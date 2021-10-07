@@ -66,6 +66,11 @@ public class PieceStorageService {
     return restClient.delete(requestEntry, requestContext);
   }
 
+  public CompletableFuture<Void> deletePiece(String pieceId, boolean skipNotFoundException, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(PIECE_STORAGE_BY_ID_ENDPOINT).withId(pieceId);
+    return restClient.delete(requestEntry, skipNotFoundException, requestContext);
+  }
+
   public CompletableFuture<Void> deletePiecesByIds(List<String> pieceIds, RequestContext rqContext) {
     List<CompletableFuture<Void>> deletedItems = new ArrayList<>(pieceIds.size());
     pieceIds.forEach(pieceId -> deletedItems.add(deletePiece(pieceId, rqContext)));

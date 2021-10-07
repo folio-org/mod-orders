@@ -10,6 +10,7 @@ import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
@@ -55,7 +56,8 @@ public class PieceCreateFlowManager {
       .thenAccept(v -> pieceCreateFlowValidator.isCreatePieceRequestValid(holder))
       .thenCompose(order -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(),
                                                                       ProtectedOperationType.CREATE, requestContext))
-      .thenCompose(v -> pieceCreateFlowInventoryManager.processInventory(holder, requestContext))
+      .thenCompose(v -> pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
+                                                                holder.isCreateItem(), requestContext))
       .thenAccept(compPoLine -> updatePoLine(holder, requestContext))
       .thenCompose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }

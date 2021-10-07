@@ -4,15 +4,6 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.groupingBy;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.helper.PurchaseOrderHelper.GET_PURCHASE_ORDERS;
-import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
-import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
-import static org.folio.rest.core.exceptions.ErrorCodes.LOC_NOT_PROVIDED;
-import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_ALREADY_RECEIVED;
-import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_FOUND;
-import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_RETRIEVED;
-import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_POL_MISMATCH;
-import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_UPDATE_FAILED;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -22,6 +13,15 @@ import static org.folio.orders.utils.HelperUtils.handlePutRequest;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.rest.core.exceptions.ErrorCodes.LOC_NOT_PROVIDED;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_ALREADY_RECEIVED;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_RETRIEVED;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_POL_MISMATCH;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_UPDATE_FAILED;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
@@ -66,6 +66,7 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -92,6 +93,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   protected InventoryManager inventoryManager;
   @Autowired
   protected PurchaseOrderLineService purchaseOrderLineService;
+  @Autowired
+  protected PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
 
   private List<PoLine> poLineList;
 
@@ -109,7 +112,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
    * @return {@link CompletableFuture} which holds map with PO line id as key
    *         and list of corresponding pieces as value
    */
-  CompletableFuture<Map<String, List<Piece>>> retrievePieceRecords(Map<String, Map<String, T>> piecesByLineId,
+ protected CompletableFuture<Map<String, List<Piece>>> retrievePieceRecords(Map<String, Map<String, T>> piecesByLineId,
                                                                    RequestContext requestContext) {
     Map<String, List<Piece>> piecesByPoLine = new HashMap<>();
     this.piecesByLineId = piecesByLineId;
@@ -438,7 +441,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   public CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds, RequestContext requestContext) {
-    if(poLineList == null) {
+    if (poLineList == null) {
       return purchaseOrderLineService.getOrderLinesByIds(poLineIds, requestContext)
                                      .thenApply(list -> {
                                         poLineList = list;
@@ -747,7 +750,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
 
   protected CompletableFuture<Void> removeForbiddenEntities(List<PoLine> poLines, Map<String, Map<String, T>> pieces) {
     if(!poLines.isEmpty()) {
-      Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().collect(groupingBy(PoLine::getPurchaseOrderId));
+      Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().distinct().collect(groupingBy(PoLine::getPurchaseOrderId));
       String query = buildQuery(convertIdsToCqlQuery(poLinesGroupedByOrderId.keySet()), logger);
       String url = String.format(GET_PURCHASE_ORDERS, poLinesGroupedByOrderId.size(), 0, query, lang);
       return handleGetRequest(url, httpClient, okapiHeaders, logger)

@@ -197,7 +197,8 @@ public class PieceService {
       .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
   }
 
-  private List<Piece> createPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
+  public List<Piece> createPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem,
+    List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
     // For each location collect pieces that need to be created.
     groupLocationsByLocationId(compPOL)
@@ -225,7 +226,8 @@ public class PieceService {
     return piecesToCreate;
   }
 
-  private List<Piece> getPiecesWithChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces, List<Piece> existingPieces) {
+  public List<Piece> getPiecesWithChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces,
+    List<Piece> existingPieces) {
     Map<String, Map<Piece.Format, Integer>> existingPieceMap = numOfPiecesByFormatAndLocationId(existingPieces, compPOL.getId());
     Map<String, Map<Piece.Format, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, compPOL.getId());
 
@@ -253,7 +255,7 @@ public class PieceService {
     return piecesForLocationUpdate;
   }
 
-  private List<Piece> createPiecesWithoutLocationId(CompositePoLine compPOL, List<Piece> existingPieces) {
+  public List<Piece> createPiecesWithoutLocationId(CompositePoLine compPOL, List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
     Map<Piece.Format, Integer> expectedQuantitiesWithoutLocation = calculatePiecesQuantityWithoutLocation(compPOL);
     Map<Piece.Format, Integer> existingPiecesQuantities = calculateQuantityOfExistingPiecesWithoutLocation(existingPieces);

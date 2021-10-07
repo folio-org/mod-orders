@@ -1,7 +1,6 @@
 package org.folio.service.pieces.flows.create;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_HOLDING_WITHOUT_INSTANCE_ERROR;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
 import java.util.Optional;
@@ -11,8 +10,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.rest.RestConstants;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
@@ -36,10 +33,8 @@ public class PieceCreateFlowInventoryManager {
     this.inventoryManager = inventoryManager;
   }
 
-  public CompletableFuture<Void> processInventory(PieceCreationHolder holder, RequestContext requestContext) {
-    CompositePoLine compPOL = holder.getOriginPoLine();
-    Piece piece = holder.getPieceToCreate();
-    boolean createItem = holder.isCreateItem();
+  public CompletableFuture<Void> processInventory(CompositePoLine compPOL,  Piece piece,  boolean createItem,
+                                                  RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return packagePoLineUpdateInventory(compPOL, piece, createItem, requestContext);
     }
@@ -51,9 +46,8 @@ public class PieceCreateFlowInventoryManager {
 
   private CompletableFuture<Void> nonPackagePoLineUpdateInventory(CompositePoLine compPOL, Piece piece, boolean createItem,
                                                                   RequestContext requestContext) {
-    return titlesService.getTitleById(piece.getTitleId(), requestContext)
-      .thenCompose(title -> nonPackageUpdateTitleWithInstance(compPOL, title, requestContext))
-      .thenCompose(title -> handleHolding(compPOL, piece, title.getInstanceId(), requestContext))
+    return nonPackageUpdateTitleWithInstance(compPOL, piece.getTitleId(), requestContext)
+      .thenCompose(instanceId -> handleHolding(compPOL, piece, instanceId, requestContext))
       .thenCompose(holdingId -> handleItem(compPOL, createItem, piece, requestContext))
       .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId));
   }
@@ -67,32 +61,33 @@ public class PieceCreateFlowInventoryManager {
       .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId));
   }
 
-  private CompletableFuture<String> handleHolding(CompositePoLine compPOL, Piece piece, String instanceId, RequestContext requestContext) {
-    if (piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
-      return completedFuture(piece.getHoldingId());
+  private CompletableFuture<Location> handleHolding(CompositePoLine compPOL, Piece piece, String instanceId, RequestContext requestContext) {
+    if (piece.getHoldingId() != null) {
+      return completedFuture(new Location().withHoldingId(piece.getHoldingId()));
     }
-
-    if (instanceId == null) {
-      logger.error(CREATE_HOLDING_WITHOUT_INSTANCE_ERROR.getDescription());
-      return CompletableFuture.failedFuture(
-        new HttpException(RestConstants.VALIDATION_ERROR, CREATE_HOLDING_WITHOUT_INSTANCE_ERROR));
-    }
-    Location location = new Location().withLocationId(piece.getLocationId());
-    return pieceUpdateInventoryService.handleHoldingsRecord(compPOL, location, instanceId, requestContext)
-      .thenApply(holdingId -> {
+    if (instanceId != null && PieceCreateFlowValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
+      Location location = new Location().withLocationId(piece.getLocationId());
+      return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).thenApply(holdingId -> {
         Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
           piece.setLocationId(null);
           piece.setHoldingId(holdingId);
+          location.setLocationId(null);
+          location.setHoldingId(holdingId);
         });
-        return holdingId;
-    });
+        return location;
+      });
+    }
+    return completedFuture(new Location().withLocationId(piece.getLocationId()));
   }
 
   private CompletableFuture<String> handleItem(CompositePoLine compPOL, boolean createItem, Piece piece, RequestContext requestContext) {
-      if (createItem && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL)) {
+    if (piece.getItemId() != null) {
+      return completedFuture(piece.getItemId());
+    }
+    if (createItem && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL) && piece.getHoldingId() != null) {
         return createItemRecord(compPOL, piece.getHoldingId(), requestContext);
-      }
-      return CompletableFuture.completedFuture(null);
+    }
+    return CompletableFuture.completedFuture(null);
   }
 
   /**
@@ -118,24 +113,35 @@ public class PieceCreateFlowInventoryManager {
     return itemFuture;
   }
 
-  private CompletableFuture<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
-    if (title.getInstanceId() != null) {
-      return CompletableFuture.completedFuture(title);
-    } else {
-      return pieceUpdateInventoryService.getOrCreateInstanceRecord(title, requestContext)
-                  .thenApply(title::withInstanceId)
-                  .thenCompose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(json -> title));
+  private CompletableFuture<String> nonPackageUpdateTitleWithInstance(CompositePoLine poLine, String titleId, RequestContext requestContext) {
+    if (poLine.getInstanceId() == null && !PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
+      return titlesService.getTitleById(titleId, requestContext)
+        .thenCompose(title -> {
+          if (title.getInstanceId() == null) {
+            return createTitleInstance(title, requestContext);
+          }
+          return completedFuture(title.getInstanceId());
+        })
+        .thenApply(instanceId -> poLine.withInstanceId(instanceId).getInstanceId());
     }
+    return completedFuture(poLine.getInstanceId());
   }
 
-  private CompletableFuture<Title> nonPackageUpdateTitleWithInstance(CompositePoLine poLine, Title title, RequestContext requestContext) {
-    if (title.getInstanceId() != null || !PoLineCommonUtil.isOnlyInstanceUpdateRequired(poLine) ||
-                      !PoLineCommonUtil.isHoldingsUpdateRequired(poLine.getEresource(), poLine.getPhysical())  ) {
+  private CompletableFuture<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
+    if (title.getInstanceId() != null) {
       return CompletableFuture.completedFuture(title);
     } else {
       return pieceUpdateInventoryService.getOrCreateInstanceRecord(title, requestContext)
         .thenApply(title::withInstanceId)
         .thenCompose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(json -> title));
     }
+  }
+
+  private CompletableFuture<String> createTitleInstance(Title title, RequestContext requestContext) {
+    return pieceUpdateInventoryService.getOrCreateInstanceRecord(title, requestContext)
+      .thenApply(title::withInstanceId)
+      .thenCompose(titleWithInstanceId ->
+        titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(aVoid -> title.getInstanceId())
+      );
   }
 }

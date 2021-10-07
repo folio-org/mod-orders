@@ -349,7 +349,7 @@ public class CheckinReceivingApiTest {
    logger.info("=== Test POST Checkin - locationId checking ===");
 
     String poLineId = "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56";
-
+    String pieceId = UUID.randomUUID().toString();
     CompositePoLine poLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
     MockServer.addMockTitles(Collections.singletonList(poLine));
 
@@ -357,7 +357,8 @@ public class CheckinReceivingApiTest {
     toBeCheckedInList.add(new ToBeCheckedIn()
       .withCheckedIn(1)
       .withPoLineId(poLineId)
-      .withCheckInPieces(Arrays.asList(new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER), new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS))));
+      .withCheckInPieces(Arrays.asList(new CheckInPiece().withId(pieceId).withItemStatus(CheckInPiece.ItemStatus.ON_ORDER),
+        new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.IN_PROCESS))));
 
     CheckinCollection request = new CheckinCollection()
       .withToBeCheckedIn(toBeCheckedInList)

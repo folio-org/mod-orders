@@ -3,7 +3,6 @@ package org.folio.helper;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
@@ -11,6 +10,7 @@ import static org.folio.orders.utils.HelperUtils.handleGetRequest;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -163,6 +163,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
     return StreamEx
       .of(receivingCollection.getToBeReceived())
+      .distinct()
       .groupingBy(ToBeReceived::getPoLineId,
         mapping(ToBeReceived::getReceivedItems,
           collectingAndThen(toList(),
@@ -235,6 +236,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private Map<String, Map<String, ReceivedItem>> groupReceivedItemsByPoLineId(ReceivingCollection receivingCollection) {
     return StreamEx
       .of(receivingCollection.getToBeReceived())
+      .distinct()
       .groupingBy(ToBeReceived::getPoLineId,
         mapping(ToBeReceived::getReceivedItems,
           collectingAndThen(toList(),

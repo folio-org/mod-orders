@@ -369,10 +369,14 @@ public class InventoryManager {
                                  .collect(Collectors.toList()));
   }
 
-  public CompletableFuture<JsonObject> getHoldingById(String holdingId, RequestContext requestContext) {
+  public CompletableFuture<JsonObject> getHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId)
-                                                      .withQueryParameter(LANG, "en");
-    return restClient.getAsJsonObject(requestEntry, requestContext);
+      .withQueryParameter(LANG, "en");
+    return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
+  }
+
+  public CompletableFuture<JsonObject> getHoldingById(String holdingId, RequestContext requestContext) {
+    return getHoldingById(holdingId, false, requestContext);
   }
 
   public CompletableFuture<List<JsonObject>> getHoldingRecords(String instanceId, List<String> locationIds, RequestContext requestContext) {
