@@ -101,7 +101,6 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 
 public class PurchaseOrderLineHelper extends AbstractHelper {
 
-  private static final String ISBN = "ISBN";
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String GET_PO_LINES_BY_QUERY = resourcesPath(PO_LINES) + SEARCH_PARAMS;
   private static final String PO_LINE_NUMBER_ENDPOINT = resourcesPath(PO_LINE_NUMBER) + "?" + PURCHASE_ORDER_ID + "=";
@@ -843,9 +842,14 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return completedFuture(null);
   }
 
+  public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL, String isbnId, RequestContext requestContext) {
+    return validateIsbnValues(compPOL, isbnId, requestContext)
+      .thenAccept(aVoid -> removeISBNDuplicates(compPOL, isbnId));
+  }
+
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL, RequestContext requestContext) {
     if (HelperUtils.isProductIdsExist(compPOL)) {
-      return inventoryManager.getProductTypeUuidByIsbn(ISBN, requestContext)
+      return inventoryManager.getProductTypeUuidByIsbn(requestContext)
         .thenCompose(id -> validateIsbnValues(compPOL, id, requestContext)
           .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
     }
