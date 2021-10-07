@@ -1,5 +1,11 @@
 package org.folio.service.finance.transaction;
 
+import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
@@ -11,12 +17,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.orders.OrderWorkflowType;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
 
 public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
@@ -43,7 +43,8 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
 
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       // get the encumbrances to unrelease
-      return encumbranceService.getOrderEncumbrancesToUnrelease(compPO, requestContext)
+      return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPO, poAndLinesFromStorage, requestContext)
+        .thenCompose(mapFiscalYearIdsWithCompPOLines -> encumbranceService.getOrderEncumbrancesToUnrelease(compPO, mapFiscalYearIdsWithCompPOLines, requestContext))
         .thenCompose(transactions -> {
           // stop if nothing needs to be done
           if (transactions.isEmpty())

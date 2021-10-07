@@ -1,28 +1,12 @@
 package org.folio.service.finance.transaction;
 
-import static java.util.stream.Collectors.toList;
-import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
-import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
-import static org.folio.rest.core.exceptions.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-
-import javax.money.MonetaryAmount;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.HttpStatus;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.core.exceptions.HttpException;
-import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -30,12 +14,32 @@ import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.service.invoice.InvoiceService;
 import org.javamoney.moneta.function.MonetaryOperators;
 
+import javax.money.MonetaryAmount;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+
+import static java.util.stream.Collectors.toList;
+import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.rest.core.exceptions.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+
 public class EncumbranceService {
-//String a = "{ \"orderType\": \"ListedPrintMonograph\", \"mappings\": [ { \"field\": \"ACQUISITION_METHOD\", \"dataSource\": { \"default\": \"Purchase At Vendor System\" } }, { \"field\": \"APPROVED\", \"dataSource\": { \"default\": \"true\", \"translation\": \"toBoolean\", \"translateDefault\": true } }, { \"field\": \"CLAIMED\", \"dataSource\": { \"default\": \"true\", \"translation\": \"toBoolean\", \"translateDefault\": true } }, { \"field\": \"COLLECTION\", \"dataSource\": { \"default\": \"false\", \"translation\": \"toBoolean\", \"translateDefault\": true } }, { \"field\": \"CONTRIBUTOR\", \"dataSource\": { \"from\": \"//datafield[@tag='100']/*\", \"combinator\": \"concat\" } }, { \"field\": \"CONTRIBUTOR_NAME_TYPE\", \"dataSource\": { \"default\": \"Personal name\", \"translation\": \"lookupContributorNameTypeId\", \"translateDefault\": true } }, { \"field\": \"CURRENCY\", \"dataSource\": { \"from\": \"//ListPrice/Currency\", \"default\": \"USD\" } }, { \"field\": \"DATE_ORDERED\", \"dataSource\": { \"from\": \"//OrderPlaced\", \"translation\": \"toDate\" } }, { \"field\": \"EXPENSE_CLASS\", \"dataSource\": { \"from\": \"//LocalData[Description='LocalData4']/Value\", \"translation\": \"lookupExpenseClassId\" } }, { \"field\": \"FUND_ID\", \"dataSource\": { \"from\": \"//FundCode\", \"translation\": \"lookupFundId\" } }, { \"field\": \"FUND_CODE\", \"dataSource\": { \"from\": \"//FundCode\" } }, { \"field\": \"FUND_PERCENTAGE\", \"dataSource\": { \"default\": \"100\", \"translation\": \"toDouble\", \"translateDefault\": true } }, { \"field\": \"VENDOR_INSTRUCTIONS\", \"dataSource\": { \"from\": \"//OrderNotes\", \"default\" : \"N/A\" } }, { \"field\": \"LIST_UNIT_PRICE\", \"dataSource\": { \"from\": \"//ListPrice/Amount\", \"default\": \"0\", \"translation\": \"toDouble\", \"translateDefault\": true } }, { \"field\": \"LOCATION\", \"dataSource\": { \"from\": \"//Location\", \"default\": \"*\", \"translation\": \"lookupLocationId\", \"translateDefault\": true } }, { \"field\": \"MANUAL_PO\", \"dataSource\": { \"default\": \"false\", \"translation\": \"toBoolean\", \"translateDefault\": true } }, { \"field\": \"MATERIAL_TYPE\", \"dataSource\": { \"from\": \"//LocalData[Description='LocalData1']/Value\", \"default\" : \"unspecified\", \"translation\": \"lookupMaterialTypeId\", \"translateDefault\": true } }, { \"field\": \"ORDER_TYPE\", \"dataSource\": { \"default\": \"One-Time\" } }, { \"field\": \"PO_LINE_ORDER_FORMAT\", \"dataSource\": { \"default\": \"Physical Resource\" } }, { \"field\": \"PO_LINE_PAYMENT_STATUS\", \"dataSource\": { \"default\": \"Awaiting Payment\" } }, { \"field\": \"PO_LINE_RECEIPT_STATUS\", \"dataSource\": { \"default\": \"Awaiting Receipt\" } }, { \"field\": \"PRODUCT_ID\", \"dataSource\": { \"from\": \"//datafield[@tag='020']/subfield[@code='a']\", \"translation\": \"truncateISBNQualifier\" } }, { \"field\": \"PRODUCT_ID_TYPE\", \"dataSource\": { \"default\": \"ISBN\", \"translation\": \"lookupProductIdType\", \"translateDefault\": true } }, { \"field\": \"PRODUCT_QUALIFIER\", \"dataSource\": { \"from\": \"//datafield[@tag='020']/subfield[@code='q']\", \"defaultMapping\": { \"dataSource\": { \"from\": \"//datafield[@tag='020']/subfield[@code='a']\", \"translation\": \"separateISBNQualifier\" } } } }, { \"field\": \"PUBLICATION_DATE\", \"dataSource\": { \"from\": \"//datafield[@tag='260']/subfield[@code='c']\" } }, { \"field\": \"PUBLISHER\", \"dataSource\": { \"from\": \"//datafield[@tag='260']/subfield[@code='b']\" } }, { \"field\": \"QUANTITY_PHYSICAL\", \"dataSource\": { \"from\": \"//Quantity\", \"default\": \"1\", \"translation\": \"toInteger\" } }, { \"field\": \"RECEIVING_NOTE\", \"dataSource\": { \"from\": \"//LocalData[Description='LocalData2']/Value\" } }, { \"field\": \"REQUESTER\", \"dataSource\": { \"from\": \"//LocalData[Description='LocalData3']/Value\" } }, { \"field\": \"SOURCE\", \"dataSource\": { \"default\": \"API\" } }, { \"field\": \"TITLE\", \"dataSource\": { \"from\": \"//datafield[@tag='245']/*\", \"combinator\": \"concat\" } }, { \"field\": \"VENDOR\", \"dataSource\": { \"default\": \"GOBI\", \"translation\": \"lookupOrganization\", \"translateDefault\": true } }, { \"field\": \"VENDOR_ACCOUNT\", \"dataSource\": { \"from\": \"//SubAccount\", \"default\": \"0\" } }, { \"field\": \"VENDOR_REF_NO\", \"dataSource\": { \"from\": \"//YBPOrderKey\" } }, { \"field\": \"VENDOR_REF_NO_TYPE\", \"dataSource\": { \"default\": \"Vendor order reference number\" } }, { \"field\": \"WORKFLOW_STATUS\", \"dataSource\": { \"default\": \"Open\" } } ] }"
+
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
   public static final String AND = " and ";
   public static final String FUND_CODE = "fundCode";
@@ -80,7 +84,7 @@ public class EncumbranceService {
   }
 
   public CompletionStage<Void> updateEncumbrancesOrderStatus(CompositePurchaseOrder compPo, RequestContext requestContext) {
-    return getOrderEncumbrances(compPo.getId(), requestContext)
+    return getOrderUnreleasedEncumbrances(compPo.getId(), requestContext)
             .thenCompose(encumbrs -> {
               if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
                 return transactionSummariesService.updateOrderTransactionSummary(compPo.getId(), encumbrs.size(), requestContext)
@@ -113,25 +117,26 @@ public class EncumbranceService {
     return updateEncumbrances(encumbrances, requestContext);
   }
 
-
-  public CompletableFuture<List<Transaction>> getOrderEncumbrances(String orderId, RequestContext requestContext) {
-    return transactionService.getTransactions(buildEncumbranceOrderQuery(orderId), 0, Integer.MAX_VALUE, requestContext)
+  public CompletableFuture<List<Transaction>> getOrderUnreleasedEncumbrances(String orderId, RequestContext requestContext) {
+    return transactionService.getTransactions(buildNonReleasedEncumbranceOrderQuery(orderId), 0, Integer.MAX_VALUE, requestContext)
               .thenApply(TransactionCollection::getTransactions);
   }
 
-  public CompletableFuture<List<Transaction>> getOrderEncumbrancesToUnrelease(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  public CompletableFuture<List<Transaction>> getOrderEncumbrancesToUnrelease(CompositePurchaseOrder compPO,
+                                                                              Map<String, List<CompositePoLine>> mapFiscalYearWithCompPOLines,
+                                                                              RequestContext requestContext) {
     // Check invoice line's releaseEncumbrance value for each order line
     List<CompletableFuture<List<Transaction>>> futures =
       compPO.getCompositePoLines()
         .stream()
-        .map(poLine -> getPoLineEncumbrancesToUnrelease(poLine, requestContext))
+        .map(poLine -> getPoLineEncumbrancesToUnrelease(poLine, mapFiscalYearWithCompPOLines, requestContext))
         .collect(toList());
-    return HelperUtils.collectResultsOnSuccess(futures)
+    return collectResultsOnSuccess(futures)
       .thenApply(listOfLists -> listOfLists.stream().flatMap(List::stream).collect(toList()));
   }
 
-  public CompletableFuture<List<Transaction>> getPoLineEncumbrances(String poLineId, RequestContext requestContext) {
-    return transactionService.getTransactions(buildEncumbranceByPoLineQuery(poLineId), 0, Integer.MAX_VALUE, requestContext)
+  public CompletableFuture<List<Transaction>> getPoLineUnreleasedEncumbrances(String poLineId, RequestContext requestContext) {
+    return transactionService.getTransactions(buildNonReleasedEncumbranceByPoLineQuery(poLineId), 0, Integer.MAX_VALUE, requestContext)
       .thenApply(TransactionCollection::getTransactions);
   }
 
@@ -145,6 +150,14 @@ public class EncumbranceService {
     return transactionService.getTransactionsByPoLinesIds(poLineIds, searchCriteria, requestContext);
   }
 
+  public CompletableFuture<List<Transaction>> getEncumbrancesByPoLinesFromCurrentFy(
+      Map<String, List<CompositePoLine>> poLinesByFy, RequestContext requestContext) {
+    return collectResultsOnSuccess(poLinesByFy.entrySet().stream()
+        .map(entry -> getCurrentPoLinesEncumbrances(entry.getValue(), entry.getKey(), requestContext))
+        .collect(toList()))
+      .thenApply(encumbrances -> encumbrances.stream().flatMap(Collection::stream).collect(toList()));
+  }
+
   public void updateEncumbrance(FundDistribution fundDistribution, CompositePoLine poLine, Transaction trEncumbrance) {
     MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
     trEncumbrance.setAmount(calculateAmountEncumbered(fundDistribution, estimatedPrice));
@@ -156,7 +169,6 @@ public class EncumbranceService {
     encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
     encumbrance.setInitialAmountEncumbered(trEncumbrance.getAmount());
   }
-
 
   public CompletableFuture<Void> releaseEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
     encumbrances.forEach(transaction -> transaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
@@ -177,12 +189,12 @@ public class EncumbranceService {
   }
 
   public CompletableFuture<Void> deletePoLineEncumbrances(String lineId, RequestContext requestContext) {
-    return getPoLineEncumbrances(lineId, requestContext)
+    return getPoLineUnreleasedEncumbrances(lineId, requestContext)
       .thenCompose(encumbrances -> transactionService.deleteTransactions(encumbrances, requestContext));
   }
 
   public CompletableFuture<Void> deleteOrderEncumbrances(String orderId, RequestContext requestContext) {
-    return getOrderEncumbrances(orderId, requestContext)
+    return getOrderUnreleasedEncumbrances(orderId, requestContext)
       .thenCompose(encumbrances -> transactionService.deleteTransactions(encumbrances, requestContext));
   }
 
@@ -196,36 +208,54 @@ public class EncumbranceService {
     return distribution.getValue();
   }
 
-  private String buildEncumbranceOrderQuery(String orderId) {
+  private String buildNonReleasedEncumbranceOrderQuery(String orderId) {
     return ENCUMBRANCE_CRITERIA
                 + AND + "encumbrance.sourcePurchaseOrderId==" + orderId
                     + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED;
   }
 
-  private String buildEncumbranceByPoLineQuery(String polineId) {
+  private String buildNonReleasedEncumbranceByPoLineQuery(String polineId) {
     return ENCUMBRANCE_CRITERIA
       + AND + "encumbrance.sourcePoLineId==" + polineId
       + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED;
   }
 
-  private String buildUnreleaseEncumbranceByPoLineQuery(String polineId) {
+  private String buildReleasedEncumbranceByPoLineQuery(String poLineId, String fiscalYearId) {
     return ENCUMBRANCE_CRITERIA
-      + AND + "encumbrance.sourcePoLineId == " + polineId
-      + AND + "encumbrance.status == " + Encumbrance.Status.RELEASED;
+      + AND + "encumbrance.sourcePoLineId == " + poLineId
+      + AND + "encumbrance.status == " + Encumbrance.Status.RELEASED
+      + AND + "encumbrance.fiscalYearId == " + fiscalYearId;
   }
 
-  private CompletableFuture<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePoLine poLine, RequestContext requestContext) {
-    return hasInvoiceLineWithReleaseEncumbrance(poLine, requestContext)
-      .thenCompose(test -> {
-        if (test)
+  private CompletableFuture<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePoLine poLine,
+                                                                                Map<String, List<CompositePoLine>> mapFiscalYearWithCompPOLines,
+                                                                                RequestContext requestContext) {
+    final String[] currentFiscalYearId = new String[1];
+    for (Map.Entry<String, List<CompositePoLine>> entry : mapFiscalYearWithCompPOLines.entrySet()) {
+      for (CompositePoLine pLine : entry.getValue()) {
+        if (poLine.getId().equals(pLine.getId())) {
+          currentFiscalYearId[0] = entry.getKey();
+          break;
+        }
+      }
+    }
+    if (currentFiscalYearId[0] == null) {
+        Error error = ErrorCodes.CURRENT_FISCAL_YEAR_ID_NOT_FOUND.toError();
+        List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("poLineNumber")
+                                           .withValue(poLine.getPoLineNumber()));
+      throw new HttpException(404, error.withParameters(parameters));
+    }
+    return hasNotInvoiceLineWithReleaseEncumbrance(poLine, requestContext)
+      .thenCompose(hasNotInvoiceLineWithReleaseEncumbrance -> {
+        if (hasNotInvoiceLineWithReleaseEncumbrance)
           return CompletableFuture.completedFuture(Collections.emptyList());
         return transactionService.getTransactions(
-          buildUnreleaseEncumbranceByPoLineQuery(poLine.getId()), 0, Integer.MAX_VALUE, requestContext)
+          buildReleasedEncumbranceByPoLineQuery(poLine.getId(), currentFiscalYearId[0]), 0, Integer.MAX_VALUE, requestContext)
             .thenApply(TransactionCollection::getTransactions);
       });
   }
 
-  private CompletableFuture<Boolean> hasInvoiceLineWithReleaseEncumbrance(CompositePoLine poLine, RequestContext requestContext) {
+  private CompletableFuture<Boolean> hasNotInvoiceLineWithReleaseEncumbrance(CompositePoLine poLine, RequestContext requestContext) {
     return invoiceService.retrieveInvoiceLines("poLineId == " + poLine.getId() + AND + "releaseEncumbrance == true", requestContext)
       .thenApply(invoiceLines -> !invoiceLines.isEmpty())
       .exceptionally(t -> {
