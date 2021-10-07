@@ -25,8 +25,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -36,7 +34,6 @@ import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.model.ReceivingHistoryCollection;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
-import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.service.AcquisitionsUnitsService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,18 +96,6 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .thenCompose(piecesByPoLineIds -> updatePoLinesStatus(piecesByPoLineIds, requestContext))
       // 7. Return results to the client
       .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
-  }
-
-  private Map<String, List<CheckInPiece>> getItemCreateNeededCheckinPieces(CheckinCollection checkinCollection) {
-    return StreamEx
-      .of(checkinCollection.getToBeCheckedIn())
-      .distinct()
-      .groupingBy(ToBeCheckedIn::getPoLineId,
-        mapping(ToBeCheckedIn::getCheckInPieces,
-          collectingAndThen(toList(),
-            lists -> StreamEx.of(lists)
-              .flatMap(List::stream)
-              .collect(toList()))));
   }
 
   /**

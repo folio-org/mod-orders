@@ -77,6 +77,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.jupiter.api.AfterAll;

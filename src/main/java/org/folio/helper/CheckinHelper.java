@@ -117,7 +117,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         }));
     })
     .thenCompose(v -> collectResultsOnSuccess(futures).thenApply(poLineIdVsPieceList -> {
-      logger.debug("{} pieces updated with item", poLineIdVsPieceList.size());
+  //    logger.debug("{} pieces updated with item", poLineIdVsPieceList.size());
       return StreamEx.of(poLineIdVsPieceList)
         .distinct()
         .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(),
@@ -126,10 +126,10 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private CompletableFuture<String> handleItem(CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
-    if (PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL)) {
+    if (piece.getItemId() == null && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL)) {
        return pieceCreateFlowInventoryManager.createItemRecord(compPOL, piece.getHoldingId(), requestContext);
     }
-    return CompletableFuture.completedFuture(null);
+    return CompletableFuture.completedFuture(piece.getItemId());
   }
 
   private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
@@ -200,7 +200,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
               .toMap(CheckInPiece::getId, checkInPiece -> checkInPiece))));
   }
 
-  private Map<String, List<CheckInPiece>> getItemCreateNeededCheckinPieces(CheckinCollection checkinCollection) {
+  public Map<String, List<CheckInPiece>> getItemCreateNeededCheckinPieces(CheckinCollection checkinCollection) {
     return StreamEx
       .of(checkinCollection.getToBeCheckedIn())
       .distinct()

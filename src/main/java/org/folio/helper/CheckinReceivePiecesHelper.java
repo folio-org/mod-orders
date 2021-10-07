@@ -441,7 +441,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   public CompletableFuture<List<PoLine>> getPoLines(List<String> poLineIds, RequestContext requestContext) {
-    if(poLineList == null) {
+    if (poLineList == null) {
       return purchaseOrderLineService.getOrderLinesByIds(poLineIds, requestContext)
                                      .thenApply(list -> {
                                         poLineList = list;
