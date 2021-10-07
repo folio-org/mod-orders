@@ -6,7 +6,6 @@ import java.util.stream.Stream;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -36,7 +35,7 @@ public class TransactionSummariesService {
 
     public CompletableFuture<OrderTransactionSummary> getOrderTransactionSummary(String orderId, RequestContext requestContext) {
         RequestEntry requestEntry = new RequestEntry(GET_BY_ID_STORAGE_ENDPOINT).withId(orderId);
-        return restClient.get(requestEntry, requestContext, OrderTransactionSummary.class);
+        return restClient.get(requestEntry, true, requestContext, OrderTransactionSummary.class);
     }
 
     public CompletableFuture<Void> updateOrderTransactionSummary(String orderId, int number, RequestContext requestContext) {
@@ -69,14 +68,14 @@ public class TransactionSummariesService {
       // update or create summary if not exists
       if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
         getOrderTransactionSummary(orderId, requestContext).handle((ok, error) -> {
-          if (error == null) {
+          if (error == null && ok != null) {
             updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
               .thenAccept(a -> future.complete(null))
               .exceptionally(t -> {
                 future.completeExceptionally(t);
                 return null;
               });
-          } else if (error instanceof HttpException && ((HttpException) error).getCode() == 404) {
+          } else if (ok == null) {
             createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
               .thenAccept(a -> future.complete(null))
               .exceptionally(t -> {

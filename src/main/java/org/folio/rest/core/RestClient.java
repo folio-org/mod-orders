@@ -4,12 +4,16 @@ import static java.util.Objects.nonNull;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
+import static org.folio.orders.utils.HelperUtils.verifyResponse;
+import static org.folio.rest.RestConstants.ERROR_MESSAGE;
+import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
@@ -25,52 +29,55 @@ import io.vertx.core.json.JsonObject;
 
 public class RestClient {
 
-    private static final Logger logger = LogManager.getLogger();
-    private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
-    private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
+  private static final Logger logger = LogManager.getLogger();
+  private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
+  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
 
+  public <T> CompletableFuture<T> getById(String baseEndpoint, String id, boolean skipThrowNorFoundException,
+                                           RequestContext requestContext, Class<T> responseType) {
+    RequestEntry requestEntry = new RequestEntry(baseEndpoint).withPathParameter("id", id);
+    return get(requestEntry, skipThrowNorFoundException, requestContext, responseType);
+  }
 
-    public <T> CompletableFuture<T> getById(String baseEndpoint, String id, RequestContext requestContext, Class<T> responseType) {
-        RequestEntry requestEntry = new RequestEntry(baseEndpoint).withPathParameter("id", id);
-        return get(requestEntry, requestContext, responseType);
+  public <T> CompletableFuture<T> getById(String baseEndpoint, String id, RequestContext requestContext, Class<T> responseType) {
+    return getById(baseEndpoint, id, false, requestContext, responseType);
+  }
+
+  public <T> CompletableFuture<T> post(RequestEntry requestEntry, T entity, RequestContext requestContext, Class<T> responseType) {
+    CompletableFuture<T> future = new CompletableFuture<>();
+    String endpoint = requestEntry.buildEndpoint();
+    JsonObject recordData = JsonObject.mapFrom(entity);
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Sending 'POST {}' with body: {}", endpoint, recordData.encodePrettily());
     }
 
-    public <T> CompletableFuture<T> post(RequestEntry requestEntry, T entity, RequestContext requestContext, Class<T> responseType) {
-        CompletableFuture<T> future = new CompletableFuture<>();
-        String endpoint = requestEntry.buildEndpoint();
-        JsonObject recordData = JsonObject.mapFrom(entity);
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("Sending 'POST {}' with body: {}", endpoint, recordData.encodePrettily());
-        }
-
-        HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-        try {
-            client
-                    .request(HttpMethod.POST, recordData.toBuffer(), endpoint, requestContext.getHeaders())
-                    .thenApply(HelperUtils::verifyAndExtractBody)
-                    .thenAccept(body -> {
-                        client.closeClient();
-                        T responseEntity = body.mapTo(responseType);
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);
-                        }
-                        future.complete(responseEntity);
-                    })
-                    .exceptionally(t -> {
-                        client.closeClient();
-                        logger.error("'POST {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), t.getCause());
-                        future.completeExceptionally(t.getCause());
-                        return null;
-                    });
-        } catch (Exception e) {
-            logger.error("'POST {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), e);
-            client.closeClient();
-            future.completeExceptionally(e);
-        }
-
-        return future;
+    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
+    try {
+      client.request(HttpMethod.POST, recordData.toBuffer(), endpoint, requestContext.getHeaders())
+        .thenApply(HelperUtils::verifyAndExtractBody)
+        .thenAccept(body -> {
+          client.closeClient();
+          T responseEntity = body.mapTo(responseType);
+          if (logger.isDebugEnabled()) {
+            logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);
+          }
+          future.complete(responseEntity);
+        })
+        .exceptionally(t -> {
+          client.closeClient();
+          logger.error("'POST {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), t.getCause());
+          future.completeExceptionally(t.getCause());
+          return null;
+        });
+    } catch (Exception e) {
+      logger.error("'POST {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), e);
+      client.closeClient();
+      future.completeExceptionally(e);
     }
+
+    return future;
+  }
 
   public <T> CompletableFuture<T> post(RequestEntry requestEntry, JsonObject recordData, PostResponseType postResponseType,
                                        Class<T> responseType, RequestContext requestContext) {
@@ -182,90 +189,64 @@ public class RestClient {
     return future;
   }
 
-    public CompletableFuture<Void> delete(RequestEntry requestEntry, RequestContext requestContext) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        String endpoint = requestEntry.buildEndpoint();
-        if (logger.isDebugEnabled()) {
-            logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint);
-        }
-        HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-        setDefaultHeaders(client);
+  public CompletableFuture<Void> delete(RequestEntry requestEntry, boolean skipThrowNorFoundException, RequestContext requestContext) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    String endpoint = requestEntry.buildEndpoint();
+    if (logger.isDebugEnabled()) {
+      logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint);
+    }
+    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
+    setDefaultHeaders(client);
 
-        try {
-          client.request(HttpMethod.DELETE, endpoint, requestContext.getHeaders())
-            .thenAccept(HelperUtils::verifyResponse)
-            .thenAccept(aVoid -> {
-              client.closeClient();
-              future.complete(null);
-            })
-            .exceptionally(t -> {
-              client.closeClient();
-              logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint, requestContext), t);
-              future.completeExceptionally(t.getCause());
-              return null;
-            });
-        } catch (Exception e) {
+    try {
+      client.request(HttpMethod.DELETE, endpoint, requestContext.getHeaders())
+        .thenAccept(response -> {
           client.closeClient();
-          logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint, requestContext), e);
-          future.completeExceptionally(e);
-        }
-
-        return future;
+          int code = response.getCode();
+          if (code == NOT_FOUND && skipThrowNorFoundException) {
+            String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
+            logger.error("The GET {} operation completed with {} error: {}", endpoint, code, errorMessage);
+            future.complete(null);
+          } else {
+            verifyResponse(response);
+            future.complete(null);
+          }
+        })
+        .exceptionally(t -> {
+          client.closeClient();
+          logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint, requestContext), t);
+          future.completeExceptionally(t.getCause());
+          return null;
+        });
+    } catch (Exception e) {
+      client.closeClient();
+      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint, requestContext), e);
+      future.completeExceptionally(e);
     }
 
-    public <S> CompletableFuture<S> get(RequestEntry requestEntry, RequestContext requestContext, Class<S> responseType) {
-        CompletableFuture<S> future = new CompletableFuture<>();
-        String endpoint = requestEntry.buildEndpoint();
-        HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-        if (logger.isDebugEnabled()) {
-            logger.debug("Calling GET {}", endpoint);
-        }
+    return future;
+  }
 
-        try {
-            client
-                    .request(HttpMethod.GET, endpoint, requestContext.getHeaders())
-                    .thenApply(response -> {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Validating response for GET {}", endpoint);
-                        }
-                        return verifyAndExtractBody(response);
-                    })
-                    .thenAccept(body -> {
-                        client.closeClient();
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
-                        }
-                        S responseEntity = body.mapTo(responseType);
-                        future.complete(responseEntity);
-                    })
-                    .exceptionally(t -> {
-                        client.closeClient();
-                        logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, endpoint, requestContext), t);
-                        future.completeExceptionally(t.getCause());
-                        return null;
-                    });
-        } catch (Exception e) {
-          logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, requestEntry.getBaseEndpoint(), requestContext), e);
-          client.closeClient();
-          future.completeExceptionally(e);
-        }
-        return future;
-    }
+  public CompletableFuture<Void> delete(RequestEntry requestEntry, RequestContext requestContext) {
+    return delete(requestEntry, false, requestContext);
+  }
 
-  public CompletableFuture<JsonObject> getAsJsonObject(RequestEntry requestEntry, RequestContext requestContext) {
-    CompletableFuture<JsonObject> future = new CompletableFuture<>();
+  public <S> CompletableFuture<S> get(RequestEntry requestEntry, boolean skipThrowNorFoundException,
+                                      RequestContext requestContext, Class<S> responseType) {
+    CompletableFuture<S> future = new CompletableFuture<>();
     String endpoint = requestEntry.buildEndpoint();
     HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-    if (logger.isDebugEnabled()) {
-      logger.debug("Calling GET {}", endpoint);
-    }
+    logger.debug("Calling GET {}", endpoint);
 
     try {
       client
         .request(HttpMethod.GET, endpoint, requestContext.getHeaders())
         .thenApply(response -> {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Validating response for GET {}", endpoint);
+          int code = response.getCode();
+          if (code == NOT_FOUND && skipThrowNorFoundException) {
+            String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
+            logger.error("The GET {} operation completed with {} error: {}", endpoint, code, errorMessage);
+            return new JsonObject();
           }
           return verifyAndExtractBody(response);
         })
@@ -274,7 +255,11 @@ public class RestClient {
           if (logger.isDebugEnabled()) {
             logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
           }
-          future.complete(body);
+          if (body != null && !body.isEmpty()) {
+            S responseEntity = body.mapTo(responseType);
+            future.complete(responseEntity);
+          }
+          future.complete(null);
         })
         .exceptionally(t -> {
           client.closeClient();
@@ -288,6 +273,57 @@ public class RestClient {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  public <S> CompletableFuture<S> get(RequestEntry requestEntry, RequestContext requestContext, Class<S> responseType) {
+    return get(requestEntry, false, requestContext, responseType);
+  }
+
+  public CompletableFuture<JsonObject> getAsJsonObject(RequestEntry requestEntry, boolean skipThrowNorFoundException,
+                                                        RequestContext requestContext) {
+    CompletableFuture<JsonObject> future = new CompletableFuture<>();
+    String endpoint = requestEntry.buildEndpoint();
+    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
+    logger.debug("Calling GET {}", endpoint);
+    try {
+      client
+        .request(HttpMethod.GET, endpoint, requestContext.getHeaders())
+        .thenApply(response -> {
+          int code = response.getCode();
+          if (code == NOT_FOUND && skipThrowNorFoundException) {
+            String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
+            logger.error("The GET {} operation completed with {} error: {}", endpoint, code, errorMessage);
+            return new JsonObject();
+          }
+          return verifyAndExtractBody(response);
+        })
+        .thenAccept(json -> {
+          client.closeClient();
+          if (json != null) {
+            if (!json.isEmpty() && logger.isDebugEnabled()) {
+              logger.debug("The GET {} operation completed with following response body: {}", endpoint, json.encodePrettily());
+            }
+            future.complete(json);
+          } else {
+            logger.debug("The GET {} operation completed with no response body", endpoint);
+            future.complete(new JsonObject());
+          }
+        })
+        .exceptionally(t -> {
+          client.closeClient();
+          logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, endpoint, requestContext), t);
+          future.completeExceptionally(t.getCause());
+          return null;
+        });
+    } catch (Exception e) {
+      client.closeClient();
+      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, requestEntry.getBaseEndpoint(), requestContext), e);
+      future.completeExceptionally(e);
+    }
+    return future;
+  }
+  public CompletableFuture<JsonObject> getAsJsonObject(RequestEntry requestEntry, RequestContext requestContext) {
+   return getAsJsonObject(requestEntry, false, requestContext);
   }
 
   public HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {

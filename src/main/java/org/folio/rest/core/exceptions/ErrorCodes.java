@@ -56,6 +56,7 @@ public enum ErrorCodes {
   ISBN_NOT_VALID("invalidISBN", "ISBN value is invalid"),
   FUNDS_NOT_FOUND("fundsNotFound", "The fund records are not found"),
   CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger"),
+  CURRENT_FISCAL_YEAR_ID_NOT_FOUND("currentFYearIdNotFound", "Current fiscal year id not found for POLine"),
   TITLE_NOT_FOUND("titleNotFound", "Associated title not found for PO Line"),
   TITLE_EXIST("titleExist", "The title for poLine already exist"),
   MULTIPLE_NONPACKAGE_TITLES("multipleNonPackageTitles", "Non package PO Line must contain only one title."),
@@ -92,7 +93,12 @@ public enum ErrorCodes {
   RECEIVING_PROCESS_ENCUMBRANCES_ERROR("receivingProcessEncumbrancesError",
     "Pieces can not be added to or deleted from this Title until all the Fund distributions on the related purchase order line are converted from amounts to percentages."),
   PIECE_HOLDING_REFERENCE_IS_NOT_ALLOWED_ERROR("holdingReferenceIsNotAllowed", "Holding reference is not allowed in the Piece for Pending order. Please set location reference"),
-  POSTGRE_SQL_ERROR("pgException", "PostgreSQL exception");;
+  POSTGRE_SQL_ERROR("pgException", "PostgreSQL exception"),
+  PIECE_FORMAT_IS_NOT_VALID_ERROR("pieceFormatIsNotValid", "Piece format %s is not compatible with purchase line %s"),
+  CREATE_HOLDING_WITHOUT_INSTANCE_ERROR("createHoldingWithoutInstanceError", "Can't create holding, because instance reference is mandatory for the holding"),
+  CREATE_PIECE_FOR_PENDING_ORDER_ERROR("createPiecePendingOrderError", "Creating piece for pending order is not possible. Please open order."),
+  CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR("createItemForPieceIsNotAllowedError", "Create item for piece format %s is not allowed. Please check inventory option in the purchase order line %s"),
+  NOT_FOUND("notFound", "Not Found");
 
 
   private final String code;

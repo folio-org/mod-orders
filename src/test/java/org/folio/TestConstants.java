@@ -75,8 +75,5 @@ public final class TestConstants {
   public static final String LOCATION_ID = "f34d27c6-a8eb-461b-acd6-5dea81771e70";
 
   public static final String PIECE_ID = "0f1bb087-72e9-44ce-a145-bfc2e7b005cf";
-  public static final String ITEM_ID = "522a501a-56b5-48d9-b28a-3a8f02482d97";
-
-  public static final int MAX_IDS_FOR_GET_RQ = 15;
-
+  public static final String EXISTED_ITEM_ID = "522a501a-56b5-48d9-b28a-3a8f02482d97";
 }

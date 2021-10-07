@@ -13,9 +13,11 @@ public class PieceCreationHolder {
   private Piece pieceToCreate;
   private CompositePurchaseOrder originPurchaseOrder;
   private CompositePurchaseOrder purchaseOrderToSave;
+  private boolean createItem;
 
-  public PieceCreationHolder(Piece pieceToCreate) {
+  public PieceCreationHolder(Piece pieceToCreate, boolean createItem) {
     this.pieceToCreate = pieceToCreate;
+    this.createItem = createItem;
   }
 
   public PieceCreationHolder(CompositePurchaseOrder originPurchaseOrder) {
@@ -52,4 +54,9 @@ public class PieceCreationHolder {
   public Piece getPieceToCreate() {
     return pieceToCreate;
   }
+
+  public boolean isCreateItem() {
+    return createItem;
+  }
+
 }

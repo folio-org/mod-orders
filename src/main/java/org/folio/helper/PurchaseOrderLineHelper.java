@@ -440,6 +440,7 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     }
 
     if (!compositePoLine.getCost().getPoLineEstimatedPrice().equals(storagePoLine.getCost().getPoLineEstimatedPrice())
+      || !compositePoLine.getCost().getCurrency().equals(storagePoLine.getCost().getCurrency())
       || (requestFundDistros.size() != storageFundDistros.size())) {
       return true;
     }

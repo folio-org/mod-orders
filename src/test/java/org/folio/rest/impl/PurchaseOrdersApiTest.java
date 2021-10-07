@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -16,9 +17,50 @@ import static org.folio.TestConfig.X_OKAPI_URL;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestConstants.*;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.TestConstants.BAD_QUERY;
+import static org.folio.TestConstants.COMPOSITE_PO_LINES_PREFIX;
+import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
+import static org.folio.TestConstants.EMPTY_CONFIG_X_OKAPI_TENANT;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ID;
+import static org.folio.TestConstants.ID_BAD_FORMAT;
+import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
+import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.TestConstants.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER;
+import static org.folio.TestConstants.INVALID_CONFIG_X_OKAPI_TENANT;
+import static org.folio.TestConstants.INVALID_LANG;
+import static org.folio.TestConstants.MIN_PO_ID;
+import static org.folio.TestConstants.NON_EXIST_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.NON_EXIST_CONFIG_X_OKAPI_TENANT;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_STATUS_TENANT_HEADER;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT_HEADER;
+import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
+import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
+import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
+import static org.folio.TestConstants.PO_ID_OPEN_TO_BE_CLOSED;
+import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITHOUT_PO_LINES;
+import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
+import static org.folio.TestConstants.PO_LINE_ID_FOR_SUCCESS_CASE;
+import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
+import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
+import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
+import static org.folio.TestConstants.X_ECHO_STATUS;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestConstants.X_OKAPI_USER_ID_WITH_ACQ_UNITS;
+import static org.folio.TestUtils.getInstanceId;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
+import static org.folio.TestUtils.verifyLocationQuantity;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.helper.InventoryInteractionTestHelper.joinExistingAndNewItems;
@@ -31,7 +73,6 @@ import static org.folio.helper.InventoryInteractionTestHelper.verifyOpenOrderPie
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
 import static org.folio.helper.PurchaseOrderHelper.OKAPI_HEADER_PERMISSIONS;
-import static org.folio.rest.core.exceptions.ErrorCodes.*;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
@@ -47,12 +88,37 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
+import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.TestUtils.getInstanceId;
-import static org.folio.TestUtils.getMinimalContentCompositePoLine;
-import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
-import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
-import static org.folio.TestUtils.verifyLocationQuantity;
+import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
+import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
+import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
+import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
+import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_MATERIAL_TYPE;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
+import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_CLOSED;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_OPEN;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
+import static org.folio.rest.core.exceptions.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_TO_BE_DELETED;
+import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
+import static org.folio.rest.core.exceptions.ErrorCodes.VENDOR_ISSUE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
+import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
 import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
@@ -102,13 +168,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,14 +201,19 @@ import org.folio.config.ApplicationConfig;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.VendorHelper;
 import org.folio.orders.utils.AcqDesiredPermissions;
-import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.finance.TransactionCollection;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -151,6 +226,7 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -161,17 +237,27 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.finance.transaction.TransactionService;
 import org.hamcrest.beans.HasPropertyWithValue;
 import org.hamcrest.core.Every;
 import org.hamcrest.core.Is;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
 import io.restassured.response.Response;
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -245,6 +331,28 @@ public class PurchaseOrdersApiTest {
 
   private static boolean runningOnOwn;
 
+  @InjectMocks
+  private EncumbranceService encumbranceService;
+  @Mock
+  private TransactionService transactionService;
+  @Mock
+  private RestClient restClient;
+
+  private RequestContext requestContext;
+  @Mock
+  private RequestEntry requestEntry;
+
+  @BeforeEach
+  public void initMocks() {
+    MockitoAnnotations.initMocks(this);
+    Context context = Vertx.vertx().getOrCreateContext();
+    Map<String, String> okapiHeaders = new HashMap<>();
+    okapiHeaders.put(OKAPI_URL, "http://localhost:" + mockPort);
+    okapiHeaders.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
+    okapiHeaders.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
+    okapiHeaders.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
+    requestContext = new RequestContext(context, okapiHeaders);
+  }
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
     if (isVerticleNotDeployed()) {
@@ -4014,9 +4122,36 @@ public class PurchaseOrdersApiTest {
   void testReopenOrderUnreleasesEncumbrancesUnlessInvoiceLineHasReleaseEncumbrance() {
     logger.info("=== Check encumbrances are unreleased when an order is reopened, except for po lines having a linked invoice line with releaseEncumbrance = true ===");
 
-    String poId = "477f9ca8-b295-11eb-8529-0242ac130003";
-    String poLineId1 = "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1";
-    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, poId).mapTo(CompositePurchaseOrder.class);
+    String purchaseOrderId = "0fb18568-cf8d-442b-b74a-cad7cfa557a0";
+    String poLineId1 = "0285a6b6-6693-4ea9-83e1-41d227063d88";
+    String transactionId = "41fe8202-f038-4000-a969-4eee74ba8735";
+    String fiscalYearId = "ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2";
+    String fundId = "a89eccf0-57a6-495e-898d-32b9b2210f2f";
+
+    List<String> transactionIds = Arrays.asList(transactionId);
+    Cost cost = new Cost().withCurrency("USD").withListUnitPrice(10.00).withQuantityElectronic(1);
+    FundDistribution fundDistribution = new FundDistribution().withFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
+      .withDistributionType(DistributionType.PERCENTAGE).withValue(100.00).withEncumbrance("eb506834-6c70-4239-8d1a-6414a5b08008");
+    CompositePoLine poLines = new CompositePoLine().withId(poLineId1)
+      .withPurchaseOrderId(purchaseOrderId).withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
+      .withCollection(true).withCost(cost).withFundDistribution(Arrays.asList(fundDistribution));
+    CompositePurchaseOrder reqData = new CompositePurchaseOrder().withId(purchaseOrderId).withApproved(true)
+      .withPoNumber("S60402").withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME)
+      .withVendor("d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1").withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
+
+    Encumbrance encumbrance = new Encumbrance().withOrderType(Encumbrance.OrderType.ONE_TIME)
+      .withStatus(Encumbrance.Status.UNRELEASED).withSourcePoLineId(poLineId1).withReEncumber(false)
+      .withSubscription(false).withSourcePurchaseOrderId(purchaseOrderId).withInitialAmountEncumbered(10.00)
+      .withAmountAwaitingPayment(0.0).withAmountExpended(0.0);
+    Metadata metadata = new Metadata().withCreatedByUserId("00000001-1111-5555-9999-999999999999")
+      .withUpdatedByUsername("00000001-1111-5555-9999-999999999999").withCreatedDate(new Date(2020, 05, 29, 11, 30))
+      .withUpdatedDate(new Date(2020, 05, 30, 11, 30));
+    Transaction transaction = new Transaction().withId(transactionId).withAmount(10.0).withSource(Transaction.Source.PO_LINE)
+      .withCurrency("USD").withToFundId(fundId).withEncumbrance(encumbrance).withFiscalYearId(fiscalYearId)
+      .withTransactionType(Transaction.TransactionType.ENCUMBRANCE).withMetadata(metadata);
+    MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLines));
+    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(reqData));
+
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
     reqData.setWorkflowStatus(WorkflowStatus.OPEN);
 
@@ -4027,7 +4162,18 @@ public class PurchaseOrdersApiTest {
     // check the order has been reopened, the first encumbrance has been unreleased but not the second one
     PurchaseOrder po = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
     assertThat(po.getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.OPEN));
-    List<Transaction> updatedTransactions = MockServer.getUpdatedTransactions();
+
+    List<Transaction> transactions = Arrays.asList(transaction);
+    TransactionCollection transactionCollection = new TransactionCollection().withTransactions(Arrays.asList(transaction)).withTotalRecords(1);
+    doAnswer(new Answer<Void>() {
+      public Void answer(InvocationOnMock invocation) {
+        Object[] args = invocation.getArguments();
+        return null;
+      }
+    }).when(transactionService).updateTransactions(transactions, requestContext);
+    doReturn(completedFuture(transactionCollection)).when(restClient).get(requestEntry, requestContext, TransactionCollection.class);
+    doReturn(completedFuture(transactions)).when(transactionService).getTransactionsByIds(transactionIds, requestContext);
+    List<Transaction> updatedTransactions = encumbranceService.getEncumbrancesByIds(transactionIds, requestContext).join();
     assertThat(updatedTransactions.size(), equalTo(1));
     Transaction updatedEncumbrance1 = updatedTransactions.get(0);
     assertThat(updatedEncumbrance1.getEncumbrance().getSourcePoLineId(), equalTo(poLineId1));

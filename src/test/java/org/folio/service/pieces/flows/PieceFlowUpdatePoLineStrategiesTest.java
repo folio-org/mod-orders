@@ -1,4 +1,4 @@
-package org.folio.service.pieces;
+package org.folio.service.pieces.flows;
 
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
@@ -14,6 +14,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategies;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 
@@ -258,13 +259,13 @@ public class PieceFlowUpdatePoLineStrategiesTest {
     //When
     PieceFlowUpdatePoLineStrategies.DELETE.updateQuantity(1, piece, poLine);
     assertNull(poLine.getCost().getQuantityElectronic());
-    assertEquals(0, poLine.getCost().getQuantityPhysical());
+    assertNull(poLine.getCost().getQuantityPhysical());
     assertEquals(Collections.emptyList(), poLine.getLocations());
   }
 
   @Test
   @DisplayName("Should delete POL location if 1 electronic piece with location to electronic pol with 1 location and same location id as in piece")
-  void elecDeleteLocationStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
+  void elecDeleteLocationStrategyShouldDecreaseIncreaseQuantityForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
@@ -277,7 +278,7 @@ public class PieceFlowUpdatePoLineStrategiesTest {
     //When
     PieceFlowUpdatePoLineStrategies.DELETE.updateQuantity(1, piece, poLine);
     assertNull(poLine.getCost().getQuantityPhysical());
-    assertEquals(0, poLine.getCost().getQuantityElectronic());
+    assertNull(poLine.getCost().getQuantityElectronic());
     assertEquals(Collections.emptyList(), poLine.getLocations());
   }
 }
