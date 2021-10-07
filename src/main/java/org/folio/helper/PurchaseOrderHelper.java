@@ -713,13 +713,14 @@ public class PurchaseOrderHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO, RequestContext requestContext) {
-
-    CompletableFuture<?>[] futures = compPO.getCompositePoLines()
-      .stream()
-      .map(line -> orderLineHelper.validateAndNormalizeISBN(line, requestContext))
-      .toArray(CompletableFuture[]::new);
-
-    return CompletableFuture.allOf(futures);
+    if (compPO.getCompositePoLines().isEmpty()){
+      return completedFuture(null);
+    }
+    return inventoryManager.getProductTypeUuidByIsbn(requestContext)
+      .thenCompose(isbnId -> CompletableFuture.allOf(compPO.getCompositePoLines().stream()
+        .filter(HelperUtils::isProductIdsExist)
+        .map(line -> orderLineHelper.validateAndNormalizeISBN(line, isbnId, requestContext))
+        .toArray(CompletableFuture[]::new)));
   }
 
   private CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO) {
