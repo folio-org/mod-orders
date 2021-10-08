@@ -19,7 +19,7 @@ This release focused on improvements in handling pieces
 * [MODORDERS-576](https://issues.folio.org/browse/MODORDERS-576) - Holding is created for piece when Create inventory is None/Instance
 * [MODORDERS-575](https://issues.folio.org/browse/MODORDERS-575) - No way to create piece for pending order with manual create piece = True
 * [MODORDERS-573](https://issues.folio.org/browse/MODORDERS-573) - Update instance matching logic
-* [MODORDERS-563](https://issues.folio.org/browse/MODORDERS-563) - Cannot delete PO Line if other PO Line on the same order is linked to an invoice line (#491) aleksandr2110* 10.09.2021, 14:57
+* [MODORDERS-563](https://issues.folio.org/browse/MODORDERS-563) - Cannot delete PO Line if other PO Line on the same order is linked to an invoice line
 * [MODORDERS-539](https://issues.folio.org/browse/MODORDERS-539) - Encumbrance not deleted when order Fund distribution is removed
 * [MODORDERS-528](https://issues.folio.org/browse/MODORDERS-528) - Trying and failing to open a PO will still create records in Inventory
 * [MODORDERS-404](https://issues.folio.org/browse/MODORDERS-404) - Orders composite crashes API crashes after loading around 10,000 open orders
