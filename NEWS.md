@@ -1,4 +1,29 @@
-## 12.2.0 - Unreleased
+## 12.3.0 - Unreleased
+
+## 12.2.0 - Released
+This release focused on improvements in handling pieces 
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.1.0...v12.2.0)
+
+### Stories
+* [MODORDERS-572](https://issues.folio.org/browse/MODORDERS-572) - Piece update/receive : support location/holding field adjustments
+* [MODORDERS-565](https://issues.folio.org/browse/MODORDERS-565) - All transaction queries should use the fiscal year id
+* [MODORDERS-538](https://issues.folio.org/browse/MODORDERS-538) - Update quantity of the Location in the POL if pieces updated/removed
+* [MODORDERS-534](https://issues.folio.org/browse/MODORDERS-534) - Define and implement business API for retrieving pieces information
+* [MODORDERS-533](https://issues.folio.org/browse/MODORDERS-533) - Remove unused InventoryManager.updateItemRecords
+* [MODORDERS-517](https://issues.folio.org/browse/MODORDERS-520) - align dependency versions affected by Inventory's Optimistic Locking
+* [MODORDERS-510](https://issues.folio.org/browse/MODORDERS-510) - Merge branch feature/UXPROD-1925 into master
+* [MODORDERS-507](https://issues.folio.org/browse/MODORDERS-507) - Update UnOpen order logic with holding ids storing
+
+### Bug Fixes
+* [MODORDERS-576](https://issues.folio.org/browse/MODORDERS-576) - Holding is created for piece when Create inventory is None/Instance
+* [MODORDERS-575](https://issues.folio.org/browse/MODORDERS-575) - No way to create piece for pending order with manual create piece = True
+* [MODORDERS-573](https://issues.folio.org/browse/MODORDERS-573) - Update instance matching logic
+* [MODORDERS-563](https://issues.folio.org/browse/MODORDERS-563) - Cannot delete PO Line if other PO Line on the same order is linked to an invoice line (#491) aleksandr2110* 10.09.2021, 14:57
+* [MODORDERS-539](https://issues.folio.org/browse/MODORDERS-539) - Encumbrance not deleted when order Fund distribution is removed
+* [MODORDERS-528](https://issues.folio.org/browse/MODORDERS-528) - Trying and failing to open a PO will still create records in Inventory
+* [MODORDERS-404](https://issues.folio.org/browse/MODORDERS-404) - Orders composite crashes API crashes after loading around 10,000 open orders
+
 
 ## 12.1.0 - Released
 
