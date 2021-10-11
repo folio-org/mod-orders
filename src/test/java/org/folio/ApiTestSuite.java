@@ -67,6 +67,8 @@ import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolverTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManagerTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowValidatorTest;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManagerTest;
+import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManagerTest;
+import org.folio.service.pieces.flows.update.PieceUpdateFlowManagerTest;
 import org.folio.service.pieces.validators.PieceValidatorUtilTest;
 import org.folio.orders.utils.PoLineCommonUtilTest;
 import org.junit.jupiter.api.AfterAll;
@@ -347,6 +349,15 @@ public class ApiTestSuite {
 
   @Nested
   class CheckinHelperTestNested extends CheckinHelperTest {
+
+  }
+  @Nested
+  class PieceUpdateFlowManagerTestNested extends PieceUpdateFlowManagerTest {
+
+  }
+
+  @Nested
+  class PieceUpdateFlowInventoryManagerTestNested extends PieceUpdateFlowInventoryManagerTest {
 
   }
 }

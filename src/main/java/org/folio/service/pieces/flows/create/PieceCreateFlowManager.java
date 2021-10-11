@@ -10,7 +10,6 @@ import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;

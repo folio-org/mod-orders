@@ -167,7 +167,6 @@ public class PieceDeleteFlowManagerTest {
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     verify(inventoryManager).deleteHolding(holdingId, true, requestContext);
-    verify(inventoryManager).deleteHolding(holdingId, true, requestContext);
     //Then
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());

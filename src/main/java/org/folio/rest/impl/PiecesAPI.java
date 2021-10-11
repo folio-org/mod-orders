@@ -17,6 +17,7 @@ import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceService;
+import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -38,6 +39,8 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   private PieceCreateFlowManager pieceCreateFlowManager;
   @Autowired
   private PieceDeleteFlowManager pieceDeleteFlowManager;
+  @Autowired
+  private PieceUpdateFlowManager pieceUpdateFlowManager;
 
   public PiecesAPI() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -77,7 +80,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       piece.setId(pieceId);
     }
 
-    pieceService.updatePieceRecord(piece, new RequestContext(vertxContext, okapiHeaders))
+    pieceUpdateFlowManager.updatePiece(piece, createItem, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
