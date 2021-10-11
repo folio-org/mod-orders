@@ -71,6 +71,7 @@ import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategies;
 import org.folio.service.pieces.flows.create.PieceCreateFlowValidator;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
+import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.titles.TitlesService;
 import org.springframework.context.annotation.Bean;
@@ -431,9 +432,14 @@ public class ApplicationConfig {
   @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,
     ProtectionService protectionService, PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
     InventoryManager inventoryManager, ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
-    PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver) {
+    PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager) {
     return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService, purchaseOrderService, purchaseOrderLineService,
-      inventoryManager, receivingEncumbranceStrategy, pieceFlowUpdatePoLineStrategyResolver);
+      inventoryManager, receivingEncumbranceStrategy, pieceFlowUpdatePoLineStrategyResolver, pieceUpdateFlowInventoryManager);
+  }
+
+  @Bean PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager(TitlesService titlesService,
+    PieceUpdateInventoryService pieceUpdateInventoryService, InventoryManager inventoryManager) {
+    return new PieceUpdateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryManager);
   }
 
   @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,

@@ -34,10 +34,13 @@ public class PieceUpdateFlowManager {
   private final InventoryManager inventoryManager;
   private final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
   private final PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver;
+  private final PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager;
 
   public PieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
     PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
-    ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver) {
+    ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
+    PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver,
+    PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager) {
     this.pieceStorageService = pieceStorageService;
     this.pieceService = pieceService;
     this.protectionService = protectionService;
@@ -46,6 +49,7 @@ public class PieceUpdateFlowManager {
     this.inventoryManager = inventoryManager;
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
     this.pieceFlowUpdatePoLineStrategyResolver = pieceFlowUpdatePoLineStrategyResolver;
+    this.pieceUpdateFlowInventoryManager = pieceUpdateFlowInventoryManager;
   }
   // Flow to update piece
   // 1. Before update, get piece by id from storage and store receiving status
@@ -57,41 +61,24 @@ public class PieceUpdateFlowManager {
     pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
       .thenCompose(pieceFromStorage -> purchaseOrderLineService.getOrderLineById(pieceToUpdate.getPoLineId(), requestContext)
         .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-          .thenAccept(purchaseOrder -> holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine).withPieceFromStorage(pieceFromStorage)))
+          .thenAccept(purchaseOrder -> holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine)).withPieceFromStorage(pieceFromStorage))
         ))
       .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), UPDATE, requestContext))
-      .thenCompose(v -> inventoryManager.updateItemWithPoLineId(holder.getPieceToUpdate().getItemId(), holder.getPieceToUpdate().getPoLineId(), requestContext))
-      .thenAccept(vVoid ->
-        pieceStorageService.getPieceById(holder.getPieceToUpdate().getId(), requestContext).thenAccept(pieceStorage -> {
-            Piece.ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
-            pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext)
-              .thenAccept(aVoid -> updatePoLine(holder, requestContext))
-              .thenAccept(future::complete)
-              .thenAccept(afterUpdate -> {
-
-                JsonObject messageToEventBus = new JsonObject();
-                messageToEventBus.put("poLineIdUpdate", holder.getPieceToUpdate().getPoLineId());
-
-                Piece.ReceivingStatus receivingStatusUpdate = holder.getPieceToUpdate().getReceivingStatus();
-                logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
-                logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
-
-                if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
-                  pieceService.receiptConsistencyPiecePoLine(messageToEventBus, requestContext);
-                }
-              })
-              .exceptionally(e -> {
-                logger.error("Error updating piece by id to storage {}", holder.getPieceToUpdate().getId(), e);
-                future.completeExceptionally(e);
-                return null;
-              });
-          })
-          .exceptionally(e -> {
-            logger.error("Error getting piece by id from storage {}", holder.getPieceToUpdate().getId(), e);
-            future.completeExceptionally(e);
-            return null;
-          })
-      )
+      .thenCompose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
+      .thenCompose(vVoid -> updatePoLine(holder, requestContext))
+      .thenAccept(afterUpdate -> {
+        JsonObject messageToEventBus = new JsonObject();
+        messageToEventBus.put("poLineIdUpdate", holder.getPieceToUpdate().getPoLineId());
+        Piece.ReceivingStatus receivingStatusStorage = holder.getPieceFromStorage().getReceivingStatus();
+        Piece.ReceivingStatus receivingStatusUpdate = holder.getPieceToUpdate().getReceivingStatus();
+        logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
+        logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
+        if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
+          pieceService.receiptConsistencyPiecePoLine(messageToEventBus, requestContext);
+        }
+      })
+      .thenCompose(aVoid -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext))
+      .thenAccept(future::complete)
       .exceptionally(t -> {
         logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause());
         future.completeExceptionally(t);
@@ -101,22 +88,41 @@ public class PieceUpdateFlowManager {
   }
 
   private CompletableFuture<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
-    if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems()) ) {
+    if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) &&
+            !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems()) &&
+                      isLocationUpdated(holder)) {
       return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(poLineUpdateQuantity(holder))
         .thenCompose(aHolder -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(),
-          holder.getPurchaseOrderToSave(), requestContext))
+          holder.getOriginPurchaseOrder(), requestContext))
         .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext)));
     }
     return CompletableFuture.completedFuture(null);
   }
 
   private PieceUpdateHolder poLineUpdateQuantity(PieceUpdateHolder holder) {
-    PieceFlowUpdatePoLineKey key = new PieceFlowUpdatePoLineKey().withIsPackage(holder.getPoLineToSave().getIsPackage())
+    PieceFlowUpdatePoLineKey keyDelete = new PieceFlowUpdatePoLineKey().withIsPackage(holder.getPoLineToSave().getIsPackage())
       .withOrderWorkFlowStatus(holder.getPurchaseOrderToSave().getWorkflowStatus())
-      .withPieceFlowType(PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_UPDATE_FLOW);
-    pieceFlowUpdatePoLineStrategyResolver.resolve(key).ifPresent(strategy -> {
+      .withPieceFlowType(PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_DELETE_FLOW);
+    pieceFlowUpdatePoLineStrategyResolver.resolve(keyDelete).ifPresent(strategy -> {
+      strategy.updateQuantity(1, holder.getPieceFromStorage(), holder.getPoLineToSave());
+    });
+
+    PieceFlowUpdatePoLineKey keyAdd = new PieceFlowUpdatePoLineKey().withIsPackage(holder.getPoLineToSave().getIsPackage())
+      .withOrderWorkFlowStatus(holder.getPurchaseOrderToSave().getWorkflowStatus())
+      .withPieceFlowType(PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_CREATE_FLOW);
+    pieceFlowUpdatePoLineStrategyResolver.resolve(keyAdd).ifPresent(strategy -> {
       strategy.updateQuantity(1, holder.getPieceToUpdate(), holder.getPoLineToSave());
     });
     return holder;
+  }
+
+  private boolean isLocationUpdated(PieceUpdateHolder pieceUpdateHolder) {
+    Piece pieceToUpdate = pieceUpdateHolder.getPieceToUpdate();
+    Piece pieceFromStorage = pieceUpdateHolder.getPieceFromStorage();
+    return (pieceToUpdate.getLocationId() != null  && pieceFromStorage.getHoldingId() != null) ||
+           (pieceToUpdate.getHoldingId() != null && pieceFromStorage.getHoldingId() != null &&
+                          !pieceToUpdate.getHoldingId().equals(pieceFromStorage.getHoldingId())) ||
+           (pieceToUpdate.getLocationId() != null  && pieceFromStorage.getLocationId() != null &&
+                          !pieceToUpdate.getLocationId().equals(pieceFromStorage.getLocationId()));
   }
 }

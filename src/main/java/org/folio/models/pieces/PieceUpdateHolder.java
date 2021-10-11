@@ -10,11 +10,11 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import java.util.List;
 
 public class PieceUpdateHolder {
+  private boolean createItem;
   private Piece pieceToUpdate;
   private Piece pieceFromStorage;
   private CompositePurchaseOrder originPurchaseOrder;
   private CompositePurchaseOrder purchaseOrderToSave;
-  private boolean createItem;
 
   public PieceUpdateHolder(Piece pieceToUpdate, boolean createItem) {
     this.pieceToUpdate = pieceToUpdate;
@@ -31,9 +31,16 @@ public class PieceUpdateHolder {
     this.purchaseOrderToSave = HelperUtils.clone(CompositePurchaseOrder.class, this.originPurchaseOrder);
   }
 
-  public void shallowCopy(PieceUpdateHolder sourcePieceUpdateHolder) {
+  public PieceUpdateHolder(PurchaseOrder originPurchaseOrder, PoLine originPoLine, boolean createItem) {
+    this.originPurchaseOrder = HelperUtils.convertToCompositePurchaseOrder(originPurchaseOrder, List.of(originPoLine));
+    this.purchaseOrderToSave = HelperUtils.clone(CompositePurchaseOrder.class, this.originPurchaseOrder);
+    this.createItem = createItem;
+  }
+
+  public PieceUpdateHolder shallowCopy(PieceUpdateHolder sourcePieceUpdateHolder) {
     this.originPurchaseOrder = sourcePieceUpdateHolder.getOriginPurchaseOrder();
     this.purchaseOrderToSave = sourcePieceUpdateHolder.getPurchaseOrderToSave();
+    return this;
   }
 
   public CompositePurchaseOrder getOriginPurchaseOrder() {

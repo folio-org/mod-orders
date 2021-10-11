@@ -204,10 +204,10 @@ public class PieceServiceTest {
     @Bean PieceService piecesService(PieceStorageService pieceStorageService, ProtectionService protectionService,
                                 PurchaseOrderLineService purchaseOrderLineService,
                                 InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-                                ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PurchaseOrderService purchaseOrderService,
+                                PurchaseOrderService purchaseOrderService,
                                 PieceUpdateInventoryService pieceUpdateInventoryService) {
       return spy(new PieceService(pieceStorageService, protectionService, purchaseOrderLineService,
-                                    inventoryManager, receiptStatusPublisher, receivingEncumbranceStrategy,
+                                    inventoryManager, receiptStatusPublisher,
                                     purchaseOrderService, pieceUpdateInventoryService));
     }
   }
