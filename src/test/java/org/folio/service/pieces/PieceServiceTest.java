@@ -20,7 +20,6 @@ import static org.mockito.Mockito.verify;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -125,7 +124,7 @@ public class PieceServiceTest {
     doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
     //When
-    pieceService.updatePieceRecord(piece, requestContext).join();
+    pieceService.openOrderUpdatePieceRecord(piece, requestContext).join();
     //Then
     verify(receiptStatusPublisher, times(0)).sendEvent(eq(MessageAddress.RECEIPT_STATUS), any(JsonObject.class), eq(requestContext));
   }
@@ -144,7 +143,7 @@ public class PieceServiceTest {
     doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
     //When
-    pieceService.updatePieceRecord(piece, requestContext).join();
+    pieceService.openOrderUpdatePieceRecord(piece, requestContext).join();
     //Then
     verify(receiptStatusPublisher, times(1)).sendEvent(eq(MessageAddress.RECEIPT_STATUS), any(JsonObject.class), eq(requestContext));
   }
@@ -205,10 +204,10 @@ public class PieceServiceTest {
     @Bean PieceService piecesService(PieceStorageService pieceStorageService, ProtectionService protectionService,
                                 PurchaseOrderLineService purchaseOrderLineService,
                                 InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-                                ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PurchaseOrderService purchaseOrderService,
+                                PurchaseOrderService purchaseOrderService,
                                 PieceUpdateInventoryService pieceUpdateInventoryService) {
       return spy(new PieceService(pieceStorageService, protectionService, purchaseOrderLineService,
-                                    inventoryManager, receiptStatusPublisher, receivingEncumbranceStrategy,
+                                    inventoryManager, receiptStatusPublisher,
                                     purchaseOrderService, pieceUpdateInventoryService));
     }
   }

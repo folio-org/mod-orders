@@ -26,11 +26,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.InventoryException;
-import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -38,7 +38,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
 import org.folio.service.ProtectionService;
-import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
@@ -55,20 +54,17 @@ public class PieceService {
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final InventoryManager inventoryManager;
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
-  private final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
 
   public PieceService(PieceStorageService pieceStorageService, ProtectionService protectionService,
                       PurchaseOrderLineService purchaseOrderLineService,
                       InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-                      ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PurchaseOrderService purchaseOrderService,
-                      PieceUpdateInventoryService pieceUpdateInventoryService) {
+                      PurchaseOrderService purchaseOrderService, PieceUpdateInventoryService pieceUpdateInventoryService) {
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.inventoryManager = inventoryManager;
     this.receiptStatusPublisher = receiptStatusPublisher;
-    this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
     this.purchaseOrderService = purchaseOrderService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
   }
@@ -86,7 +82,7 @@ public class PieceService {
   // 1. Before update, get piece by id from storage and store receiving status
   // 2. Update piece with new content and complete future
   // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
-  public CompletableFuture<Void> updatePieceRecord(Piece piece, RequestContext requestContext) {
+  public CompletableFuture<Void> openOrderUpdatePieceRecord(Piece piece, RequestContext requestContext) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     getOrderByPoLineId(piece.getPoLineId(), requestContext)
       .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
@@ -175,7 +171,7 @@ public class PieceService {
         List<Piece> onlyLocationChangedPieces = getPiecesWithChangedLocation(compPOL, piecesWithLocationToProcess, existingPieces);
         if ((onlyLocationChangedPieces.size() == piecesWithLocationToProcess.size()) && !isOpenOrderFlow) {
           return allOf(onlyLocationChangedPieces.stream()
-                    .map(piece -> updatePieceRecord(piece, requestContext)).toArray(CompletableFuture[]::new));
+                    .map(piece -> openOrderUpdatePieceRecord(piece, requestContext)).toArray(CompletableFuture[]::new));
         } else {
           piecesToCreate = new ArrayList<>(piecesWithLocationToProcess);
           piecesToCreate.addAll(piecesWithHoldingToProcess);
@@ -365,7 +361,7 @@ public class PieceService {
       .collect(groupingBy(Piece::getLocationId, groupingBy(Piece::getFormat, summingInt(q -> 1))));
   }
 
-  private void receiptConsistencyPiecePoLine(JsonObject jsonObj, RequestContext requestContext) {
+  public void receiptConsistencyPiecePoLine(JsonObject jsonObj, RequestContext requestContext) {
     logger.debug("Sending event to verify receipt status");
 
     receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, jsonObj, requestContext);
