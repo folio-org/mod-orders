@@ -618,7 +618,7 @@ public class PurchaseOrdersApiTest {
 
     final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    assertThat(response.getErrors(), hasSize(11));
+    assertThat(response.getErrors(), hasSize(10));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)

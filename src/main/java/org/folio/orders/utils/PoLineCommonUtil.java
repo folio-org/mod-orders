@@ -2,6 +2,7 @@ package org.folio.orders.utils;
 
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
 
 import java.util.Collections;
@@ -55,16 +56,24 @@ public final class PoLineCommonUtil {
     return compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE;
   }
 
-  public static boolean isHoldingsUpdateRequired(Eresource eresource, Physical physical) {
-    return isHoldingUpdateRequiredForEresource(eresource) || isHoldingUpdateRequiredForPhysical(physical);
+  public static boolean isHoldingsUpdateRequired(CompositePoLine compPOL) {
+    return isHoldingUpdateRequiredForPhysical(compPOL) || isHoldingUpdateRequiredForEresource(compPOL);
   }
 
-  public static boolean isHoldingUpdateRequiredForPhysical(Physical physical) {
+  public static boolean isHoldingUpdateRequiredForPhysical(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    if (!(format == PHYSICAL_RESOURCE || format == OTHER || format == P_E_MIX))
+      return false;
+    Physical physical = compPOL.getPhysical();
     return physical != null && (physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
       || physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
 
-  public static boolean isHoldingUpdateRequiredForEresource(Eresource eresource) {
+  public static boolean isHoldingUpdateRequiredForEresource(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    if (!(format == ELECTRONIC_RESOURCE || format == P_E_MIX))
+      return false;
+    Eresource eresource = compPOL.getEresource();
     return eresource != null && (eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
       || eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
@@ -74,6 +83,9 @@ public final class PoLineCommonUtil {
   }
 
   public static boolean isItemsUpdateRequiredForEresource(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    if (!(format == ELECTRONIC_RESOURCE || format == P_E_MIX))
+      return false;
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return false;
     }
@@ -83,6 +95,9 @@ public final class PoLineCommonUtil {
   }
 
   public static boolean isItemsUpdateRequiredForPhysical(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    if (!(format == PHYSICAL_RESOURCE || format == OTHER || format == P_E_MIX))
+      return false;
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return false;
     }
@@ -92,11 +107,15 @@ public final class PoLineCommonUtil {
   }
 
   public static boolean isOnlyInstanceUpdateRequired(CompositePoLine compPOL) {
-    boolean isPhysicalInstance = Optional.ofNullable(compPOL.getPhysical())
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    boolean checkPhysical = format == PHYSICAL_RESOURCE || format == OTHER || format == P_E_MIX;
+    boolean checkElectronic = format == ELECTRONIC_RESOURCE || format == P_E_MIX;
+
+    boolean isPhysicalInstance = checkPhysical && Optional.ofNullable(compPOL.getPhysical())
       .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE)
       .orElse(false);
 
-    boolean isElectronicInstance = Optional.ofNullable(compPOL.getEresource())
+    boolean isElectronicInstance = checkElectronic && Optional.ofNullable(compPOL.getEresource())
       .map(elec -> elec.getCreateInventory() == Eresource.CreateInventory.INSTANCE)
       .orElse(false);
 
@@ -104,8 +123,8 @@ public final class PoLineCommonUtil {
   }
 
   public static boolean isHoldingCreationRequiredForLocation(CompositePoLine compPOL, Location location) {
-    return (isHoldingUpdateRequiredForPhysical(compPOL.getPhysical()) && ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
-      || (isHoldingUpdateRequiredForEresource(compPOL.getEresource()) && ObjectUtils.defaultIfNull(location.getQuantityElectronic(), 0) > 0);
+    return (isHoldingUpdateRequiredForPhysical(compPOL) && ObjectUtils.defaultIfNull(location.getQuantityPhysical(), 0) > 0)
+      || (isHoldingUpdateRequiredForEresource(compPOL) && ObjectUtils.defaultIfNull(location.getQuantityElectronic(), 0) > 0);
   }
 
   private static int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {

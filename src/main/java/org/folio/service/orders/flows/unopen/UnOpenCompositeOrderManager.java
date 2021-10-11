@@ -117,7 +117,7 @@ public class UnOpenCompositeOrderManager {
       });
     } else if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
       return processInventoryWithItems(compPOL, rqContext);
-    } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
+    } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
       return processInventoryOnlyWithHolding(compPOL, rqContext);
     }
     return completedFuture(null);
