@@ -156,8 +156,9 @@ public class PieceDeleteFlowManagerTest {
     doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(completedFuture(item)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
+
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).deleteHolding(holdingId, true, requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).deleteHoldingById(holdingId, true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
 
     //When
@@ -166,7 +167,7 @@ public class PieceDeleteFlowManagerTest {
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    verify(inventoryManager).deleteHolding(holdingId, true, requestContext);
+    verify(inventoryManager).deleteHoldingById(holdingId, true, requestContext);
     //Then
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
@@ -206,7 +207,7 @@ public class PieceDeleteFlowManagerTest {
     doReturn(completedFuture(item)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).deleteHolding(holdingId, true, requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).deleteHoldingById(holdingId, true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
     //When
     pieceDeleteFlowManager.deleteItem(piece.getId(), true, requestContext).get();
@@ -214,7 +215,7 @@ public class PieceDeleteFlowManagerTest {
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    verify(inventoryManager).deleteHolding(holdingId, true, requestContext);
+    verify(inventoryManager).deleteHoldingById(holdingId, true, requestContext);
     verify(inventoryManager).deleteItem(itemId, true, requestContext);
 
     verify(receivingEncumbranceStrategy, times(0)).processEncumbrances(holder.getPurchaseOrderToSave(),
@@ -253,13 +254,13 @@ public class PieceDeleteFlowManagerTest {
     doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).deleteHolding(holdingId, true, requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).deleteHoldingById(holdingId, true, requestContext);
     //When
     pieceDeleteFlowManager.deleteItem(piece.getId(), true, requestContext).get();
     //Then
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     verify(inventoryManager, times(0)).deleteItem(itemId, true, requestContext);
-    verify(inventoryManager, times(0)).deleteHolding(holdingId, true, requestContext);
+    verify(inventoryManager, times(0)).deleteHoldingById(holdingId, true, requestContext);
     verify(receivingEncumbranceStrategy, times(1)).processEncumbrances(any(CompositePurchaseOrder.class),
                                                             any(CompositePurchaseOrder.class), eq(requestContext));
     verify(purchaseOrderLineService, times(1)).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
@@ -297,7 +298,7 @@ public class PieceDeleteFlowManagerTest {
     doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).deleteHolding(piece.getHoldingId(), true, requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).deleteHoldingById(piece.getHoldingId(), true, requestContext);
     doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
     doReturn(completedFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLine(any(CompositePoLine.class), eq(requestContext));
@@ -306,7 +307,7 @@ public class PieceDeleteFlowManagerTest {
     doReturn(completedFuture(null)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).deleteHolding(holdingId, true, requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).deleteHoldingById(holdingId, true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
     doNothing().when(holder).shallowCopy(holder);
     //When
@@ -314,14 +315,14 @@ public class PieceDeleteFlowManagerTest {
     //Then
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     verify(inventoryManager, times(0)).deleteItem(itemId, true, requestContext);
-    verify(inventoryManager).deleteHolding(holdingId, true, requestContext);
+    verify(inventoryManager).deleteHoldingById(holdingId, true, requestContext);
 
     verify(receivingEncumbranceStrategy, times(1)).processEncumbrances(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
     verify(purchaseOrderLineService, times(1)).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
     verify(purchaseOrderLineService, times(1)).updateOrderLine(any(CompositePoLine.class), eq(requestContext));
     verify(pieceFlowUpdatePoLineStrategyResolver, times(1)).resolve(any());
     verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    verify(inventoryManager, times(1)).deleteHolding(piece.getHoldingId(), true, requestContext);
+    verify(inventoryManager, times(1)).deleteHoldingById(piece.getHoldingId(), true, requestContext);
   }
 
   private static class ContextConfiguration {

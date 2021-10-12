@@ -11,6 +11,7 @@ import java.util.List;
 
 public class PieceUpdateHolder {
   private boolean createItem;
+  private String instanceId;
   private Piece pieceToUpdate;
   private Piece pieceFromStorage;
   private CompositePurchaseOrder originPurchaseOrder;
@@ -69,6 +70,15 @@ public class PieceUpdateHolder {
 
   public PieceUpdateHolder withPieceFromStorage(Piece pieceFromStorage) {
     this.pieceFromStorage = pieceFromStorage;
+    return this;
+  }
+
+  public String getInstanceId() {
+    return this.instanceId;
+  }
+
+  public PieceUpdateHolder withInstanceId(String instanceId) {
+    this.instanceId = instanceId;
     return this;
   }
 

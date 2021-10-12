@@ -74,7 +74,7 @@ public class PieceService {
       return getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
         .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
                                                .thenApply(v -> order))
-        .thenCompose(order -> pieceUpdateInventoryService.updateInventory(order.getCompositePoLines().get(0), piece, requestContext))
+        .thenCompose(order -> pieceUpdateInventoryService.openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, requestContext))
         .thenCompose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
 

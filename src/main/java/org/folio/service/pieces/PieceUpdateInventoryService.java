@@ -39,7 +39,7 @@ public class PieceUpdateInventoryService {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public CompletableFuture<Void> updateInventory(CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
+  public CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
         .thenCompose(title -> handleInstanceRecord(title, requestContext))
@@ -54,7 +54,7 @@ public class PieceUpdateInventoryService {
               piece.setLocationId(null);
               piece.setHoldingId(holdingId);
               return holdingId;
-            });
+          });
         })
         .thenCompose(holdingId -> createItemRecord(compPOL, holdingId, requestContext))
         .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId));

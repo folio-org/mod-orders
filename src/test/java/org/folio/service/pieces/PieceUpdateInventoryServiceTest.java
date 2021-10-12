@@ -238,7 +238,7 @@ public class PieceUpdateInventoryServiceTest {
     Piece piece = createPieceWithLocationId(line, title);
     doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId(), requestContext);
     //When
-    pieceUpdateInventoryService.updateInventory(line, piece, requestContext).get();
+    pieceUpdateInventoryService.openOrderUpdateInventory(line, piece, requestContext).get();
     //Then
     assertEquals(title.getId(), piece.getTitleId());
   }
@@ -289,7 +289,7 @@ public class PieceUpdateInventoryServiceTest {
 
     doReturn(completedFuture(itemId)).when(inventoryManager).createInstanceRecord(eq(title), eq(requestContext));
     //When
-    pieceUpdateInventoryService.updateInventory(line, piece, requestContext).get();
+    pieceUpdateInventoryService.openOrderUpdateInventory(line, piece, requestContext).get();
     //Then
     assertEquals(piece.getItemId(), itemId);
     assertEquals(piece.getPoLineId(), line.getId());
@@ -321,7 +321,7 @@ public class PieceUpdateInventoryServiceTest {
     doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).createItemRecord(line, holdingId, requestContext);
 
     //When
-    pieceUpdateInventoryService.updateInventory(line, piece, requestContext).get();
+    pieceUpdateInventoryService.openOrderUpdateInventory(line, piece, requestContext).get();
     //Then
     assertEquals(holdingId, piece.getHoldingId());
     assertEquals(title.getId(), piece.getTitleId());

@@ -370,9 +370,11 @@ public class InventoryManager {
   }
 
   public CompletableFuture<JsonObject> getHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId)
-      .withQueryParameter(LANG, "en");
-    return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
+    if (StringUtils.isNotEmpty(holdingId)) {
+      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId).withQueryParameter(LANG, "en");
+      return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
+    }
+    return completedFuture(new JsonObject());
   }
 
   public CompletableFuture<JsonObject> getHoldingById(String holdingId, RequestContext requestContext) {
@@ -915,14 +917,16 @@ public class InventoryManager {
   }
 
   public CompletableFuture<Void> updateItemWithPoLineId(String itemId, String poLineId, RequestContext requestContext) {
-    if (itemId == null || poLineId == null) return CompletableFuture.completedFuture(null);
+    if (itemId == null || poLineId == null) {
+      return CompletableFuture.completedFuture(null);
+    }
 
-    return getItemRecordsByIds(ImmutableList.of(itemId), requestContext)
-      .thenCompose(items -> {
-        if (items.isEmpty() || poLineId.equals(items.get(0).getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))) {
+    return getItemRecordById(itemId, true, requestContext)
+      .thenCompose(item -> {
+        if (item == null || item.isEmpty() || poLineId.equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))) {
           return CompletableFuture.completedFuture(null);
         } else {
-          return updateItem(items.get(0).put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId), requestContext);
+          return updateItem(item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId), requestContext);
         }
       });
   }
@@ -958,9 +962,13 @@ public class InventoryManager {
     return restClient.post(requestEntry, instanceRecJson, PostResponseType.UUID,  String.class, requestContext);
   }
 
-  public CompletableFuture<Void> deleteHolding(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId).withQueryParameter(LANG, "en");
-    return restClient.delete(requestEntry, skipNotFoundException, requestContext);
+  public CompletableFuture<Void> deleteHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
+    if (StringUtils.isNotEmpty(holdingId)) {
+      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
+                                                .withId(holdingId).withQueryParameter(LANG, "en");
+      return restClient.delete(requestEntry, skipNotFoundException, requestContext);
+    }
+    return completedFuture(null);
   }
 
   public CompletableFuture<List<JsonObject>> getItemsByPoLineIdsAndStatus(List<String> poLineIds, String itemStatus, RequestContext requestContext) {

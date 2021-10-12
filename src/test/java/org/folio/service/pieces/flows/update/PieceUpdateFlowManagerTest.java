@@ -292,12 +292,12 @@ public class PieceUpdateFlowManagerTest {
 
     @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,
                         ProtectionService protectionService, PurchaseOrderService purchaseOrderService,
-                        PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
-                        ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver,
+                        PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
+                        PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver,
                         PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager) {
       return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService,
-        purchaseOrderService, purchaseOrderLineService, inventoryManager,
-        receivingEncumbranceStrategy, pieceFlowUpdatePoLineStrategyResolver, pieceUpdateFlowInventoryManager);
+                        purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy,
+                        pieceFlowUpdatePoLineStrategyResolver, pieceUpdateFlowInventoryManager);
     }
   }
 }

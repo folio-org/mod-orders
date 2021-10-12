@@ -31,13 +31,12 @@ public class PieceUpdateFlowManager {
   private final ProtectionService protectionService;
   private final PurchaseOrderService purchaseOrderService;
   private final PurchaseOrderLineService purchaseOrderLineService;
-  private final InventoryManager inventoryManager;
   private final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
   private final PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver;
   private final PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager;
 
   public PieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
-    PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
+    PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
     ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
     PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver,
     PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager) {
@@ -46,7 +45,6 @@ public class PieceUpdateFlowManager {
     this.protectionService = protectionService;
     this.purchaseOrderService = purchaseOrderService;
     this.purchaseOrderLineService = purchaseOrderLineService;
-    this.inventoryManager = inventoryManager;
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
     this.pieceFlowUpdatePoLineStrategyResolver = pieceFlowUpdatePoLineStrategyResolver;
     this.pieceUpdateFlowInventoryManager = pieceUpdateFlowInventoryManager;
@@ -93,7 +91,7 @@ public class PieceUpdateFlowManager {
                       isLocationUpdated(holder)) {
       return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(poLineUpdateQuantity(holder))
         .thenCompose(aHolder -> receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(),
-          holder.getOriginPurchaseOrder(), requestContext))
+                                              holder.getPurchaseOrderToSave(), requestContext))
         .thenAccept(v -> purchaseOrderLineService.updateOrderLine(holder.getPoLineToSave(), requestContext)));
     }
     return CompletableFuture.completedFuture(null);

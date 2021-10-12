@@ -153,32 +153,16 @@ public class PieceDeleteFlowManager {
     }
   }
 
-  private CompletableFuture<Void> deleteHoldingById(String holdingId, RequestContext requestContext) {
-    if (StringUtils.isNotEmpty(holdingId)) {
-      return inventoryManager.deleteHolding(holdingId, true, requestContext);
-    } else {
-      return completedFuture(null);
-    }
-  }
-
-  private CompletableFuture<JsonObject> getHoldingById(String holdingId, RequestContext requestContext) {
-    if (StringUtils.isNotEmpty(holdingId)) {
-      return inventoryManager.getHoldingById(holdingId, true, requestContext);
-    } else {
-      return completedFuture(null);
-    }
-  }
-
   private CompletableFuture<Pair<String, String>> deleteHolding(PieceDeletionHolder holder, RequestContext rqContext) {
     if (holder.isDeleteHolding() && holder.getPieceToDelete().getHoldingId() != null) {
       String holdingId = holder.getPieceToDelete().getHoldingId();
-      return getHoldingById(holdingId, rqContext).thenCompose(holding -> {
+      return inventoryManager.getHoldingById(holdingId, true, rqContext).thenCompose(holding -> {
         if (holding != null && !holding.isEmpty()) {
           return inventoryManager.getItemsByHoldingId(holdingId, rqContext)
             .thenCompose(items -> {
               if (CollectionUtils.isEmpty(items)) {
                 String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-                return deleteHoldingById(holdingId, rqContext)
+                return inventoryManager.deleteHoldingById(holdingId, true, rqContext)
                             .thenApply(v -> Pair.of(holdingId, permanentLocationId));
               }
               return completedFuture(null);

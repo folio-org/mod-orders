@@ -207,7 +207,7 @@ public class UnOpenCompositeOrderManager {
         deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(holdingId, rqContext)
           .thenCompose(items -> {
             if (items.isEmpty()) {
-              return inventoryManager.deleteHolding(holdingId, true, rqContext)
+              return inventoryManager.deleteHoldingById(holdingId, true, rqContext)
                                      .thenApply(v -> Pair.of(holdingId, effectiveLocationId));
             }
             return CompletableFuture.completedFuture(null);
@@ -236,7 +236,7 @@ public class UnOpenCompositeOrderManager {
           deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(holdingId, rqContext)
             .thenCompose(items -> {
               if (items.isEmpty()) {
-                return inventoryManager.deleteHolding(holdingId, true, rqContext).thenApply(v -> Pair.of(holdingId, permanentLocationId));
+                return inventoryManager.deleteHoldingById(holdingId, true, rqContext).thenApply(v -> Pair.of(holdingId, permanentLocationId));
               }
               return CompletableFuture.completedFuture(null);
             }));
