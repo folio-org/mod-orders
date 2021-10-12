@@ -68,8 +68,6 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.pieces.PieceStorageService;
 
-import com.google.common.collect.ImmutableList;
-
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;

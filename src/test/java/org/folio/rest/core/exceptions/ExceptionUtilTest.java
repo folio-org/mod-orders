@@ -3,7 +3,6 @@ package org.folio.rest.core.exceptions;
 import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.POSTGRE_SQL_ERROR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
 
 import org.folio.rest.jaxrs.model.Errors;
 import org.junit.jupiter.api.Assertions;

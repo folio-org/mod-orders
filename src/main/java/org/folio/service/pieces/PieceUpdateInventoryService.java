@@ -1,6 +1,7 @@
 package org.folio.service.pieces;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
@@ -19,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.ID;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 
 public class PieceUpdateInventoryService {
   private static final Logger logger = LogManager.getLogger(PieceUpdateInventoryService.class);
@@ -132,5 +134,25 @@ public class PieceUpdateInventoryService {
       itemFuture.completeExceptionally(e);
     }
     return itemFuture;
+  }
+
+  public CompletableFuture<Pair<String, String>> deleteHoldingById(String holdingId, RequestContext rqContext) {
+    if (holdingId != null) {
+      return inventoryManager.getHoldingById(holdingId, true, rqContext).thenCompose(holding -> {
+        if (holding != null && !holding.isEmpty()) {
+          return inventoryManager.getItemsByHoldingId(holdingId, rqContext)
+            .thenCompose(items -> {
+              if (CollectionUtils.isEmpty(items)) {
+                String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
+                return inventoryManager.deleteHoldingById(holdingId, true, rqContext)
+                  .thenApply(v -> Pair.of(holdingId, permanentLocationId));
+              }
+              return completedFuture(null);
+            });
+        }
+        return completedFuture(null);
+      });
+    }
+    return completedFuture(null);
   }
 }

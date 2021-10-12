@@ -1,7 +1,6 @@
 package org.folio.service.pieces.flows.create;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -84,33 +83,11 @@ public class PieceCreateFlowInventoryManager {
       return completedFuture(piece.getItemId());
     }
     if (createItem && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL) && piece.getHoldingId() != null) {
-        return createItemRecord(compPOL, piece.getHoldingId(), requestContext);
+        return pieceUpdateInventoryService.createItemRecord(compPOL, piece.getHoldingId(), requestContext);
     }
     return CompletableFuture.completedFuture(null);
   }
 
-  /**
-   * Return id of created  Item
-   */
-  public CompletableFuture<String> createItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
-    final int ITEM_QUANTITY = 1;
-    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
-    CompletableFuture<String> itemFuture = new CompletableFuture<>();
-    try {
-        if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
-          inventoryManager.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
-            .thenApply(idS -> itemFuture.complete(idS.get(0)))
-            .exceptionally(itemFuture::completeExceptionally);
-        } else {
-          inventoryManager.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
-            .thenApply(idS -> itemFuture.complete(idS.get(0)))
-            .exceptionally(itemFuture::completeExceptionally);
-        }
-    } catch (Exception e) {
-      itemFuture.completeExceptionally(e);
-    }
-    return itemFuture;
-  }
 
   private CompletableFuture<String> nonPackageUpdateTitleWithInstance(CompositePoLine poLine, String titleId, RequestContext requestContext) {
     if (poLine.getInstanceId() == null && !PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {

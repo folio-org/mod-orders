@@ -77,7 +77,6 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.jupiter.api.AfterAll;
@@ -533,6 +532,38 @@ public class InventoryManagerTest {
     assertEquals(error, cause.getError());
   }
 
+  @Test
+  void shouldRetrieveItemIfHoldingIdProvidedAndHoldingFound() {
+    String holdingId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holdingId);
+    doReturn(completedFuture(holding)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+    JsonObject holdingIdAct = inventoryManager.getHoldingById(holdingId, true, requestContext).join();
+
+    assertThat(holding, equalTo(holdingIdAct));
+    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+  }
+
+  @Test
+  void shouldRetrieveItemIfHoldingIdProvidedAndHoldingFoundAndNotSkipNotFound() {
+    String holdingId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holdingId);
+    doReturn(completedFuture(holding)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(false), eq(requestContext));
+    JsonObject holdingIdAct = inventoryManager.getHoldingById(holdingId, requestContext).join();
+
+    assertThat(holding, equalTo(holdingIdAct));
+    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(false), eq(requestContext));
+  }
+
+  @Test
+  void shouldRetrieveEmptyJsonObjectItemIfHoldingIdIsNotProvidedAndHoldingFound() {
+    JsonObject holding = new JsonObject();
+    JsonObject holdingIdAct = inventoryManager.getHoldingById(null, true, requestContext).join();
+
+    assertThat(holding, equalTo(holdingIdAct));
+    verify(restClient, times(0)).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+  }
   /**
    * Define unit test specific beans to override actual ones
    */

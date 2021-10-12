@@ -1,8 +1,6 @@
 package org.folio.service.pieces.flows.update;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
-import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
@@ -10,8 +8,6 @@ import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_L
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
@@ -63,7 +59,7 @@ public class PieceUpdateFlowInventoryManager {
       .thenCompose(instanceId -> handleHolding(holder, requestContext))
       .thenCompose(holdingId -> handleItem(holder, requestContext))
       .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
-      .thenCompose(aVoid -> deleteOldHolding(holder, requestContext))
+      .thenCompose(aVoid -> pieceUpdateInventoryService.deleteHoldingById(holder.getPieceFromStorage().getHoldingId(), requestContext))
       .thenAccept(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE));
   }
 
@@ -74,7 +70,7 @@ public class PieceUpdateFlowInventoryManager {
       .thenCompose(title -> handleHolding(holder, requestContext))
       .thenCompose(holdingId -> handleItem(holder, requestContext))
       .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
-      .thenCompose(aVoid -> deleteOldHolding(holder, requestContext))
+      .thenCompose(aVoid -> pieceUpdateInventoryService.deleteHoldingById(holder.getPieceFromStorage().getHoldingId(), requestContext))
       .thenAccept(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE));
   }
 
@@ -108,7 +104,7 @@ public class PieceUpdateFlowInventoryManager {
       .thenCompose(jsonItem -> {
         if (holder.isCreateItem() && pieceToUpdate.getHoldingId() != null && (jsonItem == null || jsonItem.isEmpty()) &&
                           PieceCreateFlowValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
-          return createItemRecord(poLineToSave, pieceToUpdate.getHoldingId(), requestContext);
+          return pieceUpdateInventoryService.createItemRecord(poLineToSave, pieceToUpdate.getHoldingId(), requestContext);
         } else {
           return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate, requestContext)
                       .thenCompose(aVoid -> inventoryManager.updateItem(jsonItem, requestContext)
@@ -125,29 +121,6 @@ public class PieceUpdateFlowInventoryManager {
         });
        itemP.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
       });
-  }
-
-  /**
-   * Return id of created  Item
-   */
-  public CompletableFuture<String> createItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
-    final int ITEM_QUANTITY = 1;
-    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
-    CompletableFuture<String> itemFuture = new CompletableFuture<>();
-    try {
-      if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
-        inventoryManager.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
-          .thenApply(idS -> itemFuture.complete(idS.get(0)))
-          .exceptionally(itemFuture::completeExceptionally);
-      } else {
-        inventoryManager.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
-          .thenApply(idS -> itemFuture.complete(idS.get(0)))
-          .exceptionally(itemFuture::completeExceptionally);
-      }
-    } catch (Exception e) {
-      itemFuture.completeExceptionally(e);
-    }
-    return itemFuture;
   }
 
   private CompletableFuture<String> nonPackageUpdateTitleWithInstance(PieceUpdateHolder holder, RequestContext requestContext) {
@@ -183,27 +156,4 @@ public class PieceUpdateFlowInventoryManager {
         titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(aVoid -> title.getInstanceId())
       );
   }
-
-  private CompletableFuture<Pair<String, String>> deleteOldHolding(PieceUpdateHolder holder, RequestContext rqContext) {
-    if (holder.getPieceFromStorage().getHoldingId() != null) {
-      String holdingId = holder.getPieceFromStorage().getHoldingId();
-      return inventoryManager.getHoldingById(holdingId, true, rqContext)
-                  .thenCompose(holding -> {
-                    if (holding != null && !holding.isEmpty()) {
-                      return inventoryManager.getItemsByHoldingId(holdingId, rqContext)
-                        .thenCompose(items -> {
-                          if (CollectionUtils.isEmpty(items)) {
-                            String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-                            return inventoryManager.deleteHoldingById(holdingId, true, rqContext)
-                              .thenApply(v -> Pair.of(holdingId, permanentLocationId));
-                          }
-                          return completedFuture(null);
-                        });
-                  }
-                  return completedFuture(null);
-      });
-    }
-    return completedFuture(null);
-  }
-
 }

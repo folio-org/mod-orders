@@ -19,7 +19,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
 import org.folio.ApiTestSuite;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.rest.core.models.RequestContext;
@@ -126,6 +125,8 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager).createMissingElectronicItems(compPOL, holdingId, 1, requestContext);
     doReturn(completedFuture(title)).when(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
     doReturn(completedFuture(holdingId)).when(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
+    doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingById(piece.getHoldingId(), requestContext);
+    doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).createItemRecord(compPOL, holdingId, requestContext);
 
     PieceCreationHolder holder = new PieceCreationHolder(piece, true);
     holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
@@ -138,7 +139,7 @@ public class PieceCreateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
     verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
-    verify(inventoryManager).createMissingElectronicItems(compPOL, holdingId, 1, requestContext);
+    verify(pieceUpdateInventoryService).createItemRecord(compPOL, holdingId, requestContext);
   }
 
   @Test

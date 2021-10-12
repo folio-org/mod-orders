@@ -424,9 +424,11 @@ public class ApplicationConfig {
 
   @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
     PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
-    ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver) {
+    ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver,
+    PieceUpdateInventoryService pieceUpdateInventoryService) {
     return new PieceDeleteFlowManager(pieceStorageService, protectionService, purchaseOrderService, purchaseOrderLineService,
-                                        inventoryManager, receivingEncumbranceStrategy, pieceFlowUpdatePoLineStrategyResolver);
+                                        inventoryManager, receivingEncumbranceStrategy,
+                                        pieceFlowUpdatePoLineStrategyResolver, pieceUpdateInventoryService);
   }
 
   @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,

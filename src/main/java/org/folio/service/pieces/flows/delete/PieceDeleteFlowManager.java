@@ -2,7 +2,6 @@ package org.folio.service.pieces.flows.delete;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
-import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 
@@ -32,6 +31,7 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey;
 import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
 
@@ -47,11 +47,13 @@ public class PieceDeleteFlowManager {
   private final InventoryManager inventoryManager;
   private final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
   private final PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver;
-
+  private final PieceUpdateInventoryService pieceUpdateInventoryService;
 
   public PieceDeleteFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
     PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
-    ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver) {
+    ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
+    PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver,
+    PieceUpdateInventoryService pieceUpdateInventoryService) {
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
     this.purchaseOrderService = purchaseOrderService;
@@ -59,6 +61,7 @@ public class PieceDeleteFlowManager {
     this.inventoryManager = inventoryManager;
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
     this.pieceFlowUpdatePoLineStrategyResolver = pieceFlowUpdatePoLineStrategyResolver;
+    this.pieceUpdateInventoryService = pieceUpdateInventoryService;
   }
 
   public CompletableFuture<Void> deleteItem(String pieceId, boolean deleteHolding, RequestContext requestContext) {
@@ -116,7 +119,12 @@ public class PieceDeleteFlowManager {
 
   private CompletableFuture<Pair<String, String>> processInventory(PieceDeletionHolder holder, RequestContext rqContext) {
     return deleteItem(holder, rqContext)
-               .thenCompose(aVoid -> deleteHolding(holder, rqContext));
+               .thenCompose(aVoid -> {
+                 if (holder.isDeleteHolding()) {
+                   pieceUpdateInventoryService.deleteHoldingById(holder.getPieceToDelete().getHoldingId(), rqContext);
+                 }
+                 return completedFuture(null);
+               });
   }
 
   private CompletableFuture<Void> deleteItem(PieceDeletionHolder holder, RequestContext rqContext) {
@@ -151,26 +159,5 @@ public class PieceDeleteFlowManager {
     } else {
       return completedFuture(null);
     }
-  }
-
-  private CompletableFuture<Pair<String, String>> deleteHolding(PieceDeletionHolder holder, RequestContext rqContext) {
-    if (holder.isDeleteHolding() && holder.getPieceToDelete().getHoldingId() != null) {
-      String holdingId = holder.getPieceToDelete().getHoldingId();
-      return inventoryManager.getHoldingById(holdingId, true, rqContext).thenCompose(holding -> {
-        if (holding != null && !holding.isEmpty()) {
-          return inventoryManager.getItemsByHoldingId(holdingId, rqContext)
-            .thenCompose(items -> {
-              if (CollectionUtils.isEmpty(items)) {
-                String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-                return inventoryManager.deleteHoldingById(holdingId, true, rqContext)
-                            .thenApply(v -> Pair.of(holdingId, permanentLocationId));
-              }
-              return completedFuture(null);
-            });
-        }
-        return completedFuture(null);
-      });
-    }
-    return completedFuture(null);
   }
 }
