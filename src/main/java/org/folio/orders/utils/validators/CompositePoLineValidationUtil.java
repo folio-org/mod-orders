@@ -140,12 +140,12 @@ public final class CompositePoLineValidationUtil {
 
   private static boolean isLocationsPhysicalQuantityNotValid(CompositePoLine compPOL) {
     int physicalQuantity = HelperUtils.getPhysicalLocationsQuantity(compPOL.getLocations());
-    return (isHoldingUpdateRequiredForPhysical(compPOL.getPhysical()) || physicalQuantity > 0) && (physicalQuantity != getPhysicalCostQuantity(compPOL));
+    return (isHoldingUpdateRequiredForPhysical(compPOL) || physicalQuantity > 0) && (physicalQuantity != getPhysicalCostQuantity(compPOL));
   }
 
   private static boolean isLocationsEresourceQuantityNotValid(CompositePoLine compPOL) {
     int electronicQuantity = HelperUtils.getElectronicLocationsQuantity(compPOL.getLocations());
-    return (isHoldingUpdateRequiredForEresource(compPOL.getEresource()) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(compPOL));
+    return (isHoldingUpdateRequiredForEresource(compPOL) || electronicQuantity > 0) && (electronicQuantity != getElectronicCostQuantity(compPOL));
   }
 
   private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {

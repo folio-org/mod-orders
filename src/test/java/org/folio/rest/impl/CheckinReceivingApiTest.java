@@ -79,6 +79,7 @@ import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.helper.AbstractHelper;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
@@ -794,6 +795,7 @@ public class CheckinReceivingApiTest {
           .getPoLineId()))
       .findFirst()
       .get();
+    CompositePoLine compPOL = PoLineCommonUtil.convertToCompositePoLine(poline);
 
     // get processed pieces for receiving
     PieceCollection pieces = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json"))
@@ -818,7 +820,7 @@ public class CheckinReceivingApiTest {
           .equals(piece.getId())
             && !receivedItem.getLocationId()
               .equals(piece.getLocationId())
-            && isHoldingsUpdateRequired(piece, poline)) {
+            && isHoldingsUpdateRequired(piece, compPOL)) {
           expectedHoldings.add(getInstanceId(poline) + receivedItem.getLocationId());
         }
       }
@@ -826,11 +828,11 @@ public class CheckinReceivingApiTest {
     assertEquals(expectedHoldings.size(), getCreatedHoldings().size());
   }
 
-  private boolean isHoldingsUpdateRequired(org.folio.rest.acq.model.Piece piece, PoLine poLine) {
+  private boolean isHoldingsUpdateRequired(org.folio.rest.acq.model.Piece piece, CompositePoLine compPOL) {
     if (piece.getFormat() == org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC) {
-     return isHoldingUpdateRequiredForEresource(poLine.getEresource());
+     return isHoldingUpdateRequiredForEresource(compPOL);
     } else {
-      return isHoldingUpdateRequiredForPhysical(poLine.getPhysical());
+      return isHoldingUpdateRequiredForPhysical(compPOL);
     }
   }
 
