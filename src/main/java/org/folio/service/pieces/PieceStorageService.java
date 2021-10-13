@@ -10,6 +10,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -22,6 +23,7 @@ public class PieceStorageService {
   private static final Logger logger = LogManager.getLogger(PieceStorageService.class);
 
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
+  private static final String PIECES_BY_HOLDING_ID_QUERY = "holdingId==%s";
   private static final String PIECE_STORAGE_ENDPOINT = resourcesPath(PIECES_STORAGE);
   private static final String PIECE_STORAGE_BY_ID_ENDPOINT = PIECE_STORAGE_ENDPOINT + "/{id}";
 
@@ -88,10 +90,19 @@ public class PieceStorageService {
     return getPieces(Integer.MAX_VALUE, 0, query, requestContext);
   }
 
+  public CompletableFuture<List<Piece>> getPiecesByHoldingId(String holdingId, RequestContext requestContext) {
+    if (holdingId != null) {
+      String query = String.format(PIECES_BY_HOLDING_ID_QUERY, holdingId);
+      return getPieces(Integer.MAX_VALUE, 0, query, requestContext).thenApply(PieceCollection::getPieces);
+    }
+    return CompletableFuture.completedFuture(Collections.emptyList());
+  }
+
   public CompletableFuture<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query)
       .withOffset(offset)
       .withLimit(limit);
     return restClient.get(requestEntry, requestContext, PieceCollection.class);
   }
+
 }

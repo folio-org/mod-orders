@@ -26,7 +26,7 @@ public final class TestConstants {
   public static final String EXISTED_ID = "763643c2-0f80-4908-b18b-780d3e8cd136";
   public static final String ID_BAD_FORMAT = "123-45-678-90-abc";
   public static final String ID_DOES_NOT_EXIST = "d25498e7-3ae6-45fe-9612-ec99e2700d2f";
-  protected static final String ID_ORDER_TR_SUMMARY_EXIST = "11111111-1111-2222-8888-999999999999";
+  public static final String ID_ORDER_TR_SUMMARY_EXIST = "11111111-1111-2222-8888-999999999999";
   public static final String ID_FOR_INTERNAL_SERVER_ERROR = "168f8a86-d26c-406e-813f-c7527f241ac3";
   public static final String ID_FOR_PIECES_INTERNAL_SERVER_ERROR = "93c5bb58-9429-4fa7-b06d-a829bdf16813";
   public static final String PO_ID_GET_LINES_INTERNAL_SERVER_ERROR = "bad500bb-bbbb-500b-bbbb-bbbbbbbbbbbb";

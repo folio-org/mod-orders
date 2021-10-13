@@ -1,5 +1,6 @@
 package org.folio.service.pieces;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -29,10 +30,13 @@ public class PieceUpdateInventoryService {
 
   private final TitlesService titlesService;
   private final InventoryManager inventoryManager;
+  private final PieceStorageService pieceStorageService;
 
-  public PieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager) {
+  public PieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
+                                      PieceStorageService pieceStorageService) {
     this.titlesService = titlesService;
     this.inventoryManager = inventoryManager;
+    this.pieceStorageService = pieceStorageService;
   }
 
   /**
@@ -138,20 +142,28 @@ public class PieceUpdateInventoryService {
 
   public CompletableFuture<Pair<String, String>> deleteHoldingById(String holdingId, RequestContext rqContext) {
     if (holdingId != null) {
-      return inventoryManager.getHoldingById(holdingId, true, rqContext).thenCompose(holding -> {
-        if (holding != null && !holding.isEmpty()) {
-          return inventoryManager.getItemsByHoldingId(holdingId, rqContext)
-            .thenCompose(items -> {
-              if (CollectionUtils.isEmpty(items)) {
-                String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-                return inventoryManager.deleteHoldingById(holdingId, true, rqContext)
-                  .thenApply(v -> Pair.of(holdingId, permanentLocationId));
-              }
-              return completedFuture(null);
-            });
-        }
-        return completedFuture(null);
-      });
+      return inventoryManager.getHoldingById(holdingId, true, rqContext)
+                  .thenCompose(holding -> {
+                      if (holding != null && !holding.isEmpty()) {
+                          return pieceStorageService.getPiecesByHoldingId(holdingId, rqContext)
+                                  .thenCombine(inventoryManager.getItemsByHoldingId(holdingId, rqContext),
+                                    (existingPieces, existingItems) -> {
+                                      if (CollectionUtils.isEmpty(existingPieces) && CollectionUtils.isEmpty(existingItems)) {
+                                        return Pair.of(true, holding);
+                                      }
+                                      return Pair.of(false, new JsonObject());
+                                    });
+                      }
+                      return completedFuture(Pair.of(false, new JsonObject()));
+                  })
+                  .thenCompose(isUpdatePossibleVsHolding -> {
+                    if (isUpdatePossibleVsHolding.getKey() && !isUpdatePossibleVsHolding.getValue().isEmpty()) {
+                      String permanentLocationId = isUpdatePossibleVsHolding.getValue().getString(HOLDING_PERMANENT_LOCATION_ID);
+                      return inventoryManager.deleteHoldingById(holdingId, true, rqContext)
+                                              .thenApply(v -> Pair.of(holdingId, permanentLocationId));
+                    }
+                    return completedFuture(null);
+                  });
     }
     return completedFuture(null);
   }

@@ -52,9 +52,9 @@ public class PieceUpdateFlowManager {
   // 1. Before update, get piece by id from storage and store receiving status
   // 2. Update piece with new content and complete future
   // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
-  public CompletableFuture<Void> updatePiece(Piece pieceToUpdate, boolean createItem, RequestContext requestContext) {
+  public CompletableFuture<Void> updatePiece(Piece pieceToUpdate, boolean createItem, boolean deleteHolding, RequestContext requestContext) {
     CompletableFuture<Void> future = new FolioVertxCompletableFuture<>(requestContext.getContext());
-    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, createItem);
+    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, createItem, deleteHolding);
     pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
       .thenCompose(pieceFromStorage -> purchaseOrderLineService.getOrderLineById(pieceToUpdate.getPoLineId(), requestContext)
         .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)

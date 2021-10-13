@@ -8,6 +8,7 @@ import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_L
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
@@ -59,7 +60,7 @@ public class PieceUpdateFlowInventoryManager {
       .thenCompose(instanceId -> handleHolding(holder, requestContext))
       .thenCompose(holdingId -> handleItem(holder, requestContext))
       .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
-      .thenCompose(aVoid -> pieceUpdateInventoryService.deleteHoldingById(holder.getPieceFromStorage().getHoldingId(), requestContext))
+      .thenCompose(aVoid -> deleteHolding(holder, requestContext))
       .thenAccept(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE));
   }
 
@@ -70,10 +71,16 @@ public class PieceUpdateFlowInventoryManager {
       .thenCompose(title -> handleHolding(holder, requestContext))
       .thenCompose(holdingId -> handleItem(holder, requestContext))
       .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
-      .thenCompose(aVoid -> pieceUpdateInventoryService.deleteHoldingById(holder.getPieceFromStorage().getHoldingId(), requestContext))
+      .thenCompose(aVoid -> deleteHolding(holder, requestContext))
       .thenAccept(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE));
   }
 
+  private CompletableFuture<Pair<String, String>> deleteHolding(PieceUpdateHolder holder, RequestContext requestContext) {
+    if (holder.isDeleteHolding()) {
+      return pieceUpdateInventoryService.deleteHoldingById(holder.getPieceFromStorage().getHoldingId(), requestContext);
+    }
+    return completedFuture(null);
+  }
   private CompletableFuture<Location> handleHolding(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
@@ -100,17 +107,17 @@ public class PieceUpdateFlowInventoryManager {
   private CompletableFuture<String> handleItem(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
-    return inventoryManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext)
-      .thenCompose(jsonItem -> {
-        if (holder.isCreateItem() && pieceToUpdate.getHoldingId() != null && (jsonItem == null || jsonItem.isEmpty()) &&
-                          PieceCreateFlowValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
+    if (PieceCreateFlowValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
+      return inventoryManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext).thenCompose(jsonItem -> {
+        if (holder.isCreateItem() && (jsonItem == null || jsonItem.isEmpty()) && pieceToUpdate.getHoldingId() != null) {
           return pieceUpdateInventoryService.createItemRecord(poLineToSave, pieceToUpdate.getHoldingId(), requestContext);
         } else {
-          return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate, requestContext)
-                      .thenCompose(aVoid -> inventoryManager.updateItem(jsonItem, requestContext)
-                      .thenApply(item -> jsonItem.getString(ID)));
+          return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate, requestContext).thenCompose(
+            aVoid -> inventoryManager.updateItem(jsonItem, requestContext).thenApply(item -> jsonItem.getString(ID)));
         }
       });
+    }
+    return completedFuture(null);
   }
 
   private CompletableFuture<Void> updateItemWithFields(JsonObject item, CompositePoLine compPOL, Piece piece, RequestContext requestContext) {

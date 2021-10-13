@@ -11,15 +11,17 @@ import java.util.List;
 
 public class PieceUpdateHolder {
   private boolean createItem;
+  private boolean deleteHolding;
   private String instanceId;
   private Piece pieceToUpdate;
   private Piece pieceFromStorage;
   private CompositePurchaseOrder originPurchaseOrder;
   private CompositePurchaseOrder purchaseOrderToSave;
 
-  public PieceUpdateHolder(Piece pieceToUpdate, boolean createItem) {
+  public PieceUpdateHolder(Piece pieceToUpdate, boolean createItem, boolean deleteHolding) {
     this.pieceToUpdate = pieceToUpdate;
     this.createItem = createItem;
+    this.deleteHolding = deleteHolding;
   }
 
   public PieceUpdateHolder(CompositePurchaseOrder originPurchaseOrder) {
@@ -32,10 +34,11 @@ public class PieceUpdateHolder {
     this.purchaseOrderToSave = HelperUtils.clone(CompositePurchaseOrder.class, this.originPurchaseOrder);
   }
 
-  public PieceUpdateHolder(PurchaseOrder originPurchaseOrder, PoLine originPoLine, boolean createItem) {
+  public PieceUpdateHolder(PurchaseOrder originPurchaseOrder, PoLine originPoLine, boolean createItem, boolean deleteHolding) {
     this.originPurchaseOrder = HelperUtils.convertToCompositePurchaseOrder(originPurchaseOrder, List.of(originPoLine));
     this.purchaseOrderToSave = HelperUtils.clone(CompositePurchaseOrder.class, this.originPurchaseOrder);
     this.createItem = createItem;
+    this.deleteHolding = deleteHolding;
   }
 
   public PieceUpdateHolder shallowCopy(PieceUpdateHolder sourcePieceUpdateHolder) {
@@ -86,4 +89,7 @@ public class PieceUpdateHolder {
     return createItem;
   }
 
+  public boolean isDeleteHolding() {
+    return deleteHolding;
+  }
 }

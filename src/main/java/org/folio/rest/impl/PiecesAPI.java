@@ -74,13 +74,13 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
-  @Override public void putOrdersPiecesById(String pieceId, boolean createItem, String lang, Piece piece,
+  @Override public void putOrdersPiecesById(String pieceId, boolean createItem, boolean deleteHolding, String lang, Piece piece,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     if (StringUtils.isEmpty(piece.getId())) {
       piece.setId(pieceId);
     }
 
-    pieceUpdateFlowManager.updatePiece(piece, createItem, new RequestContext(vertxContext, okapiHeaders))
+    pieceUpdateFlowManager.updatePiece(piece, createItem, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }

@@ -10,6 +10,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.service.inventory.InventoryManager.ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +71,8 @@ public class PieceUpdateInventoryServiceTest {
   private InventoryManager inventoryManager;
   @Autowired
   private TitlesService titlesService;
+  @Autowired
+  private  PieceStorageService pieceStorageService;
   @Mock
   private Map<String, String> okapiHeadersMock;
   @Spy
@@ -327,6 +331,69 @@ public class PieceUpdateInventoryServiceTest {
     assertEquals(title.getId(), piece.getTitleId());
   }
 
+  @Test
+  void shouldNotDeleteHoldingIfHoldingIdIsNull() {
+    pieceUpdateInventoryService.deleteHoldingById(null, requestContext);
+
+    verify(inventoryManager, times(0)).getHoldingById(null , true, requestContext);
+    verify(inventoryManager, times(0)).deleteHoldingById(null , true, requestContext);
+  }
+
+  @Test
+  void shouldNotDeleteHoldingIfHoldingIdIsNotNullButNotFoundInTheDB() {
+    String holdingId = UUID.randomUUID().toString();
+    doReturn(completedFuture(null)).when(inventoryManager).getHoldingById(holdingId , true, requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingById(holdingId, requestContext);
+
+    verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+  }
+
+
+  @Test
+  void shouldDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndNoPiecesAndItems() {
+    String holdingId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holding);
+
+    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(completedFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingById(holdingId, requestContext);
+
+    verify(inventoryManager, times(1)).deleteHoldingById(holdingId , true, requestContext);
+  }
+
+  @Test
+  void shouldNoDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndPiecesExistAndNoItems() {
+    String holdingId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holding);
+    Piece piece = new Piece().withId(UUID.randomUUID().toString());
+    doReturn(completedFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(completedFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingById(holdingId, requestContext);
+
+    verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+  }
+
+  @Test
+  void shouldNoDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndNoPiecesAndItemsExist() {
+    String holdingId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holding);
+    JsonObject item = new JsonObject().put(ID, UUID.randomUUID().toString());
+    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingById(holdingId, requestContext);
+
+    verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+  }
 
   private Piece createPieceWithLocationId(CompositePoLine line, Title title) {
     return new Piece().withId(UUID.randomUUID().toString())
@@ -356,8 +423,14 @@ public class PieceUpdateInventoryServiceTest {
     }
 
     @Bean
-    PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager) {
-      return spy(new PieceUpdateInventoryService(titlesService, inventoryManager));
+    PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
+    }
+
+    @Bean
+    PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
+                                PieceStorageService pieceStorageService) {
+      return spy(new PieceUpdateInventoryService(titlesService, inventoryManager, pieceStorageService));
     }
   }
 }
