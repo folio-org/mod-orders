@@ -101,7 +101,7 @@ public class PieceUpdateInventoryService {
   public CompletableFuture<String> handleHoldingsRecord(final CompositePoLine compPOL, Location location, String instanceId,
     RequestContext requestContext) {
     try {
-      if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
+      if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
         return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
       } else {
         return CompletableFuture.completedFuture(null);

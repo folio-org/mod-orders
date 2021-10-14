@@ -271,9 +271,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, Location location, CompositePoLine poLine) {
     boolean isHoldingUpdateRequired;
     if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine.getEresource());
+      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine);
     } else {
-      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine.getPhysical());
+      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine);
     }
     return isHoldingUpdateRequired && (StringUtils.isNotEmpty(location.getLocationId()) || StringUtils.isNotEmpty(location.getHoldingId()));
   }

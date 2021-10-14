@@ -69,6 +69,7 @@ public class PoLineCommonUtilTest {
     //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     order.getCompositePoLines().forEach(line -> {
+      line.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
       line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
       line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
       line.setPhysical(null);

@@ -54,9 +54,9 @@ public class PieceCreateFlowValidator {
 
   public static boolean isCreateHoldingForPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
     Piece.Format pieceFormat = pieceToCreate.getFormat();
-    return (pieceFormat == Piece.Format.ELECTRONIC && PoLineCommonUtil.isHoldingUpdateRequiredForEresource(originPoLine.getEresource())) ||
+    return (pieceFormat == Piece.Format.ELECTRONIC && PoLineCommonUtil.isHoldingUpdateRequiredForEresource(originPoLine)) ||
               ((pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER)
-                        && PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(originPoLine.getPhysical()));
+                        && PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(originPoLine));
   }
 
   public static boolean isCreateItemForPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {

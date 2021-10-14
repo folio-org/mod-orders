@@ -181,7 +181,7 @@ public class InventoryManager {
     boolean isItemsUpdateRequired = PoLineCommonUtil.isItemsUpdateRequired(compPOL);
 
     // Group all locations by location id because the holding should be unique for different locations
-    if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL.getEresource(), compPOL.getPhysical())) {
+    if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
       compPOL.getLocations().forEach(location -> {
           itemsPerHolding.add(
             // Search for or create a new holdings record and then create items for it if required
