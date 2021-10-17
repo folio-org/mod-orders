@@ -1,11 +1,8 @@
 package org.folio.service.pieces;
 
-import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
 
 import java.util.List;
 import java.util.Objects;

@@ -2,7 +2,6 @@ package org.folio.service.pieces.flows;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.pieces.BasePieceFlowHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;

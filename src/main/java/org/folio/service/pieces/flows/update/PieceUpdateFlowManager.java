@@ -73,7 +73,7 @@ public class PieceUpdateFlowManager {
   }
 
   protected CompletableFuture<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
-    if (holder.getOriginPoLine().getIsPackage() && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems())) {
+    if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems())) {
       return updatePoLineService.updatePoLine(holder, requestContext);
     }
     return CompletableFuture.completedFuture(null);

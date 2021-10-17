@@ -47,6 +47,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   }
 
   @Override
+  @Validate
   public void getOrdersPieces(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceStorageService.getPieces(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
@@ -54,7 +55,9 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
-  @Override public void postOrdersPieces(boolean createItem, String lang, Piece entity, Map<String, String> okapiHeaders,
+  @Override
+  @Validate
+  public void postOrdersPieces(boolean createItem, String lang, Piece entity, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceCreateFlowManager.createPiece(entity, createItem, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(piece -> {
@@ -67,6 +70,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   }
 
   @Override
+  @Validate
   public void getOrdersPiecesById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceStorageService.getPieceById(id, new RequestContext(vertxContext, okapiHeaders))
@@ -74,7 +78,9 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
-  @Override public void putOrdersPiecesById(String pieceId, boolean createItem, boolean deleteHolding, String lang, Piece piece,
+  @Override
+  @Validate
+  public void putOrdersPiecesById(String pieceId, boolean createItem, boolean deleteHolding, String lang, Piece piece,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     if (StringUtils.isEmpty(piece.getId())) {
       piece.setId(pieceId);

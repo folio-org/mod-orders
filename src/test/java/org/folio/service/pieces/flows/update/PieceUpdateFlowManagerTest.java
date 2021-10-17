@@ -36,7 +36,6 @@ import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
@@ -154,9 +153,56 @@ public class PieceUpdateFlowManagerTest {
     PieceUpdateHolder holder = pieceUpdateHolderCapture.getValue();
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
-    verify(pieceStorageService).updatePiece(eq(pieceToUpdate), eq(requestContext));
-    verify(basePieceFlowHolderBuilder, times(0)).updateHolderWithOrderInformation(holder, requestContext);
-    verify(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
+    verify(pieceUpdateFlowPoLineService, times(0)).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    verify(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
+    verify(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
+  }
+
+  @Test
+  void shouldNotUpdateLineQuantityIfManualPieceCreateTrueAndShouldRunProcessInventory() throws ExecutionException, InterruptedException {
+    String orderId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String holdingIdTpUpdate = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    String itemId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    JsonObject item = new JsonObject().put(ID, itemId);
+    String pieceId = UUID.randomUUID().toString();
+    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
+    JsonObject holding = new JsonObject().put(ID, holdingId);
+    holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
+    Piece pieceFromStorage = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
+      .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
+    Piece pieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
+      .withHoldingId(holdingIdTpUpdate).withFormat(Piece.Format.ELECTRONIC);
+    Cost cost = new Cost().withQuantityElectronic(1);
+    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    PoLine poLine = new PoLine().withIsPackage(false).withCheckinItems(true).withPurchaseOrderId(orderId).withId(lineId)
+      .withLocations(List.of(loc)).withCost(cost);
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+
+    doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
+    doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
+    final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
+    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+      PieceUpdateHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withOrderInformation(purchaseOrder, poLine);
+      return completedFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(completedFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
+    doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
+    doReturn(completedFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    //When
+    pieceUpdateFlowManager.updatePiece(pieceToUpdate, true, true, requestContext).get();
+    //Then
+    PieceUpdateHolder holder = pieceUpdateHolderCapture.getValue();
+    assertNull(poLine.getLocations().get(0).getLocationId());
+    assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
+    verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
+    verify(pieceUpdateFlowPoLineService, times(0)).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     verify(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
     verify(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
   }
@@ -198,177 +244,21 @@ public class PieceUpdateFlowManagerTest {
       return completedFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
 
-    final ArgumentCaptor<CompositePoLine> poLineToUpdateCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-        doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
+    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(completedFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(pieceUpdateHolderCapture.capture(), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
 
     //When
     pieceUpdateFlowManager.updatePiece(incomingPieceToUpdate, true, true, requestContext).get();
     //Then
-//    CompositePoLine poLineToUpdate = poLineToUpdateCapture.getValue();
-      Piece pieceToUpdate = pieceToUpdateCapture.getValue();
-//    assertNull(pieceToUpdate.getLocationId());
-//    assertEquals(holdingIdToUpdate, pieceToUpdate.getHoldingId());
-//    Location locationToSave = poLineToUpdate.getLocations().get(0);
-//    Cost costToSave = poLineToUpdate.getCost();
-//    assertNull(locationToSave.getLocationId());
-//    assertEquals(1, locationToSave.getQuantityElectronic());
-//    assertEquals(1, locationToSave.getQuantity());
-//    assertEquals(pieceToUpdate.getHoldingId(), locationToSave.getHoldingId());
-//    assertEquals(1, costToSave.getQuantityElectronic());
-//    assertNull(costToSave.getQuantityPhysical());
-//
-//    assertNull(poLine.getLocations().get(0).getLocationId());
-//    assertEquals(oldHoldingId, poLine.getLocations().get(0).getHoldingId());
-    verify(pieceStorageService).updatePiece(eq(pieceToUpdate), eq(requestContext));
+    Piece pieceToUpdate = pieceToUpdateCapture.getValue();
+    PieceUpdateHolder pieceUpdateHolder = pieceUpdateHolderCapture.getValue();
+
     verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
     verify(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     verify(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
     verify(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
   }
-//
-//  @Test
-//  void shouldUpdateLineQuantityAndAddNewLocationWithHoldingIfPoLineIsNotPackageAndHoldingReferenceChangedAndShouldRunProcessInventory() throws ExecutionException, InterruptedException {
-//    String orderId = UUID.randomUUID().toString();
-//    String oldHoldingId = UUID.randomUUID().toString();
-//    String holdingIdToUpdate = UUID.randomUUID().toString();
-//    String lineId = UUID.randomUUID().toString();
-//    String titleId = UUID.randomUUID().toString();
-//    String itemId = UUID.randomUUID().toString();
-//    String locationId = UUID.randomUUID().toString();
-//    String pieceId = UUID.randomUUID().toString();
-//    JsonObject item = new JsonObject().put(ID, itemId);
-//    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
-//    JsonObject holding = new JsonObject().put(ID, oldHoldingId);
-//    holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
-//    Piece pieceFromStorage = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-//      .withHoldingId(oldHoldingId).withFormat(Piece.Format.PHYSICAL);
-//    Piece incomingPieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-//      .withHoldingId(holdingIdToUpdate).withFormat(Piece.Format.PHYSICAL);
-//    Cost cost = new Cost().withQuantityPhysical(2);
-//    Location loc = new Location().withHoldingId(oldHoldingId).withQuantityPhysical(2).withQuantity(2);
-//    PoLine poLine = new PoLine().withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
-//                                .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-//                                .withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
-//                                .withLocations(List.of(loc)).withCost(cost);
-//    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-//
-//    doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(incomingPieceToUpdate.getId(), requestContext);
-//    final ArgumentCaptor<Piece> pieceToUpdateCapture = ArgumentCaptor.forClass(Piece.class);
-//    doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdateCapture.capture(), eq(requestContext));
-//    doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
-//    doReturn(completedFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(eq(incomingPieceToUpdate.getPoLineId()), eq(requestContext));
-//
-//    final ArgumentCaptor<CompositePoLine> poLineToUpdateCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-//    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLine(poLineToUpdateCapture.capture(), eq(requestContext));
-//
-//    doReturn(completedFuture(purchaseOrder)).when(purchaseOrderService).getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext);
-//    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-//    doReturn(completedFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
-//    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(any(CompositePurchaseOrder.class),
-//      any(CompositePurchaseOrder.class), eq(requestContext));
-//
-//    //When
-//    pieceUpdateFlowManager.updatePiece(incomingPieceToUpdate, true, true, requestContext).get();
-//    //Then
-//    CompositePoLine poLineToUpdate = poLineToUpdateCapture.getValue();
-//    Piece pieceToUpdate = pieceToUpdateCapture.getValue();
-//    assertNull(pieceToUpdate.getLocationId());
-//    assertEquals(holdingIdToUpdate, pieceToUpdate.getHoldingId());
-//    Location oldLocationToSave = poLineToUpdate.getLocations().stream()
-//                                  .filter(loca -> loca.getHoldingId().equals(oldHoldingId)).findAny().get();
-//    Location newLocationToSave = poLineToUpdate.getLocations().stream()
-//                                  .filter(loca -> loca.getHoldingId().equals(holdingIdToUpdate)).findAny().get();
-//    Cost costToSave = poLineToUpdate.getCost();
-//    assertNull(oldLocationToSave.getLocationId());
-//    assertEquals(1, oldLocationToSave.getQuantityPhysical());
-//    assertNull(oldLocationToSave.getQuantityElectronic());
-//    assertEquals(1, oldLocationToSave.getQuantity());
-//    assertEquals(oldHoldingId, oldLocationToSave.getHoldingId());
-//    assertNull(newLocationToSave.getQuantityElectronic());
-//    assertEquals(1, newLocationToSave.getQuantityPhysical());
-//    assertEquals(1, newLocationToSave.getQuantity());
-//    assertEquals(holdingIdToUpdate, newLocationToSave.getHoldingId());
-//    assertNull(newLocationToSave.getQuantityElectronic());
-//    assertEquals(2, costToSave.getQuantityPhysical());
-//    assertNull(costToSave.getQuantityElectronic());
-//
-//    verify(pieceStorageService).updatePiece(eq(pieceToUpdate), eq(requestContext));
-//    verify(receivingEncumbranceStrategy, times(1)).processEncumbrances(any(CompositePurchaseOrder.class),
-//      any(CompositePurchaseOrder.class), eq(requestContext));
-//    verify(purchaseOrderLineService, times(1)).updateOrderLine(eq(poLineToUpdate), eq(requestContext));
-//    verify(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
-//    verify(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
-//  }
-//
-//  @Test
-//  void shouldUpdateLineQuantityIfPoLineIsNotPackageAndLocationReferenceChangedAndShouldRunProcessInventory() throws ExecutionException, InterruptedException {
-//    String orderId = UUID.randomUUID().toString();
-//    String oldHoldingId = UUID.randomUUID().toString();
-//    String newCreatedHoldingId = UUID.randomUUID().toString();
-//    String locationToUpdate = UUID.randomUUID().toString();
-//    String lineId = UUID.randomUUID().toString();
-//    String titleId = UUID.randomUUID().toString();
-//    String itemId = UUID.randomUUID().toString();
-//    String locationId = UUID.randomUUID().toString();
-//    String pieceId = UUID.randomUUID().toString();
-//    JsonObject item = new JsonObject().put(ID, itemId);
-//    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
-//    JsonObject holding = new JsonObject().put(ID, oldHoldingId);
-//    holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
-//    Piece pieceFromStorage = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-//                                        .withHoldingId(oldHoldingId).withFormat(Piece.Format.ELECTRONIC);
-//    Piece incomingPieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-//                                    .withLocationId(locationToUpdate).withFormat(Piece.Format.ELECTRONIC);
-//    Cost cost = new Cost().withQuantityElectronic(1);
-//    Location loc = new Location().withHoldingId(oldHoldingId).withQuantityElectronic(1).withQuantity(1);
-//    PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
-//      .withLocations(List.of(loc)).withCost(cost);
-//    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-//
-//    doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(incomingPieceToUpdate.getId(), requestContext);
-//
-//    final ArgumentCaptor<Piece> pieceToUpdateCapture = ArgumentCaptor.forClass(Piece.class);
-//    doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdateCapture.capture(), eq(requestContext));
-//    doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
-//    doReturn(completedFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(eq(incomingPieceToUpdate.getPoLineId()), eq(requestContext));
-//
-//    final ArgumentCaptor<CompositePoLine> poLineToUpdateCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-//    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLine(poLineToUpdateCapture.capture(), eq(requestContext));
-//    doReturn(completedFuture(purchaseOrder)).when(purchaseOrderService).getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext);
-//    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-//    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
-//      PieceUpdateHolder answerHolder = invocation.getArgument(0);
-//      answerHolder.getPieceToUpdate().setLocationId(null);
-//      answerHolder.getPieceToUpdate().setHoldingId(newCreatedHoldingId);
-//      return completedFuture(null);
-//    }).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
-//    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(any(CompositePurchaseOrder.class),
-//                                            any(CompositePurchaseOrder.class), eq(requestContext));
-//    //When
-//    pieceUpdateFlowManager.updatePiece(incomingPieceToUpdate, true, true, requestContext).get();
-//    //Then
-//    CompositePoLine poLineToUpdate = poLineToUpdateCapture.getValue();
-//    Piece pieceToUpdate = pieceToUpdateCapture.getValue();
-//    assertNull(pieceToUpdate.getLocationId());
-//    assertEquals(newCreatedHoldingId, pieceToUpdate.getHoldingId());
-//    Location locationToSave = poLineToUpdate.getLocations().get(0);
-//    Cost costToSave = poLineToUpdate.getCost();
-//    assertNull(locationToSave.getLocationId());
-//    assertEquals(1, locationToSave.getQuantityElectronic());
-//    assertEquals(1, locationToSave.getQuantity());
-//    assertEquals(pieceToUpdate.getHoldingId(), locationToSave.getHoldingId());
-//    assertEquals(1, costToSave.getQuantityElectronic());
-//    assertNull(costToSave.getQuantityPhysical());
-//
-//    verify(pieceStorageService).updatePiece(eq(pieceToUpdate), eq(requestContext));
-//    verify(receivingEncumbranceStrategy, times(1)).processEncumbrances(any(CompositePurchaseOrder.class),
-//                any(CompositePurchaseOrder.class), eq(requestContext));
-//    verify(purchaseOrderLineService, times(1)).updateOrderLine(eq(poLineToUpdate), eq(requestContext));
-//    verify(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
-//    verify(pieceStorageService).updatePiece(incomingPieceToUpdate, requestContext);
-//  }
 
   private static class ContextConfiguration {
     @Bean PieceStorageService pieceStorageService() {
@@ -383,7 +273,6 @@ public class PieceUpdateFlowManagerTest {
     @Bean PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager() {
       return mock(PieceUpdateFlowInventoryManager.class);
     }
-
     @Bean BasePieceFlowHolderBuilder basePieceFlowHolderBuilder() {
       return mock(BasePieceFlowHolderBuilder.class);
     }

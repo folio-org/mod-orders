@@ -205,7 +205,7 @@ public class PieceUpdateFlowInventoryManagerTest {
   }
 
   @Test
-  void shouldDeleteHoldingWhenPhysPieceUpdateForPackagePoLineWithCreateInventoryAllAndPieceContainsNewHoldin() {
+  void shouldDeleteHoldingWhenPhysPieceUpdateForPackagePoLineWithCreateInventoryAllAndPieceContainsNewHolding() {
     String orderId = UUID.randomUUID().toString();
     String holdingFromStorageId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();

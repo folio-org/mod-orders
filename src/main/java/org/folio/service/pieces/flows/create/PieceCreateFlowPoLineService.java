@@ -1,8 +1,6 @@
 package org.folio.service.pieces.flows.create;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -16,7 +14,6 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.BasePieceFlowUpdatePoLineService;
-import org.folio.service.pieces.validators.PieceValidatorUtil;
 
 public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineService<PieceCreationHolder> {
 
