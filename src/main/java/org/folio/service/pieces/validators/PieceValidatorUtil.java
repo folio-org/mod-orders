@@ -15,14 +15,16 @@ import java.util.List;
 
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 
 public class PieceValidatorUtil {
 
-  public static List<Error> validatePieceLocation(Piece piece) {
+  public static List<Error> validatePieceLocation(Piece piece, CompositePoLine originPoLine) {
     List<ErrorCodes> errors = new ArrayList<>();
-    if (piece.getHoldingId() == null && piece.getLocationId() == null) {
+    if (isLocationRequired(piece.getFormat(), originPoLine) && piece.getHoldingId() == null && piece.getLocationId() == null) {
      errors.add(ErrorCodes.HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR);
     } else if (piece.getHoldingId() != null && piece.getLocationId() != null) {
      errors.add(ErrorCodes.MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR);
@@ -36,6 +38,14 @@ public class PieceValidatorUtil {
       return List.of(new Error().withCode(PIECE_FORMAT_IS_NOT_VALID_ERROR.getCode()).withMessage(msg));
     }
     return Collections.emptyList();
+  }
+
+  public static boolean isLocationRequired(Piece.Format pieceFormat, CompositePoLine compPOL) {
+    if (ELECTRONIC.equals(pieceFormat))  {
+      return compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE;
+    } else {
+      return compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() != Physical.CreateInventory.NONE;
+    }
   }
 
   private static boolean isPieceFormatValid(Piece piece, CompositePoLine compositePoLine) {

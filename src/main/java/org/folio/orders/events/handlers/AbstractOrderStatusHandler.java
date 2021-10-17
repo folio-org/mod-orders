@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.folio.helper.AbstractHelper;
 import org.folio.helper.PurchaseOrderHelper;
-import org.folio.orders.utils.AsyncUtil;
+import org.folio.completablefuture.AsyncUtil;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;

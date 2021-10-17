@@ -18,7 +18,7 @@ import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
 
 import org.folio.models.ReEncumbranceHolder;
-import org.folio.orders.utils.AsyncUtil;
+import org.folio.completablefuture.AsyncUtil;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;

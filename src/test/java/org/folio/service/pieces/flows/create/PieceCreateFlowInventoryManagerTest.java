@@ -128,8 +128,8 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingById(piece.getHoldingId(), requestContext);
     doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).createItemRecord(compPOL, holdingId, requestContext);
 
-    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
-    holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
+    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    holder.withOrderInformation(compositePurchaseOrder);
 
     pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
       holder.isCreateItem(), requestContext).join();
@@ -165,8 +165,8 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
     doReturn(completedFuture(title)).when(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
 
-    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
-    holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
+    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    holder.withOrderInformation(compositePurchaseOrder);
 
     pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
       holder.isCreateItem(), requestContext).join();
@@ -203,8 +203,8 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
     doReturn(completedFuture(title)).when(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
 
-    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
-    holder.shallowCopy(new PieceCreationHolder(compositePurchaseOrder));
+    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    holder.withOrderInformation(compositePurchaseOrder);
 
     pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
       holder.isCreateItem(), requestContext).join();

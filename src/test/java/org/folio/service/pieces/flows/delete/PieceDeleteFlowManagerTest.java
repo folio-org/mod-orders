@@ -16,29 +16,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import io.vertx.core.json.JsonObject;
 import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
@@ -46,48 +42,35 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.ProtectionService;
-import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
-import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategies;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
+import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
+import io.vertx.core.json.JsonObject;
 
 public class PieceDeleteFlowManagerTest {
-  @Autowired
-  PieceDeleteFlowManager pieceDeleteFlowManager;
-  @Autowired
-  PieceStorageService pieceStorageService;
-  @Autowired
-  ProtectionService protectionService;
-  @Autowired
-  PurchaseOrderService purchaseOrderService;
-  @Autowired
-  PurchaseOrderLineService purchaseOrderLineService;
-  @Autowired
-  InventoryManager inventoryManager;
-  @Autowired
-  ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
-  @Autowired
-  PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver;
-  @Autowired
-  PieceUpdateInventoryService pieceUpdateInventoryService;
+  @Autowired PieceDeleteFlowManager pieceDeleteFlowManager;
+  @Autowired PieceStorageService pieceStorageService;
+  @Autowired ProtectionService protectionService;
+  @Autowired InventoryManager inventoryManager;
+  @Autowired PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
+  @Autowired PieceUpdateInventoryService pieceUpdateInventoryService;
+  @Autowired BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
 
   @Spy
   private Context ctxMock = getFirstContextFromVertx(getVertx());
@@ -124,9 +107,8 @@ public class PieceDeleteFlowManagerTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    Mockito.reset(pieceStorageService, protectionService,
-      purchaseOrderService, purchaseOrderLineService, inventoryManager,
-      receivingEncumbranceStrategy, pieceFlowUpdatePoLineStrategyResolver);
+    Mockito.reset(pieceStorageService, protectionService, inventoryManager,
+      pieceUpdateInventoryService, pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder);
   }
 
   @Test
@@ -148,24 +130,30 @@ public class PieceDeleteFlowManagerTest {
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
                                 .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceDeletionHolder holder = new PieceDeletionHolder(purchaseOrder, poLine,true);
 
     doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
-    doReturn(completedFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
-    doReturn(completedFuture(purchaseOrder)).when(purchaseOrderService).getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext);
     doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true),eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(completedFuture(item)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
-
+    final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+      PieceDeletionHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withOrderInformation(purchaseOrder, poLine);
+      return completedFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingById(holdingId, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
 
+    final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doReturn(completedFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+
     //When
     pieceDeleteFlowManager.deleteItem(piece.getId(), true, requestContext).get();
     //Then
+    PieceDeletionHolder holder = PieceDeletionHolderCapture.getValue();
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
@@ -173,10 +161,8 @@ public class PieceDeleteFlowManagerTest {
     //Then
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
-    verify(receivingEncumbranceStrategy, times(0)).processEncumbrances(holder.getPurchaseOrderToSave(),
-                                    holder.getOriginPurchaseOrder(), requestContext);
-    verify(purchaseOrderLineService, times(0)).updateOrderLine(eq(holder.getPoLineToSave()), eq(requestContext));
-    verify(pieceFlowUpdatePoLineStrategyResolver, times(0)).resolve(any(PieceFlowUpdatePoLineKey.class));
+    verify(pieceDeleteFlowPoLineService, times(0)).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 
   @Test
@@ -198,11 +184,8 @@ public class PieceDeleteFlowManagerTest {
     PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withLocations(List.of(loc)).withCost(cost).withCheckinItems(true);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceDeletionHolder holder = new PieceDeletionHolder(purchaseOrder, poLine,true);
 
     doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
-    doReturn(completedFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
-    doReturn(completedFuture(purchaseOrder)).when(purchaseOrderService).getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext);
     doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
@@ -211,19 +194,25 @@ public class PieceDeleteFlowManagerTest {
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingById(holdingId, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
+    final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+      PieceDeletionHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withOrderInformation(purchaseOrder, poLine);
+      return completedFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
+   final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doReturn(completedFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
     //When
     pieceDeleteFlowManager.deleteItem(piece.getId(), true, requestContext).get();
     //Then
+    PieceDeletionHolder holder = PieceDeletionHolderCapture.getValue();
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     verify(pieceUpdateInventoryService).deleteHoldingById(holdingId, requestContext);
     verify(inventoryManager).deleteItem(itemId, true, requestContext);
-
-    verify(receivingEncumbranceStrategy, times(0)).processEncumbrances(holder.getPurchaseOrderToSave(),
-      holder.getOriginPurchaseOrder(), requestContext);
-    verify(purchaseOrderLineService, times(0)).updateOrderLine(eq(holder.getPoLineToSave()), eq(requestContext));
-    verify(pieceFlowUpdatePoLineStrategyResolver, times(0)).resolve(any());
+    verify(pieceDeleteFlowPoLineService, times(0)).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 
   @Test
@@ -244,31 +233,32 @@ public class PieceDeleteFlowManagerTest {
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
     doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
-    doReturn(completedFuture(purchaseOrder)).when(purchaseOrderService).getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext);
     doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
-    doReturn(completedFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLine(any(CompositePoLine.class), eq(requestContext));
-    doReturn(Optional.of(PieceFlowUpdatePoLineStrategies.DELETE)).when(pieceFlowUpdatePoLineStrategyResolver)
-                                                                              .resolve(any(PieceFlowUpdatePoLineKey.class));
     doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingById(holdingId, requestContext);
+    final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+      PieceDeletionHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withOrderInformation(purchaseOrder, poLine);
+      return completedFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
+    final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doReturn(completedFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+
     //When
     pieceDeleteFlowManager.deleteItem(piece.getId(), true, requestContext).get();
     //Then
+    PieceDeletionHolder holder = PieceDeletionHolderCapture.getValue();
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     verify(inventoryManager, times(0)).deleteItem(itemId, true, requestContext);
     verify(inventoryManager, times(0)).deleteHoldingById(holdingId, true, requestContext);
-    verify(receivingEncumbranceStrategy, times(1)).processEncumbrances(any(CompositePurchaseOrder.class),
-                                                            any(CompositePurchaseOrder.class), eq(requestContext));
-    verify(purchaseOrderLineService, times(1)).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
-    verify(purchaseOrderLineService, times(1)).updateOrderLine(any(CompositePoLine.class), eq(requestContext));
-    verify(pieceFlowUpdatePoLineStrategyResolver, times(1)).resolve(any());
     verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
+    verify(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 
   @Test
@@ -291,40 +281,37 @@ public class PieceDeleteFlowManagerTest {
       .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING))
       .withPurchaseOrderId(orderId).withId(lineId).withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceDeletionHolder holder = spy(new PieceDeletionHolder(purchaseOrder, poLine,true));
 
     doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
-    doReturn(completedFuture(purchaseOrder)).when(purchaseOrderService).getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext);
     doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).deleteHoldingById(piece.getHoldingId(), true, requestContext);
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
-    doReturn(completedFuture(poLine)).when(purchaseOrderLineService).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLine(any(CompositePoLine.class), eq(requestContext));
-    doReturn(Optional.of(PieceFlowUpdatePoLineStrategies.DELETE)).when(pieceFlowUpdatePoLineStrategyResolver)
-      .resolve(any(PieceFlowUpdatePoLineKey.class));
     doReturn(completedFuture(null)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingById(holdingId, requestContext);
-
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
-    doNothing().when(holder).shallowCopy(holder);
+    final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+      PieceDeletionHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withOrderInformation(purchaseOrder, poLine);
+      return completedFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
+    final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doReturn(completedFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
     //When
     pieceDeleteFlowManager.deleteItem(piece.getId(), true, requestContext).get();
     //Then
+    PieceDeletionHolder holder = PieceDeletionHolderCapture.getValue();
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     verify(inventoryManager, times(0)).deleteItem(itemId, true, requestContext);
     verify(pieceUpdateInventoryService).deleteHoldingById(holdingId, requestContext);
-
-    verify(receivingEncumbranceStrategy, times(1)).processEncumbrances(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class), eq(requestContext));
-    verify(purchaseOrderLineService, times(1)).getOrderLineById(eq(piece.getPoLineId()), eq(requestContext));
-    verify(purchaseOrderLineService, times(1)).updateOrderLine(any(CompositePoLine.class), eq(requestContext));
-    verify(pieceFlowUpdatePoLineStrategyResolver, times(1)).resolve(any());
     verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
+    verify(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 
   private static class ContextConfiguration {
@@ -334,18 +321,9 @@ public class PieceDeleteFlowManagerTest {
     @Bean ProtectionService protectionService() {
       return mock(ProtectionService.class);
     }
-    @Bean PurchaseOrderService purchaseOrderService() {
-      return mock(PurchaseOrderService.class);
-    }
-    @Bean PurchaseOrderLineService purchaseOrderLineService() {
-      return mock(PurchaseOrderLineService.class);
-    }
 
-    @Bean ReceivingEncumbranceStrategy receivingEncumbranceStrategy() {
-      return mock(ReceivingEncumbranceStrategy.class);
-    }
-    @Bean PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver() {
-      return mock(PieceFlowUpdatePoLineStrategyResolver.class);
+    @Bean PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService() {
+      return mock(PieceDeleteFlowPoLineService.class);
     }
     @Bean InventoryManager inventoryManager() {
       return mock(InventoryManager.class);
@@ -354,13 +332,15 @@ public class PieceDeleteFlowManagerTest {
       return mock(PieceUpdateInventoryService.class);
     }
 
+    @Bean BasePieceFlowHolderBuilder basePieceFlowHolderBuilder() {
+      return mock(BasePieceFlowHolderBuilder.class);
+    }
+
     @Bean PieceDeleteFlowManager pieceDeleteFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
-      PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
-      ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver,
-      PieceUpdateInventoryService pieceUpdateInventoryService) {
-      return new PieceDeleteFlowManager(pieceStorageService, protectionService, purchaseOrderService,
-                            purchaseOrderLineService, inventoryManager, receivingEncumbranceStrategy,
-                            pieceFlowUpdatePoLineStrategyResolver, pieceUpdateInventoryService);
+      InventoryManager inventoryManager, PieceUpdateInventoryService pieceUpdateInventoryService,
+      PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+      return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryManager,
+            pieceUpdateInventoryService, pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder);
     }
   }
 }

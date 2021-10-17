@@ -133,8 +133,9 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, true, true).withPieceFromStorage(pieceFromStorage);
-    holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine));
+    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
+      .withCreateItem(true).withDeleteHolding(true);
+    holder.withOrderInformation(purchaseOrder, poLine);
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
@@ -180,8 +181,9 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, true, true).withPieceFromStorage(pieceFromStorage);
-    holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine));
+    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
+      .withCreateItem(true).withDeleteHolding(true);
+    holder.withOrderInformation(purchaseOrder, poLine);
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
@@ -227,8 +229,9 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, true, true).withPieceFromStorage(pieceFromStorage);
-    holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine));
+    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
+      .withCreateItem(true).withDeleteHolding(true);
+    holder.withOrderInformation(purchaseOrder, poLine);
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
 
@@ -278,8 +281,9 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, true, true).withPieceFromStorage(pieceFromStorage);
-    holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine));
+    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
+                                                      .withCreateItem(true).withDeleteHolding(true);
+    holder.withOrderInformation(purchaseOrder, poLine);
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     doReturn(completedFuture(item)).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
@@ -330,8 +334,9 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, true, true).withPieceFromStorage(pieceFromStorage);
-    holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine));
+    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
+      .withCreateItem(true).withDeleteHolding(true);
+    holder.withOrderInformation(purchaseOrder, poLine);
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
@@ -377,8 +382,9 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, true, true).withPieceFromStorage(pieceFromStorage);
-    holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine));
+    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
+      .withCreateItem(true).withDeleteHolding(true);
+    holder.withOrderInformation(purchaseOrder, poLine);
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
@@ -424,8 +430,9 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, true, true).withPieceFromStorage(pieceFromStorage);
-    holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine));
+    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
+      .withCreateItem(true).withDeleteHolding(true);
+    holder.withOrderInformation(purchaseOrder, poLine);
 
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager)
@@ -473,8 +480,9 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PieceUpdateHolder holder = new PieceUpdateHolder(pieceToUpdate, true, true).withPieceFromStorage(pieceFromStorage);
-    holder.shallowCopy(new PieceUpdateHolder(purchaseOrder, poLine));
+    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
+      .withCreateItem(true).withDeleteHolding(true);
+    holder.withOrderInformation(purchaseOrder, poLine);
 
     doReturn(completedFuture(item)).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
     doReturn(completedFuture(null)).when(inventoryManager).updateItem(item, requestContext);

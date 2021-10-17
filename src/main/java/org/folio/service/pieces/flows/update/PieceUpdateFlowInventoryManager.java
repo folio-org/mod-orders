@@ -81,6 +81,7 @@ public class PieceUpdateFlowInventoryManager {
     }
     return completedFuture(null);
   }
+
   private CompletableFuture<Location> handleHolding(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();

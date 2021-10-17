@@ -63,20 +63,20 @@ public class PurchaseOrderLineService {
         .collect(toList()));
   }
 
-  public CompletableFuture<Void> updateOrderLine(PoLine poLine, RequestContext requestContext) {
+  public CompletableFuture<Void> saveOrderLine(PoLine poLine, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(poLine.getId());
     return restClient.put(requestEntry, poLine, requestContext);
   }
 
-  public CompletableFuture<Void> updateOrderLine(CompositePoLine compositePoLine, RequestContext requestContext) {
+  public CompletableFuture<Void> saveOrderLine(CompositePoLine compositePoLine, RequestContext requestContext) {
     PoLine poLine = HelperUtils.convertToPoLine(compositePoLine);
-    return updateOrderLine(poLine, requestContext);
+    return saveOrderLine(poLine, requestContext);
   }
 
 
-  public CompletableFuture<Void> updateOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
+  public CompletableFuture<Void> saveOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
     return FolioVertxCompletableFuture.allOf(requestContext.getContext(), orderLines.stream()
-      .map(poLine -> updateOrderLine(poLine, requestContext)
+      .map(poLine -> saveOrderLine(poLine, requestContext)
         .exceptionally(t -> {
           throw new HttpException(400, ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
         }))

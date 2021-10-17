@@ -34,8 +34,9 @@ public class PieceCreateFlowValidatorTest {
     PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
                                     .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
                                     .withLocations(List.of(loc)).withCost(cost);
-    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
-    holder.shallowCopy(new PieceCreationHolder(purchaseOrder, originPoLine));
+    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    holder.withOrderInformation(purchaseOrder, originPoLine);
+
     HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
       pieceCreateFlowValidator.isCreatePieceRequestValid(holder);
     });
@@ -59,8 +60,8 @@ public class PieceCreateFlowValidatorTest {
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
-    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
-    holder.shallowCopy(new PieceCreationHolder(purchaseOrder, originPoLine));
+    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    holder.withOrderInformation(purchaseOrder, originPoLine);
 
     HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
       pieceCreateFlowValidator.isCreatePieceRequestValid(holder);
@@ -72,7 +73,7 @@ public class PieceCreateFlowValidatorTest {
   }
 
   @Test
-  void createPieceAllowableIfCreateInventoryInTheLineDonNotAllowThatButCreateItemFlagIsFalse() {
+  void createPieceAllowableIfCreateInventoryInTheLineAllowThatButCreateItemFlagIsFalse() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -80,13 +81,13 @@ public class PieceCreateFlowValidatorTest {
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
-    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
     PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
-    PieceCreationHolder holder = new PieceCreationHolder(piece, false);
-    holder.shallowCopy(new PieceCreationHolder(purchaseOrder, originPoLine));
+    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    holder.withOrderInformation(purchaseOrder, originPoLine);
 
     pieceCreateFlowValidator.isCreatePieceRequestValid(holder);
   }
@@ -105,8 +106,8 @@ public class PieceCreateFlowValidatorTest {
                 .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
                 .withEresource(eresource)
                 .withLocations(List.of(loc)).withCost(cost);
-    PieceCreationHolder holder = new PieceCreationHolder(piece, true);
-    holder.shallowCopy(new PieceCreationHolder(purchaseOrder, originPoLine));
+    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+    holder.withOrderInformation(purchaseOrder, originPoLine);
 
     pieceCreateFlowValidator.isCreatePieceRequestValid(holder);
   }

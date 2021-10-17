@@ -33,7 +33,7 @@ public class PieceCreateFlowValidator {
     List<Error> combinedErrors = new ArrayList<>();
     List<Error> isItemCreateValidError = validateItemCreateFlag(pieceToCreate, originPoLine, holder.isCreateItem());
     combinedErrors.addAll(isItemCreateValidError);
-    List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate)).orElse(new ArrayList<>());
+    List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     combinedErrors.addAll(pieceLocationErrors);
     List<Error> pieceFormatErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceFormat(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     combinedErrors.addAll(pieceFormatErrors);

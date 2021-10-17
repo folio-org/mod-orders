@@ -1,7 +1,8 @@
-package org.folio.orders.utils;
+package org.folio.completablefuture;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.vertx.core.AsyncResult;

@@ -1,0 +1,40 @@
+package org.folio.service.pieces.flows;
+
+import java.util.concurrent.CompletableFuture;
+
+import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.models.pieces.BasePieceFlowHolder;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
+import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.pieces.validators.PieceValidatorUtil;
+
+public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHolder> implements PoLineUpdateQuantityService<T> {
+  protected final PurchaseOrderService purchaseOrderService;
+  protected final PurchaseOrderLineService purchaseOrderLineService;
+  protected final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
+
+  public BasePieceFlowUpdatePoLineService(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+        ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+    this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderLineService = purchaseOrderLineService;
+    this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
+  }
+
+  public CompletableFuture<Void> updatePoLine(T holder, RequestContext requestContext) {
+    Boolean isLineUpdated = poLineUpdateQuantity(holder);
+    if (Boolean.TRUE.equals(isLineUpdated)) {
+      return receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getPurchaseOrderToSave(), requestContext)
+                                  .thenAccept(v -> purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext));
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+  protected boolean isLocationUpdateRequired(Piece piece, CompositePoLine lineToSave) {
+    return PieceValidatorUtil.isLocationRequired(piece.getFormat(), lineToSave) &&
+      (piece.getHoldingId() != null || piece.getLocationId() != null);
+  }
+}
