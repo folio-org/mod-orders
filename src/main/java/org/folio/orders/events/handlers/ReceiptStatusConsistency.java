@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
-import org.folio.orders.utils.AsyncUtil;
+import org.folio.completablefuture.AsyncUtil;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PieceCollection;

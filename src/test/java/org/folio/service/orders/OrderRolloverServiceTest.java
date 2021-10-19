@@ -1,7 +1,6 @@
 package org.folio.service.orders;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -137,7 +136,7 @@ public class OrderRolloverServiceTest {
     doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLines(eq(poLines), any());
+    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(60d);
@@ -235,7 +234,7 @@ public class OrderRolloverServiceTest {
     doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLines(eq(poLines), any());
+    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(580d);
@@ -327,7 +326,7 @@ public class OrderRolloverServiceTest {
     doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLines(eq(poLines), any());
+    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(30.16d);

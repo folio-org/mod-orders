@@ -2,7 +2,6 @@ package org.folio.service.finance.transaction;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.acq.model.finance.Encumbrance.OrderStatus.OPEN;
 import static org.folio.rest.acq.model.finance.Encumbrance.OrderType.ONGOING;
 import static org.folio.rest.acq.model.finance.Encumbrance.Status.UNRELEASED;
@@ -24,8 +23,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 

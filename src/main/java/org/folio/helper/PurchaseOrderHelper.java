@@ -658,7 +658,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return CompletableFuture.allOf( compositePoLines.stream()
       .map(this::openOrderRemoveLocationId)
       .map(this::openOrderConvertToPoLine)
-      .map(line -> purchaseOrderLineService.updateOrderLine(line, getRequestContext()))
+      .map(line -> purchaseOrderLineService.saveOrderLine(line, getRequestContext()))
       .toArray(CompletableFuture[]::new));
   }
 
@@ -1040,7 +1040,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .stream()
       .map(lineFromStorage -> {
         lineFromStorage.setPoLineNumber(orderLineHelper.buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
-        return purchaseOrderLineService.updateOrderLine(lineFromStorage, getRequestContext());
+        return purchaseOrderLineService.saveOrderLine(lineFromStorage, getRequestContext());
       })
        .toArray(CompletableFuture[]::new);
 

@@ -1,7 +1,6 @@
 package org.folio.service.pieces.flows.create;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -16,6 +15,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
 
 public class PieceCreateFlowInventoryManager {
@@ -64,17 +64,18 @@ public class PieceCreateFlowInventoryManager {
     if (piece.getHoldingId() != null) {
       return completedFuture(new Location().withHoldingId(piece.getHoldingId()));
     }
-    if (instanceId != null && PieceCreateFlowValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
+    if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
       Location location = new Location().withLocationId(piece.getLocationId());
-      return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).thenApply(holdingId -> {
-        Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
-          piece.setLocationId(null);
-          piece.setHoldingId(holdingId);
-          location.setLocationId(null);
-          location.setHoldingId(holdingId);
-        });
-        return location;
-      });
+      return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
+                    .thenApply(holdingId -> {
+                          Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
+                            piece.setLocationId(null);
+                            piece.setHoldingId(holdingId);
+                            location.setLocationId(null);
+                            location.setHoldingId(holdingId);
+                          });
+                          return location;
+                    });
     }
     return completedFuture(new Location().withLocationId(piece.getLocationId()));
   }
@@ -83,34 +84,12 @@ public class PieceCreateFlowInventoryManager {
     if (piece.getItemId() != null) {
       return completedFuture(piece.getItemId());
     }
-    if (createItem && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL) && piece.getHoldingId() != null) {
-        return createItemRecord(compPOL, piece.getHoldingId(), requestContext);
+    if (createItem &&  piece.getHoldingId() != null) {
+        return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
     }
     return CompletableFuture.completedFuture(null);
   }
 
-  /**
-   * Return id of created  Item
-   */
-  public CompletableFuture<String> createItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
-    final int ITEM_QUANTITY = 1;
-    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
-    CompletableFuture<String> itemFuture = new CompletableFuture<>();
-    try {
-        if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
-          inventoryManager.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
-            .thenApply(idS -> itemFuture.complete(idS.get(0)))
-            .exceptionally(itemFuture::completeExceptionally);
-        } else {
-          inventoryManager.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
-            .thenApply(idS -> itemFuture.complete(idS.get(0)))
-            .exceptionally(itemFuture::completeExceptionally);
-        }
-    } catch (Exception e) {
-      itemFuture.completeExceptionally(e);
-    }
-    return itemFuture;
-  }
 
   private CompletableFuture<String> nonPackageUpdateTitleWithInstance(CompositePoLine poLine, String titleId, RequestContext requestContext) {
     if (poLine.getInstanceId() == null && !PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {

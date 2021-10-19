@@ -12,7 +12,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.junit.jupiter.api.Test;
 
@@ -20,16 +22,47 @@ public class PieceValidatorUtilTest {
 
   @Test
   void testShouldReturnErrorsIfLocationAndHoldingIsNotProvided() {
-    Piece piece = new Piece();
-    List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece);
+    Piece piece = new Piece().withFormat(Piece.Format.ELECTRONIC);
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(false).withEresource(eresource);
+    List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece, originPoLine);
     assertEquals(HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR.toError(), errorList.get(0));
   }
 
   @Test
+  void testShouldReturnErrorsIfElectrLocationAndHoldingIsNotProvidedAndCreateInventoryNontNone() {
+    Piece piece = new Piece().withFormat(Piece.Format.ELECTRONIC);
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(false).withEresource(eresource);
+    List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece, originPoLine);
+    assertEquals(HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR.toError(), errorList.get(0));
+  }
+
+    @Test
+  void testShouldValidIfElectrLocationAndHoldingIsNotProvided() {
+    Piece piece = new Piece().withFormat(Piece.Format.ELECTRONIC);
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.NONE);
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(false).withEresource(eresource);
+    List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece, originPoLine);
+    assertEquals(0, errorList.size());
+  }
+
+  @Test
+  void testShouldReturnErrorsIfLocationPhysAndHoldingIsNotProvided() {
+    Piece piece = new Piece().withFormat(Piece.Format.ELECTRONIC);
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.NONE);
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(false).withPhysical(physical);
+    List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece, originPoLine);
+    assertEquals(0, errorList.size());
+  }
+
+  @Test
   void testShouldReturnErrorsIfLocationAndHoldingProvidedAtOneTime() {
-    Piece piece = new Piece().withLocationId(UUID.randomUUID().toString())
+    Piece piece = new Piece().withFormat(Piece.Format.PHYSICAL).withLocationId(UUID.randomUUID().toString())
                              .withHoldingId(UUID.randomUUID().toString());
-    List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece);
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(false).withPhysical(physical);
+    List<Error> errorList = PieceValidatorUtil.validatePieceLocation(piece, originPoLine);
     assertEquals(MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR.toError(), errorList.get(0));
   }
 

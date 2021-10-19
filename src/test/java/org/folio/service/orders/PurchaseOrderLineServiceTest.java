@@ -115,7 +115,7 @@ public class PurchaseOrderLineServiceTest {
 
     when(restClientMock.put(any(RequestEntry.class), any(PoLine.class), eq(requestContext))).thenReturn(CompletableFuture.completedFuture(null));
 
-    purchaseOrderLineService.updateOrderLine(purchaseOrderLine, requestContext).join();
+    purchaseOrderLineService.saveOrderLine(purchaseOrderLine, requestContext).join();
 
     verify(restClientMock).put(any(), eq(purchaseOrderLine), eq(requestContext));
   }
@@ -127,7 +127,7 @@ public class PurchaseOrderLineServiceTest {
     List<PoLine> purchaseOrderLines = List.of(new PoLine().withId(orderLineId1), new PoLine().withId(orderLineId2));
     when(restClientMock.put(any(RequestEntry.class), any(PoLine.class), eq(requestContext))).thenReturn(CompletableFuture.completedFuture(null));
 
-    purchaseOrderLineService.updateOrderLines(purchaseOrderLines, requestContext).join();
+    purchaseOrderLineService.saveOrderLines(purchaseOrderLines, requestContext).join();
 
     verify(restClientMock).put(any(), eq(purchaseOrderLines.get(0)), eq(requestContext));
     verify(restClientMock).put(any(), eq(purchaseOrderLines.get(1)), eq(requestContext));
