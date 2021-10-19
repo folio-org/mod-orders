@@ -11,7 +11,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import org.folio.orders.utils.AsyncUtil;
+import org.folio.completablefuture.AsyncUtil;
 import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.model.OrderTemplateCollection;
 

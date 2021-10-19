@@ -403,7 +403,7 @@ public class OrderReEncumberServiceTest {
     when(rolloverErrorService.getLedgerFyRolloverErrors(anyString(), any()))
         .thenReturn(completedFuture(new LedgerFiscalYearRolloverErrorCollection()));
     when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(completedFuture(null));
-    when(purchaseOrderLineService.updateOrderLines(anyList(), any())).thenReturn(completedFuture(null));
+    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(completedFuture(null));
     ConversionQuery conversionQuery = ConversionQueryBuilder.of().setBaseCurrency("USD").setTermCurrency("USD").build();
     when(exchangeRateProviderResolver.resolve(conversionQuery, requestContext)).thenReturn(exchangeRateProvider);
     CompletableFuture<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
@@ -444,7 +444,7 @@ public class OrderReEncumberServiceTest {
     when(rolloverErrorService.getLedgerFyRolloverErrors(anyString(), any()))
         .thenReturn(completedFuture(new LedgerFiscalYearRolloverErrorCollection()));
     when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(completedFuture(null));
-    when(purchaseOrderLineService.updateOrderLines(anyList(), any())).thenReturn(completedFuture(null));
+    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(completedFuture(null));
 
     CompletableFuture<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
     TransactionCollection toTransactionCollection = new TransactionCollection().withTransactions(Collections.EMPTY_LIST).withTotalRecords(0);
@@ -608,7 +608,7 @@ public class OrderReEncumberServiceTest {
     when(rolloverErrorService.getLedgerFyRolloverErrors(anyString(), any()))
         .thenReturn(completedFuture(new LedgerFiscalYearRolloverErrorCollection()));
     when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(completedFuture(null));
-    when(purchaseOrderLineService.updateOrderLines(anyList(), any())).thenReturn(completedFuture(null));
+    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(completedFuture(null));
 
     when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId), any()))
         .thenReturn(completedFuture(Collections.singletonList(success)));

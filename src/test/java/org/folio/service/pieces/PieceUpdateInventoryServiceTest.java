@@ -10,6 +10,8 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryManager.ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,6 +27,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +72,8 @@ public class PieceUpdateInventoryServiceTest {
   private InventoryManager inventoryManager;
   @Autowired
   private TitlesService titlesService;
+  @Autowired
+  private  PieceStorageService pieceStorageService;
   @Mock
   private Map<String, String> okapiHeadersMock;
   @Spy
@@ -189,7 +194,7 @@ public class PieceUpdateInventoryServiceTest {
     doReturn(completedFuture(Collections.singletonList(expItemId)))
       .when(inventoryManager).createMissingPhysicalItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
     //When
-    CompletableFuture<String> result = pieceUpdateInventoryService.createItemRecord(line, HOLDING_ID, requestContext);
+    CompletableFuture<String> result = pieceUpdateInventoryService.openOrderCreateItemRecord(line, HOLDING_ID, requestContext);
     String actItemId = result.get();
     //Then
     verify(inventoryManager).createMissingPhysicalItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
@@ -210,7 +215,7 @@ public class PieceUpdateInventoryServiceTest {
       .when(inventoryManager).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
 
     //When
-    CompletableFuture<String> result = pieceUpdateInventoryService.createItemRecord(line, HOLDING_ID, requestContext);
+    CompletableFuture<String> result = pieceUpdateInventoryService.openOrderCreateItemRecord(line, HOLDING_ID, requestContext);
     String actItemId = result.get();
     //Then
     verify(inventoryManager).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
@@ -223,7 +228,7 @@ public class PieceUpdateInventoryServiceTest {
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setCheckinItems(true);
     //When
-    CompletableFuture<String> result = pieceUpdateInventoryService.createItemRecord(line, HOLDING_ID, requestContext);
+    CompletableFuture<String> result = pieceUpdateInventoryService.openOrderCreateItemRecord(line, HOLDING_ID, requestContext);
     String actItemId = result.get();
     //Then
     assertNull(actItemId);
@@ -238,7 +243,7 @@ public class PieceUpdateInventoryServiceTest {
     Piece piece = createPieceWithLocationId(line, title);
     doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId(), requestContext);
     //When
-    pieceUpdateInventoryService.updateInventory(line, piece, requestContext).get();
+    pieceUpdateInventoryService.openOrderUpdateInventory(line, piece, requestContext).get();
     //Then
     assertEquals(title.getId(), piece.getTitleId());
   }
@@ -285,11 +290,11 @@ public class PieceUpdateInventoryServiceTest {
       .when(pieceUpdateInventoryService).handleInstanceRecord(any(Title.class), eq(requestContext));
     doReturn(completedFuture(holdingId))
       .when(pieceUpdateInventoryService).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
-    doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).createItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
+    doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).openOrderCreateItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
 
     doReturn(completedFuture(itemId)).when(inventoryManager).createInstanceRecord(eq(title), eq(requestContext));
     //When
-    pieceUpdateInventoryService.updateInventory(line, piece, requestContext).get();
+    pieceUpdateInventoryService.openOrderUpdateInventory(line, piece, requestContext).get();
     //Then
     assertEquals(piece.getItemId(), itemId);
     assertEquals(piece.getPoLineId(), line.getId());
@@ -299,7 +304,7 @@ public class PieceUpdateInventoryServiceTest {
   @Test
   void testUpdateInventoryNegativeCaseIfPOLIsNull() {
     //When
-    CompletableFuture<String> result = pieceUpdateInventoryService.createItemRecord(null, UUID.randomUUID().toString(), requestContext);
+    CompletableFuture<String> result = pieceUpdateInventoryService.openOrderCreateItemRecord(null, UUID.randomUUID().toString(), requestContext);
     //Then
     assertTrue(result.isCompletedExceptionally());
   }
@@ -318,15 +323,84 @@ public class PieceUpdateInventoryServiceTest {
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
-    doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).createItemRecord(line, holdingId, requestContext);
+    doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).openOrderCreateItemRecord(line, holdingId, requestContext);
 
     //When
-    pieceUpdateInventoryService.updateInventory(line, piece, requestContext).get();
+    pieceUpdateInventoryService.openOrderUpdateInventory(line, piece, requestContext).get();
     //Then
     assertEquals(holdingId, piece.getHoldingId());
     assertEquals(title.getId(), piece.getTitleId());
   }
 
+  @Test
+  void shouldNotDeleteHoldingIfHoldingIdIsNull() {
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(null, requestContext);
+
+    verify(inventoryManager, times(0)).getHoldingById(null , true, requestContext);
+    verify(inventoryManager, times(0)).deleteHoldingById(null , true, requestContext);
+  }
+
+  @Test
+  void shouldNotDeleteHoldingIfHoldingIdIsNotNullButNotFoundInTheDB() throws ExecutionException, InterruptedException {
+    String holdingId = UUID.randomUUID().toString();
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
+    doReturn(completedFuture(null)).when(inventoryManager).getHoldingById(piece.getHoldingId() , true, requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).get();
+
+    verify(inventoryManager, times(0)).deleteHoldingById(piece.getHoldingId() , true, requestContext);
+  }
+
+
+  @Test
+  void shouldDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndNoPiecesAndItems() {
+    String holdingId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holding);
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
+    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(completedFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext);
+
+    verify(inventoryManager, times(1)).deleteHoldingById(holdingId , true, requestContext);
+  }
+
+  @Test
+  void shouldNoDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndPiecesExistAndNoItems() throws ExecutionException, InterruptedException {
+    String holdingId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holding);
+    holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
+    Piece piece2 = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
+    doReturn(completedFuture(List.of(piece, piece2))).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(completedFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).get();
+
+    verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+  }
+
+  @Test
+  void shouldNoDeleteHoldingIfHoldingIdIsProvidedAndFoundInDBAndNoPiecesAndItemsExist()
+    throws ExecutionException, InterruptedException {
+    String holdingId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holding);
+    JsonObject item = new JsonObject().put(ID, UUID.randomUUID().toString());
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
+    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).get();
+
+    verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+  }
 
   private Piece createPieceWithLocationId(CompositePoLine line, Title title) {
     return new Piece().withId(UUID.randomUUID().toString())
@@ -356,8 +430,14 @@ public class PieceUpdateInventoryServiceTest {
     }
 
     @Bean
-    PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager) {
-      return spy(new PieceUpdateInventoryService(titlesService, inventoryManager));
+    PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
+    }
+
+    @Bean
+    PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
+                                PieceStorageService pieceStorageService) {
+      return spy(new PieceUpdateInventoryService(titlesService, inventoryManager, pieceStorageService));
     }
   }
 }

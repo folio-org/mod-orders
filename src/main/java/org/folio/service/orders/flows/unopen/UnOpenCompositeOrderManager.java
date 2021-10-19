@@ -94,7 +94,7 @@ public class UnOpenCompositeOrderManager {
   public CompletableFuture<Void> updatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
     return FolioVertxCompletableFuture.allOf(requestContext.getContext(), compositePoLines.stream()
       .map(HelperUtils::convertToPoLine)
-      .map(line -> purchaseOrderLineService.updateOrderLine(line, requestContext))
+      .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
       .toArray(CompletableFuture[]::new));
   }
 
@@ -207,7 +207,7 @@ public class UnOpenCompositeOrderManager {
         deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(holdingId, rqContext)
           .thenCompose(items -> {
             if (items.isEmpty()) {
-              return inventoryManager.deleteHolding(holdingId, true, rqContext)
+              return inventoryManager.deleteHoldingById(holdingId, true, rqContext)
                                      .thenApply(v -> Pair.of(holdingId, effectiveLocationId));
             }
             return CompletableFuture.completedFuture(null);
@@ -236,7 +236,7 @@ public class UnOpenCompositeOrderManager {
           deletedHoldingIds.add(inventoryManager.getItemsByHoldingId(holdingId, rqContext)
             .thenCompose(items -> {
               if (items.isEmpty()) {
-                return inventoryManager.deleteHolding(holdingId, true, rqContext).thenApply(v -> Pair.of(holdingId, permanentLocationId));
+                return inventoryManager.deleteHoldingById(holdingId, true, rqContext).thenApply(v -> Pair.of(holdingId, permanentLocationId));
               }
               return CompletableFuture.completedFuture(null);
             }));
@@ -301,11 +301,12 @@ public class UnOpenCompositeOrderManager {
   }
 
   public CompletableFuture<Void> deletePieceWithItem(String pieceId, RequestContext requestContext) {
-    PieceDeletionHolder holder = new PieceDeletionHolder(true);
+    PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(true);
     return pieceStorageService.getPieceById(pieceId, requestContext)
-      .thenCompose(piece -> purchaseOrderLineService.getOrderLineById(piece.getPoLineId(), requestContext)
+      .thenAccept(pieceToDelete -> holder.withPieceToDelete(pieceToDelete))
+      .thenCompose(aHolder -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext)
         .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-          .thenAccept(purchaseOrder -> holder.shallowCopy(new PieceDeletionHolder(purchaseOrder, poLine).withPieceToDelete(piece)))
+          .thenAccept(purchaseOrder -> holder.withOrderInformation(purchaseOrder, poLine))
         ))
       .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .thenCompose(vVoid -> canDeletePieceWithItem(holder.getPieceToDelete(), requestContext))

@@ -213,7 +213,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
       jsonPoLine.remove(REPORTING_CODES);
       return jsonPoLine.mapTo(PoLine.class).withAlerts(alertIds).withReportingCodes(codeIds);
     }).collect(toList());
-    return purchaseOrderLineService.updateOrderLines(lines, requestContext);
+    return purchaseOrderLineService.saveOrderLines(lines, requestContext);
   }
 
   private List<ReEncumbranceHolder> updateLinkToEncumbrances(List<ReEncumbranceHolder> holders) {

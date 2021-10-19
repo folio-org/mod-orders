@@ -8,13 +8,14 @@ import static org.folio.TestConfig.startMockServer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import org.folio.helper.CheckinHelperTest;
 import org.folio.helper.PurchaseOrderHelperTest;
 import org.folio.helper.PurchaseOrderLineHelperTest;
-import org.folio.helper.CheckinHelperTest;
 import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.HelperUtilsTest;
+import org.folio.orders.utils.PoLineCommonUtilTest;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtilTest;
 import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorTest;
 import org.folio.orders.utils.validators.OngoingOrderValidatorTest;
@@ -39,16 +40,16 @@ import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
-import org.folio.service.finance.FundServiceTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
+import org.folio.service.finance.FundServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
-import org.folio.service.inventory.InventoryManagerTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
-import org.folio.service.orders.AcquisitionsUnitsServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
+import org.folio.service.inventory.InventoryManagerTest;
+import org.folio.service.orders.AcquisitionsUnitsServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
@@ -59,18 +60,18 @@ import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategiesTest;
 import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolverTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManagerTest;
-import org.folio.service.pieces.flows.create.PieceCreateFlowValidatorTest;
+import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineServiceTest;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidatorTest;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManagerTest;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineServiceTest;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManagerTest;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManagerTest;
+import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineServiceTest;
 import org.folio.service.pieces.validators.PieceValidatorUtilTest;
-import org.folio.orders.utils.PoLineCommonUtilTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -309,7 +310,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class PieceFlowUpdatePoLineStrategiesTestNested extends PieceFlowUpdatePoLineStrategiesTest {
+  class PieceFlowUpdatePoLineStrategiesTestNested {
 
   }
 
@@ -320,11 +321,6 @@ public class ApiTestSuite {
 
   @Nested
   class ResponseUtilTestNested extends ResponseUtilTest {
-
-  }
-
-  @Nested
-  class PieceFlowUpdatePoLineStrategyResolverTestNested extends PieceFlowUpdatePoLineStrategyResolverTest {
 
   }
 
@@ -343,7 +339,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class PieceCreateFlowValidatorTestNested extends PieceCreateFlowValidatorTest {
+  class DefaultPieceFlowsValidatorTestNested extends DefaultPieceFlowsValidatorTest {
 
   }
 
@@ -358,6 +354,21 @@ public class ApiTestSuite {
 
   @Nested
   class PieceUpdateFlowInventoryManagerTestNested extends PieceUpdateFlowInventoryManagerTest {
+
+  }
+
+  @Nested
+  class PieceCreateFlowPoLineServiceTestNested extends PieceCreateFlowPoLineServiceTest {
+
+  }
+
+  @Nested
+  class PieceDeleteFlowPoLineServiceTestNested extends PieceDeleteFlowPoLineServiceTest {
+
+  }
+
+  @Nested
+  class PieceUpdateFlowPoLineServiceTestNested extends PieceUpdateFlowPoLineServiceTest {
 
   }
 }
