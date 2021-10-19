@@ -21,7 +21,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
-import org.folio.service.pieces.flows.create.PieceCreateFlowValidator;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.json.JsonObject;
@@ -77,7 +77,7 @@ public class PieceUpdateFlowInventoryManager {
 
   private CompletableFuture<Pair<String, String>> deleteHolding(PieceUpdateHolder holder, RequestContext requestContext) {
     if (holder.isDeleteHolding()) {
-      return pieceUpdateInventoryService.deleteHoldingById(holder.getPieceFromStorage().getHoldingId(), requestContext);
+      return pieceUpdateInventoryService.deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     }
     return completedFuture(null);
   }
@@ -89,7 +89,7 @@ public class PieceUpdateFlowInventoryManager {
       return completedFuture(new Location().withHoldingId(pieceToUpdate.getHoldingId()));
     }
     String instanceId = holder.getInstanceId();
-    if (instanceId != null && PieceCreateFlowValidator.isCreateHoldingForPiecePossible(pieceToUpdate, poLineToSave)) {
+    if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(pieceToUpdate, poLineToSave)) {
       Location location = new Location().withLocationId(pieceToUpdate.getLocationId());
       return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
                       .thenApply(holdingId -> {
@@ -108,10 +108,10 @@ public class PieceUpdateFlowInventoryManager {
   private CompletableFuture<String> handleItem(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
-    if (PieceCreateFlowValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
+    if (DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
       return inventoryManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext).thenCompose(jsonItem -> {
         if (holder.isCreateItem() && (jsonItem == null || jsonItem.isEmpty()) && pieceToUpdate.getHoldingId() != null) {
-          return pieceUpdateInventoryService.createItemRecord(poLineToSave, pieceToUpdate.getHoldingId(), requestContext);
+          return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);
         } else {
           return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate, requestContext).thenCompose(
             aVoid -> inventoryManager.updateItem(jsonItem, requestContext).thenApply(item -> jsonItem.getString(ID)));

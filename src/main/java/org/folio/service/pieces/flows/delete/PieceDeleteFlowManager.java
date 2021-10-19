@@ -53,17 +53,16 @@ public class PieceDeleteFlowManager {
     this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
   }
 
-  public CompletableFuture<Void> deleteItem(String pieceId, boolean deleteHolding, RequestContext requestContext) {
+  public CompletableFuture<Void> deletePiece(String pieceId, boolean deleteHolding, RequestContext requestContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(deleteHolding);
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .thenAccept(holder::withPieceToDelete)
       .thenCompose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
-      .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
-      .thenCompose(vVoid -> isDeletePieceRequestValid(holder, requestContext))
+      .thenCompose(aVoid -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
+      .thenCompose(aVoid -> isDeletePieceRequestValid(holder, requestContext))
       .thenCompose(aVoid -> processInventory(holder, requestContext))
-      .thenAccept(aVoid -> updatePoLine(holder, requestContext))
+      .thenCompose(pair -> updatePoLine(holder, requestContext))
       .thenCompose(aVoid -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext));
-
   }
 
   private CompletableFuture<Void> isDeletePieceRequestValid(PieceDeletionHolder holder, RequestContext requestContext) {
@@ -73,13 +72,12 @@ public class PieceDeleteFlowManager {
         if (numOfRequests != null && numOfRequests > 0) {
           combinedErrors.add(ErrorCodes.REQUEST_FOUND.toError());
         }
-      }).thenApply(numOfRequests -> {
+      }).thenAccept(numOfRequests -> {
         if (CollectionUtils.isNotEmpty(combinedErrors)) {
           Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
           logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
           throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
-        return null;
       });
     }
     return completedFuture(null);
@@ -89,7 +87,7 @@ public class PieceDeleteFlowManager {
     return deleteItem(holder, rqContext)
                .thenCompose(aVoid -> {
                  if (holder.isDeleteHolding()) {
-                   pieceUpdateInventoryService.deleteHoldingById(holder.getPieceToDelete().getHoldingId(), rqContext);
+                   return pieceUpdateInventoryService.deleteHoldingConnectedToPiece(holder.getPieceToDelete(), rqContext);
                  }
                  return completedFuture(null);
                });

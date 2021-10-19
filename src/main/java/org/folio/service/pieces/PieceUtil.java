@@ -10,14 +10,19 @@ import java.util.stream.Collectors;
 
 public class PieceUtil {
   public static List<Location> findOrderPieceLineLocation(Piece piece, CompositePoLine compPoLine) {
-    if (piece.getFormat() == Piece.Format.ELECTRONIC) {
+    if ((piece.getFormat() == Piece.Format.ELECTRONIC || piece.getFormat() == Piece.Format.PHYSICAL) &&
+                  (CompositePoLine.OrderFormat.P_E_MIX == compPoLine.getOrderFormat())) {
+      return compPoLine.getLocations().stream()
+        .filter(loc -> isLocationMatch(piece, loc)).collect(Collectors.toList());
+    } else if (piece.getFormat() == Piece.Format.ELECTRONIC && CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE == compPoLine.getOrderFormat()) {
       return compPoLine.getLocations().stream()
         .filter(loc -> Objects.nonNull(loc.getQuantityElectronic()))
         .filter(loc -> isLocationMatch(piece, loc)).collect(Collectors.toList());
     }
     return compPoLine.getLocations().stream()
-      .filter(loc -> Objects.nonNull(loc.getQuantityPhysical()))
-      .filter(loc -> isLocationMatch(piece, loc)).collect(Collectors.toList());
+          .filter(loc -> Objects.nonNull(loc.getQuantityPhysical()))
+          .filter(loc -> isLocationMatch(piece, loc))
+          .collect(Collectors.toList());
   }
 
   private static boolean isLocationMatch(Piece piece, Location loc) {

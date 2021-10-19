@@ -14,6 +14,7 @@ import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
 import io.vertx.core.json.JsonObject;
 
@@ -26,16 +27,18 @@ public class PieceUpdateFlowManager {
   private final PieceUpdateFlowPoLineService updatePoLineService;
   private final PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager;
   private final BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
+  private final DefaultPieceFlowsValidator defaultPieceFlowsValidator;
 
   public PieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
-                  PieceUpdateFlowPoLineService updatePoLineService, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager,
-                  BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+    PieceUpdateFlowPoLineService updatePoLineService, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager,
+    BasePieceFlowHolderBuilder basePieceFlowHolderBuilder, DefaultPieceFlowsValidator defaultPieceFlowsValidator) {
     this.pieceStorageService = pieceStorageService;
     this.pieceService = pieceService;
     this.protectionService = protectionService;
     this.updatePoLineService = updatePoLineService;
     this.pieceUpdateFlowInventoryManager = pieceUpdateFlowInventoryManager;
     this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
+    this.defaultPieceFlowsValidator = defaultPieceFlowsValidator;
   }
   // Flow to update piece
   // 1. Before update, get piece by id from storage and store receiving status
@@ -48,6 +51,7 @@ public class PieceUpdateFlowManager {
     pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
       .thenAccept(holder::withPieceFromStorage)
       .thenCompose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
+      .thenAccept(v -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPoLine(), createItem))
       .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), UPDATE, requestContext))
       .thenCompose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
       .thenCompose(vVoid -> updatePoLine(holder, requestContext))

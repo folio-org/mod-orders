@@ -126,9 +126,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
     ArgumentCaptor<CompositePurchaseOrder> purchaseOrderToSaveCapture = ArgumentCaptor.forClass(CompositePurchaseOrder.class);
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(purchaseOrderToSaveCapture.capture(),
-      purchaseOrderToSaveCapture.capture(), eq(requestContext));
-    ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
+      ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
     doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
     //When
@@ -148,8 +146,6 @@ public class PieceUpdateFlowPoLineServiceTest {
 
     assertNull(poLineFromStorage.getLocations().get(0).getLocationId());
     assertEquals(oldHoldingId, poLineFromStorage.getLocations().get(0).getHoldingId());
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
   }
 
@@ -178,9 +174,6 @@ public class PieceUpdateFlowPoLineServiceTest {
       .withPieceFromStorage(pieceFromStorage);
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
-    ArgumentCaptor<CompositePurchaseOrder> purchaseOrderToSaveCapture = ArgumentCaptor.forClass(CompositePurchaseOrder.class);
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(purchaseOrderToSaveCapture.capture(),
-      purchaseOrderToSaveCapture.capture(), eq(requestContext));
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
     doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
@@ -208,8 +201,6 @@ public class PieceUpdateFlowPoLineServiceTest {
     assertEquals(2, costToSave.getQuantityPhysical());
     assertNull(costToSave.getQuantityElectronic());
 
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
   }
 
@@ -239,9 +230,6 @@ public class PieceUpdateFlowPoLineServiceTest {
       .withPieceFromStorage(pieceFromStorage);
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
-    ArgumentCaptor<CompositePurchaseOrder> purchaseOrderToSaveCapture = ArgumentCaptor.forClass(CompositePurchaseOrder.class);
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(purchaseOrderToSaveCapture.capture(),
-      purchaseOrderToSaveCapture.capture(), eq(requestContext));
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
     doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
@@ -271,8 +259,6 @@ public class PieceUpdateFlowPoLineServiceTest {
     assertEquals(1, costToSave.getQuantityElectronic());
     assertEquals(1, costToSave.getQuantityPhysical());
 
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
   }
 
@@ -302,9 +288,6 @@ public class PieceUpdateFlowPoLineServiceTest {
       .withPieceFromStorage(pieceFromStorage);
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
-    ArgumentCaptor<CompositePurchaseOrder> purchaseOrderToSaveCapture = ArgumentCaptor.forClass(CompositePurchaseOrder.class);
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(purchaseOrderToSaveCapture.capture(),
-      purchaseOrderToSaveCapture.capture(), eq(requestContext));
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
     doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
@@ -334,8 +317,6 @@ public class PieceUpdateFlowPoLineServiceTest {
     assertEquals(1, costToSave.getQuantityElectronic());
     assertEquals(1, costToSave.getQuantityPhysical());
 
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
   }
 
@@ -366,9 +347,6 @@ public class PieceUpdateFlowPoLineServiceTest {
       .withPieceFromStorage(pieceFromStorage);
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
-    ArgumentCaptor<CompositePurchaseOrder> purchaseOrderToSaveCapture = ArgumentCaptor.forClass(CompositePurchaseOrder.class);
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(purchaseOrderToSaveCapture.capture(),
-      purchaseOrderToSaveCapture.capture(), eq(requestContext));
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
     doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
@@ -398,8 +376,6 @@ public class PieceUpdateFlowPoLineServiceTest {
     assertEquals(1, costToSave.getQuantityElectronic());
     assertEquals(1, costToSave.getQuantityPhysical());
 
-    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
-      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
   }
 

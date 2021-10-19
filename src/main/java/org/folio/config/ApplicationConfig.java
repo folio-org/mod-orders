@@ -60,7 +60,7 @@ import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
-import org.folio.service.pieces.flows.create.PieceCreateFlowValidator;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
@@ -369,8 +369,8 @@ public class ApplicationConfig {
                               receiptStatusPublisher, purchaseOrderService, pieceUpdateInventoryService);
   }
 
-  @Bean PieceCreateFlowValidator pieceCreateFlowValidator() {
-    return new PieceCreateFlowValidator();
+  @Bean DefaultPieceFlowsValidator pieceCreateFlowValidator() {
+    return new DefaultPieceFlowsValidator();
   }
 
   @Bean PieceCreateFlowPoLineService pieceCreateFlowPoLineService(PurchaseOrderService purchaseOrderService,
@@ -379,10 +379,10 @@ public class ApplicationConfig {
   }
 
   @Bean PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, ProtectionService protectionService,
-                PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager, PieceCreateFlowValidator pieceCreateFlowValidator,
+                PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
                 PieceCreateFlowPoLineService pieceCreateFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
     return new PieceCreateFlowManager(pieceStorageService, protectionService, pieceCreateFlowInventoryManager,
-                        pieceCreateFlowValidator, pieceCreateFlowPoLineService, basePieceFlowHolderBuilder);
+      defaultPieceFlowsValidator, pieceCreateFlowPoLineService, basePieceFlowHolderBuilder);
   }
 
   @Bean
@@ -443,9 +443,9 @@ public class ApplicationConfig {
 
   @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
             PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager,
-            BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
-    return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService,
-                      pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder);
+            BasePieceFlowHolderBuilder basePieceFlowHolderBuilder, DefaultPieceFlowsValidator defaultPieceFlowsValidator) {
+    return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService, pieceUpdateFlowPoLineService,
+                            pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder, defaultPieceFlowsValidator);
   }
 
   @Bean PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager(TitlesService titlesService,

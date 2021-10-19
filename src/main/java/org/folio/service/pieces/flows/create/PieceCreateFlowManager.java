@@ -11,6 +11,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
 public class PieceCreateFlowManager {
   private static final Logger logger = LogManager.getLogger(PieceCreateFlowManager.class);
@@ -18,18 +19,18 @@ public class PieceCreateFlowManager {
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
   private final PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
-  private final PieceCreateFlowValidator pieceCreateFlowValidator;
+  private final DefaultPieceFlowsValidator defaultPieceFlowsValidator;
   private final PieceCreateFlowPoLineService pieceCreateFlowPoLineService;
   private final BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
 
   public PieceCreateFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
-        PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager, PieceCreateFlowValidator pieceCreateFlowValidator,
+        PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
         PieceCreateFlowPoLineService pieceCreateFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
     this.pieceCreateFlowInventoryManager = pieceCreateFlowInventoryManager;
     this.pieceCreateFlowPoLineService = pieceCreateFlowPoLineService;
-    this.pieceCreateFlowValidator = pieceCreateFlowValidator;
+    this.defaultPieceFlowsValidator = defaultPieceFlowsValidator;
     this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
   }
 
@@ -37,7 +38,7 @@ public class PieceCreateFlowManager {
     logger.info("manual createPiece start");
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(createItem);
     return basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
-      .thenAccept(v -> pieceCreateFlowValidator.isCreatePieceRequestValid(holder))
+      .thenAccept(v -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToCreate, holder.getOriginPoLine(), createItem))
       .thenCompose(order -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(),
                                                                       ProtectedOperationType.CREATE, requestContext))
       .thenCompose(v -> pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),

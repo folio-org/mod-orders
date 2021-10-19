@@ -369,7 +369,8 @@ public class InventoryManager {
 
   public CompletableFuture<JsonObject> getHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
     if (StringUtils.isNotEmpty(holdingId)) {
-      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId).withQueryParameter(LANG, "en");
+      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
+                                            .withId(holdingId).withQueryParameter(LANG, "en");
       return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
     }
     return completedFuture(new JsonObject());

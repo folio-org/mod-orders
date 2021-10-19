@@ -1,26 +1,22 @@
-package org.folio.service.pieces.flows.create;
+package org.folio.service.pieces.flows;
 
-import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.OPEN;
-import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.PENDING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.UUID;
 
-import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class PieceCreateFlowValidatorTest {
-  private PieceCreateFlowValidator pieceCreateFlowValidator = new PieceCreateFlowValidator();
+public class DefaultPieceFlowsValidatorTest {
+  private DefaultPieceFlowsValidator defaultPieceFlowsValidator = new DefaultPieceFlowsValidator();
 
   @Test
   void createPieceIsForbiddenIfPieceAndLIneFormatIsNotCompatible() {
@@ -30,15 +26,12 @@ public class PieceCreateFlowValidatorTest {
     Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PENDING);
-    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
-                                    .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
+                                    .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
                                     .withLocations(List.of(loc)).withCost(cost);
-    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
-    holder.withOrderInformation(purchaseOrder, originPoLine);
 
     HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
-      pieceCreateFlowValidator.isCreatePieceRequestValid(holder);
+      defaultPieceFlowsValidator.isPieceRequestValid(piece, originPoLine, true);
     });
 
     boolean isErrorPresent = exception.getErrors().getErrors().stream()
@@ -54,17 +47,14 @@ public class PieceCreateFlowValidatorTest {
     Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
-    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
-    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
-    holder.withOrderInformation(purchaseOrder, originPoLine);
 
     HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
-      pieceCreateFlowValidator.isCreatePieceRequestValid(holder);
+      defaultPieceFlowsValidator.isPieceRequestValid(piece, originPoLine, true);
     });
 
     boolean isErrorPresent = exception.getErrors().getErrors().stream()
@@ -80,16 +70,13 @@ public class PieceCreateFlowValidatorTest {
     Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
-    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
-      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
-    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
-    holder.withOrderInformation(purchaseOrder, originPoLine);
 
-    pieceCreateFlowValidator.isCreatePieceRequestValid(holder);
+    defaultPieceFlowsValidator.isPieceRequestValid(piece, originPoLine, true);
   }
 
   @Test
@@ -100,15 +87,12 @@ public class PieceCreateFlowValidatorTest {
     Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
-    PoLine originPoLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId)
-                .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
+                .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
                 .withEresource(eresource)
                 .withLocations(List.of(loc)).withCost(cost);
-    PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
-    holder.withOrderInformation(purchaseOrder, originPoLine);
 
-    pieceCreateFlowValidator.isCreatePieceRequestValid(holder);
+    defaultPieceFlowsValidator.isPieceRequestValid(piece, originPoLine, true);
   }
 }

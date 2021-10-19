@@ -15,6 +15,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
 
 public class PieceCreateFlowInventoryManager {
@@ -63,17 +64,18 @@ public class PieceCreateFlowInventoryManager {
     if (piece.getHoldingId() != null) {
       return completedFuture(new Location().withHoldingId(piece.getHoldingId()));
     }
-    if (instanceId != null && PieceCreateFlowValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
+    if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
       Location location = new Location().withLocationId(piece.getLocationId());
-      return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).thenApply(holdingId -> {
-        Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
-          piece.setLocationId(null);
-          piece.setHoldingId(holdingId);
-          location.setLocationId(null);
-          location.setHoldingId(holdingId);
-        });
-        return location;
-      });
+      return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
+                    .thenApply(holdingId -> {
+                          Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
+                            piece.setLocationId(null);
+                            piece.setHoldingId(holdingId);
+                            location.setLocationId(null);
+                            location.setHoldingId(holdingId);
+                          });
+                          return location;
+                    });
     }
     return completedFuture(new Location().withLocationId(piece.getLocationId()));
   }
@@ -82,8 +84,8 @@ public class PieceCreateFlowInventoryManager {
     if (piece.getItemId() != null) {
       return completedFuture(piece.getItemId());
     }
-    if (createItem && PieceCreateFlowValidator.isCreateItemForPiecePossible(piece, compPOL) && piece.getHoldingId() != null) {
-        return pieceUpdateInventoryService.createItemRecord(compPOL, piece.getHoldingId(), requestContext);
+    if (createItem &&  piece.getHoldingId() != null) {
+        return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
     }
     return CompletableFuture.completedFuture(null);
   }

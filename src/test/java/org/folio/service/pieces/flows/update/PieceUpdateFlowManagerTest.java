@@ -21,6 +21,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -46,6 +47,7 @@ import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -131,7 +133,10 @@ public class PieceUpdateFlowManagerTest {
       .withHoldingId(holdingIdTpUpdate).withFormat(Piece.Format.ELECTRONIC);
     Cost cost = new Cost().withQuantityElectronic(1);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Eresource eresource = new Eresource().withCreateInventory(INSTANCE_HOLDING_ITEM);
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
@@ -179,7 +184,10 @@ public class PieceUpdateFlowManagerTest {
       .withHoldingId(holdingIdTpUpdate).withFormat(Piece.Format.ELECTRONIC);
     Cost cost = new Cost().withQuantityElectronic(1);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Eresource eresource = new Eresource().withCreateInventory(INSTANCE_HOLDING_ITEM);
     PoLine poLine = new PoLine().withIsPackage(false).withCheckinItems(true).withPurchaseOrderId(orderId).withId(lineId)
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
@@ -279,12 +287,17 @@ public class PieceUpdateFlowManagerTest {
     @Bean PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService() {
       return  mock(PieceUpdateFlowPoLineService.class);
     }
+    @Bean DefaultPieceFlowsValidator defaultPieceFlowsValidator() {
+      return spy(new DefaultPieceFlowsValidator());
+    }
 
     @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,
                       ProtectionService protectionService, PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService,
-              PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+              PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
+              DefaultPieceFlowsValidator defaultPieceFlowsValidator) {
       return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService,
-                      pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder);
+                      pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder,
+          defaultPieceFlowsValidator);
     }
   }
 }

@@ -120,13 +120,14 @@ public class PieceCreateFlowInventoryManagerTest {
                                     .withLocations(List.of(loc)).withCost(cost);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
+    doReturn(completedFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(piece.getId(), requestContext);
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
-    doReturn(completedFuture(List.of(itemId))).when(inventoryManager).createMissingElectronicItems(compPOL, holdingId, 1, requestContext);
+    doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
     doReturn(completedFuture(title)).when(pieceUpdateInventoryService).handleInstanceRecord(title, requestContext);
     doReturn(completedFuture(holdingId)).when(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingById(piece.getHoldingId(), requestContext);
-    doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).createItemRecord(compPOL, holdingId, requestContext);
+    doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
+    doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).openOrderCreateItemRecord(compPOL, holdingId, requestContext);
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
@@ -139,7 +140,7 @@ public class PieceCreateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
     verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
-    verify(pieceUpdateInventoryService).createItemRecord(compPOL, holdingId, requestContext);
+    verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }
 
   @Test
@@ -177,7 +178,7 @@ public class PieceCreateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
     verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
-    verify(inventoryManager, times(0)).createMissingElectronicItems(compPOL, locationId, 1, requestContext);
+    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }
 
 
@@ -215,7 +216,7 @@ public class PieceCreateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
     verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
-    verify(inventoryManager, times(0)).createMissingElectronicItems(compPOL, locationId, 1, requestContext);
+    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }
 
   private static class ContextConfiguration {

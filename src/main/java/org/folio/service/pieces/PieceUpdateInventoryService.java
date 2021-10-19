@@ -13,10 +13,13 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.HelperUtils.ID;
@@ -62,7 +65,7 @@ public class PieceUpdateInventoryService {
               return holdingId;
           });
         })
-        .thenCompose(holdingId -> createItemRecord(compPOL, holdingId, requestContext))
+        .thenCompose(holdingId -> openOrderCreateItemRecord(compPOL, holdingId, requestContext))
         .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId));
     }
     else
@@ -115,7 +118,7 @@ public class PieceUpdateInventoryService {
   /**
    * Return id of created  Item
    */
-  public CompletableFuture<String> createItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
+  public CompletableFuture<String> openOrderCreateItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
     logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
     CompletableFuture<String> itemFuture = new CompletableFuture<>();
@@ -140,15 +143,45 @@ public class PieceUpdateInventoryService {
     return itemFuture;
   }
 
-  public CompletableFuture<Pair<String, String>> deleteHoldingById(String holdingId, RequestContext rqContext) {
-    if (holdingId != null) {
+  /**
+   * Return id of created  Item
+   */
+  public CompletableFuture<String> manualPieceFlowCreateItemRecord(Piece piece, CompositePoLine compPOL, RequestContext requestContext) {
+    final int ITEM_QUANTITY = 1;
+    CompletableFuture<String> itemFuture = new CompletableFuture<>();
+    try {
+      String holdingId = piece.getHoldingId();
+      logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
+        if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
+          inventoryManager.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+            .thenApply(idS -> itemFuture.complete(idS.get(0)))
+            .exceptionally(itemFuture::completeExceptionally);
+        } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPOL)) {
+          inventoryManager.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+            .thenApply(idS -> itemFuture.complete(idS.get(0)))
+            .exceptionally(itemFuture::completeExceptionally);
+        }
+      else {
+        itemFuture.complete(null);
+      }
+    } catch (Exception e) {
+      itemFuture.completeExceptionally(e);
+    }
+    return itemFuture;
+  }
+
+  public CompletableFuture<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext rqContext) {
+    if (piece != null && piece.getHoldingId() != null) {
+      String holdingId = piece.getHoldingId();
       return inventoryManager.getHoldingById(holdingId, true, rqContext)
                   .thenCompose(holding -> {
                       if (holding != null && !holding.isEmpty()) {
                           return pieceStorageService.getPiecesByHoldingId(holdingId, rqContext)
+                            .thenApply(pieces -> skipPieceToProcess(piece, pieces))
                                   .thenCombine(inventoryManager.getItemsByHoldingId(holdingId, rqContext),
                                     (existingPieces, existingItems) -> {
-                                      if (CollectionUtils.isEmpty(existingPieces) && CollectionUtils.isEmpty(existingItems)) {
+                                      List<Piece> remainingPieces = skipPieceToProcess(piece, existingPieces);
+                                      if (CollectionUtils.isEmpty(remainingPieces) && CollectionUtils.isEmpty(existingItems)) {
                                         return Pair.of(true, holding);
                                       }
                                       return Pair.of(false, new JsonObject());
@@ -166,5 +199,10 @@ public class PieceUpdateInventoryService {
                   });
     }
     return completedFuture(null);
+  }
+
+  private List<Piece> skipPieceToProcess(Piece piece, List<Piece> pieces) {
+    return pieces.stream().filter(aPiece -> !aPiece.getId().equals(piece.getId())).collect(
+      Collectors.toList());
   }
 }
