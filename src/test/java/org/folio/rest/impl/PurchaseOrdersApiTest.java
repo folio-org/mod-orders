@@ -116,8 +116,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_IS_I
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.rest.core.exceptions.ErrorCodes.VENDOR_ISSUE;
-import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
 import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
@@ -618,15 +616,13 @@ public class PurchaseOrdersApiTest {
 
     final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    assertThat(response.getErrors(), hasSize(10));
+    assertThat(response.getErrors(), hasSize(8));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
                                      .collect(Collectors.toSet());
 
-    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
-                                              ZERO_COST_ELECTRONIC_QTY.getCode(),
-                                              NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
+    assertThat(errorCodes, containsInAnyOrder(NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
                                               ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
@@ -747,15 +743,13 @@ public class PurchaseOrdersApiTest {
 
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(5));
+    assertThat(response.getErrors(), hasSize(3));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
                                      .collect(Collectors.toSet());
 
-    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
-                                              ZERO_COST_PHYSICAL_QTY.getCode(),
-                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+    assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
                                               ZERO_LOCATION_QTY.getCode()));
 
