@@ -224,7 +224,7 @@ public class EncumbranceService {
     return ENCUMBRANCE_CRITERIA
       + AND + "encumbrance.sourcePoLineId == " + poLineId
       + AND + "encumbrance.status == " + Encumbrance.Status.RELEASED
-      + AND + "encumbrance.fiscalYearId == " + fiscalYearId;
+      + AND + "fiscalYearId == " + fiscalYearId;
   }
 
   private CompletableFuture<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePoLine poLine,
