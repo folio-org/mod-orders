@@ -414,9 +414,9 @@ public class ApplicationConfig {
       encumbrancesProcessingHolderBuilder);
   }
 
-  @Bean PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
+  @Bean PieceUpdateInventoryService pieceUpdateInventoryService(InventoryManager inventoryManager,
                                 PieceStorageService pieceStorageService) {
-    return new PieceUpdateInventoryService(titlesService, inventoryManager, pieceStorageService);
+    return new PieceUpdateInventoryService(inventoryManager, pieceStorageService);
   }
 
   @Bean PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderService purchaseOrderService,

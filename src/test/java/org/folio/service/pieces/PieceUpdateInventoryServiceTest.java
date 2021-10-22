@@ -8,7 +8,6 @@ import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.mockito.Mockito.doReturn;
@@ -45,18 +44,10 @@ import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 
 public class PieceUpdateInventoryServiceTest {
-  public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
-  private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
-  private static final String PIECE_PATH = BASE_MOCK_DATA_PATH + "pieces/";
-  private static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
-  public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
-
   @Autowired
   private PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
   private InventoryManager inventoryManager;
-  @Autowired
-  private TitlesService titlesService;
   @Autowired
   private  PieceStorageService pieceStorageService;
   @Mock
@@ -184,9 +175,9 @@ public class PieceUpdateInventoryServiceTest {
     }
 
     @Bean
-    PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
+    PieceUpdateInventoryService pieceUpdateInventoryService(InventoryManager inventoryManager,
                                 PieceStorageService pieceStorageService) {
-      return spy(new PieceUpdateInventoryService(titlesService, inventoryManager, pieceStorageService));
+      return spy(new PieceUpdateInventoryService(inventoryManager, pieceStorageService));
     }
   }
 }
