@@ -772,7 +772,6 @@ public class PurchaseOrdersApiTest {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
 
-    // Set incorrect quantities for the first PO Line
     CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
     firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
     firstPoLine.getCost().setQuantityPhysical(0);
