@@ -51,6 +51,8 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
+import org.folio.service.orders.flows.open.OpenCompositeOrderInventoryService;
+import org.folio.service.orders.flows.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceService;
@@ -412,9 +414,9 @@ public class ApplicationConfig {
       encumbrancesProcessingHolderBuilder);
   }
 
-  @Bean PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
+  @Bean PieceUpdateInventoryService pieceUpdateInventoryService(InventoryManager inventoryManager,
                                 PieceStorageService pieceStorageService) {
-    return new PieceUpdateInventoryService(titlesService, inventoryManager, pieceStorageService);
+    return new PieceUpdateInventoryService(inventoryManager, pieceStorageService);
   }
 
   @Bean PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderService purchaseOrderService,
@@ -456,5 +458,20 @@ public class ApplicationConfig {
   @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
                             PieceUpdateInventoryService pieceUpdateInventoryService, InventoryManager inventoryManager) {
     return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryManager);
+  }
+
+  @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
+                    PieceStorageService pieceStorageService) {
+    return new OpenCompositeOrderInventoryService(titlesService, inventoryManager, pieceStorageService) ;
+  }
+
+  @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
+          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, InventoryManager inventoryManager,
+          PieceStorageService pieceStorageService, PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
+          PieceChangeReceiptStatusPublisher receiptStatusPublisher, ExpenseClassValidationService expenseClassValidationService,
+          TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService) {
+    return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
+      pieceStorageService, purchaseOrderService, protectionService, receiptStatusPublisher, expenseClassValidationService,
+      titlesService, openCompositeOrderInventoryService);
   }
 }
