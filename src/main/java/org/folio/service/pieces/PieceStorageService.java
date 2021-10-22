@@ -10,14 +10,19 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
 
+import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 
 public class PieceStorageService {
   private static final Logger logger = LogManager.getLogger(PieceStorageService.class);
@@ -103,6 +108,25 @@ public class PieceStorageService {
       .withOffset(offset)
       .withLimit(limit);
     return restClient.get(requestEntry, requestContext, PieceCollection.class);
+  }
+
+  public CompletableFuture<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
+    logger.info("getPiecesByLineIdsByChunks start");
+    return collectResultsOnSuccess(
+      ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ).map(ids -> getPieceChunkByLineIds(ids, requestContext))
+        .toList()).thenApply(
+      lists -> lists.stream()
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList()));
+  }
+
+  private CompletableFuture<List<Piece>> getPieceChunkByLineIds(Collection<String> poLineIds, RequestContext requestContext) {
+    String query = convertIdsToCqlQuery(poLineIds, "poLineId");
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES_STORAGE)).withQuery(query)
+      .withOffset(0)
+      .withLimit(Integer.MAX_VALUE);
+    return restClient.get(requestEntry, requestContext, PieceCollection.class)
+      .thenApply(PieceCollection::getPieces);
   }
 
 }

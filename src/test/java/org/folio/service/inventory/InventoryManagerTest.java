@@ -15,12 +15,12 @@ import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
-import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
 import static org.folio.rest.impl.MockServer.ITEMS_RECORDS_MOCK_DATA_PATH;
@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -62,9 +63,9 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -77,6 +78,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.jupiter.api.AfterAll;
@@ -564,6 +566,55 @@ public class InventoryManagerTest {
     assertThat(holding, equalTo(holdingIdAct));
     verify(restClient, times(0)).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
   }
+
+  @Test
+  void testShouldCreateInstanceIfInstanceIdIsNotProvided() throws ExecutionException, InterruptedException {
+    //given
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    title.setInstanceId(null);
+    PieceService pieceService = mock(PieceService.class, CALLS_REAL_METHODS);
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).getOrCreateInstanceRecord(any(Title.class), eq(requestContext));
+    //When
+    inventoryManager.handleInstanceRecord(title, requestContext).get();
+    //Then
+    verify(inventoryManager, times(1)).getOrCreateInstanceRecord(title, requestContext);
+  }
+
+  @Test
+  void testShouldSkipCreationNewInstanceIfInstanceIdIsProvided() throws ExecutionException, InterruptedException {
+    //given
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    //When
+    CompletableFuture<Title> result = inventoryManager.handleInstanceRecord(title, requestContext);
+    //Then
+    Title actTitle = result.get();
+    assertEquals(title, actTitle);
+  }
+
+  @Test
+  void testShouldCreateInstanceRecordIfProductIsEmpty() throws ExecutionException, InterruptedException {
+    //given
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    title.setProductIds(null);
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
+    //When
+    inventoryManager.getOrCreateInstanceRecord(title, requestContext).get();
+    //Thenа
+    verify(inventoryManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
+  }
+
+  @Test
+  void testShouldCreateInstanceRecordIfProductPresentAndInstancesNotFoundInDB() throws ExecutionException, InterruptedException {
+    //given
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    doReturn(completedFuture(new JsonObject("{\"instances\" : []}"))).when(inventoryManager).searchInstancesByProducts(any(List.class), eq(requestContext));
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
+    //When
+    inventoryManager.getOrCreateInstanceRecord(title, requestContext).get();
+    //Thenа
+    verify(inventoryManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
+  }
+
   /**
    * Define unit test specific beans to override actual ones
    */

@@ -11,13 +11,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import io.vertx.core.json.JsonObject;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
+
+import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderService {
 
@@ -57,6 +58,11 @@ public class PurchaseOrderService {
       .thenApply(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(toList()));
+  }
+
+  public CompletableFuture<CompositePurchaseOrder> getCompositeOrderByPoLineId(String poLineId, RequestContext requestContext) {
+    return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
+      .thenCompose(poLine -> getCompositeOrderById(poLine.getPurchaseOrderId(), requestContext));
   }
 
   private CompletableFuture<List<PurchaseOrder>> getOrdersChunk(List<String> orderIds, RequestContext requestContext) {
