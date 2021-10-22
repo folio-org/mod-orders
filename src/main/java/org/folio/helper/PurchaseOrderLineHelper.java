@@ -1,68 +1,5 @@
 package org.folio.helper;
 
-import io.vertx.core.Context;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
-import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.rest.acq.model.SequenceNumber;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Eresource;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.rest.jaxrs.model.ReportingCode;
-import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.AcquisitionsUnitsService;
-import org.folio.service.ProtectionService;
-import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
-import org.folio.service.finance.transaction.EncumbranceService;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.inventory.InventoryManager;
-import org.folio.service.orders.OrderInvoiceRelationService;
-import org.folio.service.orders.OrderWorkflowType;
-import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.pieces.PieceService;
-import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.titles.TitlesService;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import javax.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -71,7 +8,6 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEqualCollection;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
@@ -94,9 +30,72 @@ import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.validatePoLine;
+import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.ProtectionService;
+import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
+import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.inventory.InventoryManager;
+import org.folio.service.orders.OrderInvoiceRelationService;
+import org.folio.service.orders.OrderWorkflowType;
+import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.titles.TitlesService;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import io.vertx.core.Context;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderLineHelper extends AbstractHelper {
 
@@ -113,8 +112,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   @Autowired
   private InventoryManager inventoryManager;
   @Autowired
-  private PieceService pieceService;
-  @Autowired
   private EncumbranceService encumbranceService;
   @Autowired
   private ExpenseClassValidationService expenseClassValidationService;
@@ -123,8 +120,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   @Autowired
   private OrderInvoiceRelationService orderInvoiceRelationService;
   @Autowired
-  private ConfigurationEntriesService configurationEntriesService;
-  @Autowired
   private TitlesService titlesService;
   @Autowired
   private AcquisitionsUnitsService acquisitionsUnitsService;
@@ -132,8 +127,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
   private ProtectionService protectionService;
   @Autowired
   private PurchaseOrderLineService purchaseOrderLineService;
-  @Autowired
-  private PieceStorageService pieceStorageService;
 
   public PurchaseOrderLineHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -520,36 +513,6 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, poLineId), lang);
     return operateOnObject(HttpMethod.PUT, endpoint, poLine, httpClient, okapiHeaders, logger);
   }
-//
-//  /**
-//   * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
-//   *
-//   * @param compPOL Composite PO line to update Inventory for
-//   * @return CompletableFuture with void.
-//   */
-//  CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, String titleId, RequestContext requestContext) {
-//    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
-//      return completedFuture(null);
-//    }
-//    if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL)) {
-//      // don't create pieces, if no inventory updates and receiving not required
-//      if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
-//        return completedFuture(null);
-//      }
-//      return pieceService.openOrderCreatePieces(compPOL, titleId, Collections.emptyList(), true, requestContext).thenRun(
-//          () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
-//    }
-//
-//    return inventoryManager.handleInstanceRecord(compPOL, requestContext)
-//      .thenCompose(compPOLWithInstanceId -> inventoryManager.handleHoldingsAndItemsRecords(compPOLWithInstanceId, requestContext))
-//      .thenCompose(piecesWithItemId -> {
-//        if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
-//          return completedFuture(null);
-//        }
-//        //create pieces only if receiving is required
-//        return pieceService.openOrderCreatePieces(compPOL, titleId, piecesWithItemId, true, requestContext);
-//      });
-//  }
 
   String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {
     String oldPoLineNumber = poLineFromStorage.getPoLineNumber();

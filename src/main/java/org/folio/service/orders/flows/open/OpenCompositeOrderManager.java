@@ -76,6 +76,8 @@ public class OpenCompositeOrderManager {
   private final ExpenseClassValidationService expenseClassValidationService;
   private final TitlesService titlesService;
   private final OpenCompositeOrderInventoryService openCompositeOrderInventoryService;
+
+
   public OpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
             EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, InventoryManager inventoryManager,
             PieceStorageService pieceStorageService, PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
