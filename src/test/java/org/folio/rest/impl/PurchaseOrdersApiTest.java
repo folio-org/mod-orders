@@ -176,6 +176,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -761,6 +762,23 @@ public class PurchaseOrdersApiTest {
 
     // Check that no any calls made by the business logic to other services
     assertEquals(2, MockServer.serverRqRs.size());
+  }
+
+  @Test
+  void testPutOrderWithZeroQuantitiesWithoutLocations() throws Exception {
+    //MODORDERS-584
+    logger.info("=== Test Order update - Skip quantity validation with 0 electronic and physical quantities and without location ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+
+    CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
+    firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
+    firstPoLine.getCost().setQuantityPhysical(0);
+    firstPoLine.getCost().setQuantityElectronic(0);
+    firstPoLine.setLocations(new ArrayList<>());
+
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData), "", 204);
   }
 
   @Test

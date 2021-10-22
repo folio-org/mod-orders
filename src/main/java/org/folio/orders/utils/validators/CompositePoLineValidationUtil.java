@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
@@ -37,9 +38,14 @@ public final class CompositePoLineValidationUtil {
 
   public static List<Error> validatePoLine(CompositePoLine compPOL) {
     List<Error> errors = new ArrayList<>();
+    errors.addAll(validatePackagePoLine(compPOL));
+
+    if (getPhysicalCostQuantity(compPOL) == 0 && getElectronicCostQuantity(compPOL) == 0
+      && CollectionUtils.isEmpty(compPOL.getLocations())) {
+      return errors;
+    }
 
     errors.addAll(validatePoLineFormats(compPOL));
-    errors.addAll(validatePackagePoLine(compPOL));
     errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
 
