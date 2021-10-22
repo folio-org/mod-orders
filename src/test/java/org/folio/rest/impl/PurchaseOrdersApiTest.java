@@ -116,6 +116,8 @@ import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_IS_I
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.rest.core.exceptions.ErrorCodes.VENDOR_ISSUE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
 import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
@@ -174,6 +176,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -616,13 +619,15 @@ public class PurchaseOrdersApiTest {
 
     final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    assertThat(response.getErrors(), hasSize(8));
+    assertThat(response.getErrors(), hasSize(10));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
                                      .collect(Collectors.toSet());
 
-    assertThat(errorCodes, containsInAnyOrder(NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
+                                              ZERO_COST_ELECTRONIC_QTY.getCode(),
+                                              NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
                                               ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
@@ -743,18 +748,38 @@ public class PurchaseOrdersApiTest {
 
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(3));
+    assertThat(response.getErrors(), hasSize(5));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
                                      .collect(Collectors.toSet());
 
-    assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
+                                              ZERO_COST_PHYSICAL_QTY.getCode(),
+                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
                                               ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertEquals(2, MockServer.serverRqRs.size());
+  }
+
+  @Test
+  void testPutOrderWithZeroQuantitiesWithoutLocations() throws Exception {
+    //MODORDERS-584
+    logger.info("=== Test Order update - Skip quantity validation with 0 electronic and physical quantities and without location ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+
+    // Set incorrect quantities for the first PO Line
+    CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
+    firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
+    firstPoLine.getCost().setQuantityPhysical(0);
+    firstPoLine.getCost().setQuantityElectronic(0);
+    firstPoLine.setLocations(new ArrayList<>());
+
+    verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData), "", 204);
   }
 
   @Test

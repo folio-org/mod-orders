@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
@@ -37,9 +38,14 @@ public final class CompositePoLineValidationUtil {
 
   public static List<Error> validatePoLine(CompositePoLine compPOL) {
     List<Error> errors = new ArrayList<>();
+    errors.addAll(validatePackagePoLine(compPOL));
+
+    if (getPhysicalCostQuantity(compPOL) == 0 && getElectronicCostQuantity(compPOL) == 0
+      && CollectionUtils.isEmpty(compPOL.getLocations())) {
+      return errors;
+    }
 
     errors.addAll(validatePoLineFormats(compPOL));
-    errors.addAll(validatePackagePoLine(compPOL));
     errors.addAll(validateLocations(compPOL));
     errors.addAll(validateCostPrices(compPOL));
 
@@ -48,7 +54,9 @@ public final class CompositePoLineValidationUtil {
 
   public static List<Error> validatePoLineFormats(CompositePoLine compPOL) {
     CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
-    if (orderFormat == ELECTRONIC_RESOURCE) {
+    if (orderFormat == P_E_MIX) {
+      return validatePoLineWithMixedFormat(compPOL);
+    } else if (orderFormat == ELECTRONIC_RESOURCE) {
       return validatePoLineWithElectronicFormat(compPOL);
     } else if (orderFormat == CompositePoLine.OrderFormat.PHYSICAL_RESOURCE) {
       return validatePoLineWithPhysicalFormat(compPOL);
@@ -57,6 +65,20 @@ public final class CompositePoLineValidationUtil {
     }
 
     return Collections.emptyList();
+  }
+
+  private static List<Error> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
+
+    List<ErrorCodes> errors = new ArrayList<>();
+    // The quantity of the physical and electronic resources in the cost must be specified
+    if (getPhysicalCostQuantity(compPOL) == 0) {
+      errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
+    }
+    if (getElectronicCostQuantity(compPOL) == 0) {
+      errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
+    }
+
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
   public static Optional<Error> checkMaterialAvailability(CompositePoLine compPOL) {
@@ -135,6 +157,10 @@ public final class CompositePoLineValidationUtil {
   private static List<Error> validatePoLineWithPhysicalFormat(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
+    // The quantity of the physical resources in the cost must be specified
+    if (getPhysicalCostQuantity(compPOL) == 0) {
+      errors.add(ErrorCodes.ZERO_COST_PHYSICAL_QTY);
+    }
     // The quantity of the electronic resources in the cost must not be specified
     if (getElectronicCostQuantity(compPOL) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY);
@@ -146,6 +172,10 @@ public final class CompositePoLineValidationUtil {
   private static List<Error> validatePoLineWithElectronicFormat(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
+    // The quantity of the electronic resources in the cost must be specified
+    if (getElectronicCostQuantity(compPOL) == 0) {
+      errors.add(ErrorCodes.ZERO_COST_ELECTRONIC_QTY);
+    }
     // The quantity of the physical resources in the cost must not be specified
     if (getPhysicalCostQuantity(compPOL) > 0) {
       errors.add(ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY);

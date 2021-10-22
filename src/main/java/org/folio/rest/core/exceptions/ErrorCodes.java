@@ -20,6 +20,8 @@ public enum ErrorCodes {
   ITEM_CREATION_FAILED("itemCreationFailed", "The item record failed to be created"),
   ITEM_UPDATE_FAILED("itemUpdateFailed", "The item record failed to be updated"),
   ITEM_NOT_RETRIEVED("itemNotRetrieved", "The item record is not retrieved"),
+  ZERO_COST_PHYSICAL_QTY("zeroCostQtyPhysical", "Physical cost quantity must be specified"),
+  ZERO_COST_ELECTRONIC_QTY("zeroCostQtyElectronic", "Electronic cost quantity must be specified"),
   ZERO_LOCATION_QTY("zeroLocQty", "Physical or electronic location quantity must be specified"),
   NON_ZERO_COST_PHYSICAL_QTY("nonZeroCostQtyPhysical", "Physical cost quantity must not be specified"),
   NON_ZERO_COST_ELECTRONIC_QTY("nonZeroCostQtyElectronic", "Electronic cost quantity must not be specified"),
