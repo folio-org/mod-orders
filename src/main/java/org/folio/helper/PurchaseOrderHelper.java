@@ -44,11 +44,9 @@ import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
@@ -65,7 +63,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -80,17 +77,14 @@ import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
-import org.folio.orders.utils.validators.OngoingOrderValidator;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -102,7 +96,6 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
-import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.AcquisitionsUnitsService;
@@ -118,6 +111,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.flows.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.titles.TitlesService;
@@ -174,6 +168,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
   private PieceService pieceService;
   @Autowired
   private UnOpenCompositeOrderManager unOpenCompositeOrderManager;
+  @Autowired
+  private OpenCompositeOrderManager openCompositeOrderManager;
 
   public PurchaseOrderHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
     super(httpClient, okapiHeaders, ctx, lang);
@@ -346,7 +342,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           .thenCompose(v -> updatePoLines(poFromStorage, compPO))
           .thenCompose(v -> {
             if (isTransitionToOpen) {
-              return checkOrderApprovalRequired(compPO).thenCompose(ok -> openOrder(compPO, poFromStorage, requestContext));
+              return checkOrderApprovalRequired(compPO).thenCompose(ok -> openCompositeOrderManager.process(compPO, poFromStorage, requestContext));
             } else {
               return CompletableFuture.completedFuture(null);
             }
@@ -583,7 +579,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenAccept(compPO -> protectionService.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ, getRequestContext())
         .thenAccept(ok -> purchaseOrderLineService.populateOrderLines(compPO, getRequestContext())
-          .thenCompose(this::fetchNonPackageTitles)
+          .thenCompose(compPOWithLines -> titlesService.fetchNonPackageTitles(compPOWithLines, getRequestContext()))
           .thenAccept(linesIdTitles -> populateInstanceId(linesIdTitles, compPO.getCompositePoLines()))
           .thenCompose(po -> combinedPopulateService.populate(new CompositeOrderRetrieveHolder(compPO), getRequestContext()))
           .thenApply(CompositeOrderRetrieveHolder::getOrder)
@@ -612,75 +608,75 @@ public class PurchaseOrderHelper extends AbstractHelper {
             .thenApply(CompositeOrderRetrieveHolder::getOrder);
   }
 
-  /**
-   * Handles transition of given order to OPEN status.
-   *
-   * @param compPO Purchase Order to open
-   * @return CompletableFuture that indicates when transition is completed
-   */
-  public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
-    compPO.setWorkflowStatus(OPEN);
-    compPO.setDateOrdered(new Date());
-    EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
-    return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), requestContext)
-      .thenAccept(v -> FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines()))
-      .thenAccept(v -> OngoingOrderValidator.validate(compPO))
-      .thenCompose(v -> strategy.prepareProcessEncumbrancesAndValidate(compPO, poFromStorage, requestContext))
-      .thenApply(v -> this.validateMaterialTypes(compPO))
-      .thenCompose(this::fetchNonPackageTitles)
-      .thenCompose(linesIdTitles -> {
-          populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
-          return openOrderUpdateInventory(linesIdTitles, compPO, requestContext);
-        })
-      .thenCompose(v -> finishProcessingEncumbrancesForOpenOrder(strategy, compPO, poFromStorage, requestContext))
-      .thenAccept(ok -> changePoLineStatuses(compPO))
-      .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines()));
-  }
+//  /**
+//   * Handles transition of given order to OPEN status.
+//   *
+//   * @param compPO Purchase Order to open
+//   * @return CompletableFuture that indicates when transition is completed
+//   */
+//  public CompletableFuture<Void> openOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+//    compPO.setWorkflowStatus(OPEN);
+//    compPO.setDateOrdered(new Date());
+//    EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
+//    return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), requestContext)
+//      .thenAccept(v -> FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines()))
+//      .thenAccept(v -> OngoingOrderValidator.validate(compPO))
+//      .thenCompose(v -> strategy.prepareProcessEncumbrancesAndValidate(compPO, poFromStorage, requestContext))
+//      .thenApply(v -> this.validateMaterialTypes(compPO))
+//      .thenCompose(this::fetchNonPackageTitles)
+//      .thenCompose(linesIdTitles -> {
+//          populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
+//          return openOrderUpdateInventory(linesIdTitles, compPO, requestContext);
+//        })
+//      .thenCompose(v -> finishProcessingEncumbrancesForOpenOrder(strategy, compPO, poFromStorage, requestContext))
+//      .thenAccept(ok -> changePoLineStatuses(compPO))
+//      .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines()));
+//  }
+//
+//  private CompletableFuture<Void> finishProcessingEncumbrancesForOpenOrder(EncumbranceWorkflowStrategy strategy,
+//      CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+//    return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
+//      .handle((v, t) -> {
+//        if (t == null)
+//          return CompletableFuture.completedFuture(v);
+//        // There was an error when processing the encumbrances despite the previous validations.
+//        // Order lines should be saved to avoid leaving an open order with locationId instead of holdingId.
+//        return openOrderUpdatePoLinesSummary(compPO.getCompositePoLines())
+//          .handle((vv, tt) -> {
+//            throw new CompletionException(t.getCause());
+//          });
+//      })
+//      .thenCompose(v -> v) // wait for future returned by handle
+//      .thenApply(v -> null);
+//  }
 
-  private CompletableFuture<Void> finishProcessingEncumbrancesForOpenOrder(EncumbranceWorkflowStrategy strategy,
-      CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
-    return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
-      .handle((v, t) -> {
-        if (t == null)
-          return CompletableFuture.completedFuture(v);
-        // There was an error when processing the encumbrances despite the previous validations.
-        // Order lines should be saved to avoid leaving an open order with locationId instead of holdingId.
-        return openOrderUpdatePoLinesSummary(compPO.getCompositePoLines())
-          .handle((vv, tt) -> {
-            throw new CompletionException(t.getCause());
-          });
-      })
-      .thenCompose(v -> v) // wait for future returned by handle
-      .thenApply(v -> null);
-  }
-
-  public CompletableFuture<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines) {
-    return CompletableFuture.allOf( compositePoLines.stream()
-      .map(this::openOrderRemoveLocationId)
-      .map(this::openOrderConvertToPoLine)
-      .map(line -> purchaseOrderLineService.saveOrderLine(line, getRequestContext()))
-      .toArray(CompletableFuture[]::new));
-  }
-
-  private CompositePoLine openOrderRemoveLocationId(CompositePoLine compositePoLine) {
-    compositePoLine.getLocations().forEach(location ->
-    {
-      if (location.getHoldingId() != null) {
-        location.setLocationId(null);
-      }
-    });
-    return compositePoLine;
-  }
-
-  public PoLine openOrderConvertToPoLine(CompositePoLine compPoLine) {
-    JsonObject pol = JsonObject.mapFrom(compPoLine);
-    pol.remove(ALERTS);
-    pol.remove(REPORTING_CODES);
-    PoLine poLine = pol.mapTo(PoLine.class);
-    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
-    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
-    return poLine;
-  }
+//  public CompletableFuture<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines) {
+//    return CompletableFuture.allOf( compositePoLines.stream()
+//      .map(this::openOrderRemoveLocationId)
+//      .map(this::openOrderConvertToPoLine)
+//      .map(line -> purchaseOrderLineService.saveOrderLine(line, getRequestContext()))
+//      .toArray(CompletableFuture[]::new));
+//  }
+//
+//  private CompositePoLine openOrderRemoveLocationId(CompositePoLine compositePoLine) {
+//    compositePoLine.getLocations().forEach(location ->
+//    {
+//      if (location.getHoldingId() != null) {
+//        location.setLocationId(null);
+//      }
+//    });
+//    return compositePoLine;
+//  }
+//
+//  public PoLine openOrderConvertToPoLine(CompositePoLine compPoLine) {
+//    JsonObject pol = JsonObject.mapFrom(compPoLine);
+//    pol.remove(ALERTS);
+//    pol.remove(REPORTING_CODES);
+//    PoLine poLine = pol.mapTo(PoLine.class);
+//    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
+//    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
+//    return poLine;
+//  }
 
   private CompletableFuture<Void> updateItemsInInventory(List<JsonObject> items) {
     return CompletableFuture.allOf(items.stream()
@@ -688,17 +684,8 @@ public class PurchaseOrderHelper extends AbstractHelper {
                                         .toArray(CompletableFuture[]::new));
   }
 
-  private CompletableFuture<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO) {
-    List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());
-    return titlesService.getTitlesByPoLineIds(lineIds, getRequestContext());
-  }
-
   private List<CompositePoLine> getNonPackageLines(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
-  }
-
-  private List<String> getNonPackageLineIds(List<CompositePoLine> compositePoLines) {
-    return compositePoLines.stream().filter(line -> !line.getIsPackage()).map(CompositePoLine::getId).collect(toList());
   }
 
   /**
@@ -852,7 +839,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
           return checkOrderApprovalRequired(compPO)
             .thenCompose(ok ->
               purchaseOrderLineService.populateOrderLines(compPO, requestContext)
-                .thenCompose(po -> openOrder(po, null, requestContext)))
+                .thenCompose(po -> openCompositeOrderManager.process(po, null, requestContext)))
             .thenCompose(ok -> handleFinalOrderStatus(compPO, finalStatus.value(), requestContext));
         }
         return completedFuture(null);
@@ -943,30 +930,30 @@ public class PurchaseOrderHelper extends AbstractHelper {
     });
   }
 
-  private void changePoLineStatuses(CompositePurchaseOrder compPO) {
-    compPO.getCompositePoLines().forEach(poLine -> {
-      changeReceiptStatus(compPO, poLine);
-      changePaymentStatus(compPO, poLine);
-    });
-  }
+//  private void changePoLineStatuses(CompositePurchaseOrder compPO) {
+//    compPO.getCompositePoLines().forEach(poLine -> {
+//      changeReceiptStatus(compPO, poLine);
+//      changePaymentStatus(compPO, poLine);
+//    });
+//  }
 
-  private void changePaymentStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
-    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)) {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.ONGOING);
-    }
-    else if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.PENDING) {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
-    }
-  }
-
-  private void changeReceiptStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
-    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)) {
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.ONGOING);
-    }
-    else if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-    }
-  }
+//  private void changePaymentStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
+//    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)) {
+//      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.ONGOING);
+//    }
+//    else if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.PENDING) {
+//      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
+//    }
+//  }
+//
+//  private void changeReceiptStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
+//    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)) {
+//      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.ONGOING);
+//    }
+//    else if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
+//      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+//    }
+//  }
 
   private CompletionStage<Void> validatePoNumber(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
     if (isPoNumberChanged(poFromStorage, updatedPo)) {
@@ -1047,22 +1034,22 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return CompletableFuture.allOf(futures);
   }
 
-  private CompletableFuture<Void> openOrderUpdateInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
-                                                           RequestContext requestContext) {
-    return CompletableFuture.allOf(
-      compPO.getCompositePoLines()
-        .stream()
-        .map(poLine -> orderLineHelper.openOrderUpdateInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), requestContext))
-        .toArray(CompletableFuture[]::new)
-    );
-  }
+//  private CompletableFuture<Void> openOrderUpdateInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
+//                                                           RequestContext requestContext) {
+//    return CompletableFuture.allOf(
+//      compPO.getCompositePoLines()
+//        .stream()
+//        .map(poLine -> orderLineHelper.openOrderUpdateInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), requestContext))
+//        .toArray(CompletableFuture[]::new)
+//    );
+//  }
 
-  private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, CompositePoLine poLine) {
-    return Optional.ofNullable(lineIdsTitles.get(poLine.getId()))
-      .map(titles -> titles.get(0))
-      .map(Title::getId)
-      .orElse(null);
-  }
+//  private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, CompositePoLine poLine) {
+//    return Optional.ofNullable(lineIdsTitles.get(poLine.getId()))
+//      .map(titles -> titles.get(0))
+//      .map(Title::getId)
+//      .orElse(null);
+//  }
 
   private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage) {
     logger.info("handlePoLines start");
@@ -1208,15 +1195,15 @@ public class PurchaseOrderHelper extends AbstractHelper {
     return !getProvidedPermissions().contains(PERMISSION_ORDER_REOPEN);
   }
 
-  private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
-    if (purchaseOrder.getWorkflowStatus() != PENDING) {
-        List<Error> errors = CompositePoLineValidationUtil.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
-        if (!errors.isEmpty()) {
-          throw new HttpException(422, errors.get(0));
-        }
-    }
-    return purchaseOrder;
-  }
+//  private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
+//    if (purchaseOrder.getWorkflowStatus() != PENDING) {
+//        List<Error> errors = CompositePoLineValidationUtil.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
+//        if (!errors.isEmpty()) {
+//          throw new HttpException(422, errors.get(0));
+//        }
+//    }
+//    return purchaseOrder;
+//  }
 
 
 }

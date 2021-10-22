@@ -60,12 +60,14 @@ import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
+import org.folio.service.orders.flows.open.OpenCompositeOrderInventoryServiceTest;
+import org.folio.service.orders.flows.open.OpenCompositeOrderManagerTest;
 import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidatorTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManagerTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineServiceTest;
-import org.folio.service.pieces.flows.DefaultPieceFlowsValidatorTest;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManagerTest;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineServiceTest;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManagerTest;
@@ -371,4 +373,15 @@ public class ApiTestSuite {
   class PieceUpdateFlowPoLineServiceTestNested extends PieceUpdateFlowPoLineServiceTest {
 
   }
+
+  @Nested
+  class OpenCompositeOrderInventoryServiceTestNested extends OpenCompositeOrderInventoryServiceTest {
+
+  }
+
+  @Nested
+  class OpenCompositeOrderManagerTestNested extends OpenCompositeOrderManagerTest {
+
+  }
+
 }

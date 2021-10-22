@@ -2,6 +2,7 @@ package org.folio.service.titles;
 
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -15,12 +16,14 @@ import java.util.function.Function;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
@@ -134,4 +137,13 @@ public class TitlesService {
       });
   }
 
+  public CompletableFuture<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());
+    return getTitlesByPoLineIds(lineIds, requestContext);
+  }
+
+
+  private List<String> getNonPackageLineIds(List<CompositePoLine> compositePoLines) {
+    return compositePoLines.stream().filter(line -> !line.getIsPackage()).map(CompositePoLine::getId).collect(toList());
+  }
 }

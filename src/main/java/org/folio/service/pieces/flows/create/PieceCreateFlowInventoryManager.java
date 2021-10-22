@@ -109,14 +109,14 @@ public class PieceCreateFlowInventoryManager {
     if (title.getInstanceId() != null) {
       return CompletableFuture.completedFuture(title);
     } else {
-      return pieceUpdateInventoryService.getOrCreateInstanceRecord(title, requestContext)
+      return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
         .thenApply(title::withInstanceId)
         .thenCompose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(json -> title));
     }
   }
 
   private CompletableFuture<String> createTitleInstance(Title title, RequestContext requestContext) {
-    return pieceUpdateInventoryService.getOrCreateInstanceRecord(title, requestContext)
+    return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
       .thenApply(title::withInstanceId)
       .thenCompose(titleWithInstanceId ->
         titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(aVoid -> title.getInstanceId())

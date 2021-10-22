@@ -12,7 +12,6 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.core.models.RequestContext;
@@ -513,44 +512,44 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
     return future;
   }
 
-  /**
-   * Handle update of the order line without sub-objects
-   */
+//  /**
+//   * Handle update of the order line without sub-objects
+//   */
   public CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine) {
     logger.debug("Updating PO line...");
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES, poLineId), lang);
     return operateOnObject(HttpMethod.PUT, endpoint, poLine, httpClient, okapiHeaders, logger);
   }
-
-  /**
-   * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
-   *
-   * @param compPOL Composite PO line to update Inventory for
-   * @return CompletableFuture with void.
-   */
-  CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, String titleId, RequestContext requestContext) {
-    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return completedFuture(null);
-    }
-    if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL)) {
-      // don't create pieces, if no inventory updates and receiving not required
-      if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
-        return completedFuture(null);
-      }
-      return pieceService.openOrderCreatePieces(compPOL, titleId, Collections.emptyList(), true, requestContext).thenRun(
-          () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
-    }
-
-    return inventoryManager.handleInstanceRecord(compPOL, requestContext)
-      .thenCompose(compPOLWithInstanceId -> inventoryManager.handleHoldingsAndItemsRecords(compPOLWithInstanceId, requestContext))
-      .thenCompose(piecesWithItemId -> {
-        if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
-          return completedFuture(null);
-        }
-        //create pieces only if receiving is required
-        return pieceService.openOrderCreatePieces(compPOL, titleId, piecesWithItemId, true, requestContext);
-      });
-  }
+//
+//  /**
+//   * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
+//   *
+//   * @param compPOL Composite PO line to update Inventory for
+//   * @return CompletableFuture with void.
+//   */
+//  CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, String titleId, RequestContext requestContext) {
+//    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
+//      return completedFuture(null);
+//    }
+//    if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL)) {
+//      // don't create pieces, if no inventory updates and receiving not required
+//      if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
+//        return completedFuture(null);
+//      }
+//      return pieceService.openOrderCreatePieces(compPOL, titleId, Collections.emptyList(), true, requestContext).thenRun(
+//          () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
+//    }
+//
+//    return inventoryManager.handleInstanceRecord(compPOL, requestContext)
+//      .thenCompose(compPOLWithInstanceId -> inventoryManager.handleHoldingsAndItemsRecords(compPOLWithInstanceId, requestContext))
+//      .thenCompose(piecesWithItemId -> {
+//        if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
+//          return completedFuture(null);
+//        }
+//        //create pieces only if receiving is required
+//        return pieceService.openOrderCreatePieces(compPOL, titleId, piecesWithItemId, true, requestContext);
+//      });
+//  }
 
   String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {
     String oldPoLineNumber = poLineFromStorage.getPoLineNumber();

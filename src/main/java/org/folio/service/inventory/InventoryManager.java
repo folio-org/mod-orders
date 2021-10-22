@@ -160,14 +160,6 @@ public class InventoryManager {
       REQUESTS, "/circulation/requests");
   }
 
-  public CompletableFuture<CompositePoLine> handleInstanceRecord(CompositePoLine compPOL, RequestContext requestContext) {
-    if(compPOL.getInstanceId() != null) {
-      return CompletableFuture.completedFuture(compPOL);
-    } else {
-      return getInstanceRecord(compPOL, requestContext)
-                  .thenApply(compPOL::withInstanceId);
-    }
-  }
 
   /**
    * Returns list of pieces with populated item and location id's corresponding to given PO line.
@@ -984,8 +976,23 @@ public class InventoryManager {
       .thenApply(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
   }
 
+  public CompletableFuture<CompositePoLine> handleInstanceRecord(CompositePoLine compPOL, RequestContext requestContext) {
+    if(compPOL.getInstanceId() != null) {
+      return CompletableFuture.completedFuture(compPOL);
+    } else {
+      return getInstanceRecord(compPOL, requestContext)
+        .thenApply(compPOL::withInstanceId);
+    }
+  }
+  public CompletableFuture<Title> handleInstanceRecord(Title title, RequestContext requestContext) {
+    if (title.getInstanceId() != null) {
+      return CompletableFuture.completedFuture(title);
+    } else {
+      return getOrCreateInstanceRecord(title, requestContext).thenApply(title::withInstanceId);
+    }
+  }
+
   public CompletableFuture<String> getOrCreateInstanceRecord(Title title, RequestContext requestContext) {
-    // proceed with new Instance Record creation if no productId is provided
     if (!CollectionUtils.isNotEmpty(title.getProductIds())) {
       return createInstanceRecord(title, requestContext);
     }
