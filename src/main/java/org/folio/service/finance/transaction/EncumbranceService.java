@@ -17,6 +17,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.invoice.InvoiceService;
 import org.javamoney.moneta.function.MonetaryOperators;
 
@@ -188,14 +189,18 @@ public class EncumbranceService {
     return transactionService.deleteTransactions(encumbrances, requestContext);
   }
 
-  public CompletableFuture<Void> deletePoLineEncumbrances(String lineId, RequestContext requestContext) {
-    return getPoLineUnreleasedEncumbrances(lineId, requestContext)
-      .thenCompose(encumbrances -> transactionService.deleteTransactions(encumbrances, requestContext));
+  public CompletableFuture<Void> deletePoLineEncumbrances(PoLine poline, RequestContext requestContext) {
+    return getPoLineUnreleasedEncumbrances(poline.getId(), requestContext)
+      .thenCompose(encumbrances -> transactionSummariesService.updateOrderTransactionSummary(poline.getPurchaseOrderId(), encumbrances.size(), requestContext)
+          .thenCompose(v -> releaseEncumbrances(encumbrances, requestContext))
+          .thenCompose(ok -> transactionService.deleteTransactions(encumbrances, requestContext)));
   }
 
   public CompletableFuture<Void> deleteOrderEncumbrances(String orderId, RequestContext requestContext) {
     return getOrderUnreleasedEncumbrances(orderId, requestContext)
-      .thenCompose(encumbrances -> transactionService.deleteTransactions(encumbrances, requestContext));
+      .thenCompose(encumbrances -> transactionSummariesService.updateOrderTransactionSummary(orderId, encumbrances.size(), requestContext)
+        .thenCompose(v -> releaseEncumbrances(encumbrances, requestContext))
+        .thenCompose(v -> transactionService.deleteTransactions(encumbrances, requestContext)));
   }
 
   public static double calculateAmountEncumbered(FundDistribution distribution, MonetaryAmount estimatedPrice) {

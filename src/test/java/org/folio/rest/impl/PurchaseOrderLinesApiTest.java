@@ -512,6 +512,8 @@ public class PurchaseOrderLinesApiTest {
     body.setIsPackage(false);
     body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
     body.setReportingCodes(new ArrayList<>());
+    body.setPurchaseOrderId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+
     MockServer.addMockEntry(PO_LINES, body);
     MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
@@ -543,7 +545,7 @@ public class PurchaseOrderLinesApiTest {
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(100D)));
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
-    Transaction updatedEncumbrance = MockServer.getUpdatedTransactions().get(0);
+    Transaction updatedEncumbrance = MockServer.getUpdatedTransactions().get(1);
     assertEquals(Collections.singletonList("updated"), updatedEncumbrance.getTags().getTagList());
   }
 
@@ -640,8 +642,8 @@ public class PurchaseOrderLinesApiTest {
     assertThat(column, hasKey(PO_LINES));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(4, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(PO_LINES, ALERTS, REPORTING_CODES, ORDER_TRANSACTION_SUMMARIES));
+    assertEquals(5, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES, ALERTS, REPORTING_CODES, ORDER_TRANSACTION_SUMMARIES, ENCUMBRANCES));
 
     // Verify no message sent via event bus
     HandlersTestHelper.verifyOrderStatusUpdateEvent(0);

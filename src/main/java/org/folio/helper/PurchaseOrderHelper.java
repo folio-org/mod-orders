@@ -1072,7 +1072,7 @@ public class PurchaseOrderHelper extends AbstractHelper {
       // The remaining unprocessed PoLines should be removed
       poLinesFromStorage
         .forEach(poLine -> futures.add(orderInvoiceRelationService.checkOrderInvoiceRelationship(compOrder.getId(), getRequestContext())
-            .thenCompose(v -> encumbranceService.deletePoLineEncumbrances(poLine.getId(), getRequestContext())
+            .thenCompose(v -> encumbranceService.deletePoLineEncumbrances(poLine, getRequestContext())
               .thenCompose(ok -> deletePoLine(JsonObject.mapFrom(poLine), httpClient, okapiHeaders, logger)))));
 
     }

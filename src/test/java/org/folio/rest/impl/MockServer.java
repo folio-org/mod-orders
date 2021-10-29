@@ -1425,7 +1425,7 @@ public class MockServer {
             }
             JsonObject compPO = new JsonObject(getMockData(filePath));
             // Build PoLineCollection to make sure content is valid
-            poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES));
+            poLineCollection = buildPoLineCollection(tenant, compPO.getJsonArray(COMPOSITE_PO_LINES), poId);
           }
         } else {
         // Attempt to find POLine in mock server memory
@@ -1482,7 +1482,7 @@ public class MockServer {
     }
   }
 
-  private PoLineCollection buildPoLineCollection(String tenant, JsonArray lines) {
+  private PoLineCollection buildPoLineCollection(String tenant, JsonArray lines, String poId) {
     PoLineCollection result = new PoLineCollection();
     if (lines == null || lines.isEmpty()) {
       result.setTotalRecords(0);
@@ -1495,6 +1495,7 @@ public class MockServer {
           replaceObjectsByIds(line, ALERTS, REPORTING_CODES);
           return line.mapTo(PoLine.class);
         })
+        .map(line -> line.withPurchaseOrderId(StringUtils.isNotEmpty(poId) ? poId : UUID.randomUUID().toString() ))
         .collect(Collectors.toList());
 
       // Set PO Line number if empty

@@ -361,20 +361,19 @@ public class PurchaseOrderLineHelper extends AbstractHelper {
 
   public CompletableFuture<Void> deleteLine(String lineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .thenCompose(line -> verifyDeleteAllowed(line, requestContext))
-      .thenCompose(line -> {
+      .thenCompose(line -> verifyDeleteAllowed(line, requestContext)
+      .thenCompose(ok -> {
         logger.debug("Deleting PO line...");
-        return encumbranceService.deletePoLineEncumbrances(lineId, requestContext)
-          .thenCompose(v -> deletePoLine(line, httpClient, okapiHeaders, logger));
+        return encumbranceService.deletePoLineEncumbrances(line, requestContext)
+          .thenCompose(v -> deletePoLine(JsonObject.mapFrom(line), httpClient, okapiHeaders, logger));
       })
-      .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
+      .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId)));
   }
 
-  private CompletableFuture<JsonObject> verifyDeleteAllowed(PoLine line, RequestContext requestContext) {
+  private CompletableFuture<Void> verifyDeleteAllowed(PoLine line, RequestContext requestContext) {
     return orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(line, requestContext)
       .thenCompose(v -> getCompositePurchaseOrder(line.getPurchaseOrderId())
-        .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext))
-        .thenApply(aVoid -> JsonObject.mapFrom(line)));
+        .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext)));
   }
 
   /**
