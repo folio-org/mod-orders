@@ -13,6 +13,7 @@ public final class RestConstants {
   public static final int VALIDATION_ERROR = 422;
   public static final int INTERNAL_SERVER_ERROR = 500;
   public static final String ERROR_MESSAGE = "errorMessage";
+  public static final String EN = "en";
   private RestConstants() {
 
   }

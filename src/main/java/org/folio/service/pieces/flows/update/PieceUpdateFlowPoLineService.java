@@ -14,7 +14,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.BasePieceFlowUpdatePoLineService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
@@ -24,10 +24,10 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   private PieceCreateFlowPoLineService pieceCreateFlowPoLineService;
   private PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
 
-  public PieceUpdateFlowPoLineService(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+  public PieceUpdateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
               ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceCreateFlowPoLineService pieceCreateFlowPoLineService,
               PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService) {
-    super(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy);
+    super(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
     this.pieceCreateFlowPoLineService = pieceCreateFlowPoLineService;
     this.pieceDeleteFlowPoLineService = pieceDeleteFlowPoLineService;
   }

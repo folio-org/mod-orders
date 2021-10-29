@@ -15,7 +15,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 
 import io.vertx.core.json.JsonObject;
 
@@ -24,7 +24,7 @@ public class PieceService {
 
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
-  private final PurchaseOrderService purchaseOrderService;
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final InventoryManager inventoryManager;
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
@@ -33,18 +33,18 @@ public class PieceService {
   public PieceService(PieceStorageService pieceStorageService, ProtectionService protectionService,
                       PurchaseOrderLineService purchaseOrderLineService,
                       InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-                      PurchaseOrderService purchaseOrderService, PieceUpdateInventoryService pieceUpdateInventoryService) {
+                      PurchaseOrderStorageService purchaseOrderStorageService, PieceUpdateInventoryService pieceUpdateInventoryService) {
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.inventoryManager = inventoryManager;
     this.receiptStatusPublisher = receiptStatusPublisher;
-    this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
   }
 
   public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
-    return purchaseOrderService.getCompositeOrderById(purchaseOrderId, requestContext)
+    return purchaseOrderStorageService.getCompositeOrderById(purchaseOrderId, requestContext)
       .exceptionally(t -> {
         Throwable cause = t.getCause();
         // The case when specified order does not exist

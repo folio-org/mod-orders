@@ -12,8 +12,8 @@ import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getRandomId;
@@ -181,13 +181,15 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
   @Test
   void testReceivingCompositeFlow() {
 
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(NOT_PROTECTED_UNITS).withId(ORDER_WITH_NOT_PROTECTED_UNITS_ID)));
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(PROTECTED_UNITS).withId(ORDER_WITH_PROTECTED_UNITS_ID)));
+    addMockEntry(
+        PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(NOT_PROTECTED_UNITS).withId(ORDER_WITH_NOT_PROTECTED_UNITS_ID)));
+    addMockEntry(
+        PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(PROTECTED_UNITS).withId(ORDER_WITH_PROTECTED_UNITS_ID)));
     List<CompositePoLine> poLines = new ArrayList<>();
     poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID));
     poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1));
     poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2));
-    poLines.forEach(line -> addMockEntry(PO_LINES, JsonObject.mapFrom(line)));
+    poLines.forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line)));
 
     MockServer.addMockTitles(poLines);
     ReceivingCollection toBeReceivedRq = new ReceivingCollection();
@@ -226,14 +228,16 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
   @Test
   void testCheckInCompositeFlow() {
 
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(NOT_PROTECTED_UNITS).withId(ORDER_WITH_NOT_PROTECTED_UNITS_ID)));
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(PROTECTED_UNITS).withId(ORDER_WITH_PROTECTED_UNITS_ID)));
+    addMockEntry(
+        PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(NOT_PROTECTED_UNITS).withId(ORDER_WITH_NOT_PROTECTED_UNITS_ID)));
+    addMockEntry(
+        PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(PROTECTED_UNITS).withId(ORDER_WITH_PROTECTED_UNITS_ID)));
 
     List<CompositePoLine> poLines = new ArrayList<>();
     poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID));
     poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1));
     poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2));
-    poLines.forEach(line -> addMockEntry(PO_LINES, JsonObject.mapFrom(line)));
+    poLines.forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line)));
 
     MockServer.addMockTitles(poLines);
 
@@ -273,10 +277,10 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
   private static CheckinCollection getCheckInCollection(List<String> units) {
 
     CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder().withAcqUnitIds(units).withId(getRandomId());
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
     CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
-    addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     MockServer.addMockTitles(Collections.singletonList(poLine));
 
@@ -295,10 +299,10 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
   private static ReceivingCollection getReceivingCollection(List<String> units) {
 
     CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder().withAcqUnitIds(units).withId(getRandomId());
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
     CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
-    addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     MockServer.addMockTitles(Collections.singletonList(poLine));
     ReceivingCollection toBeReceivedRq = new ReceivingCollection();

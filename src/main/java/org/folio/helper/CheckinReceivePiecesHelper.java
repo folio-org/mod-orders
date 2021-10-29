@@ -737,8 +737,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   }
 
   private CompletableFuture<?>[] getListOfRestrictionCheckingFutures(List<PurchaseOrder> orders,  Map<String, List<PoLine>> poLinesGroupedByOrderId,
-                                                                     Map<String, Map<String, T>> pieces) {
-    return orders.stream().map(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, getRequestContext())
+                                                                     Map<String, Map<String, T>> pieces, RequestContext requestContext) {
+    return orders.stream().map(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)
       .exceptionally(t -> {
         for (PoLine line : poLinesGroupedByOrderId.get(order.getId())) {
           for (String pieceId : pieces.remove(line.getId()).keySet()) {
@@ -749,7 +749,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       })).toArray(CompletableFuture[]::new);
   }
 
-  protected CompletableFuture<Void> removeForbiddenEntities(List<PoLine> poLines, Map<String, Map<String, T>> pieces) {
+  protected CompletableFuture<Void> removeForbiddenEntities(List<PoLine> poLines, Map<String, Map<String, T>> pieces,
+                                                            RequestContext requestContext) {
     if(!poLines.isEmpty()) {
       Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().distinct().collect(groupingBy(PoLine::getPurchaseOrderId));
       String query = buildQuery(convertIdsToCqlQuery(poLinesGroupedByOrderId.keySet()), logger);
@@ -757,7 +758,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       return handleGetRequest(url, httpClient, okapiHeaders, logger)
         .thenCompose(json -> {
           List<PurchaseOrder> orders = json.mapTo(PurchaseOrderCollection.class).getPurchaseOrders();
-          return CompletableFuture.allOf(getListOfRestrictionCheckingFutures(orders, poLinesGroupedByOrderId, pieces));
+          return CompletableFuture.allOf(getListOfRestrictionCheckingFutures(orders, poLinesGroupedByOrderId, pieces, requestContext));
         });
     } else {
       return CompletableFuture.completedFuture(null);

@@ -51,7 +51,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   protected final Logger logger = LogManager.getLogger();
 
-  private final PurchaseOrderService purchaseOrderService;
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder;
   private final RolloverErrorService rolloverErrorService;
   private final RolloverRetrieveService rolloverRetrieveService;
@@ -60,7 +60,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   private final TransactionSummariesService transactionSummaryService;
   private final BudgetRestrictionService budgetRestrictionService;
 
-  public OrderReEncumberService(PurchaseOrderService purchaseOrderService,
+  public OrderReEncumberService(PurchaseOrderStorageService purchaseOrderStorageService,
                                 ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder,
                                 RolloverErrorService rolloverErrorService,
                                 RolloverRetrieveService rolloverRetrieveService,
@@ -68,7 +68,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
                                 TransactionService transactionService,
                                 TransactionSummariesService transactionSummaryService,
                                 BudgetRestrictionService budgetRestrictionService) {
-    this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.reEncumbranceHoldersBuilder = reEncumbranceHoldersBuilder;
     this.rolloverErrorService = rolloverErrorService;
     this.rolloverRetrieveService = rolloverRetrieveService;
@@ -109,7 +109,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   }
 
   public CompletableFuture<Void> reEncumber(String orderId, RequestContext requestContext) {
-    return purchaseOrderService.getCompositeOrderById(orderId, requestContext)
+    return purchaseOrderStorageService.getCompositeOrderById(orderId, requestContext)
       .thenApply(reEncumbranceHoldersBuilder::buildReEncumbranceHoldersWithOrdersData)
       .thenCompose(holders -> reEncumbranceHoldersBuilder.withFundsData(holders, requestContext))
       .thenApply(this::checkAllFundsFound)

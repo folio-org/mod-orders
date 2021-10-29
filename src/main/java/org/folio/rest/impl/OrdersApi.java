@@ -1,7 +1,10 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_BUSINESS;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.rest.RestConstants.OKAPI_URL;
 
 import java.util.Map;
 
@@ -11,16 +14,17 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.helper.PurchaseOrderHelper;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.RestConstants;
 import org.folio.rest.annotations.Validate;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.resource.OrdersCompositeOrders;
 import org.folio.rest.jaxrs.resource.OrdersRollover;
+import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
 import org.folio.spring.SpringContextUtil;
@@ -42,6 +46,10 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   private OrderRolloverService orderRolloverService;
   @Autowired
   private OrderReEncumberService orderReEncumberService;
+  @Autowired
+  private ConfigurationEntriesService configurationEntriesService;
+  @Autowired
+  private PurchaseOrderHelper purchaseOrderHelper;
 
   public OrdersApi(Vertx vertx, String tenantId) {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -52,11 +60,9 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   public void deleteOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
-    helper
-      .deleteOrder(id)
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
-      .exceptionally(t -> HelperUtils.handleErrorResponse(asyncResultHandler, helper, t));
+    purchaseOrderHelper.deleteOrder(id, new RequestContext(vertxContext, okapiHeaders))
+      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -64,11 +70,9 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   public void getOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
-    helper
-      .getCompositeOrder(id)
-      .thenAccept(order -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(order))))
-      .exceptionally(t -> HelperUtils.handleErrorResponse(asyncResultHandler, helper, t));
+    purchaseOrderHelper.getCompositeOrder(id, new RequestContext(vertxContext, okapiHeaders))
+      .thenAccept(order -> asyncResultHandler.handle(succeededFuture(buildOkResponse(order))))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -76,25 +80,25 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   public void postOrdersCompositeOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
-
+    RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     // First validate content of the PO and proceed only if all is okay
-    helper
-      .validateOrder(compPO, new RequestContext(vertxContext, okapiHeaders))
-      .thenCompose(isValid -> {
-        if (Boolean.TRUE.equals(isValid)) {
+    configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+      .thenCompose(tenantConfig -> purchaseOrderHelper.validateOrder(compPO, tenantConfig, requestContext))
+      .thenCompose(errors -> {
+        if (CollectionUtils.isEmpty(errors)) {
           logger.info("Creating PO and POLines...");
-          return helper.createPurchaseOrder(compPO, new RequestContext(vertxContext, okapiHeaders))
+          return purchaseOrderHelper.createPurchaseOrder(compPO, new RequestContext(vertxContext, okapiHeaders))
             .thenAccept(withIds -> {
               logger.info("Successfully Placed Order: {}", JsonObject.mapFrom(withIds).encodePrettily());
-              asyncResultHandler.handle(succeededFuture(helper
-                .buildResponseWithLocation(String.format(ORDERS_LOCATION_PREFIX, withIds.getId()), withIds)));
+              String okapiUrl = okapiHeaders.get(OKAPI_URL);
+              String url = resourceByIdPath(PO_LINES_BUSINESS, compPO.getId());
+              asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiUrl, url, compPO)));
             });
         } else {
-          throw new HttpException(422, GENERIC_ERROR_CODE);
+          throw new HttpException(422, new Errors().withErrors(errors).withTotalRecords(errors.size()));
         }
       })
-      .exceptionally(t -> HelperUtils.handleErrorResponse(asyncResultHandler, helper, t));
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -104,28 +108,24 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
     // Set order id from path if not specified in body
     populateOrderId(orderId, compPO);
 
-    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
-    RequestContext requestContext = helper.getRequestContext();
-    helper.validateExistingOrder(orderId, compPO, requestContext)
-      .thenCompose(isValid -> {
-        logger.info("Order is valid: {}", isValid);
-        if (Boolean.TRUE.equals(isValid)) {
-          return helper.updateOrder(compPO, requestContext)
+    RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
+    purchaseOrderHelper.validateExistingOrder(orderId, compPO, requestContext)
+      .thenCompose(validationErrors -> {
+        if (CollectionUtils.isEmpty(validationErrors)) {
+          return purchaseOrderHelper.updateOrder(compPO, requestContext)
             .thenAccept(v -> {
               if (logger.isInfoEnabled()) {
                 logger.info("Successfully Updated Order: {}", JsonObject.mapFrom(compPO).encodePrettily());
               }
-              asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
+              asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
             });
         } else {
-          logger.error("Validation error. Failed to update purchase order with id={}", orderId);
-          return FolioVertxCompletableFuture.runAsync(vertxContext, () -> asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422))));
+          Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
+          logger.error("Validation error. Failed to update purchase order : " + JsonObject.mapFrom(errors).encodePrettily());
+          throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
       })
-      .exceptionally(t -> {
-        logger.error("Failed to update purchase order with id={}", orderId, t);
-        return HelperUtils.handleErrorResponse(asyncResultHandler, helper, t);
-      });
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   private void populateOrderId(String orderId, CompositePurchaseOrder compPO) {
@@ -145,16 +145,16 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   @Validate
   public void getOrdersCompositeOrders(int offset, int limit, String query, String lang,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    PurchaseOrderHelper helper = new PurchaseOrderHelper(okapiHeaders, vertxContext, lang);
-    helper
-      .getPurchaseOrders(limit, offset, query)
+
+    purchaseOrderHelper
+      .getPurchaseOrders(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(orders -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved orders: {}", JsonObject.mapFrom(orders).encodePrettily());
         }
-        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(orders)));
+        asyncResultHandler.handle(succeededFuture(buildOkResponse(orders)));
       })
-      .exceptionally(t -> HelperUtils.handleErrorResponse(asyncResultHandler, helper, t));
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override

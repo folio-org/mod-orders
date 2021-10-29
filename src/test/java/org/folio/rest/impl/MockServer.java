@@ -198,7 +198,6 @@ public class MockServer {
   static final String LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT = "Ledger not found for transaction";
   static final String BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT = "Budget not found for transaction";
   static final Header PO_NUMBER_ERROR_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, PO_NUMBER_ERROR_TENANT);
-  public static final Header X_OKAPI_ORDER_WITHOUT_LINES = new Header("ORDER_QITHOUT_LINES", "true");
 
   private static final String TOTAL_RECORDS = "totalRecords";
   private static final String QUERY = "query";
@@ -270,23 +269,23 @@ public class MockServer {
   }
 
   public static List<JsonObject> getPoLineUpdates() {
-    return serverRqRs.get(PO_LINES, HttpMethod.PUT);
+    return serverRqRs.get(PO_LINES_STORAGE, HttpMethod.PUT);
   }
 
   public static List<JsonObject> getPoLineSearches() {
-    return serverRqRs.get(PO_LINES, HttpMethod.GET);
+    return serverRqRs.get(PO_LINES_STORAGE, HttpMethod.GET);
   }
 
   public static List<JsonObject> getPurchaseOrderRetrievals() {
-    return serverRqRs.get(PURCHASE_ORDER, HttpMethod.GET);
+    return serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.GET);
   }
 
   public static List<JsonObject> getPurchaseOrderCreations() {
-    return serverRqRs.get(PURCHASE_ORDER, HttpMethod.POST);
+    return serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.POST);
   }
 
   public static List<JsonObject> getPurchaseOrderUpdates() {
-    return serverRqRs.get(PURCHASE_ORDER, HttpMethod.PUT);
+    return serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT);
   }
 
   public static List<JsonObject> getPieceUpdates() {
@@ -447,11 +446,11 @@ public class MockServer {
     Router router = Router.router(vertx);
 
     router.route().handler(BodyHandler.create());
-    router.post(resourcesPath(PURCHASE_ORDER)).handler(this::handlePostPurchaseOrder);
+    router.post(resourcesPath(PURCHASE_ORDER_STORAGE)).handler(this::handlePostPurchaseOrder);
     router.post("/inventory/instances").handler(this::handlePostInstanceRecord);
     router.post("/item-storage/items").handler(this::handlePostItemStorRecord);
     router.post("/holdings-storage/holdings").handler(this::handlePostHoldingRecord);
-    router.post(resourcesPath(PO_LINES)).handler(this::handlePostPOLine);
+    router.post(resourcesPath(PO_LINES_STORAGE)).handler(this::handlePostPOLine);
     router.post(resourcesPath(ALERTS)).handler(ctx -> handlePostGenericSubObj(ctx, ALERTS));
     router.post(resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
     router.post(resourcesPath(PIECES_STORAGE)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES_STORAGE));
@@ -468,8 +467,8 @@ public class MockServer {
     router.post(resourcesPath(SUFFIXES)).handler(ctx -> handlePostGenericSubObj(ctx, SUFFIXES));
     router.post(resourcesPath(TAGS)).handler(ctx -> handlePostGenericSubObj(ctx, TAGS));
 
-    router.get(resourcePath(PURCHASE_ORDER)).handler(this::handleGetPurchaseOrderById);
-    router.get(resourcesPath(PURCHASE_ORDER)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER));
+    router.get(resourcePath(PURCHASE_ORDER_STORAGE)).handler(this::handleGetPurchaseOrderById);
+    router.get(resourcesPath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER_STORAGE));
     router.get("/instance-types").handler(this::handleGetInstanceType);
     router.get("/instance-statuses").handler(this::handleGetInstanceStatus);
     router.get("/inventory/instances").handler(this::handleGetInstanceRecord);
@@ -483,8 +482,8 @@ public class MockServer {
     router.get("/organizations-storage/organizations").handler(this::handleGetAccessProviders);
     router.get("/identifier-types").handler(this::handleGetIdentifierType);
     router.get("/circulation/requests").handler(this::handleGetItemRequests);
-    router.get(resourcesPath(PO_LINES)).handler(ctx -> handleGetPoLines(ctx, PO_LINES));
-    router.get(resourcePath(PO_LINES)).handler(this::handleGetPoLineById);
+    router.get(resourcesPath(PO_LINES_STORAGE)).handler(ctx -> handleGetPoLines(ctx, PO_LINES_STORAGE));
+    router.get(resourcePath(PO_LINES_STORAGE)).handler(this::handleGetPoLineById);
     router.get(resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
     router.get(resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
     router.get(resourcesPath(PO_NUMBER)).handler(this::handleGetPoNumber);
@@ -526,8 +525,8 @@ public class MockServer {
     router.get(resourcesPath(TAGS)).handler(ctx -> handleGetGenericSubObj(ctx, TAGS));
     router.get("/invoice/invoice-lines").handler(this::handleGetInvoiceLines);
 
-    router.put(resourcePath(PURCHASE_ORDER)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER));
-    router.put(resourcePath(PO_LINES)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES));
+    router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
+    router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
     router.put(resourcePath(PIECES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PIECES_STORAGE));
     router.put(resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
     router.put(resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
@@ -544,8 +543,8 @@ public class MockServer {
     router.put(resourcePath(ENCUMBRANCES)).handler(ctx -> handlePutGenericSubObj(ctx, ENCUMBRANCES));
 
 
-    router.delete(resourcePath(PURCHASE_ORDER)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER));
-    router.delete(resourcePath(PO_LINES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES));
+    router.delete(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
+    router.delete(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES_STORAGE));
     router.delete(resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
     router.delete(resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
     router.delete(resourcePath(PIECES_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES_STORAGE));
@@ -795,7 +794,7 @@ public class MockServer {
     String id = ctx.request().getParam(ID);
     logger.info("id: " + id);
 
-    addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
+    addServerRqRsData(HttpMethod.GET, PO_LINES_STORAGE, new JsonObject().put(ID, id));
 
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
@@ -1532,7 +1531,7 @@ public class MockServer {
     String id = ctx.request().getParam(ID);
     logger.info("id: " + id);
 
-    addServerRqRsData(HttpMethod.GET, PO_LINES, new JsonObject().put(ID, id));
+    addServerRqRsData(HttpMethod.GET, PO_LINES_STORAGE, new JsonObject().put(ID, id));
 
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
@@ -1542,7 +1541,7 @@ public class MockServer {
       try {
 
         // Attempt to find POLine in mock server memory
-        JsonObject pol = getMockEntry(PO_LINES, id).orElse(null);
+        JsonObject pol = getMockEntry(PO_LINES_STORAGE, id).orElse(null);
 
         // If previous step has no result then attempt to find POLine in stubs
         if (pol == null) {
@@ -1818,7 +1817,7 @@ public class MockServer {
 
     try {
       // Attempt to find PO in mock server memory
-      JsonObject po = getMockEntry(PURCHASE_ORDER, id).orElse(null);
+      JsonObject po = getMockEntry(PURCHASE_ORDER_STORAGE, id).orElse(null);
       // If previous step has no result then attempt to find PO in stubs
       if (po == null) {
         if (MIN_PO_ID.equals(id)) {
@@ -1851,7 +1850,7 @@ public class MockServer {
       po.remove(COMPOSITE_PO_LINES);
       po.remove("totalEstimatedPrice");
       po.remove("totalItems");
-      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER, po);
+      addServerRqRsData(HttpMethod.GET, PURCHASE_ORDER_STORAGE, po);
       serverResponse(ctx, 200, APPLICATION_JSON, po.encodePrettily());
     } catch (IOException e) {
       ctx.response()
@@ -1919,8 +1918,8 @@ public class MockServer {
     JsonObject body = ctx.getBodyAsJson();
     body.put(ID, id);
     org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
-    addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER, body);
-    addServerRqRsData(HttpMethod.SEARCH, PURCHASE_ORDER, body);
+    addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER_STORAGE, body);
+    addServerRqRsData(HttpMethod.SEARCH, PURCHASE_ORDER_STORAGE, body);
     ctx.response()
       .setStatusCode(201)
       .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
@@ -2157,8 +2156,8 @@ public class MockServer {
         .end(JsonObject.mapFrom(pol).encodePrettily());
     }
 
-    addServerRqRsData(HttpMethod.POST, PO_LINES, body);
-    addServerRqRsData(HttpMethod.SEARCH, PO_LINES, body);
+    addServerRqRsData(HttpMethod.POST, PO_LINES_STORAGE, body);
+    addServerRqRsData(HttpMethod.SEARCH, PO_LINES_STORAGE, body);
   }
 
   private void handleGetPoNumber(RoutingContext ctx) {

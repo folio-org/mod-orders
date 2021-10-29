@@ -18,7 +18,7 @@ import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
@@ -100,7 +100,7 @@ public class TitlesApiTest {
     CompositePoLine poLine = getMinimalContentCompositePoLine()
       .withId(poLineId);
 
-    addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     Title postTitleRq = titleJsonReqData.mapTo(Title.class).withPoLineId(poLineId);
 
@@ -155,7 +155,7 @@ public class TitlesApiTest {
     Title titleWithPackagePoLineRQ = titleJsonReqData.mapTo(Title.class)
       .withPoLineId(packagePoLineId);
 
-    addMockEntry(PO_LINES, JsonObject.mapFrom(packagePoLine));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(packagePoLine));
 
     Title titleWithPackagePoLineRS = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(titleWithPackagePoLineRQ).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);

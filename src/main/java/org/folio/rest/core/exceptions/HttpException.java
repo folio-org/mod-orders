@@ -1,6 +1,7 @@
 package org.folio.rest.core.exceptions;
 
 import java.util.Collections;
+import java.util.List;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -44,7 +45,10 @@ public class HttpException extends RuntimeException {
   }
 
   public Errors getErrors() {
-    return errors;
+    if (errors != null && CollectionUtils.isNotEmpty(errors.getErrors())) {
+      return errors;
+    }
+    return new Errors().withErrors(List.of(ErrorCodes.GENERIC_ERROR_CODE.toError())).withTotalRecords(1);
   }
 
   public Error getError() {

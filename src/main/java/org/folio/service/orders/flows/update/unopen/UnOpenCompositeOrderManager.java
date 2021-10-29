@@ -1,4 +1,4 @@
-package org.folio.service.orders.flows.unopen;
+package org.folio.service.orders.flows.update.unopen;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.groupingBy;
@@ -46,7 +46,7 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.models.ItemStatus;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceStorageService;
 
 import io.vertx.core.json.JsonObject;
@@ -54,7 +54,7 @@ import io.vertx.core.json.JsonObject;
 public class UnOpenCompositeOrderManager {
   private static final Logger logger = LogManager.getLogger(UnOpenCompositeOrderManager.class);
 
-  private final PurchaseOrderService purchaseOrderService;
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final InventoryManager inventoryManager;
@@ -64,13 +64,13 @@ public class UnOpenCompositeOrderManager {
   public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
                                       InventoryManager inventoryManager, PieceStorageService pieceStorageService,
-                                      PurchaseOrderService purchaseOrderService,
+                                      PurchaseOrderStorageService purchaseOrderStorageService,
                                       ProtectionService protectionService) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryManager = inventoryManager;
     this.pieceStorageService = pieceStorageService;
-    this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.protectionService = protectionService;
   }
 
@@ -305,7 +305,7 @@ public class UnOpenCompositeOrderManager {
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .thenAccept(pieceToDelete -> holder.withPieceToDelete(pieceToDelete))
       .thenCompose(aHolder -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext)
-        .thenCompose(poLine -> purchaseOrderService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
+        .thenCompose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
           .thenAccept(purchaseOrder -> holder.withOrderInformation(purchaseOrder, poLine))
         ))
       .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))

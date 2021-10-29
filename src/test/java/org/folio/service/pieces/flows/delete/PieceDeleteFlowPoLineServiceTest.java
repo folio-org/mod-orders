@@ -36,7 +36,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -53,7 +53,7 @@ import org.springframework.context.annotation.Bean;
 import io.vertx.core.Context;
 
 public class PieceDeleteFlowPoLineServiceTest {
-  @Autowired PurchaseOrderService purchaseOrderService;
+  @Autowired PurchaseOrderStorageService purchaseOrderStorageService;
   @Autowired PurchaseOrderLineService purchaseOrderLineService;
   @Autowired ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
   @Autowired PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
@@ -93,7 +93,7 @@ public class PieceDeleteFlowPoLineServiceTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    Mockito.reset(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy);
+    Mockito.reset(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
 
@@ -333,8 +333,8 @@ public class PieceDeleteFlowPoLineServiceTest {
   }
 
   private static class ContextConfiguration {
-    @Bean PurchaseOrderService purchaseOrderService() {
-      return mock(PurchaseOrderService.class);
+    @Bean PurchaseOrderStorageService purchaseOrderService() {
+      return mock(PurchaseOrderStorageService.class);
     }
 
     @Bean PurchaseOrderLineService purchaseOrderLineService() {
@@ -345,9 +345,9 @@ public class PieceDeleteFlowPoLineServiceTest {
       return mock(ReceivingEncumbranceStrategy.class);
     }
 
-    @Bean  PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderService purchaseOrderService,
+    @Bean  PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
                       PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-      return new PieceDeleteFlowPoLineService(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy);
+      return new PieceDeleteFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
     }
   }
 }

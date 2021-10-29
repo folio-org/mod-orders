@@ -26,7 +26,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Suffix;
 import org.folio.rest.jaxrs.model.SuffixCollection;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -42,7 +42,7 @@ public class SuffixServiceTest {
   private RestClient restClient;
 
   @Mock
-  private PurchaseOrderService purchaseOrderService;
+  private PurchaseOrderStorageService purchaseOrderStorageService;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -62,7 +62,7 @@ public class SuffixServiceTest {
     when(restClient.get(any(), any(), any()))
       .thenReturn(CompletableFuture.completedFuture(new Suffix().withName("test")));
     when(restClient.delete(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
+    when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
       .thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(1)));
 
     String id = UUID.randomUUID().toString();
@@ -75,7 +75,7 @@ public class SuffixServiceTest {
 
     verify(restClient).get(any(), any(), any());
     verify(restClient, never()).delete(any(), any());
-    verify(purchaseOrderService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
+    verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
   }
 
   @Test
@@ -83,7 +83,7 @@ public class SuffixServiceTest {
     //given
     when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(new Suffix().withName("test")));
     when(restClient.delete(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
+    when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
       .thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
@@ -93,7 +93,7 @@ public class SuffixServiceTest {
 
     verify(restClient).get(any(), any(), any());
     verify(restClient).delete(any(), any());
-    verify(purchaseOrderService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
+    verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
   }
 
   @Test

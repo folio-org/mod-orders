@@ -14,7 +14,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.PrefixCollection;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 
 public class PrefixService {
 
@@ -24,11 +24,11 @@ public class PrefixService {
 
 
   private final RestClient restClient;
-  private final PurchaseOrderService purchaseOrderService;
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
 
-  public PrefixService(RestClient restClient, PurchaseOrderService purchaseOrderService) {
+  public PrefixService(RestClient restClient, PurchaseOrderStorageService purchaseOrderStorageService) {
     this.restClient = restClient;
-    this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
   }
 
   public CompletableFuture<PrefixCollection> getPrefixes(String query, int offset, int limit, RequestContext requestContext) {
@@ -67,7 +67,7 @@ public class PrefixService {
 
   private CompletableFuture<Void> checkPrefixNotUsed(Prefix prefix, RequestContext requestContext) {
     String query = "poNumberPrefix==" + prefix.getName();
-    return purchaseOrderService.getPurchaseOrders(query, 0, 0, requestContext)
+    return purchaseOrderStorageService.getPurchaseOrders(query, 0, 0, requestContext)
       .thenAccept(purchaseOrders -> {
         if (purchaseOrders.getTotalRecords() > 0) {
           logger.error("Prefix is used by {} orders", purchaseOrders.getTotalRecords());

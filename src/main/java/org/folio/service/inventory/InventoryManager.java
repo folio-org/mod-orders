@@ -46,7 +46,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.models.PieceItemPair;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -160,47 +159,6 @@ public class InventoryManager {
       REQUESTS, "/circulation/requests");
   }
 
-
-  /**
-   * Returns list of pieces with populated item and location id's corresponding to given PO line.
-   * Items are either retrieved from Inventory or new ones are created if no corresponding item records exist yet.
-   *
-   * @param compPOL   PO line to retrieve/create Item Records for. At this step PO Line must contain instance Id
-   * @return future with list of pieces with item and location id's
-   */
-  public CompletableFuture<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL, RequestContext requestContext) {
-    List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
-    boolean isItemsUpdateRequired = PoLineCommonUtil.isItemsUpdateRequired(compPOL);
-
-    // Group all locations by location id because the holding should be unique for different locations
-    if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
-      compPOL.getLocations().forEach(location -> {
-          itemsPerHolding.add(
-            // Search for or create a new holdings record and then create items for it if required
-            getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, requestContext)
-              .thenCompose(holdingId -> {
-                  // Items are not going to be created when create inventory is "Instance, Holding"
-                exchangeLocationIdWithHoldingId(location, holdingId);
-                if (isItemsUpdateRequired) {
-                    return handleItemRecords(compPOL, location, requestContext);
-                  } else {
-                    return completedFuture(Collections.emptyList());
-                  }
-                }
-              ));
-        });
-    }
-    return collectResultsOnSuccess(itemsPerHolding)
-      .thenApply(itemCreated -> itemCreated.stream()
-        .flatMap(List::stream)
-        .collect(toList())
-      );
-  }
-
-  private void exchangeLocationIdWithHoldingId(Location location, String holdingId) {
-    addHoldingId(List.of(location), holdingId);
-    location.setLocationId(null);
-  }
 
   /**
    * Returns list of item records for specified id's.
@@ -1005,11 +963,6 @@ public class InventoryManager {
         }
         return createInstanceRecord(title, requestContext);
       });
-  }
-
-
-  private void addHoldingId(List<Location> polLocations, String holdingId) {
-    polLocations.forEach(location -> location.setHoldingId(holdingId));
   }
 
   private void validateItemsCreation(String poLineId, int expectedItemsQuantity, int itemsSize) {

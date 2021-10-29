@@ -38,7 +38,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
 import org.junit.jupiter.api.AfterAll;
@@ -57,7 +57,7 @@ import org.springframework.context.annotation.Bean;
 import io.vertx.core.Context;
 
 public class PieceUpdateFlowPoLineServiceTest {
-  @Autowired PurchaseOrderService purchaseOrderService;
+  @Autowired PurchaseOrderStorageService purchaseOrderStorageService;
   @Autowired PurchaseOrderLineService purchaseOrderLineService;
   @Autowired ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
   @Autowired PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
@@ -97,7 +97,7 @@ public class PieceUpdateFlowPoLineServiceTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    Mockito.reset(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy);
+    Mockito.reset(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
   @Test
@@ -380,8 +380,8 @@ public class PieceUpdateFlowPoLineServiceTest {
   }
 
   private static class ContextConfiguration {
-    @Bean PurchaseOrderService purchaseOrderService() {
-      return mock(PurchaseOrderService.class);
+    @Bean PurchaseOrderStorageService purchaseOrderService() {
+      return mock(PurchaseOrderStorageService.class);
     }
     @Bean PurchaseOrderLineService purchaseOrderLineService() {
       return mock(PurchaseOrderLineService.class);
@@ -389,19 +389,19 @@ public class PieceUpdateFlowPoLineServiceTest {
     @Bean ReceivingEncumbranceStrategy receivingEncumbranceStrategy() {
       return mock(ReceivingEncumbranceStrategy.class);
     }
-    @Bean PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderService purchaseOrderService,
+    @Bean PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
       PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-      return spy(new PieceDeleteFlowPoLineService(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy));
+      return spy(new PieceDeleteFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy));
     }
 
-    @Bean PieceCreateFlowPoLineService pieceCreateFlowPoLineService(PurchaseOrderService purchaseOrderService,
+    @Bean PieceCreateFlowPoLineService pieceCreateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
       PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-      return spy(new PieceCreateFlowPoLineService(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy));
+      return spy(new PieceCreateFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy));
     }
-    @Bean PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService(PurchaseOrderService purchaseOrderService,
+    @Bean PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
                     PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
               PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService, PieceCreateFlowPoLineService pieceCreateFlowPoLineService) {
-      return new PieceUpdateFlowPoLineService(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy,
+      return new PieceUpdateFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy,
                                               pieceCreateFlowPoLineService, pieceDeleteFlowPoLineService);
     }
   }
