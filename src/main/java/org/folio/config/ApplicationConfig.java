@@ -1,12 +1,5 @@
 package org.folio.config;
 
-import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
-import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
-import static org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_CREATE_FLOW;
-import static org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey.PieceFlowType.PIECE_DELETE_FLOW;
-
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
 import org.folio.rest.core.RestClient;
@@ -58,21 +51,23 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
+import org.folio.service.orders.flows.open.OpenCompositeOrderInventoryService;
+import org.folio.service.orders.flows.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineKey;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategy;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategyResolver;
+import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
-import org.folio.service.pieces.flows.PieceFlowUpdatePoLineStrategies;
-import org.folio.service.pieces.flows.create.PieceCreateFlowValidator;
+import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
+import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -376,19 +371,20 @@ public class ApplicationConfig {
                               receiptStatusPublisher, purchaseOrderService, pieceUpdateInventoryService);
   }
 
-  @Bean PieceCreateFlowValidator pieceCreateFlowValidator() {
-    return new PieceCreateFlowValidator();
+  @Bean DefaultPieceFlowsValidator pieceCreateFlowValidator() {
+    return new DefaultPieceFlowsValidator();
   }
 
-  @Bean PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, PurchaseOrderLineService purchaseOrderLineService,
-                                                  PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
-                                                  ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
-                                                  PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager,
-                                                  PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver,
-                                                  PieceCreateFlowValidator pieceCreateFlowValidator) {
-    return new PieceCreateFlowManager(pieceStorageService, purchaseOrderLineService, purchaseOrderService, protectionService,
-                  receivingEncumbranceStrategy, pieceCreateFlowInventoryManager,
-                  pieceFlowUpdatePoLineStrategyResolver, pieceCreateFlowValidator);
+  @Bean PieceCreateFlowPoLineService pieceCreateFlowPoLineService(PurchaseOrderService purchaseOrderService,
+    PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+    return new PieceCreateFlowPoLineService(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy);
+  }
+
+  @Bean PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, ProtectionService protectionService,
+                PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
+                PieceCreateFlowPoLineService pieceCreateFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+    return new PieceCreateFlowManager(pieceStorageService, protectionService, pieceCreateFlowInventoryManager,
+      defaultPieceFlowsValidator, pieceCreateFlowPoLineService, basePieceFlowHolderBuilder);
   }
 
   @Bean
@@ -418,23 +414,40 @@ public class ApplicationConfig {
       encumbrancesProcessingHolderBuilder);
   }
 
-  @Bean PieceUpdateInventoryService pieceUpdateInventoryService(TitlesService titlesService, InventoryManager inventoryManager) {
-    return new PieceUpdateInventoryService(titlesService, inventoryManager);
+  @Bean PieceUpdateInventoryService pieceUpdateInventoryService(InventoryManager inventoryManager,
+                                PieceStorageService pieceStorageService) {
+    return new PieceUpdateInventoryService(inventoryManager, pieceStorageService);
+  }
+
+  @Bean PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderService purchaseOrderService,
+                    PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+    return new PieceDeleteFlowPoLineService(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
   @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
-    PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService, InventoryManager inventoryManager,
-    ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver) {
-    return new PieceDeleteFlowManager(pieceStorageService, protectionService, purchaseOrderService, purchaseOrderLineService,
-                                        inventoryManager, receivingEncumbranceStrategy, pieceFlowUpdatePoLineStrategyResolver);
+    InventoryManager inventoryManager, PieceUpdateInventoryService pieceUpdateInventoryService,
+    PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+    return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryManager, pieceUpdateInventoryService,
+                      pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder);
   }
 
-  @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,
-    ProtectionService protectionService, PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
-    InventoryManager inventoryManager, ReceivingEncumbranceStrategy receivingEncumbranceStrategy,
-    PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager) {
-    return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService, purchaseOrderService, purchaseOrderLineService,
-      inventoryManager, receivingEncumbranceStrategy, pieceFlowUpdatePoLineStrategyResolver, pieceUpdateFlowInventoryManager);
+
+  @Bean BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService) {
+      return new BasePieceFlowHolderBuilder(purchaseOrderService, purchaseOrderLineService);
+  }
+
+  @Bean PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+          ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
+          PieceCreateFlowPoLineService pieceCreateFlowPoLineService) {
+    return new PieceUpdateFlowPoLineService(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy,
+          pieceCreateFlowPoLineService, pieceDeleteFlowPoLineService);
+  }
+
+  @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
+            PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager,
+            BasePieceFlowHolderBuilder basePieceFlowHolderBuilder, DefaultPieceFlowsValidator defaultPieceFlowsValidator) {
+    return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService, pieceUpdateFlowPoLineService,
+                            pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder, defaultPieceFlowsValidator);
   }
 
   @Bean PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager(TitlesService titlesService,
@@ -447,24 +460,18 @@ public class ApplicationConfig {
     return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryManager);
   }
 
-  @Bean PieceFlowUpdatePoLineStrategyResolver pieceFlowUpdatePoLineStrategyResolver() {
-    Map<PieceFlowUpdatePoLineKey, PieceFlowUpdatePoLineStrategy> strategies = new HashMap<>();
-    PieceFlowUpdatePoLineKey pendingNonPackageCreatePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_CREATE_FLOW)
-                                                                             .withOrderWorkFlowStatus(PENDING).withIsPackage(false);
-    strategies.put(pendingNonPackageCreatePieceKey, PieceFlowUpdatePoLineStrategies.ADD);
+  @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
+                    PieceStorageService pieceStorageService) {
+    return new OpenCompositeOrderInventoryService(titlesService, inventoryManager, pieceStorageService) ;
+  }
 
-    PieceFlowUpdatePoLineKey openNonPackageCreatePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_CREATE_FLOW)
-                                                                              .withOrderWorkFlowStatus(OPEN).withIsPackage(false);
-    strategies.put(openNonPackageCreatePieceKey, PieceFlowUpdatePoLineStrategies.ADD);
-
-
-    PieceFlowUpdatePoLineKey pendingNonPackageDeletePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_DELETE_FLOW)
-                                                                              .withOrderWorkFlowStatus(PENDING).withIsPackage(false);
-    strategies.put(pendingNonPackageDeletePieceKey, PieceFlowUpdatePoLineStrategies.DELETE);
-
-    PieceFlowUpdatePoLineKey openNonPackageDeletePieceKey = new PieceFlowUpdatePoLineKey().withPieceFlowType(PIECE_DELETE_FLOW)
-                                                                              .withOrderWorkFlowStatus(OPEN).withIsPackage(false);
-    strategies.put(openNonPackageDeletePieceKey, PieceFlowUpdatePoLineStrategies.DELETE);
-    return new PieceFlowUpdatePoLineStrategyResolver(strategies);
+  @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
+          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, InventoryManager inventoryManager,
+          PieceStorageService pieceStorageService, PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
+          PieceChangeReceiptStatusPublisher receiptStatusPublisher, ExpenseClassValidationService expenseClassValidationService,
+          TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService) {
+    return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
+      pieceStorageService, purchaseOrderService, protectionService, receiptStatusPublisher, expenseClassValidationService,
+      titlesService, openCompositeOrderInventoryService);
   }
 }

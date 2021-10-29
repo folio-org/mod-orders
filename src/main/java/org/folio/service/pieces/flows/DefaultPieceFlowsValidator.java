@@ -1,4 +1,4 @@
-package org.folio.service.pieces.flows.create;
+package org.folio.service.pieces.flows;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR;
 
@@ -10,7 +10,6 @@ import java.util.Optional;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
@@ -24,27 +23,25 @@ import org.folio.service.pieces.validators.PieceValidatorUtil;
 
 import io.vertx.core.json.JsonObject;
 
-public class PieceCreateFlowValidator {
-  private static final Logger logger = LogManager.getLogger(PieceCreateFlowValidator.class);
+public class DefaultPieceFlowsValidator {
+  private static final Logger logger = LogManager.getLogger(DefaultPieceFlowsValidator.class);
 
-  public void isCreatePieceRequestValid(PieceCreationHolder holder) {
-    Piece pieceToCreate = holder.getPieceToCreate();
-    CompositePoLine originPoLine = holder.getOriginPoLine();
+  public void isPieceRequestValid(Piece pieceToCreate, CompositePoLine originPoLine, boolean isCreateItem) {
     List<Error> combinedErrors = new ArrayList<>();
-    List<Error> isItemCreateValidError = validateItemCreateFlag(pieceToCreate, originPoLine, holder.isCreateItem());
+    List<Error> isItemCreateValidError = validateItemCreateFlag(pieceToCreate, originPoLine, isCreateItem);
     combinedErrors.addAll(isItemCreateValidError);
-    List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate)).orElse(new ArrayList<>());
+    List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     combinedErrors.addAll(pieceLocationErrors);
     List<Error> pieceFormatErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceFormat(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     combinedErrors.addAll(pieceFormatErrors);
     if (CollectionUtils.isNotEmpty(combinedErrors)) {
       Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
       logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
-      throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
+      throw new HttpException(RestConstants.BAD_REQUEST, errors);
     }
   }
 
-  private List<Error> validateItemCreateFlag(Piece pieceToCreate, CompositePoLine originPoLine, boolean createItem) {
+  public static List<Error> validateItemCreateFlag(Piece pieceToCreate, CompositePoLine originPoLine, boolean createItem) {
     if (createItem && !isCreateItemForPiecePossible(pieceToCreate, originPoLine)) {
       String msg = String.format(CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getDescription(), pieceToCreate.getFormat(), originPoLine.getId());
       return List.of(new Error().withCode(CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getCode()).withMessage(msg));
@@ -60,10 +57,20 @@ public class PieceCreateFlowValidator {
   }
 
   public static boolean isCreateItemForPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
+    return isCreateItemForElectronicPiecePossible(pieceToCreate, originPoLine) ||
+                  isCreateItemForNonElectronicPiecePossible(pieceToCreate, originPoLine);
+  }
+
+  public static boolean isCreateItemForElectronicPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
     Piece.Format pieceFormat = pieceToCreate.getFormat();
-    return (pieceFormat == Piece.Format.ELECTRONIC && isItemsUpdateRequiredForEresource(originPoLine)) ||
-                  ((pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER)
-                                && isItemsUpdateRequiredForPhysical(originPoLine));
+    return (pieceFormat == Piece.Format.ELECTRONIC && isItemsUpdateRequiredForEresource(originPoLine));
+  }
+
+
+  public static boolean isCreateItemForNonElectronicPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
+    Piece.Format pieceFormat = pieceToCreate.getFormat();
+    return (pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER)
+                            && isItemsUpdateRequiredForPhysical(originPoLine);
   }
 
   public static boolean isItemsUpdateRequiredForEresource(CompositePoLine compPOL) {
