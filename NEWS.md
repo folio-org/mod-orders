@@ -1,5 +1,14 @@
 ## 12.6.0 - Unreleased
 
+## 12.5.1 Nolana R3 2022 - Released
+The focus of this release was to fix Holding and Item duplication on GOBI import
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.5.0...v12.5.1)
+
+### Bug Fixes
+* [MODORDERS-790](https://issues.folio.org/browse/MODORDERS-790) - Duplicate Holding and Item when ordering something from GOBI
+
+
 ## 12.5.0 Nolana R3 2022 - Released
 This release focused on upgrade RMB and module interface dependencies
 
