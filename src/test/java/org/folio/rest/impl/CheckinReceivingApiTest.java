@@ -20,8 +20,8 @@ import static org.folio.orders.events.handlers.HandlersTestHelper.verifyOrderSta
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
@@ -500,8 +500,8 @@ public class CheckinReceivingApiTest {
       .withTitleId(titleId)
       .withItemId(UUID.randomUUID().toString());
 
-    addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
-    addMockEntry(PO_LINES, poLine);
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, physicalPiece);
     addMockEntry(PIECES_STORAGE, electronicPiece);
 
@@ -558,8 +558,8 @@ public class CheckinReceivingApiTest {
       .withTitleId(titleIdForElectronic)
       .withItemId(UUID.randomUUID().toString());
 
-    addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
-    addMockEntry(PO_LINES, poLine);
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, physicalPiece);
     addMockEntry(PIECES_STORAGE, electronicPiece);
 
@@ -612,8 +612,8 @@ public class CheckinReceivingApiTest {
       .withTitleId(titleIdForElectronic)
       .withItemId(UUID.randomUUID().toString());
 
-    addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
-    addMockEntry(PO_LINES, poLine);
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, physicalPiece);
     addMockEntry(PIECES_STORAGE, electronicPiece);
 
@@ -656,8 +656,8 @@ public class CheckinReceivingApiTest {
       .withTitleId(UUID.randomUUID().toString())
       .withItemId(UUID.randomUUID().toString());
 
-    addMockEntry(PURCHASE_ORDER, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
-    addMockEntry(PO_LINES, poLine);
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, electronicPiece);
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
@@ -879,7 +879,7 @@ public class CheckinReceivingApiTest {
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-500-error-for-items-lookup.json").mapTo(ReceivingCollection.class);
     receivingRq.getToBeReceived().forEach(toBeReceived -> {
       CompositePoLine poLine = getMinimalContentCompositePoLine().withId(toBeReceived.getPoLineId());
-      addMockEntry(PO_LINES, poLine);
+      addMockEntry(PO_LINES_STORAGE, poLine);
       addMockTitles(Collections.singletonList(poLine));
     });
     ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),

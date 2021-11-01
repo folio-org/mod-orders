@@ -13,8 +13,8 @@ import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.TestUtils.encodePrettily;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
@@ -332,9 +332,9 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     line2.setId(UUID.randomUUID().toString());
     order.getCompositePoLines().add(line1);
     order.getCompositePoLines().add(line2);
-    addMockEntry(PO_LINES, JsonObject.mapFrom(line1));
-    addMockEntry(PO_LINES, JsonObject.mapFrom(line2));
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line1));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line2));
+    addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
     order.getCompositePoLines().remove(1);
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER);
     Errors errors = UPDATE.process(COMPOSITE_ORDERS_PATH, encodePrettily(order),
@@ -355,8 +355,8 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
     CompositePoLine line = getMinimalContentCompositePoLine(order.getId());
     line.setId(UUID.randomUUID().toString());
     order.getCompositePoLines().add(line);
-    addMockEntry(PO_LINES, JsonObject.mapFrom(line));
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line));
+    addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
     order.getCompositePoLines().remove(0);
     order.getCompositePoLines().add(getMinimalContentCompositePoLine(order.getId()));
     Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER);

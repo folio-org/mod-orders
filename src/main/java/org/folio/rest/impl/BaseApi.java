@@ -10,6 +10,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.ws.rs.core.Response;
@@ -70,27 +71,30 @@ public class BaseApi {
   }
 
   public void addProcessingError(Error error) {
-    processingErrors.getErrors()
-      .add(error);
+    processingErrors.getErrors().add(error);
+  }
+
+  public void addProcessingErrors(List<Error> errors) {
+    processingErrors.getErrors().addAll(errors);
   }
 
   protected int handleProcessingError(Throwable throwable) {
     final Throwable cause = throwable.getCause();
     logger.error("Exception encountered", cause);
-    final Error error;
+    final List<Error> errors = new ArrayList<>();
     final int code;
 
     if (cause instanceof HttpException) {
       code = ((HttpException) cause).getCode();
-      error = ((HttpException) cause).getError();
+      errors.addAll(((HttpException) cause).getErrors().getErrors());
     } else {
       code = INTERNAL_SERVER_ERROR.getStatusCode();
-      error = GENERIC_ERROR_CODE.toError()
-        .withAdditionalProperty(ERROR_CAUSE, cause.getMessage());
+      Error error = GENERIC_ERROR_CODE.toError().withAdditionalProperty(ERROR_CAUSE, cause.getMessage());
+      errors.add(error);
     }
 
     if (getErrors().isEmpty()) {
-      addProcessingError(error);
+      addProcessingErrors(errors);
     }
 
     return code;

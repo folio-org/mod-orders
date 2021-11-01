@@ -1,52 +1,4 @@
-package org.folio.service.orders.flows.open;
-
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
-import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.utils.FundDistributionUtils;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
-import org.folio.orders.utils.validators.OngoingOrderValidator;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.InventoryException;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ReportingCode;
-import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.ProtectionService;
-import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.inventory.InventoryManager;
-import org.folio.service.orders.OrderWorkflowType;
-import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
-import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
-import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.titles.TitlesService;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
+package org.folio.service.orders.flows.update.open;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.collectingAndThen;
@@ -61,38 +13,83 @@ import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
-import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.completablefuture.AsyncUtil;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.helper.PurchaseOrderLineHelper;
+import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.exceptions.InventoryException;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.ProtectionService;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
+import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.inventory.InventoryManager;
+import org.folio.service.orders.OrderWorkflowType;
+import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderStorageService;
+import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
+import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.titles.TitlesService;
+
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.StreamEx;
 
 public class OpenCompositeOrderManager {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderManager.class);
 
-  private final PurchaseOrderService purchaseOrderService;
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
+  private final PurchaseOrderLineHelper purchaseOrderLineHelper;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final InventoryManager inventoryManager;
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
-  private final ExpenseClassValidationService expenseClassValidationService;
   private final TitlesService titlesService;
   private final OpenCompositeOrderInventoryService openCompositeOrderInventoryService;
+  private final OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
 
-
-  public OpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-            EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, InventoryManager inventoryManager,
-            PieceStorageService pieceStorageService, PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
-            PieceChangeReceiptStatusPublisher receiptStatusPublisher, ExpenseClassValidationService expenseClassValidationService,
-            TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService) {
+  public OpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, InventoryManager inventoryManager,
+    PieceStorageService pieceStorageService, PurchaseOrderStorageService purchaseOrderStorageService, ProtectionService protectionService,
+    PieceChangeReceiptStatusPublisher receiptStatusPublisher, TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, PurchaseOrderLineHelper purchaseOrderLineHelper) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryManager = inventoryManager;
     this.pieceStorageService = pieceStorageService;
-    this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.protectionService = protectionService;
     this.receiptStatusPublisher = receiptStatusPublisher;
-    this.expenseClassValidationService = expenseClassValidationService;
     this.titlesService = titlesService;
     this.openCompositeOrderInventoryService = openCompositeOrderInventoryService;
+    this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
+    this.purchaseOrderLineHelper = purchaseOrderLineHelper;
   }
 
   /**
@@ -102,20 +99,14 @@ public class OpenCompositeOrderManager {
    * @return CompletableFuture that indicates when transition is completed
    */
   public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
-      compPO.setWorkflowStatus(OPEN);
-      compPO.setDateOrdered(new Date());
-      EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
-      return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), requestContext)
-        .thenAccept(v -> FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines()))
-        .thenAccept(v -> OngoingOrderValidator.validate(compPO))
-        .thenCompose(v -> strategy.prepareProcessEncumbrancesAndValidate(compPO, poFromStorage, requestContext))
-        .thenApply(v -> this.validateMaterialTypes(compPO))
+      return AsyncUtil.executeBlocking(requestContext.getContext(), false, () -> updateIncomingOrder(compPO, poFromStorage))
+        .thenCompose(aVoid -> openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext))
         .thenCompose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
         .thenCompose(linesIdTitles -> {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
           return processInventory(linesIdTitles, compPO, requestContext);
         })
-        .thenCompose(v -> finishProcessingEncumbrancesForOpenOrder(strategy, compPO, poFromStorage, requestContext))
+        .thenCompose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
         .thenAccept(ok -> changePoLineStatuses(compPO))
         .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext));
   }
@@ -155,18 +146,26 @@ public class OpenCompositeOrderManager {
       if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
         return completedFuture(null);
       }
-      return openOrderCreatePieces(compPOL, titleId, Collections.emptyList(), true, requestContext).thenRun(
+      // do not create pieces in case of check-in flow
+      if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+        return completedFuture(null);
+      }
+      return openOrderCreatePieces(compPOL, titleId, Collections.emptyList(), requestContext).thenRun(
         () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
     }
 
     return inventoryManager.handleInstanceRecord(compPOL, requestContext)
-      .thenCompose(compPOLWithInstanceId -> inventoryManager.handleHoldingsAndItemsRecords(compPOLWithInstanceId, requestContext))
+      .thenCompose(compPOLWithInstanceId -> openCompositeOrderInventoryService.handleHoldingsAndItemsRecords(compPOLWithInstanceId, requestContext))
       .thenCompose(piecesWithItemId -> {
+        // do not create pieces in case of check-in flow
+        if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+          return completedFuture(null);
+        }
         if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
           return completedFuture(null);
         }
         //create pieces only if receiving is required
-        return openOrderCreatePieces(compPOL, titleId, piecesWithItemId, true, requestContext);
+        return openOrderCreatePieces(compPOL, titleId, piecesWithItemId, requestContext);
       });
   }
 
@@ -177,13 +176,9 @@ public class OpenCompositeOrderManager {
    * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
    * @return void future
    */
-  public CompletableFuture<Void> openOrderCreatePieces(CompositePoLine compPOL, String titleId,
-    List<Piece> expectedPiecesWithItem, boolean isOpenOrderFlow, RequestContext requestContext) {
+  public CompletableFuture<Void> openOrderCreatePieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
+                                                        RequestContext requestContext) {
     int createdItemsQuantity = expectedPiecesWithItem.size();
-    // do not create pieces in case of check-in flow
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
-      return completedFuture(null);
-    }
     logger.info("Get pieces by poLine ID");
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
       .thenCompose(existingPieces -> {
@@ -192,7 +187,7 @@ public class OpenCompositeOrderManager {
         List<Piece> piecesWithHoldingToProcess = createPiecesByHoldingId(compPOL, expectedPiecesWithItem, existingPieces);
 
         List<Piece> onlyLocationChangedPieces = getPiecesWithChangedLocation(compPOL, piecesWithLocationToProcess, existingPieces);
-        if ((onlyLocationChangedPieces.size() == piecesWithLocationToProcess.size()) && !isOpenOrderFlow) {
+        if ((onlyLocationChangedPieces.size() == piecesWithLocationToProcess.size()) && CollectionUtils.isNotEmpty(onlyLocationChangedPieces)) {
           return FolioVertxCompletableFuture.allOf(requestContext.getContext(), onlyLocationChangedPieces.stream()
             .map(piece -> openOrderUpdatePieceRecord(piece, requestContext)).toArray(CompletableFuture[]::new));
         } else {
@@ -218,7 +213,7 @@ public class OpenCompositeOrderManager {
 
   public CompletableFuture<Piece> openOrderCreatePiece(Piece piece, RequestContext requestContext) {
     logger.info("createPiece start");
-    return purchaseOrderService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
+    return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
       .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
         .thenApply(v -> order))
       .thenCompose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, requestContext))
@@ -248,7 +243,12 @@ public class OpenCompositeOrderManager {
               return holdingId;
             });
         })
-        .thenCompose(holdingId -> openCompositeOrderInventoryService.createItemRecord(compPOL, holdingId, requestContext))
+        .thenCompose(holdingId -> {
+          if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
+            return openCompositeOrderInventoryService.createItemRecord(compPOL, holdingId, requestContext);
+          }
+          return completedFuture(null);
+        })
         .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId));
     }
     else
@@ -263,7 +263,7 @@ public class OpenCompositeOrderManager {
   // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
   public CompletableFuture<Void> openOrderUpdatePieceRecord(Piece piece, RequestContext requestContext) {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    purchaseOrderService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
+    purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
       .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
       .thenCompose(v -> inventoryManager.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId(), requestContext))
       .thenAccept(vVoid ->
@@ -304,23 +304,21 @@ public class OpenCompositeOrderManager {
     return future;
   }
 
-  public List<Piece> createPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem,
-    List<Piece> existingPieces) {
+  public List<Piece> createPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
     // For each location collect pieces that need to be created.
     groupLocationsByLocationId(compPOL)
-      .forEach((existingPieceLocationId, existingPieceLocations) -> {
-        List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, existingPieceLocationId);
-        List<Piece> createdPiecesWithItem = processPiecesWithLocationAndItem(expectedPiecesWithItem, filteredExistingPieces, existingPieceLocationId);
+      .forEach((lineLocationId, lineLocations) -> {
+        List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, lineLocationId);
+        List<Piece> createdPiecesWithItem = processPiecesWithItemAndLocationId(expectedPiecesWithItem, filteredExistingPieces, lineLocationId);
         piecesToCreate.addAll(createdPiecesWithItem);
-        List<Piece> piecesWithoutItem = processPiecesWithoutItemAndLocationId(compPOL, filteredExistingPieces, existingPieceLocationId, existingPieceLocations);
+        List<Piece> piecesWithoutItem = processPiecesWithoutItemAndLocationId(compPOL, filteredExistingPieces, lineLocationId, lineLocations);
         piecesToCreate.addAll(piecesWithoutItem);
       });
     return piecesToCreate;
   }
 
-  public List<Piece> getPiecesWithChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces,
-    List<Piece> existingPieces) {
+  public List<Piece> getPiecesWithChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces, List<Piece> existingPieces) {
     Map<String, Map<Piece.Format, Integer>> existingPieceMap = numOfPiecesByFormatAndLocationId(existingPieces, compPOL.getId());
     Map<String, Map<Piece.Format, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, compPOL.getId());
 
@@ -396,16 +394,6 @@ public class OpenCompositeOrderManager {
       .collect(Collectors.toList());
   }
 
-  private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
-    if (purchaseOrder.getWorkflowStatus() != PENDING) {
-      List<Error> errors = CompositePoLineValidationUtil.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
-      if (!errors.isEmpty()) {
-        throw new HttpException(422, errors.get(0));
-      }
-    }
-    return purchaseOrder;
-  }
-
   private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
     if (itemsSize != expectedItemsQuantity) {
@@ -438,7 +426,7 @@ public class OpenCompositeOrderManager {
     groupLocationsByHoldingId(compPOL)
       .forEach((existingPieceHoldingId, existingPieceLocations) -> {
         List<Piece> filteredExistingPieces = filterByHoldingId(existingPieces, existingPieceHoldingId);
-        List<Piece> createdPiecesWithItem = processPiecesWithHoldingAndItem(expectedPiecesWithItem, filteredExistingPieces, existingPieceHoldingId);
+        List<Piece> createdPiecesWithItem = processPiecesWithItemAndHoldingId(expectedPiecesWithItem, filteredExistingPieces, existingPieceHoldingId);
         piecesToCreate.addAll(createdPiecesWithItem);
         List<Piece> piecesWithoutItem = processPiecesWithoutItemAndHoldingId(compPOL, filteredExistingPieces, existingPieceHoldingId, existingPieceLocations);
         piecesToCreate.addAll(piecesWithoutItem);
@@ -478,12 +466,12 @@ public class OpenCompositeOrderManager {
     return piecesToCreate;
   }
 
-  private List<Piece> processPiecesWithLocationAndItem(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
+  private List<Piece> processPiecesWithItemAndLocationId(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
     List<Piece> expectedPiecesWithItem = filterByLocationId(piecesWithItem, existingPieceLocationId);
     return collectMissingPiecesWithItem(expectedPiecesWithItem, existedPieces);
   }
 
-  private List<Piece> processPiecesWithHoldingAndItem(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
+  private List<Piece> processPiecesWithItemAndHoldingId(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
     List<Piece> expectedPiecesWithItem = filterByHoldingId(piecesWithItem, existingPieceLocationId);
     return collectMissingPiecesWithItem(expectedPiecesWithItem, existedPieces);
   }
@@ -550,8 +538,9 @@ public class OpenCompositeOrderManager {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
   }
 
-  private CompletableFuture<Void> finishProcessingEncumbrancesForOpenOrder(EncumbranceWorkflowStrategy strategy,
-    CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+  private CompletableFuture<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
+                            RequestContext requestContext) {
+    EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
     return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
       .handle((v, t) -> {
         if (t == null)
@@ -565,5 +554,15 @@ public class OpenCompositeOrderManager {
       })
       .thenCompose(v -> v) // wait for future returned by handle
       .thenApply(v -> null);
+  }
+
+  private void updateIncomingOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
+    compPO.setWorkflowStatus(OPEN);
+    compPO.setDateOrdered(new Date());
+    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+      CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
+      compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
+    }
+    compPO.getCompositePoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
   }
 }

@@ -64,7 +64,7 @@ public class OrderRolloverServiceTest {
   @Mock
   private TransactionService transactionService;
   @Mock
-  private PurchaseOrderService purchaseOrderService;
+  private PurchaseOrderStorageService purchaseOrderStorageService;
   @Mock
   private PurchaseOrderLineService purchaseOrderLineService;
   @Mock
@@ -133,7 +133,7 @@ public class OrderRolloverServiceTest {
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing);
 
     doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderService)
+    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
@@ -231,7 +231,7 @@ public class OrderRolloverServiceTest {
     List<PoLine> poLines = List.of(poLineOneTime);
 
     doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderService)
+    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
@@ -323,7 +323,7 @@ public class OrderRolloverServiceTest {
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing);
 
     doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderService)
+    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
     doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());

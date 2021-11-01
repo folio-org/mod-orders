@@ -93,8 +93,14 @@ public class RestClient {
       client
         .request(HttpMethod.POST, recordData.toBuffer(), endpoint, requestContext.getHeaders())
         .thenApply(response -> {
+          client.closeClient();
           if (postResponseType == PostResponseType.BODY) {
-            return HelperUtils.verifyAndExtractBody(response);
+            JsonObject body =  HelperUtils.verifyAndExtractBody(response);
+            T responseEntity = body.mapTo(responseType);
+            if (logger.isDebugEnabled()) {
+              logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);
+            }
+            return responseEntity;
           } else if (postResponseType == PostResponseType.UUID) {
             return HelperUtils.verifyAndExtractRecordId(response);
           }
@@ -268,8 +274,8 @@ public class RestClient {
           return null;
         });
     } catch (Exception e) {
-      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, requestEntry.getBaseEndpoint(), requestContext), e);
       client.closeClient();
+      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, requestEntry.getBaseEndpoint(), requestContext), e);
       future.completeExceptionally(e);
     }
     return future;

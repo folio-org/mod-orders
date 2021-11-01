@@ -17,12 +17,12 @@ import static java.util.stream.Collectors.toMap;
 
 public class HoldingsSummaryService {
 
-  private PurchaseOrderService purchaseOrderService;
+  private PurchaseOrderStorageService purchaseOrderStorageService;
 
   private PurchaseOrderLineService purchaseOrderLineService;
 
-  public HoldingsSummaryService(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService) {
-    this.purchaseOrderService = purchaseOrderService;
+  public HoldingsSummaryService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService) {
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
@@ -36,7 +36,7 @@ public class HoldingsSummaryService {
         if (lines.isEmpty()) {
           return CompletableFuture.completedFuture((new HoldingSummaryCollection().withTotalRecords(0)));
         } else {
-          return purchaseOrderService.getPurchaseOrdersByIds(purchaseOrderIds, requestContext)
+          return purchaseOrderStorageService.getPurchaseOrdersByIds(purchaseOrderIds, requestContext)
             .thenCompose(orders -> buildHoldingSummaries(orders, lines))
             .thenApply(hs -> new HoldingSummaryCollection().withHoldingSummaries(hs).withTotalRecords(hs.size()));
         }

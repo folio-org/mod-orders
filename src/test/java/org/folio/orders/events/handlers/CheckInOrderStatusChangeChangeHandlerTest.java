@@ -3,6 +3,7 @@ package org.folio.orders.events.handlers;
 import static org.folio.TestConfig.X_OKAPI_URL;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
@@ -11,10 +12,12 @@ import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
 import static org.folio.TestConstants.PO_ID_OPEN_TO_BE_CLOSED;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITHOUT_PO_LINES;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.checkVertxContextCompletion;
 import static org.folio.helper.AbstractHelper.ORDER_ID;
 import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
-import static org.folio.service.inventory.InventoryManager.ITEMS;
+import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
@@ -22,6 +25,8 @@ import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
+import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -31,6 +36,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -44,11 +50,12 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.config.ApplicationConfig;
 import org.folio.helper.CheckinHelper;
+import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
 import org.folio.service.finance.transaction.EncumbranceService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -79,8 +86,11 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
   @Autowired
   private EncumbranceService encumbranceService;
   @Autowired
-  private PurchaseOrderService purchaseOrderService;
+  private PurchaseOrderStorageService purchaseOrderStorageService;
+  @Autowired
+  private PurchaseOrderHelper purchaseOrderHelper;
 
+  HashMap<String, String> okapiHeadersMock;
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -94,8 +104,15 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
 
   @BeforeEach
   void initMocks(){
+    okapiHeadersMock = new HashMap<>();
+    okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
+    okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
+    okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
+    okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
+    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
-    vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx, encumbranceService, purchaseOrderService));
+    vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx, encumbranceService,
+                          purchaseOrderStorageService, purchaseOrderHelper));
   }
 
   @AfterEach

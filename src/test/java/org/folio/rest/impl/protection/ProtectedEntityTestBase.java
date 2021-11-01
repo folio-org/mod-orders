@@ -5,8 +5,8 @@ import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMinimalContentPiece;
 import static org.folio.TestUtils.getRandomId;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -59,7 +59,7 @@ public abstract class ProtectedEntityTestBase {
     CompositePurchaseOrder po = getMinimalContentCompositePurchaseOrder();
     po.setWorkflowStatus(workflowStatus);
     po.setAcqUnitIds(new ArrayList<>(acqUnitsIds));
-    addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(po));
+    addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(po));
     return po;
   }
 
@@ -67,7 +67,7 @@ public abstract class ProtectedEntityTestBase {
                           CompositePurchaseOrder.WorkflowStatus workflowStatus) {
     CompositePurchaseOrder order = prepareOrder(acqUnitsIds, workflowStatus);
     CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
-    addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
+    addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
     return poLine;
   }
 
