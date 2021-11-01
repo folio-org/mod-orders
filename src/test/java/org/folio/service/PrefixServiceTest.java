@@ -24,7 +24,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.PrefixCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -40,7 +40,7 @@ public class PrefixServiceTest {
   private RestClient restClient;
 
   @Mock
-  private PurchaseOrderService purchaseOrderService;
+  private PurchaseOrderStorageService purchaseOrderStorageService;
 
   @Mock
   private RequestContext requestContext;
@@ -55,7 +55,7 @@ public class PrefixServiceTest {
     //given
     when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(new Prefix().withName("test")));
     when(restClient.delete(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(1)));
+    when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(1)));
 
     String id = UUID.randomUUID().toString();
     CompletableFuture<Void> result = prefixService.deletePrefix(id, requestContext);
@@ -67,7 +67,7 @@ public class PrefixServiceTest {
 
     verify(restClient).get(any(), any(), any());
     verify(restClient, never()).delete(any(), any());
-    verify(purchaseOrderService).getPurchaseOrders(eq("poNumberPrefix==test"), eq(0), eq(0), any());
+    verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberPrefix==test"), eq(0), eq(0), any());
   }
 
   @Test
@@ -75,7 +75,7 @@ public class PrefixServiceTest {
     //given
     when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(new Prefix().withName("test")));
     when(restClient.delete(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(0)));
+    when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
     CompletableFuture<Void> result = prefixService.deletePrefix(id, requestContext);
@@ -84,7 +84,7 @@ public class PrefixServiceTest {
 
     verify(restClient).get(any(), any(), any());
     verify(restClient).delete(any(), any());
-    verify(purchaseOrderService).getPurchaseOrders(eq("poNumberPrefix==test"), eq(0), eq(0), any());
+    verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberPrefix==test"), eq(0), eq(0), any());
   }
 
   @Test

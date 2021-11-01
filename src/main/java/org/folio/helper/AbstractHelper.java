@@ -7,7 +7,6 @@ import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
-import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.convertToJson;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
@@ -16,7 +15,6 @@ import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -25,7 +23,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
@@ -39,7 +36,6 @@ import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
-import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
@@ -299,26 +295,6 @@ public abstract class AbstractHelper {
         .header(CONTENT_TYPE, APPLICATION_JSON)
         .header(LOCATION, endpoint).entity(body).build();
     }
-  }
-
-  protected void sendEvent(MessageAddress messageAddress, JsonObject data) {
-    DeliveryOptions deliveryOptions = new DeliveryOptions();
-
-    // Add okapi headers
-    if (okapiHeaders != null) {
-      okapiHeaders.forEach(deliveryOptions::addHeader);
-    } else {
-      Map<String, String> okapiHeadersMap = new HashMap<>();
-      JsonObject okapiHeadersObject = data.getJsonObject(OKAPI_HEADERS);
-      okapiHeadersMap.put(OKAPI_URL, okapiHeadersObject.getString(OKAPI_URL));
-      this.okapiHeaders = okapiHeadersMap;
-    }
-
-    data.put(LANG, lang);
-
-    ctx.owner()
-      .eventBus()
-      .send(messageAddress.address, data, deliveryOptions);
   }
 
   public CompletableFuture<JsonObject> getTenantConfiguration() {

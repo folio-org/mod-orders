@@ -57,7 +57,7 @@ import org.folio.service.orders.OrderInvoiceRelationServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
-import org.folio.service.orders.PurchaseOrderServiceTest;
+import org.folio.service.orders.PurchaseOrderStorageServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
 import org.folio.service.orders.flows.open.OpenCompositeOrderInventoryServiceTest;
@@ -218,7 +218,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class PurchaseOrderServiceTestNested extends PurchaseOrderServiceTest {
+  class PurchaseOrderStorageServiceTestNested extends PurchaseOrderStorageServiceTest {
   }
 
   @Nested

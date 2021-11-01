@@ -1,5 +1,6 @@
 package org.folio.orders.utils;
 
+import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
@@ -150,7 +151,7 @@ public final class PoLineCommonUtil {
     return compPOL.getLocations()
                   .stream()
                   .filter(location -> Objects.nonNull(location.getLocationId()))
-                  .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location))
+                  .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location))
                   .collect(Collectors.groupingBy(Location::getLocationId));
   }
 
@@ -180,5 +181,9 @@ public final class PoLineCommonUtil {
 
   public static void makePoLinesPending(List<CompositePoLine> compositePoLines) {
     compositePoLines.forEach(HelperUtils::makePoLinePending);
+  }
+
+  public static void updateLocationsQuantity(List<Location> locations) {
+    locations.forEach(location -> location.setQuantity(calculateTotalLocationQuantity(location)));
   }
 }

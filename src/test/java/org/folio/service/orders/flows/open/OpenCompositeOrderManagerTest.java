@@ -28,22 +28,32 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.ApiTestSuite;
+import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
+import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
+import org.folio.service.orders.OrderInvoiceRelationService;
+import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryService;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
@@ -80,11 +90,11 @@ public class OpenCompositeOrderManagerTest {
   @Autowired
   private OpenCompositeOrderInventoryService openCompositeOrderInventoryService;
   @Autowired
-  private PurchaseOrderLineService purchaseOrderLineService;
-  @Autowired
-  private PurchaseOrderService purchaseOrderService;
+  private PurchaseOrderStorageService purchaseOrderStorageService;
   @Autowired
   private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
+  @Autowired
+  private OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -201,7 +211,7 @@ public class OpenCompositeOrderManagerTest {
 
     doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), eq(ProtectedOperationType.UPDATE), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(eq(piece.getItemId()), eq(piece.getPoLineId()), eq(requestContext));
-    doReturn(completedFuture(order)).when(purchaseOrderService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
+    doReturn(completedFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
     //When
@@ -220,7 +230,7 @@ public class OpenCompositeOrderManagerTest {
 
     doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), eq(ProtectedOperationType.UPDATE), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(eq(piece.getItemId()), eq(piece.getPoLineId()), eq(requestContext));
-    doReturn(completedFuture(order)).when(purchaseOrderService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
+    doReturn(completedFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
     //When
@@ -276,8 +286,8 @@ public class OpenCompositeOrderManagerTest {
       return mock(ReceivingEncumbranceStrategy.class);
     }
 
-    @Bean PurchaseOrderService purchaseOrderService() {
-      return mock(PurchaseOrderService.class);
+    @Bean PurchaseOrderStorageService purchaseOrderService() {
+      return mock(PurchaseOrderStorageService.class);
     }
 
     @Bean PieceStorageService pieceStorageService() {
@@ -292,20 +302,49 @@ public class OpenCompositeOrderManagerTest {
       return mock(OpenCompositeOrderInventoryService.class);
     }
 
+    @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator() {
+      return mock(OpenCompositeOrderFlowValidator.class);
+    }
+
+    @Bean PurchaseOrderLineHelper purchaseOrderLineHelper() {
+      return mock(PurchaseOrderLineHelper.class);
+    }
+
+    @Bean  EncumbranceService encumbranceService() {
+      return mock(EncumbranceService.class);
+    }
+
     @Bean ExpenseClassValidationService expenseClassValidationService() {
       return mock(ExpenseClassValidationService.class);
+    }
+
+    @Bean OrderInvoiceRelationService orderInvoiceRelationService() {
+      return mock(OrderInvoiceRelationService.class);
+    }
+
+    @Bean AcquisitionsUnitsService acquisitionsUnitsService() {
+      return mock(AcquisitionsUnitsService.class);
+    }
+
+    @Bean CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService() {
+      return mock(OrderLinesSummaryPopulateService.class);
+    }
+
+    @Bean RestClient restClient() {
+      return mock(RestClient.class);
     }
 
 
     @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, InventoryManager inventoryManager,
-      PieceStorageService pieceStorageService, PurchaseOrderService purchaseOrderService, ProtectionService protectionService,
-      PieceChangeReceiptStatusPublisher receiptStatusPublisher, ExpenseClassValidationService expenseClassValidationService,
-      TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService){
+      PieceStorageService pieceStorageService, PurchaseOrderStorageService purchaseOrderStorageService, ProtectionService protectionService,
+      PieceChangeReceiptStatusPublisher receiptStatusPublisher, TitlesService titlesService,
+      OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
+      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, PurchaseOrderLineHelper purchaseOrderLineHelper){
 
       return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
-        pieceStorageService, purchaseOrderService, protectionService, receiptStatusPublisher, expenseClassValidationService,
-        titlesService, openCompositeOrderInventoryService);
+        pieceStorageService, purchaseOrderStorageService, protectionService, receiptStatusPublisher,
+        titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, purchaseOrderLineHelper);
     }
   }
 }

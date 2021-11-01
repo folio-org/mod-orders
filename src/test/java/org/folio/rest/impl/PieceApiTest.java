@@ -20,8 +20,8 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.rest.core.exceptions.ErrorCodes.REQUEST_FOUND;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.addMockEntry;
@@ -215,8 +215,8 @@ public class PieceApiTest {
        .withItemId(ID_DOES_NOT_EXIST).withPoLineId(poLine.getId());
 
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
-    MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
-    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 204);
     assertNull(MockServer.getItemDeletions());
@@ -235,8 +235,8 @@ public class PieceApiTest {
                               .withItemId(ID_FOR_INTERNAL_SERVER_ERROR).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
-    MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
-    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 500);
     assertNull(MockServer.getItemDeletions());
@@ -262,8 +262,8 @@ public class PieceApiTest {
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(poLine.getId());
 
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
-    MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
-    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 204);
     assertThat(MockServer.getItemDeletions(), nullValue());
@@ -292,8 +292,8 @@ public class PieceApiTest {
       .withHoldingId(holdingId).withItemId(itemId).withPoLineId(poLine.getId());
 
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
-    MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
-    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
     MockServer.addMockEntry(ITEM_RECORDS, item);
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 204);
@@ -310,8 +310,8 @@ public class PieceApiTest {
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98").withPoLineId(poLine.getId());
 
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
-    MockServer.addMockEntry(PO_LINES, JsonObject.mapFrom(poLine));
-    MockServer.addMockEntry(PURCHASE_ORDER, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
 
     Errors response = verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 422).as(Errors.class);
     List<Error> errors = response.getErrors();

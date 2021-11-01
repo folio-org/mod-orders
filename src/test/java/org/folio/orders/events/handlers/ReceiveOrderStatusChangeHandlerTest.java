@@ -44,11 +44,12 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.config.ApplicationConfig;
 import org.folio.helper.AbstractHelper;
+import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
 import org.folio.service.finance.transaction.EncumbranceService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -80,7 +81,9 @@ public class ReceiveOrderStatusChangeHandlerTest {
   @Autowired
   private EncumbranceService encumbranceService;
   @Autowired
-  private PurchaseOrderService purchaseOrderService;
+  private PurchaseOrderStorageService purchaseOrderStorageService;
+  @Autowired
+  private PurchaseOrderHelper purchaseOrderHelper;
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -95,7 +98,8 @@ public class ReceiveOrderStatusChangeHandlerTest {
   @BeforeEach
   void initMocks(){
     SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
-    vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx, encumbranceService, purchaseOrderService));
+    vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx, encumbranceService,
+        purchaseOrderStorageService, purchaseOrderHelper));
   }
 
   @AfterEach

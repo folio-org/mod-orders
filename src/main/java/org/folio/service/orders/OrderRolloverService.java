@@ -65,16 +65,16 @@ public class OrderRolloverService {
   private static final int ORDERS_CHUNK = 200;
 
   private final FundService fundService;
-  private final PurchaseOrderService purchaseOrderService;
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TransactionService transactionService;
   private final ConfigurationEntriesService configurationService;
   private final ExchangeRateProviderResolver exchangeRateProviderResolver;
-  public OrderRolloverService(FundService fundService, PurchaseOrderService purchaseOrderService,
+  public OrderRolloverService(FundService fundService, PurchaseOrderStorageService purchaseOrderStorageService,
                               PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
                               ConfigurationEntriesService configurationEntriesService, ExchangeRateProviderResolver exchangeRateProviderResolver) {
     this.fundService = fundService;
-    this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.transactionService = transactionService;
     this.configurationService = configurationEntriesService;
@@ -121,7 +121,7 @@ public class OrderRolloverService {
                                                                  RequestContext requestContext) {
 
     String query = buildOpenOrderQueryByFundIdsAndTypes(chunkFundIds, ledgerFYRollover);
-    return purchaseOrderService.getPurchaseOrders(query, 0, 0, requestContext)
+    return purchaseOrderStorageService.getPurchaseOrders(query, 0, 0, requestContext)
               .thenApply(PurchaseOrderCollection::getTotalRecords)
               .thenCompose(orderTotalRecords -> getOrderIdsByChunks(requestContext, query, orderTotalRecords))
               .exceptionally(t -> {
@@ -134,7 +134,7 @@ public class OrderRolloverService {
     List<CompletableFuture<Set<String>>> futures = new ArrayList<>();
     int numberOfChuncks = orderTotalRecords/ORDERS_CHUNK + 1;
     for (int chunkNumber = 0; chunkNumber < numberOfChuncks; chunkNumber++)  {
-      futures.add(purchaseOrderService.getPurchaseOrders(query, ORDERS_CHUNK, chunkNumber * ORDERS_CHUNK, requestContext)
+      futures.add(purchaseOrderStorageService.getPurchaseOrders(query, ORDERS_CHUNK, chunkNumber * ORDERS_CHUNK, requestContext)
         .thenApply(this::extractOrderIds)
       );
       logger.debug("Order chunk query : {}", query);

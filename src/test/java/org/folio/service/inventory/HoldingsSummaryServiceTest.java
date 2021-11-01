@@ -21,7 +21,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -34,7 +34,7 @@ public class HoldingsSummaryServiceTest {
   private HoldingsSummaryService holdingsSummaryService;
 
   @Mock
-  private PurchaseOrderService purchaseOrderService;
+  private PurchaseOrderStorageService purchaseOrderStorageService;
 
   @Mock
   private PurchaseOrderLineService purchaseOrderLineService;
@@ -57,7 +57,7 @@ public class HoldingsSummaryServiceTest {
     purchaseOrders.add(order);
     polines.add(line);
 
-    when(purchaseOrderService.getPurchaseOrdersByIds(any(), any()))
+    when(purchaseOrderStorageService.getPurchaseOrdersByIds(any(), any()))
       .thenReturn(CompletableFuture.completedFuture(purchaseOrders));
 
     when(purchaseOrderLineService.getOrderLines(anyString(), anyInt(), anyInt(), any()))

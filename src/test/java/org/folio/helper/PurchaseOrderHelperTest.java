@@ -26,7 +26,12 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderStorageService;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
+import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceService;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -231,6 +236,60 @@ public class PurchaseOrderHelperTest {
     @Bean
     public PieceService piecesService() {
       return mock(PieceService.class);
+    }
+
+    @Bean
+    public PurchaseOrderLineHelper purchaseOrderLineHelper() {
+      return mock(PurchaseOrderLineHelper.class);
+    }
+
+    @Bean
+    public PurchaseOrderStorageService purchaseOrderStorageService() {
+      return mock(PurchaseOrderStorageService.class);
+    }
+
+    @Bean
+    public PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
+    }
+
+    @Bean
+    public UnOpenCompositeOrderManager unOpenCompositeOrderManager() {
+      return mock(UnOpenCompositeOrderManager.class);
+    }
+
+
+    @Bean
+    public OpenCompositeOrderManager openCompositeOrderManager() {
+      return mock(OpenCompositeOrderManager.class);
+    }
+
+    @Bean
+    public OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator() {
+      return mock(OpenCompositeOrderFlowValidator.class);
+    }
+
+
+    @Bean PoNumberHelper poNumberHelper() {
+      return mock(PoNumberHelper.class);
+    }
+
+    @Bean
+    public PurchaseOrderHelper purchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
+              OrderLinesSummaryPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
+              CompositeOrderDynamicDataPopulateService combinedPopulateService,
+              EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
+              TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
+              AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager,
+              UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
+              PurchaseOrderStorageService purchaseOrderStorageService,
+              ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
+              OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
+      return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
+        combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
+        purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
+        unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
+        poNumberHelper, openCompositeOrderFlowValidator);
     }
   }
 

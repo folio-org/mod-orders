@@ -1,53 +1,68 @@
 package org.folio.helper;
 
-import static org.folio.orders.utils.HelperUtils.getPurchaseOrderByPONumber;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.orders.utils.PoLineCommonUtil.DASH_SEPARATOR;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
-import javax.ws.rs.core.Response;
-
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.orders.utils.HelperUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoNumber;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.service.orders.PurchaseOrderStorageService;
 
-import io.vertx.core.Context;
+public class PoNumberHelper {
+  private static final Logger logger = LogManager.getLogger(PoNumberHelper.class);
 
-public class PoNumberHelper extends AbstractHelper {
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
+  private final RestClient restClient;
 
-  public PoNumberHelper(HttpClientInterface httpClient, Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(httpClient, okapiHeaders, ctx, lang);
+  public PoNumberHelper(RestClient restClient, PurchaseOrderStorageService purchaseOrderStorageService) {
+    this.restClient = restClient;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
   }
 
-  public PoNumberHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(okapiHeaders, ctx, lang);
-  }
-
-  public CompletableFuture<Response> checkPONumberUnique(PoNumber poNumber) {
-    return checkPONumberUnique(poNumber.getPoNumber())
-      .thenApply(v -> {
+  public CompletableFuture<Void> checkPONumberUnique(PoNumber poNumber, RequestContext requestContext) {
+    FolioVertxCompletableFuture<Void> future = new FolioVertxCompletableFuture<>(requestContext.getContext());
+    checkPONumberUnique(poNumber.getPoNumber(), requestContext)
+      .thenAccept(v -> {
         logger.info("The PO Number '{}' is not in use yet", poNumber.getPoNumber());
-        return buildNoContentResponse();
+        future.complete(null);
       })
-      .exceptionally(this::buildErrorResponse);
+      .exceptionally(t -> {
+        future.completeExceptionally(t.getCause());
+        return null;
+      });
+    return future;
   }
 
-  public CompletableFuture<Response> getPoNumber() {
-    return generatePoNumber()
-      .thenApply(number -> {
+  public CompletableFuture<PoNumber> getPoNumber(RequestContext requestContext) {
+    FolioVertxCompletableFuture<PoNumber> future = new FolioVertxCompletableFuture<>(requestContext.getContext());
+    generatePoNumber(requestContext)
+      .thenAccept(number -> {
         logger.info("The PO Number '{}' is not in use yet", number);
-        return buildOkResponse(new PoNumber().withPoNumber(number));
+        future.complete(new PoNumber().withPoNumber(number));
       })
-      .exceptionally(this::buildErrorResponse);
+      .exceptionally(t -> {
+        future.completeExceptionally(t.getCause());
+        return null;
+      });
+    return future;
   }
 
-  CompletableFuture<Void> checkPONumberUnique(String poNumber) {
-    return getPurchaseOrderByPONumber(poNumber, lang, httpClient, okapiHeaders, logger)
+  public CompletableFuture<Void> checkPONumberUnique(String poNumber, RequestContext requestContext) {
+    return purchaseOrderStorageService.getPurchaseOrderByPONumber(poNumber, requestContext)
       .thenAccept(po -> {
          if (po.getInteger("totalRecords") != 0) {
            logger.error("Exception validating PO Number existence");
@@ -56,9 +71,24 @@ public class PoNumberHelper extends AbstractHelper {
       });
   }
 
-  CompletableFuture<String> generatePoNumber() {
-    return HelperUtils.handleGetRequest(resourcesPath(PO_NUMBER), httpClient, okapiHeaders, logger)
-      .thenApply(seqNumber -> seqNumber.mapTo(SequenceNumber.class).getSequenceNumber());
+  public CompletableFuture<String> generatePoNumber(RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(resourcesPath(PO_NUMBER));
+    return restClient.getAsJsonObject(requestEntry, requestContext)
+                      .thenApply(seqNumber -> seqNumber.mapTo(SequenceNumber.class).getSequenceNumber());
   }
 
+  public CompletionStage<Void> validatePoNumber(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo, RequestContext requestContext) {
+    if (isPoNumberChanged(poFromStorage, updatedPo)) {
+       return checkPONumberUnique(updatedPo.getPoNumber(), requestContext);
+    }
+    return completedFuture(null);
+  }
+
+  public static boolean isPoNumberChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
+    return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
+  }
+
+  public static String buildPoLineNumber(String poNumber, String sequence) {
+    return poNumber + DASH_SEPARATOR + sequence;
+  }
 }

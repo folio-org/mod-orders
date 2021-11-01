@@ -87,7 +87,7 @@ public class AcquisitionsUnitsService {
       .thenCompose(unit -> updateAcquisitionsUnit(unit, requestContext));
   }
 
-  public CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords(RequestContext requestContext, String tableAlias) {
+  public CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords(String tableAlias, RequestContext requestContext) {
     return getAcqUnitIdsForSearch(requestContext).thenApply(ids -> {
       if (ids.isEmpty()) {
         return NO_ACQ_UNIT_ASSIGNED_CQL;
