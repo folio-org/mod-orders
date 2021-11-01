@@ -8,17 +8,17 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.validators.PieceValidatorUtil;
 
 public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHolder> implements PoLineUpdateQuantityService<T> {
-  protected final PurchaseOrderService purchaseOrderService;
+  protected final PurchaseOrderStorageService purchaseOrderStorageService;
   protected final PurchaseOrderLineService purchaseOrderLineService;
   protected final ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
 
-  public BasePieceFlowUpdatePoLineService(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+  public BasePieceFlowUpdatePoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
         ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-    this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.receivingEncumbranceStrategy = receivingEncumbranceStrategy;
   }

@@ -36,6 +36,7 @@ public class PurchaseOrderLineService {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderLineService.class);
   private static final String ENDPOINT = "/orders-storage/po-lines";
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
+  private static final String ORDER_LINES_BY_ORDER_ID_QUERY = "purchaseOrderId == %s";
 
   private final RestClient restClient;
 
@@ -43,14 +44,18 @@ public class PurchaseOrderLineService {
     this.restClient = restClient;
   }
 
-  public CompletableFuture<List<PoLine>> getOrderLines(String query, int offset, int limit, RequestContext requestContext) {
+  public CompletableFuture<PoLineCollection> getOrderLineCollection(String query, int offset, int limit, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
-    return restClient.get(requestEntry, requestContext, PoLineCollection.class)
-                     .thenApply(PoLineCollection::getPoLines);
+    return restClient.get(requestEntry, requestContext, PoLineCollection.class);
   }
 
-  public CompletableFuture<PoLine> getOrderLineById(String orderLineId, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(orderLineId);
+
+  public CompletableFuture<List<PoLine>> getOrderLines(String query, int offset, int limit, RequestContext requestContext) {
+    return getOrderLineCollection(query, offset, limit, requestContext).thenApply(PoLineCollection::getPoLines);
+  }
+
+  public CompletableFuture<PoLine> getOrderLineById(String lineId, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
     return restClient.get(requestEntry, requestContext, PoLine.class);
   }
 
@@ -83,6 +88,18 @@ public class PurchaseOrderLineService {
       .toArray(CompletableFuture[]::new));
   }
 
+  public CompletableFuture<List<PoLine>> getPoLinesByOrderId(String orderId, RequestContext requestContext) {
+    CompletableFuture<List<PoLine>> future = new CompletableFuture<>();
+    getOrderLines("purchaseOrderId==" + orderId, 0, Integer.MAX_VALUE, requestContext)
+      .thenAccept(future::complete)
+      .exceptionally(t -> {
+        logger.error("Exception gathering poLine data:", t);
+        future.completeExceptionally(t);
+        return null;
+      });
+    return future;
+  }
+
   public CompletableFuture<List<CompositePoLine>> getCompositePoLinesByOrderId(String orderId, RequestContext requestContext) {
     CompletableFuture<List<CompositePoLine>> future = new CompletableFuture<>();
 
@@ -104,8 +121,7 @@ public class PurchaseOrderLineService {
   }
 
   private CompletableFuture<CompositePoLine> operateOnPoLine(HttpMethod operation, PoLine line, RequestContext requestContext) {
-    return HelperUtils.operateOnPoLine(operation, JsonObject.mapFrom(line),
-        restClient.getHttpClient(requestContext.getHeaders()), requestContext.getHeaders(), logger);
+    return HelperUtils.operateOnPoLine(operation, JsonObject.mapFrom(line), requestContext.getHeaders(), logger);
   }
 
   /**
@@ -142,6 +158,26 @@ public class PurchaseOrderLineService {
       .withLimit(MAX_IDS_FOR_GET_RQ);
     return restClient.get(requestEntry, requestContext, PoLineCollection.class)
       .thenApply(PoLineCollection::getPoLines);
+  }
+
+  public CompletableFuture<Void> deleteLineById(String lineId, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
+    return restClient.delete(requestEntry, requestContext);
+  }
+
+  public CompletableFuture<List<PoLine>> getLinesByOrderId(String orderId, RequestContext requestContext) {
+    String query = String.format(ORDER_LINES_BY_ORDER_ID_QUERY, orderId);
+    return getOrderLines(query, 0, Integer.MAX_VALUE, requestContext);
+  }
+
+  public CompletableFuture<Void> deletePoLinesByOrderId(String orderId, RequestContext requestContext) {
+    return getLinesByOrderId(orderId, requestContext)
+      .thenCompose(jsonObjects -> CompletableFuture.allOf(jsonObjects.stream()
+        .map(line -> deleteLineById(line.getId(), requestContext)).toArray(CompletableFuture[]::new)))
+      .exceptionally(t -> {
+        logger.error("Exception deleting poLine data for order id={}", orderId, t);
+        throw new CompletionException(t.getCause());
+      });
   }
 }
 

@@ -23,6 +23,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
@@ -68,7 +69,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   public CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     return getPoLines(new ArrayList<>(checkinPieces.keySet()), requestContext)
-      .thenCompose(poLines -> removeForbiddenEntities(poLines, checkinPieces))
+      .thenCompose(poLines -> removeForbiddenEntities(poLines, checkinPieces, requestContext))
       .thenCompose(vVoid -> processCheckInPieces(checkinCollection, requestContext));
   }
 
@@ -303,13 +304,13 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         List<PoLine> successPoLines = StreamEx.of(poLines)
           .filter(line -> updatedPoLines.contains(line.getId()))
           .toList();
-        updateOrderStatus(successPoLines, checkinCollection);
+        updateOrderStatus(successPoLines, checkinCollection, requestContext);
       });
     })
       .thenApply(ok -> piecesGroupedByPoLine);
   }
 
-  private void updateOrderStatus(List<PoLine> poLines, CheckinCollection checkinCollection) {
+  private void updateOrderStatus(List<PoLine> poLines, CheckinCollection checkinCollection, RequestContext requestContext) {
     if (!poLines.isEmpty()) {
       logger.debug("Sending event to verify order status");
 
@@ -322,7 +323,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       JsonObject messageContent = new JsonObject();
       messageContent.put(OKAPI_HEADERS, okapiHeaders);
       messageContent.put(EVENT_PAYLOAD, new JsonArray(orderClosedStatusesJsonList));
-      sendEvent(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE, messageContent);
+      HelperUtils.sendEvent(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE, messageContent, requestContext);
       logger.debug("Event to verify order status - sent");
     }
   }

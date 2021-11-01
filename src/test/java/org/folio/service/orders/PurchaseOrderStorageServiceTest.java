@@ -21,9 +21,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class PurchaseOrderServiceTest {
+public class PurchaseOrderStorageServiceTest {
   @InjectMocks
-  private PurchaseOrderService purchaseOrderService;
+  private PurchaseOrderStorageService purchaseOrderStorageService;
 
   @Mock
   private RestClient restClientMock;
@@ -50,7 +50,7 @@ public class PurchaseOrderServiceTest {
       .thenReturn(CompletableFuture.completedFuture(purchaseOrderCollection));
 
     String expectedQuery =  String.format("id==%s", orderId);
-    PurchaseOrderCollection actOrders = purchaseOrderService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).join();
+    PurchaseOrderCollection actOrders = purchaseOrderStorageService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).join();
 
     verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
     assertEquals(purchaseOrderCollection, actOrders);
@@ -69,7 +69,7 @@ public class PurchaseOrderServiceTest {
     when(restClientMock.get(any(), any(), any()))
       .thenReturn(CompletableFuture.completedFuture(purchaseOrderCollection));
 
-    List<PurchaseOrder> actOrders = purchaseOrderService.getPurchaseOrdersByIds(List.of(orderId), requestContext).join();
+    List<PurchaseOrder> actOrders = purchaseOrderStorageService.getPurchaseOrdersByIds(List.of(orderId), requestContext).join();
 
     verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
     assertEquals(purchaseOrderCollection.getPurchaseOrders(), actOrders);

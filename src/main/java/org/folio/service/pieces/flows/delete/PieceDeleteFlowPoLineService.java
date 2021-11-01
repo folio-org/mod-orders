@@ -12,15 +12,15 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.BasePieceFlowUpdatePoLineService;
 
 public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineService<PieceDeletionHolder> {
 
-  public PieceDeleteFlowPoLineService(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+  public PieceDeleteFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
                                 ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-    super(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy);
+    super(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
   @Override
@@ -40,18 +40,12 @@ public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineServi
         if (loc.getQuantityElectronic() == 0) {
           loc.setQuantityElectronic(null);
         }
-        if (cost.getQuantityElectronic() == 0) {
-          cost.setQuantityElectronic(null);
-        }
       } else {
         loc.setQuantityPhysical(loc.getQuantityPhysical() - qty);
         loc.setQuantity(loc.getQuantity() - qty);
         cost.setQuantityPhysical(cost.getQuantityPhysical() - qty);
         if (loc.getQuantityPhysical() == 0) {
           loc.setQuantityPhysical(null);
-        }
-        if (cost.getQuantityPhysical() == 0) {
-          cost.setQuantityPhysical(null);
         }
       }
       if (loc.getQuantity() != null && loc.getQuantity() == 0) {

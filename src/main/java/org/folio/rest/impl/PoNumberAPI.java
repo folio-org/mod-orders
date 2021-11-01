@@ -10,16 +10,26 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.PoNumberHelper;
 import org.folio.rest.annotations.Validate;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.rest.jaxrs.resource.OrdersPoNumber;
+import org.folio.spring.SpringContextUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
-public class PoNumberAPI implements OrdersPoNumber {
-
+public class PoNumberAPI extends BaseApi implements OrdersPoNumber {
   private static final Logger logger = LogManager.getLogger();
+
+  @Autowired
+  private PoNumberHelper poNumberHelper;
+
+  public PoNumberAPI() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
 
   @Override
   @Validate
@@ -27,20 +37,20 @@ public class PoNumberAPI implements OrdersPoNumber {
       Context vertxContext) {
     logger.info("Receiving generated poNumber ...");
 
-    new PoNumberHelper(okapiHeaders, vertxContext, lang).getPoNumber()
-      .thenAccept(response -> asyncResultHandler.handle(succeededFuture(response)));
+    poNumberHelper.getPoNumber(new RequestContext(vertxContext, okapiHeaders))
+      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(buildOkResponse(result))))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
   @Validate
   public void postOrdersPoNumberValidate(String lang, PoNumber poNumber, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    PoNumberHelper helper = new PoNumberHelper(okapiHeaders, vertxContext, lang);
-    logger.info("Validating a PO Number");
 
     // @Validate asserts the pattern of a PO Number, the below method is used to
     // check for uniqueness
-    helper.checkPONumberUnique(poNumber)
-      .thenAccept(response -> asyncResultHandler.handle(succeededFuture(response)));
+    poNumberHelper.checkPONumberUnique(poNumber, new RequestContext(vertxContext, okapiHeaders))
+      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 }

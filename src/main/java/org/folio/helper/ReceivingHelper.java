@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
@@ -76,8 +77,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   public CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     return getPoLines(new ArrayList<>(receivingItems.keySet()), requestContext)
-      .thenCompose(poLines -> removeForbiddenEntities(poLines, receivingItems))
-      .thenCompose(vVoid -> processReceiveItems(receivingCollection, getRequestContext()));
+      .thenCompose(poLines -> removeForbiddenEntities(poLines, receivingItems, requestContext))
+      .thenCompose(vVoid -> processReceiveItems(receivingCollection, requestContext));
   }
 
   private CompletableFuture<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
@@ -132,14 +133,14 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
           updateOrderStatus(StreamEx.of(poLines)
             // Leave only successfully updated PO Lines
             .filter(line -> updatedPoLines.contains(line.getId()))
-            .toList());
+            .toList(), requestContext);
         });
       })
         .thenApply(ok -> piecesGroupedByPoLine);
     }
   }
 
-  private void updateOrderStatus(List<PoLine> poLines) {
+  private void updateOrderStatus(List<PoLine> poLines, RequestContext requestContext) {
     if (!poLines.isEmpty()) {
       logger.debug("Sending event to verify order status");
 
@@ -154,7 +155,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       JsonObject messageContent = new JsonObject();
       messageContent.put(OKAPI_HEADERS, okapiHeaders);
       messageContent.put(EVENT_PAYLOAD, new JsonArray(poIds));
-      sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent);
+      HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent, requestContext);
 
       logger.debug("Event to verify order status - sent");
     }
@@ -174,11 +175,11 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
               ))));
   }
 
-  public CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query) {
+  public CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query, RequestContext requestContext) {
     CompletableFuture<ReceivingHistoryCollection> future = new CompletableFuture<>();
 
     try {
-      acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(getRequestContext(), StringUtils.EMPTY)
+      acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
         .thenCompose(acqUnitsCqlExpr -> {
           String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
           String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, buildQuery(cql, logger), lang);

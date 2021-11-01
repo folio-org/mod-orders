@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.AbstractHelper;
 import org.folio.completablefuture.AsyncUtil;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.Piece.ReceivingStatus;
 import org.folio.rest.acq.model.PieceCollection;
@@ -80,7 +81,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
           .thenAccept(updatedPoLineId -> {
             if (updatedPoLineId != null) {
               // send event to update order status
-              updateOrderStatus(poLine, okapiHeaders);
+              updateOrderStatus(poLine, okapiHeaders, new RequestContext(ctx, okapiHeaders));
             }
           })
           .thenAccept(future::complete);
@@ -101,7 +102,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     completeAllFutures(httpClient, futures, message);
   }
 
-  private void updateOrderStatus(PoLine poLine, Map<String, String> okapiHeaders) {
+  private void updateOrderStatus(PoLine poLine, Map<String, String> okapiHeaders, RequestContext requestContext) {
     List<JsonObject> poIds = StreamEx
       .of(poLine)
       .map(PoLine::getPurchaseOrderId)
@@ -112,7 +113,7 @@ public class ReceiptStatusConsistency extends AbstractHelper implements Handler<
     messageContent.put(OKAPI_HEADERS, okapiHeaders);
     // Collect order ids which should be processed
     messageContent.put(EVENT_PAYLOAD, new JsonArray(poIds));
-    sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent);
+    HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent, requestContext);
   }
 
   private CompletableFuture<PoLine.ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine,

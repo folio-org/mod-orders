@@ -36,6 +36,17 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
 import static org.folio.TestUtils.verifyLocationQuantity;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
@@ -55,17 +66,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.POL_LINES_LIMIT_EXCEEDED
 import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_LOCATION_QTY;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES;
-import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
@@ -96,9 +96,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.restassured.response.Response;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -109,16 +106,17 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
-import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -138,6 +136,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import io.restassured.response.Response;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderLinesApiTest {
 
@@ -481,7 +483,7 @@ public class PurchaseOrderLinesApiTest {
     //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(3, column.size());
-    assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
@@ -491,10 +493,10 @@ public class PurchaseOrderLinesApiTest {
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(1, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(PO_LINES));
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES_STORAGE));
 
     // See MODORDERS-180
-    PoLine poLine = column.get(PO_LINES).get(0).mapTo(PoLine.class);
+    PoLine poLine = column.get(PO_LINES_STORAGE).get(0).mapTo(PoLine.class);
     assertThat(poLine.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine));
     Location location = poLine.getLocations().get(0);
     assertEquals(location.getQuantityPhysical(), location.getQuantity());
@@ -512,8 +514,8 @@ public class PurchaseOrderLinesApiTest {
     body.setIsPackage(false);
     body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
     body.setReportingCodes(new ArrayList<>());
-    MockServer.addMockEntry(PO_LINES, body);
-    MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
+    MockServer.addMockEntry(PO_LINES_STORAGE, body);
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN)
       .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME));
@@ -556,8 +558,8 @@ public class PurchaseOrderLinesApiTest {
     body.setIsPackage(false);
     body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
     body.setReportingCodes(new ArrayList<>());
-    MockServer.addMockEntry(PO_LINES, body);
-    MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
+    MockServer.addMockEntry(PO_LINES_STORAGE, body);
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN)
       .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME));
@@ -602,8 +604,8 @@ public class PurchaseOrderLinesApiTest {
     body.setIsPackage(false);
     body.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
     body.setReportingCodes(new ArrayList<>());
-    MockServer.addMockEntry(PO_LINES, body);
-    MockServer.addMockEntry(PURCHASE_ORDER, new CompositePurchaseOrder()
+    MockServer.addMockEntry(PO_LINES_STORAGE, body);
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, new CompositePurchaseOrder()
       .withId(ID_FOR_PRINT_MONOGRAPH_ORDER)
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN)
     .withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME));
@@ -637,11 +639,11 @@ public class PurchaseOrderLinesApiTest {
     // + 1 call to get the line encumbrances
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(5, column.size());
-    assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
     assertEquals(4, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(PO_LINES, ALERTS, REPORTING_CODES, ORDER_TRANSACTION_SUMMARIES));
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES_STORAGE, ALERTS, REPORTING_CODES, ORDER_TRANSACTION_SUMMARIES));
 
     // Verify no message sent via event bus
     HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
@@ -697,7 +699,7 @@ public class PurchaseOrderLinesApiTest {
     // 2 calls each to fetch Order Line, Purchase Order
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(2, column.size());
-    assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
     HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
@@ -717,7 +719,7 @@ public class PurchaseOrderLinesApiTest {
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
-    assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -778,7 +780,7 @@ public class PurchaseOrderLinesApiTest {
 
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
     assertEquals(1, column.size());
-    assertThat(column, hasKey(PO_LINES));
+    assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.POST);
     assertTrue(column.isEmpty());
@@ -893,7 +895,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(polineId)
       .withTitle("Title")
       .withInstanceId(instanceId));
-    addMockEntry(PO_LINES, getMinimalContentCompositePoLine().withIsPackage(true).withId(polineId));
+    addMockEntry(PO_LINES_STORAGE, getMinimalContentCompositePoLine().withIsPackage(true).withId(polineId));
 
     final CompositePoLine resp = verifySuccessGet(String.format(LINE_BY_ID_PATH, polineId), CompositePoLine.class);
 
@@ -955,7 +957,7 @@ public class PurchaseOrderLinesApiTest {
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
 
-    List<String> queryParams = getQueryParams(PO_LINES);
+    List<String> queryParams = getQueryParams(PO_LINES_STORAGE);
     assertThat(queryParams, hasSize(1));
     assertThat(queryParams.get(0), equalTo(NO_ACQ_UNIT_ASSIGNED_CQL));
   }
@@ -976,7 +978,7 @@ public class PurchaseOrderLinesApiTest {
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
 
-    List<String> queryParams = getQueryParams(PO_LINES);
+    List<String> queryParams = getQueryParams(PO_LINES_STORAGE);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
     assertThat(queryToStorage, containsString("(" + cql + ")"));
@@ -1123,7 +1125,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     Errors errors = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422).as(Errors.class);
@@ -1143,7 +1145,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     double newCost = 12.09d;
     reqData.getCost().setListUnitPriceElectronic(newCost);
@@ -1168,7 +1170,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     reqData.getFundDistribution().get(0).setExpenseClassId(INACTIVE_EXPENSE_CLASS_ID);
 
@@ -1192,7 +1194,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     reqData.getFundDistribution().get(0).setDistributionType(FundDistribution.DistributionType.AMOUNT);
     reqData.getFundDistribution().get(0).setValue(reqData.getCost().getPoLineEstimatedPrice());
@@ -1215,7 +1217,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
@@ -1224,7 +1226,7 @@ public class PurchaseOrderLinesApiTest {
     assertThat("No transactions have been deleted", MockServer.getRqRsEntries(HttpMethod.DELETE, ENCUMBRANCES).size() == 0);
 
     // double check with updating status only (When only status updated via request from mod-invoices)
-    CompositePoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES).get(0).mapTo(CompositePoLine.class);
+    CompositePoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE).get(0).mapTo(CompositePoLine.class);
     updatedLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(updatedLine).encodePrettily(),
@@ -1251,7 +1253,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     String newLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
     reqData.getLocations().get(0).setLocationId(newLocationId);
@@ -1284,7 +1286,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     reqData.getLocations().get(0).setQuantityElectronic(3);
     reqData.getCost().setQuantityElectronic(3);
@@ -1318,7 +1320,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     reqData.getLocations().get(0).setQuantityElectronic(3);
     reqData.getCost().setQuantityElectronic(3);
@@ -1341,7 +1343,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     int expQtyElectronic = 3;
     reqData.getLocations().get(0).setQuantityElectronic(expQtyElectronic);
@@ -1377,7 +1379,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES, reqData);
+    addMockEntry(PO_LINES_STORAGE, reqData);
 
     String newLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
     reqData.getLocations().get(0).setLocationId(newLocationId);

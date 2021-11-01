@@ -15,6 +15,10 @@ public class PieceDeletionHolder extends BasePieceFlowHolder {
     return deleteHolding;
   }
 
+  public void setPieceToDelete(Piece pieceToDelete) {
+    this.pieceToDelete = pieceToDelete;
+  }
+
   public PieceDeletionHolder withPieceToDelete(Piece pieceToDelete) {
     this.pieceToDelete = pieceToDelete;
     return this;

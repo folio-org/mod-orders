@@ -57,7 +57,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
 
     ReceivingHelper helper = new ReceivingHelper(okapiHeaders, vertxContext, lang);
 
-    helper.getReceivingHistory(limit, offset, query)
+    helper.getReceivingHistory(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .thenAccept(receivingHistory -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved receiving history: {} ", JsonObject.mapFrom(receivingHistory).encodePrettily());

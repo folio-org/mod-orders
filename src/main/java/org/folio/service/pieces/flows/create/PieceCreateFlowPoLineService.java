@@ -11,15 +11,15 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.BasePieceFlowUpdatePoLineService;
 
 public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineService<PieceCreationHolder> {
 
-  public PieceCreateFlowPoLineService(PurchaseOrderService purchaseOrderService, PurchaseOrderLineService purchaseOrderLineService,
+  public PieceCreateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
     ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
-    super(purchaseOrderService, purchaseOrderLineService, receivingEncumbranceStrategy);
+    super(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
   @Override

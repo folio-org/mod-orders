@@ -23,7 +23,7 @@ import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -138,8 +138,8 @@ public class PieceServiceTest {
       return mock(ReceivingEncumbranceStrategy.class);
     }
 
-    @Bean PurchaseOrderService purchaseOrderService() {
-      return mock(PurchaseOrderService.class);
+    @Bean PurchaseOrderStorageService purchaseOrderService() {
+      return mock(PurchaseOrderStorageService.class);
     }
 
     @Bean PieceStorageService pieceStorageService() {
@@ -153,11 +153,10 @@ public class PieceServiceTest {
     @Bean PieceService piecesService(PieceStorageService pieceStorageService, ProtectionService protectionService,
                                 PurchaseOrderLineService purchaseOrderLineService,
                                 InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-                                PurchaseOrderService purchaseOrderService,
+                                PurchaseOrderStorageService purchaseOrderStorageService,
                                 PieceUpdateInventoryService pieceUpdateInventoryService) {
       return spy(new PieceService(pieceStorageService, protectionService, purchaseOrderLineService,
-                                    inventoryManager, receiptStatusPublisher,
-                                    purchaseOrderService, pieceUpdateInventoryService));
+                                    inventoryManager, receiptStatusPublisher, purchaseOrderStorageService, pieceUpdateInventoryService));
     }
   }
 }

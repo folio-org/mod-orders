@@ -14,7 +14,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Suffix;
 import org.folio.rest.jaxrs.model.SuffixCollection;
-import org.folio.service.orders.PurchaseOrderService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 
 public class SuffixService {
 
@@ -23,11 +23,11 @@ public class SuffixService {
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
 
   private final RestClient restClient;
-  private final PurchaseOrderService purchaseOrderService;
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
 
-  public SuffixService(RestClient restClient, PurchaseOrderService purchaseOrderService) {
+  public SuffixService(RestClient restClient, PurchaseOrderStorageService purchaseOrderStorageService) {
     this.restClient = restClient;
-    this.purchaseOrderService = purchaseOrderService;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
   }
 
   public CompletableFuture<SuffixCollection> getSuffixes(String query, int offset, int limit, RequestContext requestContext) {
@@ -67,7 +67,7 @@ public class SuffixService {
 
   private CompletableFuture<Void> checkSuffixNotUsed(Suffix suffix, RequestContext requestContext) {
     String query = "poNumberSuffix==" + suffix.getName();
-    return purchaseOrderService.getPurchaseOrders(query, 0, 0, requestContext)
+    return purchaseOrderStorageService.getPurchaseOrders(query, 0, 0, requestContext)
       .thenAccept(purchaseOrders -> {
         if (purchaseOrders.getTotalRecords() > 0) {
           logger.error("Suffix is used by {} orders", purchaseOrders.getTotalRecords());

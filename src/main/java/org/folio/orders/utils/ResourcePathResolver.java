@@ -10,7 +10,8 @@ public class ResourcePathResolver {
   private ResourcePathResolver() {
   }
 
-  public static final String PO_LINES = "poLines";
+  public static final String PO_LINES_STORAGE = "poLines";
+  public static final String PO_LINES_BUSINESS = "poLinesBusinessEndpoint";
   public static final String PO_NUMBER = "poNumber";
   public static final String VENDOR_ID = "vendor";
   public static final String PO_LINE_NUMBER = "poLineNumber";
@@ -19,7 +20,7 @@ public class ResourcePathResolver {
   public static final String ACQUISITIONS_UNITS = "acquisitionsUnits";
   public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
   public static final String REPORTING_CODES = "reportingCodes";
-  public static final String PURCHASE_ORDER = "purchaseOrder";
+  public static final String PURCHASE_ORDER_STORAGE = "purchaseOrder";
   public static final String PIECES_STORAGE = "pieces";
   public static final String RECEIVING_HISTORY = "receiving-history";
   public static final String RECEIPT_STATUS = "receiptStatus";
@@ -56,9 +57,10 @@ public class ResourcePathResolver {
     apis.put(ACQUISITIONS_UNITS, "/acquisitions-units-storage/units");
     apis.put(ACQUISITIONS_MEMBERSHIPS, "/acquisitions-units-storage/memberships");
     apis.put(REPORTING_CODES, "/orders-storage/reporting-codes");
-    apis.put(PO_LINES, "/orders-storage/po-lines");
+    apis.put(PO_LINES_STORAGE, "/orders-storage/po-lines");
+    apis.put(PO_LINES_BUSINESS, "/orders/order-lines");
     apis.put(PO_NUMBER, "/orders-storage/po-number");
-    apis.put(PURCHASE_ORDER, "/orders-storage/purchase-orders");
+    apis.put(PURCHASE_ORDER_STORAGE, "/orders-storage/purchase-orders");
     apis.put(PIECES_STORAGE, "/orders-storage/pieces");
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
