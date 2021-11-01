@@ -269,12 +269,12 @@ public class PurchaseOrderLineHelper {
 
   public CompletableFuture<Void> deleteLine(String lineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .thenCompose(line -> verifyDeleteAllowed(line, requestContext))
-      .thenCompose(line -> {
-        logger.debug("Deleting PO line...");
-        return encumbranceService.deletePoLineEncumbrances(lineId, requestContext)
-          .thenCompose(v -> deletePoLine(line, requestContext.getHeaders(), logger));
-      })
+      .thenCompose(line -> verifyDeleteAllowed(line, requestContext)
+        .thenCompose(ok -> {
+          logger.debug("Deleting PO line...");
+          return encumbranceService.deletePoLineEncumbrances(line, requestContext)
+            .thenCompose(v -> deletePoLine(line, requestContext.getHeaders(), logger));
+      }))
       .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
   }
 
@@ -597,8 +597,8 @@ public class PurchaseOrderLineHelper {
       // The remaining unprocessed PoLines should be removed
       poLinesFromStorage
         .forEach(poLine -> futures.add(orderInvoiceRelationService.checkOrderInvoiceRelationship(compOrder.getId(), requestContext)
-          .thenCompose(v -> encumbranceService.deletePoLineEncumbrances(poLine.getId(), requestContext)
-            .thenCompose(ok -> HelperUtils.deletePoLine(JsonObject.mapFrom(poLine), requestContext.getHeaders(), logger)))));
+          .thenCompose(v -> encumbranceService.deletePoLineEncumbrances(poLine, requestContext)
+            .thenCompose(ok -> HelperUtils.deletePoLine(poLine, requestContext.getHeaders(), logger)))));
 
     }
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
@@ -940,11 +940,10 @@ public class PurchaseOrderLineHelper {
     }
   }
 
-  private CompletableFuture<JsonObject> verifyDeleteAllowed(PoLine line, RequestContext requestContext) {
+  private CompletableFuture<Void> verifyDeleteAllowed(PoLine line, RequestContext requestContext) {
     return orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(line, requestContext)
       .thenCompose(v -> getCompositePurchaseOrder(line.getPurchaseOrderId(), requestContext)
-        .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext))
-        .thenApply(aVoid -> JsonObject.mapFrom(line)));
+        .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext)));
   }
 
 }
