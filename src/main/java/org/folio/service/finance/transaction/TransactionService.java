@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
@@ -94,13 +95,13 @@ public class TransactionService {
   }
 
   public CompletableFuture<Void> updateTransactions(List<Transaction> transactions, RequestContext requestContext) {
-    return CompletableFuture.allOf(transactions.stream()
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), transactions.stream()
       .map(transaction -> updateTransaction(transaction, requestContext))
       .toArray(CompletableFuture[]::new));
   }
 
   public CompletableFuture<Void> deleteTransactions(List<Transaction> transactions, RequestContext requestContext) {
-    return CompletableFuture.allOf(transactions.stream()
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(),transactions.stream()
       .map(transaction -> deleteTransactionById(transaction.getId(), requestContext))
       .toArray(CompletableFuture[]::new));
   }

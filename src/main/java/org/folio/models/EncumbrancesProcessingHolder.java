@@ -89,9 +89,9 @@ public class EncumbrancesProcessingHolder {
     return encumbrancesForUnrelease;
   }
 
-  public int getAllEncumbrancesQuantity(){
-      return encumbrancesForCreate.size() + encumbrancesForDelete.size() + encumbrancesForUpdate.size() +
-        encumbrancesForRelease.size() +encumbrancesForUnrelease.size();
+  public int getAllEncumbrancesQuantity() {
+    return encumbrancesForCreate.size() + encumbrancesForUpdate.size()
+        + encumbrancesForRelease.size() + encumbrancesForUnrelease.size();
   }
 
   public List<Transaction> getEncumbrancesFromStorage() {

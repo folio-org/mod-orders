@@ -47,6 +47,7 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
       .map(EncumbranceRelationsHolder::getOldEncumbrance)
       .filter(Objects::nonNull)
       .collect(toList()));
+    holder.withEncumbrancesForRelease(getTransactionsToDelete(encumbranceRelationsHolders));
     holder.withEncumbrancesForDelete(getTransactionsToDelete(encumbranceRelationsHolders));
     return holder;
   }
