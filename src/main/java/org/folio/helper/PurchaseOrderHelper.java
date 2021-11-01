@@ -96,7 +96,6 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
-import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
@@ -122,7 +121,7 @@ public class PurchaseOrderHelper {
 
 
   private final PurchaseOrderLineHelper purchaseOrderLineHelper;
-  private final OrderLinesSummaryPopulateService orderLinesSummaryPopulateService;
+  private final CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService;
   private final EncumbranceService encumbranceService;
   private final CompositeOrderDynamicDataPopulateService combinedPopulateService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
@@ -141,7 +140,7 @@ public class PurchaseOrderHelper {
   private final PoNumberHelper poNumberHelper;
 
   public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
-       OrderLinesSummaryPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
+        CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
         CompositeOrderDynamicDataPopulateService combinedPopulateService,
         EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
         TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,

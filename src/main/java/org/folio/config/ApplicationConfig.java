@@ -319,7 +319,7 @@ public class ApplicationConfig {
     return new TransactionsTotalFieldsPopulateService(transactionService);
   }
 
-  @Bean
+  @Bean("orderLinesSummaryPopulateService")
   CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService(ConfigurationEntriesService configurationEntriesService,
                                                                             ExchangeRateProviderResolver exchangeRateProviderResolver) {
     return new OrderLinesSummaryPopulateService(configurationEntriesService, exchangeRateProviderResolver);
@@ -477,8 +477,9 @@ public class ApplicationConfig {
     return new PoNumberHelper(restClient, purchaseOrderStorageService);
   }
 
-  @Bean PurchaseOrderHelper purchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
-    OrderLinesSummaryPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
+  @Bean
+  PurchaseOrderHelper purchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
+    CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
     CompositeOrderDynamicDataPopulateService combinedPopulateService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,

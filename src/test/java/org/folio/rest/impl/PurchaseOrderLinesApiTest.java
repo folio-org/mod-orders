@@ -36,23 +36,6 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
 import static org.folio.TestUtils.verifyLocationQuantity;
-import static org.folio.rest.core.exceptions.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.COST_DISCOUNT_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
-import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
-import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
-import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
-import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
-import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_CLOSED;
-import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_OPEN;
-import static org.folio.rest.core.exceptions.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
-import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
-import static org.folio.rest.core.exceptions.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
-import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -64,6 +47,25 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.rest.core.exceptions.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.COST_DISCOUNT_INVALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
+import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
+import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
+import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_PHYSICAL_QTY;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_CLOSED;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_OPEN;
+import static org.folio.rest.core.exceptions.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
+import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
+import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
+import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
+import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
@@ -94,9 +96,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.restassured.response.Response;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -107,16 +106,17 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
-import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -136,6 +136,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import io.restassured.response.Response;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderLinesApiTest {
 
@@ -224,7 +228,10 @@ public class PurchaseOrderLinesApiTest {
       .map(Error::getCode)
       .collect(Collectors.toList());
 
-    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode()));
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
+      NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
+      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+      ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
@@ -259,7 +266,9 @@ public class PurchaseOrderLinesApiTest {
       .map(Error::getCode)
       .collect(Collectors.toList());
 
-    assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode()));
+    assertThat(errorCodes, containsInAnyOrder(ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+      ZERO_LOCATION_QTY.getCode()));
 
     // Check that no any calls made by the business logic to other services
     assertTrue(MockServer.serverRqRs.isEmpty());
