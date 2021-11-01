@@ -303,8 +303,8 @@ public class UnOpenCompositeOrderManager {
   public CompletableFuture<Void> deletePieceWithItem(String pieceId, RequestContext requestContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(true);
     return pieceStorageService.getPieceById(pieceId, requestContext)
-      .thenAccept(pieceToDelete -> holder.withPieceToDelete(pieceToDelete))
-      .thenCompose(aHolder -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext)
+      .thenAccept(holder::setPieceToDelete)
+      .thenCompose(aVoid -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext)
         .thenCompose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
           .thenAccept(purchaseOrder -> holder.withOrderInformation(purchaseOrder, poLine))
         ))

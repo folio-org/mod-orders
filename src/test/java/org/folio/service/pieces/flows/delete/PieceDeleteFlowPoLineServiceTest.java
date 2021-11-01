@@ -247,7 +247,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
-    assertNull(poLineToSave.getCost().getQuantityPhysical());
+    assertEquals(0, poLineToSave.getCost().getQuantityPhysical());
     assertEquals(Collections.emptyList(), poLineToSave.getLocations());
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
@@ -284,7 +284,7 @@ public class PieceDeleteFlowPoLineServiceTest {
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
-    assertNull(poLineToSave.getCost().getQuantityElectronic());
+    assertEquals(0, poLineToSave.getCost().getQuantityElectronic());
     assertEquals(Collections.emptyList(), poLineToSave.getLocations());
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);

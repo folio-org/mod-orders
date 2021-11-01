@@ -145,13 +145,6 @@ public class HelperUtils {
     return response.getBody();
   }
 
-  //  public static CompletableFuture<JsonObject> getPurchaseOrderByPONumber(String poNumber, String lang, HttpClientInterface httpClient,
-//      Map<String, String> okapiHeaders, Logger logger) {
-//      String endpoint = String.format(GET_PURCHASE_ORDER_BYPONUMBER_QUERY, poNumber, lang);
-//      return handleGetRequest(endpoint, httpClient, okapiHeaders, logger);
-//  }
-
-
   /**
    *  Retrieves PO lines from storage by PO id as List<JsonObjects> of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
    */
