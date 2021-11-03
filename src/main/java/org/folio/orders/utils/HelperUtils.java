@@ -5,6 +5,7 @@ import static java.util.Objects.nonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.LOCATION;
+import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -981,4 +982,28 @@ public class HelperUtils {
   public static <T> T clone(Class<T> clazz, T object) {
     return JsonObject.mapFrom(object).mapTo(clazz);
   }
+
+  public static javax.ws.rs.core.Response.ResponseBuilder createResponseBuilder(int code) {
+    final javax.ws.rs.core.Response.ResponseBuilder responseBuilder;
+    switch (code) {
+    case 400:
+    case 403:
+    case 404:
+    case 422:
+      responseBuilder = javax.ws.rs.core.Response.status(code);
+      break;
+    default:
+      responseBuilder = javax.ws.rs.core.Response.status(INTERNAL_SERVER_ERROR);
+    }
+    return responseBuilder;
+  }
+
+  public static int defineErrorCode(Throwable throwable) {
+    final Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
+    if (cause instanceof HttpException) {
+      return ((HttpException) cause).getCode();
+    }
+    return INTERNAL_SERVER_ERROR.getStatusCode();
+  }
+
 }

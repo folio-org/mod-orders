@@ -6,18 +6,18 @@ import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
-import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
+import static org.folio.orders.utils.HelperUtils.createResponseBuilder;
+import static org.folio.orders.utils.HelperUtils.defineErrorCode;
+import static org.folio.rest.core.exceptions.ExceptionUtil.convertToErrors;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 
@@ -60,6 +60,17 @@ public class BaseApi {
     return null;
   }
 
+  public Response buildErrorResponse(Throwable throwable) {
+    logger.error("Exception encountered", throwable.getCause());
+    final int code = defineErrorCode(throwable);
+    final Errors errors = convertToErrors(throwable);
+    //final Response response = buildErrorResponse(code);
+    final Response.ResponseBuilder responseBuilder = createResponseBuilder(code);
+    return responseBuilder.header(CONTENT_TYPE, APPLICATION_JSON)
+      .entity(errors)
+      .build();
+  }
+
   public List<Error> getErrors() {
     return processingErrors.getErrors();
   }
@@ -72,36 +83,6 @@ public class BaseApi {
 
   public void addProcessingError(Error error) {
     processingErrors.getErrors().add(error);
-  }
-
-  public void addProcessingErrors(List<Error> errors) {
-    processingErrors.getErrors().addAll(errors);
-  }
-
-  protected int handleProcessingError(Throwable throwable) {
-    final Throwable cause = throwable.getCause();
-    logger.error("Exception encountered", cause);
-    final List<Error> errors = new ArrayList<>();
-    final int code;
-
-    if (cause instanceof HttpException) {
-      code = ((HttpException) cause).getCode();
-      errors.addAll(((HttpException) cause).getErrors().getErrors());
-    } else {
-      code = INTERNAL_SERVER_ERROR.getStatusCode();
-      Error error = GENERIC_ERROR_CODE.toError().withAdditionalProperty(ERROR_CAUSE, cause.getMessage());
-      errors.add(error);
-    }
-
-    if (getErrors().isEmpty()) {
-      addProcessingErrors(errors);
-    }
-
-    return code;
-  }
-
-  public Response buildErrorResponse(Throwable throwable) {
-    return buildErrorResponse(handleProcessingError(throwable));
   }
 
   public Response buildErrorResponse(int code) {
