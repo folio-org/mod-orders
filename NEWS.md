@@ -1,5 +1,20 @@
 ## 12.3.0 - Unreleased
 
+## 12.2.1 - Released
+This release focused on fixing processing of pieces
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.1.0...v12.2.0)
+
+### Bug Fixes
+* [MODORDERS-588](https://issues.folio.org/browse/MODORDERS-588) - Payment takes place with insufficient funds
+* [MODORDERS-584](https://issues.folio.org/browse/MODORDERS-584) - User can remove last unit of quantity from POL
+* [MODORDERS-583](https://issues.folio.org/browse/MODORDERS-583) - Item not created when editing piece
+* [MODORDERS-582](https://issues.folio.org/browse/MODORDERS-582) - Encumbrances not updated when several encumbrances are changed
+* [MODORDERS-580](https://issues.folio.org/browse/MODORDERS-580) - POL location not updated when piece location is Edited
+* [MODORDERS-579](https://issues.folio.org/browse/MODORDERS-579) - POL Quantity not updated when piece is deleted that does not share location with POL
+* [MODORDERS-578](https://issues.folio.org/browse/MODORDERS-578) - Holding is created for order line when Create inventory is None/Instance
+
+
 ## 12.2.0 - Released
 This release focused on improvements in handling pieces 
 
