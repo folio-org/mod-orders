@@ -63,39 +63,12 @@ public class OpenCompositeOrderInventoryService {
     }
 
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL)) {
-      // don't create pieces, if no inventory updates and receiving not required
-      if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
-        return completedFuture(null);
-      }
-      // do not create pieces in case of check-in flow
-      if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
-        return completedFuture(null);
-      }
-      return openCompositeOrderPieceService.handlePieces(compPOL, titleId, Collections.emptyList(), requestContext).thenRun(
-        () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
+      return handlePieces(compPOL, titleId, Collections.emptyList(), requestContext);
     }
 
     return inventoryManager.handleInstanceRecord(compPOL, requestContext)
       .thenCompose(compPOLWithInstanceId -> handleHoldingsAndItemsRecords(compPOLWithInstanceId, requestContext))
-      .thenCompose(piecesWithItemId -> {
-        // do not create pieces in case of check-in flow
-        if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
-          return completedFuture(null);
-        }
-        if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
-          return completedFuture(null);
-        }
-        //create pieces only if receiving is required
-        return openCompositeOrderPieceService.handlePieces(compPOL, titleId, piecesWithItemId, requestContext).thenRun(
-          () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are required", compPOL.getId()));
-      });
-  }
-
-  private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, CompositePoLine poLine) {
-    return Optional.ofNullable(lineIdsTitles.get(poLine.getId()))
-      .map(titles -> titles.get(0))
-      .map(Title::getId)
-      .orElse(null);
+      .thenCompose(piecesWithItemId -> handlePieces(compPOL, titleId, piecesWithItemId, requestContext));
   }
 
   /**
@@ -133,6 +106,19 @@ public class OpenCompositeOrderInventoryService {
       );
   }
 
+  private CompletableFuture<Void> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> piecesWithItemId, RequestContext requestContext) {
+    // don't create pieces, if no inventory updates and receiving not required
+    if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
+      return completedFuture(null);
+    }
+    // do not create pieces in case of check-in flow
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return completedFuture(null);
+    }
+    return openCompositeOrderPieceService.handlePieces(compPOL, titleId, piecesWithItemId, requestContext).thenRun(
+      () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
+
+  }
   private void exchangeLocationIdWithHoldingId(Location location, String holdingId) {
     addHoldingId(List.of(location), holdingId);
     location.setLocationId(null);
@@ -142,4 +128,10 @@ public class OpenCompositeOrderInventoryService {
     polLocations.forEach(location -> location.setHoldingId(holdingId));
   }
 
+  private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, CompositePoLine poLine) {
+    return Optional.ofNullable(lineIdsTitles.get(poLine.getId()))
+      .map(titles -> titles.get(0))
+      .map(Title::getId)
+      .orElse(null);
+  }
 }
