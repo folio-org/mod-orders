@@ -981,4 +981,5 @@ public class HelperUtils {
   public static <T> T clone(Class<T> clazz, T object) {
     return JsonObject.mapFrom(object).mapTo(clazz);
   }
+
 }
