@@ -55,8 +55,10 @@ import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderHolderBuilder;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceService;
@@ -463,9 +465,18 @@ public class ApplicationConfig {
     return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryManager);
   }
 
+  @Bean OpenCompositeOrderPieceService openCompositeOrderPieceCreateService(PurchaseOrderStorageService purchaseOrderStorageService,
+              PieceStorageService pieceStorageService, ProtectionService protectionService,
+              PieceChangeReceiptStatusPublisher receiptStatusPublisher, InventoryManager inventoryManager, TitlesService titlesService,
+              OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
+    return new OpenCompositeOrderPieceService(purchaseOrderStorageService, pieceStorageService, protectionService,
+                              receiptStatusPublisher, inventoryManager, titlesService, openCompositeOrderHolderBuilder);
+  }
+
   @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
-                    PieceStorageService pieceStorageService) {
-    return new OpenCompositeOrderInventoryService(titlesService, inventoryManager, pieceStorageService) ;
+                    PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
+    return new OpenCompositeOrderInventoryService(titlesService, inventoryManager, pieceStorageService,
+      openCompositeOrderPieceService) ;
   }
 
   @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(ExpenseClassValidationService expenseClassValidationService,
@@ -507,13 +518,14 @@ public class ApplicationConfig {
   }
 
   @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, InventoryManager inventoryManager,
-          PieceStorageService pieceStorageService, PurchaseOrderStorageService purchaseOrderStorageService, ProtectionService protectionService,
-          PieceChangeReceiptStatusPublisher receiptStatusPublisher, TitlesService titlesService,
-          OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-          OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, PurchaseOrderLineHelper purchaseOrderLineHelper) {
-    return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
-      pieceStorageService, purchaseOrderStorageService, protectionService, receiptStatusPublisher,
-      titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, purchaseOrderLineHelper);
+          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+          TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
+          OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
+    return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
+                        titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator);
+  }
+
+  @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {
+    return new OpenCompositeOrderHolderBuilder(pieceStorageService);
   }
 }

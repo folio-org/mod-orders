@@ -34,6 +34,7 @@ public class ResponseUtil {
     handleFailure(promise, reply.cause());
   }
 
+
   private static int extractHttpCode(Throwable cause) {
      if (cause instanceof io.vertx.ext.web.handler.HttpException) {
       return ((io.vertx.ext.web.handler.HttpException) cause).getStatusCode();

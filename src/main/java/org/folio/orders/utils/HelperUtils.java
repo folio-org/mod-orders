@@ -20,7 +20,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
@@ -68,10 +67,8 @@ import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
@@ -299,15 +296,6 @@ public class HelperUtils {
       .joining(") " + operator + " (", "(", ")") + sorting;
   }
 
-  public static int getPhysicalCostQuantity(CompositePoLine compPOL) {
-    return defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
-  }
-
-  public static int getElectronicCostQuantity(CompositePoLine compPOL) {
-    return defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
-  }
-
-
   public static Integer calculateTotalLocationQuantity(Location location) {
     int quantity = 0;
     quantity += defaultIfNull(location.getQuantityElectronic(), 0);
@@ -396,87 +384,6 @@ public class HelperUtils {
   }
 
   /**
-   * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
-   *
-   * @param compPOL composite PO Line
-   * @param locations list of locations to calculate quantity for
-   * @return quantity of pieces per piece format either not required Inventory item for PO Line
-   */
-  public static Map<Piece.Format, Integer> calculatePiecesWithoutItemIdQuantity(CompositePoLine compPOL, List<Location> locations) {
-    // Piece records are not going to be created for PO Line which is going to be checked-in
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
-      return Collections.emptyMap();
-    }
-
-    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    switch (compPOL.getOrderFormat()) {
-      case P_E_MIX:
-        if (isInstanceHolding(compPOL.getPhysical())) {
-          quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
-        }
-        if (compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING) {
-          quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
-        }
-        return quantities;
-      case PHYSICAL_RESOURCE:
-        int pQty = (isInstanceHolding(compPOL.getPhysical())) ? calculatePiecesQuantity(Piece.Format.PHYSICAL, locations) : 0;
-        quantities.put(Piece.Format.PHYSICAL, pQty);
-        return quantities;
-      case ELECTRONIC_RESOURCE:
-        int eQty = (isInstanceHolding(compPOL.getEresource())) ? calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations) : 0;
-        quantities.put(Piece.Format.ELECTRONIC, eQty);
-        return quantities;
-      case OTHER:
-        int oQty = (isInstanceHolding(compPOL.getPhysical())) ? calculatePiecesQuantity(Piece.Format.OTHER, locations) : 0;
-        quantities.put(Piece.Format.OTHER, oQty);
-        return quantities;
-      default:
-        return Collections.emptyMap();
-    }
-  }
-
-  private static boolean isInstanceHolding(Physical physical) {
-    return physical != null && physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING;
-  }
-
-  private static boolean isInstanceHolding(Eresource eresource) {
-    return eresource != null && eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING;
-  }
-
-  public static Map<Piece.Format, Integer> calculatePiecesQuantityWithoutLocation(CompositePoLine compPOL) {
-    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-
-    if (compPOL.getOrderFormat() == OTHER && (compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.INSTANCE)) {
-      Physical.CreateInventory physicalCreateInventory = compPOL.getPhysical().getCreateInventory();
-      if (physicalCreateInventory == Physical.CreateInventory.NONE || physicalCreateInventory == Physical.CreateInventory.INSTANCE) {
-        quantities.put(Piece.Format.OTHER, getPhysicalCostQuantity(compPOL));
-      }
-    } else {
-      quantities.putAll(calculatePhysicalPiecesQuantityWithoutLocation(compPOL));
-      quantities.putAll(calculateElectronicPiecesQuantityWithoutLocation(compPOL));
-    }
-    return quantities;
-  }
-
-  private static EnumMap<Piece.Format, Integer> calculatePhysicalPiecesQuantityWithoutLocation(CompositePoLine compPOL) {
-    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    Physical.CreateInventory physicalCreateInventory = Optional.ofNullable(compPOL.getPhysical()).map(Physical::getCreateInventory).orElse(null);
-    if (physicalCreateInventory == Physical.CreateInventory.NONE || physicalCreateInventory == Physical.CreateInventory.INSTANCE) {
-      quantities.put(Piece.Format.PHYSICAL, getPhysicalCostQuantity(compPOL));
-    }
-    return quantities;
-  }
-
-  private static EnumMap<Piece.Format, Integer> calculateElectronicPiecesQuantityWithoutLocation(CompositePoLine compPOL) {
-    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    Eresource.CreateInventory eresourceCreateInventory = Optional.ofNullable(compPOL.getEresource()).map(Eresource::getCreateInventory).orElse(null);
-    if (eresourceCreateInventory == Eresource.CreateInventory.NONE || eresourceCreateInventory == Eresource.CreateInventory.INSTANCE) {
-      quantities.put(Piece.Format.ELECTRONIC, getElectronicCostQuantity(compPOL));
-    }
-    return quantities;
-  }
-
-  /**
    * Calculates pieces quantity for specified locations based on piece format.
    *
    * @param format piece format
@@ -493,18 +400,6 @@ public class HelperUtils {
       default:
         return 0;
     }
-  }
-
-  /**
-   * Calculates quantity of pieces for specified locations which do not require item records in Inventory.
-   *
-   * @param compPOL composite PO Line
-   * @param locations list of locations to calculate quantity for
-   * @return quantity of pieces without items in the inventory for PO Line
-   * @see #calculatePiecesWithoutItemIdQuantity(CompositePoLine, List)
-   */
-  public static int calculateExpectedQuantityOfPiecesWithoutItemCreation(CompositePoLine compPOL, List<Location> locations) {
-    return IntStreamEx.of(calculatePiecesWithoutItemIdQuantity(compPOL, locations).values()).sum();
   }
 
   /**
