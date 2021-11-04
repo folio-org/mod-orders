@@ -64,7 +64,6 @@ public class BaseApi {
     logger.error("Exception encountered", throwable.getCause());
     final int code = defineErrorCode(throwable);
     final Errors errors = convertToErrors(throwable);
-    //final Response response = buildErrorResponse(code);
     final Response.ResponseBuilder responseBuilder = createResponseBuilder(code);
     return responseBuilder.header(CONTENT_TYPE, APPLICATION_JSON)
       .entity(errors)
