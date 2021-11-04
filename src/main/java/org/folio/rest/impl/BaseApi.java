@@ -6,8 +6,6 @@ import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
-import static org.folio.orders.utils.HelperUtils.createResponseBuilder;
-import static org.folio.orders.utils.HelperUtils.defineErrorCode;
 import static org.folio.rest.core.exceptions.ExceptionUtil.convertToErrors;
 
 import java.net.URI;
@@ -18,6 +16,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 
@@ -104,6 +103,29 @@ public class BaseApi {
 
   public Response buildCreatedResponse(Object body) {
     return Response.status(CREATED).header(CONTENT_TYPE, APPLICATION_JSON).entity(body).build();
+  }
+
+  public static javax.ws.rs.core.Response.ResponseBuilder createResponseBuilder(int code) {
+    final javax.ws.rs.core.Response.ResponseBuilder responseBuilder;
+    switch (code) {
+    case 400:
+    case 403:
+    case 404:
+    case 422:
+      responseBuilder = javax.ws.rs.core.Response.status(code);
+      break;
+    default:
+      responseBuilder = javax.ws.rs.core.Response.status(INTERNAL_SERVER_ERROR);
+    }
+    return responseBuilder;
+  }
+
+  public static int defineErrorCode(Throwable throwable) {
+    final Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
+    if (cause instanceof HttpException) {
+      return ((HttpException) cause).getCode();
+    }
+    return INTERNAL_SERVER_ERROR.getStatusCode();
   }
 }
 
