@@ -140,9 +140,9 @@ public class OpenCompositeOrderManagerTest {
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPieceWithLocationId(line, title);
     doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId(), requestContext);
-    doReturn(completedFuture(title)).when(inventoryManager).handleInstanceRecord(title, requestContext);
+    doReturn(completedFuture(title)).when(inventoryManager).handleInstanceRecord(title, false, requestContext);
     //When
-    openCompositeOrderManager.openOrderUpdateInventory(line, piece, requestContext).get();
+    openCompositeOrderManager.openOrderUpdateInventory(line, piece, false, requestContext).get();
     //Then
     assertEquals(title.getId(), piece.getTitleId());
   }
@@ -163,14 +163,14 @@ public class OpenCompositeOrderManagerTest {
     doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
 
     doReturn(completedFuture(title.withInstanceId(UUID.randomUUID().toString())))
-      .when(inventoryManager).handleInstanceRecord(any(Title.class), eq(requestContext));
+      .when(inventoryManager).handleInstanceRecord(any(Title.class), any(Boolean.class), eq(requestContext));
     doReturn(completedFuture(holdingId))
       .when(openCompositeOrderInventoryService).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
     doReturn(completedFuture(itemId)).when(openCompositeOrderInventoryService).createItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
 
     doReturn(completedFuture(itemId)).when(inventoryManager).createInstanceRecord(eq(title), eq(requestContext));
     //When
-    openCompositeOrderManager.openOrderUpdateInventory(line, piece, requestContext).get();
+    openCompositeOrderManager.openOrderUpdateInventory(line, piece, false, requestContext).get();
     //Then
     assertEquals(piece.getItemId(), itemId);
     assertEquals(piece.getPoLineId(), line.getId());
@@ -191,11 +191,11 @@ public class OpenCompositeOrderManagerTest {
 
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
-    doReturn(completedFuture(title)).when(inventoryManager).handleInstanceRecord(title, requestContext);
+    doReturn(completedFuture(title)).when(inventoryManager).handleInstanceRecord(title, false, requestContext);
     doReturn(completedFuture(itemId)).when(openCompositeOrderInventoryService).createItemRecord(line, holdingId, requestContext);
 
     //When
-    openCompositeOrderManager.openOrderUpdateInventory(line, piece, requestContext).get();
+    openCompositeOrderManager.openOrderUpdateInventory(line, piece, false, requestContext).get();
     //Then
     assertEquals(holdingId, piece.getHoldingId());
     assertEquals(title.getId(), piece.getTitleId());
@@ -340,11 +340,11 @@ public class OpenCompositeOrderManagerTest {
       PieceStorageService pieceStorageService, PurchaseOrderStorageService purchaseOrderStorageService, ProtectionService protectionService,
       PieceChangeReceiptStatusPublisher receiptStatusPublisher, TitlesService titlesService,
       OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, PurchaseOrderLineHelper purchaseOrderLineHelper){
+      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator){
 
       return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
         pieceStorageService, purchaseOrderStorageService, protectionService, receiptStatusPublisher,
-        titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, purchaseOrderLineHelper);
+        titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator);
     }
   }
 }

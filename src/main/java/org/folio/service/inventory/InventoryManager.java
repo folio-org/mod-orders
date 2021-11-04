@@ -942,16 +942,17 @@ public class InventoryManager {
         .thenApply(compPOL::withInstanceId);
     }
   }
-  public CompletableFuture<Title> handleInstanceRecord(Title title, RequestContext requestContext) {
+
+  public CompletableFuture<Title> handleInstanceRecord(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (title.getInstanceId() != null) {
       return CompletableFuture.completedFuture(title);
     } else {
-      return getOrCreateInstanceRecord(title, requestContext).thenApply(title::withInstanceId);
+      return getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, requestContext).thenApply(title::withInstanceId);
     }
   }
 
-  public CompletableFuture<String> getOrCreateInstanceRecord(Title title, RequestContext requestContext) {
-    if (!CollectionUtils.isNotEmpty(title.getProductIds())) {
+  public CompletableFuture<String> getOrCreateInstanceRecord(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(title.getProductIds()) || isInstanceMatchingDisabled) {
       return createInstanceRecord(title, requestContext);
     }
 

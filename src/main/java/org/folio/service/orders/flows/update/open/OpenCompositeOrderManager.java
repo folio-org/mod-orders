@@ -63,9 +63,11 @@ import one.util.streamex.StreamEx;
 public class OpenCompositeOrderManager {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderManager.class);
 
+  public static final String DISABLE_INSTANCE_MARCHING_CONFIG_NAME = "disableInstanceMatching";
+  public static final String DISABLE_INSTANCE_MARCHING_CONFIG_KEY = "isInstanceMatchingDisabled";
+
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
-  private final PurchaseOrderLineHelper purchaseOrderLineHelper;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final InventoryManager inventoryManager;
   private final PieceStorageService pieceStorageService;
@@ -78,7 +80,7 @@ public class OpenCompositeOrderManager {
   public OpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, InventoryManager inventoryManager,
     PieceStorageService pieceStorageService, PurchaseOrderStorageService purchaseOrderStorageService, ProtectionService protectionService,
     PieceChangeReceiptStatusPublisher receiptStatusPublisher, TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, PurchaseOrderLineHelper purchaseOrderLineHelper) {
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryManager = inventoryManager;
@@ -89,7 +91,6 @@ public class OpenCompositeOrderManager {
     this.titlesService = titlesService;
     this.openCompositeOrderInventoryService = openCompositeOrderInventoryService;
     this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
-    this.purchaseOrderLineHelper = purchaseOrderLineHelper;
   }
 
   /**
@@ -98,17 +99,23 @@ public class OpenCompositeOrderManager {
    * @param compPO Purchase Order to open
    * @return CompletableFuture that indicates when transition is completed
    */
-  public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+  public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, JsonObject config, RequestContext requestContext) {
       return AsyncUtil.executeBlocking(requestContext.getContext(), false, () -> updateIncomingOrder(compPO, poFromStorage))
         .thenCompose(aVoid -> openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext))
         .thenCompose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
         .thenCompose(linesIdTitles -> {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
-          return processInventory(linesIdTitles, compPO, requestContext);
+          return processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext);
         })
         .thenCompose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
         .thenAccept(ok -> changePoLineStatuses(compPO))
         .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext));
+  }
+
+  private boolean isInstanceMatchingDisabled(JsonObject config) {
+    return Optional.ofNullable(config.getString(DISABLE_INSTANCE_MARCHING_CONFIG_NAME))
+      .map(approval -> new JsonObject(approval).getBoolean(DISABLE_INSTANCE_MARCHING_CONFIG_KEY))
+      .orElse(false);
   }
 
   public CompletableFuture<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
@@ -136,7 +143,7 @@ public class OpenCompositeOrderManager {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
- public CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, String titleId, RequestContext requestContext) {
+ public CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, String titleId, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }
@@ -150,7 +157,7 @@ public class OpenCompositeOrderManager {
       if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
         return completedFuture(null);
       }
-      return openOrderCreatePieces(compPOL, titleId, Collections.emptyList(), requestContext).thenRun(
+      return openOrderCreatePieces(compPOL, titleId, Collections.emptyList(), isInstanceMatchingDisabled, requestContext).thenRun(
         () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
     }
 
@@ -165,7 +172,7 @@ public class OpenCompositeOrderManager {
           return completedFuture(null);
         }
         //create pieces only if receiving is required
-        return openOrderCreatePieces(compPOL, titleId, piecesWithItemId, requestContext);
+        return openOrderCreatePieces(compPOL, titleId, piecesWithItemId, isInstanceMatchingDisabled, requestContext);
       });
   }
 
@@ -177,7 +184,7 @@ public class OpenCompositeOrderManager {
    * @return void future
    */
   public CompletableFuture<Void> openOrderCreatePieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
-                                                        RequestContext requestContext) {
+                                                       boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     int createdItemsQuantity = expectedPiecesWithItem.size();
     logger.info("Get pieces by poLine ID");
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
@@ -199,7 +206,7 @@ public class OpenCompositeOrderManager {
         logger.info("Trying to create pieces");
         List<CompletableFuture<Piece>> piecesToCreateFutures = new ArrayList<>();
         piecesToCreate.forEach(piece ->
-          piecesToCreateFutures.add(openOrderCreatePiece(piece, requestContext))
+          piecesToCreateFutures.add(openOrderCreatePiece(piece, isInstanceMatchingDisabled, requestContext))
         );
         return collectResultsOnSuccess(piecesToCreateFutures)
           .thenAccept(result -> logger.info("Number of created pieces: " + result.size()))
@@ -211,12 +218,12 @@ public class OpenCompositeOrderManager {
       .thenAccept(v -> validateItemsCreation(compPOL, createdItemsQuantity));
   }
 
-  public CompletableFuture<Piece> openOrderCreatePiece(Piece piece, RequestContext requestContext) {
+  public CompletableFuture<Piece> openOrderCreatePiece(Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.info("createPiece start");
     return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
       .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
         .thenApply(v -> order))
-      .thenCompose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, requestContext))
+      .thenCompose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
       .thenCompose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
 
@@ -226,10 +233,10 @@ public class OpenCompositeOrderManager {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
+  public CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .thenCompose(title -> inventoryManager.handleInstanceRecord(title, requestContext))
+        .thenCompose(title -> inventoryManager.handleInstanceRecord(title, isInstanceMatchingDisabled, requestContext))
         .thenCompose(title -> titlesService.saveTitle(title, requestContext).thenApply(json -> title))
         .thenCompose(title ->
         {
@@ -404,11 +411,11 @@ public class OpenCompositeOrderManager {
   }
 
   private CompletableFuture<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
-    RequestContext requestContext) {
+                                                   boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     return FolioVertxCompletableFuture.allOf(requestContext.getContext(),
       compPO.getCompositePoLines()
         .stream()
-        .map(poLine -> openOrderUpdateInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), requestContext))
+        .map(poLine -> openOrderUpdateInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext))
         .toArray(CompletableFuture[]::new)
     );
   }

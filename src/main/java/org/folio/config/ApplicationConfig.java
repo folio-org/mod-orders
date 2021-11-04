@@ -511,9 +511,9 @@ public class ApplicationConfig {
           PieceStorageService pieceStorageService, PurchaseOrderStorageService purchaseOrderStorageService, ProtectionService protectionService,
           PieceChangeReceiptStatusPublisher receiptStatusPublisher, TitlesService titlesService,
           OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-          OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, PurchaseOrderLineHelper purchaseOrderLineHelper) {
+          OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
     return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
       pieceStorageService, purchaseOrderStorageService, protectionService, receiptStatusPublisher,
-      titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, purchaseOrderLineHelper);
+      titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator);
   }
 }

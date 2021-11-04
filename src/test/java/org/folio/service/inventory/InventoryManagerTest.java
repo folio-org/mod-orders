@@ -105,6 +105,7 @@ public class InventoryManagerTest {
   public static final String HOLDING_INSTANCE_ID_2_HOLDING = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d48";
   private static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
+  private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instance.json";
 
   @Autowired
   InventoryManager inventoryManager;
@@ -573,11 +574,11 @@ public class InventoryManagerTest {
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     title.setInstanceId(null);
     PieceService pieceService = mock(PieceService.class, CALLS_REAL_METHODS);
-    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).getOrCreateInstanceRecord(any(Title.class), eq(requestContext));
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).getOrCreateInstanceRecord(any(Title.class), any(Boolean.class), eq(requestContext));
     //When
-    inventoryManager.handleInstanceRecord(title, requestContext).get();
+    inventoryManager.handleInstanceRecord(title, false, requestContext).get();
     //Then
-    verify(inventoryManager, times(1)).getOrCreateInstanceRecord(title, requestContext);
+    verify(inventoryManager, times(1)).getOrCreateInstanceRecord(title, false, requestContext);
   }
 
   @Test
@@ -585,7 +586,7 @@ public class InventoryManagerTest {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     //When
-    CompletableFuture<Title> result = inventoryManager.handleInstanceRecord(title, requestContext);
+    CompletableFuture<Title> result = inventoryManager.handleInstanceRecord(title, false, requestContext);
     //Then
     Title actTitle = result.get();
     assertEquals(title, actTitle);
@@ -598,8 +599,19 @@ public class InventoryManagerTest {
     title.setProductIds(null);
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
     //When
-    inventoryManager.getOrCreateInstanceRecord(title, requestContext).get();
-    //Thenа
+    inventoryManager.getOrCreateInstanceRecord(title, false, requestContext).get();
+    //Then
+    verify(inventoryManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
+  }
+
+  @Test
+  void testShouldCreateInstanceRecordIfInstanceMatchingIsDisabled() throws ExecutionException, InterruptedException {
+    //given
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
+    //When
+    inventoryManager.getOrCreateInstanceRecord(title, true, requestContext).get();
+    //Then
     verify(inventoryManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
   }
 
@@ -610,9 +622,23 @@ public class InventoryManagerTest {
     doReturn(completedFuture(new JsonObject("{\"instances\" : []}"))).when(inventoryManager).searchInstancesByProducts(any(List.class), eq(requestContext));
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
     //When
-    inventoryManager.getOrCreateInstanceRecord(title, requestContext).get();
-    //Thenа
+    inventoryManager.getOrCreateInstanceRecord(title, false, requestContext).get();
+    //Then
     verify(inventoryManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
+  }
+
+  @Test
+  void testShouldNotCreateInstanceRecordIfInstancesFoundInDB() throws ExecutionException, InterruptedException, IOException {
+    //given
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    JsonObject instances = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH));
+    doReturn(completedFuture(instances)).when(inventoryManager).searchInstancesByProducts(any(List.class), eq(requestContext));
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
+    //When
+    inventoryManager.getOrCreateInstanceRecord(title, false, requestContext).get();
+    //Then
+    verify(inventoryManager, times(0)).createInstanceRecord(any(Title.class), eq(requestContext));
+    verify(inventoryManager, times(1)).searchInstancesByProducts(any(List.class), eq(requestContext));
   }
 
   /**
