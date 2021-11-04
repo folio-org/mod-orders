@@ -17,6 +17,8 @@ public class EncumbrancesProcessingHolderBuilder {
     holder.withEncumbrancesForCreate(getToBeCreatedHolders(encumbranceRelationsHolders));
     holder.withEncumbrancesForUpdate(getToBeUpdatedHolders(encumbranceRelationsHolders));
     holder.withEncumbrancesForDelete(getTransactionsToDelete(encumbranceRelationsHolders));
+    // also release transaction before delete
+    holder.withEncumbrancesForRelease(getTransactionsToDelete(encumbranceRelationsHolders));
     holder.withEncumbrancesFromStorage(encumbranceRelationsHolders.stream()
       .map(EncumbranceRelationsHolder::getOldEncumbrance)
       .filter(Objects::nonNull)

@@ -155,8 +155,8 @@ public class HelperUtils {
         .collect(toList()));
   }
 
-  public static CompletableFuture<Void> deletePoLine(JsonObject line, Map<String, String> okapiHeaders, Logger logger) {
-    return operateOnPoLine(HttpMethod.DELETE, line, okapiHeaders, logger)
+  public static CompletableFuture<Void> deletePoLine(PoLine line, Map<String, String> okapiHeaders, Logger logger) {
+    return operateOnPoLine(HttpMethod.DELETE, JsonObject.mapFrom(line), okapiHeaders, logger)
       .thenCompose(poline -> {
         String polineId = poline.getId();
         return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES_STORAGE, polineId), okapiHeaders, logger)

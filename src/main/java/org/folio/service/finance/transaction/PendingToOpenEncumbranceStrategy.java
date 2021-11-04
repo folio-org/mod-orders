@@ -45,24 +45,20 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
       .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage, requestContext))
       .thenApply(fundsDistributionService::distributeFunds)
       .thenAccept(budgetRestrictionService::checkEncumbranceRestrictions)
-      .thenAccept(v -> {
-        prepared = true;
-      });
+      .thenAccept(v -> prepared = true);
   }
 
   @Override
   public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
       RequestContext requestContext) {
-    CompletableFuture<Void> f;
+    CompletableFuture<Void> future;
     if (prepared)
-      f = CompletableFuture.completedFuture(null);
+      future = CompletableFuture.completedFuture(null);
     else
-      f = prepareProcessEncumbrancesAndValidate(compPO, poAndLinesFromStorage, requestContext);
-    return f.thenApply(v -> encumbrancesProcessingHolderBuilder.distributeHoldersByOperation(encumbranceRelationsHolders))
+      future = prepareProcessEncumbrancesAndValidate(compPO, poAndLinesFromStorage, requestContext);
+    return future.thenApply(v -> encumbrancesProcessingHolderBuilder.distributeHoldersByOperation(encumbranceRelationsHolders))
       .thenCompose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext))
-      .whenComplete((v, t) -> {
-        prepared = false;
-      });
+      .whenComplete((v, t) -> prepared = false);
   }
 
   @Override
