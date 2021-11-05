@@ -16,13 +16,11 @@ import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
@@ -112,6 +110,7 @@ public class InventoryManagerTest {
   public static final String HOLDING_INSTANCE_ID_2_HOLDING = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d48";
   private static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
+  private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instance.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
 
@@ -577,27 +576,38 @@ public class InventoryManagerTest {
   }
 
   @Test
+  void testShouldSkipCreationNewInstanceIfInstanceIdIsProvided() throws ExecutionException, InterruptedException {
+    //given
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    //When
+    CompletableFuture<Title> result = inventoryManager.openOrderHandlePackageLineInstance(title, false, requestContext);
+    //Then
+    Title actTitle = result.get();
+    assertEquals(title, actTitle);
+  }
+
+  @Test
+  void testShouldCreateInstanceRecordIfInstanceMatchingIsDisabled() throws ExecutionException, InterruptedException {
+    //given
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
+    //When
+    inventoryManager.getOrCreateInstanceRecord(title, true, requestContext).get();
+    //Then
+    verify(inventoryManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
+  }
+
+  @Test
   void testShouldCreateInstanceIfInstanceIdIsNotProvided() throws ExecutionException, InterruptedException {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     title.setInstanceId(null);
     PieceService pieceService = mock(PieceService.class, CALLS_REAL_METHODS);
-    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).getOrCreateInstanceRecord(any(Title.class), eq(requestContext));
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).getOrCreateInstanceRecord(any(Title.class), any(Boolean.class), eq(requestContext));
     //When
-    inventoryManager.handleInstanceRecord(title, requestContext).get();
+    inventoryManager.openOrderHandlePackageLineInstance(title, false, requestContext).get();
     //Then
-    verify(inventoryManager, times(1)).getOrCreateInstanceRecord(title, requestContext);
-  }
-
-  @Test
-  void testShouldSkipCreationNewInstanceIfInstanceIdIsProvided() throws ExecutionException, InterruptedException {
-    //given
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    //When
-    CompletableFuture<Title> result = inventoryManager.handleInstanceRecord(title, requestContext);
-    //Then
-    Title actTitle = result.get();
-    assertEquals(title, actTitle);
+    verify(inventoryManager, times(1)).getOrCreateInstanceRecord(title, false, requestContext);
   }
 
   @Test
@@ -608,7 +618,7 @@ public class InventoryManagerTest {
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
     //When
     inventoryManager.getOrCreateInstanceRecord(title, requestContext).get();
-    //Thenа
+    //Then
     verify(inventoryManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
   }
 
@@ -620,8 +630,22 @@ public class InventoryManagerTest {
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
     //When
     inventoryManager.getOrCreateInstanceRecord(title, requestContext).get();
-    //Thenа
+    //Then
     verify(inventoryManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
+  }
+
+  @Test
+  void testShouldNotCreateInstanceRecordIfInstancesFoundInDB() throws ExecutionException, InterruptedException, IOException {
+    //given
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    JsonObject instances = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH));
+    doReturn(completedFuture(instances)).when(inventoryManager).searchInstancesByProducts(any(List.class), eq(requestContext));
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).createInstanceRecord(any(Title.class), eq(requestContext));
+    //When
+    inventoryManager.getOrCreateInstanceRecord(title, false, requestContext).get();
+    //Then
+    verify(inventoryManager, times(0)).createInstanceRecord(any(Title.class), eq(requestContext));
+    verify(inventoryManager, times(1)).searchInstancesByProducts(any(List.class), eq(requestContext));
   }
 
 

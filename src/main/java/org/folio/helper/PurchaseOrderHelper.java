@@ -226,7 +226,7 @@ public class PurchaseOrderHelper {
    * @return completable future holding response indicating success (204 No Content) or error if failed
    */
   public CompletableFuture<Void> updateOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    JsonObject cachedTenantConfiguration= new JsonObject();
+    JsonObject cachedTenantConfiguration = new JsonObject();
     return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .thenApply(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
       .thenCompose(tenantConfiguration -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(compPO.getId(), requestContext))
@@ -278,7 +278,7 @@ public class PurchaseOrderHelper {
           .thenCompose(v -> {
             if (isTransitionToOpen) {
               checkOrderApprovalRequired(compPO, cachedTenantConfiguration, requestContext);
-              return openCompositeOrderManager.process(compPO, poFromStorage, requestContext);
+              return openCompositeOrderManager.process(compPO, poFromStorage, cachedTenantConfiguration, requestContext);
             } else {
               return CompletableFuture.completedFuture(null);
             }
@@ -547,7 +547,7 @@ public class PurchaseOrderHelper {
       compPO.setWorkflowStatus(PENDING);
     }
 
-    return purchaseOrderStorageService.cretePurchaseOrder(convertToPurchaseOrder(compPO), requestContext)
+    return purchaseOrderStorageService.createPurchaseOrder(convertToPurchaseOrder(compPO), requestContext)
       .thenApply(createdOrder -> compPO.withId(createdOrder.getId()))
       .thenCompose(compPOWithId -> createPoLines(compPOWithId, requestContext))
       .thenApply(compPO::withCompositePoLines)
@@ -555,8 +555,8 @@ public class PurchaseOrderHelper {
         if (finalStatus == OPEN) {
           compPO.setWorkflowStatus(OPEN);
           checkOrderApprovalRequired(compPO, cachedTenantConfiguration, requestContext);
-           return purchaseOrderLineService.populateOrderLines(compPO, requestContext)
-                        .thenCompose(po -> openCompositeOrderManager.process(po, null, requestContext))
+          return purchaseOrderLineService.populateOrderLines(compPO, requestContext)
+                        .thenCompose(po -> openCompositeOrderManager.process(po, null, cachedTenantConfiguration, requestContext))
                         .thenCompose(ok -> handleFinalOrderStatus(compPO, finalStatus.value(), requestContext));
         }
         return completedFuture(null);

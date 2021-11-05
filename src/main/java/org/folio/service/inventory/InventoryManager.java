@@ -545,9 +545,9 @@ public class InventoryManager {
    * @param compPOL PO line to retrieve Instance Record Id for
    * @return future with Instance Id
    */
-  public CompletableFuture<String> getInstanceRecord(CompositePoLine compPOL, RequestContext requestContext) {
+  public CompletableFuture<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     // proceed with new Instance Record creation if no productId is provided
-    if (!isProductIdsExist(compPOL)) {
+    if (!isProductIdsExist(compPOL) || isInstanceMatchingDisabled) {
       return createInstanceRecord(compPOL, requestContext);
     }
 
@@ -959,24 +959,29 @@ public class InventoryManager {
       .thenApply(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
   }
 
-  public CompletableFuture<CompositePoLine> handleInstanceRecord(CompositePoLine compPOL, RequestContext requestContext) {
+  public CompletableFuture<CompositePoLine> openOrderHandleInstance(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if(compPOL.getInstanceId() != null) {
       return CompletableFuture.completedFuture(compPOL);
     } else {
-      return getInstanceRecord(compPOL, requestContext)
+      return getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext)
         .thenApply(compPOL::withInstanceId);
     }
   }
-  public CompletableFuture<Title> handleInstanceRecord(Title title, RequestContext requestContext) {
+
+  public CompletableFuture<Title> openOrderHandlePackageLineInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (title.getInstanceId() != null) {
       return CompletableFuture.completedFuture(title);
     } else {
-      return getOrCreateInstanceRecord(title, requestContext).thenApply(title::withInstanceId);
+      return getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, requestContext).thenApply(title::withInstanceId);
     }
   }
 
   public CompletableFuture<String> getOrCreateInstanceRecord(Title title, RequestContext requestContext) {
-    if (!CollectionUtils.isNotEmpty(title.getProductIds())) {
+    return getOrCreateInstanceRecord(title, false, requestContext);
+  }
+
+  public CompletableFuture<String> getOrCreateInstanceRecord(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(title.getProductIds()) || isInstanceMatchingDisabled) {
       return createInstanceRecord(title, requestContext);
     }
 

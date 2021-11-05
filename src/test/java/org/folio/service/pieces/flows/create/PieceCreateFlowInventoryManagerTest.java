@@ -125,7 +125,7 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
     doReturn(completedFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
-    doReturn(completedFuture(title)).when(inventoryManager).handleInstanceRecord(title, requestContext);
+    doReturn(completedFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
     doReturn(completedFuture(holdingId)).when(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
 
@@ -164,7 +164,7 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
-    doReturn(completedFuture(title)).when(inventoryManager).handleInstanceRecord(title, requestContext);
+    doReturn(completedFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
@@ -202,7 +202,7 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
-    doReturn(completedFuture(title)).when(inventoryManager).handleInstanceRecord(title, requestContext);
+    doReturn(completedFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
