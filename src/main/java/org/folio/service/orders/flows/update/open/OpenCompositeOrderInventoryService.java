@@ -1,26 +1,29 @@
 package org.folio.service.orders.flows.update.open;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
 public class OpenCompositeOrderInventoryService {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderInventoryService.class);
@@ -28,54 +31,44 @@ public class OpenCompositeOrderInventoryService {
   private final TitlesService titlesService;
   private final InventoryManager inventoryManager;
   private final PieceStorageService pieceStorageService;
+  private final OpenCompositeOrderPieceService openCompositeOrderPieceService;
 
   public OpenCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
-    PieceStorageService pieceStorageService) {
+    PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
     this.titlesService = titlesService;
     this.inventoryManager = inventoryManager;
     this.pieceStorageService = pieceStorageService;
+    this.openCompositeOrderPieceService = openCompositeOrderPieceService;
   }
 
-
-  /**
-   * Return id of created  Item
-   */
-  public CompletableFuture<String> createItemRecord(CompositePoLine compPOL, String holdingId,
-                                                    RequestContext requestContext) {
-    final int ITEM_QUANTITY = 1;
-    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
-    FolioVertxCompletableFuture<String> itemFuture = new FolioVertxCompletableFuture<>(requestContext.getContext());
-    try {
-      if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
-        inventoryManager.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
-          .thenApply(idS -> itemFuture.complete(idS.get(0)))
-          .exceptionally(itemFuture::completeExceptionally);
-      } else {
-        inventoryManager.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
-          .thenApply(idS -> itemFuture.complete(idS.get(0)))
-          .exceptionally(itemFuture::completeExceptionally);
-      }
-    } catch (Exception e) {
-      itemFuture.completeExceptionally(e);
-    }
-    return itemFuture;
-  }
-
-  /**
-   * Return id of created  Holding
-   */
-  public CompletableFuture<String> handleHoldingsRecord(final CompositePoLine compPOL, Location location, String instanceId,
+  public CompletableFuture<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
     RequestContext requestContext) {
-    try {
-      if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
-        return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
-      } else {
-        return CompletableFuture.completedFuture(null);
-      }
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(),
+      compPO.getCompositePoLines()
+        .stream()
+        .map(poLine -> processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), requestContext))
+        .toArray(CompletableFuture[]::new)
+    );
+  }
+
+  /**
+   * Creates Inventory records associated with given PO line and updates PO line with corresponding links.
+   *
+   * @param compPOL Composite PO line to update Inventory for
+   * @return CompletableFuture with void.
+   */
+  public CompletableFuture<Void> processInventory(CompositePoLine compPOL, String titleId, RequestContext requestContext) {
+    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
+      return completedFuture(null);
     }
-    catch (Exception e) {
-      return CompletableFuture.failedFuture(e);
+
+    if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL)) {
+      return handlePieces(compPOL, titleId, Collections.emptyList(), requestContext);
     }
+
+    return inventoryManager.handleInstanceRecord(compPOL, requestContext)
+      .thenCompose(compPOLWithInstanceId -> handleHoldingsAndItemsRecords(compPOLWithInstanceId, requestContext))
+      .thenCompose(piecesWithItemId -> handlePieces(compPOL, titleId, piecesWithItemId, requestContext));
   }
 
   /**
@@ -113,6 +106,19 @@ public class OpenCompositeOrderInventoryService {
       );
   }
 
+  private CompletableFuture<Void> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> piecesWithItemId, RequestContext requestContext) {
+    // don't create pieces, if no inventory updates and receiving not required
+    if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
+      return completedFuture(null);
+    }
+    // do not create pieces in case of check-in flow
+    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+      return completedFuture(null);
+    }
+    return openCompositeOrderPieceService.handlePieces(compPOL, titleId, piecesWithItemId, requestContext).thenRun(
+      () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
+
+  }
   private void exchangeLocationIdWithHoldingId(Location location, String holdingId) {
     addHoldingId(List.of(location), holdingId);
     location.setLocationId(null);
@@ -122,4 +128,10 @@ public class OpenCompositeOrderInventoryService {
     polLocations.forEach(location -> location.setHoldingId(holdingId));
   }
 
+  private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, CompositePoLine poLine) {
+    return Optional.ofNullable(lineIdsTitles.get(poLine.getId()))
+      .map(titles -> titles.get(0))
+      .map(Title::getId)
+      .orElse(null);
+  }
 }

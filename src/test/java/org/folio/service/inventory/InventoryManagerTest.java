@@ -11,15 +11,18 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.TestConstants.PIECE_PATH;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
@@ -33,16 +36,19 @@ import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOC
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
-import static org.folio.service.pieces.PieceServiceTest.LINE_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -69,6 +75,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
@@ -105,6 +112,8 @@ public class InventoryManagerTest {
   public static final String HOLDING_INSTANCE_ID_2_HOLDING = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d48";
   private static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
+  public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+  public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
 
   @Autowired
   InventoryManager inventoryManager;
@@ -613,6 +622,101 @@ public class InventoryManagerTest {
     inventoryManager.getOrCreateInstanceRecord(title, requestContext).get();
     //Thenа
     verify(inventoryManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
+  }
+
+
+  @Test
+  void testShouldCreateItemRecordForEresources() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Eresource eresource = new Eresource().withMaterialType(line.getPhysical().getMaterialType())
+      .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+    line.setPhysical(null);
+    line.setEresource(eresource);
+    line.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    String expItemId = UUID.randomUUID().toString();
+    doReturn(completedFuture(Collections.singletonList(expItemId)))
+      .when(inventoryManager).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
+
+    //When
+    CompletableFuture<String> result = inventoryManager.openOrderCreateItemRecord(line, HOLDING_ID, requestContext);
+    String actItemId = result.get();
+    //Then
+    verify(inventoryManager).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
+    assertEquals(expItemId, actItemId);
+  }
+
+  @Test
+  void testShouldCreateItemRecordForPhysical() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    String expItemId = UUID.randomUUID().toString();
+    doReturn(completedFuture(Collections.singletonList(expItemId)))
+      .when(inventoryManager).createMissingPhysicalItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
+    //When
+    CompletableFuture<String> result = inventoryManager.openOrderCreateItemRecord(line, HOLDING_ID, requestContext);
+    String actItemId = result.get();
+    //Then
+    verify(inventoryManager).createMissingPhysicalItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
+    assertEquals(expItemId, actItemId);
+  }
+
+  @Test
+  void testHoldingsItemCreationShouldBeSkippedIfEresourceOrPhysicsIsAbsent() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setEresource(null);
+    line.setPhysical(null);
+
+    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+
+    doReturn(completedFuture(HOLDING_ID)).when(inventoryManager).getOrCreateHoldingsRecord(anyString(), any(Location.class), eq(requestContext));
+    //When
+    Location location = new Location().withLocationId(piece.getLocationId());
+    CompletableFuture<String> result = inventoryManager.handleHoldingsRecord(line, location, title.getInstanceId(), requestContext);
+
+    //Then
+    String holdingId = result.get();
+    verify(inventoryManager,never()).getOrCreateHoldingsRecord(title.getInstanceId(), location, requestContext);
+    assertNull(holdingId);
+  }
+
+  @Test
+  void testHoldingsItemShouldNotBeCreatedIfPOLIsNull() {
+    //given
+    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    //When
+    Location location = new Location().withLocationId(piece.getLocationId());
+    CompletableFuture<String> result = inventoryManager.handleHoldingsRecord(null, location, title.getInstanceId(), requestContext);
+    //Then
+    assertTrue(result.isCompletedExceptionally());
+  }
+
+  @Test
+  void testHoldingsRecordShouldBeCreated() throws ExecutionException, InterruptedException {
+    //given
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+
+    doReturn(completedFuture(HOLDING_ID)).when(inventoryManager).getOrCreateHoldingsRecord(anyString(), any(Location.class), eq(requestContext));
+    //When
+    Location location = new Location().withLocationId(piece.getLocationId());
+    CompletableFuture<String> result = inventoryManager.handleHoldingsRecord(line, location, title.getInstanceId(), requestContext);
+    String actHoldingId = result.get();
+    //Then
+    verify(inventoryManager).getOrCreateHoldingsRecord(eq(title.getInstanceId()), eq(location), eq(requestContext));
+    assertEquals(HOLDING_ID, actHoldingId);
+  }
+
+  @Test
+  void testUpdateInventoryNegativeCaseIfPOLIsNull() {
+    //When
+    CompletableFuture<String> result =  inventoryManager.openOrderCreateItemRecord(null, UUID.randomUUID().toString(), requestContext);
+    //Then
+    assertTrue(result.isCompletedExceptionally());
   }
 
   /**

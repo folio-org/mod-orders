@@ -1,5 +1,6 @@
 package org.folio.orders.utils;
 
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
@@ -185,5 +186,13 @@ public final class PoLineCommonUtil {
 
   public static void updateLocationsQuantity(List<Location> locations) {
     locations.forEach(location -> location.setQuantity(calculateTotalLocationQuantity(location)));
+  }
+
+  public static int getPhysicalCostQuantity(CompositePoLine compPOL) {
+    return defaultIfNull(compPOL.getCost().getQuantityPhysical(), 0);
+  }
+
+  public static int getElectronicCostQuantity(CompositePoLine compPOL) {
+    return defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
   }
 }

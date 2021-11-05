@@ -5,17 +5,14 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId;
-import static org.folio.service.inventory.InventoryManager.*;
 import static org.folio.orders.utils.HelperUtils.CONFIGS;
 import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
 import static org.folio.orders.utils.HelperUtils.CONFIG_VALUE;
-import static org.folio.orders.utils.HelperUtils.calculateExpectedQuantityOfPiecesWithoutItemCreation;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
-import static org.folio.orders.utils.HelperUtils.calculatePiecesQuantityWithoutLocation;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.HelperUtils.getElectronicCostQuantity;
-import static org.folio.orders.utils.HelperUtils.getPhysicalCostQuantity;
+import static org.folio.orders.utils.PoLineCommonUtil.getElectronicCostQuantity;
+import static org.folio.orders.utils.PoLineCommonUtil.getPhysicalCostQuantity;
+import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId;
 import static org.folio.rest.impl.MockServer.CONFIG_MOCK_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_STATUSES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.INSTANCE_TYPES_MOCK_DATA_PATH;
@@ -32,6 +29,38 @@ import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
+import static org.folio.service.inventory.InventoryManager.CONFIG_NAME_INSTANCE_STATUS_CODE;
+import static org.folio.service.inventory.InventoryManager.CONFIG_NAME_INSTANCE_TYPE_CODE;
+import static org.folio.service.inventory.InventoryManager.CONFIG_NAME_LOAN_TYPE_NAME;
+import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME;
+import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME_TYPE_ID;
+import static org.folio.service.inventory.InventoryManager.DEFAULT_INSTANCE_STATUS_CODE;
+import static org.folio.service.inventory.InventoryManager.DEFAULT_INSTANCE_TYPE_CODE;
+import static org.folio.service.inventory.InventoryManager.DEFAULT_LOAN_TYPE_NAME;
+import static org.folio.service.inventory.InventoryManager.HOLDING_INSTANCE_ID;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryManager.ID;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_CONTRIBUTORS;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_DATE_OF_PUBLICATION;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIERS;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_ID;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLICATION;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLISHER;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_SOURCE;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_STATUSES;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_STATUS_ID;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_TITLE;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_TYPES;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_TYPE_ID;
+import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.inventory.InventoryManager.ITEM_MATERIAL_TYPE_ID;
+import static org.folio.service.inventory.InventoryManager.ITEM_PERMANENT_LOAN_TYPE_ID;
+import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
+import static org.folio.service.inventory.InventoryManager.LOAN_TYPES;
+import static org.folio.service.pieces.PieceUtil.calculatePiecesQuantityWithoutLocation;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -59,7 +88,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
-
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -98,11 +126,11 @@ public class InventoryInteractionTestHelper {
     }
   }
 
-  public static void verifyInventoryInteraction(CompositePurchaseOrder reqData, int createdInstancesCount) {
-    verifyInventoryInteraction(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, reqData, createdInstancesCount);
+  public static void verifyInventoryInteraction(CompositePurchaseOrder reqData, int createdInstancesCount, int expectedWithItemQty) {
+    verifyInventoryInteraction(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, reqData, createdInstancesCount, expectedWithItemQty);
   }
 
-  public static void verifyInventoryInteraction(Header tenant, CompositePurchaseOrder reqData, int createdInstancesCount) {
+  public static void verifyInventoryInteraction(Header tenant, CompositePurchaseOrder reqData, int createdInstancesCount, int expectedWithItemQty) {
     // Verify inventory GET and POST requests for instance, holding and item records
     verifyInventoryInteraction(true, true);
 
@@ -121,7 +149,7 @@ public class InventoryInteractionTestHelper {
       verifyInstanceCreated(tenant, createdInstances, pol);
       verifyHoldingsCreated(createdHoldings, pol);
       verifyItemsCreated(tenant, items, pol);
-      verifyOpenOrderPiecesCreated(items, reqData.getCompositePoLines(), createdPieces);
+      verifyOpenOrderPiecesCreated(items, reqData.getCompositePoLines(), createdPieces, expectedWithItemQty);
     }
   }
 
@@ -232,7 +260,7 @@ public class InventoryInteractionTestHelper {
         expectedElQty = getElectronicCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations);
       }
 
-      int expectedWithItemQty = calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, locations);
+      int expectedWithItemQty = 0;
       int expectedWithoutItemQty = calculateInventoryItemsQuantity(poLine, locations);
       int expectedWithoutLocation = calculatePiecesQuantityWithoutLocation(poLine).values().stream().mapToInt(Integer::intValue).sum();
 
@@ -275,7 +303,7 @@ public class InventoryInteractionTestHelper {
     assertThat(pieceJsons, hasSize(totalForAllPoLines));
   }
 
-  public static void verifyOpenOrderPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieceJsons) {
+  public static void verifyOpenOrderPiecesCreated(List<JsonObject> inventoryItems, List<CompositePoLine> compositePoLines, List<JsonObject> pieceJsons, int expectedWithItemQty) {
     // Collect all item id's
     List<String> itemIds = inventoryItems.stream()
       .map(item -> item.getString(ID))
@@ -311,7 +339,6 @@ public class InventoryInteractionTestHelper {
         expectedElQty = getElectronicCostQuantity(poLine);//calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations);
       }
 
-      int expectedWithItemQty = calculateExpectedQuantityOfPiecesWithoutItemCreation(poLine, locations);
       int expectedWithoutItemQty = calculateInventoryItemsQuantity(poLine, locations);
       int expectedWithoutLocation = calculatePiecesQuantityWithoutLocation(poLine).values().stream().mapToInt(Integer::intValue).sum();
 

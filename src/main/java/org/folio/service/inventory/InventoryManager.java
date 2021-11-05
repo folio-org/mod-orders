@@ -26,6 +26,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,9 +44,11 @@ import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.PieceItemPair;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -762,6 +765,29 @@ public class InventoryManager {
   }
 
   /**
+   * Return id of created  Item
+   */
+  public CompletableFuture<String> openOrderCreateItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
+    final int ITEM_QUANTITY = 1;
+    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
+    FolioVertxCompletableFuture<String> itemFuture = new FolioVertxCompletableFuture<>(requestContext.getContext());
+    try {
+      if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
+        createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+          .thenApply(idS -> itemFuture.complete(idS.get(0)))
+          .exceptionally(itemFuture::completeExceptionally);
+      } else {
+        createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+          .thenApply(idS -> itemFuture.complete(idS.get(0)))
+          .exceptionally(itemFuture::completeExceptionally);
+      }
+    } catch (Exception e) {
+      itemFuture.completeExceptionally(e);
+    }
+    return itemFuture;
+  }
+
+  /**
    * Creates Items in the inventory based on the PO line data.
    *
    * @param compPOL PO line to create Instance Record for
@@ -808,7 +834,6 @@ public class InventoryManager {
   }
 
   private CompletableFuture<String> getLoanTypeId(RequestContext requestContext) {
-    ///loan-types?query=name==%s&limit=1&lang=%s
     return getEntryId(LOAN_TYPES, MISSING_LOAN_TYPE, requestContext)
       .thenApply(jsonObject -> jsonObject.getString(LOAN_TYPES));
   }
@@ -964,6 +989,24 @@ public class InventoryManager {
         return createInstanceRecord(title, requestContext);
       });
   }
+
+  /**
+   * Return id of created  Holding
+   */
+  public CompletableFuture<String> handleHoldingsRecord(final CompositePoLine compPOL, Location location, String instanceId,
+    RequestContext requestContext) {
+    try {
+      if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
+        return getOrCreateHoldingsRecord(instanceId, location, requestContext);
+      } else {
+        return CompletableFuture.completedFuture(null);
+      }
+    }
+    catch (Exception e) {
+      return CompletableFuture.failedFuture(e);
+    }
+  }
+
 
   private void validateItemsCreation(String poLineId, int expectedItemsQuantity, int itemsSize) {
     if (itemsSize != expectedItemsQuantity) {
