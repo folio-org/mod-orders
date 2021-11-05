@@ -34,7 +34,7 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
 
   @Override
   public CompletableFuture<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
-    FolioVertxCompletableFuture<Void> future = new FolioVertxCompletableFuture(requestContext.getContext());
+    FolioVertxCompletableFuture<Void> future = new FolioVertxCompletableFuture<>(requestContext.getContext());
     try {
       Boolean isLineUpdated = poLineUpdateQuantity(holder);
       if (Boolean.TRUE.equals(isLineUpdated)) {
