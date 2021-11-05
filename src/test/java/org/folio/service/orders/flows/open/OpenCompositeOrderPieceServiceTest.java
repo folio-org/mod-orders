@@ -1,6 +1,7 @@
 package org.folio.service.orders.flows.open;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.toList;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -12,8 +13,10 @@ import static org.folio.TestConstants.PIECE_PATH;
 import static org.folio.TestConstants.TILES_PATH;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING_ITEM;
 import static org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManagerTest.ORDER_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,15 +27,20 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import groovy.lang.IntRange;
 import org.folio.ApiTestSuite;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.orders.events.handlers.MessageAddress;
@@ -270,7 +278,7 @@ public class OpenCompositeOrderPieceServiceTest {
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), requestContext).join();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
-                                          .collect(Collectors.toList());
+                                          .collect(toList());
     assertEquals(qty1, piecesLoc1.size());
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -280,7 +288,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(Piece.Format.fromValue(pieceFormat), piece.getFormat());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId2))
-                                          .collect(Collectors.toList());
+                                          .collect(toList());
     assertEquals(qty2, piecesLoc2.size());
     piecesLoc2.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -292,7 +300,8 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @ParameterizedTest
-  @CsvSource(value = {"Electronic Resource:Instance:2:3:Electronic", "Electronic Resource:None:2:3:Electronic"}, delimiter = ':')
+  @CsvSource(value = {"Electronic Resource:Instance:2:3:Electronic",
+                      "Electronic Resource:None:2:3:Electronic"}, delimiter = ':')
   void shouldCreatePieceWithLocationReferenceIfElectronicLineContainsLocationAndInventoryIsInstanceOrNoneAndNoCreatedPieces(
     String lineType, String createInventory, int qty1, int qty2, String pieceFormat) {
     //given
@@ -325,7 +334,7 @@ public class OpenCompositeOrderPieceServiceTest {
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), requestContext).join();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
-      .collect(Collectors.toList());
+      .collect(toList());
     assertEquals(qty1, piecesLoc1.size());
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -335,7 +344,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(Piece.Format.fromValue(pieceFormat), piece.getFormat());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId2))
-      .collect(Collectors.toList());
+      .collect(toList());
     assertEquals(qty2, piecesLoc2.size());
     piecesLoc2.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -383,7 +392,7 @@ public class OpenCompositeOrderPieceServiceTest {
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), requestContext).join();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
-      .collect(Collectors.toList());
+      .collect(toList());
     assertEquals(elecQty1, piecesLoc1.size());
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -393,7 +402,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(Piece.Format.ELECTRONIC, piece.getFormat());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId2))
-      .collect(Collectors.toList());
+      .collect(toList());
     assertEquals(physQty2, piecesLoc2.size());
     piecesLoc2.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -440,7 +449,7 @@ public class OpenCompositeOrderPieceServiceTest {
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), requestContext).join();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> locationId1.equals(piece.getLocationId()))
-      .collect(Collectors.toList());
+      .collect(toList());
     assertEquals(elecQty1, piecesLoc1.size());
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -450,7 +459,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(Piece.Format.ELECTRONIC, piece.getFormat());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> holdingId.equals(piece.getHoldingId()))
-      .collect(Collectors.toList());
+      .collect(toList());
     assertEquals(physQty2, piecesLoc2.size());
     piecesLoc2.forEach(piece -> {
       assertNull(piece.getLocationId());
@@ -459,6 +468,117 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(titleId, piece.getTitleId());
       assertEquals(Piece.Format.PHYSICAL, piece.getFormat());
     });
+  }
+
+  @ParameterizedTest
+  @CsvSource(value = {"P/E Mix:Instance:Instance, Holding, Item:2:3", "P/E Mix:None:Instance, Holding, Item:2:3"}, delimiter = ':')
+  void shouldCreatePieceWithLocationAndHoldingReferenceIfMixedLineContainsLocationAndInventoryIsInstanceOrNoneAndExistPiecesWithItems(
+                  String lineType, String elecCreateInventory, String physCreateInventory, int elecQty1, int physQty2) {
+    //given
+    String lineId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    List<Piece> expectedPiecesWithItem = new ArrayList<>();
+    Location elecLocation = new Location().withQuantityElectronic(elecQty1).withQuantity(elecQty1);
+    if (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM == Eresource.CreateInventory.fromValue(elecCreateInventory)) {
+      elecLocation.withHoldingId(holdingId);
+      expectedPiecesWithItem.addAll(createElecPiecesWithHoldingId(lineId, titleId, true, elecLocation));
+    } else {
+      elecLocation.withLocationId(locationId);
+    }
+     Location physLocation = new Location().withQuantityPhysical(physQty2).withQuantity(physQty2);
+    if (Physical.CreateInventory.INSTANCE_HOLDING_ITEM == Physical.CreateInventory.fromValue(physCreateInventory)) {
+      physLocation.withHoldingId(holdingId);
+      expectedPiecesWithItem.addAll(createPhysPiecesWithHoldingId(lineId, titleId, true, physLocation));
+    } else {
+      physLocation.withLocationId(locationId);
+    }
+
+    Cost cost = new Cost().withQuantityElectronic(elecQty1 + physQty2);
+
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(elecCreateInventory));
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(physCreateInventory));
+
+    CompositePoLine line = new CompositePoLine().withId(lineId).withCost(cost).withLocations(List.of(elecLocation, physLocation))
+      .withIsPackage(false).withEresource(eresource).withPhysical(physical)
+      .withOrderFormat(CompositePoLine.OrderFormat.fromValue(lineType));
+    CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
+
+    doReturn(completedFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), eq(requestContext));
+    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
+    doReturn(completedFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(completedFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
+    doAnswer((Answer<CompletableFuture<Piece>>) invocation -> {
+      Piece piece = invocation.getArgument(0);
+      return completedFuture(piece);
+    }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
+
+    //When
+    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, expectedPiecesWithItem, requestContext).join();
+    //Then
+    List<Piece> piecesLocElec = createdPieces.stream().filter(piece -> Piece.Format.ELECTRONIC.equals(piece.getFormat()))
+      .collect(toList());
+    assertEquals(elecQty1, piecesLocElec.size());
+    piecesLocElec.forEach(piece -> {
+      assertEquals(lineId, piece.getPoLineId());
+      assertEquals(titleId, piece.getTitleId());
+      if (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM == Eresource.CreateInventory.fromValue(elecCreateInventory)) {
+        assertEquals(holdingId, piece.getHoldingId());
+        assertNotNull(piece.getItemId());
+      } else {
+        assertEquals(locationId, piece.getLocationId());
+        assertNull(piece.getItemId());
+      }
+    });
+    List<Piece> piecesLocPhys =  createdPieces.stream().filter(piece -> Piece.Format.PHYSICAL.equals(piece.getFormat()))
+      .collect(toList());
+    assertEquals(physQty2, piecesLocPhys.size());
+    piecesLocPhys.forEach(piece -> {
+      assertEquals(lineId, piece.getPoLineId());
+      assertEquals(titleId, piece.getTitleId());
+      if (Physical.CreateInventory.INSTANCE_HOLDING_ITEM == Physical.CreateInventory.fromValue(physCreateInventory)) {
+        assertEquals(holdingId, piece.getHoldingId());
+        assertNotNull(piece.getItemId());
+      } else {
+        assertEquals(locationId, piece.getLocationId());
+        assertNull(piece.getItemId());
+      }
+    });
+  }
+
+  private List<Piece> createPhysPiecesWithHoldingId(String lineId, String titleId, boolean withItem, Location location) {
+    List<Piece> pieces = new ArrayList<>();
+    for (int i = 0; i < location.getQuantityPhysical(); i++) {
+      Piece piece = new Piece().withId(UUID.randomUUID().toString())
+        .withTitleId(titleId)
+        .withPoLineId(lineId)
+        .withHoldingId(location.getHoldingId())
+        .withFormat(Piece.Format.PHYSICAL);
+      if (withItem) {
+        piece.withItemId(UUID.randomUUID().toString());
+      }
+      pieces.add(piece);
+    }
+    return pieces;
+  }
+
+  private List<Piece> createElecPiecesWithHoldingId(String lineId, String titleId, boolean withItem, Location location) {
+    List<Piece> pieces = new ArrayList<>();
+    for (int i = 0; i < location.getQuantityPhysical(); i++) {
+      Piece piece = new Piece().withId(UUID.randomUUID().toString())
+        .withTitleId(titleId)
+        .withPoLineId(lineId)
+        .withHoldingId(location.getHoldingId())
+        .withFormat(Piece.Format.ELECTRONIC);
+      if (withItem) {
+        piece.withItemId(UUID.randomUUID().toString());
+      }
+      pieces.add(piece);
+    }
+    return pieces;
   }
 
   private Piece createPieceWithLocationId(CompositePoLine line, Title title) {
