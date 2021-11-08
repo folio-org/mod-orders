@@ -96,7 +96,7 @@ public class PurchaseOrderStorageService {
     return restClient.delete(requestEntry, requestContext);
   }
 
-  public CompletableFuture<PurchaseOrder> cretePurchaseOrder(JsonObject jsonOrder, RequestContext requestContext) {
+  public CompletableFuture<PurchaseOrder> createPurchaseOrder(JsonObject jsonOrder, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT);
     return restClient.post(requestEntry, jsonOrder, PostResponseType.BODY, PurchaseOrder.class, requestContext);
   }

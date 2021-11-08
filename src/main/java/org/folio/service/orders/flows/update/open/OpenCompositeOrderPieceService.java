@@ -63,7 +63,7 @@ public class OpenCompositeOrderPieceService {
    * @return void future
    */
   public CompletableFuture<List<Piece>> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
-                                              RequestContext requestContext) {
+                                                     boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("Get pieces by poLine ID");
     return openCompositeOrderHolderBuilder.buildHolder(compPOL, titleId, expectedPiecesWithItem, requestContext)
       .thenCompose(holder -> {
@@ -71,7 +71,7 @@ public class OpenCompositeOrderPieceService {
                        (holder.getPiecesWithChangedLocation().size() == holder.getPiecesWithLocationToProcess().size())) {
           return updatePieces(holder, requestContext);
         } else {
-          return createPieces(holder, requestContext);
+          return createPieces(holder, isInstanceMatchingDisabled, requestContext);
         }
       })
       .thenApply(pieces -> {
@@ -88,7 +88,7 @@ public class OpenCompositeOrderPieceService {
     return collectResultsOnSuccess(updateFutures);
   }
 
-  private CompletableFuture<List<Piece>> createPieces(OpenOrderPieceHolder holder, RequestContext requestContext) {
+  private CompletableFuture<List<Piece>> createPieces(OpenOrderPieceHolder holder, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     List<Piece> piecesToCreate = new ArrayList<>(holder.getPiecesWithLocationToProcess());
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
@@ -96,7 +96,7 @@ public class OpenCompositeOrderPieceService {
     logger.debug("Trying to create pieces");
     List<CompletableFuture<Piece>> piecesToCreateFutures = new ArrayList<>();
     piecesToCreate.forEach(piece ->
-      piecesToCreateFutures.add(createPiece(piece, requestContext))
+      piecesToCreateFutures.add(createPiece(piece, isInstanceMatchingDisabled, requestContext))
     );
     return collectResultsOnSuccess(piecesToCreateFutures)
       .exceptionally(th -> {
@@ -105,12 +105,12 @@ public class OpenCompositeOrderPieceService {
       });
   }
 
-  public CompletableFuture<Piece> createPiece(Piece piece, RequestContext requestContext) {
+  public CompletableFuture<Piece> createPiece(Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPiece start");
     return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
       .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
         .thenApply(v -> order))
-      .thenCompose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, requestContext))
+      .thenCompose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
       .thenCompose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
 
@@ -163,10 +163,10 @@ public class OpenCompositeOrderPieceService {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
+  public CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .thenCompose(title -> inventoryManager.handleInstanceRecord(title, requestContext))
+        .thenCompose(title -> inventoryManager.openOrderHandlePackageLineInstance(title, isInstanceMatchingDisabled, requestContext))
         .thenCompose(title -> titlesService.saveTitle(title, requestContext).thenApply(json -> title))
         .thenCompose(title ->
         {

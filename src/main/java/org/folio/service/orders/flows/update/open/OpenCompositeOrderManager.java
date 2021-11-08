@@ -8,6 +8,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.O
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -34,6 +35,9 @@ import io.vertx.core.json.JsonObject;
 public class OpenCompositeOrderManager {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderManager.class);
 
+  public static final String DISABLE_INSTANCE_MARCHING_CONFIG_NAME = "disableInstanceMatching";
+  public static final String DISABLE_INSTANCE_MARCHING_CONFIG_KEY = "isInstanceMatchingDisabled";
+
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final TitlesService titlesService;
@@ -56,17 +60,23 @@ public class OpenCompositeOrderManager {
    * @param compPO Purchase Order to open
    * @return CompletableFuture that indicates when transition is completed
    */
-  public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+  public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, JsonObject config, RequestContext requestContext) {
       return AsyncUtil.executeBlocking(requestContext.getContext(), false, () -> updateIncomingOrder(compPO, poFromStorage))
         .thenCompose(aVoid -> openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext))
         .thenCompose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
         .thenCompose(linesIdTitles -> {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
-          return openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, requestContext);
+          return openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext);
         })
         .thenCompose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
         .thenAccept(ok -> changePoLineStatuses(compPO))
         .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext));
+  }
+
+  private boolean isInstanceMatchingDisabled(JsonObject config) {
+    return Optional.ofNullable(config.getString(DISABLE_INSTANCE_MARCHING_CONFIG_NAME))
+      .map(instMatch -> new JsonObject(instMatch).getBoolean(DISABLE_INSTANCE_MARCHING_CONFIG_KEY))
+      .orElse(false);
   }
 
   public CompletableFuture<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {

@@ -42,11 +42,11 @@ public class OpenCompositeOrderInventoryService {
   }
 
   public CompletableFuture<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
-    RequestContext requestContext) {
+                                                  boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     return FolioVertxCompletableFuture.allOf(requestContext.getContext(),
       compPO.getCompositePoLines()
         .stream()
-        .map(poLine -> processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), requestContext))
+        .map(poLine -> processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext))
         .toArray(CompletableFuture[]::new)
     );
   }
@@ -57,18 +57,19 @@ public class OpenCompositeOrderInventoryService {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public CompletableFuture<Void> processInventory(CompositePoLine compPOL, String titleId, RequestContext requestContext) {
+  public CompletableFuture<Void> processInventory(CompositePoLine compPOL, String titleId,
+                                                  boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return completedFuture(null);
     }
 
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL)) {
-      return handlePieces(compPOL, titleId, Collections.emptyList(), requestContext);
+      return handlePieces(compPOL, titleId, Collections.emptyList(), isInstanceMatchingDisabled, requestContext);
     }
 
-    return inventoryManager.handleInstanceRecord(compPOL, requestContext)
+    return inventoryManager.openOrderHandleInstance(compPOL, isInstanceMatchingDisabled, requestContext)
       .thenCompose(compPOLWithInstanceId -> handleHoldingsAndItemsRecords(compPOLWithInstanceId, requestContext))
-      .thenCompose(piecesWithItemId -> handlePieces(compPOL, titleId, piecesWithItemId, requestContext));
+      .thenCompose(piecesWithItemId -> handlePieces(compPOL, titleId, piecesWithItemId, isInstanceMatchingDisabled, requestContext));
   }
 
   /**
@@ -106,7 +107,8 @@ public class OpenCompositeOrderInventoryService {
       );
   }
 
-  private CompletableFuture<Void> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> piecesWithItemId, RequestContext requestContext) {
+  private CompletableFuture<Void> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> piecesWithItemId,
+                                               boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     // don't create pieces, if no inventory updates and receiving not required
     if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
       return completedFuture(null);
@@ -115,10 +117,10 @@ public class OpenCompositeOrderInventoryService {
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return completedFuture(null);
     }
-    return openCompositeOrderPieceService.handlePieces(compPOL, titleId, piecesWithItemId, requestContext).thenRun(
+    return openCompositeOrderPieceService.handlePieces(compPOL, titleId, piecesWithItemId, isInstanceMatchingDisabled, requestContext).thenRun(
       () -> logger.info("Create pieces for PO Line with '{}' id where inventory updates are not required", compPOL.getId()));
-
   }
+
   private void exchangeLocationIdWithHoldingId(Location location, String holdingId) {
     addHoldingId(List.of(location), holdingId);
     location.setLocationId(null);
