@@ -56,17 +56,21 @@ public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineServi
     } else if (!isLocationUpdateRequired(piece, lineToSave)) {
       Cost cost = lineToSave.getCost();
       if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-        Optional.ofNullable(cost.getQuantityElectronic()).ifPresent(prevQty -> {
+        if (cost.getQuantityPhysical() != null) {
+          int prevQty = cost.getQuantityElectronic();
           if (prevQty > 0) {
             cost.setQuantityElectronic(prevQty - qty);
+            return Boolean.TRUE;
           }
-        });
+        }
       } else {
-        Optional.ofNullable(cost.getQuantityPhysical()).ifPresent(prevQty -> {
+        if (cost.getQuantityPhysical() != null) {
+          int prevQty = cost.getQuantityPhysical();
           if (prevQty > 0) {
             cost.setQuantityPhysical(prevQty - qty);
+            return Boolean.TRUE;
           }
-        });
+        }
       }
     }
    return Boolean.FALSE;
