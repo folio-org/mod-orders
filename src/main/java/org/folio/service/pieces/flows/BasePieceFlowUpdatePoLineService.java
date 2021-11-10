@@ -33,7 +33,7 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
   }
 
   protected boolean isLocationUpdateRequired(Piece piece, CompositePoLine lineToSave) {
-    return PieceValidatorUtil.isLocationRequired(piece.getFormat(), lineToSave) ||
-      (piece.getHoldingId() != null || piece.getLocationId() != null);
+    return (piece.getHoldingId() != null || piece.getLocationId() != null) ||
+                      PieceValidatorUtil.isLocationRequired(piece.getFormat(), lineToSave);
   }
 }
