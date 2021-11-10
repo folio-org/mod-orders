@@ -506,6 +506,44 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(inventoryManager).updateItem(item, requestContext);
   }
 
+  @Test
+  void shouldNotTryToUpdateItemWhenUpdatingPieceThatDoesNotHaveItem()
+  {
+    String orderId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+    String caption = "updated";
+    JsonObject item = new JsonObject();
+    JsonObject holding = new JsonObject().put(ID, holdingId);
+    holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
+    Piece pieceFromStorage = new Piece().withId(pieceId).withTitleId(titleId).withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
+    Piece pieceToUpdate = new Piece().withId(pieceId).withTitleId(titleId).withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL).withCaption(caption);
+    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost = new Cost().withQuantityElectronic(1);
+
+    PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
+      .withInstanceId(instanceId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withLocations(List.of(loc)).withCost(cost);
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withPieceFromStorage(pieceFromStorage)
+      .withCreateItem(false).withDeleteHolding(false);
+    holder.withOrderInformation(purchaseOrder, poLine);
+
+    doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(null, true, requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate().getItemId(), holder.getPieceToUpdate().getPoLineId(), requestContext);
+
+    pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).join();
+
+    verify(inventoryManager, times(1)).getItemRecordById(null, true, requestContext);
+    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
+    verify(inventoryManager, times(0)).updateItem(item, requestContext);
+  }
+
   private static class ContextConfiguration {
     @Bean TitlesService titlesService() {
       return mock(TitlesService.class);
