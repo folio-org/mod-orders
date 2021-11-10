@@ -153,7 +153,7 @@ public class PurchaseOrderLinesApiTest {
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   public static final String ISBN_PRODUCT_TYPE_ID = "8261054f-be78-422d-bd51-4ed9f33c3422";
   public static final String INVALID_ISBN = "1234";
-  private static final String ACQUISITIONS_UNIT_IDS = "acqUnitIds";
+  private static final String ACQUISITIONS_UNIT_IDS = "purchaseOrder.acqUnitIds";
   private static final String NO_ACQ_UNIT_ASSIGNED_CQL = "cql.allRecords=1 not " + ACQUISITIONS_UNIT_IDS + " <> []";
 
   private static boolean runningOnOwn;
