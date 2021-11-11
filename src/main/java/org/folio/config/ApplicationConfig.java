@@ -1,11 +1,14 @@
 package org.folio.config;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.folio.helper.PoNumberHelper;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.PrefixService;
@@ -71,6 +74,7 @@ import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
+import org.folio.service.pieces.flows.strategies.*;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
@@ -474,9 +478,9 @@ public class ApplicationConfig {
   }
 
   @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
-                    PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
+                    PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService, Resolver resolver) {
     return new OpenCompositeOrderInventoryService(titlesService, inventoryManager, pieceStorageService,
-      openCompositeOrderPieceService) ;
+      openCompositeOrderPieceService, resolver) ;
   }
 
   @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(ExpenseClassValidationService expenseClassValidationService,
@@ -527,5 +531,21 @@ public class ApplicationConfig {
 
   @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {
     return new OpenCompositeOrderHolderBuilder(pieceStorageService);
+  }
+
+  @Bean
+  Resolver resolver(InventoryManager inventoryManager, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
+    Map<String, ProcessInventoryStrategy> strategy = new HashMap<>();
+
+    ElectronicStrategy electronicStrategy = new ElectronicStrategy(inventoryManager, openCompositeOrderPieceService);
+    PhysicalStrategy physicalStrategy = new PhysicalStrategy(inventoryManager, openCompositeOrderPieceService);
+    MixedStrategy mixedStrategy = new MixedStrategy(inventoryManager, openCompositeOrderPieceService);
+
+    strategy.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), electronicStrategy);
+    strategy.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), physicalStrategy);
+    strategy.put(CompositePoLine.OrderFormat.OTHER.value(), physicalStrategy);
+    strategy.put(CompositePoLine.OrderFormat.P_E_MIX.value(), mixedStrategy);
+
+    return new Resolver(strategy);
   }
 }
