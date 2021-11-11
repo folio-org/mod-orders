@@ -1,18 +1,7 @@
 package org.folio.rest.core;
 
-import static java.util.Objects.nonNull;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
-import static org.folio.orders.utils.HelperUtils.verifyResponse;
-import static org.folio.rest.RestConstants.ERROR_MESSAGE;
-import static org.folio.rest.RestConstants.NOT_FOUND;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -24,8 +13,18 @@ import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static java.util.Objects.nonNull;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
+import static org.folio.orders.utils.HelperUtils.verifyResponse;
+import static org.folio.rest.RestConstants.ERROR_MESSAGE;
+import static org.folio.rest.RestConstants.NOT_FOUND;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 public class RestClient {
 
@@ -96,6 +95,9 @@ public class RestClient {
           client.closeClient();
           if (postResponseType == PostResponseType.BODY) {
             JsonObject body =  HelperUtils.verifyAndExtractBody(response);
+            if (responseType == JsonObject.class) {
+              return body;
+            }
             T responseEntity = body.mapTo(responseType);
             if (logger.isDebugEnabled()) {
               logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);

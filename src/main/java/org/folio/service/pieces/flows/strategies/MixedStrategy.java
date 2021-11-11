@@ -1,8 +1,8 @@
 package org.folio.service.pieces.flows.strategies;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -11,12 +11,16 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryManager.ID;
 
 public class MixedStrategy extends ProcessInventoryStrategy {
 
@@ -60,88 +64,69 @@ public class MixedStrategy extends ProcessInventoryStrategy {
   }
 
   public CompletableFuture<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL, RequestContext requestContext) {
-    List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
-    return FolioVertxCompletableFuture
-      .from(requestContext.getContext(), CompletableFuture.completedFuture(splitLocation(compPOL.getLocations())))
-      .thenCompose(splitLocations -> {
-        if (PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(compPOL)) {
-          itemsPerHolding.add(holdingsUpdate(compPOL,
-            splitLocations.get(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value()), requestContext));
-        }
-        if (PoLineCommonUtil.isHoldingUpdateRequiredForEresource(compPOL)) {
-          itemsPerHolding.add(holdingsUpdate(compPOL,
-            splitLocations.get(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value()), requestContext));
-        }
-        return collectResultsOnSuccess(itemsPerHolding)
-          .thenApply(itemCreated -> itemCreated.stream()
-            .flatMap(List::stream)
-            .collect(toList())
-          ).thenApply(pieces -> {
-            updateLocation(compPOL, splitLocations);
-            return pieces;
-          });
-      });
-  }
-
-  private void updateLocation(CompositePoLine compPOL, Map<String, List<Location>> splitLocation) {
-    compPOL.setLocations(null);
-    compPOL.setLocations(splitLocation.values().stream().flatMap(List::stream).collect(toList()));
-  }
-
-  private CompletableFuture<List<Piece>> holdingsUpdate(CompositePoLine compPOL,
-                                                              List<Location> locations, RequestContext requestContext) {
-
-    List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
-    locations.forEach(location -> itemsPerHolding.add(
-      // Search for or create a new holdings record and then create items for it if required
-      inventoryManager.getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, requestContext)
-        .thenCompose(holdingId -> {
-            // Items are not going to be created when create inventory is "Instance, Holding"
-            exchangeLocationIdWithHoldingId(location, holdingId);
-            if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-              return inventoryManager.handleItemRecords(compPOL, location, requestContext);
-            } else {
-              return completedFuture(Collections.emptyList());
-            }
-          }
-        )));
-
+    List<CompletableFuture<Void>> itemsPerHolding = new ArrayList<>();
+    compPOL.getLocations().forEach(location -> {
+      itemsPerHolding.add(inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getInstanceId(), location, requestContext)
+        .thenAccept(holding -> updateLocationWithHoldingInfo(holding, location))
+        .thenAccept(aVoid -> updateLocations(compPOL)));
+    });
     return collectResultsOnSuccess(itemsPerHolding)
-      .thenApply(pieceWithItemIdList -> pieceWithItemIdList.stream().flatMap(Collection::stream).collect(toList()));
+      .thenCompose(aVoid -> {
+          List<CompletableFuture<List<Piece>>> pieceFutures = new ArrayList<>();
+          if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
+            for (Location location : compPOL.getLocations()) {
+              pieceFutures.add(inventoryManager.handleItemRecords(compPOL, location, requestContext));
+            }
+          } else {
+            pieceFutures.add(completedFuture(Collections.emptyList()));
+          }
+          return collectResultsOnSuccess(pieceFutures)
+            .thenApply(itemCreated -> itemCreated.stream()
+              .flatMap(List::stream)
+              .collect(toList())
+            );
+        }
+      );
+
   }
 
-  private Map<String, List<Location>> splitLocation(List<Location> locations) {
-    Map<String, List<Location>> locationMap = new HashMap<>();
+  private void updateLocationWithHoldingInfo(JsonObject holding, Location location) {
+    if (holding != null && !holding.isEmpty()) {
+      String permLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
+      String holdingId = holding.getString(ID);
+      location.setHoldingId(holdingId);
+      location.setLocationId(permLocationId);
+    }
+  }
 
-    List<Location> physicalLocations = new ArrayList<>();
-    List<Location> electronicLocations = new ArrayList<>();
-
-    for (Location location : locations) {
-
-      if (location.getQuantityPhysical() > 0) {
+  private void updateLocations(CompositePoLine compPOL) {
+    List<Location> locations = new ArrayList<>();
+    for (Location location : compPOL.getLocations()) {
+      if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
         Location physicalLocation = new Location();
-        physicalLocation.setLocationId(location.getLocationId());
-        physicalLocation.setHoldingId(location.getHoldingId());
+        if (PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(compPOL)) {
+          physicalLocation.setHoldingId(location.getHoldingId());
+        } else {
+          physicalLocation.setLocationId(location.getLocationId());
+        }
         physicalLocation.setQuantity(location.getQuantityPhysical());
         physicalLocation.setQuantityPhysical(location.getQuantityPhysical());
-
-        physicalLocations.add(physicalLocation);
+        locations.add(physicalLocation);
       }
 
-      if (location.getQuantityElectronic() > 0) {
+      if (location.getQuantityElectronic() != null && location.getQuantityElectronic() > 0) {
         Location electronicLocation = new Location();
-        electronicLocation.setLocationId(location.getLocationId());
-        electronicLocation.setHoldingId(location.getHoldingId());
+        if (PoLineCommonUtil.isHoldingUpdateRequiredForEresource(compPOL)) {
+          electronicLocation.setHoldingId(location.getHoldingId());
+        } else {
+          electronicLocation.setLocationId(location.getLocationId());
+        }
         electronicLocation.setQuantity(location.getQuantityElectronic());
         electronicLocation.setQuantityElectronic(location.getQuantityElectronic());
-
-        electronicLocations.add(electronicLocation);
+        locations.add(electronicLocation);
       }
     }
-
-    locationMap.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), physicalLocations);
-    locationMap.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), electronicLocations);
-
-    return locationMap;
+    compPOL.setLocations(null);
+    compPOL.setLocations(locations);
   }
 }
