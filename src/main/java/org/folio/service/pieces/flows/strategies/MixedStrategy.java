@@ -2,6 +2,7 @@ package org.folio.service.pieces.flows.strategies;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -60,26 +61,35 @@ public class MixedStrategy extends ProcessInventoryStrategy {
 
   public CompletableFuture<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL, RequestContext requestContext) {
     List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
-    Map<String, List<Location>> splitLocation = splitLocation(compPOL.getLocations());
-
-    if (PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(compPOL)) {
-      itemsPerHolding = holdingsUpdateRequired(compPOL,
-        splitLocation.get(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value()), requestContext);
-    }
-    if (PoLineCommonUtil.isHoldingUpdateRequiredForEresource(compPOL)) {
-      itemsPerHolding = holdingsUpdateRequired(compPOL,
-        splitLocation.get(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value()), requestContext);
-    }
-
-    return collectResultsOnSuccess(itemsPerHolding)
-      .thenApply(itemCreated -> itemCreated.stream()
-        .flatMap(List::stream)
-        .collect(toList())
-      );
+    return FolioVertxCompletableFuture
+      .from(requestContext.getContext(), CompletableFuture.completedFuture(splitLocation(compPOL.getLocations())))
+      .thenCompose(splitLocations -> {
+        if (PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(compPOL)) {
+          itemsPerHolding.add(holdingsUpdate(compPOL,
+            splitLocations.get(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value()), requestContext));
+        }
+        if (PoLineCommonUtil.isHoldingUpdateRequiredForEresource(compPOL)) {
+          itemsPerHolding.add(holdingsUpdate(compPOL,
+            splitLocations.get(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value()), requestContext));
+        }
+        return collectResultsOnSuccess(itemsPerHolding)
+          .thenApply(itemCreated -> itemCreated.stream()
+            .flatMap(List::stream)
+            .collect(toList())
+          ).thenApply(pieces -> {
+            updateLocation(compPOL, splitLocations);
+            return pieces;
+          });
+      });
   }
 
-  private List<CompletableFuture<List<Piece>>> holdingsUpdateRequired(CompositePoLine compPOL,
-                                                                      List<Location> locations, RequestContext requestContext) {
+  private void updateLocation(CompositePoLine compPOL, Map<String, List<Location>> splitLocation) {
+    compPOL.setLocations(null);
+    compPOL.setLocations(splitLocation.values().stream().flatMap(List::stream).collect(toList()));
+  }
+
+  private CompletableFuture<List<Piece>> holdingsUpdate(CompositePoLine compPOL,
+                                                              List<Location> locations, RequestContext requestContext) {
 
     List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
     locations.forEach(location -> itemsPerHolding.add(
@@ -96,7 +106,8 @@ public class MixedStrategy extends ProcessInventoryStrategy {
           }
         )));
 
-    return itemsPerHolding;
+    return collectResultsOnSuccess(itemsPerHolding)
+      .thenApply(pieceWithItemIdList -> pieceWithItemIdList.stream().flatMap(Collection::stream).collect(toList()));
   }
 
   private Map<String, List<Location>> splitLocation(List<Location> locations) {
