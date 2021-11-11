@@ -56,7 +56,7 @@ public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineServi
     } else if (!isLocationUpdateRequired(piece, lineToSave)) {
       Cost cost = lineToSave.getCost();
       if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-        if (cost.getQuantityPhysical() != null) {
+        if (cost.getQuantityElectronic() != null) {
           int prevQty = cost.getQuantityElectronic();
           if (prevQty > 0) {
             cost.setQuantityElectronic(prevQty - qty);
