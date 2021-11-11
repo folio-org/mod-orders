@@ -42,9 +42,12 @@ public class PieceValidatorUtil {
 
   public static boolean isLocationRequired(Piece.Format pieceFormat, CompositePoLine compPOL) {
     if (ELECTRONIC.equals(pieceFormat))  {
-      return compPOL.getEresource() != null && compPOL.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE;
+      return compPOL.getEresource() != null &&
+          (compPOL.getEresource().getCreateInventory() != Eresource.CreateInventory.NONE &&
+            compPOL.getEresource().getCreateInventory() != Eresource.CreateInventory.INSTANCE);
     } else {
-      return compPOL.getPhysical() != null && compPOL.getPhysical().getCreateInventory() != Physical.CreateInventory.NONE;
+      return compPOL.getPhysical() != null && (compPOL.getPhysical().getCreateInventory() != Physical.CreateInventory.NONE &&
+            compPOL.getPhysical().getCreateInventory() != Physical.CreateInventory.INSTANCE);
     }
   }
 
