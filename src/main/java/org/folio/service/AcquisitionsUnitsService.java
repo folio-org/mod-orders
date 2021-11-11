@@ -28,7 +28,7 @@ public class AcquisitionsUnitsService {
   private static final Logger logger = LogManager.getLogger();
 
   public static final String ACQUISITIONS_UNIT_IDS = "acqUnitIds";
-  private static final String NO_ACQ_UNIT_ASSIGNED_CQL = "cql.allRecords=1 not " + ACQUISITIONS_UNIT_IDS + " <> []";
+  private static final String NO_ACQ_UNIT_ASSIGNED_CQL = "cql.allRecords=1 not %s" + ACQUISITIONS_UNIT_IDS + " <> []";
 
   private static final String IS_DELETED_PROP = "isDeleted";
   private static final String ACTIVE_UNITS_CQL = IS_DELETED_PROP + "==false";
@@ -89,10 +89,13 @@ public class AcquisitionsUnitsService {
 
   public CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords(String tableAlias, RequestContext requestContext) {
     return getAcqUnitIdsForSearch(requestContext).thenApply(ids -> {
+      String noAcqUnitAssignedQuery = String.format(NO_ACQ_UNIT_ASSIGNED_CQL, tableAlias);
       if (ids.isEmpty()) {
-        return NO_ACQ_UNIT_ASSIGNED_CQL;
+        return noAcqUnitAssignedQuery;
       }
-      return String.format("%s or (%s)", HelperUtils.convertFieldListToCqlQuery(ids, tableAlias + ACQUISITIONS_UNIT_IDS, false), NO_ACQ_UNIT_ASSIGNED_CQL);
+      return String.format("%s or (%s)",
+        HelperUtils.convertFieldListToCqlQuery(ids, tableAlias + ACQUISITIONS_UNIT_IDS, false),
+        noAcqUnitAssignedQuery);
     });
   }
 
