@@ -336,15 +336,11 @@ public class PieceDeleteFlowPoLineServiceTest {
 
   @ParameterizedTest
   @DisplayName("Should decrease quantity for cost if initially POL without location")
-  @CsvSource(value = {"Electronic Resource:Instance:2:Electronic:1",
-                      "Electronic Resource:None:2:Electronic:1",
-                      "Electronic Resource:None:1:Electronic:0",
-                      "Physical Resource:None:2:Physical:1",
-                      "Physical Resource:Instance:2:Physical:1",
-                      "Physical Resource:None:1:Physical:0",
-                      "Other:None:2:Other:1",
-                      "Other:None:1:Other:0"}, delimiter = ':')
-  void shouldDecreaseQuantityTo1ForCostIfInitiallyWas2AndPOLWithoutLocation(
+  @CsvSource(value = {
+                   "Electronic Resource:Instance:2:Electronic:1",
+                   "Electronic Resource:None:2:Electronic:1",
+                   "Electronic Resource:None:1:Electronic:0"}, delimiter = ':')
+  void shouldDecreaseElectronicQuantityTo1ForCostIfInitiallyWas2AndPOLWithoutLocation(
               String lineType, String createInventory, int qty, String pieceFormat, int expQty)
     throws ExecutionException, InterruptedException {
     String orderId = UUID.randomUUID().toString();
@@ -355,15 +351,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
       .withOrderFormat(PoLine.OrderFormat.fromValue(lineType)).withId(lineId)
       .withCost(cost);
-    if (Piece.Format.ELECTRONIC == pieceFormatE) {
-      Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(createInventory));
-      originPoLine.withEresource(eresource);
-      cost.withQuantityElectronic(qty);
-    } else {
-      Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(createInventory));
-      originPoLine.withPhysical(physical);
-      cost.setQuantityPhysical(qty);
-    }
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(createInventory));
+    originPoLine.withEresource(eresource);
+    cost.withQuantityElectronic(qty);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
@@ -375,13 +365,50 @@ public class PieceDeleteFlowPoLineServiceTest {
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
-    if (Piece.Format.ELECTRONIC == pieceFormatE) {
-      assertNull(poLineToSave.getCost().getQuantityPhysical());
-      assertEquals(expQty, poLineToSave.getCost().getQuantityElectronic());
-    } else {
-      assertNull(poLineToSave.getCost().getQuantityElectronic());
-      assertEquals(expQty, poLineToSave.getCost().getQuantityPhysical());
-    }
+    assertNull(poLineToSave.getCost().getQuantityPhysical());
+    assertEquals(expQty, poLineToSave.getCost().getQuantityElectronic());
+    assertEquals(0, poLineToSave.getLocations().size());
+
+    verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+  }
+
+  @ParameterizedTest
+  @DisplayName("Should decrease quantity for cost if initially POL without location")
+  @CsvSource(value = {
+    "Physical Resource:None:2:Physical:1",
+    "Physical Resource:Instance:2:Physical:1",
+    "Physical Resource:None:1:Physical:0",
+    "Other:None:2:Other:1",
+    "Other:None:1:Other:0"}, delimiter = ':')
+  void shouldDecreasePhysicalQuantityTo1ForCostIfInitiallyWas2AndPOLWithoutLocation(
+    String lineType, String createInventory, int qty, String pieceFormat, int expQty)
+    throws ExecutionException, InterruptedException {
+    String orderId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    Piece.Format pieceFormatE = Piece.Format.fromValue(pieceFormat);
+    Piece piece = new Piece().withPoLineId(lineId).withFormat(pieceFormatE);
+    Cost cost = new Cost();
+    PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
+      .withOrderFormat(PoLine.OrderFormat.fromValue(lineType)).withId(lineId)
+      .withCost(cost);
+    Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(createInventory));
+    originPoLine.withPhysical(physical);
+    cost.setQuantityPhysical(qty);
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
+    PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
+    incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
+
+    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+      incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
+    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    //When
+    pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    //Then
+    CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
+    assertNull(poLineToSave.getCost().getQuantityElectronic());
+    assertEquals(expQty, poLineToSave.getCost().getQuantityPhysical());
     assertEquals(0, poLineToSave.getLocations().size());
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
