@@ -682,7 +682,6 @@ public class PurchaseOrderLinesApiTest {
 
     allProtectedFieldsModification.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(),
         CompositePoLine.AcquisitionMethod.APPROVAL_PLAN.value());
-    allProtectedFieldsModification.put(POLineProtectedFields.TITLE_OR_PACKAGE.getFieldName(), "Testing ProtectedFields");
     allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
     allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName(), 100);
     // adding trial because a default value is added while sending the request
