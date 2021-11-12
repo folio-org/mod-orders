@@ -1,9 +1,23 @@
 ## 12.3.0 - Unreleased
 
+## 12.2.2 - Released
+This release focused on fixing processing of pieces
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.2.1...v12.2.2)
+
+### Bug Fixes
+* [MODORDERS-614](https://issues.folio.org/browse/MODORDERS-614) - Add a piece the quantity and location are updated but the estimated price does not change
+* [MODORDERS-610](https://issues.folio.org/browse/MODORDERS-610) - PoLine search querying non-existing poLine.acqUnitIds
+* [MODORDERS-608](https://issues.folio.org/browse/MODORDERS-608) - Update Piece flow : Location quantity is not updated if create inventory is None and location provided
+* [MODORDERS-607](https://issues.folio.org/browse/MODORDERS-607) - Can't edit caption or enumeration etc. when piece has no item connected
+* [MODORDERS-606](https://issues.folio.org/browse/MODORDERS-606) - Pieces with no location can be delete and do not update order quantity
+* [MODORDERS-595](https://issues.folio.org/browse/MODORDERS-595) - Open order : Incorrect piece creation for non-package Physical and Electronic order line
+* [MODORDERS-587](https://issues.folio.org/browse/MODORDERS-587) - Open order : Incorrect piece creation for non-package P/E mixed order line
+
 ## 12.2.1 - Released
 This release focused on fixing processing of pieces
 
-[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.1.0...v12.2.0)
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.2.0...v12.2.1)
 
 ### Bug Fixes
 * [MODORDERS-588](https://issues.folio.org/browse/MODORDERS-588) - Payment takes place with insufficient funds
