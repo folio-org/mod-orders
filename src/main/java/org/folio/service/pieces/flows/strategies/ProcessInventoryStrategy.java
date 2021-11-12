@@ -1,5 +1,12 @@
 package org.folio.service.pieces.flows.strategies;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -9,13 +16,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
 
 public abstract class ProcessInventoryStrategy {
 

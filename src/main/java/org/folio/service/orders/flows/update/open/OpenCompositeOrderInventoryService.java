@@ -1,5 +1,10 @@
 package org.folio.service.orders.flows.update.open;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
@@ -9,11 +14,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 public class OpenCompositeOrderInventoryService {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderInventoryService.class);
