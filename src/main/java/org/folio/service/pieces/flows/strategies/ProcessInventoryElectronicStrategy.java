@@ -18,14 +18,14 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
-public class PhysicalStrategy extends ProcessInventoryStrategy {
+public class ProcessInventoryElectronicStrategy extends ProcessInventoryStrategy {
 
-  private static final Logger logger = LogManager.getLogger(PhysicalStrategy.class);
+  private static final Logger logger = LogManager.getLogger(ProcessInventoryElectronicStrategy.class);
 
   private final InventoryManager inventoryManager;
   private final OpenCompositeOrderPieceService openCompositeOrderPieceService;
 
-  public PhysicalStrategy(InventoryManager inventoryManager, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
+  public ProcessInventoryElectronicStrategy(InventoryManager inventoryManager, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
     this.inventoryManager = inventoryManager;
     this.openCompositeOrderPieceService = openCompositeOrderPieceService;
   }
@@ -63,7 +63,7 @@ public class PhysicalStrategy extends ProcessInventoryStrategy {
     List<CompletableFuture<List<Piece>>> itemsPerHolding = new ArrayList<>();
 
     // Group all locations by location id because the holding should be unique for different locations
-    if (PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(compPOL)) {
+    if (PoLineCommonUtil.isHoldingUpdateRequiredForEresource(compPOL)) {
       compPOL.getLocations().forEach(location -> {
         itemsPerHolding.add(
           // Search for or create a new holdings record and then create items for it if required
@@ -87,5 +87,4 @@ public class PhysicalStrategy extends ProcessInventoryStrategy {
         .collect(toList())
       );
   }
-
 }

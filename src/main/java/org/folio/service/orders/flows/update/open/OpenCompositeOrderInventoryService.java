@@ -9,7 +9,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.pieces.flows.strategies.Resolver;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
 import org.folio.service.titles.TitlesService;
 
 import java.util.List;
@@ -24,15 +24,15 @@ public class OpenCompositeOrderInventoryService {
   private final InventoryManager inventoryManager;
   private final PieceStorageService pieceStorageService;
   private final OpenCompositeOrderPieceService openCompositeOrderPieceService;
-  private final Resolver resolver;
+  private final ProcessInventoryStrategyResolver processInventoryStrategyResolver;
 
   public OpenCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
-                                            PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService, Resolver resolver) {
+                                            PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService, ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
     this.titlesService = titlesService;
     this.inventoryManager = inventoryManager;
     this.pieceStorageService = pieceStorageService;
     this.openCompositeOrderPieceService = openCompositeOrderPieceService;
-    this.resolver = resolver;
+    this.processInventoryStrategyResolver = processInventoryStrategyResolver;
   }
 
   public CompletableFuture<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
@@ -48,7 +48,7 @@ public class OpenCompositeOrderInventoryService {
   public CompletableFuture<Void> processInventory(CompositePoLine compPOL, String titleId,
                                                   boolean isInstanceMatchingDisabled, RequestContext requestContext) {
 
-    return resolver.getHoldingAndItemStrategy(compPOL.getOrderFormat().value())
+    return processInventoryStrategyResolver.getHoldingAndItemStrategy(compPOL.getOrderFormat().value())
       .processInventory(compPOL, titleId, isInstanceMatchingDisabled, requestContext);
   }
 

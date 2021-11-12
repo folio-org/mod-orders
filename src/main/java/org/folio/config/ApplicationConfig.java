@@ -478,9 +478,9 @@ public class ApplicationConfig {
   }
 
   @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
-                    PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService, Resolver resolver) {
+                    PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService, ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
     return new OpenCompositeOrderInventoryService(titlesService, inventoryManager, pieceStorageService,
-      openCompositeOrderPieceService, resolver) ;
+      openCompositeOrderPieceService, processInventoryStrategyResolver) ;
   }
 
   @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(ExpenseClassValidationService expenseClassValidationService,
@@ -533,19 +533,18 @@ public class ApplicationConfig {
     return new OpenCompositeOrderHolderBuilder(pieceStorageService);
   }
 
-  @Bean
-  Resolver resolver(InventoryManager inventoryManager, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
+  @Bean ProcessInventoryStrategyResolver resolver(InventoryManager inventoryManager, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
     Map<String, ProcessInventoryStrategy> strategy = new HashMap<>();
 
-    ElectronicStrategy electronicStrategy = new ElectronicStrategy(inventoryManager, openCompositeOrderPieceService);
-    PhysicalStrategy physicalStrategy = new PhysicalStrategy(inventoryManager, openCompositeOrderPieceService);
-    MixedStrategy mixedStrategy = new MixedStrategy(inventoryManager, openCompositeOrderPieceService);
+    ProcessInventoryElectronicStrategy processInventoryElectronicStrategy = new ProcessInventoryElectronicStrategy(inventoryManager, openCompositeOrderPieceService);
+    ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy = new ProcessInventoryPhysicalStrategy(inventoryManager, openCompositeOrderPieceService);
+    ProcessInventoryMixedStrategy processInventoryMixedStrategy = new ProcessInventoryMixedStrategy(inventoryManager, openCompositeOrderPieceService);
 
-    strategy.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), electronicStrategy);
-    strategy.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), physicalStrategy);
-    strategy.put(CompositePoLine.OrderFormat.OTHER.value(), physicalStrategy);
-    strategy.put(CompositePoLine.OrderFormat.P_E_MIX.value(), mixedStrategy);
+    strategy.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
+    strategy.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
+    strategy.put(CompositePoLine.OrderFormat.OTHER.value(), processInventoryPhysicalStrategy);
+    strategy.put(CompositePoLine.OrderFormat.P_E_MIX.value(), processInventoryMixedStrategy);
 
-    return new Resolver(strategy);
+    return new ProcessInventoryStrategyResolver(strategy);
   }
 }

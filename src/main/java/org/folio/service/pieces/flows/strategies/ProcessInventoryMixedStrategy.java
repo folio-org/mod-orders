@@ -22,14 +22,14 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
 
-public class MixedStrategy extends ProcessInventoryStrategy {
+public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
 
-  private static final Logger logger = LogManager.getLogger(MixedStrategy.class);
+  private static final Logger logger = LogManager.getLogger(ProcessInventoryMixedStrategy.class);
 
   private final InventoryManager inventoryManager;
   private final OpenCompositeOrderPieceService openCompositeOrderPieceService;
 
-  public MixedStrategy(InventoryManager inventoryManager, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
+  public ProcessInventoryMixedStrategy(InventoryManager inventoryManager, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
     this.inventoryManager = inventoryManager;
     this.openCompositeOrderPieceService = openCompositeOrderPieceService;
   }

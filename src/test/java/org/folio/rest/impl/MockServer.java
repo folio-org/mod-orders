@@ -855,7 +855,7 @@ public class MockServer {
       .setStatusCode(201)
       .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
       .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + id)
-      .end();
+      .end(body.encode());
   }
 
   private void handlePostItemStorRecord(RoutingContext ctx) {

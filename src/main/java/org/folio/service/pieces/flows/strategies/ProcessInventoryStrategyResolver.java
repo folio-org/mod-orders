@@ -2,11 +2,11 @@ package org.folio.service.pieces.flows.strategies;
 
 import java.util.Map;
 
-public class Resolver {
+public class ProcessInventoryStrategyResolver {
 
   private final Map<String, ProcessInventoryStrategy> strategy;
 
-  public Resolver(Map<String, ProcessInventoryStrategy> strategy) {
+  public ProcessInventoryStrategyResolver(Map<String, ProcessInventoryStrategy> strategy) {
     this.strategy = strategy;
   }
 
