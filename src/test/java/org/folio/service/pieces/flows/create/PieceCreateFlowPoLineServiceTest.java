@@ -106,7 +106,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String lineId = UUID.randomUUID().toString();
     Piece piece = new Piece().withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -147,7 +149,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String lineId = UUID.randomUUID().toString();
     Piece piece = new Piece().withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityPhysical(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityPhysical(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -186,7 +190,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String lineId = UUID.randomUUID().toString();
     Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withLocationId(locationId).withQuantityPhysical(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityPhysical(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -224,7 +230,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String lineId = UUID.randomUUID().toString();
     Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -264,7 +272,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String lineId = UUID.randomUUID().toString();
     Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     List<Location> locations = new ArrayList<>();
     locations.add(loc);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
@@ -307,7 +317,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String lineId = UUID.randomUUID().toString();
     Piece pieceToCreate = new Piece().withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantityPhysical(1).withQuantity(2);
-    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
@@ -350,7 +362,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String lineId = UUID.randomUUID().toString();
     Piece pieceToCreate = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantityPhysical(1).withQuantity(2);
-    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE);
@@ -393,7 +407,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String lineId = UUID.randomUUID().toString();
     Piece pieceToCreate = new Piece().withPoLineId(lineId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityPhysical(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.NONE);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE);
@@ -436,7 +452,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String lineId = UUID.randomUUID().toString();
     Piece pieceToCreate = new Piece().withPoLineId(lineId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.NONE);
@@ -477,7 +495,9 @@ public class PieceCreateFlowPoLineServiceTest {
     String orderId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     Piece pieceToCreate = new Piece().withPoLineId(lineId).withFormat(Piece.Format.PHYSICAL);
-    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.NONE);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE);

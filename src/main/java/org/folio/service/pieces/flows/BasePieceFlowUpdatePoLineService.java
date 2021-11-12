@@ -36,9 +36,10 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
     return CompletableFuture.completedFuture(null);
   }
 
-  public void updateEstimatedPrice(CompositePoLine compPoLine) {
+  protected CompositePoLine updateEstimatedPrice(CompositePoLine compPoLine) {
     Cost cost = compPoLine.getCost();
     cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
+    return compPoLine;
   }
 
   protected boolean isLocationUpdateRequired(Piece piece, CompositePoLine lineToSave) {
