@@ -8,9 +8,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryManager;
-import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
-import org.folio.service.titles.TitlesService;
 
 import java.util.List;
 import java.util.Map;
@@ -20,17 +18,14 @@ import java.util.concurrent.CompletableFuture;
 public class OpenCompositeOrderInventoryService {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderInventoryService.class);
 
-  private final TitlesService titlesService;
   private final InventoryManager inventoryManager;
-  private final PieceStorageService pieceStorageService;
   private final OpenCompositeOrderPieceService openCompositeOrderPieceService;
   private final ProcessInventoryStrategyResolver processInventoryStrategyResolver;
 
-  public OpenCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
-                                            PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService, ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
-    this.titlesService = titlesService;
+  public OpenCompositeOrderInventoryService(InventoryManager inventoryManager,
+                                            OpenCompositeOrderPieceService openCompositeOrderPieceService,
+                                            ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
     this.inventoryManager = inventoryManager;
-    this.pieceStorageService = pieceStorageService;
     this.openCompositeOrderPieceService = openCompositeOrderPieceService;
     this.processInventoryStrategyResolver = processInventoryStrategyResolver;
   }
@@ -48,8 +43,10 @@ public class OpenCompositeOrderInventoryService {
   public CompletableFuture<Void> processInventory(CompositePoLine compPOL, String titleId,
                                                   boolean isInstanceMatchingDisabled, RequestContext requestContext) {
 
+    logger.debug("Executing a strategy for: " + compPOL.getOrderFormat().value());
     return processInventoryStrategyResolver.getHoldingAndItemStrategy(compPOL.getOrderFormat().value())
-      .processInventory(compPOL, titleId, isInstanceMatchingDisabled, requestContext);
+      .processInventory(compPOL, titleId, isInstanceMatchingDisabled,
+        inventoryManager, openCompositeOrderPieceService, requestContext);
   }
 
   private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, CompositePoLine poLine) {

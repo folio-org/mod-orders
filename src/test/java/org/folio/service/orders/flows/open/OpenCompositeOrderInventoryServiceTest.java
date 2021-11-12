@@ -103,10 +103,10 @@ public class OpenCompositeOrderInventoryServiceTest {
       return mock(ProcessInventoryStrategyResolver.class);
     }
 
-    @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
-            PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService, ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
-      return spy(new OpenCompositeOrderInventoryService(titlesService, inventoryManager, pieceStorageService,
-        openCompositeOrderPieceService, processInventoryStrategyResolver));
+    @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryManager inventoryManager,
+                                                                                OpenCompositeOrderPieceService openCompositeOrderPieceService,
+                                                                                ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
+      return spy(new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver));
     }
   }
 }
