@@ -38,6 +38,7 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
     try {
       Boolean isLineUpdated = poLineUpdateQuantity(holder);
       if (Boolean.TRUE.equals(isLineUpdated)) {
+        updateEstimatedPrice(holder.getPoLineToSave());
         purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext)
                                 .thenAccept(aVoid -> future.complete(null))
                                 .exceptionally(ex -> {

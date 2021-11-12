@@ -113,7 +113,9 @@ public class PieceCreateFlowInventoryManagerTest {
     Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(UUID.randomUUID().toString());
     Piece piece = new Piece().withId(pieceId).withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
 
     CompositePoLine compPOL = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
                                     .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
@@ -153,7 +155,9 @@ public class PieceCreateFlowInventoryManagerTest {
     Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(UUID.randomUUID().toString());
     Piece piece = new Piece().withId(pieceId).withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
 
     CompositePoLine compPOL = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
       .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)
@@ -192,7 +196,9 @@ public class PieceCreateFlowInventoryManagerTest {
     Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(UUID.randomUUID().toString());
     Piece piece = new Piece().withId(pieceId).withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
 
     CompositePoLine compPOL = new CompositePoLine().withIsPackage(false).withPurchaseOrderId(orderId)
       .withOrderFormat(ELECTRONIC_RESOURCE).withId(lineId)

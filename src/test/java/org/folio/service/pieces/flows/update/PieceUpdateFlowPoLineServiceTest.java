@@ -113,7 +113,9 @@ public class PieceUpdateFlowPoLineServiceTest {
       .withHoldingId(oldHoldingId).withFormat(Piece.Format.ELECTRONIC);
     Piece pieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
       .withHoldingId(newHoldingId).withFormat(Piece.Format.ELECTRONIC);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     Location loc = new Location().withHoldingId(oldHoldingId).withQuantityElectronic(1).withQuantity(1);
     PoLine poLineFromStorage = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
@@ -162,7 +164,9 @@ public class PieceUpdateFlowPoLineServiceTest {
       .withHoldingId(oldHoldingId).withFormat(Piece.Format.PHYSICAL);
     Piece pieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
       .withHoldingId(holdingIdToUpdate).withFormat(Piece.Format.PHYSICAL);
-    Cost cost = new Cost().withQuantityPhysical(2);
+    Cost cost = new Cost().withQuantityPhysical(2)
+      .withListUnitPrice(2d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(2d);
     Location loc = new Location().withHoldingId(oldHoldingId).withQuantityPhysical(2).withQuantity(2);
     PoLine poLineFromStorage = new PoLine().withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
                                 .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
@@ -217,7 +221,9 @@ public class PieceUpdateFlowPoLineServiceTest {
                                         .withHoldingId(oldHoldingId).withFormat(Piece.Format.ELECTRONIC);
     Piece pieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
                                     .withLocationId(locationToUpdate).withFormat(Piece.Format.ELECTRONIC);
-    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1)
+      .withListUnitPrice(1d).withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     Location loc = new Location().withHoldingId(oldHoldingId).withQuantityPhysical(1).withQuantityElectronic(1).withQuantity(2);
     PoLine poLineFromStorage = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
                     .withOrderFormat(PoLine.OrderFormat.P_E_MIX)
@@ -275,7 +281,9 @@ public class PieceUpdateFlowPoLineServiceTest {
       .withHoldingId(oldHoldingId).withFormat(Piece.Format.ELECTRONIC);
     Piece pieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
       .withHoldingId(holdingToUpdate).withFormat(Piece.Format.ELECTRONIC);
-    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1)
+      .withListUnitPrice(1d).withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     Location loc = new Location().withHoldingId(oldHoldingId).withQuantityPhysical(1).withQuantityElectronic(1).withQuantity(2);
     PoLine poLineFromStorage = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.P_E_MIX)
@@ -333,7 +341,9 @@ public class PieceUpdateFlowPoLineServiceTest {
       .withHoldingId(oldHoldingId).withFormat(Piece.Format.ELECTRONIC);
     Piece pieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
       .withHoldingId(holdingToUpdate).withFormat(Piece.Format.ELECTRONIC);
-    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityElectronic(1).withQuantityPhysical(1)
+      .withListUnitPrice(1d).withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(2d);
     Location loc1 = new Location().withHoldingId(oldHoldingId).withQuantityElectronic(1).withQuantity(1);
     Location loc2 = new Location().withHoldingId(oldHoldingId).withQuantityPhysical(1).withQuantity(1);
     PoLine poLineFromStorage = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)

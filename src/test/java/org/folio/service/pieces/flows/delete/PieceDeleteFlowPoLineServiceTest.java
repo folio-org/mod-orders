@@ -110,7 +110,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     Location loc = new Location().withHoldingId(holdingId).withQuantityPhysical(2).withQuantity(2);
     List<Location> locations = new ArrayList<>();
     locations.add(loc);
-    Cost cost = new Cost().withQuantityPhysical(2);
+    Cost cost = new Cost().withQuantityPhysical(2)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(2d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -150,7 +152,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     Location loc = new Location().withLocationId(locationId).withQuantityPhysical(2).withQuantity(2);
     List<Location> locations = new ArrayList<>();
     locations.add(loc);
-    Cost cost = new Cost().withQuantityPhysical(2);
+    Cost cost = new Cost().withQuantityPhysical(2)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(2d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -190,7 +194,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(2).withQuantity(2);
     List<Location> locations = new ArrayList<>();
     locations.add(loc);
-    Cost cost = new Cost().withQuantityElectronic(2);
+    Cost cost = new Cost().withQuantityElectronic(2)
+      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -230,7 +236,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     Location loc = new Location().withLocationId(locationId).withQuantityPhysical(1).withQuantity(1);
     List<Location> locations = new ArrayList<>();
     locations.add(loc);
-    Cost cost = new Cost().withQuantityPhysical(1);
+    Cost cost = new Cost().withQuantityPhysical(1)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -267,7 +275,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
     List<Location> locations = new ArrayList<>();
     locations.add(loc);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -304,7 +314,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(2).withQuantity(2);
     List<Location> locations = new ArrayList<>();
     locations.add(loc);
-    Cost cost = new Cost().withQuantityElectronic(2);
+    Cost cost = new Cost().withQuantityElectronic(2)
+      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(2d);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -353,7 +365,9 @@ public class PieceDeleteFlowPoLineServiceTest {
       .withCost(cost);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.fromValue(createInventory));
     originPoLine.withEresource(eresource);
-    cost.withQuantityElectronic(qty);
+    cost.withQuantityElectronic(qty)
+      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice((double) qty);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
@@ -395,7 +409,9 @@ public class PieceDeleteFlowPoLineServiceTest {
       .withCost(cost);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(createInventory));
     originPoLine.withPhysical(physical);
-    cost.setQuantityPhysical(qty);
+    cost.withQuantityPhysical(qty)
+      .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice((double) qty);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
