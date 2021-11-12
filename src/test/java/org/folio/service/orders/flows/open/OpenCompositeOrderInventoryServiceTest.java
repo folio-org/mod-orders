@@ -20,6 +20,7 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -97,10 +98,15 @@ public class OpenCompositeOrderInventoryServiceTest {
     @Bean OpenCompositeOrderPieceService openCompositeOrderPieceCreateService() {
       return mock(OpenCompositeOrderPieceService.class);
     }
-    @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
-            PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
-      return spy(new OpenCompositeOrderInventoryService(titlesService, inventoryManager, pieceStorageService,
-        openCompositeOrderPieceService));
+
+    @Bean ProcessInventoryStrategyResolver resolver() {
+      return mock(ProcessInventoryStrategyResolver.class);
+    }
+
+    @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryManager inventoryManager,
+                                                                                OpenCompositeOrderPieceService openCompositeOrderPieceService,
+                                                                                ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
+      return spy(new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver));
     }
   }
 }
