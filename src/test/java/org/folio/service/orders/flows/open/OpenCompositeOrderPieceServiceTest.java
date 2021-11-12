@@ -296,7 +296,7 @@ public class OpenCompositeOrderPieceServiceTest {
   @CsvSource(value = {"Electronic Resource:Instance:2:3:Electronic",
                       "Electronic Resource:None:2:3:Electronic"}, delimiter = ':')
   void shouldCreatePieceWithLocationReferenceIfElectronicLineContainsLocationAndInventoryIsInstanceOrNoneAndNoCreatedPieces(
-    String lineType, String createInventory, int qty1, int qty2, String pieceFormat) {
+        String lineType, String createInventory, int qty1, int qty2, String pieceFormat) {
     //given
     String lineId = UUID.randomUUID().toString();
     String locationId1 = UUID.randomUUID().toString();
