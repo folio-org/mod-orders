@@ -1,11 +1,14 @@
 package org.folio.config;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.folio.helper.PoNumberHelper;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.PrefixService;
@@ -65,12 +68,17 @@ import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
+import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
-import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryElectronicStrategy;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryMixedStrategy;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryPhysicalStrategy;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategy;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
@@ -473,10 +481,10 @@ public class ApplicationConfig {
                               receiptStatusPublisher, inventoryManager, titlesService, openCompositeOrderHolderBuilder);
   }
 
-  @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(TitlesService titlesService, InventoryManager inventoryManager,
-                    PieceStorageService pieceStorageService, OpenCompositeOrderPieceService openCompositeOrderPieceService) {
-    return new OpenCompositeOrderInventoryService(titlesService, inventoryManager, pieceStorageService,
-      openCompositeOrderPieceService) ;
+  @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryManager inventoryManager,
+                                                                              OpenCompositeOrderPieceService openCompositeOrderPieceService,
+                                                                              ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
+    return new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver) ;
   }
 
   @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(ExpenseClassValidationService expenseClassValidationService,
@@ -527,5 +535,20 @@ public class ApplicationConfig {
 
   @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {
     return new OpenCompositeOrderHolderBuilder(pieceStorageService);
+  }
+
+  @Bean ProcessInventoryStrategyResolver resolver() {
+    Map<String, ProcessInventoryStrategy> strategy = new HashMap<>();
+
+    ProcessInventoryElectronicStrategy processInventoryElectronicStrategy = new ProcessInventoryElectronicStrategy();
+    ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy = new ProcessInventoryPhysicalStrategy();
+    ProcessInventoryMixedStrategy processInventoryMixedStrategy = new ProcessInventoryMixedStrategy();
+
+    strategy.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
+    strategy.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
+    strategy.put(CompositePoLine.OrderFormat.OTHER.value(), processInventoryPhysicalStrategy);
+    strategy.put(CompositePoLine.OrderFormat.P_E_MIX.value(), processInventoryMixedStrategy);
+
+    return new ProcessInventoryStrategyResolver(strategy);
   }
 }

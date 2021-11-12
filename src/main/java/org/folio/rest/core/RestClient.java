@@ -96,6 +96,9 @@ public class RestClient {
           client.closeClient();
           if (postResponseType == PostResponseType.BODY) {
             JsonObject body =  HelperUtils.verifyAndExtractBody(response);
+            if (responseType == JsonObject.class) {
+              return body;
+            }
             T responseEntity = body.mapTo(responseType);
             if (logger.isDebugEnabled()) {
               logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);
