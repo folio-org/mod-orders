@@ -240,8 +240,10 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
         MonetaryAmount amount;
         if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.REMAINING) {
           amount = Money.of(fromEncumbrance.getAmount(), fromEncumbrance.getCurrency());
-        } else {
+        } else if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.EXPENDED){
           amount = Money.of(fromEncumbrance.getEncumbrance().getAmountExpended(), fromEncumbrance.getCurrency());
+        } else {
+          amount = Money.of(fromEncumbrance.getEncumbrance().getInitialAmountEncumbered(), fromEncumbrance.getCurrency());
         }
         amount = amount.add(amount.with(percentOperator)).with(fyToPoLineConversion);
         poLineEstimatedPriceAfterRollover = poLineEstimatedPriceAfterRollover.add(amount);

@@ -89,48 +89,66 @@ public class OrderRolloverServiceTest {
     String toFiscalYearId = UUID.randomUUID().toString();
     String fundId1 = UUID.randomUUID().toString();
     String fundId2 = UUID.randomUUID().toString();
+    String fundId3 = UUID.randomUUID().toString();
     String orderId1 = UUID.randomUUID().toString();
     String orderId2 = UUID.randomUUID().toString();
+    String orderId3 = UUID.randomUUID().toString();
     String poLineId1 = UUID.randomUUID().toString();
     String poLineId2 = UUID.randomUUID().toString();
+    String poLineId3 = UUID.randomUUID().toString();
     String prevEncumbrId1 = UUID.randomUUID().toString();
     String prevEncumbrId2 = UUID.randomUUID().toString();
+    String prevEncumbrId3 = UUID.randomUUID().toString();
     String currEncumbrId1 = UUID.randomUUID().toString();
     String currEncumbrId2 = UUID.randomUUID().toString();
+    String currEncumbrId3 = UUID.randomUUID().toString();
     String expClassId2 = UUID.randomUUID().toString();
+    String expClassId3 = UUID.randomUUID().toString();
 
-    EncumbranceRollover ongoingEncumbrance = new EncumbranceRollover()
+    EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
     EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
+    EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
 
     LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
       .withId(UUID.randomUUID().toString())
       .withFromFiscalYearId(fromFiscalYearId)
       .withLedgerId(ledgerId)
       .withToFiscalYearId(toFiscalYearId)
-      .withEncumbrancesRollover(List.of(ongoingEncumbrance, oneTimeEncumbrance));
+      .withEncumbrancesRollover(List.of(ongoingEncumbranceBasedOnExpended, oneTimeEncumbrance, ongoingEncumbranceBasedOnInitialAmount));
 
-    List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId));
+    List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
+      new Fund().withId(fundId3).withLedgerId(ledgerId));
 
     PurchaseOrder purchaseOrder1 = new PurchaseOrder().withId(orderId1).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
     PurchaseOrder purchaseOrder2 = new PurchaseOrder().withId(orderId2).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    List<PurchaseOrder> orders = List.of(purchaseOrder1, purchaseOrder2);
-    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection().withPurchaseOrders(orders).withTotalRecords(2);
+    PurchaseOrder purchaseOrder3 = new PurchaseOrder().withId(orderId3).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+
+    List<PurchaseOrder> orders = List.of(purchaseOrder1, purchaseOrder2, purchaseOrder3);
+    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection().withPurchaseOrders(orders).withTotalRecords(3);
 
     FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(100d)
       .withEncumbrance(prevEncumbrId1);
-    FundDistribution fundDistributionOngoing = new FundDistribution().withFundId(fundId2).withValue(100d)
+    FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(100d)
       .withEncumbrance(prevEncumbrId2).withExpenseClassId(expClassId2);
+    FundDistribution fundDistributionOngoing3 = new FundDistribution().withFundId(fundId3).withValue(100d)
+      .withEncumbrance(prevEncumbrId3).withExpenseClassId(expClassId3);
 
     Cost costOneTime = new Cost().withListUnitPrice(100d).withQuantityPhysical(1).withCurrency("USD").withPoLineEstimatedPrice(100d);
     PoLine poLineOneTime = new PoLine().withId(poLineId1).withPurchaseOrderId(orderId1).withCost(costOneTime)
       .withFundDistribution(List.of(fundDistributionOneTime));
 
-    Cost costOngoing = new Cost().withListUnitPrice(100d).withQuantityPhysical(1).withCurrency("USD").withPoLineEstimatedPrice(100d);
-    PoLine poLineOngoing = new PoLine().withId(poLineId2).withPurchaseOrderId(orderId2).withCost(costOngoing)
-      .withFundDistribution(List.of(fundDistributionOngoing));
-    List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing);
+    Cost costOngoing2 = new Cost().withListUnitPrice(100d).withQuantityPhysical(1).withCurrency("USD").withPoLineEstimatedPrice(100d);
+    PoLine poLineOngoing2 = new PoLine().withId(poLineId2).withPurchaseOrderId(orderId2).withCost(costOngoing2)
+      .withFundDistribution(List.of(fundDistributionOngoing2));
+
+    Cost costOngoing3 = new Cost().withListUnitPrice(100d).withQuantityPhysical(1).withCurrency("USD").withPoLineEstimatedPrice(100d);
+    PoLine poLineOngoing3 = new PoLine().withId(poLineId3).withPurchaseOrderId(orderId3).withCost(costOngoing3)
+      .withFundDistribution(List.of(fundDistributionOngoing3));
+
+    List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing2, poLineOngoing3);
 
     doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
     doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
@@ -142,12 +160,17 @@ public class OrderRolloverServiceTest {
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(60d);
     Transaction transactionOneTime = new Transaction().withId(currEncumbrId1).withFromFundId(fundId1)
       .withEncumbrance(encumbranceOneTime);
-    Encumbrance encumbranceOngoing = new Encumbrance().withSourcePurchaseOrderId(orderId2).withSourcePoLineId(poLineId2)
+    Encumbrance encumbranceOngoing2 = new Encumbrance().withSourcePurchaseOrderId(orderId2).withSourcePoLineId(poLineId2)
       .withOrderType(Encumbrance.OrderType.ONGOING).withInitialAmountEncumbered(90d);
-    Transaction transactionOngoing = new Transaction().withId(currEncumbrId2).withFromFundId(fundId2)
-      .withEncumbrance(encumbranceOngoing).withExpenseClassId(expClassId2);
-    List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing);
-    TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(2);
+    Transaction transactionOngoing2 = new Transaction().withId(currEncumbrId2).withFromFundId(fundId2)
+      .withEncumbrance(encumbranceOngoing2).withExpenseClassId(expClassId2);
+    Encumbrance encumbranceOngoing3 = new Encumbrance().withSourcePurchaseOrderId(orderId3).withSourcePoLineId(poLineId3)
+      .withOrderType(Encumbrance.OrderType.ONGOING).withInitialAmountEncumbered(95d);
+    Transaction transactionOngoing3 = new Transaction().withId(currEncumbrId3).withFromFundId(fundId3)
+      .withEncumbrance(encumbranceOngoing3).withExpenseClassId(expClassId3);
+
+    List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
+    TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(3);
     doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
 
     double exchangeEurToUsdRate = 1.0d;
@@ -171,13 +194,16 @@ public class OrderRolloverServiceTest {
     assertFalse(future.isCompletedExceptionally());
 
     assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
-    assertThat(fundDistributionOngoing.getEncumbrance(), equalTo(currEncumbrId2));
+    assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
+    assertThat(fundDistributionOngoing3.getEncumbrance(), equalTo(currEncumbrId3));
 
     assertThat(costOneTime.getPoLineEstimatedPrice(), equalTo(60d));
-    assertThat(costOngoing.getPoLineEstimatedPrice(), equalTo(90d));
+    assertThat(costOngoing2.getPoLineEstimatedPrice(), equalTo(90d));
+    assertThat(costOngoing3.getPoLineEstimatedPrice(), equalTo(95d));
 
     assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(-40d));
-    assertThat(costOngoing.getFyroAdjustmentAmount(), equalTo(-10d));
+    assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(-10d));
+    assertThat(costOngoing3.getFyroAdjustmentAmount(), equalTo(-5d));
   }
 
   @Test
@@ -195,17 +221,19 @@ public class OrderRolloverServiceTest {
     String currEncumbrId1 = UUID.randomUUID().toString();
     String expClassId2 = UUID.randomUUID().toString();
 
-    EncumbranceRollover ongoingEncumbrance = new EncumbranceRollover()
+    EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
     EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
+    EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
 
     LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
       .withId(UUID.randomUUID().toString())
       .withFromFiscalYearId(fromFiscalYearId)
       .withLedgerId(ledgerId)
       .withToFiscalYearId(toFiscalYearId)
-      .withEncumbrancesRollover(List.of(ongoingEncumbrance, oneTimeEncumbrance));
+      .withEncumbrancesRollover(List.of(ongoingEncumbranceBasedOnExpended, oneTimeEncumbrance, ongoingEncumbranceBasedOnInitialAmount));
 
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId));
 
@@ -278,49 +306,66 @@ public class OrderRolloverServiceTest {
     String toFiscalYearId = UUID.randomUUID().toString();
     String fundId1 = UUID.randomUUID().toString();
     String fundId2 = UUID.randomUUID().toString();
+    String fundId3 = UUID.randomUUID().toString();
     String orderId1 = UUID.randomUUID().toString();
     String orderId2 = UUID.randomUUID().toString();
+    String orderId3 = UUID.randomUUID().toString();
     String poLineId1 = UUID.randomUUID().toString();
     String poLineId2 = UUID.randomUUID().toString();
+    String poLineId3 = UUID.randomUUID().toString();
     String prevEncumbrId1 = UUID.randomUUID().toString();
     String prevEncumbrId2 = UUID.randomUUID().toString();
+    String prevEncumbrId3 = UUID.randomUUID().toString();
     String currEncumbrId1 = UUID.randomUUID().toString();
     String currEncumbrId2 = UUID.randomUUID().toString();
+    String currEncumbrId3 = UUID.randomUUID().toString();
     String expClassId2 = UUID.randomUUID().toString();
+    String expClassId3 = UUID.randomUUID().toString();
 
-    EncumbranceRollover ongoingEncumbrance = new EncumbranceRollover()
+    EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
     EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
+    EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
 
     LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
       .withId(UUID.randomUUID().toString())
       .withFromFiscalYearId(fromFiscalYearId)
       .withLedgerId(ledgerId)
       .withToFiscalYearId(toFiscalYearId)
-      .withEncumbrancesRollover(List.of(ongoingEncumbrance, oneTimeEncumbrance));
+      .withEncumbrancesRollover(List.of(ongoingEncumbranceBasedOnExpended, oneTimeEncumbrance, ongoingEncumbranceBasedOnInitialAmount));
 
-    List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId));
+    List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
+      new Fund().withId(fundId3).withLedgerId(ledgerId));
 
     PurchaseOrder purchaseOrder1 = new PurchaseOrder().withId(orderId1).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
     PurchaseOrder purchaseOrder2 = new PurchaseOrder().withId(orderId2).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    List<PurchaseOrder> orders = List.of(purchaseOrder1, purchaseOrder2);
-    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection().withPurchaseOrders(orders).withTotalRecords(2);
+    PurchaseOrder purchaseOrder3 = new PurchaseOrder().withId(orderId3).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
-    FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(24.99d)
+    List<PurchaseOrder> orders = List.of(purchaseOrder1, purchaseOrder2, purchaseOrder3);
+    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection().withPurchaseOrders(orders).withTotalRecords(3);
+
+    FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(100d)
       .withEncumbrance(prevEncumbrId1);
-    FundDistribution fundDistributionOngoing = new FundDistribution().withFundId(fundId2).withValue(24.99d)
+    FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(100d)
       .withEncumbrance(prevEncumbrId2).withExpenseClassId(expClassId2);
+    FundDistribution fundDistributionOngoing3 = new FundDistribution().withFundId(fundId3).withValue(100d)
+      .withEncumbrance(prevEncumbrId3).withExpenseClassId(expClassId3);
 
     String polCurrency = "EUR";
     Cost costOneTime = new Cost().withListUnitPrice(24.99d).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(24.99d);
     PoLine poLineOneTime = new PoLine().withId(poLineId1).withPurchaseOrderId(orderId1).withCost(costOneTime)
       .withFundDistribution(List.of(fundDistributionOneTime));
 
-    Cost costOngoing = new Cost().withListUnitPrice(24.99d).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(24.99d);
-    PoLine poLineOngoing = new PoLine().withId(poLineId2).withPurchaseOrderId(orderId2).withCost(costOngoing)
-      .withFundDistribution(List.of(fundDistributionOngoing));
-    List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing);
+    Cost costOngoing2 = new Cost().withListUnitPrice(24.99d).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(24.99d);
+    PoLine poLineOngoing2 = new PoLine().withId(poLineId2).withPurchaseOrderId(orderId2).withCost(costOngoing2)
+      .withFundDistribution(List.of(fundDistributionOngoing2));
+
+    Cost costOngoing3 = new Cost().withListUnitPrice(24.99d).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(24.99d);
+    PoLine poLineOngoing3 = new PoLine().withId(poLineId3).withPurchaseOrderId(orderId3).withCost(costOngoing3)
+      .withFundDistribution(List.of(fundDistributionOngoing3));
+    List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing2, poLineOngoing3);
 
     doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
     doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
@@ -332,12 +377,17 @@ public class OrderRolloverServiceTest {
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(30.16d);
     Transaction transactionOneTime = new Transaction().withId(currEncumbrId1).withFromFundId(fundId1)
       .withEncumbrance(encumbranceOneTime);
-    Encumbrance encumbranceOngoing = new Encumbrance().withSourcePurchaseOrderId(orderId2).withSourcePoLineId(poLineId2)
+    Encumbrance encumbranceOngoing2 = new Encumbrance().withSourcePurchaseOrderId(orderId2).withSourcePoLineId(poLineId2)
       .withOrderType(Encumbrance.OrderType.ONGOING).withInitialAmountEncumbered(30.16d);
-    Transaction transactionOngoing = new Transaction().withId(currEncumbrId2).withFromFundId(fundId2)
-      .withEncumbrance(encumbranceOngoing).withExpenseClassId(expClassId2);
-    List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing);
-    TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(2);
+    Transaction transactionOngoing2 = new Transaction().withId(currEncumbrId2).withFromFundId(fundId2)
+      .withEncumbrance(encumbranceOngoing2).withExpenseClassId(expClassId2);
+    Encumbrance encumbranceOngoing3 = new Encumbrance().withSourcePurchaseOrderId(orderId3).withSourcePoLineId(poLineId3)
+      .withOrderType(Encumbrance.OrderType.ONGOING).withInitialAmountEncumbered(30.16d);
+    Transaction transactionOngoing3 = new Transaction().withId(currEncumbrId3).withFromFundId(fundId3)
+      .withEncumbrance(encumbranceOngoing3).withExpenseClassId(expClassId3);
+
+    List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
+    TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(3);
     doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
 
     double exchangeEurToUsdRate = 0.82858d;
@@ -360,14 +410,18 @@ public class OrderRolloverServiceTest {
     assertFalse(future.isCompletedExceptionally());
 
     assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
-    assertThat(fundDistributionOngoing.getEncumbrance(), equalTo(currEncumbrId2));
+    assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
+    assertThat(fundDistributionOngoing3.getEncumbrance(), equalTo(currEncumbrId3));
 
     assertThat(new BigDecimal(costOneTime.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
                 equalTo(new BigDecimal(24.99d).setScale(2, RoundingMode.HALF_EVEN)));
-    assertThat(new BigDecimal(costOngoing.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
+    assertThat(new BigDecimal(costOngoing2.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
+                equalTo(new BigDecimal(24.99d).setScale(2, RoundingMode.HALF_EVEN)));
+    assertThat(new BigDecimal(costOngoing3.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
                 equalTo(new BigDecimal(24.99d).setScale(2, RoundingMode.HALF_EVEN)));
 
     assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(0.0d));
-    assertThat(costOngoing.getFyroAdjustmentAmount(), equalTo(0.0d));
+    assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(0.0d));
+    assertThat(costOngoing3.getFyroAdjustmentAmount(), equalTo(0.0d));
   }
 }
