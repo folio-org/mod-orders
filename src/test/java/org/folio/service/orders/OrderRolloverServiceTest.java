@@ -110,7 +110,7 @@ public class OrderRolloverServiceTest {
     EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
     EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
-      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT_ENCUMBERED);
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
 
     LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
       .withId(UUID.randomUUID().toString())
@@ -226,7 +226,7 @@ public class OrderRolloverServiceTest {
     EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
     EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
-      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT_ENCUMBERED);
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
 
     LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
       .withId(UUID.randomUUID().toString())
@@ -327,7 +327,7 @@ public class OrderRolloverServiceTest {
     EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
     EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
-      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT_ENCUMBERED);
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
 
     LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
       .withId(UUID.randomUUID().toString())
