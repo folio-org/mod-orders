@@ -25,7 +25,6 @@ public enum POLineProtectedFields {
   REQUESTER("requester"),
   RUSH("rush"),
   SELECTOR("selector"),
-  TITLE_OR_PACKAGE("titleOrPackage"),
   VENDORDETAIL_INSTRUCTION_TO_VENDOR("vendorDetail.instructions");
 
 
