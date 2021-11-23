@@ -245,6 +245,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       return inventoryManager.getOrCreateHoldingsRecord(instanceId, receivedPieceLocation, requestContext)
         .thenCompose(holdingId -> {
           processedHoldings.put(holdingKey, holdingId);
+          piece.setHoldingId(holdingId);
           return completedFuture(true);
         })
         .exceptionally(t -> {
