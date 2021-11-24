@@ -1,5 +1,13 @@
 ## 12.3.0 - Unreleased
 
+## 12.2.3 - Released
+This release focused on fixing processing of pieces
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.2.2...v12.2.3)
+
+### Bug Fixes
+* [MODORDERS-622](https://issues.folio.org/browse/MODORDERS-622) - New holdingId is not saved into piece when location is changed during receiving
+
 ## 12.2.2 - Released
 This release focused on fixing processing of pieces
 
