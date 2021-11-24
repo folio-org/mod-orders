@@ -9,13 +9,7 @@ import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.service.AcquisitionsUnitsService;
-import org.folio.service.FundsDistributionService;
-import org.folio.service.PrefixService;
-import org.folio.service.ProtectionService;
-import org.folio.service.ReasonForClosureService;
-import org.folio.service.SuffixService;
-import org.folio.service.TagService;
+import org.folio.service.*;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.FinanceExchangeRateService;
@@ -354,6 +348,11 @@ public class ApplicationConfig {
   @Bean
   AcquisitionsUnitsService acquisitionsUnitsService(RestClient restClient) {
     return new AcquisitionsUnitsService(restClient);
+  }
+
+  @Bean
+  AcquisitionMethodsService acquisitionMethodsService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService) {
+    return new AcquisitionMethodsService(restClient, purchaseOrderLineService);
   }
 
   @Bean

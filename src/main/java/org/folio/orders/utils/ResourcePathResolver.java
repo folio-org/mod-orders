@@ -18,6 +18,7 @@ public class ResourcePathResolver {
 
   public static final String ALERTS = "alerts";
   public static final String ACQUISITIONS_UNITS = "acquisitionsUnits";
+  public static final String ACQUISITION_METHODS = "acquisitionMethods";
   public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
   public static final String REPORTING_CODES = "reportingCodes";
   public static final String PURCHASE_ORDER_STORAGE = "purchaseOrder";
@@ -47,7 +48,6 @@ public class ResourcePathResolver {
   public static final String ORDER_INVOICE_RELATIONSHIP = "order-invoice-relationship";
   public static final String TAGS = "tags";
 
-
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
 
@@ -55,6 +55,7 @@ public class ResourcePathResolver {
     Map<String, String> apis = new HashMap<>();
     apis.put(ALERTS, "/orders-storage/alerts");
     apis.put(ACQUISITIONS_UNITS, "/acquisitions-units-storage/units");
+    apis.put(ACQUISITION_METHODS, "/orders-storage/acquisition-methods");
     apis.put(ACQUISITIONS_MEMBERSHIPS, "/acquisitions-units-storage/memberships");
     apis.put(REPORTING_CODES, "/orders-storage/reporting-codes");
     apis.put(PO_LINES_STORAGE, "/orders-storage/po-lines");

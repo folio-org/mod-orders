@@ -515,6 +515,42 @@
       ]
     },
     {
+      "id": "acquisition-methods",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/acquisition-methods",
+          "permissionsRequired": ["orders.acquisition-methods.collection.get"],
+          "modulePermissions": ["orders-storage.acquisition-methods.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/acquisition-methods",
+          "permissionsRequired": ["orders.acquisition-method.item.post"],
+          "modulePermissions": ["orders-storage.acquisition-method.item.post"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/orders/acquisition-methods/{id}",
+          "permissionsRequired": ["orders.acquisition-method.item.put"],
+          "modulePermissions": ["orders-storage.acquisition-method.item.put"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/acquisition-methods/{id}",
+          "permissionsRequired": ["orders.acquisition-method.item.get"],
+          "modulePermissions": ["orders-storage.acquisition-method.item.get"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/orders/acquisition-methods/{id}",
+          "permissionsRequired": ["orders.acquisition-method.item.delete"],
+          "modulePermissions": ["orders-storage.acquisition-method.item.delete"]
+        }
+      ]
+    },
+    {
       "id": "order-templates",
       "version": "1.0",
       "handlers": [
@@ -1120,6 +1156,43 @@
       ]
     },
     {
+      "permissionName" : "orders.acquisition-methods.collection.get",
+      "displayName" : "acquisition-methods-collection get",
+      "description" : "Get a collection of acquisition-methods"
+    },
+    {
+      "permissionName" : "orders.acquisition-method.item.post",
+      "displayName" : "acquisition-method-item post",
+      "description" : "Create a new acquisition-methods"
+    },
+    {
+      "permissionName" : "orders.acquisition-method.item.get",
+      "displayName" : "acquisition-method-item get",
+      "description" : "Fetch a acquisition-method"
+    },
+    {
+      "permissionName" : "orders.acquisition-method.item.put",
+      "displayName" : "acquisition-method put",
+      "description" : "Update a purchase acquisition method"
+    },
+    {
+      "permissionName" : "orders.acquisition-method.item.delete",
+      "displayName" : "acquisition-method-item delete",
+      "description" : "Delete a acquisition-method"
+    },
+    {
+      "permissionName" : "orders.acquisition-methods.all",
+      "displayName" : "All acquisition method perms",
+      "description" : "All permissions for the acquisition method",
+      "subPermissions" : [
+        "orders.acquisition-methods.collection.get",
+        "orders.acquisition-method.item.post",
+        "orders.acquisition-method.item.get",
+        "orders.acquisition-method.item.put",
+        "orders.acquisition-method.item.delete"
+      ]
+    },
+    {
       "permissionName" : "orders.order-templates.collection.get",
       "displayName" : "Orders - Get template collection",
       "description" : "Get a collection of order templates"
@@ -1436,7 +1509,8 @@
         "orders.configuration.suffixes.all",
         "orders.re-encumber.item.post",
         "orders.rollover.item.post",
-        "orders.holding-summary.collection.get"
+        "orders.holding-summary.collection.get",
+        "orders.acquisition-methods.all"
       ]
     },
     {
