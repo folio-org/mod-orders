@@ -44,27 +44,8 @@ import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.acq.model.tag.Tag;
-import org.folio.rest.jaxrs.model.AcquisitionsUnit;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
-import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.OrderTemplate;
-import org.folio.rest.jaxrs.model.OrderTemplateCollection;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.Prefix;
-import org.folio.rest.jaxrs.model.PrefixCollection;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
-import org.folio.rest.jaxrs.model.ReasonForClosure;
-import org.folio.rest.jaxrs.model.ReasonForClosureCollection;
-import org.folio.rest.jaxrs.model.Suffix;
-import org.folio.rest.jaxrs.model.SuffixCollection;
 
 import javax.ws.rs.core.Response;
 import java.io.IOException;
@@ -173,6 +154,8 @@ public class MockServer {
   private static final String ITEM_REQUESTS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemRequests/";
   public static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
   public static final String ACQUISITIONS_MEMBERSHIPS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/memberships.json";
+  public static final String ACQUISITION_METHOD_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionMethods/";
+  public static final String ACQUISITION_METHODS_COLLECTION = ACQUISITION_METHOD_MOCK_DATA_PATH + "acquisitionMethods.json";
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
   private static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
   private static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
@@ -461,6 +444,7 @@ public class MockServer {
     router.post("/finance/release-encumbrance/:id").handler(ctx -> handlePostGenericSubObj(ctx, FINANCE_RELEASE_ENCUMBRANCE));
 
     router.post(resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
+    router.post(resourcesPath(ACQUISITION_METHODS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITION_METHODS));
     router.post(resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
     router.post(resourcesPath(REASONS_FOR_CLOSURE)).handler(ctx -> handlePostGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.post(resourcesPath(PREFIXES)).handler(ctx -> handlePostGenericSubObj(ctx, PREFIXES));
@@ -524,6 +508,8 @@ public class MockServer {
     router.get(resourcesPath(ORDER_INVOICE_RELATIONSHIP)).handler(this::handleGetOrderInvoiceRelationship);
     router.get(resourcesPath(TAGS)).handler(ctx -> handleGetGenericSubObj(ctx, TAGS));
     router.get("/invoice/invoice-lines").handler(this::handleGetInvoiceLines);
+    router.get(resourcesPath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethods);
+    router.get(resourcePath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethod);
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -541,6 +527,7 @@ public class MockServer {
     router.put(resourcePath(SUFFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, SUFFIXES));
     router.put("/finance/order-transaction-summaries/:id").handler(ctx -> handlePutGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
     router.put(resourcePath(ENCUMBRANCES)).handler(ctx -> handlePutGenericSubObj(ctx, ENCUMBRANCES));
+    router.put(resourcePath(ACQUISITION_METHODS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITION_METHODS));
 
 
     router.delete(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
@@ -549,6 +536,7 @@ public class MockServer {
     router.delete(resourcePath(REPORTING_CODES)).handler(ctx -> handleDeleteGenericSubObj(ctx, REPORTING_CODES));
     router.delete(resourcePath(PIECES_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PIECES_STORAGE));
     router.delete(resourcePath(ACQUISITIONS_UNITS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_UNITS));
+    router.delete(resourcePath(ACQUISITION_METHODS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITION_METHODS));
     router.delete(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
     router.delete(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ORDER_TEMPLATES));
     router.delete(resourcePath(ENCUMBRANCES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ENCUMBRANCES));
@@ -2108,6 +2096,8 @@ public class MockServer {
         return org.folio.rest.acq.model.Piece.class;
       case ACQUISITIONS_UNITS:
         return AcquisitionsUnit.class;
+      case ACQUISITION_METHODS:
+        return AcquisitionMethod.class;
       case ACQUISITIONS_MEMBERSHIPS:
         return AcquisitionsUnitMembership.class;
       case ORDER_TEMPLATES:
@@ -2340,6 +2330,64 @@ public class MockServer {
       serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
     } else {
       serverResponse(ctx, 404, TEXT_PLAIN, id);
+    }
+  }
+
+  private void handleGetAcquisitionMethod(RoutingContext ctx) {
+    logger.info("handleGetAcquisitionMethod got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+
+    AcquisitionMethodCollection acquisitionMethodCollection;
+    try {
+      acquisitionMethodCollection = new JsonObject(getMockData(ACQUISITION_METHODS_COLLECTION)).mapTo(AcquisitionMethodCollection.class);
+    } catch (IOException e) {
+      acquisitionMethodCollection = new AcquisitionMethodCollection();
+    }
+
+    AcquisitionMethod acquisitionMethod = acquisitionMethodCollection.getAcquisitionMethods()
+      .stream()
+      .filter(acqMethod -> acqMethod.getId().equals(id))
+      .findAny()
+      .orElse(null);
+
+    if (acquisitionMethod != null) {
+      JsonObject data = JsonObject.mapFrom(acquisitionMethod);
+      addServerRqRsData(HttpMethod.GET, ACQUISITION_METHODS, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
+    } else {
+      serverResponse(ctx, 404, TEXT_PLAIN, id);
+    }
+  }
+
+  private void handleGetAcquisitionMethods(RoutingContext ctx) {
+    logger.info("handleGetAcquisitionMethods got: " + ctx.request().path());
+
+    String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    if (query.contains(BAD_QUERY)) {
+      serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
+    } else {
+
+      Matcher sourceMatcher = Pattern.compile(".*source==(\\S+).*").matcher(query);
+      final String acquisitionMethodSource = sourceMatcher.find() ? sourceMatcher.group(1) : EMPTY;
+
+      AcquisitionMethodCollection acquisitionMethodCollection;
+      try {
+        acquisitionMethodCollection = new JsonObject(getMockData(ACQUISITION_METHODS_COLLECTION)).mapTo(AcquisitionMethodCollection.class);
+      } catch (IOException e) {
+        acquisitionMethodCollection = new AcquisitionMethodCollection();
+      }
+
+      if (StringUtils.isNotEmpty(acquisitionMethodSource)) {
+        acquisitionMethodCollection.getAcquisitionMethods().removeIf(acquisitionMethod -> !acquisitionMethod.getSource().value().equals(acquisitionMethodSource));
+        List<String> acquisitionsMethodSource = extractValuesFromQuery("Source", query);
+        if (!acquisitionsMethodSource.isEmpty()) {
+          acquisitionMethodCollection.getAcquisitionMethods().removeIf(acquisitionMethod -> !acquisitionsMethodSource.contains(acquisitionMethod.getSource().value()));
+        }
+      }
+
+      JsonObject data = JsonObject.mapFrom(acquisitionMethodCollection.withTotalRecords(acquisitionMethodCollection.getAcquisitionMethods().size()));
+      addServerRqRsData(HttpMethod.GET, ACQUISITION_METHODS, data);
+      serverResponse(ctx, 200, APPLICATION_JSON, data.encodePrettily());
     }
   }
 

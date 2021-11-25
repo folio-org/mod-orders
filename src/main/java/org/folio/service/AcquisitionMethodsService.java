@@ -2,10 +2,13 @@ package org.folio.service;
 
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.core.exceptions.ErrorCodes.FORBIDDEN_DELETE;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.folio.HttpStatus;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.AcquisitionMethod;
@@ -65,7 +68,7 @@ public class AcquisitionMethodsService {
         return purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
                                        .thenApply(CollectionUtils::isEmpty);
       }
-      return CompletableFuture.completedFuture(false);
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), FORBIDDEN_DELETE);
     });
   }
 
