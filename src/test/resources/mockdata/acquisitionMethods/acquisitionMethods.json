@@ -1,0 +1,25 @@
+{
+  "acquisition_methods": [
+    {
+      "id": "e69a29f8-f4b2-472e-8b6b-bfca1679dd38",
+      "value": "Approval Plan",
+      "source": "System"
+    },
+    {
+      "id": "bc6e6baf-673f-4c1c-8a98-cda988e5dccb",
+      "value": "Demand Driven Acquisitions (DDA)",
+      "source": "System"
+    },
+    {
+      "id": "fd36e1aa-cf59-4355-a7f2-1c58c06d6edc",
+      "value": "Depository",
+      "source": "System"
+    },
+    {
+      "id": "15c5e2f6-7a1d-4938-a929-d8b321252ee2",
+      "value": "Depository",
+      "source": "User"
+    }
+  ],
+  "totalRecords": 4
+}
