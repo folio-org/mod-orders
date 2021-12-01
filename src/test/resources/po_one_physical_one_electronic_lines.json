@@ -11,7 +11,7 @@
   "workflowStatus": "Open",
   "compositePoLines": [
     {
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "cancellationRestriction": false,
       "collection": false,
       "cost": {
@@ -64,7 +64,7 @@
       "titleOrPackage": "Harry Potter and the Sorcerer's Stone"
     },
     {
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "cancellationRestriction": false,
       "collection": false,
       "cost": {

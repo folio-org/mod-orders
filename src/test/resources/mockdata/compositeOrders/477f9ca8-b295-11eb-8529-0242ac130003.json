@@ -9,7 +9,7 @@
     {
       "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
       "purchaseOrderId": "477f9ca8-b295-11eb-8529-0242ac130003",
-      "acquisitionMethod": "Purchase",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
       "collection": true,
       "cost": {
         "currency": "USD",
@@ -49,7 +49,7 @@
     {
       "id": "4d3d5eb0-b32a-11eb-8529-0242ac130003",
       "purchaseOrderId": "477f9ca8-b295-11eb-8529-0242ac130003",
-      "acquisitionMethod": "Purchase",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
       "collection": true,
       "cost": {
         "currency": "USD",

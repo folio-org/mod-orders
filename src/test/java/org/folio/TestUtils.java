@@ -171,7 +171,7 @@ public final class TestUtils {
     return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
       .withId(MIN_PO_LINE_ID)
       .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
+      .withAcquisitionMethod("df26d81b-9d63-4ff8-bf41-49bf75cfa70e")
       .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
       .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
       .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1).withQuantity(1)))
@@ -183,7 +183,7 @@ public final class TestUtils {
     return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
       .withId(MIN_PO_LINE_ID)
       .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
+      .withAcquisitionMethod("df26d81b-9d63-4ff8-bf41-49bf75cfa70e")
       .withIsPackage(true)
       .withTitleOrPackage("Title")
       .withPurchaseOrderId(orderId);

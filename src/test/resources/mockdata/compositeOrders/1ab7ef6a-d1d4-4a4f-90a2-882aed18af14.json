@@ -16,7 +16,7 @@
   "compositePoLines": [
     {
       "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
-      "acquisitionMethod": "Purchase",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -109,7 +109,7 @@
     },
     {
       "id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2",
-      "acquisitionMethod": "Purchase",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -201,7 +201,7 @@
     },
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
-      "acquisitionMethod": "Purchase",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",

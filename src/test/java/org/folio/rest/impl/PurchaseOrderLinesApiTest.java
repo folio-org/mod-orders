@@ -681,7 +681,7 @@ public class PurchaseOrderLinesApiTest {
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
 
     allProtectedFieldsModification.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(),
-        CompositePoLine.AcquisitionMethod.APPROVAL_PLAN.value());
+        "796596c4-62b5-4b64-a2ce-524c747afaa2");
     allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
     allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName(), 100);
     // adding trial because a default value is added while sending the request
