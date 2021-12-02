@@ -111,6 +111,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
+import org.folio.TestUtils;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
 import org.folio.orders.utils.POLineProtectedFields;
@@ -681,7 +682,7 @@ public class PurchaseOrderLinesApiTest {
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
 
     allProtectedFieldsModification.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(),
-        CompositePoLine.AcquisitionMethod.APPROVAL_PLAN.value());
+      TestUtils.APPROVAL_PLAN_METHOD);
     allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
     allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName(), 100);
     // adding trial because a default value is added while sending the request

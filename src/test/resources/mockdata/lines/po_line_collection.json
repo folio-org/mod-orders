@@ -5,7 +5,7 @@
       "edition": "First edition",
       "checkinItems": false,
       "agreementId": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "alerts": [
         "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
       ],
@@ -116,7 +116,7 @@
       "edition": "First edition",
       "checkinItems": false,
       "agreementId": "bdc75fea-fed8-11e8-8eb2-f2801f1b9fd1",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "alerts": [
         "9a665b22-9fe5-4c95-b4ee-837a5433c95d"
       ],
@@ -231,7 +231,7 @@
     },
     {
       "id": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4a",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "alerts": [],
       "cancellationRestriction": false,
       "claims": [],
@@ -304,7 +304,7 @@
     },
     {
       "id": "cf447221-29b9-481e-947c-9ad545f22888",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "cancellationRestriction": false,
       "collection": false,
       "cost": {
@@ -371,7 +371,7 @@
     },
     {
       "id": "daa9cfd1-b330-4b65-8c2a-3663aaae5130",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "alerts": [],
       "cancellationRestriction": false,
       "claims": [],
@@ -442,7 +442,7 @@
     },
     {
       "id": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
       "collection": false,
@@ -570,7 +570,7 @@
     },
     {
       "id": "f217a5c2-2c56-4d05-9412-a96cfc8e52de",
-      "acquisitionMethod": "Purchase",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -666,7 +666,7 @@
     },
     {
       "id": "9b68e7c2-8818-4387-a405-6567232c1c6f",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "alerts": [],
       "checkinItems": true,
       "claims": [
@@ -753,7 +753,7 @@
     },
     {
       "id": "7c98369b-89e4-4b2a-9793-ba36c056fc97",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "alerts": [],
       "checkinItems": true,
       "claims": [
@@ -825,7 +825,7 @@
     },
     {
       "id": "6e2b169a-ebeb-4c3c-a2f2-6233ff9c59ae",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",

@@ -11,7 +11,7 @@
   "compositePoLines": [
     {
       "id": "50fb4bfa-cdf1-11e8-a8d5-f2801f1b9fd1",
-      "acquisitionMethod": "Purchase",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -79,7 +79,7 @@
     },
     {
       "id": "50fb5168-cdf1-11e8-a8d5-f2801f1b9fd3",
-      "acquisitionMethod": "Purchase",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",
@@ -160,7 +160,7 @@
     },
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b3",
-      "acquisitionMethod": "Purchase At Vendor System",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
       "alerts": [
         {
           "alert": "Receipt overdue"
@@ -288,7 +288,7 @@
     },
     {
       "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
-      "acquisitionMethod": "Purchase",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
       "alerts": [],
       "cancellationRestriction": false,
       "cancellationRestrictionNote": "",

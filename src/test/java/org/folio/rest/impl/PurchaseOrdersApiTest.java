@@ -197,6 +197,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
+import org.folio.TestUtils;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
@@ -3455,7 +3456,7 @@ public class PurchaseOrdersApiTest {
 
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.CHECKIN_ITEMS.getFieldName()), true);
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.ACQUISITION_METHOD.getFieldName()),
-      "Depository");
+      TestUtils.DEPOSITORY_METHOD);
     allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName()),
       100);
 
@@ -4140,7 +4141,7 @@ public class PurchaseOrdersApiTest {
     FundDistribution fundDistribution = new FundDistribution().withFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
       .withDistributionType(DistributionType.PERCENTAGE).withValue(100.00).withEncumbrance("eb506834-6c70-4239-8d1a-6414a5b08008");
     CompositePoLine poLines = new CompositePoLine().withId(poLineId1)
-      .withPurchaseOrderId(purchaseOrderId).withAcquisitionMethod(CompositePoLine.AcquisitionMethod.PURCHASE)
+      .withPurchaseOrderId(purchaseOrderId).withAcquisitionMethod(TestUtils.PURCHASE_METHOD)
       .withCollection(true).withCost(cost).withFundDistribution(Arrays.asList(fundDistribution));
     CompositePurchaseOrder reqData = new CompositePurchaseOrder().withId(purchaseOrderId).withApproved(true)
       .withPoNumber("S60402").withOrderType(CompositePurchaseOrder.OrderType.ONE_TIME)
