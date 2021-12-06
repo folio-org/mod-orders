@@ -238,14 +238,24 @@ public class EncumbranceRelationsHoldersBuilder {
       .filter(transaction -> encumbranceHolders.stream().allMatch(holder -> !transaction.getEncumbrance().getSourcePoLineId().equals(holder.getPoLineId())
           || !transaction.getFromFundId().equals(holder.getFundId())
           || !Objects.equals(transaction.getExpenseClassId(), holder.getFundDistribution().getExpenseClassId())))
-      .map(this::buildToBeReleasedHolder)
+      .map(tr -> buildToBeReleasedHolder(tr, encumbranceHolders))
       .collect(toList());
     encumbranceHolders.addAll(toBeReleasedHolders);
     return encumbranceHolders;
   }
 
-  private EncumbranceRelationsHolder buildToBeReleasedHolder(Transaction transaction) {
-    return new EncumbranceRelationsHolder().withOldEncumbrance(transaction);
+  private EncumbranceRelationsHolder buildToBeReleasedHolder(Transaction transaction,
+      List<EncumbranceRelationsHolder> encumbranceHolders) {
+    // find the transaction reference in the fund distributions, to be able to remove it if the transaction is deleted
+    FundDistribution fd = encumbranceHolders.stream()
+      .filter(erh -> erh.getFundDistribution() != null &&
+        transaction.getId().equals(erh.getFundDistribution().getEncumbrance()))
+      .findFirst()
+      .map(EncumbranceRelationsHolder::getFundDistribution)
+      .orElse(null);
+    return new EncumbranceRelationsHolder()
+      .withOldEncumbrance(transaction)
+      .withFundDistribution(fd);
   }
 
   private void mapHoldersToTransactions(List<EncumbranceRelationsHolder> encumbranceHolders, List<Transaction> existingTransactions) {
