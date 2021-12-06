@@ -185,8 +185,15 @@ public class EncumbranceService {
     return transactionService.updateTransactions(transactions, requestContext);
   }
 
-  public CompletableFuture<Void> deleteEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
-    return transactionService.deleteTransactions(encumbrances, requestContext);
+  public CompletableFuture<Void> deleteEncumbrances(List<EncumbranceRelationsHolder> holders, RequestContext requestContext) {
+    // before deleting encumbrances, set the fund distribution encumbrance to null if a new encumbrance has not been created
+    // (as with pending->pending)
+    holders.stream()
+      .filter(erh -> erh.getFundDistribution() != null &&
+        erh.getOldEncumbrance().getId().equals(erh.getFundDistribution().getEncumbrance()))
+      .forEach(erh -> erh.getFundDistribution().setEncumbrance(null));
+    List<Transaction> transactions = holders.stream().map(EncumbranceRelationsHolder::getOldEncumbrance).collect(toList());
+    return transactionService.deleteTransactions(transactions, requestContext);
   }
 
   public CompletableFuture<Void> deletePoLineEncumbrances(PoLine poline, RequestContext requestContext) {

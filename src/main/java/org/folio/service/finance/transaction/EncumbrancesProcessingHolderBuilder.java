@@ -16,9 +16,11 @@ public class EncumbrancesProcessingHolderBuilder {
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     holder.withEncumbrancesForCreate(getToBeCreatedHolders(encumbranceRelationsHolders));
     holder.withEncumbrancesForUpdate(getToBeUpdatedHolders(encumbranceRelationsHolders));
-    holder.withEncumbrancesForDelete(getTransactionsToDelete(encumbranceRelationsHolders));
+    List<EncumbranceRelationsHolder> toDelete = getTransactionsToDelete(encumbranceRelationsHolders);
+    holder.withEncumbrancesForDelete(toDelete);
     // also release transaction before delete
-    holder.withEncumbrancesForRelease(getTransactionsToDelete(encumbranceRelationsHolders));
+    List<Transaction> toRelease = toDelete.stream().map(EncumbranceRelationsHolder::getOldEncumbrance).collect(toList());
+    holder.withEncumbrancesForRelease(toRelease);
     holder.withEncumbrancesFromStorage(encumbranceRelationsHolders.stream()
       .map(EncumbranceRelationsHolder::getOldEncumbrance)
       .filter(Objects::nonNull)
@@ -52,10 +54,9 @@ public class EncumbrancesProcessingHolderBuilder {
       .collect(toList());
   }
 
-  private List<Transaction> getTransactionsToDelete(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
+  private List<EncumbranceRelationsHolder> getTransactionsToDelete(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
     return encumbranceRelationsHolders.stream()
       .filter(holder -> Objects.isNull(holder.getNewEncumbrance()))
-      .map(EncumbranceRelationsHolder::getOldEncumbrance)
       .collect(toList());
   }
 }
