@@ -2,7 +2,8 @@ package org.folio.service;
 
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.core.exceptions.ErrorCodes.FORBIDDEN_DELETE;
+import static org.folio.rest.core.exceptions.ErrorCodes.FORBIDDEN_DELETE_SYSTEM_VALUE;
+import static org.folio.rest.core.exceptions.ErrorCodes.FORBIDDEN_DELETE_USED_VALUE;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -14,7 +15,6 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.AcquisitionMethod;
 import org.folio.rest.jaxrs.model.AcquisitionMethodCollection;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.springframework.util.CollectionUtils;
 
 public class AcquisitionMethodsService {
   private static final String ENDPOINT = resourcesPath(ACQUISITION_METHODS);
@@ -55,20 +55,26 @@ public class AcquisitionMethodsService {
 
   public CompletableFuture<Void> deleteAcquisitionMethod(String acquisitionMethodId, RequestContext requestContext) {
 
-    return isDeletePossible(acquisitionMethodId, requestContext).thenCompose(poLines -> {
+    return isDeletePossible(acquisitionMethodId, requestContext).thenCompose(aVoid -> {
       RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(acquisitionMethodId);
       return restClient.delete(requestEntry, requestContext);
     });
   }
 
-  private CompletableFuture<Boolean> isDeletePossible(String acquisitionMethodId, RequestContext requestContext) {
+  private CompletableFuture<Void> isDeletePossible(String acquisitionMethodId, RequestContext requestContext) {
     return getAcquisitionMethodById(acquisitionMethodId, requestContext).thenCompose(acquisitionMethod -> {
-      if (!acquisitionMethod.getSource().equals(AcquisitionMethod.Source.SYSTEM)) {
-        String query = String.format(PO_LINE_BY_ACQUISITION_METHOD_QUERY, acquisitionMethod.getValue());
+      boolean isSystem = AcquisitionMethod.Source.SYSTEM.equals(acquisitionMethod.getSource());
+      if (!isSystem) {
+        String query = String.format(PO_LINE_BY_ACQUISITION_METHOD_QUERY, acquisitionMethod.getId());
         return purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
-                                       .thenApply(CollectionUtils::isEmpty);
+           .thenAccept(poLines -> {
+             if (!poLines.isEmpty()) {
+               throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), FORBIDDEN_DELETE_USED_VALUE);
+             }
+           });
+      } else {
+        throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), FORBIDDEN_DELETE_SYSTEM_VALUE);
       }
-      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), FORBIDDEN_DELETE);
     });
   }
 
