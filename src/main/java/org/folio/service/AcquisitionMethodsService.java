@@ -69,11 +69,11 @@ public class AcquisitionMethodsService {
         return purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
            .thenAccept(poLines -> {
              if (!poLines.isEmpty()) {
-               throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), FORBIDDEN_DELETE_USED_VALUE);
+               throw new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), FORBIDDEN_DELETE_USED_VALUE);
              }
            });
       } else {
-        throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), FORBIDDEN_DELETE_SYSTEM_VALUE);
+        throw new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), FORBIDDEN_DELETE_SYSTEM_VALUE);
       }
     });
   }
