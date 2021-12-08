@@ -1,5 +1,14 @@
 ## 12.3.0 - Unreleased
 
+## 12.2.4 - Released
+This release focused on fixing order reopen process
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.2.3...v12.2.4)
+
+### Bug Fixes
+* [MODORDERS-626](https://issues.folio.org/browse/MODORDERS-626) - Can't reopen an order after changing the expense class
+
+
 ## 12.2.3 - Released
 This release focused on fixing processing of pieces
 
