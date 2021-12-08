@@ -55,13 +55,13 @@ public class AcquisitionMethodsService {
 
   public CompletableFuture<Void> deleteAcquisitionMethod(String acquisitionMethodId, RequestContext requestContext) {
 
-    return isDeletePossible(acquisitionMethodId, requestContext).thenCompose(aVoid -> {
+    return validateDeleteOperation(acquisitionMethodId, requestContext).thenCompose(aVoid -> {
       RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(acquisitionMethodId);
       return restClient.delete(requestEntry, requestContext);
     });
   }
 
-  private CompletableFuture<Void> isDeletePossible(String acquisitionMethodId, RequestContext requestContext) {
+  private CompletableFuture<Void> validateDeleteOperation(String acquisitionMethodId, RequestContext requestContext) {
     return getAcquisitionMethodById(acquisitionMethodId, requestContext).thenCompose(acquisitionMethod -> {
       boolean isSystem = AcquisitionMethod.Source.SYSTEM.equals(acquisitionMethod.getSource());
       if (!isSystem) {
