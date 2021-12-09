@@ -139,7 +139,7 @@ public class AcquisitionMethodAPITest {
     logger.info("=== Test DELETE acquisitions method - forbidden case ===");
     String url = ACQUISITION_METHODS + "/bc6e6baf-673f-4c1c-8a98-cda988e5dccb";
 
-    verifyDeleteResponse(url, "", 403);
+    verifyDeleteResponse(url, "", 400);
   }
 
   @Test
