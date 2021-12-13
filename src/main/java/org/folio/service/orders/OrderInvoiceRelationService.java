@@ -47,17 +47,24 @@ public class OrderInvoiceRelationService {
   }
 
   public CompletableFuture<Void> checkOrderPOLineLinkedToInvoiceLine(PoLine line, RequestContext requestContext) {
-    return invoiceLineService.getInvoiceLinesByOrderLineId(line.getId(), requestContext)
-      .thenApply(invoiceLines -> {
-        boolean notAllowedDeletePOLine = invoiceLines.stream()
-        .filter(invoiceLine -> invoiceLine.getPoLineId() != null)
-        .anyMatch(invoiceLine -> invoiceLine.getPoLineId().equals(line.getId()));
-        if (notAllowedDeletePOLine) {
-          logger.error("Order or order line {} is linked to the invoice and can not be deleted", line.getId());
-          throw new HttpException(400, ORDER_RELATES_TO_INVOICE);
+    String query = "purchaseOrderId==" + line.getPurchaseOrderId();
+
+    return getOrderInvoiceRelationshipCollection(query, 0, 0, requestContext)
+      .thenCompose(oirs -> {
+        if (oirs.getTotalRecords() > 0) {
+          return invoiceLineService.getInvoiceLinesByOrderLineId(line.getId(), requestContext)
+            .thenAccept(invoiceLines -> {
+                boolean notAllowedDeletePOLine = invoiceLines.stream()
+                  .filter(invoiceLine -> invoiceLine.getPoLineId() != null)
+                  .anyMatch(invoiceLine -> invoiceLine.getPoLineId().equals(line.getId()));
+                if (notAllowedDeletePOLine) {
+                  logger.error("Order or order line {} is linked to the invoice and can not be deleted", line.getId());
+                  throw new HttpException(400, ORDER_RELATES_TO_INVOICE);
+                }
+              }
+            );
         }
-          return null;
-        }
-      );
+        return CompletableFuture.completedFuture(null);
+      });
   }
 }
