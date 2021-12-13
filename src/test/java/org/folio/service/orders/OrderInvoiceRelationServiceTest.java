@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
@@ -15,6 +16,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.folio.rest.acq.model.OrderInvoiceRelationship;
+import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
@@ -54,6 +57,12 @@ public class OrderInvoiceRelationServiceTest {
   @Test
   void testShouldThrowExceptionWhenOrderLineLinkedToInvoice() {
     // GIVEN
+    OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection()
+      .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
+      .withTotalRecords(1);
+
+    doReturn(completedFuture(oirCollection)).when(restClient).get(any(), any(), any());
+
     PoLine poLineLinkedToInvoice = new PoLine().withId(poLineIdConnectedToInvoice);
     InvoiceLine invoiceLine1 = new InvoiceLine().withInvoiceId(invoiceId).withPoLineId(poLineIdConnectedToInvoice);
     InvoiceLine invoiceLine2 = new InvoiceLine().withInvoiceId(invoiceId).withPoLineId(UUID.randomUUID().toString());
@@ -73,6 +82,12 @@ public class OrderInvoiceRelationServiceTest {
 
   @Test
   void testShouldDeletePoLIneWhenOrderLineIsNotLinkedToInvoice() {
+    OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection()
+      .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
+      .withTotalRecords(0);
+
+    doReturn(completedFuture(oirCollection)).when(restClient).get(any(), any(), any());
+
     PoLine poLineNotLinkedToInvoice = new PoLine().withId(poLineIdNotConnectedToInvoice);
     // WHEN
     when(invoiceLineService.getInvoiceLinesByOrderLineId(eq(poLineIdNotConnectedToInvoice), any())).thenReturn(completedFuture(
