@@ -72,7 +72,8 @@ public class ExceptionUtil {
 
   private static Error mapToError(Error error) {
     if (isErrorMessageJson(error.getMessage())) {
-      return new JsonObject(error.getMessage()).mapTo(Error.class);
+      String jsonMessage = error.getMessage().substring(error.getMessage().indexOf("{"), error.getMessage().lastIndexOf("}") + 1);
+      return new JsonObject(jsonMessage).mapTo(Error.class);
     }
     return error;
   }
