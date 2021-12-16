@@ -1,5 +1,13 @@
 ## 12.3.0 - Unreleased
 
+## 12.2.5 - Released
+This bugfix release focused on fixing Log4j vulnerability
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.2.4...v12.2.5)
+
+### Bug Fixes
+* [MODORDERS-630](https://issues.folio.org/browse/MODORDERS-630) - Kiwi R3 2021 - Log4j vulnerability verification and correction
+
 ## 12.2.4 - Released
 This release focused on fixing order reopen process
 
