@@ -1,5 +1,14 @@
 ## 12.2.0 - Unreleased
 
+## 12.1.4 (Juniper) - Released
+
+The focus of this release was to fix Log4j vulnerability
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.1.3...v12.1.4)
+
+### Bug Fixes
+* [MODORDERS-631](https://issues.folio.org/browse/MODORDERS-631) - Juniper R2 2021 - Log4j vulnerability verification and correction
+
 ## 12.1.3 (Juniper) - Released
 
 This released focused on fixing encumbrances processing
