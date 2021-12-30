@@ -1001,7 +1001,7 @@
     },
     {
       "id": "circulation",
-      "version": "10.0 11.0"
+      "version": "10.0 11.0 12.0"
     },
     {
       "id": "finance-storage.budget-expense-classes",
