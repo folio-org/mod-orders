@@ -98,7 +98,8 @@ public enum ErrorCodes {
   CREATE_PIECE_FOR_PENDING_ORDER_ERROR("createPiecePendingOrderError", "Creating piece for pending order is not possible. Please open order."),
   CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR("createItemForPieceIsNotAllowedError", "Create item for piece format %s is not allowed. Please check inventory option in the purchase order line %s"),
   NOT_FOUND("notFound", "Not Found"),
-  FORBIDDEN_DELETE("forbiddenDeleteSystemValues", "It is forbidden to delete system values");
+  FORBIDDEN_DELETE_SYSTEM_VALUE("forbiddenDeleteSystemValues", "It is forbidden to delete system values"),
+  FORBIDDEN_DELETE_USED_VALUE("forbiddenDeleteUsedValue", "Deleting the value used is prohibited");
 
 
   private final String code;

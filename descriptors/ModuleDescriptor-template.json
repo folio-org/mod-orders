@@ -270,6 +270,7 @@
             "orders-storage.po-lines.item.delete",
             "orders-storage.alerts.item.delete",
             "orders-storage.reporting-codes.item.delete",
+            "orders-storage.order-invoice-relationships.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "invoice.invoice-lines.collection.get"
@@ -1566,6 +1567,7 @@
         "inventory.instances.collection.get",
         "inventory.instances.item.post",
         "inventory.items.collection.get",
+        "inventory.items.item.get",
         "inventory.items.item.put",
         "inventory.items.item.delete",
         "inventory-storage.instance-types.collection.get",
