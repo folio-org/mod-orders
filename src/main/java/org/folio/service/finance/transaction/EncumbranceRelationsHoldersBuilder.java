@@ -235,9 +235,11 @@ public class EncumbranceRelationsHoldersBuilder {
       List<Transaction> transactionsFromStorage) {
 
     List<EncumbranceRelationsHolder> toBeReleasedHolders = transactionsFromStorage.stream()
-      .filter(transaction -> encumbranceHolders.stream().allMatch(holder -> !transaction.getEncumbrance().getSourcePoLineId().equals(holder.getPoLineId())
+      .filter(transaction -> encumbranceHolders.stream().allMatch(holder ->
+        (holder.getOldEncumbrance() == null || !transaction.getId().equals(holder.getOldEncumbrance().getId())) && (
+          !transaction.getEncumbrance().getSourcePoLineId().equals(holder.getPoLineId())
           || !transaction.getFromFundId().equals(holder.getFundId())
-          || !Objects.equals(transaction.getExpenseClassId(), holder.getFundDistribution().getExpenseClassId())))
+          || !Objects.equals(transaction.getExpenseClassId(), holder.getFundDistribution().getExpenseClassId()))))
       .map(tr -> buildToBeReleasedHolder(tr, encumbranceHolders))
       .collect(toList());
     encumbranceHolders.addAll(toBeReleasedHolders);
@@ -258,21 +260,22 @@ public class EncumbranceRelationsHoldersBuilder {
       .withFundDistribution(fd);
   }
 
-  private void mapHoldersToTransactions(List<EncumbranceRelationsHolder> encumbranceHolders, List<Transaction> existingTransactions) {
-
+  private void mapHoldersToTransactions(List<EncumbranceRelationsHolder> encumbranceHolders,
+      List<Transaction> existingTransactions) {
     encumbranceHolders.forEach(holder -> existingTransactions.stream()
-          .filter(encumbrance -> encumbrance.getEncumbrance().getSourcePoLineId().equals(holder.getPoLineId())
-              && encumbrance.getFromFundId().equals(holder.getFundId())
-              && Objects.equals(encumbrance.getExpenseClassId(), holder.getFundDistribution().getExpenseClassId()))
-          .findAny()
-          .ifPresent(existingTransaction -> {
-            holder.withOldEncumbrance(existingTransaction);
-            Transaction newTransaction = holder.getNewEncumbrance();
-            newTransaction.setId(existingTransaction.getId());
-            newTransaction.getEncumbrance()
-                .withAmountExpended(existingTransaction.getEncumbrance().getAmountExpended())
-                .withAmountAwaitingPayment(existingTransaction.getEncumbrance().getAmountAwaitingPayment());
-          }));
+      .filter(encumbrance -> encumbrance.getId().equals(holder.getFundDistribution().getEncumbrance()) || (
+        encumbrance.getEncumbrance().getSourcePoLineId().equals(holder.getPoLineId())
+          && encumbrance.getFromFundId().equals(holder.getFundId())
+          && Objects.equals(encumbrance.getExpenseClassId(), holder.getFundDistribution().getExpenseClassId())))
+      .findAny()
+      .ifPresent(existingTransaction -> {
+        holder.withOldEncumbrance(existingTransaction);
+        Transaction newTransaction = holder.getNewEncumbrance();
+        newTransaction.setId(existingTransaction.getId());
+        newTransaction.getEncumbrance()
+          .withAmountExpended(existingTransaction.getEncumbrance().getAmountExpended())
+          .withAmountAwaitingPayment(existingTransaction.getEncumbrance().getAmountAwaitingPayment());
+      }));
   }
 
   public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
