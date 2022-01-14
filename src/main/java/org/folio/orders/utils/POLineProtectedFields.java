@@ -25,7 +25,8 @@ public enum POLineProtectedFields {
   REQUESTER("requester"),
   RUSH("rush"),
   SELECTOR("selector"),
-  VENDORDETAIL_INSTRUCTION_TO_VENDOR("vendorDetail.instructions");
+  VENDORDETAIL_INSTRUCTION_TO_VENDOR("vendorDetail.instructions"),
+  LAST_EDI_EXPORT_DATE("lastEDIExportDate");
 
 
   POLineProtectedFields(String field) {
