@@ -105,6 +105,9 @@ public class InventoryManager {
   public static final String ITEM_PERMANENT_LOAN_TYPE_ID = "permanentLoanTypeId";
   public static final String ITEM_PURCHASE_ORDER_LINE_IDENTIFIER = "purchaseOrderLineIdentifier";
   public static final String ITEM_EFFECTIVE_LOCATION = "effectiveLocation";
+  public static final String ITEM_ENUMERATION = "enumeration";
+  public static final String ITEM_CHRONOLOGY = "chronology";
+  public static final String ITEM_DISCOVERY_SUPPRESS = "discoverySuppress";
   public static final String CONTRIBUTOR_NAME = "name";
   public static final String CONTRIBUTOR_NAME_TYPE_ID = "contributorNameTypeId";
   public static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
@@ -136,7 +139,6 @@ public class InventoryManager {
   public static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
-
   private RestClient restClient;
   private ConfigurationEntriesService configurationEntriesService;
   private PieceStorageService pieceStorageService;
@@ -240,38 +242,6 @@ public class InventoryManager {
     List<CompletableFuture<Void>> futures = new ArrayList<>(itemIds.size());
     itemIds.forEach(itemId -> futures.add(deleteItem(itemId, skipNotFoundException, requestContext)));
     return collectResultsOnSuccess(futures);
-  }
-
-  /**
-   * Returns list of item records for specified id's.
-   *
-   * @param itemRecord   item record
-   * @param receivedItem item details specified by user upon receiving flow
-   * @return future with list of item records
-   */
-  public CompletableFuture<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem, RequestContext requestContext) {
-    // Update item record with receiving details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
-    if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
-      itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
-    }
-    if (StringUtils.isNotEmpty(receivedItem.getCallNumber())) {
-      itemRecord.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
-    }
-    return updateItem(itemRecord, requestContext);
-  }
-
-  public CompletableFuture<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece, RequestContext requestContext) {
-
-    // Update item record with checkIn details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
-    if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
-      itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getCallNumber())) {
-      itemRecord.put(ITEM_LEVEL_CALL_NUMBER, checkinPiece.getCallNumber());
-    }
-    return updateItem(itemRecord, requestContext);
   }
 
   /**
@@ -422,20 +392,21 @@ public class InventoryManager {
           piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
             // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
             if (expectedQuantity > 0) {
-              List<String> items;
+              List<String> existingItemIds;
               CompletableFuture<List<String>> newItems;
-              // Depending on piece format get already existing items and send requests to create missing items
+              // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
+              Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
               if (pieceFormat == Piece.Format.ELECTRONIC) {
-                items = getElectronicItemIds(compPOL, existingItems);
-                newItems = createMissingElectronicItems(compPOL, location.getHoldingId(), expectedQuantity - items.size(), requestContext);
+                existingItemIds = getElectronicItemIds(compPOL, existingItems);
+                newItems = createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext);
               } else {
-                items = getPhysicalItemIds(compPOL, existingItems);
-                newItems = createMissingPhysicalItems(compPOL, location.getHoldingId(), expectedQuantity - items.size(), requestContext);
+                existingItemIds = getPhysicalItemIds(compPOL, existingItems);
+                newItems = createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext);
               }
 
-              // Build piece records once new items are created
+              // Build piece records once new existingItemIds are created
               pieces.add(newItems.thenApply(createdItemIds -> {
-                List<String> itemIds = ListUtils.union(createdItemIds, items);
+                List<String> itemIds = ListUtils.union(createdItemIds, existingItemIds);
                 logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
                 return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(polId, itemId, pieceFormat, location))
                   .toList();
@@ -797,12 +768,13 @@ public class InventoryManager {
     logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
     FolioVertxCompletableFuture<String> itemFuture = new FolioVertxCompletableFuture<>(requestContext.getContext());
     try {
+      Piece pieceWithHoldingId = new Piece().withHoldingId(holdingId);
       if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
-        createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+        createMissingElectronicItems(compPOL, pieceWithHoldingId, ITEM_QUANTITY, requestContext)
           .thenApply(idS -> itemFuture.complete(idS.get(0)))
           .exceptionally(itemFuture::completeExceptionally);
       } else {
-        createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+        createMissingPhysicalItems(compPOL, pieceWithHoldingId, ITEM_QUANTITY, requestContext)
           .thenApply(idS -> itemFuture.complete(idS.get(0)))
           .exceptionally(itemFuture::completeExceptionally);
       }
@@ -816,13 +788,14 @@ public class InventoryManager {
    * Creates Items in the inventory based on the PO line data.
    *
    * @param compPOL   PO line to create Instance Record for
-   * @param holdingId holding id
+   * @param piece base piece to build item
    * @param quantity  expected number of items to create
    * @return id of newly created Instance Record
    */
-  public CompletableFuture<List<String>> createMissingElectronicItems(CompositePoLine compPOL, String holdingId, int quantity,
+  public CompletableFuture<List<String>> createMissingElectronicItems(CompositePoLine compPOL, Piece piece, int quantity,
                                                                       RequestContext requestContext) {
     if (quantity > 0) {
+      String holdingId = piece.getHoldingId();
       return buildElectronicItemRecordJsonObject(compPOL, holdingId, requestContext)
         .thenCompose(itemData -> {
           logger.debug("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
@@ -837,13 +810,14 @@ public class InventoryManager {
    * Creates Items in the inventory based on the PO line data.
    *
    * @param compPOL   PO line to create Instance Record for
-   * @param holdingId holding id
+   * @param piece base piece to build item
    * @param quantity  expected number of items to create
    * @return id of newly created Instance Record
    */
-  public CompletableFuture<List<String>> createMissingPhysicalItems(CompositePoLine compPOL, String holdingId, int quantity,
+  public CompletableFuture<List<String>> createMissingPhysicalItems(CompositePoLine compPOL, Piece piece, int quantity,
                                                                     RequestContext requestContext) {
     if (quantity > 0) {
+      String holdingId = piece.getHoldingId();
       return buildPhysicalItemRecordJsonObject(compPOL, holdingId, requestContext)
         .thenCompose(itemData -> {
           logger.debug("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
@@ -914,18 +888,25 @@ public class InventoryManager {
       });
   }
 
-  public CompletableFuture<Void> updateItemWithPoLineId(String itemId, String poLineId, RequestContext requestContext) {
-    if (itemId == null || poLineId == null) {
+  public CompletableFuture<Void> updateItemWithPoLineId(Piece piece, RequestContext requestContext) {
+    if (piece.getItemId() == null || piece.getPoLineId() == null) {
       return CompletableFuture.completedFuture(null);
     }
-
+    String itemId = piece.getItemId();
+    String poLineId = piece.getPoLineId();
     return getItemRecordById(itemId, true, requestContext)
       .thenCompose(item -> {
-        if (item == null || item.isEmpty() || poLineId.equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))) {
-          return CompletableFuture.completedFuture(null);
-        } else {
-          return updateItem(item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId), requestContext);
+        if (poLineId != null && item != null && !item.isEmpty()) {
+          item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId);
+          Optional.ofNullable(piece.getEnumeration())
+              .ifPresentOrElse(enumeration -> item.put(ITEM_ENUMERATION, enumeration), () -> item.remove(ITEM_ENUMERATION));
+          Optional.ofNullable(piece.getChronology())
+            .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
+          Optional.ofNullable(piece.getDiscoverySuppress())
+            .ifPresentOrElse(discSup -> item.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> item.remove(ITEM_DISCOVERY_SUPPRESS));
+          return updateItem(item, requestContext);
         }
+        return CompletableFuture.completedFuture(null);
       });
   }
 

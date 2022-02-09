@@ -118,7 +118,7 @@ public class OpenCompositeOrderPieceService {
     CompletableFuture<Void> future = new CompletableFuture<>();
     purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
       .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
-      .thenCompose(v -> inventoryManager.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId(), requestContext))
+      .thenCompose(v -> inventoryManager.updateItemWithPoLineId(piece, requestContext))
       .thenAccept(vVoid ->
         pieceStorageService.getPieceById(piece.getId(), requestContext).thenAccept(pieceStorage -> {
             Piece.ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
@@ -190,7 +190,7 @@ public class OpenCompositeOrderPieceService {
     }
     else
     {
-      return inventoryManager.updateItemWithPoLineId(piece.getItemId(), piece.getPoLineId(), requestContext);
+      return inventoryManager.updateItemWithPoLineId(piece, requestContext);
     }
   }
 

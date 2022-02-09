@@ -659,14 +659,14 @@ public class InventoryManagerTest {
     line.setEresource(eresource);
     line.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
     String expItemId = UUID.randomUUID().toString();
+    Piece piece = new Piece().withHoldingId(HOLDING_ID).withChronology("CH").withEnumeration("EN").withDiscoverySuppress(true);
     doReturn(completedFuture(Collections.singletonList(expItemId)))
-      .when(inventoryManager).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
-
+      .when(inventoryManager).createMissingElectronicItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
     //When
     CompletableFuture<String> result = inventoryManager.openOrderCreateItemRecord(line, HOLDING_ID, requestContext);
     String actItemId = result.get();
     //Then
-    verify(inventoryManager).createMissingElectronicItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
+    verify(inventoryManager).createMissingElectronicItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
     assertEquals(expItemId, actItemId);
   }
 
@@ -675,13 +675,15 @@ public class InventoryManagerTest {
     //given
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     String expItemId = UUID.randomUUID().toString();
+    Piece piece = new Piece().withHoldingId(HOLDING_ID).withChronology("CH").withEnumeration("EN").withDiscoverySuppress(true);
+
     doReturn(completedFuture(Collections.singletonList(expItemId)))
-      .when(inventoryManager).createMissingPhysicalItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
+      .when(inventoryManager).createMissingPhysicalItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
     //When
     CompletableFuture<String> result = inventoryManager.openOrderCreateItemRecord(line, HOLDING_ID, requestContext);
     String actItemId = result.get();
     //Then
-    verify(inventoryManager).createMissingPhysicalItems(any(CompositePoLine.class), eq(HOLDING_ID), eq(1), eq(requestContext));
+    verify(inventoryManager).createMissingPhysicalItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
     assertEquals(expItemId, actItemId);
   }
 

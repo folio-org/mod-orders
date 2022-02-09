@@ -7,6 +7,13 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
+import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
+import static org.folio.service.inventory.InventoryManager.ITEM_DISCOVERY_SUPPRESS;
+import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
+import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,6 +22,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -75,9 +83,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   private CompletionStage<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
-    //Should be used in next stories MODORDERS-535
-    //Map<String, Map<String, String>> pieceHoldingsGroupedByPoLine = groupHoldingsByPoLineIdOnCheckin(checkinCollection);
-    // 1. Get piece records from storage
+     // 1. Get piece records from storage
     return createItemsWithPieceUpdate(checkinCollection, requestContext)
       // 2. Filter locationId
       .thenCompose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
@@ -213,10 +219,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
     CheckInPiece checkinPiece = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
-    return inventoryManager
-      // Update item records with check-in information and send updates to
-      // Inventory
-      .checkinItem(item, checkinPiece, requestContext)
+    return checkinItem(item, checkinPiece, requestContext)
       // Update Piece record object with check-in details if item updated
       // successfully
       .thenApply(v -> {
@@ -236,18 +239,19 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     CheckInPiece checkinPiece = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
 
-    if (StringUtils.isNotEmpty(checkinPiece.getCaption())) {
-      piece.setCaption(checkinPiece.getCaption());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getComment())) {
-      piece.setComment(checkinPiece.getComment());
-    }
+    piece.setCaption(checkinPiece.getCaption());
+    piece.setComment(checkinPiece.getComment());
+
     if (StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
       piece.setLocationId(checkinPiece.getLocationId());
     }
     if (StringUtils.isNotEmpty(checkinPiece.getHoldingId())) {
       piece.setHoldingId(checkinPiece.getHoldingId());
     }
+    piece.setEnumeration(checkinPiece.getEnumeration());
+    piece.setChronology(checkinPiece.getChronology());
+    piece.setDisplayOnHolding(checkinPiece.getDisplayOnHolding());
+    piece.setDiscoverySuppress(checkinPiece.getDiscoverySuppress());
     // Piece record might be received or rolled-back to Expected
     if (inventoryManager.isOnOrderPieceStatus(checkinPiece)) {
       piece.setReceivedDate(null);
@@ -345,6 +349,26 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       orderClosedStatusesMap.put(orderId, isItemOrderClosedPresent);
     }));
     return orderClosedStatusesMap;
+  }
+
+  private CompletableFuture<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece, RequestContext requestContext) {
+
+    // Update item record with checkIn details
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
+    if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
+      itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getCallNumber())) {
+      itemRecord.put(ITEM_LEVEL_CALL_NUMBER, checkinPiece.getCallNumber());
+    }
+    Optional.ofNullable(checkinPiece.getEnumeration())
+      .ifPresentOrElse(enumeration -> itemRecord.put(ITEM_ENUMERATION, enumeration), () -> itemRecord.remove(ITEM_ENUMERATION));
+    Optional.ofNullable(checkinPiece.getChronology())
+      .ifPresentOrElse(chronology -> itemRecord.put(ITEM_CHRONOLOGY, chronology), () -> itemRecord.remove(ITEM_CHRONOLOGY));
+    Optional.ofNullable(checkinPiece.getDiscoverySuppress())
+      .ifPresentOrElse(discSup -> itemRecord.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> itemRecord.remove(ITEM_DISCOVERY_SUPPRESS));
+
+    return inventoryManager.updateItem(itemRecord, requestContext);
   }
 
   @Override

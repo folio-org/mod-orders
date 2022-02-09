@@ -2,7 +2,6 @@ package org.folio.service.pieces.flows.delete;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.pieces.PieceDeletionHolder;
