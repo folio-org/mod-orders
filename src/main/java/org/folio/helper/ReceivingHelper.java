@@ -11,6 +11,12 @@ import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
+import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
+import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
+import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,6 +24,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
@@ -258,10 +265,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   protected CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
     ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
-    return inventoryManager
-      // Update item records with receiving information and send updates to
-      // Inventory
-      .receiveItem(item, receivedItem, requestContext)
+    return receiveItem(item, receivedItem, requestContext)
       // Update Piece record object with receiving details if item updated
       // successfully
       .thenApply(v -> {
@@ -297,18 +301,18 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
 
-    if (StringUtils.isNotEmpty(receivedItem.getCaption())) {
-      piece.setCaption(receivedItem.getCaption());
-    }
-    if (StringUtils.isNotEmpty(receivedItem.getComment())) {
-      piece.setComment(receivedItem.getComment());
-    }
+    piece.setCaption(receivedItem.getCaption());
+    piece.setComment(receivedItem.getComment());
     if (StringUtils.isNotEmpty(receivedItem.getLocationId())) {
       piece.setLocationId(receivedItem.getLocationId());
     }
     if (StringUtils.isNotEmpty(receivedItem.getHoldingId())) {
       piece.setHoldingId(receivedItem.getHoldingId());
     }
+    piece.setEnumeration(receivedItem.getEnumeration());
+    piece.setChronology(receivedItem.getChronology());
+    piece.setDisplayOnHolding(receivedItem.getDisplayOnHolding());
+  //  piece.setDiscoverySuppress(receivedItem.getDiscoverySuppress());
     // Piece record might be received or rolled-back to Expected
     if (inventoryManager.isOnOrderItemStatus(receivedItem)) {
       piece.setReceivedDate(null);
@@ -317,6 +321,29 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       piece.setReceivedDate(new Date());
       piece.setReceivingStatus(Piece.ReceivingStatus.RECEIVED);
     }
+  }
+
+  /**
+   * Returns list of item records for specified id's.
+   *
+   * @param itemRecord   item record
+   * @param receivedItem item details specified by user upon receiving flow
+   * @return future with list of item records
+   */
+  private CompletableFuture<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem, RequestContext requestContext) {
+    // Update item record with receiving details
+    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
+    if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
+      itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getCallNumber())) {
+      itemRecord.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
+    }
+    Optional.ofNullable(receivedItem.getEnumeration())
+      .ifPresentOrElse(enumeration -> itemRecord.put(ITEM_ENUMERATION, enumeration), () -> itemRecord.remove(ITEM_ENUMERATION));
+    Optional.ofNullable(receivedItem.getChronology())
+      .ifPresentOrElse(chronology -> itemRecord.put(ITEM_CHRONOLOGY, chronology), () -> itemRecord.remove(ITEM_CHRONOLOGY));
+    return inventoryManager.updateItem(itemRecord, requestContext);
   }
 
   @Override

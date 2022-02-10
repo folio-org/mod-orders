@@ -53,14 +53,13 @@ public class PieceUpdateInventoryService {
     final int ITEM_QUANTITY = 1;
     CompletableFuture<String> itemFuture = new CompletableFuture<>();
     try {
-      String holdingId = piece.getHoldingId();
-      logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
+      logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
         if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
-          inventoryManager.createMissingElectronicItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+          inventoryManager.createMissingElectronicItems(compPOL, piece, ITEM_QUANTITY, requestContext)
             .thenApply(idS -> itemFuture.complete(idS.get(0)))
             .exceptionally(itemFuture::completeExceptionally);
         } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPOL)) {
-          inventoryManager.createMissingPhysicalItems(compPOL, holdingId, ITEM_QUANTITY, requestContext)
+          inventoryManager.createMissingPhysicalItems(compPOL, piece, ITEM_QUANTITY, requestContext)
             .thenApply(idS -> itemFuture.complete(idS.get(0)))
             .exceptionally(itemFuture::completeExceptionally);
         }

@@ -108,11 +108,13 @@ public class CheckinHelperTest {
     toBeCheckedIn1.withCheckInPieces(List.of(checkInPiece1, checkInPiece2));
 
     ToBeCheckedIn toBeCheckedIn2 = new ToBeCheckedIn().withPoLineId(poLine1);
-    CheckInPiece checkInPiece3 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("3");
+    CheckInPiece checkInPiece3 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("3")
+                        .withEnumeration("Enum1").withChronology("Ch1").withDiscoverySuppress(true).withDisplayOnHolding(true);
     toBeCheckedIn2.withCheckInPieces(List.of(checkInPiece3));
 
     ToBeCheckedIn toBeCheckedIn3 = new ToBeCheckedIn().withPoLineId(poLine2);
-    CheckInPiece checkInPiece4 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("4");
+    CheckInPiece checkInPiece4 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("4")
+                        .withEnumeration("Enum2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);;
     toBeCheckedIn3.withCheckInPieces(List.of(checkInPiece4));
 
     checkinCollection.withToBeCheckedIn(List.of(toBeCheckedIn1, toBeCheckedIn2, toBeCheckedIn3));
@@ -123,8 +125,22 @@ public class CheckinHelperTest {
 
     assertEquals(2, map.values().size());
     assertEquals(3, map.get(poLine1).size());
+
     assertEquals(1, map.get(poLine2).size());
-    assertEquals("4", map.get(poLine2).get(0).getCaption());
+    CheckInPiece actCheckInPiece1 = map.get(poLine1).stream()
+                              .filter(checkInPiece -> "3".equals(checkInPiece.getCaption()))
+                              .findFirst().get();
+    assertEquals("3", actCheckInPiece1.getCaption());
+    assertEquals("Enum1", actCheckInPiece1.getEnumeration());
+    assertEquals("Ch1", actCheckInPiece1.getChronology());
+    assertEquals(true, actCheckInPiece1.getDiscoverySuppress());
+    assertEquals(true, actCheckInPiece1.getDisplayOnHolding());
+    CheckInPiece actCheckInPiece2 = map.get(poLine2).get(0);
+    assertEquals("4", actCheckInPiece2.getCaption());
+    assertEquals("Enum2", actCheckInPiece2.getEnumeration());
+    assertEquals("Ch2", actCheckInPiece2.getChronology());
+    assertEquals(false, actCheckInPiece2.getDiscoverySuppress());
+    assertEquals(false, actCheckInPiece2.getDisplayOnHolding());
   }
 
   private static class ContextConfiguration {
