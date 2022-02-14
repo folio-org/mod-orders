@@ -6,11 +6,15 @@ import io.vertx.core.Vertx;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
+import org.folio.rest.acq.model.invoice.Adjustment;
+import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.invoice.InvoiceLineService;
+import org.folio.service.orders.OrderInvoiceRelationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -37,14 +41,18 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class EncumbranceServiceTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
@@ -61,6 +69,10 @@ public class EncumbranceServiceTest {
   private TransactionService transactionService;
   @Mock
   private TransactionSummariesService transactionSummariesService;
+  @Mock
+  private OrderInvoiceRelationService orderInvoiceRelationService;
+  @Mock
+  private InvoiceLineService invoiceLineService;
 
   @BeforeEach
   public void initMocks(){
@@ -165,5 +177,51 @@ public class EncumbranceServiceTest {
 
   }
 
+  @Test
+  void shouldCallRemoveEncumbranceLinks() {
+    //Given
+    String poLineId = UUID.randomUUID().toString();
+    String orderId = UUID.randomUUID().toString();
+    String encumbrance1Id = UUID.randomUUID().toString();
+    String encumbrance2Id = UUID.randomUUID().toString();
+    Transaction encumbrance1 = new Transaction()
+      .withId(encumbrance1Id)
+      .withEncumbrance(new Encumbrance()
+        .withSourcePurchaseOrderId(orderId)
+        .withSourcePoLineId(poLineId));
+    Transaction encumbrance2 = new Transaction()
+      .withId(encumbrance2Id)
+      .withEncumbrance(new Encumbrance()
+        .withSourcePurchaseOrderId(orderId)
+        .withSourcePoLineId(poLineId));
+    List<Transaction> transactions = List.of(encumbrance1, encumbrance2);
+
+    InvoiceLine invoiceLine = new InvoiceLine()
+      .withId(UUID.randomUUID().toString())
+      .withPoLineId(poLineId)
+      .withFundDistributions(List.of(new org.folio.rest.acq.model.invoice.FundDistribution()
+        .withEncumbrance(encumbrance1Id)))
+      .withAdjustments(List.of(new Adjustment().withFundDistributions(List.of(
+        new org.folio.rest.acq.model.invoice.FundDistribution().withEncumbrance(encumbrance2Id)))));
+    List<InvoiceLine> invoiceLines = List.of(invoiceLine);
+
+    when(orderInvoiceRelationService.isOrderLinkedToAnInvoice(eq(orderId), eq(requestContextMock)))
+      .thenReturn(CompletableFuture.completedFuture(true));
+    when(invoiceLineService.getInvoiceLinesByOrderLineIds(anyList(), eq(requestContextMock)))
+      .thenReturn(CompletableFuture.completedFuture(invoiceLines));
+    when(invoiceLineService.removeEncumbranceLinks(anyList(), anyList(), eq(requestContextMock)))
+      .thenReturn(CompletableFuture.completedFuture(null));
+
+    //When
+    CompletableFuture<Void> result = encumbranceService.deleteEncumbranceLinksInInvoiceLines(transactions, requestContextMock);
+    assertFalse(result.isCompletedExceptionally());
+    result.join();
+
+    //Then
+    verify(invoiceLineService, times(1)).removeEncumbranceLinks(
+      argThat(lines -> lines.size() == 1),
+      argThat(ids -> ids.containsAll(List.of(encumbrance1Id, encumbrance2Id))),
+      eq(requestContextMock));
+  }
 
 }
