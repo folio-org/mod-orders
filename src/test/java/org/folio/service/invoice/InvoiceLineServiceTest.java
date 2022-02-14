@@ -2,8 +2,11 @@ package org.folio.service.invoice;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.acq.model.invoice.Adjustment;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -17,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -26,6 +30,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class InvoiceLineServiceTest {
+
+  private static final Logger logger = LogManager.getLogger();
 
   @InjectMocks
   private InvoiceLineService invoiceLineService;
@@ -75,6 +81,23 @@ public class InvoiceLineServiceTest {
       argThat(requestEntry -> invoiceLineId.equals(requestEntry.getPathParams().get("id"))),
       eq(expectedInvoiceLine),
       eq(requestContextMock));
+  }
 
+  @Test
+  void shouldGetInvoiceLinesByOrderLineIds() {
+    //Given
+    List<String> poLineIds = List.of("1", "2");
+    when(restClient.get(any(RequestEntry.class), eq(requestContextMock), eq(InvoiceLineCollection.class)))
+      .thenReturn(CompletableFuture.completedFuture(new InvoiceLineCollection()));
+    //When
+    CompletableFuture<List<InvoiceLine>> result = invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContextMock);
+    assertFalse(result.isCompletedExceptionally());
+    result.join();
+    //Then
+    verify(restClient, times(1)).get(
+      argThat(requestEntry -> encodeQuery("poLineId == (\"1\" OR \"2\")", logger)
+        .equals(requestEntry.getQueryParams().get("query"))),
+      eq(requestContextMock),
+      eq(InvoiceLineCollection.class));
   }
 }

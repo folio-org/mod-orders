@@ -223,5 +223,36 @@ public class EncumbranceServiceTest {
       argThat(ids -> ids.containsAll(List.of(encumbrance1Id, encumbrance2Id))),
       eq(requestContextMock));
   }
+  @Test
+  void shouldNotCallRemoveEncumbranceLinks() {
+    //Given
+    String poLineId = UUID.randomUUID().toString();
+    String orderId = UUID.randomUUID().toString();
+    String encumbrance1Id = UUID.randomUUID().toString();
+    String encumbrance2Id = UUID.randomUUID().toString();
+    Transaction encumbrance1 = new Transaction()
+      .withId(encumbrance1Id)
+      .withEncumbrance(new Encumbrance()
+        .withSourcePurchaseOrderId(orderId)
+        .withSourcePoLineId(poLineId));
+    Transaction encumbrance2 = new Transaction()
+      .withId(encumbrance2Id)
+      .withEncumbrance(new Encumbrance()
+        .withSourcePurchaseOrderId(orderId)
+        .withSourcePoLineId(poLineId));
+    List<Transaction> transactions = List.of(encumbrance1, encumbrance2);
+
+    when(orderInvoiceRelationService.isOrderLinkedToAnInvoice(eq(orderId), eq(requestContextMock)))
+      .thenReturn(CompletableFuture.completedFuture(false));
+
+    //When
+    CompletableFuture<Void> result = encumbranceService.deleteEncumbranceLinksInInvoiceLines(transactions, requestContextMock);
+    assertFalse(result.isCompletedExceptionally());
+    result.join();
+
+    //Then
+    verify(orderInvoiceRelationService, times(1))
+      .isOrderLinkedToAnInvoice(eq(orderId), eq(requestContextMock));
+  }
 
 }
