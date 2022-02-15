@@ -50,6 +50,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -180,30 +181,43 @@ public class EncumbranceServiceTest {
   @Test
   void shouldCallRemoveEncumbranceLinks() {
     //Given
-    String poLineId = UUID.randomUUID().toString();
+    String poLineId1 = UUID.randomUUID().toString();
+    String poLineId2 = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
     String encumbrance1Id = UUID.randomUUID().toString();
     String encumbrance2Id = UUID.randomUUID().toString();
+    String encumbrance3Id = UUID.randomUUID().toString();
     Transaction encumbrance1 = new Transaction()
       .withId(encumbrance1Id)
       .withEncumbrance(new Encumbrance()
         .withSourcePurchaseOrderId(orderId)
-        .withSourcePoLineId(poLineId));
+        .withSourcePoLineId(poLineId1));
     Transaction encumbrance2 = new Transaction()
       .withId(encumbrance2Id)
       .withEncumbrance(new Encumbrance()
         .withSourcePurchaseOrderId(orderId)
-        .withSourcePoLineId(poLineId));
-    List<Transaction> transactions = List.of(encumbrance1, encumbrance2);
+        .withSourcePoLineId(poLineId1));
+    Transaction encumbrance3 = new Transaction()
+      .withId(encumbrance3Id)
+      .withEncumbrance(new Encumbrance()
+        .withSourcePurchaseOrderId(orderId)
+        .withSourcePoLineId(poLineId2));
+    List<Transaction> transactions = List.of(encumbrance1, encumbrance2, encumbrance3);
+    List<String> transactionIds = List.of(encumbrance1Id, encumbrance2Id, encumbrance3Id);
 
-    InvoiceLine invoiceLine = new InvoiceLine()
+    InvoiceLine invoiceLine1 = new InvoiceLine()
       .withId(UUID.randomUUID().toString())
-      .withPoLineId(poLineId)
+      .withPoLineId(poLineId1)
       .withFundDistributions(List.of(new org.folio.rest.acq.model.invoice.FundDistribution()
         .withEncumbrance(encumbrance1Id)))
       .withAdjustments(List.of(new Adjustment().withFundDistributions(List.of(
         new org.folio.rest.acq.model.invoice.FundDistribution().withEncumbrance(encumbrance2Id)))));
-    List<InvoiceLine> invoiceLines = List.of(invoiceLine);
+    InvoiceLine invoiceLine2 = new InvoiceLine()
+      .withId(UUID.randomUUID().toString())
+      .withPoLineId(poLineId2)
+      .withAdjustments(List.of(new Adjustment().withFundDistributions(List.of(
+        new org.folio.rest.acq.model.invoice.FundDistribution().withEncumbrance(encumbrance3Id)))));
+    List<InvoiceLine> invoiceLines = List.of(invoiceLine1, invoiceLine2);
 
     when(orderInvoiceRelationService.isOrderLinkedToAnInvoice(eq(orderId), eq(requestContextMock)))
       .thenReturn(CompletableFuture.completedFuture(true));
@@ -219,10 +233,11 @@ public class EncumbranceServiceTest {
 
     //Then
     verify(invoiceLineService, times(1)).removeEncumbranceLinks(
-      argThat(lines -> lines.size() == 1),
-      argThat(ids -> ids.containsAll(List.of(encumbrance1Id, encumbrance2Id))),
+      argThat(lines -> lines.size() == 2),
+      argThat(ids -> ids.containsAll(transactionIds)),
       eq(requestContextMock));
   }
+
   @Test
   void shouldNotCallRemoveEncumbranceLinks() {
     //Given
@@ -253,6 +268,8 @@ public class EncumbranceServiceTest {
     //Then
     verify(orderInvoiceRelationService, times(1))
       .isOrderLinkedToAnInvoice(eq(orderId), eq(requestContextMock));
+    verify(invoiceLineService, never()).getInvoiceLinesByOrderLineIds(any(), any());
+    verify(invoiceLineService, never()).removeEncumbranceLinks(any(), any(), any());
   }
 
 }
