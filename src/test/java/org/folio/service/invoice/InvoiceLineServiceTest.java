@@ -49,23 +49,33 @@ public class InvoiceLineServiceTest {
   @Test
   void shouldRemoveEncumbranceLinks() {
     //Given
-    String poLineId = UUID.randomUUID().toString();
+    String poLineId1 = UUID.randomUUID().toString();
+    String poLineId2 = UUID.randomUUID().toString();
     String encumbrance1Id = UUID.randomUUID().toString();
     String encumbrance2Id = UUID.randomUUID().toString();
-    List<String> transactionIds = List.of(encumbrance1Id, encumbrance2Id);
+    String encumbrance3Id = UUID.randomUUID().toString();
+    List<String> transactionIds = List.of(encumbrance1Id, encumbrance2Id, encumbrance3Id);
 
-    String invoiceLineId = UUID.randomUUID().toString();
-    InvoiceLine invoiceLine = new InvoiceLine()
-      .withId(invoiceLineId)
-      .withPoLineId(poLineId)
+    String invoiceLineId1 = UUID.randomUUID().toString();
+    InvoiceLine invoiceLine1 = new InvoiceLine()
+      .withId(invoiceLineId1)
+      .withPoLineId(poLineId1)
       .withFundDistributions(List.of(new org.folio.rest.acq.model.invoice.FundDistribution()
         .withEncumbrance(encumbrance1Id)))
       .withAdjustments(List.of(new Adjustment().withFundDistributions(List.of(
         new org.folio.rest.acq.model.invoice.FundDistribution().withEncumbrance(encumbrance2Id)))));
-    List<InvoiceLine> invoiceLines = List.of(invoiceLine);
-    InvoiceLine expectedInvoiceLine = JsonObject.mapFrom(invoiceLine).mapTo(InvoiceLine.class);
-    expectedInvoiceLine.getFundDistributions().get(0).setEncumbrance(null);
-    expectedInvoiceLine.getAdjustments().get(0).getFundDistributions().get(0).setEncumbrance(null);
+    String invoiceLineId2 = UUID.randomUUID().toString();
+    InvoiceLine invoiceLine2 = new InvoiceLine()
+      .withId(invoiceLineId2)
+      .withPoLineId(poLineId2)
+      .withAdjustments(List.of(new Adjustment().withFundDistributions(List.of(
+        new org.folio.rest.acq.model.invoice.FundDistribution().withEncumbrance(encumbrance3Id)))));
+    List<InvoiceLine> invoiceLines = List.of(invoiceLine1, invoiceLine2);
+    InvoiceLine expectedInvoiceLine1 = JsonObject.mapFrom(invoiceLine1).mapTo(InvoiceLine.class);
+    expectedInvoiceLine1.getFundDistributions().get(0).setEncumbrance(null);
+    expectedInvoiceLine1.getAdjustments().get(0).getFundDistributions().get(0).setEncumbrance(null);
+    InvoiceLine expectedInvoiceLine2 = JsonObject.mapFrom(invoiceLine2).mapTo(InvoiceLine.class);
+    expectedInvoiceLine2.getAdjustments().get(0).getFundDistributions().get(0).setEncumbrance(null);
 
     when(restClient.put(any(RequestEntry.class), any(InvoiceLine.class), eq(requestContextMock)))
       .thenReturn(CompletableFuture.completedFuture(null));
@@ -78,8 +88,12 @@ public class InvoiceLineServiceTest {
 
     //Then
     verify(restClient, times(1)).put(
-      argThat(requestEntry -> invoiceLineId.equals(requestEntry.getPathParams().get("id"))),
-      eq(expectedInvoiceLine),
+      argThat(requestEntry -> invoiceLineId1.equals(requestEntry.getPathParams().get("id"))),
+      eq(expectedInvoiceLine1),
+      eq(requestContextMock));
+    verify(restClient, times(1)).put(
+      argThat(requestEntry -> invoiceLineId2.equals(requestEntry.getPathParams().get("id"))),
+      eq(expectedInvoiceLine2),
       eq(requestContextMock));
   }
 
