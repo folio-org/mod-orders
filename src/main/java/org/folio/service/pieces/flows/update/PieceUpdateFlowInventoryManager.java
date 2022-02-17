@@ -42,7 +42,7 @@ public class PieceUpdateFlowInventoryManager {
   }
 
   public CompletableFuture<Void> processInventory(PieceUpdateHolder holder, RequestContext requestContext) {
-    return inventoryManager.updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext)
+    return inventoryManager.updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext)
       .thenCompose(aVoid -> {
         if (Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage())) {
           return packagePoLineUpdateInventory(holder, requestContext);

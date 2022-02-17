@@ -252,6 +252,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     piece.setChronology(checkinPiece.getChronology());
     piece.setDisplayOnHolding(checkinPiece.getDisplayOnHolding());
     piece.setDiscoverySuppress(checkinPiece.getDiscoverySuppress());
+    piece.setSupplement(checkinPiece.getSupplement());
     // Piece record might be received or rolled-back to Expected
     if (inventoryManager.isOnOrderPieceStatus(checkinPiece)) {
       piece.setReceivedDate(null);

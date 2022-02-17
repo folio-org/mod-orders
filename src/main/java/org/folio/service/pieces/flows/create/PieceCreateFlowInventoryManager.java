@@ -39,7 +39,7 @@ public class PieceCreateFlowInventoryManager {
     }
     else
     {
-      return nonPackagePoLineUpdateInventory(compPOL, piece, createItem, requestContext);
+       return nonPackagePoLineUpdateInventory(compPOL, piece, createItem, requestContext);
     }
   }
 

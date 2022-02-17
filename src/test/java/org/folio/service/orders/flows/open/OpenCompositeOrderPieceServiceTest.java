@@ -139,7 +139,7 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), eq(ProtectedOperationType.UPDATE), eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(eq(piece), eq(requestContext));
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
     doReturn(completedFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
@@ -158,7 +158,7 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), eq(ProtectedOperationType.UPDATE), eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(eq(piece), eq(requestContext));
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
     doReturn(completedFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
@@ -174,7 +174,7 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPieceWithLocationId(line, title);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(piece, requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(piece, requestContext);
     doReturn(completedFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).get();
