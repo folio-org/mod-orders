@@ -65,7 +65,7 @@ import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.RestConstants;
-import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -777,9 +777,9 @@ public class PurchaseOrderLineHelper {
   private CompletableFuture<String> generateLineNumber(CompositePurchaseOrder compOrder, RequestContext requestContext) {
     RequestEntry rqEntry = new RequestEntry(resourcesPath(PO_LINE_NUMBER)).withQueryParameter(PURCHASE_ORDER_ID, compOrder.getId());
     return restClient.getAsJsonObject(rqEntry, requestContext)
-      .thenApply(sequenceNumberJson -> {
-        SequenceNumber sequenceNumber = sequenceNumberJson.mapTo(SequenceNumber.class);
-        return buildPoLineNumber(compOrder.getPoNumber(), sequenceNumber.getSequenceNumber());
+      .thenApply(sequenceNumbersJson -> {
+        SequenceNumbers sequenceNumbers = JsonObject.mapFrom(sequenceNumbersJson).mapTo(SequenceNumbers.class);
+        return buildPoLineNumber(compOrder.getPoNumber(), sequenceNumbers.getSequenceNumbers().get(0));
       });
   }
 
