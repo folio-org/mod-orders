@@ -20,6 +20,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.helper.AbstractHelper;
 import org.folio.isbn.IsbnUtil;
+import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
@@ -2160,14 +2161,12 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end();
     } else {
-      SequenceNumbers seqNumbers = new SequenceNumbers();
-      List<String> seqNumbersList = new ArrayList<>();
-      seqNumbersList.add(PO_LINE_NUMBER_VALUE);
-      seqNumbers.setSequenceNumbers(seqNumbersList);
+      SequenceNumber seqNumber = new SequenceNumber();
+      seqNumber.setSequenceNumber(PO_NUMBER_VALUE);
       ctx.response()
         .setStatusCode(200)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(JsonObject.mapFrom(seqNumbers).encodePrettily());
+        .end(JsonObject.mapFrom(seqNumber).encodePrettily());
     }
   }
 
