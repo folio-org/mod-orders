@@ -797,9 +797,13 @@ public class InventoryManager {
     if (quantity > 0) {
       String holdingId = piece.getHoldingId();
       return buildElectronicItemRecordJsonObject(compPOL, holdingId, requestContext)
-        .thenCompose(itemData -> {
+        .thenApply(item -> {
+          updateItemWithPieceFields(piece, item);
+          return item;
+        })
+        .thenCompose(item -> {
           logger.debug("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
-          return createItemRecords(itemData, quantity, requestContext);
+          return createItemRecords(item, quantity, requestContext);
         });
     } else {
       return completedFuture(Collections.emptyList());
@@ -819,9 +823,13 @@ public class InventoryManager {
     if (quantity > 0) {
       String holdingId = piece.getHoldingId();
       return buildPhysicalItemRecordJsonObject(compPOL, holdingId, requestContext)
-        .thenCompose(itemData -> {
+        .thenApply(item -> {
+          updateItemWithPieceFields(piece, item);
+          return item;
+        })
+        .thenCompose(item -> {
           logger.debug("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
-          return createItemRecords(itemData, quantity, requestContext);
+          return createItemRecords(item, quantity, requestContext);
         });
     } else {
       return completedFuture(Collections.emptyList());
@@ -888,22 +896,19 @@ public class InventoryManager {
       });
   }
 
-  public CompletableFuture<Void> updateItemWithPoLineId(Piece piece, RequestContext requestContext) {
+  public CompletableFuture<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
     if (piece.getItemId() == null || piece.getPoLineId() == null) {
       return CompletableFuture.completedFuture(null);
     }
     String itemId = piece.getItemId();
     String poLineId = piece.getPoLineId();
     return getItemRecordById(itemId, true, requestContext)
+      .thenApply(item -> {
+        updateItemWithPieceFields(piece, item);
+        return item;
+      })
       .thenCompose(item -> {
         if (poLineId != null && item != null && !item.isEmpty()) {
-          item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId);
-          Optional.ofNullable(piece.getEnumeration())
-              .ifPresentOrElse(enumeration -> item.put(ITEM_ENUMERATION, enumeration), () -> item.remove(ITEM_ENUMERATION));
-          Optional.ofNullable(piece.getChronology())
-            .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
-          Optional.ofNullable(piece.getDiscoverySuppress())
-            .ifPresentOrElse(discSup -> item.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> item.remove(ITEM_DISCOVERY_SUPPRESS));
           return updateItem(item, requestContext);
         }
         return CompletableFuture.completedFuture(null);
@@ -1183,5 +1188,14 @@ public class InventoryManager {
           .collect(Collectors.toList());
         throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
       });
+  }
+
+  private void updateItemWithPieceFields(Piece piece, JsonObject item) {
+    Optional.ofNullable(piece.getEnumeration())
+      .ifPresentOrElse(enumeration -> item.put(ITEM_ENUMERATION, enumeration), () -> item.remove(ITEM_ENUMERATION));
+    Optional.ofNullable(piece.getChronology())
+      .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
+    Optional.ofNullable(piece.getDiscoverySuppress())
+      .ifPresentOrElse(discSup -> item.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> item.remove(ITEM_DISCOVERY_SUPPRESS));
   }
 }

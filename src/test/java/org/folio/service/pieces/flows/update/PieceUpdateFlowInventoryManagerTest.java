@@ -141,7 +141,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager)
       .createMissingElectronicItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
@@ -152,7 +152,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(eq(holder.getInstanceId()), any(Location.class), eq(requestContext));
     verify(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
-    verify(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    verify(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
   }
 
@@ -189,7 +189,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager)
       .createMissingPhysicalItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
@@ -200,7 +200,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(eq(holder.getInstanceId()), any(Location.class), eq(requestContext));
     verify(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
-    verify(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    verify(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
   }
 
@@ -238,7 +238,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager)
       .createMissingPhysicalItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
@@ -249,7 +249,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(eq(holder.getInstanceId()), any(Location.class), eq(requestContext));
     verify(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
-    verify(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    verify(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
   }
 
@@ -291,7 +291,7 @@ public class PieceUpdateFlowInventoryManagerTest {
 
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager)
       .createMissingPhysicalItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
@@ -303,7 +303,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(eq(holder.getInstanceId()), any(Location.class), eq(requestContext));
     verify(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
-    verify(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    verify(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     verify(inventoryManager,times(0)).createMissingElectronicItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
     verify(inventoryManager,times(0)).createMissingPhysicalItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
     verify(inventoryManager).updateItem(item, requestContext);
@@ -342,7 +342,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager)
                                   .createMissingElectronicItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
@@ -353,7 +353,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(eq(holder.getInstanceId()), any(Location.class), eq(requestContext));
     verify(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
-    verify(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    verify(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
   }
 
@@ -390,7 +390,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager)
       .createMissingPhysicalItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
@@ -401,7 +401,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(titlesService).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(eq(holder.getInstanceId()), any(Location.class), eq(requestContext));
     verify(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
-    verify(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    verify(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
   }
 
@@ -437,7 +437,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(pieceToUpdate.getItemId(), true, requestContext);
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager)
       .createMissingPhysicalItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
@@ -448,7 +448,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(titlesService, times(0)).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(eq(holder.getInstanceId()), any(Location.class), eq(requestContext));
     verify(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
-    verify(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    verify(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
   }
 
@@ -489,7 +489,7 @@ public class PieceUpdateFlowInventoryManagerTest {
 
     doReturn(completedFuture(List.of(itemId))).when(inventoryManager)
       .createMissingPhysicalItems(holder.getPoLineToSave(), pieceToUpdate, 1, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
@@ -501,7 +501,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(titlesService, times(0)).getTitleById(pieceToUpdate.getTitleId(), requestContext);
     verify(inventoryManager, times(0)).getOrCreateHoldingsRecord(eq(holder.getInstanceId()), any(Location.class), eq(requestContext));
     verify(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
-    verify(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    verify(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
     verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
     verify(inventoryManager).updateItem(item, requestContext);
   }
@@ -535,7 +535,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     holder.withOrderInformation(purchaseOrder, poLine);
 
     doReturn(completedFuture(new JsonObject())).when(inventoryManager).getItemRecordById(null, true, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPoLineId(holder.getPieceToUpdate(), requestContext);
+    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext);
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).join();
 
