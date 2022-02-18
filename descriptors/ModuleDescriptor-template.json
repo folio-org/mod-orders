@@ -247,7 +247,10 @@
             "isbn-utils.convert-to-13.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
-            "organizations-storage.organizations.collection.get"
+            "organizations-storage.organizations.collection.get",
+            "invoice.invoice-lines.collection.get",
+            "invoice.invoice-lines.item.put",
+            "orders-storage.order-invoice-relationships.collection.get"
           ]
         },
         {

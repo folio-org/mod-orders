@@ -639,8 +639,9 @@ public class PurchaseOrderLinesApiTest {
     // 2 calls each to fetch Order Line and Purchase Order
     // + 2 calls for ISBN validation
     // + 1 call to get the line encumbrances
+    // + 1 call to check invoice relationships
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(5, column.size());
+    assertEquals(6, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);

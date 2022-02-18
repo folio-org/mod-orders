@@ -44,7 +44,6 @@ import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.invoice.InvoiceLineService;
-import org.folio.service.invoice.InvoiceService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
@@ -154,8 +153,11 @@ public class ApplicationConfig {
   }
 
   @Bean
-  EncumbranceService encumbranceService(TransactionService transactionService, TransactionSummariesService transactionSummariesService, InvoiceService invoiceService) {
-    return new EncumbranceService(transactionService, transactionSummariesService, invoiceService);
+  EncumbranceService encumbranceService(TransactionService transactionService,
+      TransactionSummariesService transactionSummariesService,
+      InvoiceLineService invoiceLineService,
+      OrderInvoiceRelationService orderInvoiceRelationService) {
+    return new EncumbranceService(transactionService, transactionSummariesService, invoiceLineService, orderInvoiceRelationService);
   }
 
   @Bean
@@ -194,11 +196,6 @@ public class ApplicationConfig {
   @Bean
   FundsDistributionService fundsDistributionService() {
     return new FundsDistributionService();
-  }
-
-  @Bean
-  InvoiceService invoiceService(RestClient restClient) {
-    return new InvoiceService(restClient);
   }
 
   @Bean

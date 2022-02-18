@@ -1,9 +1,6 @@
 package org.folio;
 
-import static org.folio.TestConfig.closeMockServer;
-import static org.folio.TestConfig.closeVertx;
-import static org.folio.TestConfig.deployVerticle;
-import static org.folio.TestConfig.startMockServer;
+import static org.folio.TestConfig.*;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -22,15 +19,7 @@ import org.folio.orders.utils.validators.OngoingOrderValidatorTest;
 import org.folio.rest.core.ResponseUtilTest;
 import org.folio.rest.core.RestClientTest;
 import org.folio.rest.core.exceptions.ExceptionUtilTest;
-import org.folio.rest.impl.CheckinReceivingApiTest;
-import org.folio.rest.impl.HoldingsSummaryAPITest;
-import org.folio.rest.impl.OrderTemplateTest;
-import org.folio.rest.impl.PieceApiTest;
-import org.folio.rest.impl.PoNumberApiTest;
-import org.folio.rest.impl.PurchaseOrderLinesApiTest;
-import org.folio.rest.impl.PurchaseOrdersApiTest;
-import org.folio.rest.impl.ReceivingHistoryApiTest;
-import org.folio.rest.impl.TitlesApiTest;
+import org.folio.rest.impl.*;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
@@ -49,17 +38,8 @@ import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTes
 import org.folio.service.finance.transaction.TransactionServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.inventory.InventoryManagerTest;
-import org.folio.service.orders.AcquisitionsUnitsServiceTest;
-import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
-import org.folio.service.orders.CompositeOrderRetrieveHolderBuilderTest;
-import org.folio.service.orders.FundsDistributionServiceTest;
-import org.folio.service.orders.OrderInvoiceRelationServiceTest;
-import org.folio.service.orders.OrderReEncumberServiceTest;
-import org.folio.service.orders.OrderRolloverServiceTest;
-import org.folio.service.orders.PurchaseOrderLineServiceTest;
-import org.folio.service.orders.PurchaseOrderStorageServiceTest;
-import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
-import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
+import org.folio.service.invoice.InvoiceLineServiceTest;
+import org.folio.service.orders.*;
 import org.folio.service.orders.flows.open.OpenCompositeOrderHolderBuilderTest;
 import org.folio.service.orders.flows.open.OpenCompositeOrderInventoryServiceTest;
 import org.folio.service.orders.flows.open.OpenCompositeOrderManagerTest;
@@ -395,4 +375,9 @@ public class ApiTestSuite {
   class OpenCompositeOrderHolderBuilderTestNested extends OpenCompositeOrderHolderBuilderTest {
 
   }
+
+  @Nested
+  class InvoiceLineServiceTestNested extends InvoiceLineServiceTest {
+  }
+
 }
