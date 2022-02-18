@@ -38,6 +38,7 @@ import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTes
 import org.folio.service.finance.transaction.TransactionServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.inventory.InventoryManagerTest;
+import org.folio.service.invoice.InvoiceLineServiceTest;
 import org.folio.service.orders.*;
 import org.folio.service.orders.flows.open.OpenCompositeOrderHolderBuilderTest;
 import org.folio.service.orders.flows.open.OpenCompositeOrderInventoryServiceTest;
@@ -378,4 +379,9 @@ public class ApiTestSuite {
   class OpenCompositeOrderHolderBuilderTestNested extends OpenCompositeOrderHolderBuilderTest {
 
   }
+
+  @Nested
+  class InvoiceLineServiceTestNested extends InvoiceLineServiceTest {
+  }
+
 }
