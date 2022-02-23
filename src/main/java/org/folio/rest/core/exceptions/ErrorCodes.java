@@ -99,7 +99,8 @@ public enum ErrorCodes {
   CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR("createItemForPieceIsNotAllowedError", "Create item for piece format %s is not allowed. Please check inventory option in the purchase order line %s"),
   NOT_FOUND("notFound", "Not Found"),
   FORBIDDEN_DELETE_SYSTEM_VALUE("forbiddenDeleteSystemValues", "It is forbidden to delete system values"),
-  FORBIDDEN_DELETE_USED_VALUE("forbiddenDeleteUsedValue", "Deleting the value used is prohibited");
+  FORBIDDEN_DELETE_USED_VALUE("forbiddenDeleteUsedValue", "Deleting the value used is prohibited"),
+  ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES("errorRemovingInvoiceLineEncumbrances", "Error removing invoice line encumbrance links after deleting the encumbrances: %s");
 
 
   private final String code;

@@ -33,6 +33,12 @@ public class OrderInvoiceRelationService {
     return restClient.get(requestEntry, requestContext, OrderInvoiceRelationshipCollection.class);
   }
 
+  public CompletableFuture<Boolean> isOrderLinkedToAnInvoice(String orderId, RequestContext requestContext) {
+    String query = "purchaseOrderId==" + orderId;
+    return getOrderInvoiceRelationshipCollection(query, 0, 0, requestContext)
+      .thenApply(oirs -> oirs.getTotalRecords() > 0);
+  }
+
   public CompletableFuture<Void> checkOrderInvoiceRelationship(String id, RequestContext requestContext) {
     String query = "purchaseOrderId==" + id;
 
