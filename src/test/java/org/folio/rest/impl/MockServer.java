@@ -20,11 +20,12 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.helper.AbstractHelper;
 import org.folio.isbn.IsbnUtil;
+import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.TitleCollection;
 import org.folio.rest.acq.model.finance.Budget;
@@ -807,12 +808,14 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end();
     } else {
-      SequenceNumber seqNumber = new SequenceNumber();
-      seqNumber.setSequenceNumber(PO_LINE_NUMBER_VALUE);
+      SequenceNumbers seqNumbers = new SequenceNumbers();
+      List<String> seqNumbersList = new ArrayList<>();
+      seqNumbersList.add(PO_LINE_NUMBER_VALUE);
+      seqNumbers.setSequenceNumbers(seqNumbersList);
       ctx.response()
         .setStatusCode(200)
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(JsonObject.mapFrom(seqNumber).encodePrettily());
+        .end(JsonObject.mapFrom(seqNumbers).encodePrettily());
     }
   }
 
