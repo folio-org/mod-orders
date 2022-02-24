@@ -1,4 +1,18 @@
-## 12.4.0 - Unreleased
+## 12.3.2 - Unreleased
+
+## 12.3.1 - Released
+
+The primary focus of this release was to fix issues with processing lines with more then 2 fund distributions.
+Also error handling and performance were improved.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.3.0...v12.3.1)
+
+### Technical tasks
+* [MODORDERS-490](https://issues.folio.org/browse/MODORDERS-490) - Generate list of poLine numbers in a single request
+
+### Bug Fixes
+* [MODORDERS-652](https://issues.folio.org/browse/MODORDERS-652) - Open order : Error message does not indicate what Fund does not have money
+* [MODORDERS-646](https://issues.folio.org/browse/MODORDERS-646) - Fund distribution total not correct when 3 Fund distributions are used
 
 ## 12.3.0 - Released
 This release focused on adding support of EDI export and fixing po line processing 
