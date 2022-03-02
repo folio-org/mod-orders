@@ -1660,6 +1660,21 @@
         "tags.item.post"
       ],
       "visible": false
+    },
+    {
+      "permissionName" : "orders.item.approve",
+      "displayName" : "Permission should be provided to approve order",
+      "description" : "Permission should be provided to approve order"
+    },
+    {
+      "permissionName" : "orders.item.unopen",
+      "displayName" : "Permission should be provided to unopen order",
+      "description" : "Permission should be provided to unopen order"
+    },
+    {
+      "permissionName" : "orders.item.reopen",
+      "displayName" : "Permission should be provided to reopen order",
+      "description" : "Permission should be provided to reopen order"
     }
   ],
   "launchDescriptor": {
