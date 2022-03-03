@@ -1,4 +1,27 @@
-## 12.3.0 - Unreleased
+## 12.4.0 - Unreleased
+
+## 12.3.0 - Released
+This release focused on adding support of EDI export and fixing po line processing 
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.1.0...v12.2.0)
+
+### Stories
+* [MODORDERS-634](https://issues.folio.org/browse/MODORDERS-634) - Support circulation interface v13
+* [MODORDERS-620](https://issues.folio.org/browse/MODORDERS-620) - Create Acquisition method schema and API
+* [MODORDERS-609](https://issues.folio.org/browse/MODORDERS-609) - Deleting an order line fails without mod-invoice
+* [MODORDERS-605](https://issues.folio.org/browse/MODORDERS-605) - Return helpful and clear error code, when Acquisition unit name already exist
+* [MODORDERS-599](https://issues.folio.org/browse/MODORDERS-599) - Update re-encumbered logic to support "initialEncumbered"
+* [MODORDERS-569](https://issues.folio.org/browse/MODORDERS-569) - Implement logic for updating Item fields when Piece was changed
+* [MODORDERS-557](https://issues.folio.org/browse/MODORDERS-557) - Support "Disable instance matching" flag at the open order flow
+
+### Bug Fixes
+* [MODORDERS-655](https://issues.folio.org/browse/MODORDERS-655) - Undefined permission 'finance.order-transaction-summaries.item.get'
+* [MODORDERS-649](https://issues.folio.org/browse/MODORDERS-649) - Some fields of the piece are not populated when receiving/unreceiving
+* [MODORDERS-645](https://issues.folio.org/browse/MODORDERS-645) - Invoice payment fails if order line fund distribution is changed before invoice approval
+* [MODORDERS-638](https://issues.folio.org/browse/MODORDERS-638) - Invoice can be approved but not paid when expense class added at point of invoice
+* [MODORDERS-635](https://issues.folio.org/browse/MODORDERS-635) - Title "Publication date" validation is different from that of the PO Line
+* [MODORDERS-616](https://issues.folio.org/browse/MODORDERS-616) - New holdingId is not saved into piece when location is changed during receiving
+
 
 ## 12.2.0 - Released
 This release focused on improvements in handling pieces 

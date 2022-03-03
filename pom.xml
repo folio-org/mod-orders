@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-orders</artifactId>
-  <version>12.3.0-SNAPSHOT</version>
+  <version>12.4.0-SNAPSHOT</version>
 
   <name>Orders Business Logic</name>
   <description>Business logic to manage orders in FOLIO</description>
@@ -59,6 +59,7 @@
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <spring.version>5.2.11.RELEASE</spring.version>
     <vertx.version>4.1.0.CR1</vertx.version>
+    <log4j.version>2.17.2</log4j.version>
     <argLine />
   </properties>
 
@@ -195,7 +196,6 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
-      <version>2.13.3</version>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
@@ -682,6 +682,13 @@
         <version>${vertx.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-bom</artifactId>
+        <version>${log4j.version}</version>
+        <scope>import</scope>
+        <type>pom</type>
       </dependency>
     </dependencies>
   </dependencyManagement>
