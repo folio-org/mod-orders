@@ -3,7 +3,7 @@ package org.folio.service.finance.budget;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
-import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.money.CurrencyUnit;
 import javax.money.Monetary;
@@ -19,6 +20,7 @@ import javax.money.MonetaryAmount;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Budget;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryFunctions;
@@ -31,7 +33,14 @@ public class BudgetRestrictionService {
         .filter(EncumbranceRelationsHolder::getRestrictEncumbrance)
         .collect(groupingBy(EncumbranceRelationsHolder::getBudget));
 
-    List<String> failedBudgetIds = budgetHoldersMap.entrySet()
+    Map<String, String> fundHoldersMap = dataHolders.stream()
+        .filter(EncumbranceRelationsHolder::getRestrictEncumbrance)
+        .map(EncumbranceRelationsHolder::getFundDistribution)
+        .filter(fd -> fd != null && fd.getFundId() != null && fd.getCode() != null)
+        .collect(Collectors.toMap(FundDistribution::getFundId, FundDistribution::getCode,
+          (fundEntityKey, fundEntityDupKey) -> fundEntityKey));
+
+    List<String> failedFundIds = budgetHoldersMap.entrySet()
         .stream()
         .filter(entry -> Objects.nonNull(entry.getKey().getAllowableEncumbrance()))
         .filter(entry -> {
@@ -39,12 +48,12 @@ public class BudgetRestrictionService {
           return isRemainingAmountExceed(entry.getKey(), newEncumberedAmount);
         })
         .map(Map.Entry::getKey)
-        .map(Budget::getId)
+        .map(Budget::getFundId)
         .collect(toList());
 
-    if (!failedBudgetIds.isEmpty()) {
-      Parameter parameter = new Parameter().withKey(BUDGETS)
-          .withValue(failedBudgetIds.toString());
+    if (!failedFundIds.isEmpty()) {
+      Parameter parameter = new Parameter().withKey(FUNDS)
+          .withValue(failedFundIds.stream().map(fundHoldersMap::get).collect(toList()).toString());
       throw new HttpException(422, FUND_CANNOT_BE_PAID.toError()
           .withParameters(Collections.singletonList(parameter)));
     }
