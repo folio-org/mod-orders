@@ -13,6 +13,7 @@ import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
@@ -49,6 +50,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -620,7 +622,7 @@ public class PurchaseOrderHelper {
             .stream()
             .map(compositePoLine -> purchaseOrderLineHelper.createPoLine(compositePoLine, compPO, requestContext))
             .collect(Collectors.toList());
-    return HelperUtils.collectResultsOnSuccess(futures);
+    return collectResultsOnSuccess(futures);
   }
 
   private CompletableFuture<List<CompositePoLine>> fetchCompositePoLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
@@ -797,11 +799,26 @@ public class PurchaseOrderHelper {
     if (compPO.getCompositePoLines().isEmpty()){
       return completedFuture(null);
     }
+
+    var filteredCompLines = compPO.getCompositePoLines()
+      .stream()
+      .filter(HelperUtils::isProductIdsExist)
+      .collect(toList());
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+
     return inventoryManager.getProductTypeUuidByIsbn(requestContext)
-      .thenCompose(isbnId -> CompletableFuture.allOf(compPO.getCompositePoLines().stream()
-        .filter(HelperUtils::isProductIdsExist)
-        .map(line -> purchaseOrderLineHelper.validateAndNormalizeISBN(line, isbnId, requestContext))
-        .toArray(CompletableFuture[]::new)));
+      .thenAccept(isbnId -> {
+        CompletableFuture<Void> future = completedFuture(null);
+        Map<String, String> normalizedIsbnCache = new HashMap<>();
+
+        for (CompositePoLine compLine : filteredCompLines) {
+          if (HelperUtils.isProductIdsExist(compLine)) {
+            future = future.thenCompose(v -> purchaseOrderLineHelper.validateAndNormalizeISBN(compLine, isbnId, normalizedIsbnCache, requestContext));
+            futures.add(future);
+          }
+        }
+      })
+      .thenCompose(v -> CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])));
   }
 
   private CompletableFuture<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO, JsonObject tenantConfiguration) {

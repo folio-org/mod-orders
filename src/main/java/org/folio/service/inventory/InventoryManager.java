@@ -375,12 +375,13 @@ public class InventoryManager {
    * @return future with list of piece objects
    */
   public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, Location location,
-                                                          RequestContext requestContext) {
+      RequestContext requestContext) {
     Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, List.of(location));
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
-    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId, location.getHoldingId());
+    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId,
+        location.getHoldingId());
     if (piecesWithItemsQty == 0) {
       return completedFuture(Collections.emptyList());
     }
@@ -388,40 +389,50 @@ public class InventoryManager {
     // Search for already existing items
     return searchStorageExistingItems(compPOL.getId(), location.getHoldingId(), piecesWithItemsQty, requestContext)
       .thenCompose(existingItems -> {
-          List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
-          piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
-            // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
-            if (expectedQuantity > 0) {
+        List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
+        CompletableFuture<List<Piece>> future = CompletableFuture.completedFuture(null);
+
+        for (Map.Entry<Piece.Format, Integer> pieceEntry : piecesWithItemsQuantities.entrySet()) {
+          Piece.Format pieceFormat = pieceEntry.getKey();
+          Integer expectedQuantity = pieceEntry.getValue();
+
+          // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
+          if (expectedQuantity > 0) {
+            // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
+            Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
+
+            future = future.thenCompose(v -> {
               List<String> existingItemIds;
-              CompletableFuture<List<String>> newItems;
-              // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
-              Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
               if (pieceFormat == Piece.Format.ELECTRONIC) {
                 existingItemIds = getElectronicItemIds(compPOL, existingItems);
-                newItems = createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext);
+                return createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext)
+                      .thenApply(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
               } else {
                 existingItemIds = getPhysicalItemIds(compPOL, existingItems);
-                newItems = createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext);
+                return createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext)
+                      .thenApply(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
               }
-
-              // Build piece records once new existingItemIds are created
-              pieces.add(newItems.thenApply(createdItemIds -> {
-                List<String> itemIds = ListUtils.union(createdItemIds, existingItemIds);
-                logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
-                return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(polId, itemId, pieceFormat, location))
-                  .toList();
-              }));
-            }
-          });
-
-          // Wait for all items to be created and corresponding pieces are built
-          return collectResultsOnSuccess(pieces)
-            .thenApply(results -> {
-              validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
-              return results.stream().flatMap(List::stream).collect(toList());
             });
+            // Build piece records once new existingItemIds are created
+            pieces.add(future);
+          }
         }
-      );
+
+        // Wait for all items to be created and corresponding pieces are built
+        return collectResultsOnSuccess(pieces).thenApply(results -> {
+          validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
+          return results.stream()
+            .flatMap(List::stream)
+            .collect(toList());
+        });
+      });
+  }
+
+  private List<Piece> buildPieces(Location location, String polId, Piece.Format pieceFormat, List<String> createdItemIds,
+    List<String> existingItemIds) {
+    List<String> itemIds = ListUtils.union(createdItemIds, existingItemIds);
+    logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
+    return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(polId, itemId, pieceFormat, location)).toList();
   }
 
   private Piece openOrderBuildPiece(String polId, String itemId, Piece.Format pieceFormat, Location location) {
