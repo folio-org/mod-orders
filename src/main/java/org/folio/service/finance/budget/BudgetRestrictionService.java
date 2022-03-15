@@ -37,6 +37,7 @@ public class BudgetRestrictionService {
         .filter(EncumbranceRelationsHolder::getRestrictEncumbrance)
         .map(EncumbranceRelationsHolder::getFundDistribution)
         .filter(fd -> fd != null && fd.getFundId() != null && fd.getCode() != null)
+        .distinct()
         .collect(Collectors.toMap(FundDistribution::getFundId, FundDistribution::getCode,
           (fundEntityKey, fundEntityDupKey) -> fundEntityKey));
 
