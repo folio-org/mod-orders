@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.folio.models.EncumbranceRelationsHolder;
+import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Fund;
@@ -39,6 +40,7 @@ public class BudgetRestrictionServiceTest {
     String fiscalYearId = UUID.randomUUID().toString();
     String fundId = UUID.randomUUID().toString();
     String budgetId = UUID.randomUUID().toString();
+    String fundCode = "TEST-FUND";
 
     Transaction existingTransaction = new Transaction()
         .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)
@@ -66,12 +68,16 @@ public class BudgetRestrictionServiceTest {
         .withAllowableEncumbrance(100d);
 
     List<EncumbranceRelationsHolder> holders = new ArrayList<>();
+    FundDistribution fundDistribution = new FundDistribution()
+        .withFundId(fundId)
+        .withCode(fundCode);
     EncumbranceRelationsHolder holder = new EncumbranceRelationsHolder().withOldEncumbrance(existingTransaction)
         .withNewEncumbrance(newTransaction)
         .withBudget(budget)
         .withRestrictEncumbrances(true)
         .withCurrentFiscalYearId(fiscalYearId)
-        .withCurrency("USD");
+        .withCurrency("USD")
+        .withFundDistribution(fundDistribution);
     holders.add(holder);
 
     HttpException httpException = assertThrows(HttpException.class, () -> restrictionService.checkEncumbranceRestrictions(holders));
@@ -79,7 +85,7 @@ public class BudgetRestrictionServiceTest {
     assertEquals(422, httpException.getCode());
     Error error = httpException.getError();
     assertEquals(FUND_CANNOT_BE_PAID.getCode(), error.getCode());
-    assertEquals(Collections.singletonList(budgetId).toString(), error.getParameters().get(0).getValue());
+    assertEquals(Collections.singletonList(fundCode).toString(), error.getParameters().get(0).getValue());
 
   }
 
@@ -238,6 +244,7 @@ public class BudgetRestrictionServiceTest {
     String fiscalYearId = UUID.randomUUID().toString();
     String fundId = UUID.randomUUID().toString();
     String budgetId = UUID.randomUUID().toString();
+    String fundCode = "TEST-FUND";
 
 
     Transaction newTransaction = new Transaction()
@@ -260,13 +267,17 @@ public class BudgetRestrictionServiceTest {
 
     List<EncumbranceRelationsHolder> holders = new ArrayList<>();
 
+    FundDistribution fundDistribution = new FundDistribution()
+        .withFundId(fundId)
+        .withCode(fundCode);
     EncumbranceRelationsHolder holder = new EncumbranceRelationsHolder()
         .withOldEncumbrance(null)
         .withNewEncumbrance(newTransaction)
         .withBudget(budget)
         .withRestrictEncumbrances(true)
         .withCurrentFiscalYearId(fiscalYearId)
-        .withCurrency("USD");
+        .withCurrency("USD")
+        .withFundDistribution(fundDistribution);
     holders.add(holder);
 
     HttpException httpException = assertThrows(HttpException.class, () -> restrictionService.checkEncumbranceRestrictions(holders));
@@ -274,7 +285,7 @@ public class BudgetRestrictionServiceTest {
     assertEquals(422, httpException.getCode());
     Error error = httpException.getError();
     assertEquals(FUND_CANNOT_BE_PAID.getCode(), error.getCode());
-    assertEquals(Collections.singletonList(budgetId).toString(), error.getParameters().get(0).getValue());
+    assertEquals(Collections.singletonList(fundCode).toString(), error.getParameters().get(0).getValue());
   }
 
 
