@@ -12,7 +12,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.FundDistributionUtils;
-import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
 import org.folio.orders.utils.validators.OngoingOrderValidator;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -22,6 +21,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.pieces.PieceStorageService;
 
@@ -31,12 +31,15 @@ public class OpenCompositeOrderFlowValidator {
   private final ExpenseClassValidationService expenseClassValidationService;
   private final PieceStorageService pieceStorageService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
+  private final CompositePoLineValidationService compositePoLineValidationService;
 
   public OpenCompositeOrderFlowValidator(ExpenseClassValidationService expenseClassValidationService,
-    PieceStorageService pieceStorageService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory) {
+    PieceStorageService pieceStorageService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+    CompositePoLineValidationService compositePoLineValidationService) {
     this.expenseClassValidationService = expenseClassValidationService;
     this.pieceStorageService = pieceStorageService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
+    this.compositePoLineValidationService = compositePoLineValidationService;
   }
 
   public CompletableFuture<Void> validate(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
@@ -63,7 +66,7 @@ public class OpenCompositeOrderFlowValidator {
 
   private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
-      List<Error> errors = CompositePoLineValidationUtil.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
+      List<Error> errors = compositePoLineValidationService.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
       if (!errors.isEmpty()) {
         throw new HttpException(422, errors.get(0));
       }

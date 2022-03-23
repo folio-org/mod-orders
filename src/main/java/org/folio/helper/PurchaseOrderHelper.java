@@ -13,6 +13,7 @@ import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
@@ -47,6 +48,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.O
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -72,7 +74,6 @@ import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.orders.utils.validators.CompositePoLineValidationUtil;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -95,6 +96,7 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
+import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -138,6 +140,7 @@ public class PurchaseOrderHelper {
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final ConfigurationEntriesService configurationEntriesService;
   private final PoNumberHelper poNumberHelper;
+  private final CompositePoLineValidationService compositePoLineValidationService;
 
   public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
         CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
@@ -148,7 +151,8 @@ public class PurchaseOrderHelper {
         UnOpenCompositeOrderManager unOpenCompositeOrderManager,
         OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
         ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
-        OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
+        OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+        CompositePoLineValidationService compositePoLineValidationService) {
     this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.orderLinesSummaryPopulateService = orderLinesSummaryPopulateService;
     this.encumbranceService = encumbranceService;
@@ -167,6 +171,7 @@ public class PurchaseOrderHelper {
     this.configurationEntriesService = configurationEntriesService;
     this.poNumberHelper = poNumberHelper;
     this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
+    this.compositePoLineValidationService = compositePoLineValidationService;
   }
 
   /**
@@ -433,7 +438,7 @@ public class PurchaseOrderHelper {
                                                   RequestContext requestContext) {
     List<Error> errors = new ArrayList<>();
     return setCreateInventoryDefaultValues(compPO, tenantConfig)
-                .thenAccept(v -> errors.addAll(validateOrderPoLines(compPO)))
+                .thenCompose(v -> validateOrderPoLines(compPO, requestContext)).thenAccept(errors::addAll)
                 .thenAccept(v -> errors.addAll(validatePoLineLimit(compPO, tenantConfig)))
                 .thenCompose(v -> validateIsbnValues(compPO, requestContext))
                 .thenCompose(v -> validateVendor(compPO, requestContext).thenAccept(errors::addAll))
@@ -443,12 +448,15 @@ public class PurchaseOrderHelper {
                 });
   }
 
-  public List<Error> validateOrderPoLines(CompositePurchaseOrder compositeOrder) {
-    List<Error> errors = new ArrayList<>();
-    for (CompositePoLine compositePoLine : compositeOrder.getCompositePoLines()) {
-      errors.addAll(CompositePoLineValidationUtil.validatePoLine(compositePoLine));
-    }
-    return errors;
+  public CompletableFuture<List<Error>> validateOrderPoLines(CompositePurchaseOrder compositeOrder, RequestContext requestContext) {
+    List<CompletableFuture<List<Error>>> poLinesErrors = compositeOrder.getCompositePoLines().stream()
+      .map(compositePoLine -> compositePoLineValidationService.validatePoLine(compositePoLine, requestContext))
+      .collect(toList());
+
+    return collectResultsOnSuccess(poLinesErrors).thenApply(
+      lists -> lists.stream()
+        .flatMap(Collection::stream)
+        .collect(toList()));
   }
 
   /**
@@ -620,7 +628,7 @@ public class PurchaseOrderHelper {
             .stream()
             .map(compositePoLine -> purchaseOrderLineHelper.createPoLine(compositePoLine, compPO, requestContext))
             .collect(Collectors.toList());
-    return HelperUtils.collectResultsOnSuccess(futures);
+    return collectResultsOnSuccess(futures);
   }
 
   private CompletableFuture<List<CompositePoLine>> fetchCompositePoLines(CompositePurchaseOrder compPO, RequestContext requestContext) {

@@ -41,6 +41,7 @@ import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
+import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
@@ -484,8 +485,10 @@ public class ApplicationConfig {
   }
 
   @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(ExpenseClassValidationService expenseClassValidationService,
-    PieceStorageService pieceStorageService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory) {
-    return new OpenCompositeOrderFlowValidator(expenseClassValidationService, pieceStorageService, encumbranceWorkflowStrategyFactory);
+    PieceStorageService pieceStorageService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+    CompositePoLineValidationService compositePoLineValidationService) {
+    return new OpenCompositeOrderFlowValidator(expenseClassValidationService, pieceStorageService,
+      encumbranceWorkflowStrategyFactory, compositePoLineValidationService);
   }
 
   @Bean PoNumberHelper poNumberHelper(RestClient restClient, PurchaseOrderStorageService purchaseOrderStorageService) {
@@ -502,12 +505,13 @@ public class ApplicationConfig {
     UnOpenCompositeOrderManager unOpenCompositeOrderManager,
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
-    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+    CompositePoLineValidationService compositePoLineValidationService) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
       unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
-      poNumberHelper, openCompositeOrderFlowValidator);
+      poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService);
   }
 
   @Bean PurchaseOrderLineHelper purchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
@@ -515,10 +519,15 @@ public class ApplicationConfig {
         EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
         TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
         PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
-        ConfigurationEntriesService configurationEntriesService, RestClient restClient) {
+        ConfigurationEntriesService configurationEntriesService, RestClient restClient,
+        CompositePoLineValidationService compositePoLineValidationService) {
     return new PurchaseOrderLineHelper(inventoryManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, acquisitionsUnitsService, protectionService,
-      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient);
+      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient, compositePoLineValidationService);
+  }
+
+  @Bean CompositePoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService) {
+    return new CompositePoLineValidationService(expenseClassValidationService);
   }
 
   @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
