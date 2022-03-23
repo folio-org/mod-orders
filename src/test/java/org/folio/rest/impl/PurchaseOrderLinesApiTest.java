@@ -28,6 +28,7 @@ import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
 import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
 import static org.folio.TestConstants.PO_LINE_ID_FOR_SUCCESS_CASE;
+import static org.folio.TestConstants.PO_LINE_ID_WRONG_EXPENSE_CLASS;
 import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
 import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
@@ -351,6 +352,20 @@ public class PurchaseOrderLinesApiTest {
 
     assertEquals(1, resp.getErrors().size());
     assertEquals(ErrorCodes.ORDER_NOT_FOUND.getCode(), resp.getErrors().get(0).getCode());
+  }
+
+  @Test
+  void testPostOrdersLinesByIdPoLineWithWrongExpenseClasses() {
+    logger.info("=== Test Post Order Lines By Id (expense class doesn't exist in budget) ===");
+    JsonObject reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, PO_LINE_ID_WRONG_EXPENSE_CLASS);
+
+    reqData.put(PURCHASE_ORDER_ID, "9a952cd0-842b-4e71-bddd-014eb128dc8e");
+
+    Errors resp = verifyPostResponse(LINES_PATH, reqData.encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 400).as(Errors.class);
+
+    assertEquals(1, resp.getErrors().size());
+    assertEquals(ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND.getCode(), resp.getErrors().get(0).getCode());
   }
 
   @Test
