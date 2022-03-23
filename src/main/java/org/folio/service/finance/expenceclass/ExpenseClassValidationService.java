@@ -44,7 +44,6 @@ public class ExpenseClassValidationService {
   }
 
   public CompletableFuture<Void> validateExpenseClasses(List<CompositePoLine> poLines, RequestContext requestContext) {
-
     Map<FundDistribution, String> expenseClassesByFundId = poLines.stream()
       .flatMap(poLine -> poLine.getFundDistribution()
         .stream())
@@ -94,7 +93,7 @@ public class ExpenseClassValidationService {
   }
 
   private CompletableFuture<List<Parameter>> getFundIdExpenseClassIdParameters(
-      Map.Entry<FundDistribution, String> expenseClassByFundId, RequestContext requestContext) {
+    Map.Entry<FundDistribution, String> expenseClassByFundId, RequestContext requestContext) {
     String query = ID + "==" + expenseClassByFundId.getValue();
     List<Parameter> parameters = new ArrayList<>();
     parameters.add(new Parameter().withKey(FUND_CODE)
