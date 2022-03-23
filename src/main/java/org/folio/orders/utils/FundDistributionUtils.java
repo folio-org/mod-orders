@@ -37,7 +37,8 @@ public final class FundDistributionUtils {
               remainingPercent = remainingPercent.subtract(percentageValue);
             }
           }
-          if (remainingPercent.compareTo(BigDecimal.ZERO) != 0) {
+          BigDecimal epsilon = BigDecimal.valueOf(1e-10);
+          if (remainingPercent.abs().compareTo(epsilon) > 0) {
             throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
           }
         }
