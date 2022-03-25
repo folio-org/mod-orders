@@ -44,7 +44,7 @@ public class OpenCompositeOrderFlowValidator {
 
   public CompletableFuture<Void> validate(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                                           RequestContext requestContext) {
-    return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), requestContext)
+    return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), true, requestContext)
       .thenCompose(v -> checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext))
       .thenAccept(v -> FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines()))
       .thenAccept(v -> OngoingOrderValidator.validate(compPO))

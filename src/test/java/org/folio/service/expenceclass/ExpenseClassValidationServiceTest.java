@@ -4,6 +4,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -50,9 +51,9 @@ public class ExpenseClassValidationServiceTest {
     ExpenseClassValidationService expenseClassValidationService = mock(ExpenseClassValidationService.class,CALLS_REAL_METHODS);
     RequestContext requestContext = new RequestContext(null,null);
 
-    doReturn(completedFuture(null)).when(expenseClassValidationService).checkExpenseClassIsActiveByFundDistribution(any(), any());
+    doReturn(completedFuture(null)).when(expenseClassValidationService).checkExpenseClassIsActiveByFundDistribution(any(), anyBoolean(), any());
 
-    CompletableFuture<Void> response = expenseClassValidationService.validateExpenseClasses(compositePoLineList, requestContext);
+    CompletableFuture<Void> response = expenseClassValidationService.validateExpenseClasses(compositePoLineList, true, requestContext);
     response.join();
 
     Assertions.assertTrue(response.isDone());

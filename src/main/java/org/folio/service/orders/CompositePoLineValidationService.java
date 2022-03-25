@@ -54,7 +54,7 @@ public class CompositePoLineValidationService {
     List<CompositePoLine> compositePoLines = new ArrayList<>();
     compositePoLines.add(compPOL);
 
-    return expenseClassValidationService.validateExpenseClasses(compositePoLines, requestContext)
+    return expenseClassValidationService.validateExpenseClasses(compositePoLines, false, requestContext)
       .thenAccept(v -> errors.addAll(validatePoLineFormats(compPOL)))
       .thenAccept(v -> errors.addAll(validateLocations(compPOL)))
       .thenApply(v -> {

@@ -38,12 +38,13 @@ public class ExpenseClassValidationService {
   public CompletableFuture<Void> validateExpenseClassesForOpenedOrder(CompositePurchaseOrder compOrder,
       List<CompositePoLine> compositePoLines, RequestContext requestContext) {
     if (compOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.OPEN) {
-      return validateExpenseClasses(compositePoLines, requestContext);
+      return validateExpenseClasses(compositePoLines, true, requestContext);
     }
     return CompletableFuture.completedFuture(null);
   }
 
-  public CompletableFuture<Void> validateExpenseClasses(List<CompositePoLine> poLines, RequestContext requestContext) {
+  public CompletableFuture<Void> validateExpenseClasses(List<CompositePoLine> poLines,
+      boolean isActiveExpenseClassCheckRequired, RequestContext requestContext) {
     Map<FundDistribution, String> expenseClassesByFundId = poLines.stream()
       .flatMap(poLine -> poLine.getFundDistribution()
         .stream())
@@ -53,12 +54,13 @@ public class ExpenseClassValidationService {
 
     return allOf(expenseClassesByFundId.entrySet()
       .stream()
-      .map(expenseClassByFundId -> checkExpenseClassIsActiveByFundDistribution(expenseClassByFundId, requestContext))
-      .toArray(CompletableFuture[]::new));
+      .map(expenseClassByFundId -> checkExpenseClassIsActiveByFundDistribution(expenseClassByFundId,
+          isActiveExpenseClassCheckRequired, requestContext)).toArray(CompletableFuture[]::new));
   }
 
   public CompletableFuture<Void> checkExpenseClassIsActiveByFundDistribution(
-      Map.Entry<FundDistribution, String> expenseClassByFundId, RequestContext requestContext) {
+      Map.Entry<FundDistribution, String> expenseClassByFundId,
+      boolean isActiveExpenseClassCheckRequired, RequestContext requestContext) {
     String query = String.format("budget.fundId==%s and budget.budgetStatus==Active", expenseClassByFundId.getKey()
       .getFundId());
     return budgetExpenseClassService.getBudgetExpenseClasses(query, 0, Integer.MAX_VALUE, requestContext)
@@ -75,7 +77,7 @@ public class ExpenseClassValidationService {
               .contains(budgetExpenseClass.getExpenseClassId()))
             .anyMatch(expenseClass -> BudgetExpenseClass.Status.INACTIVE.equals(expenseClass.getStatus()));
 
-          if (hasInactiveExpenseClass) {
+          if (isActiveExpenseClassCheckRequired && hasInactiveExpenseClass) {
             return getFundIdExpenseClassIdParameters(expenseClassByFundId, requestContext).thenApply(parameters -> {
               throw new HttpException(400, INACTIVE_EXPENSE_CLASS.toError()
                 .withParameters(parameters));
