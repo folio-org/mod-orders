@@ -172,7 +172,8 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "inventory-storage.identifier-types.collection.get",
-            "isbn-utils.convert-to-13.get"
+            "isbn-utils.convert-to-13.get",
+            "finance-storage.budget-expense-classes.collection.get"
           ]
         },
         {
