@@ -51,10 +51,7 @@ public class CompositePoLineValidationService {
       return CompletableFuture.completedFuture(errors);
     }
 
-    List<CompositePoLine> compositePoLines = new ArrayList<>();
-    compositePoLines.add(compPOL);
-
-    return expenseClassValidationService.validateExpenseClasses(compositePoLines, false, requestContext)
+    return expenseClassValidationService.validateExpenseClasses(List.of(compPOL), false, requestContext)
       .thenAccept(v -> errors.addAll(validatePoLineFormats(compPOL)))
       .thenAccept(v -> errors.addAll(validateLocations(compPOL)))
       .thenApply(v -> {
