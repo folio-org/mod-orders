@@ -760,10 +760,10 @@ public class PurchaseOrderHelper {
     return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
       .thenApply(acqUnitsCqlExpr -> {
         if (StringUtils.isEmpty(query)) {
-          String queryParam = buildQuery(acqUnitsCqlExpr, logger);
+          String queryParam = buildQuery(acqUnitsCqlExpr);
           return String.format(GET_PURCHASE_ORDERS, limit, offset, queryParam, EN);
         } else {
-          String queryParam = buildQuery(combineCqlExpressions("and", acqUnitsCqlExpr, query), logger);
+          String queryParam = buildQuery(combineCqlExpressions("and", acqUnitsCqlExpr, query));
           return String.format(SEARCH_ORDERS_BY_LINES_DATA, limit, offset, queryParam, EN);
         }
       });

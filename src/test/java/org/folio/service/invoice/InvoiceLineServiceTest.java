@@ -109,7 +109,7 @@ public class InvoiceLineServiceTest {
     result.join();
     //Then
     verify(restClient, times(1)).get(
-      argThat(requestEntry -> encodeQuery("poLineId == (\"1\" OR \"2\")", logger)
+      argThat(requestEntry -> encodeQuery("poLineId == (\"1\" OR \"2\")")
         .equals(requestEntry.getQueryParams().get("query"))),
       eq(requestContextMock),
       eq(InvoiceLineCollection.class));

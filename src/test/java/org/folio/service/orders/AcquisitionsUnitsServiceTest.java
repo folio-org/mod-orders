@@ -51,6 +51,7 @@ import static org.folio.rest.impl.MockServer.getRqRsEntries;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -195,7 +196,7 @@ public class AcquisitionsUnitsServiceTest {
       APPLICATION_JSON, 201);
     AcquisitionsUnitMembership unit = response.as(AcquisitionsUnitMembership.class);
 
-    assertThat(unit.getId(), not(isEmptyOrNullString()));
+    assertThat(unit.getId(), not(is(emptyOrNullString())));
     assertThat(response.header(HttpHeaders.LOCATION), containsString(unit.getId()));
   }
 
@@ -327,7 +328,7 @@ public class AcquisitionsUnitsServiceTest {
       APPLICATION_JSON, 201);
     AcquisitionsUnit unit = response.as(AcquisitionsUnit.class);
 
-    assertThat(unit.getId(), not(isEmptyOrNullString()));
+    assertThat(unit.getId(), not(is(emptyOrNullString())));
     assertThat(response.header(HttpHeaders.LOCATION), containsString(unit.getId()));
   }
 
