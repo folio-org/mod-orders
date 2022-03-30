@@ -57,11 +57,9 @@ public class FundsDistributionService {
           CurrencyUnit fyCurrency = Monetary.getCurrency(holder.getCurrency());
           MonetaryAmount initialAmount = getDistributionAmount(holder.getFundDistribution(), expectedTotal, conversion);
 
-          if (FundDistribution.DistributionType.PERCENTAGE.equals(holder.getFundDistribution().getDistributionType())) {
-            if (!remainder.isZero()) {
-              initialAmount = initialAmount.add(smallestUnit);
-              remainder = remainder.abs().subtract(smallestUnit.abs()).multiply(remainderSignum);
-            }
+          if (FundDistribution.DistributionType.PERCENTAGE.equals(holder.getFundDistribution().getDistributionType()) && !remainder.isZero()) {
+            initialAmount = initialAmount.add(smallestUnit);
+            remainder = remainder.abs().subtract(smallestUnit.abs()).multiply(remainderSignum);
           }
 
           MonetaryAmount expended = Optional.of(holder).map(EncumbranceRelationsHolder::getNewEncumbrance).map(Transaction::getEncumbrance).map(Encumbrance::getAmountExpended).map(aDouble -> Money.of(aDouble, fyCurrency))
