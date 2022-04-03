@@ -57,7 +57,7 @@ public class FundsDistributionService {
           CurrencyUnit fyCurrency = Monetary.getCurrency(holder.getCurrency());
           MonetaryAmount initialAmount = getDistributionAmount(holder.getFundDistribution(), expectedTotal, conversion);
 
-          if (!remainder.isZero()) {
+          if (FundDistribution.DistributionType.PERCENTAGE.equals(holder.getFundDistribution().getDistributionType()) && !remainder.isZero()) {
             initialAmount = initialAmount.add(smallestUnit);
             remainder = remainder.abs().subtract(smallestUnit.abs()).multiply(remainderSignum);
           }
@@ -67,6 +67,16 @@ public class FundsDistributionService {
           MonetaryAmount awaitingPayment = Optional.of(holder).map(EncumbranceRelationsHolder::getNewEncumbrance).map(Transaction::getEncumbrance).map(Encumbrance::getAmountAwaitingPayment)
               .map(aDouble -> Money.of(aDouble, fyCurrency)).orElse(Money.zero(fyCurrency));
           MonetaryAmount amount = MonetaryFunctions.max().apply(initialAmount.subtract(expended).subtract(awaitingPayment), Money.zero(fyCurrency));
+
+          if (!poLineCurrency.equals(fyCurrency)) {
+            amount = Money.of(amount.getNumber().doubleValue(), poLineCurrency)
+              .with(conversion)
+              .with(getDefaultRounding());
+
+            initialAmount = Money.of(initialAmount.getNumber().doubleValue(), poLineCurrency)
+              .with(conversion)
+              .with(getDefaultRounding());
+          }
 
           holder.getNewEncumbrance().setAmount(amount.getNumber().doubleValue());
           holder.getNewEncumbrance().getEncumbrance().setInitialAmountEncumbered(initialAmount.getNumber().doubleValue());
