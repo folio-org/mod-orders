@@ -81,7 +81,7 @@ public class FundsDistributionServiceTest {
     Transaction transaction2 = new Transaction().withEncumbrance(new Encumbrance());
     Transaction transaction3 = new Transaction().withEncumbrance(new Encumbrance());
     Transaction transaction4 = new Transaction().withEncumbrance(new Encumbrance());
-    FundDistribution fundDistribution1 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.AMOUNT).withValue(0.41);
+    FundDistribution fundDistribution1 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.AMOUNT).withValue(0.40);
     FundDistribution fundDistribution2 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(30d);
     FundDistribution fundDistribution3 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(30d);
     FundDistribution fundDistribution4 = new FundDistribution().withDistributionType(FundDistribution.DistributionType.AMOUNT).withValue(0.39);
