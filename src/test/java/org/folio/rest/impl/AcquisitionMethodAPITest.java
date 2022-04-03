@@ -170,7 +170,7 @@ public class AcquisitionMethodAPITest {
         APPLICATION_JSON, 201);
     AcquisitionMethod method = response.as(AcquisitionMethod.class);
 
-    assertThat(method.getId(), not(isEmptyOrNullString()));
+    assertThat(method.getId(), not(is(emptyOrNullString())));
     assertThat(response.header(HttpHeaders.LOCATION), containsString(method.getId()));
   }
 

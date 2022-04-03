@@ -44,7 +44,7 @@ public class OrderTemplatesHelper extends AbstractHelper {
   public CompletableFuture<OrderTemplateCollection> getOrderTemplates(String query, int offset, int limit) {
     CompletableFuture<OrderTemplateCollection> future = new CompletableFuture<>();
     try {
-      String endpoint = String.format(GET_ORDER_TEMPLATES_BY_QUERY, limit, offset, buildQuery(query, logger), lang);
+      String endpoint = String.format(GET_ORDER_TEMPLATES_BY_QUERY, limit, offset, buildQuery(query), lang);
       handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
         .thenCompose(json -> AsyncUtil.executeBlocking(ctx, false, () -> json.mapTo(OrderTemplateCollection.class)))
         .thenAccept(future::complete)

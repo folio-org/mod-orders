@@ -25,6 +25,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import javax.money.MonetaryAmount;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -82,16 +83,18 @@ public class EncumbranceService {
   }
 
   public CompletableFuture<Void> createEncumbrances(List<EncumbranceRelationsHolder> relationsHolders, RequestContext requestContext) {
-    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), relationsHolders.stream()
-            .map(holder -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
-                    .thenAccept(transaction -> holder.getFundDistribution().setEncumbrance(transaction.getId()))
-                    .exceptionally(fail -> {
-                      checkCustomTransactionError(fail);
-                      throw new CompletionException(fail);
-                    })
-            )
-            .toArray(CompletableFuture[]::new)
-    );
+    List<CompletableFuture<Void>> futureList = new ArrayList<>();
+    CompletableFuture<Void> future = completedFuture(null);
+    for (EncumbranceRelationsHolder holder : relationsHolders) {
+      future = future.thenCompose(v -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
+        .thenAccept(transaction -> holder.getFundDistribution().setEncumbrance(transaction.getId()))
+        .exceptionally(fail -> {
+          checkCustomTransactionError(fail);
+          throw new CompletionException(fail);
+        }));
+      futureList.add(future);
+    }
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), futureList.toArray(new CompletableFuture[0]));
   }
 
   public CompletionStage<Void> updateEncumbrancesOrderStatus(CompositePurchaseOrder compPo, RequestContext requestContext) {

@@ -5,8 +5,10 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.folio.helper.AbstractHelper.EVENT_PAYLOAD;
 import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
+import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
@@ -74,9 +76,9 @@ public class HandlersTestHelper {
       assertThat(message.headers(), not(emptyIterable()));
       assertThat(message.body(), notNullValue());
       assertThat(message.body()
-        .getString("poLineIdUpdate"), not(isEmptyOrNullString()));
+        .getString("poLineIdUpdate"), not(is(emptyOrNullString())));
       assertThat(message.body()
-        .getString(HelperUtils.LANG), not(isEmptyOrNullString()));
+        .getString(HelperUtils.LANG), not(is(emptyOrNullString())));
     }
   }
 }

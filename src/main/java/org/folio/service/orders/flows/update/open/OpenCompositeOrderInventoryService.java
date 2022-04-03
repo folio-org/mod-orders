@@ -1,5 +1,6 @@
 package org.folio.service.orders.flows.update.open;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,13 +32,19 @@ public class OpenCompositeOrderInventoryService {
   }
 
   public CompletableFuture<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
-                                                  boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    return FolioVertxCompletableFuture.allOf(requestContext.getContext(),
-      compPO.getCompositePoLines()
-        .stream()
-        .map(poLine -> processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext))
-        .toArray(CompletableFuture[]::new)
-    );
+      boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
+    for (int idx = 0; idx < compPO.getCompositePoLines().size(); idx++) {
+      var poLine = compPO.getCompositePoLines().get(idx);
+      if (idx % 2 == 0){
+        future = future.thenCompose(v -> processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext));
+        futures.add(future);
+      } else {
+        futures.add(processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext));
+      }
+    }
+    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), futures.toArray(new CompletableFuture[0]));
   }
 
   public CompletableFuture<Void> processInventory(CompositePoLine compPOL, String titleId,

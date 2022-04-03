@@ -152,7 +152,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
   private CompletableFuture<Void> getPiecesByIds(List<String> ids, Map<String, List<Piece>> piecesByPoLine, RequestContext requestContext) {
     // Transform piece id's to CQL query
     String query = convertIdsToCqlQuery(ids);
-    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, ids.size(), lang, encodeQuery(query, logger));
+    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, ids.size(), lang, encodeQuery(query));
     return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
       .thenAccept(pieceJson -> {
         List<Piece> pieces = pieceJson.mapTo(PieceCollection.class).getPieces();
@@ -543,7 +543,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
       Piece.ReceivingStatus receivingStatus) {
     String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
     // Limit to 0 because only total number is important
-    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, 0, lang, encodeQuery(query, logger));
+    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, 0, lang, encodeQuery(query));
     // Search for pieces with Expected status
     return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
       // Return total records quantity
@@ -754,7 +754,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends AbstractHelper {
                                                             RequestContext requestContext) {
     if(!poLines.isEmpty()) {
       Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().distinct().collect(groupingBy(PoLine::getPurchaseOrderId));
-      String query = buildQuery(convertIdsToCqlQuery(poLinesGroupedByOrderId.keySet()), logger);
+      String query = buildQuery(convertIdsToCqlQuery(poLinesGroupedByOrderId.keySet()));
       String url = String.format(GET_PURCHASE_ORDERS, poLinesGroupedByOrderId.size(), 0, query, lang);
       return handleGetRequest(url, httpClient, okapiHeaders, logger)
         .thenCompose(json -> {

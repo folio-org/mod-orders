@@ -7,6 +7,7 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -101,23 +102,17 @@ public class PurchaseOrderLineService {
   }
 
   public CompletableFuture<List<CompositePoLine>> getCompositePoLinesByOrderId(String orderId, RequestContext requestContext) {
-    CompletableFuture<List<CompositePoLine>> future = new CompletableFuture<>();
-
-    getOrderLines("purchaseOrderId==" + orderId, 0, Integer.MAX_VALUE, requestContext)
-      .thenAccept(jsonLines ->
-        collectResultsOnSuccess(jsonLines.stream().map(line -> operateOnPoLine(HttpMethod.GET, line, requestContext)).collect(toList()))
-          .thenAccept(future::complete)
-          .exceptionally(t -> {
-            future.completeExceptionally(t.getCause());
-            return null;
-          })
-      )
-      .exceptionally(t -> {
-        logger.error("Exception gathering poLine data:", t);
-        future.completeExceptionally(t);
-        return null;
-      });
-    return future;
+    return getOrderLines("purchaseOrderId==" + orderId, 0, Integer.MAX_VALUE, requestContext)
+      .thenApply(poLines -> {
+        List<CompletableFuture<CompositePoLine>> poLineFutures = new ArrayList<>();
+        CompletableFuture<CompositePoLine> lineFuture = completedFuture(null);
+        for (PoLine line : poLines) {
+          lineFuture = lineFuture.thenCompose(v -> operateOnPoLine(HttpMethod.GET, line, requestContext));
+          poLineFutures.add(lineFuture);
+        }
+        return poLineFutures;
+      })
+      .thenCompose(HelperUtils::collectResultsOnSuccess);
   }
 
   private CompletableFuture<CompositePoLine> operateOnPoLine(HttpMethod operation, PoLine line, RequestContext requestContext) {

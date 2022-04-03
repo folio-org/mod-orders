@@ -2,6 +2,7 @@ package org.folio.orders.utils;
 
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,7 +21,7 @@ public class HelperUtilsTest {
   @Test
   public void testShouldReturnEmptyString(){
     String act = HelperUtils.combineCqlExpressions("");
-    assertThat(act, isEmptyOrNullString());
+    assertThat(act, is(emptyOrNullString()));
   }
 
   @Test
