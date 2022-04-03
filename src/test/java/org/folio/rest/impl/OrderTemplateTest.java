@@ -16,18 +16,18 @@ import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.rest.impl.MockServer.ORDER_TEMPLATES_COLLECTION;
 import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.MockServer.getRqRsEntries;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -100,7 +100,7 @@ public class OrderTemplateTest {
     Response response = verifyPostResponse(ORDER_TEMPLATES_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
       APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
     final OrderTemplate template = response.as(OrderTemplate.class);
-    assertThat(template.getId(), not(isEmptyOrNullString()));
+    assertThat(template.getId(), not(is(emptyOrNullString())));
     assertThat(response.header(HttpHeaders.LOCATION), containsString(template.getId()));
   }
 

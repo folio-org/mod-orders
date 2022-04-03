@@ -62,6 +62,7 @@ import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 import static org.folio.service.inventory.InventoryManager.LOAN_TYPES;
 import static org.folio.service.pieces.PieceUtil.calculatePiecesQuantityWithoutLocation;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -549,9 +550,9 @@ public class InventoryInteractionTestHelper {
   }
 
   private static void verifyItemRecordRequest(Header tenant, JsonObject item, String material) {
-    assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(isEmptyOrNullString()));
+    assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(is(emptyOrNullString())));
     assertThat(material, is(item.getString(ITEM_MATERIAL_TYPE_ID)));
-    assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(isEmptyOrNullString()));
+    assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(is(emptyOrNullString())));
     assertThat(item.getString(ITEM_PERMANENT_LOAN_TYPE_ID), equalTo(getLoanTypeId(tenant)));
     assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
     assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));

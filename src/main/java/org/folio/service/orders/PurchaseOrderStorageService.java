@@ -11,6 +11,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -22,6 +24,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderStorageService {
+  private static final Logger logger = LogManager.getLogger(PurchaseOrderStorageService.class);
 
   private static final String ENDPOINT = "/orders-storage/purchase-orders";
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
