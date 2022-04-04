@@ -45,12 +45,10 @@ public class OpenCompositeOrderHolderBuilder {
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
       .thenAccept(holder::withExistingPieces)
       .thenAccept(aVoid -> {
-        holder.withPiecesWithLocationToProcess(createPiecesByLocationId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
-        holder.withPiecesWithHoldingToProcess(createPiecesByHoldingId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
+        holder.withPiecesWithLocationToProcess(buildPiecesByLocationId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
+        holder.withPiecesWithHoldingToProcess(buildPiecesByHoldingId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
       })
-      .thenAccept(aVoid -> {
-        holder.withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces()));
-      })
+      .thenAccept(aVoid -> holder.withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces())))
       .thenAccept(aVoid -> {
         if (CollectionUtils.isEmpty(compPOL.getLocations())) {
           holder.withPiecesWithoutLocationId(createPiecesWithoutLocationId(compPOL, holder.getExistingPieces()));
@@ -59,7 +57,7 @@ public class OpenCompositeOrderHolderBuilder {
       .thenApply(aVoid -> holder);
   }
 
-  private List<Piece> createPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
+  private List<Piece> buildPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
     // For each location collect pieces that need to be created.
     groupLocationsByLocationId(compPOL)
@@ -134,7 +132,7 @@ public class OpenCompositeOrderHolderBuilder {
       .collect(Collectors.toList());
   }
 
-  private List<Piece> createPiecesByHoldingId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
+  private List<Piece> buildPiecesByHoldingId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
     // For each location collect pieces that need to be created.
     groupLocationsByHoldingId(compPOL)

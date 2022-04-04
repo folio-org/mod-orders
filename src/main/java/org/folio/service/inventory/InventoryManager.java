@@ -39,6 +39,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
+import javax.ws.rs.core.Response;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -73,6 +75,8 @@ import org.folio.service.pieces.PieceStorageService;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.shareddata.Lock;
+import io.vertx.core.shareddata.SharedData;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 
@@ -266,11 +270,29 @@ public class InventoryManager {
 
   public CompletableFuture<String> getOrCreateHoldingsRecord(String instanceId, Location location, RequestContext requestContext) {
     if (location.getHoldingId() != null) {
+      Context ctx = requestContext.getContext();
+      String tenantId = TenantTool.tenantId(requestContext.getHeaders());
+
       String holdingId = location.getHoldingId();
-      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
-        .withId(holdingId);
-      return restClient.getAsJsonObject(requestEntry, requestContext)
-        .thenApply(HelperUtils::extractId)
+      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId);
+
+      CompletableFuture<String> holdingIdFuture;
+      var holdingIdKey = String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, "getOrCreateHoldingsRecord", holdingId);
+      String holdingIdCached = ctx.get(holdingIdKey);
+
+      if (holdingIdCached != null) {
+        holdingIdFuture = CompletableFuture.completedFuture(holdingIdCached);
+      } else {
+        holdingIdFuture = restClient.getAsJsonObject(requestEntry, requestContext)
+          .whenComplete((id, err) -> ctx.put(holdingIdKey, id))
+          .thenApply(holdingJson -> {
+            var id = HelperUtils.extractId(holdingJson);
+            ctx.put(holdingIdKey, id);
+            return id;
+          });
+      }
+
+      return holdingIdFuture
         .exceptionally(throwable -> {
           if (throwable.getCause() instanceof HttpException && ((HttpException) throwable.getCause()).getCode() == 404) {
             String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
@@ -375,12 +397,13 @@ public class InventoryManager {
    * @return future with list of piece objects
    */
   public CompletableFuture<List<Piece>> handleItemRecords(CompositePoLine compPOL, Location location,
-                                                          RequestContext requestContext) {
+      RequestContext requestContext) {
     Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, List.of(location));
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
-    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId, location.getHoldingId());
+    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId,
+        location.getHoldingId());
     if (piecesWithItemsQty == 0) {
       return completedFuture(Collections.emptyList());
     }
@@ -388,40 +411,51 @@ public class InventoryManager {
     // Search for already existing items
     return searchStorageExistingItems(compPOL.getId(), location.getHoldingId(), piecesWithItemsQty, requestContext)
       .thenCompose(existingItems -> {
-          List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
-          piecesWithItemsQuantities.forEach((pieceFormat, expectedQuantity) -> {
-            // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
-            if (expectedQuantity > 0) {
+        List<CompletableFuture<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
+        CompletableFuture<List<Piece>> future = CompletableFuture.completedFuture(null);
+
+        for (Map.Entry<Piece.Format, Integer> pieceEntry : piecesWithItemsQuantities.entrySet()) {
+          Piece.Format pieceFormat = pieceEntry.getKey();
+          Integer expectedQuantity = pieceEntry.getValue();
+
+          // The expected quantity might be zero for particular piece format if the PO Line's order format is P/E Mix
+          if (expectedQuantity > 0) {
+            // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
+            Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
+
+            future = future.thenCompose(v -> {
               List<String> existingItemIds;
-              CompletableFuture<List<String>> newItems;
-              // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
-              Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
               if (pieceFormat == Piece.Format.ELECTRONIC) {
                 existingItemIds = getElectronicItemIds(compPOL, existingItems);
-                newItems = createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext);
+                return createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext)
+                      .thenApply(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
               } else {
                 existingItemIds = getPhysicalItemIds(compPOL, existingItems);
-                newItems = createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext);
+                return createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext)
+                      .thenApply(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
               }
-
-              // Build piece records once new existingItemIds are created
-              pieces.add(newItems.thenApply(createdItemIds -> {
-                List<String> itemIds = ListUtils.union(createdItemIds, existingItemIds);
-                logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
-                return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(polId, itemId, pieceFormat, location))
-                  .toList();
-              }));
-            }
-          });
-
-          // Wait for all items to be created and corresponding pieces are built
-          return collectResultsOnSuccess(pieces)
-            .thenApply(results -> {
-              validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
-              return results.stream().flatMap(List::stream).collect(toList());
             });
+            // Build piece records once new existingItemIds are created
+            pieces.add(future);
+          }
         }
-      );
+
+        // Wait for all items to be created and corresponding pieces are built
+        return collectResultsOnSuccess(pieces)
+          .thenApply(results -> {
+          validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
+          return results.stream()
+            .flatMap(List::stream)
+            .collect(toList());
+        });
+      });
+  }
+
+  private List<Piece> buildPieces(Location location, String polId, Piece.Format pieceFormat, List<String> createdItemIds,
+    List<String> existingItemIds) {
+    List<String> itemIds = ListUtils.union(createdItemIds, existingItemIds);
+    logger.info(BUILDING_PIECE_MESSAGE, itemIds.size(), pieceFormat, polId);
+    return StreamEx.of(itemIds).map(itemId -> openOrderBuildPiece(polId, itemId, pieceFormat, location)).toList();
   }
 
   private Piece openOrderBuildPiece(String polId, String itemId, Piece.Format pieceFormat, Location location) {
@@ -632,13 +666,35 @@ public class InventoryManager {
 
   public CompletableFuture<JsonObject> getEntryId(String entryType, ErrorCodes errorCode, RequestContext requestContext) {
     CompletableFuture<JsonObject> future = new CompletableFuture<>();
-    getAndCache(entryType, requestContext)
-      .thenAccept(future::complete)
-      .exceptionally(throwable -> {
-        getEntryTypeValue(entryType, requestContext)
-          .thenAccept(entryTypeValue -> future.completeExceptionally(new HttpException(500, buildErrorWithParameter(entryTypeValue, errorCode))));
-        return null;
-      });
+    var vertx = requestContext.getContext().owner();
+    SharedData sharedData = vertx.sharedData();
+    String lockName = TenantTool.tenantId(requestContext.getHeaders()) + "." + entryType;
+
+    sharedData.getLock(lockName, lockResult -> {
+      if (lockResult.succeeded()) {
+        logger.debug("Got lock {}", lockName);
+        Lock lock = lockResult.result();
+        try {
+          vertx.setTimer(30000, timerId -> releaseLock(lock, lockName));
+          getAndCache(entryType, requestContext).whenComplete((ok, err) -> {
+            releaseLock(lock, lockName);
+            if (err == null) {
+              future.complete(ok);
+            } else {
+              getEntryTypeValue(entryType, requestContext)
+                .thenAccept(entryTypeValue -> future.completeExceptionally(new HttpException(500, buildErrorWithParameter(entryTypeValue, errorCode))));
+            }
+          });
+        } catch (Exception e) {
+          releaseLock(lock, lockName);
+          future.completeExceptionally(e);
+        }
+      } else {
+        future.completeExceptionally(
+            new io.vertx.ext.web.handler.HttpException(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), lockResult.cause().getMessage()));
+      }
+    });
+
     return future;
   }
 
@@ -852,15 +908,31 @@ public class InventoryManager {
    * @return configuration value by entry type
    */
   public CompletableFuture<JsonObject> getAndCache(String entryType, RequestContext requestContext) {
-    return getEntryTypeValue(entryType, requestContext)
-      .thenCompose(key -> {
-        Context ctx = requestContext.getContext();
-        Map<String, String> okapiHeaders = requestContext.getHeaders();
+      CompletableFuture<String> entryTypeValueFuture;
+      String tenantId = TenantTool.tenantId(requestContext.getHeaders());
+      var entryTypeKey = String.format("%s.%s", tenantId, entryType);
+
+      Context ctx = requestContext.getContext();
+      Map<String, String> okapiHeaders = requestContext.getHeaders();
+
+      String entryTypeCachedValue = ctx.get(entryTypeKey);
+
+      if (entryTypeCachedValue != null) {
+        entryTypeValueFuture = CompletableFuture.completedFuture(entryTypeCachedValue);
+      } else {
+        entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
+      }
+
+      return entryTypeValueFuture.thenCompose(key -> {
+        // save entryType to context
+        ctx.put(entryTypeKey, key);
+
         String tenantSpecificKey = buildTenantSpecificKey(key, entryType, okapiHeaders);
         JsonObject response = ctx.get(tenantSpecificKey);
         if (response == null) {
-          String endpoint = buildLookupEndpoint(entryType, encodeQuery(key, logger));
-          return handleGetRequest(endpoint, restClient.getHttpClient(requestContext.getHeaders()), okapiHeaders, logger)
+          String endpoint = buildLookupEndpoint(entryType, encodeQuery(key));
+          RequestEntry requestEntry = new RequestEntry(endpoint);
+          return restClient.getAsJsonObject(requestEntry, requestContext)
             .thenApply(entries -> {
               JsonObject result = new JsonObject();
               result.put(entryType, getFirstObjectFromResponse(entries, entryType).getString(ID));
@@ -875,9 +947,11 @@ public class InventoryManager {
 
   public CompletableFuture<String> getProductTypeUuidByIsbn(RequestContext requestContext) {
     // return id of already retrieved identifier type
-    String endpoint = "/identifier-types?limit=1&query=name==ISBN";
-    Map<String, String> okapiHeaders = requestContext.getHeaders();
-    return handleGetRequest(endpoint, restClient.getHttpClient(okapiHeaders), okapiHeaders, logger)
+    RequestEntry requestEntry = new RequestEntry("/identifier-types")
+      .withLimit(1)
+      .withQuery("name==ISBN");
+
+    return restClient.getAsJsonObject(requestEntry, requestContext)
       .thenCompose(identifierTypes -> {
         String identifierTypeId = extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES));
         return completedFuture(identifierTypeId);
@@ -886,8 +960,9 @@ public class InventoryManager {
 
   public CompletableFuture<String> convertToISBN13(String isbn, RequestContext requestContext) {
     String convertEndpoint = String.format("/isbn/convertTo13?isbn=%s", isbn);
-    Map<String, String> okapiHeaders = requestContext.getHeaders();
-    return handleGetRequest(convertEndpoint, restClient.getHttpClient(okapiHeaders), okapiHeaders, logger)
+    RequestEntry requestEntry = new RequestEntry(convertEndpoint);
+
+    return restClient.getAsJsonObject(requestEntry, requestContext)
       .thenApply(json -> json.getString("isbn"))
       .exceptionally(throwable -> {
         logger.error("Can't convert {} to isbn13", isbn);
@@ -921,7 +996,7 @@ public class InventoryManager {
       .collect(joining(" or "));
 
     // query contains special characters so must be encoded before submitting
-    String endpoint = buildLookupEndpoint(INSTANCES, encodeQuery(query, logger));
+    String endpoint = buildLookupEndpoint(INSTANCES, encodeQuery(query));
     Map<String, String> okapiHeaders = requestContext.getHeaders();
     return handleGetRequest(endpoint, restClient.getHttpClient(okapiHeaders), okapiHeaders, logger);
   }
@@ -1197,5 +1272,10 @@ public class InventoryManager {
       .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
     Optional.ofNullable(piece.getDiscoverySuppress())
       .ifPresentOrElse(discSup -> item.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> item.remove(ITEM_DISCOVERY_SUPPRESS));
+  }
+
+  private void releaseLock(Lock lock, String lockName) {
+    logger.debug("Released lock {}", lockName);
+    lock.release();
   }
 }

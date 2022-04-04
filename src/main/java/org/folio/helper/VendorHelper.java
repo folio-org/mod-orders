@@ -203,7 +203,7 @@ public class VendorHelper extends AbstractHelper {
    */
   private CompletableFuture<List<Organization>> getAccessProvidersByIds(Set<String> accessProviderIds) {
     String query = convertIdsToCqlQuery(new ArrayList<>(accessProviderIds));
-    String endpoint = String.format(ORGANIZATIONS_WITH_QUERY_ENDPOINT, accessProviderIds.size(), lang, encodeQuery(query, logger));
+    String endpoint = String.format(ORGANIZATIONS_WITH_QUERY_ENDPOINT, accessProviderIds.size(), lang, encodeQuery(query));
     return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
       .thenApply(jsonArray -> jsonArray.getJsonArray(ORGANIZATIONS)
         .stream()

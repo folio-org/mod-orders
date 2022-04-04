@@ -37,6 +37,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -524,15 +525,16 @@ public class PurchaseOrderLineHelper {
 
   }
 
-  public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL, String isbnId, RequestContext requestContext) {
-    return validateIsbnValues(compPOL, isbnId, requestContext)
+  public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL, String isbnId, Map<String, String> normalizedIsbnCache, RequestContext requestContext) {
+    return validateIsbnValues(compPOL, isbnId, normalizedIsbnCache, requestContext)
       .thenAccept(aVoid -> removeISBNDuplicates(compPOL, isbnId));
   }
 
   public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL, RequestContext requestContext) {
+    Map<String, String> normalizedIsbnCache = new HashMap<>();
     if (HelperUtils.isProductIdsExist(compPOL)) {
       return inventoryManager.getProductTypeUuidByIsbn(requestContext)
-                  .thenCompose(id -> validateIsbnValues(compPOL, id, requestContext)
+                  .thenCompose(id -> validateIsbnValues(compPOL, id, normalizedIsbnCache, requestContext)
                   .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
     }
     return completedFuture(null);
@@ -654,13 +656,25 @@ public class PurchaseOrderLineHelper {
     return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
   }
 
-  private CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String isbnTypeId, RequestContext requestContext) {
+  private CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String isbnTypeId,
+      Map<String, String> normalizedIsbnCache, RequestContext requestContext) {
     CompletableFuture<?>[] futures = compPOL.getDetails()
       .getProductIds()
       .stream()
       .filter(productId -> isISBN(isbnTypeId, productId))
-      .map(productID -> inventoryManager.convertToISBN13(productID.getProductId(), requestContext)
-        .thenAccept(productID::setProductId))
+      .map(productID -> {
+        if (normalizedIsbnCache.get(productID.getProductId()) != null) {
+          productID.setProductId(normalizedIsbnCache.get(productID.getProductId()));
+          return completedFuture(null);
+        } else {
+          return inventoryManager.convertToISBN13(productID.getProductId(), requestContext)
+            .thenAccept(normalizedIsbn -> {
+              normalizedIsbnCache.put(productID.getProductId(), normalizedIsbn);
+              productID.setProductId(normalizedIsbn);
+            });
+        }
+      })
+
       .toArray(CompletableFuture[]::new);
 
     return CompletableFuture.allOf(futures);

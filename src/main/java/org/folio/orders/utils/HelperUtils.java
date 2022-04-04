@@ -266,15 +266,14 @@ public class HelperUtils {
 
   /**
    * @param query string representing CQL query
-   * @param logger {@link Logger} to log error if any
    * @return URL encoded string
    */
-  public static String encodeQuery(String query, Logger logger) {
+  public static String encodeQuery(String query) {
     return URLEncoder.encode(query, StandardCharsets.UTF_8);
   }
 
-  public static String buildQuery(String query, Logger logger) {
-    return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query, logger);
+  public static String buildQuery(String query) {
+    return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query);
   }
 
   public static String combineCqlExpressions(String operator, String... expressions) {
