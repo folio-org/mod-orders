@@ -4,7 +4,6 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_BUSINESS;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.validatePoLine;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 
 import java.util.ArrayList;
@@ -25,6 +24,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.resource.OrdersOrderLines;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -41,6 +41,8 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   private PurchaseOrderLineHelper helper;
   @Autowired
   private ConfigurationEntriesService configurationEntriesService;
+  @Autowired
+  private CompositePoLineValidationService compositePoLineValidationService;
 
   public CompositePoLineAPI() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -112,8 +114,9 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
     }
     configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .thenCompose(tenantConfig -> helper.setTenantDefaultCreateInventoryValues(poLine, tenantConfig))
+      .thenCompose(v -> compositePoLineValidationService.validatePoLine(poLine, requestContext))
+      .thenAccept(errors::addAll)
       .thenAccept(empty -> {
-        errors.addAll(validatePoLine(poLine));
         if (!errors.isEmpty()) {
           PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse
             .respond422WithApplicationJson(new Errors().withErrors(errors));

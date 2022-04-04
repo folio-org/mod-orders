@@ -13,7 +13,6 @@ import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.orders.utils.PoLineCommonUtilTest;
-import org.folio.orders.utils.validators.CompositePoLineValidationUtilTest;
 import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorTest;
 import org.folio.orders.utils.validators.OngoingOrderValidatorTest;
 import org.folio.rest.core.ResponseUtilTest;
@@ -273,7 +272,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class CompositePoLineValidationUtilNested extends CompositePoLineValidationUtilTest {
+  class CompositePoLineValidationServiceTestNested extends CompositePoLineValidationServiceTest {
 
   }
 

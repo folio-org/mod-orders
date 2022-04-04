@@ -29,7 +29,6 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.orders.utils.validators.CompositePoLineValidationUtil.validatePoLine;
 import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
@@ -98,6 +97,7 @@ import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -131,13 +131,15 @@ public class PurchaseOrderLineHelper {
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final ConfigurationEntriesService configurationEntriesService;
   private final RestClient restClient;
+  private final CompositePoLineValidationService compositePoLineValidationService;
 
   public PurchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
     ExpenseClassValidationService expenseClassValidationService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
     PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
-    ConfigurationEntriesService configurationEntriesService, RestClient restClient) {
+    ConfigurationEntriesService configurationEntriesService, RestClient restClient,
+    CompositePoLineValidationService compositePoLineValidationService) {
     this.inventoryManager = inventoryManager;
     this.encumbranceService = encumbranceService;
     this.expenseClassValidationService = expenseClassValidationService;
@@ -150,6 +152,7 @@ public class PurchaseOrderLineHelper {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.configurationEntriesService = configurationEntriesService;
     this.restClient = restClient;
+    this.compositePoLineValidationService = compositePoLineValidationService;
   }
 
   /**
@@ -742,23 +745,30 @@ public class PurchaseOrderLineHelper {
     if (compPOL.getPurchaseOrderId() == null) {
       errors.add(ErrorCodes.MISSING_ORDER_ID_IN_POL.toError());
     }
-    errors.addAll(validatePoLine(compPOL));
 
     // If static validation has failed, no need to call other services
     if (CollectionUtils.isNotEmpty(errors)) {
       return completedFuture(errors);
     }
 
-    return validatePoLineLimit(compPOL, tenantConfiguration, requestContext)
-                    .thenCompose(aErrors -> {
-                      if (CollectionUtils.isEmpty(aErrors)) {
-                        return validateAndNormalizeISBN(compPOL, requestContext)
-                                      .thenApply(v -> errors);
-                      } else {
-                        errors.addAll(aErrors);
-                        return completedFuture(errors);
-                      }
-                    });
+    return compositePoLineValidationService.validatePoLine(compPOL, requestContext)
+      .thenCompose(poLineErrors -> {
+      if (CollectionUtils.isEmpty(poLineErrors)) {
+        return validatePoLineLimit(compPOL, tenantConfiguration, requestContext)
+          .thenCompose(aErrors -> {
+            if (CollectionUtils.isEmpty(aErrors)) {
+              return validateAndNormalizeISBN(compPOL, requestContext)
+                .thenApply(v -> errors);
+            } else {
+              errors.addAll(aErrors);
+              return completedFuture(errors);
+            }
+          });
+      } else {
+        errors.addAll(poLineErrors);
+        return completedFuture(errors);
+      }
+    });
   }
 
 

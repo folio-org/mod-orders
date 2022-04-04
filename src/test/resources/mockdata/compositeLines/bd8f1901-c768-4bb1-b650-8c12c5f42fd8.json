@@ -1,0 +1,66 @@
+{
+  "id": "bd8f1901-c768-4bb1-b650-8c12c5f42fd8",
+  "edition" : "",
+  "checkinItems" : false,
+  "acquisitionMethod" : "482bb632-c2b3-4320-be10-11b18a925bbc",
+  "instanceId" : "69640328-788e-43fc-9c3c-af39e243f3b7",
+  "alerts" : [ ],
+  "claims" : [ ],
+  "contributors" : [ {
+    "contributor" : "Moutinho, Luiz",
+    "contributorNameTypeId" : "2b94c631-fca9-4892-a730-03ee529ffe2a"
+  } ],
+  "cost" : {
+    "listUnitPrice" : 50,
+    "currency" : "USD",
+    "discount" : 10.0,
+    "discountType" : "percentage",
+    "quantityPhysical" : 1,
+    "poLineEstimatedPrice" : 3.6
+  },
+  "details" : {
+    "productIds" : [ {
+      "productId" : "9783319643991",
+      "productIdType" : "8261054f-be78-422d-bd51-4ed9f33c3422",
+      "qualifier" : ""
+    } ],
+    "subscriptionInterval" : 0
+  },
+  "eresource" : {
+    "activated" : false,
+    "createInventory" : "Instance, Holding",
+    "trial" : false,
+    "accessProvider" : "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+  },
+  "fundDistribution" : [ {
+    "code" : "USHIST",
+    "fundId" : "65032151-39a5-4cef-8810-5350eb316300",
+    "expenseClassId" : "3afe2706-a5af-4bd1-a37f-33a22dd40f49",
+    "distributionType" : "percentage",
+    "value" : 100.0
+  } ],
+  "isPackage" : false,
+  "locations" : [ {
+    "holdingId" : "c4a15834-0184-4a6f-9c0c-0ca5bad8286d",
+    "quantity" : 1,
+    "quantityPhysical" : 1
+  } ],
+  "orderFormat" : "Physical Resource",
+  "paymentStatus" : "Pending",
+  "physical" : {
+    "createInventory" : "Instance, Holding, Item",
+    "materialType" : "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+    "materialSupplier" : "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "volumes" : [ ]
+  },
+  "publisher" : "Palgrave Macmillan",
+  "purchaseOrderId" : "00000000-1111-2222-8888-999999999999",
+  "receiptStatus" : "Pending",
+  "reportingCodes" : [ ],
+  "source" : "User",
+  "titleOrPackage" : "Futures, biometrics and neuroscience research Luiz Moutinho, Mladen Sokele, editors",
+  "vendorDetail" : {
+    "instructions" : "",
+    "vendorAccount" : "BRXXXXX-01"
+  }
+}

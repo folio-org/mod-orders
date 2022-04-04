@@ -22,6 +22,7 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
+import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
@@ -269,6 +270,10 @@ public class PurchaseOrderHelperTest {
       return mock(OpenCompositeOrderFlowValidator.class);
     }
 
+    @Bean
+    public CompositePoLineValidationService compositePoLineValidationService() {
+      return mock(CompositePoLineValidationService.class);
+    }
 
     @Bean PoNumberHelper poNumberHelper() {
       return mock(PoNumberHelper.class);
@@ -284,12 +289,13 @@ public class PurchaseOrderHelperTest {
               UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
               PurchaseOrderStorageService purchaseOrderStorageService,
               ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
-              OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
+              OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+              CompositePoLineValidationService compositePoLineValidationService) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
         purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
         unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
-        poNumberHelper, openCompositeOrderFlowValidator);
+        poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService);
     }
   }
 
