@@ -17,11 +17,13 @@ import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.json.JsonObject;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.orders.HoldingsSummaryService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
+import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -38,6 +40,8 @@ public class HoldingsSummaryServiceTest {
 
   @Mock
   private PurchaseOrderLineService purchaseOrderLineService;
+
+  @Mock PieceStorageService pieceStorageService;
 
   @Mock
   private RequestContext requestContext;
@@ -62,6 +66,9 @@ public class HoldingsSummaryServiceTest {
 
     when(purchaseOrderLineService.getOrderLines(anyString(), anyInt(), anyInt(), any()))
       .thenReturn(CompletableFuture.completedFuture(polines));
+
+    when(pieceStorageService.getPieces(anyInt(), anyInt(), anyString(), any()))
+      .thenReturn(CompletableFuture.completedFuture(new PieceCollection()));
 
     var hs = holdingsSummaryService.getHoldingsSummary(UUID.randomUUID().toString(), requestContext)
       .join();
