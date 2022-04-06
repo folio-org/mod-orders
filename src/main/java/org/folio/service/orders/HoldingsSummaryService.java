@@ -42,11 +42,11 @@ public class HoldingsSummaryService {
           .collect(Collectors.toList());
 
         if (!lineIds.isEmpty()) {
-          StringBuffer poIds = new StringBuffer();
+          StringBuilder poIds = new StringBuilder();
           poIds.append(lineIds.get(0));
           lineIds.stream().skip(1).forEach(id -> poIds.append(" or ").append(id));
 
-          return CompletableFuture.completedFuture(String.format(queryForLines + " or id==(%s)", poIds));
+          return CompletableFuture.completedFuture(String.format("%s or id==(%s)", queryForLines, poIds));
         }
         return CompletableFuture.completedFuture(queryForLines);})
       .thenCompose(query -> purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
