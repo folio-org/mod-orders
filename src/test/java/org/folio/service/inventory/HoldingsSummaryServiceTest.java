@@ -58,6 +58,7 @@ public class HoldingsSummaryServiceTest {
 
     var order = new JsonObject(getMockData(BASE_MOCK_DATA_PATH + "purchase-orders/81_ongoing_pending.json")).mapTo(PurchaseOrder.class);
     var line = new JsonObject(getMockData(BASE_MOCK_DATA_PATH + "lines/81-1_pending_fomat-other.json")).mapTo(PoLine.class);
+    var pieces = new JsonObject(getMockData(BASE_MOCK_DATA_PATH + "pieces/pieceRecords-d471d766-8dbb-4609-999a-02681dea6c22.json")).mapTo(PieceCollection.class);
     purchaseOrders.add(order);
     polines.add(line);
 
@@ -68,7 +69,7 @@ public class HoldingsSummaryServiceTest {
       .thenReturn(CompletableFuture.completedFuture(polines));
 
     when(pieceStorageService.getPieces(anyInt(), anyInt(), anyString(), any()))
-      .thenReturn(CompletableFuture.completedFuture(new PieceCollection()));
+      .thenReturn(CompletableFuture.completedFuture(pieces));
 
     var hs = holdingsSummaryService.getHoldingsSummary(UUID.randomUUID().toString(), requestContext)
       .join();

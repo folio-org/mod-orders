@@ -38,6 +38,7 @@ public class HoldingsSummaryService {
       .thenCompose(piecesCollection -> {
         List<String> lineIds = piecesCollection.getPieces().stream()
           .map(Piece::getPoLineId)
+          .distinct()
           .collect(Collectors.toList());
 
         if (!lineIds.isEmpty()) {
