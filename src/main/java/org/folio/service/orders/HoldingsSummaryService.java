@@ -1,6 +1,7 @@
 package org.folio.service.orders;
 
 import io.vertx.core.json.JsonObject;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.HoldingSummary;
 import org.folio.rest.jaxrs.model.HoldingSummaryCollection;
@@ -11,6 +12,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.pieces.PieceStorageService;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -35,20 +37,14 @@ public class HoldingsSummaryService {
     var queryForLines = String.format("?query=locations=\"holdingId\" : \"%s\"", holdingId);
 
     return pieceStorageService.getPieces(Integer.MAX_VALUE, 0, queryForPiece, requestContext)
-      .thenCompose(piecesCollection -> {
-        List<String> lineIds = piecesCollection.getPieces().stream()
+      .thenApply(piecesCollection -> {
+        Set<String> lineIds = piecesCollection.getPieces().stream()
           .map(Piece::getPoLineId)
-          .distinct()
-          .collect(Collectors.toList());
-
+          .collect(Collectors.toSet());
         if (!lineIds.isEmpty()) {
-          StringBuilder poIds = new StringBuilder();
-          poIds.append(lineIds.get(0));
-          lineIds.stream().skip(1).forEach(id -> poIds.append(" or ").append(id));
-
-          return CompletableFuture.completedFuture(String.format("%s or id==(%s)", queryForLines, poIds));
+          return String.format("%s or %s", queryForLines, HelperUtils.convertIdsToCqlQuery(lineIds));
         }
-        return CompletableFuture.completedFuture(queryForLines);})
+        return queryForLines;})
       .thenCompose(query -> purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
         .thenCompose(lines -> {
           var purchaseOrderIds = lines.stream()
