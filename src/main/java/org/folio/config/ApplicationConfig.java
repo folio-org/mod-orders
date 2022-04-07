@@ -311,8 +311,8 @@ public class ApplicationConfig {
 
   @Bean
   HoldingsSummaryService holdingsSummaryService(PurchaseOrderStorageService purchaseOrderStorageService,
-      PurchaseOrderLineService purchaseOrderLineService) {
-    return new HoldingsSummaryService(purchaseOrderStorageService, purchaseOrderLineService);
+      PurchaseOrderLineService purchaseOrderLineService, PieceStorageService pieceStorageService) {
+    return new HoldingsSummaryService(purchaseOrderStorageService, purchaseOrderLineService, pieceStorageService);
   }
 
   @Bean
