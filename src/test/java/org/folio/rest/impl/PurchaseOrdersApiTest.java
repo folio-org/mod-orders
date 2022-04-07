@@ -43,6 +43,7 @@ import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
 import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
 import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
 import static org.folio.TestConstants.PO_ID_OPEN_TO_BE_CLOSED;
+import static org.folio.TestConstants.PO_ID_OPEN_TO_CANCEL;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITHOUT_PO_LINES;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
 import static org.folio.TestConstants.PO_LINE_ID_FOR_SUCCESS_CASE;
@@ -204,6 +205,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
+import org.folio.rest.acq.model.PaymentStatus;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Metadata;
@@ -3443,6 +3445,34 @@ public class PurchaseOrdersApiTest {
     reqData.put("closeReason", JsonObject.mapFrom(closeReason));
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getString("id")), JsonObject.mapFrom(reqData), "", 204);
+  }
+
+  @Test
+  void testCancelOrder() {
+    logger.info("=== Test case: Cancel order ===");
+
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_OPEN_TO_CANCEL);
+    assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.OPEN.value()));
+    reqData.put("workflowStatus", "Closed");
+    CloseReason closeReason = new CloseReason();
+    closeReason.setReason("Cancelled");
+    reqData.put("closeReason", JsonObject.mapFrom(closeReason));
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getString("id")), JsonObject.mapFrom(reqData), "", 204);
+    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(),
+      is(PurchaseOrder.WorkflowStatus.CLOSED));
+    List<JsonObject> polUpdates = MockServer.getPoLineUpdates();
+    assertNotNull(polUpdates);
+    // check the payment and receipt status of the last 3 updated polines
+    JsonObject line1 = polUpdates.get(polUpdates.size() - 3);
+    assertEquals(ReceiptStatus.CANCELLED.value(), line1.getString(RECEIPT_STATUS));
+    assertEquals(PaymentStatus.CANCELLED.value(), line1.getString(PAYMENT_STATUS));
+    JsonObject line2 = polUpdates.get(polUpdates.size() - 2);
+    assertEquals(ReceiptStatus.CANCELLED.value(), line2.getString(RECEIPT_STATUS));
+    assertEquals(PaymentStatus.PAYMENT_NOT_REQUIRED.value(), line2.getString(PAYMENT_STATUS));
+    JsonObject line3 = polUpdates.get(polUpdates.size() - 1);
+    assertEquals(ReceiptStatus.FULLY_RECEIVED.value(), line3.getString(RECEIPT_STATUS));
+    assertEquals(PaymentStatus.CANCELLED.value(), line3.getString(PAYMENT_STATUS));
   }
 
   @Test

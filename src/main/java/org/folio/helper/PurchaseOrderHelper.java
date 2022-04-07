@@ -79,6 +79,8 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
+import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
@@ -786,7 +788,32 @@ public class PurchaseOrderHelper {
         .collect(toList());
       clonedCompPO.setCompositePoLines(clonedLines);
     }
+    if (compPO.getCloseReason() != null && "Cancelled".equals(compPO.getCloseReason().getReason())) {
+      cancelOrderLines(compPO, poFromStorage);
+    }
     return strategy.processEncumbrances(clonedCompPO, poFromStorage, requestContext);
+  }
+
+  private void cancelOrderLines(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
+    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+      List<CompositePoLine> clonedLines = poFromStorage.getCompositePoLines()
+        .stream()
+        .map(line -> JsonObject.mapFrom(line).mapTo(CompositePoLine.class))
+        .collect(toList());
+      compPO.setCompositePoLines(clonedLines);
+    }
+    compPO.getCompositePoLines().forEach(line -> {
+      if (line.getPaymentStatus() != PaymentStatus.FULLY_PAID &&
+          line.getPaymentStatus() != PaymentStatus.PAYMENT_NOT_REQUIRED &&
+          line.getPaymentStatus() != PaymentStatus.CANCELLED) {
+        line.setPaymentStatus(PaymentStatus.CANCELLED);
+      }
+      if (line.getReceiptStatus() != ReceiptStatus.FULLY_RECEIVED &&
+          line.getReceiptStatus() != ReceiptStatus.RECEIPT_NOT_REQUIRED &&
+          line.getReceiptStatus() != ReceiptStatus.CANCELLED) {
+        line.setReceiptStatus(ReceiptStatus.CANCELLED);
+      }
+    });
   }
 
   private CompletionStage<Void> reopenOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {

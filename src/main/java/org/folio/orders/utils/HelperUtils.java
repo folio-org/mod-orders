@@ -71,6 +71,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.ReportingCode;
@@ -649,8 +650,8 @@ public class HelperUtils {
   private static boolean isCompletedPoLine(PoLine line) {
     PoLine.PaymentStatus paymentStatus = line.getPaymentStatus();
     PoLine.ReceiptStatus receiptStatus = line.getReceiptStatus();
-    return (paymentStatus == PAYMENT_NOT_REQUIRED || paymentStatus == FULLY_PAID)
-      && (receiptStatus == FULLY_RECEIVED || receiptStatus == RECEIPT_NOT_REQUIRED);
+    return (paymentStatus == PAYMENT_NOT_REQUIRED || paymentStatus == FULLY_PAID || paymentStatus == PaymentStatus.CANCELLED)
+      && (receiptStatus == FULLY_RECEIVED || receiptStatus == RECEIPT_NOT_REQUIRED || receiptStatus == ReceiptStatus.CANCELLED);
   }
 
   public static PoLine convertToPoLine(CompositePoLine compPoLine) {
