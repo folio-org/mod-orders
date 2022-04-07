@@ -3457,6 +3457,7 @@ public class PurchaseOrdersApiTest {
     CloseReason closeReason = new CloseReason();
     closeReason.setReason("Cancelled");
     reqData.put("closeReason", JsonObject.mapFrom(closeReason));
+    reqData.remove("compositePoLines");
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getString("id")), JsonObject.mapFrom(reqData), "", 204);
     assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(),
