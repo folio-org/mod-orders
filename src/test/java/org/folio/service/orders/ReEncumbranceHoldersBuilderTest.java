@@ -878,7 +878,7 @@ public class ReEncumbranceHoldersBuilderTest {
         hasProperty("id", nullValue()),
         hasProperty("currency", is(fromEncumbrance1.getCurrency())),
         hasProperty("fromFundId", is(fromEncumbrance1.getFromFundId())),
-        hasProperty("amount", is(46.58d)),
+        hasProperty("amount", is(46.59d)),
         hasProperty("fiscalYearId", is(toFyId))
     ))));
 
@@ -886,7 +886,7 @@ public class ReEncumbranceHoldersBuilderTest {
         hasProperty("id", nullValue()),
         hasProperty("currency", is(fromEncumbrance2.getCurrency())),
         hasProperty("fromFundId", is(fromEncumbrance2.getFromFundId())),
-        hasProperty("amount", is(46.59d)),
+        hasProperty("amount", is(46.58d)),
         hasProperty("fiscalYearId", is(toFyId))
     ))));
   }
