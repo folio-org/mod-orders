@@ -42,7 +42,7 @@ public class FundsDistributionService {
           .with(getDefaultRounding());
       MonetaryAmount calculatedTotal = encumbranceRelationsHolders.stream()
           .map(EncumbranceRelationsHolder::getFundDistribution)
-          .map(fundDistribution -> getDistributionAmount(fundDistribution, expectedTotal, conversion))
+          .map(fundDistribution -> getDistributionAmount(fundDistribution, expectedTotal, poLineCurrency, conversion))
           .reduce((money, money2) -> Money.from(MonetaryFunctions.sum(money, money2)))
           .orElseGet(() -> Money.zero(poLineCurrency));
 
@@ -55,9 +55,9 @@ public class FundsDistributionService {
 
         final EncumbranceRelationsHolder holder = iteratorNext(iterator, remainderSignum);
           CurrencyUnit fyCurrency = Monetary.getCurrency(holder.getCurrency());
-          MonetaryAmount initialAmount = getDistributionAmount(holder.getFundDistribution(), expectedTotal, conversion);
+          MonetaryAmount initialAmount = getDistributionAmount(holder.getFundDistribution(), expectedTotal, poLineCurrency, conversion);
 
-          if (!remainder.isZero()) {
+          if (FundDistribution.DistributionType.PERCENTAGE.equals(holder.getFundDistribution().getDistributionType()) && !remainder.isZero()) {
             initialAmount = initialAmount.add(smallestUnit);
             remainder = remainder.abs().subtract(smallestUnit.abs()).multiply(remainderSignum);
           }
@@ -77,10 +77,10 @@ public class FundsDistributionService {
   }
 
 
-  private MonetaryAmount getDistributionAmount(FundDistribution fundDistribution, MonetaryAmount total,
+  private MonetaryAmount getDistributionAmount(FundDistribution fundDistribution, MonetaryAmount total, CurrencyUnit poLineCurrency,
                                                CurrencyConversion conversion) {
     if (fundDistribution.getDistributionType() == FundDistribution.DistributionType.AMOUNT) {
-      return Money.of(fundDistribution.getValue(), total.getCurrency()).with(conversion).with(getDefaultRounding());
+      return Money.of(fundDistribution.getValue(), poLineCurrency).with(conversion).with(getDefaultRounding());
     }
     return total.with(MonetaryOperators.percent(fundDistribution.getValue())).with(getDefaultRounding());
   }
