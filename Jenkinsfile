@@ -1,5 +1,4 @@
 @Library ('folio_jenkins_shared_libs@FOLIO-2893-api-lint-display') _
-
 buildMvn {
   publishModDescriptor = 'yes'
   mvnDeploy = 'yes'
