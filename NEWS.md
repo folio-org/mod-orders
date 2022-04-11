@@ -1,4 +1,15 @@
-## 12.3.2 - Unreleased
+## 12.4.0 - Unreleased
+
+## 12.3.2 - Released
+
+The primary focus of this release was to fix Holding summary info and memory leaks
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.3.1...v12.3.2)
+
+### Bug Fixes
+* [MODORDERS-677](https://issues.folio.org/browse/MODORDERS-677) - Exchange Rate is ignored for encumbrance calculating when other than US dollars currency is selected
+* [MODORDERS-672](https://issues.folio.org/browse/MODORDERS-672) - Holdings related to package POLs are not displaying Order information in acquisition accordion
+* [MODORDERS-641](https://issues.folio.org/browse/MODORDERS-641) - Error opening large orders
 
 ## 12.3.1 - Released
 
