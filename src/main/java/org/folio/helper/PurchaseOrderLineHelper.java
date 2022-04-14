@@ -847,12 +847,10 @@ public class PurchaseOrderLineHelper {
 
     compositePoLine.getFundDistribution().stream()
       .filter(fundDistribution -> storageFundIds.contains(fundDistribution.getFundId()) && fundDistribution.getEncumbrance() == null)
-      .forEach(fundDistribution -> {
-        storagePoLine.getFundDistribution().stream()
+      .forEach(fundDistribution -> storagePoLine.getFundDistribution().stream()
           .filter(storageFundDistribution -> storageFundDistribution.getFundId().equals(fundDistribution.getFundId()))
           .findFirst()
-          .ifPresent(storageFundDistribution -> fundDistribution.setEncumbrance(storageFundDistribution.getEncumbrance()));
-      });
+          .ifPresent(storageFundDistribution -> fundDistribution.setEncumbrance(storageFundDistribution.getEncumbrance())));
 
     if (isEncumbranceUpdateNeeded(compOrder, compositePoLine, storagePoLine)) {
       OrderWorkflowType workflowType = compOrder.getWorkflowStatus() == PENDING ?
