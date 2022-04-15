@@ -50,6 +50,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.ws.rs.core.Response;
@@ -839,6 +840,17 @@ public class PurchaseOrderLineHelper {
   private CompletableFuture<Void> processPoLineEncumbrances(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine,
     JsonObject lineFromStorage, RequestContext requestContext) {
     PoLine storagePoLine = lineFromStorage.mapTo(PoLine.class);
+
+    List<String> storageFundIds = storagePoLine.getFundDistribution().stream()
+      .map(FundDistribution::getFundId)
+      .collect(Collectors.toList());
+
+    compositePoLine.getFundDistribution().stream()
+      .filter(fundDistribution -> storageFundIds.contains(fundDistribution.getFundId()) && fundDistribution.getEncumbrance() == null)
+      .forEach(fundDistribution -> storagePoLine.getFundDistribution().stream()
+          .filter(storageFundDistribution -> storageFundDistribution.getFundId().equals(fundDistribution.getFundId()))
+          .findFirst()
+          .ifPresent(storageFundDistribution -> fundDistribution.setEncumbrance(storageFundDistribution.getEncumbrance())));
 
     if (isEncumbranceUpdateNeeded(compOrder, compositePoLine, storagePoLine)) {
       OrderWorkflowType workflowType = compOrder.getWorkflowStatus() == PENDING ?
