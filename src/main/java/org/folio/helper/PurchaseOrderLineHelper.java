@@ -308,9 +308,38 @@ public class PurchaseOrderLineHelper {
           // update
           compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
           return updateOrderLine(compOrderLine, lineFromStorage, requestContext)
-            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext));
+            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext))
+            .thenAccept(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext));
         });
 
+  }
+
+  private void updateEncumbranceStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage,
+    RequestContext requestContext) {
+    FolioVertxCompletableFuture.supplyBlockingAsync(requestContext.getContext(), () -> lineFromStorage.mapTo(PoLine.class))
+      .thenAccept(poLine -> {
+        if(isReleaseEncumbrances(compOrderLine, poLine)) {
+          encumbranceService.getPoLineUnreleasedEncumbrances(compOrderLine.getId(), requestContext)
+            .thenCompose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
+              .thenCompose(v -> encumbranceService.releaseEncumbrances(transactionList, requestContext)));
+        } else if (isUnreleasedEncumbrances(compOrderLine, poLine)) {
+          encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
+            .thenCompose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
+              .thenCompose(v -> encumbranceService.unreleaseEncumbrances(transactionList, requestContext)));
+        }
+      });
+  }
+
+  private boolean isReleaseEncumbrances(CompositePoLine compOrderLine, PoLine poLine) {
+    return !StringUtils.equals(poLine.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value())
+      && StringUtils.equals(compOrderLine.getPaymentStatus().value(), CompositePoLine.PaymentStatus.CANCELLED.value());
+  }
+
+  private boolean isUnreleasedEncumbrances(CompositePoLine compOrderLine, PoLine poLine) {
+    return StringUtils.equals(poLine.getPaymentStatus().value(), CompositePoLine.PaymentStatus.CANCELLED.value())
+      && (StringUtils.equals(compOrderLine.getPaymentStatus().value(), CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value())
+        || StringUtils.equals(compOrderLine.getPaymentStatus().value(), CompositePoLine.PaymentStatus.PARTIALLY_PAID.value())
+        || StringUtils.equals(compOrderLine.getPaymentStatus().value(), CompositePoLine.PaymentStatus.ONGOING.value()));
   }
 
   /**

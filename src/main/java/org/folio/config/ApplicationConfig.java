@@ -151,8 +151,9 @@ public class ApplicationConfig {
   EncumbranceService encumbranceService(TransactionService transactionService,
       TransactionSummariesService transactionSummariesService,
       InvoiceLineService invoiceLineService,
-      OrderInvoiceRelationService orderInvoiceRelationService) {
-    return new EncumbranceService(transactionService, transactionSummariesService, invoiceLineService, orderInvoiceRelationService);
+      OrderInvoiceRelationService orderInvoiceRelationService,
+      FiscalYearService fiscalYearService) {
+    return new EncumbranceService(transactionService, transactionSummariesService, invoiceLineService, orderInvoiceRelationService, fiscalYearService);
   }
 
   @Bean
