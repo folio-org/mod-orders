@@ -1352,6 +1352,7 @@ public class PurchaseOrderLinesApiTest {
   void testCancelledPolineForOpenedOrder() {
     logger.info("=== Test cancelled Poline for opened order ===");
 
+    CompositePoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
     reqData.setReceiptStatus(ReceiptStatus.CANCELLED);
     reqData.setPaymentStatus(PaymentStatus.CANCELLED);
@@ -1360,7 +1361,7 @@ public class PurchaseOrderLinesApiTest {
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
-    addMockEntry(PO_LINES_STORAGE, reqData);
+    addMockEntry(PO_LINES_STORAGE, lineFromStorage);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
