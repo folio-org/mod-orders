@@ -1349,7 +1349,7 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
-  void testReleaseEncumbrancesAfterCancelledPoLine() {
+  void testShouldReleaseEncumbrancesAfterCancelledPoLine() {
     logger.info("=== Test release encumbrances after cancelled PoLine  ===");
 
     CompositePoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
@@ -1368,7 +1368,7 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
-  void testUnreleasedEncumbrancesAfterUncancelledPoLine() {
+  void testShouldUnreleasedEncumbrancesAfterUncancelledPoLine() {
     logger.info("=== Test unreleased encumbrances after uncancelled PoLine ===");
 
     CompositePoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
