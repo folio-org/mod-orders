@@ -1349,13 +1349,34 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
-  void testCancelledPolineForOpenedOrder() {
-    logger.info("=== Test cancelled Poline for opened order ===");
+  void testReleaseEncumbrancesAfterCancelledPoLine() {
+    logger.info("=== Test release encumbrances after cancelled PoLine  ===");
 
     CompositePoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
     reqData.setReceiptStatus(ReceiptStatus.CANCELLED);
     reqData.setPaymentStatus(PaymentStatus.CANCELLED);
+
+    addMockEntry(PIECES_STORAGE, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES_STORAGE, lineFromStorage);
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+  }
+
+  @Test
+  void testUnreleasedEncumbrancesAfterUncancelledPoLine() {
+    logger.info("=== Test unreleased encumbrances after uncancelled PoLine ===");
+
+    CompositePoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    lineFromStorage.setReceiptStatus(ReceiptStatus.CANCELLED);
+    lineFromStorage.setPaymentStatus(PaymentStatus.CANCELLED);
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    reqData.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
+    reqData.setPaymentStatus(PaymentStatus.AWAITING_PAYMENT);
 
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
