@@ -308,25 +308,28 @@ public class PurchaseOrderLineHelper {
           // update
           compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
           return updateOrderLine(compOrderLine, lineFromStorage, requestContext)
-            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext))
-            .thenAccept(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext));
+            .thenCompose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
+            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext));
         });
 
   }
 
-  private void updateEncumbranceStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage,
+  private CompletableFuture<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage,
     RequestContext requestContext) {
-    FolioVertxCompletableFuture.supplyBlockingAsync(requestContext.getContext(), () -> lineFromStorage.mapTo(PoLine.class))
-      .thenAccept(poLine -> {
+    return FolioVertxCompletableFuture.supplyBlockingAsync(requestContext.getContext(), () -> lineFromStorage.mapTo(PoLine.class))
+      .thenCompose(poLine -> {
         if(isReleaseEncumbrances(compOrderLine, poLine)) {
-          encumbranceService.getPoLineUnreleasedEncumbrances(compOrderLine.getId(), requestContext)
+          logger.info("Encumbrances releasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
+          return encumbranceService.getPoLineUnreleasedEncumbrances(compOrderLine.getId(), requestContext)
             .thenCompose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
               .thenCompose(v -> encumbranceService.releaseEncumbrances(transactionList, requestContext)));
         } else if (isUnreleasedEncumbrances(compOrderLine, poLine)) {
-          encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
+          logger.info("Encumbrances unreleasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
+          return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
             .thenCompose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
               .thenCompose(v -> encumbranceService.unreleaseEncumbrances(transactionList, requestContext)));
         }
+        return CompletableFuture.completedFuture(null);
       });
   }
 
