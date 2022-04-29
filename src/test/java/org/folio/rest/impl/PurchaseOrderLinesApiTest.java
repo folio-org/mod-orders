@@ -41,6 +41,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
@@ -117,6 +118,7 @@ import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
+import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -1357,11 +1359,18 @@ public class PurchaseOrderLinesApiTest {
     reqData.setReceiptStatus(ReceiptStatus.CANCELLED);
     reqData.setPaymentStatus(PaymentStatus.CANCELLED);
 
+    Fund fund = new Fund()
+      .withId("7fbd5d84-62d1-44c6-9c45-6cb173998bbd")
+      .withName("Fund")
+      .withExternalAccountNo("externalNo")
+      .withLedgerId("133a7916-f05e-4df4-8f7f-09eb2a7076d1");
+
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, lineFromStorage);
+    addMockEntry(FUNDS, fund);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
@@ -1378,11 +1387,18 @@ public class PurchaseOrderLinesApiTest {
     reqData.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
     reqData.setPaymentStatus(PaymentStatus.AWAITING_PAYMENT);
 
+    Fund fund = new Fund()
+      .withId("7fbd5d84-62d1-44c6-9c45-6cb173998bbd")
+      .withName("Fund")
+      .withExternalAccountNo("externalNo")
+      .withLedgerId("133a7916-f05e-4df4-8f7f-09eb2a7076d1");
+
     addMockEntry(PIECES_STORAGE, new Piece()
       .withPoLineId(reqData.getId())
       .withLocationId(reqData.getLocations().get(0).getLocationId()));
 
     addMockEntry(PO_LINES_STORAGE, lineFromStorage);
+    addMockEntry(FUNDS, fund);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
