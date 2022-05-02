@@ -80,7 +80,8 @@
             "orders.item.reopen"
           ],
           "modulePermissions": [
-            "modperms.orders.item.put"
+            "modperms.orders.item.put",
+            "inventory-storage.related-instances.collection.get"
           ]
         },
         {
