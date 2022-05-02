@@ -80,8 +80,7 @@
             "orders.item.reopen"
           ],
           "modulePermissions": [
-            "modperms.orders.item.put",
-            "inventory-storage.related-instances.collection.get"
+            "modperms.orders.item.put"
           ]
         },
         {
@@ -1577,6 +1576,7 @@
         "inventory.items.item.delete",
         "inventory-storage.instance-types.collection.get",
         "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.related-instances.collection.get",
         "inventory-storage.holdings.item.get",
         "inventory-storage.holdings.item.post",
         "inventory-storage.holdings.item.delete",
