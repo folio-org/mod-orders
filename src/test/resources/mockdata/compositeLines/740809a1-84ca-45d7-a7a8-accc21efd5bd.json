@@ -1,0 +1,66 @@
+{
+  "id": "740809a1-84ca-45d7-a7a8-accc21efd5bd",
+  "checkinItems": false,
+  "instanceId": "feb3627f-ec4c-491f-b080-a04f633cb38e",
+  "acquisitionMethod": "796596c4-62b5-4b64-a2ce-524c747afaa2",
+  "automaticExport": false,
+  "alerts": [],
+  "claims": [],
+  "collection": false,
+  "contributors": [],
+  "cost": {
+    "listUnitPrice": 15,
+    "currency": "USD",
+    "discountType": "percentage",
+    "quantityPhysical": 1,
+    "poLineEstimatedPrice": 15
+  },
+  "details": {
+    "productIds": [],
+    "subscriptionInterval": 0
+  },
+  "fundDistribution": [
+    {
+      "code": "AFRICAHIST",
+      "encumbrance": "c1dbe93c-e12b-4733-a3a3-d14ac7df9052",
+      "fundId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
+      "expenseClassId": "1bcc3247-99bf-4dca-9b0f-7bc51a2998c2",
+      "distributionType": "percentage",
+      "value": 100
+    }
+  ],
+  "isPackage": false,
+  "locations": [
+    {
+      "holdingId": "57b2d7ec-b5b5-4a45-9f0c-2c70f42b4a8a",
+      "quantity": 1,
+      "quantityPhysical": 1
+    }
+  ],
+  "orderFormat": "Physical Resource",
+  "paymentStatus": "Awaiting Payment",
+  "physical": {
+    "createInventory": "Instance, Holding, Item",
+    "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+    "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "volumes": []
+  },
+  "poLineNumber": "10090-2",
+  "purchaseOrderId": "1196fcd9-7607-447d-ae85-6e91883d7e4f",
+  "receiptStatus": "Awaiting Receipt",
+  "reportingCodes": [],
+  "rush": false,
+  "source": "User",
+  "titleOrPackage": "line2",
+  "vendorDetail": {
+    "instructions": "",
+    "vendorAccount": "1234",
+    "referenceNumbers": []
+  },
+  "metadata": {
+    "createdDate": "2022-04-28T15:44:07.353+00:00",
+    "createdByUserId": "f36ef0bd-d2f1-545a-ab27-80e0c637ef3b",
+    "updatedDate": "2022-04-28T15:44:16.024+00:00",
+    "updatedByUserId": "f36ef0bd-d2f1-545a-ab27-80e0c637ef3b"
+  }
+}

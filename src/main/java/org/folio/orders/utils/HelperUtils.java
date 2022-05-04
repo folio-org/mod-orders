@@ -107,6 +107,7 @@ public class HelperUtils {
 
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
+  public static final String REASON_CANCELLED = "Cancelled";
   private static final String MAX_POLINE_LIMIT = "999";
   public static final String OKAPI_URL = "x-okapi-url";
   private static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
@@ -626,6 +627,13 @@ public class HelperUtils {
 
   public static boolean changeOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
     boolean isUpdateRequired = false;
+
+    if (toBeCancelled(purchaseOrder, poLines)) {
+      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
+      purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_CANCELLED));
+      return true;
+    }
+
     if (toBeClosed(purchaseOrder, poLines)) {
       isUpdateRequired = true;
       purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
@@ -640,6 +648,17 @@ public class HelperUtils {
   private static boolean toBeClosed(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
     return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.OPEN
       && poLines.stream().allMatch(HelperUtils::isCompletedPoLine);
+  }
+
+  private static boolean toBeCancelled(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.OPEN
+      && poLines.stream().allMatch(HelperUtils::isCancelledPoLine);
+  }
+
+  private static boolean isCancelledPoLine(PoLine line) {
+    PoLine.PaymentStatus paymentStatus = line.getPaymentStatus();
+    PoLine.ReceiptStatus receiptStatus = line.getReceiptStatus();
+    return paymentStatus == PaymentStatus.CANCELLED && receiptStatus == ReceiptStatus.CANCELLED;
   }
 
   private static boolean toBeReopened(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
