@@ -45,6 +45,7 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
                                   future.completeExceptionally(ex);
                                   return null;
                                 });
+        return future;
       }
       return CompletableFuture.completedFuture(null);
     } catch (Exception e) {

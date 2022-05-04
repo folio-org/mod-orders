@@ -31,7 +31,7 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
     if (Boolean.TRUE.equals(isLineUpdated)) {
       return receivingEncumbranceStrategy.processEncumbrances(holder.getPurchaseOrderToSave(), holder.getPurchaseOrderToSave(), requestContext)
                                 .thenAccept(aVoid -> updateEstimatedPrice(holder.getPoLineToSave()))
-                                .thenAccept(v -> purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext));
+                                .thenCompose(v -> purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext));
     }
     return CompletableFuture.completedFuture(null);
   }
