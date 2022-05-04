@@ -43,7 +43,7 @@ public class PieceCreateFlowManager {
                                                                       ProtectedOperationType.CREATE, requestContext))
       .thenCompose(v -> pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
                                                                 holder.isCreateItem(), requestContext))
-      .thenAccept(compPoLine -> updatePoLine(holder, requestContext))
+      .thenCompose(compPoLine -> updatePoLine(holder, requestContext))
       .thenCompose(v -> pieceStorageService.insertPiece(pieceToCreate, requestContext));
   }
 
