@@ -303,6 +303,7 @@ public class PurchaseOrdersApiTest {
   private static final String PE_MIX_PATH = "po_listed_print_monograph_pe_mix.json";
   private static final String MONOGRAPH_FOR_CREATE_INVENTORY_TEST = "print_monograph_for_create_inventory_test.json";
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
+  private static final String LISTED_PRINT_SERIAL_PATH_WITHOUT_RENEWALDATE = "po_listed_print_serial_without_renewalDateAndInterval.json";
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
   private static final String ELECTRONIC_FOR_CREATE_INVENTORY_TEST = "po_listed_electronic_monograph.json";
   private static final String PO_FOR_TAGS_INHERITANCE_TEST = "po_tags_inheritance.json";
@@ -402,6 +403,20 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertThat(resp.getCompositePoLines().get(0).getCost().getPoLineEstimatedPrice(), equalTo(47.98));
+  }
+
+  @Test
+  void testOrderWithoutRenewalDateAndInterval() throws Exception {
+    logger.info("=== Test Post Successful test completion if Renewal_Date and Interval is absent ===");
+
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH_WITHOUT_RENEWALDATE));
+    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
+
+
+    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
+     prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+
   }
 
   @Test

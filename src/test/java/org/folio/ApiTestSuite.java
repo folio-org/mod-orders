@@ -14,7 +14,6 @@ import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.orders.utils.PoLineCommonUtilTest;
 import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorTest;
-import org.folio.orders.utils.validators.OngoingOrderValidatorTest;
 import org.folio.rest.core.ResponseUtilTest;
 import org.folio.rest.core.RestClientTest;
 import org.folio.rest.core.exceptions.ExceptionUtilTest;
@@ -248,10 +247,6 @@ public class ApiTestSuite {
 
   @Nested
   class BudgetRestrictionServiceTestNested extends BudgetRestrictionServiceTest {
-  }
-
-  @Nested
-  class OngoingOrderValidatorTestNested extends OngoingOrderValidatorTest {
   }
 
   @Nested
