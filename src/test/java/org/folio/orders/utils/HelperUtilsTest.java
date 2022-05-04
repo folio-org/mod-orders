@@ -1,19 +1,23 @@
 package org.folio.orders.utils;
 
+import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.UUID;
 
 import javax.money.convert.ConversionQuery;
 
+import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.junit.jupiter.api.Test;
 
 public class HelperUtilsTest {
@@ -41,4 +45,27 @@ public class HelperUtilsTest {
     assertEquals(actQuery.getCurrency().getCurrencyCode(), systemCurrency);
     assertNull(actQuery.get(RATE_KEY, Double.class));
   }
+
+  @Test void testOrderStatusToBeCancelled() {
+    PurchaseOrder purchaseOrder = new PurchaseOrder();
+    purchaseOrder.setId(UUID.randomUUID().toString());
+    purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+
+    PoLine firstPoLine = new PoLine();
+    firstPoLine.setId(UUID.randomUUID().toString());
+    firstPoLine.setPaymentStatus(PoLine.PaymentStatus.CANCELLED);
+    firstPoLine.setReceiptStatus(PoLine.ReceiptStatus.CANCELLED);
+
+    PoLine secondPoLine = new PoLine();
+    secondPoLine.setId(UUID.randomUUID().toString());
+    secondPoLine.setPaymentStatus(PoLine.PaymentStatus.CANCELLED);
+    secondPoLine.setReceiptStatus(PoLine.ReceiptStatus.CANCELLED);
+
+    List<PoLine> poLines = List.of(firstPoLine, secondPoLine);
+
+    assertTrue(HelperUtils.changeOrderStatus(purchaseOrder, poLines));
+    assertEquals(purchaseOrder.getWorkflowStatus(), PurchaseOrder.WorkflowStatus.CLOSED);
+    assertEquals(purchaseOrder.getCloseReason(), new CloseReason().withReason(REASON_CANCELLED));
+  }
+
 }

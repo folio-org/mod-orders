@@ -20,6 +20,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.finance.FiscalYearService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.javamoney.moneta.function.MonetaryOperators;
@@ -58,15 +59,18 @@ public class EncumbranceService {
   private final TransactionSummariesService transactionSummariesService;
   private final InvoiceLineService invoiceLineService;
   private final OrderInvoiceRelationService orderInvoiceRelationService;
+  private final FiscalYearService fiscalYearService;
 
   public EncumbranceService(TransactionService transactionService,
                             TransactionSummariesService transactionSummariesService,
                             InvoiceLineService invoiceLineService,
-                            OrderInvoiceRelationService orderInvoiceRelationService) {
+                            OrderInvoiceRelationService orderInvoiceRelationService,
+                            FiscalYearService fiscalYearService) {
     this.transactionService = transactionService;
     this.transactionSummariesService = transactionSummariesService;
     this.invoiceLineService = invoiceLineService;
     this.orderInvoiceRelationService = orderInvoiceRelationService;
+    this.fiscalYearService = fiscalYearService;
   }
 
 
@@ -112,6 +116,10 @@ public class EncumbranceService {
             });
   }
 
+  public CompletableFuture<Void> updateOrderTransactionSummary(CompositePoLine compOrderLine, List<Transaction> encumbrs, RequestContext requestContext) {
+    return transactionSummariesService.updateOrderTransactionSummary(compOrderLine.getPurchaseOrderId(), encumbrs.size(), requestContext);
+  }
+
   private void syncEncumbrancesOrderStatus(CompositePurchaseOrder.WorkflowStatus workflowStatus,
                                            List<Transaction> encumbrances) {
     Encumbrance.OrderStatus orderStatus = Encumbrance.OrderStatus.fromValue(workflowStatus.value());
@@ -151,6 +159,17 @@ public class EncumbranceService {
 
   public CompletableFuture<List<Transaction>> getPoLineUnreleasedEncumbrances(String poLineId, RequestContext requestContext) {
     return transactionService.getTransactions(buildNonReleasedEncumbranceByPoLineQuery(poLineId), 0, Integer.MAX_VALUE, requestContext)
+      .thenApply(TransactionCollection::getTransactions);
+  }
+
+  public CompletableFuture<List<Transaction>> getPoLineReleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
+    String currentFiscalYear = poLine.getFundDistribution().stream()
+      .findFirst()
+      .map(FundDistribution::getFundId)
+      .orElse("");
+
+    return fiscalYearService.getCurrentFiscalYearByFundId(currentFiscalYear, requestContext)
+      .thenCompose(fiscalYear -> transactionService.getTransactions(buildReleasedEncumbranceByPoLineQuery(poLine.getId(), fiscalYear.getId()), 0, Integer.MAX_VALUE, requestContext))
       .thenApply(TransactionCollection::getTransactions);
   }
 
