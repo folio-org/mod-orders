@@ -41,6 +41,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHI
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
@@ -117,10 +118,12 @@ import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
 import org.folio.orders.utils.POLineProtectedFields;
 import org.folio.rest.acq.model.Title;
+import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Cost;
@@ -1342,6 +1345,60 @@ public class PurchaseOrderLinesApiTest {
 
     reqData.getLocations().get(0).setQuantityElectronic(3);
     reqData.getCost().setQuantityElectronic(3);
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+  }
+
+  @Test
+  void testShouldReleaseEncumbrancesAfterCancelledPoLine() {
+    logger.info("=== Test release encumbrances after cancelled PoLine  ===");
+
+    CompositePoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    reqData.setReceiptStatus(ReceiptStatus.CANCELLED);
+    reqData.setPaymentStatus(PaymentStatus.CANCELLED);
+
+    Fund fund = new Fund()
+      .withId("7fbd5d84-62d1-44c6-9c45-6cb173998bbd")
+      .withName("Fund")
+      .withExternalAccountNo("externalNo")
+      .withLedgerId("133a7916-f05e-4df4-8f7f-09eb2a7076d1");
+
+    addMockEntry(PIECES_STORAGE, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES_STORAGE, lineFromStorage);
+    addMockEntry(FUNDS, fund);
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+  }
+
+  @Test
+  void testShouldUnreleasedEncumbrancesAfterUncancelledPoLine() {
+    logger.info("=== Test unreleased encumbrances after uncancelled PoLine ===");
+
+    CompositePoLine lineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    lineFromStorage.setReceiptStatus(ReceiptStatus.CANCELLED);
+    lineFromStorage.setPaymentStatus(PaymentStatus.CANCELLED);
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    reqData.setReceiptStatus(ReceiptStatus.AWAITING_RECEIPT);
+    reqData.setPaymentStatus(PaymentStatus.AWAITING_PAYMENT);
+
+    Fund fund = new Fund()
+      .withId("7fbd5d84-62d1-44c6-9c45-6cb173998bbd")
+      .withName("Fund")
+      .withExternalAccountNo("externalNo")
+      .withLedgerId("133a7916-f05e-4df4-8f7f-09eb2a7076d1");
+
+    addMockEntry(PIECES_STORAGE, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES_STORAGE, lineFromStorage);
+    addMockEntry(FUNDS, fund);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
