@@ -4,6 +4,7 @@ import io.restassured.http.Header;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.acq.model.invoice.Adjustment;
@@ -13,6 +14,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.finance.FiscalYearService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,6 +76,8 @@ public class EncumbranceServiceTest {
   private OrderInvoiceRelationService orderInvoiceRelationService;
   @Mock
   private InvoiceLineService invoiceLineService;
+  @Mock
+  private FiscalYearService fiscalYearService;
 
   @BeforeEach
   public void initMocks(){
@@ -98,6 +102,44 @@ public class EncumbranceServiceTest {
     encumbranceService.updateEncumbrances(Arrays.asList(encumbrance, encumbrance), requestContextMock);
     //Then
     verify(transactionService, times(1)).updateTransactions(any(), eq(requestContextMock));
+  }
+
+  @Test
+  void test() {
+    //Given
+    String fundId = "df876cba-eeec-4901-bce7-cc2260b0a536";
+    FundDistribution fundDistribution = new FundDistribution();
+    fundDistribution.setFundId(fundId);
+
+    FiscalYear fiscalYear = new FiscalYear();
+    fiscalYear.setId(UUID.randomUUID().toString());
+
+
+    CompositePoLine poLine = new CompositePoLine();
+    poLine.withFundDistribution(List.of(fundDistribution));
+
+    String orderId = UUID.randomUUID().toString();
+    Transaction encumbrance = new Transaction()
+      .withId(UUID.randomUUID().toString())
+      .withEncumbrance(new Encumbrance().withSourcePurchaseOrderId(orderId));
+    Transaction encumbrance2 = new Transaction()
+      .withId(UUID.randomUUID().toString())
+      .withEncumbrance(new Encumbrance().withSourcePurchaseOrderId(orderId));
+    List<Transaction> transactions = new ArrayList<>();
+    transactions.add(encumbrance);
+    transactions.add(encumbrance2);
+    TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
+
+    doReturn(completedFuture(fiscalYear)).when(fiscalYearService).getCurrentFiscalYearByFundId(anyString(), eq(requestContextMock));
+    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), eq(requestContextMock));
+
+    //When
+    CompletableFuture<List<Transaction>> result = encumbranceService.getPoLineReleasedEncumbrances(poLine, requestContextMock);
+    assertFalse(result.isCompletedExceptionally());
+    result.join();
+
+    //Then
+    verify(transactionService, times(1)).getTransactions(anyString(), anyInt(), anyInt(), eq(requestContextMock));
   }
 
   @Test
