@@ -12,7 +12,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.FundDistributionUtils;
-import org.folio.orders.utils.validators.OngoingOrderValidator;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -47,7 +46,6 @@ public class OpenCompositeOrderFlowValidator {
     return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), true, requestContext)
       .thenCompose(v -> checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext))
       .thenAccept(v -> FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines()))
-      .thenAccept(v -> OngoingOrderValidator.validate(compPO))
       .thenApply(v -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN))
       .thenCompose(strategy -> strategy.prepareProcessEncumbrancesAndValidate(compPO, poFromStorage, requestContext))
       .thenAccept(v -> validateMaterialTypes(compPO));
