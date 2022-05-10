@@ -1,5 +1,14 @@
 ## 12.3.0 - Unreleased
 
+## 12.2.6 - Released
+This bugfix release focused on fixing approve and pay invoice related issues
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.2.5...v12.2.6)
+
+### Bug Fixes
+* [MODORDERS-689](https://issues.folio.org/browse/MODORDERS-689) - Kiwi (R3 2021) Hot Fix #3 - Invoice can be approved but not paid when expense class added at point of invoice
+* [MODORDERS-688](https://issues.folio.org/browse/MODORDERS-688) - Kiwi (R3 2021) Hot Fix #3 - Invoice payment fails if order line fund distribution is changed before invoice approval
+
 ## 12.2.5 - Released
 This bugfix release focused on fixing Log4j vulnerability
 
