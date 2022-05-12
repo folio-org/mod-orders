@@ -111,6 +111,7 @@ public class BaseApi {
     case 400:
     case 403:
     case 404:
+    case 409:
     case 422:
       responseBuilder = javax.ws.rs.core.Response.status(code);
       break;
