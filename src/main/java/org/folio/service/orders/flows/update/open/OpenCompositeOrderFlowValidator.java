@@ -48,7 +48,7 @@ public class OpenCompositeOrderFlowValidator {
       .thenAccept(v -> FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines()))
       .thenApply(v -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN))
       .thenCompose(strategy -> strategy.prepareProcessEncumbrancesAndValidate(compPO, poFromStorage, requestContext))
-      .thenAccept(v -> validateMaterialTypes(compPO));
+      .thenAccept(holders -> validateMaterialTypes(compPO));
   }
 
   public CompletableFuture<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines, RequestContext requestContext) {
