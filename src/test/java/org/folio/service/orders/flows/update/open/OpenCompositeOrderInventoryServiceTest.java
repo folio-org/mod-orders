@@ -1,4 +1,4 @@
-package org.folio.service.orders.flows.open;
+package org.folio.service.orders.flows.update.open;
 
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
@@ -17,8 +17,6 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.service.inventory.InventoryManager;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryService;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
 import org.folio.service.titles.TitlesService;

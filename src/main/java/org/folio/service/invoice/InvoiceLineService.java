@@ -1,5 +1,18 @@
 package org.folio.service.invoice;
 
+import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static org.folio.completablefuture.FolioVertxCompletableFuture.allOf;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
@@ -12,13 +25,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static java.lang.String.format;
-import static java.util.stream.Collectors.joining;
-import static org.folio.completablefuture.FolioVertxCompletableFuture.allOf;
+import one.util.streamex.StreamEx;
 
 public class InvoiceLineService {
 
@@ -57,10 +64,14 @@ public class InvoiceLineService {
      return retrieveInvoiceLines(query, requestContext);
   }
 
-  public CompletableFuture<List<InvoiceLine>> getInvoiceLinesByOrderLineIds(List<String> poLineIds,
-      RequestContext requestContext) {
-    String query = buildInvoiceLineWithPoLineQuery(poLineIds);
-    return retrieveInvoiceLines(query, requestContext);
+  public CompletableFuture<List<InvoiceLine>> getInvoiceLinesByOrderLineIds(List<String> poLineIds, RequestContext requestContext) {
+    List<CompletableFuture<List<InvoiceLine>>> futures = StreamEx
+      .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
+      .map(ids -> getInvoiceLineByOrderLineIdsChunk(ids, requestContext))
+      .collect(toList());
+    return collectResultsOnSuccess(futures)
+      .thenApply(listList -> listList.stream().flatMap(Collection::stream).collect(toList()))
+      .thenApply(invoiceLines -> invoiceLines.stream().distinct().collect(Collectors.toList()));
   }
 
   public CompletableFuture<Void> removeEncumbranceLinks(List<InvoiceLine> invoiceLines, List<String> transactionIds,
@@ -96,6 +107,11 @@ public class InvoiceLineService {
   private CompletableFuture<Void> saveInvoiceLine(InvoiceLine invoiceLine,  RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVOICE_LINE_BY_ID_ENDPOINT).withId(invoiceLine.getId());
     return restClient.put(requestEntry, invoiceLine, requestContext);
+  }
+
+  private CompletableFuture<List<InvoiceLine>> getInvoiceLineByOrderLineIdsChunk(List<String> poLineIds, RequestContext requestContext) {
+    String query = buildInvoiceLineWithPoLineQuery(poLineIds);
+    return retrieveInvoiceLines(query, requestContext);
   }
 
   private String buildInvoiceLineWithPoLineQuery(List<String> poLineIds) {

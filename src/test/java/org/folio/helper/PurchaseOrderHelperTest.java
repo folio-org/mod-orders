@@ -30,6 +30,7 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
+import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
@@ -259,7 +260,6 @@ public class PurchaseOrderHelperTest {
       return mock(UnOpenCompositeOrderManager.class);
     }
 
-
     @Bean
     public OpenCompositeOrderManager openCompositeOrderManager() {
       return mock(OpenCompositeOrderManager.class);
@@ -273,6 +273,11 @@ public class PurchaseOrderHelperTest {
     @Bean
     public CompositePoLineValidationService compositePoLineValidationService() {
       return mock(CompositePoLineValidationService.class);
+    }
+
+    @Bean
+    public ReOpenCompositeOrderManager reOpenCompositeOrderManager() {
+      return mock(ReOpenCompositeOrderManager.class);
     }
 
     @Bean PoNumberHelper poNumberHelper() {
@@ -290,12 +295,13 @@ public class PurchaseOrderHelperTest {
               PurchaseOrderStorageService purchaseOrderStorageService,
               ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
               OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-              CompositePoLineValidationService compositePoLineValidationService) {
+              CompositePoLineValidationService compositePoLineValidationService,
+              ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
         purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
         unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
-        poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService);
+        poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager);
     }
   }
 

@@ -1,4 +1,4 @@
-package org.folio.service.orders.flows.open;
+package org.folio.service.orders.flows.update.open;
 
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
@@ -31,9 +31,6 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryService;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
