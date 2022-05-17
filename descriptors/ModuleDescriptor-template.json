@@ -965,15 +965,15 @@
     },
     {
       "id": "finance.expense-classes",
-      "version": "2.0"
+      "version": "3.0"
     },
     {
       "id": "finance.funds",
-      "version": "1.3"
+      "version": "2.0"
     },
     {
       "id": "finance.transactions",
-      "version": "4.1"
+      "version": "5.0"
     },
     {
       "id": "finance.order-transaction-summaries",
@@ -981,11 +981,11 @@
     },
     {
       "id": "finance.ledgers",
-      "version": "1.5"
+      "version": "2.0"
     },
     {
       "id": "finance.budgets",
-      "version": "1.3"
+      "version": "2.0"
     },
     {
       "id": "orders-storage.titles",
@@ -1009,11 +1009,11 @@
     },
     {
       "id": "finance-storage.budget-expense-classes",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "finance-storage.transactions",
-      "version": "3.1"
+      "version": "4.0"
     },
     {
       "id": "finance.exchange-rate",
@@ -1021,7 +1021,7 @@
     },
     {
       "id": "finance.ledger-rollovers",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "finance.ledger-rollovers-progress",

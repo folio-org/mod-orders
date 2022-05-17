@@ -273,6 +273,7 @@ public class EncumbranceRelationsHoldersBuilder {
         holder.withOldEncumbrance(existingTransaction);
         Transaction newTransaction = holder.getNewEncumbrance();
         newTransaction.setId(existingTransaction.getId());
+        newTransaction.setVersion(existingTransaction.getVersion());
         newTransaction.getEncumbrance()
           .withAmountExpended(existingTransaction.getEncumbrance().getAmountExpended())
           .withAmountAwaitingPayment(existingTransaction.getEncumbrance().getAmountAwaitingPayment());
