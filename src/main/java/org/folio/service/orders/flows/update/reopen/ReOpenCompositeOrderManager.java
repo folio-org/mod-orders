@@ -8,11 +8,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.ListUtils;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.orders.flows.update.reopen.ReOpenCompositeOrderHolder;
 import org.folio.rest.acq.model.invoice.Invoice;
@@ -68,10 +66,7 @@ public class ReOpenCompositeOrderManager {
     return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(compPO.getOrderType()))
               .thenCompose(orderTypeP -> {
                 if (CompositePurchaseOrder.OrderType.ONE_TIME == compPO.getOrderType()) {
-                  return oneTimeUpdatePoLineStatuses(compPO.getId(), compPO.getCompositePoLines(), requestContext)
-                    .thenAccept(v -> {
-                      String s = ";";
-                    });
+                  return oneTimeUpdatePoLineStatuses(compPO.getId(), compPO.getCompositePoLines(), requestContext);
                 } else if (CompositePurchaseOrder.OrderType.ONGOING == compPO.getOrderType()) {
                   return ongoingUpdatePoLineStatuses(compPO.getCompositePoLines(), requestContext);
                 }

@@ -393,7 +393,7 @@ public class ApplicationConfig {
                               InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
                               PurchaseOrderStorageService purchaseOrderStorageService, PieceUpdateInventoryService pieceUpdateInventoryService) {
     return new PieceService(pieceStorageService, protectionService, purchaseOrderLineService, inventoryManager,
-                              receiptStatusPublisher, purchaseOrderStorageService, pieceUpdateInventoryService);
+                              receiptStatusPublisher, pieceUpdateInventoryService);
   }
 
   @Bean DefaultPieceFlowsValidator pieceCreateFlowValidator() {

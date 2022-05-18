@@ -13,8 +13,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.invoice.Invoice;
@@ -25,11 +23,7 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.service.orders.OrderInvoiceRelationService;
 
 public class InvoiceService {
-  private static final Logger LOG = LogManager.getLogger(InvoiceService.class);
-
   private static final String INVOICE_ENDPOINT = "/invoice/invoices";
-  private static final String INVOICE_BY_ID_ENDPOINT = INVOICE_ENDPOINT + "/{id}";
-  private static final String GET_INVOICE_BY_PO_NUMBER_RQ = "poNumbers==*\"%s\"*";
   private static final String GET_ORDER_INVOICE_REL_BY_PO_ID_RQ = "purchaseOrderId==*\"%s\"*";
 
   private final RestClient restClient;
@@ -38,13 +32,6 @@ public class InvoiceService {
   public InvoiceService(RestClient restClient, OrderInvoiceRelationService orderInvoiceRelationService) {
     this.restClient = restClient;
     this.orderInvoiceRelationService = orderInvoiceRelationService;
-  }
-
-  public CompletableFuture<List<Invoice>> getInvoicesByOrderNumber(String orderNumber, RequestContext requestContext) {
-    String query = String.format(GET_INVOICE_BY_PO_NUMBER_RQ, orderNumber);
-    RequestEntry requestEntry = new RequestEntry(INVOICE_ENDPOINT).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
-    return  restClient.get(requestEntry, requestContext, InvoiceCollection.class)
-                      .thenApply(InvoiceCollection::getInvoices);
   }
 
   public CompletableFuture<List<Invoice>> getInvoicesByOrderId(String orderId, RequestContext requestContext) {
