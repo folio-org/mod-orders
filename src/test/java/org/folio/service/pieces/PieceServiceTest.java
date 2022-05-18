@@ -156,7 +156,7 @@ public class PieceServiceTest {
                                 PurchaseOrderStorageService purchaseOrderStorageService,
                                 PieceUpdateInventoryService pieceUpdateInventoryService) {
       return spy(new PieceService(pieceStorageService, protectionService, purchaseOrderLineService,
-                                    inventoryManager, receiptStatusPublisher, purchaseOrderStorageService, pieceUpdateInventoryService));
+                                    inventoryManager, receiptStatusPublisher, pieceUpdateInventoryService));
     }
   }
 }

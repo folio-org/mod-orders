@@ -9,7 +9,14 @@ import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.service.*;
+import org.folio.service.AcquisitionMethodsService;
+import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.FundsDistributionService;
+import org.folio.service.PrefixService;
+import org.folio.service.ProtectionService;
+import org.folio.service.ReasonForClosureService;
+import org.folio.service.SuffixService;
+import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.FinanceExchangeRateService;
@@ -38,6 +45,7 @@ import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.invoice.InvoiceLineService;
+import org.folio.service.invoice.InvoiceService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
@@ -56,6 +64,7 @@ import org.folio.service.orders.flows.update.open.OpenCompositeOrderHolderBuilde
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
+import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceService;
@@ -197,6 +206,11 @@ public class ApplicationConfig {
   @Bean
   InvoiceLineService invoiceLineService(RestClient restClient) {
     return new InvoiceLineService(restClient);
+  }
+
+  @Bean
+  InvoiceService invoiceService(RestClient restClient, OrderInvoiceRelationService orderInvoiceRelationService) {
+    return new InvoiceService(restClient, orderInvoiceRelationService);
   }
 
   @Bean EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder(EncumbranceService encumbranceService,
@@ -379,7 +393,7 @@ public class ApplicationConfig {
                               InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
                               PurchaseOrderStorageService purchaseOrderStorageService, PieceUpdateInventoryService pieceUpdateInventoryService) {
     return new PieceService(pieceStorageService, protectionService, purchaseOrderLineService, inventoryManager,
-                              receiptStatusPublisher, purchaseOrderStorageService, pieceUpdateInventoryService);
+                              receiptStatusPublisher, pieceUpdateInventoryService);
   }
 
   @Bean DefaultPieceFlowsValidator pieceCreateFlowValidator() {
@@ -507,12 +521,12 @@ public class ApplicationConfig {
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-    CompositePoLineValidationService compositePoLineValidationService) {
+    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
       unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
-      poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService);
+      poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager);
   }
 
   @Bean PurchaseOrderLineHelper purchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
@@ -531,12 +545,18 @@ public class ApplicationConfig {
     return new CompositePoLineValidationService(expenseClassValidationService);
   }
 
+  @Bean ReOpenCompositeOrderManager reOpenCompositeOrderManager(EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+                    PieceStorageService pieceStorageService, InvoiceLineService invoiceLineService, InvoiceService invoiceService) {
+    return new ReOpenCompositeOrderManager(encumbranceWorkflowStrategyFactory, pieceStorageService, invoiceLineService,
+        invoiceService);
+  }
+
   @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-          TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-          OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
+    EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+    TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
     return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-                        titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator);
+      titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator);
   }
 
   @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {

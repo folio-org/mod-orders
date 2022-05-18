@@ -363,6 +363,7 @@ public class PurchaseOrderLineHelper {
       .thenAccept(json -> future.complete(null))
       .exceptionally(throwable -> {
         String message = String.format("PO Line with '%s' id partially updated but there are issues processing some PO Line sub-objects", compOrderLine.getId());
+        logger.error(message);
         future.completeExceptionally(throwable);
         return null;
       });

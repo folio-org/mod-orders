@@ -1,4 +1,4 @@
-package org.folio.service.orders.flows.open;
+package org.folio.service.orders.flows.update.open;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
@@ -13,7 +13,7 @@ import static org.folio.TestConstants.PIECE_PATH;
 import static org.folio.TestConstants.TILES_PATH;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
-import static org.folio.service.orders.flows.unopen.UnOpenCompositeOrderManagerTest.ORDER_PATH;
+import static org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManagerTest.ORDER_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -50,8 +50,6 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderStorageService;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderHolderBuilder;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;

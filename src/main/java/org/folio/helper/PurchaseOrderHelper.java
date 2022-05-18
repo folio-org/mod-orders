@@ -106,6 +106,7 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
+import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.titles.TitlesService;
 
@@ -144,18 +145,15 @@ public class PurchaseOrderHelper {
   private final ConfigurationEntriesService configurationEntriesService;
   private final PoNumberHelper poNumberHelper;
   private final CompositePoLineValidationService compositePoLineValidationService;
+  private final ReOpenCompositeOrderManager reOpenCompositeOrderManager;
 
-  public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
-        CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
-        CompositeOrderDynamicDataPopulateService combinedPopulateService,
-        EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
-        TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-        AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager,
-        UnOpenCompositeOrderManager unOpenCompositeOrderManager,
-        OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
-        ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
-        OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-        CompositePoLineValidationService compositePoLineValidationService) {
+  public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper, CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
+    CompositeOrderDynamicDataPopulateService combinedPopulateService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
+    TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager,
+    UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
+    PurchaseOrderStorageService purchaseOrderStorageService, ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
     this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.orderLinesSummaryPopulateService = orderLinesSummaryPopulateService;
     this.encumbranceService = encumbranceService;
@@ -175,6 +173,7 @@ public class PurchaseOrderHelper {
     this.poNumberHelper = poNumberHelper;
     this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
     this.compositePoLineValidationService = compositePoLineValidationService;
+    this.reOpenCompositeOrderManager = reOpenCompositeOrderManager;
   }
 
   /**
@@ -278,7 +277,7 @@ public class PurchaseOrderHelper {
           .thenCompose(ok -> {
             if (isTransitionToReopen(poFromStorage, compPO)) {
               checkOrderReopenPermissions(requestContext);
-              return reopenOrder(compPO, poFromStorage, requestContext);
+              return reOpenCompositeOrderManager.process(compPO, poFromStorage, requestContext);
             }
             return CompletableFuture.completedFuture(null);
           })
@@ -814,19 +813,6 @@ public class PurchaseOrderHelper {
         line.setReceiptStatus(ReceiptStatus.CANCELLED);
       }
     });
-  }
-
-  private CompletionStage<Void> reopenOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
-    EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.CLOSED_TO_OPEN);
-    CompositePurchaseOrder clonedCompPO = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
-    if (CollectionUtils.isEmpty(clonedCompPO.getCompositePoLines())) {
-      List<CompositePoLine> clonedLines = poFromStorage.getCompositePoLines()
-        .stream()
-        .map(line -> JsonObject.mapFrom(line).mapTo(CompositePoLine.class))
-        .collect(toList());
-      clonedCompPO.setCompositePoLines(clonedLines);
-    }
-    return strategy.processEncumbrances(clonedCompPO, poFromStorage, requestContext);
   }
 
   private CompletableFuture<Void> validateIsbnValues(CompositePurchaseOrder compPO, RequestContext requestContext) {

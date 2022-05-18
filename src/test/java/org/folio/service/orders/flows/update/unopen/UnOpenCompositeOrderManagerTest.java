@@ -1,4 +1,4 @@
-package org.folio.service.orders.flows.unopen;
+package org.folio.service.orders.flows.update.unopen;
 
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;

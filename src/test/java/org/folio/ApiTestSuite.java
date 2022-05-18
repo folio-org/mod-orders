@@ -38,10 +38,11 @@ import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.inventory.InventoryManagerTest;
 import org.folio.service.invoice.InvoiceLineServiceTest;
 import org.folio.service.orders.*;
-import org.folio.service.orders.flows.open.OpenCompositeOrderHolderBuilderTest;
-import org.folio.service.orders.flows.open.OpenCompositeOrderInventoryServiceTest;
-import org.folio.service.orders.flows.open.OpenCompositeOrderManagerTest;
-import org.folio.service.orders.flows.open.OpenCompositeOrderPieceServiceTest;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderHolderBuilderTest;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryServiceTest;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderManagerTest;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceServiceTest;
+import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManagerTest;
 import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
@@ -378,4 +379,8 @@ public class ApiTestSuite {
   class InvoiceLineServiceTestNested extends InvoiceLineServiceTest {
   }
 
+  @Nested
+  class ReOpenCompositeOrderManagerTestNested extends ReOpenCompositeOrderManagerTest {
+
+  }
 }

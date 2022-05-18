@@ -1,21 +1,12 @@
 package org.folio.service.pieces;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-
-import javax.ws.rs.core.Response;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderStorageService;
 
 import io.vertx.core.json.JsonObject;
 
@@ -24,7 +15,6 @@ public class PieceService {
 
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
-  private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final InventoryManager inventoryManager;
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
@@ -33,26 +23,13 @@ public class PieceService {
   public PieceService(PieceStorageService pieceStorageService, ProtectionService protectionService,
                       PurchaseOrderLineService purchaseOrderLineService,
                       InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-                      PurchaseOrderStorageService purchaseOrderStorageService, PieceUpdateInventoryService pieceUpdateInventoryService) {
+                      PieceUpdateInventoryService pieceUpdateInventoryService) {
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.inventoryManager = inventoryManager;
     this.receiptStatusPublisher = receiptStatusPublisher;
-    this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
-  }
-
-  public CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
-    return purchaseOrderStorageService.getCompositeOrderById(purchaseOrderId, requestContext)
-      .exceptionally(t -> {
-        Throwable cause = t.getCause();
-        // The case when specified order does not exist
-        if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
-          throw new HttpException(404, ErrorCodes.ORDER_NOT_FOUND);
-        }
-        throw t instanceof CompletionException ? (CompletionException) t : new CompletionException(cause);
-      });
   }
 
   public void receiptConsistencyPiecePoLine(JsonObject jsonObj, RequestContext requestContext) {
