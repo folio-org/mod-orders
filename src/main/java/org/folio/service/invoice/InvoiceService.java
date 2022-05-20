@@ -24,7 +24,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 
 public class InvoiceService {
   private static final String INVOICE_ENDPOINT = "/invoice/invoices";
-  private static final String GET_ORDER_INVOICE_REL_BY_PO_ID_RQ = "purchaseOrderId==*\"%s\"*";
+  private static final String GET_ORDER_INVOICE_REL_BY_PO_ID_RQ = "purchaseOrderId==%s";
 
   private final RestClient restClient;
   private final OrderInvoiceRelationService orderInvoiceRelationService;
