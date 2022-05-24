@@ -20,11 +20,14 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.resource.OrdersOrderLines;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.orders.CompositePoLineValidationService;
+import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -43,6 +46,10 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   private ConfigurationEntriesService configurationEntriesService;
   @Autowired
   private CompositePoLineValidationService compositePoLineValidationService;
+  @Autowired
+  private OrderLinePatchOperationService orderLinePatchOperationService;
+  @Autowired
+  private PurchaseOrderLineService purchaseOrderLineService;
 
   public CompositePoLineAPI() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -130,4 +137,17 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
       .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
+  @Override
+  @Validate
+  public void patchOrdersOrderLinesById(String lineId,  PatchOrderLineRequest request,
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
+      Context vertxContext) {
+    RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
+
+    purchaseOrderLineService.getOrderLineById(lineId, requestContext)
+        .thenAccept(poLine -> {
+          orderLinePatchOperationService.patch(poLine, request, requestContext);
+        })
+        .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+  }
 }
