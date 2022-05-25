@@ -14,7 +14,6 @@ public class OrderLineUpdateInstanceHandler implements PatchOperationHandler{
   }
 
   @Override public CompletableFuture<Void> handle(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture();
     PoLine storagePoLine = holder.getStoragePoLine();
 
     switch (storagePoLine.getOrderFormat()) {
@@ -35,8 +34,7 @@ public class OrderLineUpdateInstanceHandler implements PatchOperationHandler{
             .resolve(CreateInventoryType.fromValue(storagePoLine.getPhysical().getCreateInventory().value()))
             .updateInstance(holder, requestContext);
       default:
-        future.complete(null);
-        return future;
+        return CompletableFuture.completedFuture(null);
     }
   }
 }

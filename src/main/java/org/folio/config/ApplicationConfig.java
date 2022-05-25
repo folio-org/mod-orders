@@ -1,5 +1,6 @@
 package org.folio.config;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -600,7 +601,7 @@ public class ApplicationConfig {
 
   @Bean OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver(
       PatchOperationHandler orderLineUpdateInstanceHandler) {
-    Map<PatchOrderLineRequest.Operation, PatchOperationHandler> handlers = new HashMap<>();
+    Map<PatchOrderLineRequest.Operation, PatchOperationHandler> handlers = new EnumMap<>(PatchOrderLineRequest.Operation.class);
     handlers.put(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF, orderLineUpdateInstanceHandler);
     return new OrderLinePatchOperationHandlerResolver(handlers);
   }
@@ -615,7 +616,7 @@ public class ApplicationConfig {
 
   @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
       OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
-    Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies = new HashMap<>();
+    Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies = new EnumMap<>(CreateInventoryType.class);
 
     strategies.put(CreateInventoryType.INSTANCE_HOLDING_ITEM, withHoldingOrderLineUpdateInstanceStrategy);
     strategies.put(CreateInventoryType.INSTANCE_HOLDING, withHoldingOrderLineUpdateInstanceStrategy);

@@ -145,9 +145,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
 
     purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-        .thenAccept(poLine -> {
-          orderLinePatchOperationService.patch(poLine, request, requestContext);
-        })
+        .thenAccept(poLine -> orderLinePatchOperationService.patch(poLine, request, requestContext))
         .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 }

@@ -9,9 +9,6 @@ import java.util.concurrent.CompletableFuture;
 
 public class WithoutHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpdateInstanceStrategy {
 
-  public WithoutHoldingOrderLineUpdateInstanceStrategy() {
-  }
-
   @Override public CompletableFuture<Void> updateInstance(OrderLineUpdateInstanceHolder holder, RequestContext rqContext) {
     throw new NotImplementedException();
   }
