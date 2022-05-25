@@ -74,10 +74,11 @@ class OrderLineUpdateInstanceHandlerTest {
             .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
         .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE));
 
-    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
-        .withStoragePoLine(poLine);
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
     patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF);
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+        .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
     assertThrows(NotImplementedException.class, () ->
       orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext));
@@ -93,10 +94,11 @@ class OrderLineUpdateInstanceHandlerTest {
         .withPhysical(new Physical()
             .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING));
 
-    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
-        .withStoragePoLine(poLine);
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
     patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF);
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+        .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
     assertThrows(NotImplementedException.class, () ->
         orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext));
@@ -111,10 +113,11 @@ class OrderLineUpdateInstanceHandlerTest {
             withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
         .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE));
 
-    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
-        .withStoragePoLine(poLine);
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
     patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF);
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+        .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
     assertThrows(NotImplementedException.class, () ->
         orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext));
@@ -130,10 +133,11 @@ class OrderLineUpdateInstanceHandlerTest {
         .withPhysical(new Physical()
             .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING));
 
-    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
-        .withStoragePoLine(poLine);
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
     patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF);
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+        .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
     assertThrows(NotImplementedException.class, () ->
         orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext));
