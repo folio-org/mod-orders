@@ -37,7 +37,7 @@ import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.junit.jupiter.api.Assertions.*;
 
 
-class OrderLinePatchOperationServiceTest {
+public class OrderLinePatchOperationServiceTest {
   @Autowired
   private OrderLinePatchOperationService orderLinePatchOperationService;
 

@@ -29,7 +29,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.junit.jupiter.api.Assertions.*;
 
-class OrderLineUpdateInstanceHandlerTest {
+public class OrderLineUpdateInstanceHandlerTest {
   @Autowired
   private OrderLineUpdateInstanceHandler orderLineUpdateInstanceHandler;
 
