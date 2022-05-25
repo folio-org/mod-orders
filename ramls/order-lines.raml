@@ -9,6 +9,8 @@ documentation:
     content: <b>API for managing purchase orders</b>
 
 types:
+  patch_order_line_request: !include acq-models/mod-orders/schemas/patch_order_line_request.json
+  create-inventory-type: !include acq-models/mod-orders/schemas/createInventoryType.json
   composite-po-line: !include acq-models/mod-orders/schemas/composite_po_line.json
   po-line-collection: !include acq-models/mod-orders-storage/schemas/po_line_collection.json
   po-line: !include acq-models/mod-orders-storage/schemas/po_line.json
@@ -59,3 +61,24 @@ resourceTypes:
       description: Update a purchase order line with given {id}
     delete:
       description: Delete a purchase order line with given {id}
+    patch:
+      description: Apply partial modifications to a order line
+      body:
+        application/json:
+          description: Patch order line request
+          type: patch_order_line_request
+          example:
+            strict: false
+            value: !include acq-models/mod-orders/examples/patch_order_line_request.sample
+      responses:
+        204:
+          description: "Order line successfully updated"
+        404:
+          description: Not found
+          body:
+            text/plain:
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            text/plain:
+              example: "internal server error, contact administrator"

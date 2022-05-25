@@ -6,6 +6,7 @@ import static org.folio.RestTestUtils.checkPreventProtectedFieldsModificationRul
 import static org.folio.RestTestUtils.prepareHeaders;
 import static org.folio.RestTestUtils.verifyDeleteResponse;
 import static org.folio.RestTestUtils.verifyGet;
+import static org.folio.RestTestUtils.verifyPatch;
 import static org.folio.RestTestUtils.verifyPostResponse;
 import static org.folio.RestTestUtils.verifyPut;
 import static org.folio.RestTestUtils.verifySuccessGet;
@@ -54,6 +55,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
+import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
@@ -1470,6 +1472,17 @@ public class PurchaseOrderLinesApiTest {
 
     assertThat(errorCodes, containsInAnyOrder(LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN.getCode()));
     assertEquals(0, getRqRsEntries(HttpMethod.PUT, TITLES).size(), "Items should not updated");
+  }
+
+  @Test
+  void shouldThrowNotImplementedExceptionFotPatchMethod() {
+    String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
+    String body = "{ \"operation\": \"Replace Instance Ref\" }";
+
+    Errors errors = verifyPatch(url, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 500)
+        .as(Errors.class);
+    assertEquals(1, errors.getErrors().size());
+    assertEquals(GENERIC_ERROR_CODE.getCode(), errors.getErrors().get(0).getCode());
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {

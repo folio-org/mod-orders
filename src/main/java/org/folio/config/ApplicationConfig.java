@@ -1,5 +1,6 @@
 package org.folio.config;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -9,6 +10,8 @@ import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CreateInventoryType;
+import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.FundsDistributionService;
@@ -66,6 +69,14 @@ import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
+import org.folio.service.orders.lines.update.OrderLinePatchOperationHandlerResolver;
+import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
+import org.folio.service.orders.lines.update.OrderLineUpdateInstanceHandler;
+import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
+import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategyResolver;
+import org.folio.service.orders.lines.update.PatchOperationHandler;
+import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
+import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
@@ -576,5 +587,43 @@ public class ApplicationConfig {
     strategy.put(CompositePoLine.OrderFormat.P_E_MIX.value(), processInventoryMixedStrategy);
 
     return new ProcessInventoryStrategyResolver(strategy);
+  }
+
+  @Bean OrderLinePatchOperationService orderLinePatchOperationService(
+      OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
+      PurchaseOrderLineService purchaseOrderLineService) {
+    return new OrderLinePatchOperationService(orderLinePatchOperationHandlerResolver, purchaseOrderLineService);
+  }
+
+  @Bean PatchOperationHandler orderLineUpdateInstanceHandler(
+      OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver) {
+    return new OrderLineUpdateInstanceHandler(updateInstanceStrategyResolver);
+  }
+
+  @Bean OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver(
+      PatchOperationHandler orderLineUpdateInstanceHandler) {
+    Map<PatchOrderLineRequest.Operation, PatchOperationHandler> handlers = new EnumMap<>(PatchOrderLineRequest.Operation.class);
+    handlers.put(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF, orderLineUpdateInstanceHandler);
+    return new OrderLinePatchOperationHandlerResolver(handlers);
+  }
+
+  @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy() {
+    return new WithHoldingOrderLineUpdateInstanceStrategy();
+  }
+
+  @Bean OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy() {
+    return new WithoutHoldingOrderLineUpdateInstanceStrategy();
+  }
+
+  @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
+      OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
+    Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies = new EnumMap<>(CreateInventoryType.class);
+
+    strategies.put(CreateInventoryType.INSTANCE_HOLDING_ITEM, withHoldingOrderLineUpdateInstanceStrategy);
+    strategies.put(CreateInventoryType.INSTANCE_HOLDING, withHoldingOrderLineUpdateInstanceStrategy);
+    strategies.put(CreateInventoryType.INSTANCE, withoutHoldingOrderLineUpdateInstanceStrategy);
+    strategies.put(CreateInventoryType.NONE, withoutHoldingOrderLineUpdateInstanceStrategy);
+
+    return new OrderLineUpdateInstanceStrategyResolver(strategies);
   }
 }
