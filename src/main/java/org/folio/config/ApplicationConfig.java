@@ -590,8 +590,9 @@ public class ApplicationConfig {
   }
 
   @Bean OrderLinePatchOperationService orderLinePatchOperationService(
-      OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver) {
-    return new OrderLinePatchOperationService(orderLinePatchOperationHandlerResolver);
+      OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
+      PurchaseOrderLineService purchaseOrderLineService) {
+    return new OrderLinePatchOperationService(orderLinePatchOperationHandlerResolver, purchaseOrderLineService);
   }
 
   @Bean PatchOperationHandler orderLineUpdateInstanceHandler(

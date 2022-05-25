@@ -48,8 +48,6 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   private CompositePoLineValidationService compositePoLineValidationService;
   @Autowired
   private OrderLinePatchOperationService orderLinePatchOperationService;
-  @Autowired
-  private PurchaseOrderLineService purchaseOrderLineService;
 
   public CompositePoLineAPI() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -144,8 +142,8 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
       Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
 
-    purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-        .thenAccept(poLine -> orderLinePatchOperationService.patch(poLine, request, requestContext))
+    orderLinePatchOperationService.patch(lineId, request, requestContext)
+        .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
         .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
   }
 }

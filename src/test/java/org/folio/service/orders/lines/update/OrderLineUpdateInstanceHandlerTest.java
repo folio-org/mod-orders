@@ -3,11 +3,16 @@ package org.folio.service.orders.lines.update;
 import io.vertx.core.Context;
 import org.apache.commons.lang.NotImplementedException;
 import org.folio.ApiTestSuite;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
+import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,7 +21,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -54,7 +61,7 @@ public class OrderLineUpdateInstanceHandlerTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(OrderLinePatchOperationServiceTest.ContextConfiguration.class);
+    initSpringContext(OrderLineUpdateInstanceHandlerTest.ContextConfiguration.class);
   }
 
   @AfterAll
@@ -142,5 +149,53 @@ public class OrderLineUpdateInstanceHandlerTest {
     assertThrows(NotImplementedException.class, () ->
         orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext));
 
+  }
+
+  static class ContextConfiguration {
+    @Bean RestClient restClient() {
+      return new RestClient();
+    }
+
+    @Bean PurchaseOrderLineService purchaseOrderLineService(RestClient restClient) {
+      return new PurchaseOrderLineService(restClient);
+    }
+
+    @Bean OrderLinePatchOperationService orderLinePatchOperationService(
+        OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
+        PurchaseOrderLineService purchaseOrderLineService) {
+      return new OrderLinePatchOperationService(orderLinePatchOperationHandlerResolver, purchaseOrderLineService);
+    }
+
+    @Bean PatchOperationHandler orderLineUpdateInstanceHandler(
+        OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver) {
+      return new OrderLineUpdateInstanceHandler(updateInstanceStrategyResolver);
+    }
+
+    @Bean OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver(
+        PatchOperationHandler orderLineUpdateInstanceHandler) {
+      Map<PatchOrderLineRequest.Operation, PatchOperationHandler> handlers = new HashMap<>();
+      handlers.put(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF, orderLineUpdateInstanceHandler);
+      return new OrderLinePatchOperationHandlerResolver(handlers);
+    }
+
+    @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy() {
+      return new WithHoldingOrderLineUpdateInstanceStrategy();
+    }
+
+    @Bean OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy() {
+      return new WithoutHoldingOrderLineUpdateInstanceStrategy();
+    }
+
+    @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
+        OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
+      Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies = new HashMap<>();
+
+      strategies.put(CreateInventoryType.INSTANCE_HOLDING_ITEM, withHoldingOrderLineUpdateInstanceStrategy);
+      strategies.put(CreateInventoryType.INSTANCE_HOLDING, withHoldingOrderLineUpdateInstanceStrategy);
+      strategies.put(CreateInventoryType.INSTANCE, withoutHoldingOrderLineUpdateInstanceStrategy);
+      strategies.put(CreateInventoryType.NONE, withoutHoldingOrderLineUpdateInstanceStrategy);
+
+      return new OrderLineUpdateInstanceStrategyResolver(strategies);
+    }
   }
 }
