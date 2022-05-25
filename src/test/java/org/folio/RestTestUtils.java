@@ -91,6 +91,30 @@ public class RestTestUtils {
     return response;
   }
 
+  public static Response verifyPatch(String url, String body, String expectedContentType, int expectedCode) {
+    return verifyPatch(url, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), expectedContentType, expectedCode);
+  }
+  public static Response verifyPatch(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+    Response response = RestAssured
+        .with()
+        .header(X_OKAPI_TOKEN)
+        .header(X_OKAPI_URL)
+        .headers(headers)
+        .body(body)
+        .contentType(APPLICATION_JSON)
+        .patch(url)
+        .then()
+        .statusCode(expectedCode)
+        .contentType(expectedContentType)
+        .extract()
+        .response();
+
+    // Verify no messages sent via event bus
+    HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
+
+    return response;
+  }
+
   public static Response verifyGet(String url, String expectedContentType, int expectedCode) {
     Headers headers = prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT);
     return verifyGet(url, headers, expectedContentType, expectedCode);
