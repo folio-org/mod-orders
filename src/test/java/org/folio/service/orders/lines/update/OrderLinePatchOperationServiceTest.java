@@ -4,7 +4,6 @@ import io.vertx.core.Context;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.folio.ApiTestSuite;
-import org.folio.config.ApplicationConfig;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
@@ -63,7 +62,7 @@ class OrderLinePatchOperationServiceTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(ApplicationConfig.class);
+    initSpringContext(OrderLinePatchOperationServiceTest.ContextConfiguration.class);
   }
 
   @AfterAll
