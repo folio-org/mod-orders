@@ -35,7 +35,6 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -252,8 +251,7 @@ public class OrderRolloverService {
   private CompletableFuture<List<Transaction>> getEncumbrancesForRollover(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover,
                                                                           RequestContext requestContext) {
     String query = buildQueryEncumbrancesForRollover(orderIds, ledgerFYRollover);
-    return transactionService.getTransactions(query, 0, Integer.MAX_VALUE, requestContext)
-                                .thenApply(TransactionCollection::getTransactions);
+    return transactionService.getTransactions(query, requestContext);
   }
 
   private String buildQueryEncumbrancesForRollover(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover) {

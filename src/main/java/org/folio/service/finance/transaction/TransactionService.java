@@ -33,13 +33,12 @@ public class TransactionService {
     this.restClient = restClient;
   }
 
-  public CompletableFuture<TransactionCollection> getTransactions(String query, int offset, int limit,
-                                                                  RequestContext requestContext) {
+  public CompletableFuture<List<Transaction>> getTransactions(String query, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
-      .withOffset(offset)
-      .withLimit(limit);
-
-    return restClient.get(requestEntry, requestContext, TransactionCollection.class);
+      .withOffset(0)
+      .withLimit(Integer.MAX_VALUE);
+    return restClient.get(requestEntry, requestContext, TransactionCollection.class)
+      .thenApply(TransactionCollection::getTransactions);
   }
 
   public CompletableFuture<List<Transaction>> getTransactionsByPoLinesIds(List<String> trIds, String searchCriteria, RequestContext requestContext) {

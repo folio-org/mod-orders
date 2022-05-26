@@ -25,7 +25,6 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -260,8 +259,7 @@ public class ReEncumbranceHoldersBuilder {
         reEncumbranceHolder.getPurchaseOrder()
           .getId());
 
-    return transactionService.getTransactions(toQuery, 0, Integer.MAX_VALUE, requestContext)
-      .thenApply(TransactionCollection::getTransactions)
+    return transactionService.getTransactions(toQuery, requestContext)
       .thenApply(transactions -> {
         populateExistingToFYEncumbrances(holders, transactions);
         populateNonExistingToFYEncumbrances(holders);
@@ -311,8 +309,7 @@ public class ReEncumbranceHoldersBuilder {
       .findFirst()
       .map(holder -> String.format(GET_ORDER_TRANSACTIONS_QUERY_TEMPLATE, holder.getRollover()
         .getFromFiscalYearId(), holder.getPurchaseOrder().getId()))
-      .map(fromQuery -> transactionService.getTransactions(fromQuery, 0, Integer.MAX_VALUE, requestContext)
-        .thenApply(TransactionCollection::getTransactions)
+      .map(fromQuery -> transactionService.getTransactions(fromQuery, requestContext)
         .thenApply(transactions -> {
           var idTransactionMap = transactions.stream().collect(toMap(Transaction::getId, Function.identity()));
           return holders.stream()

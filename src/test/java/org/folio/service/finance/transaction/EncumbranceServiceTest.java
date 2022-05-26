@@ -6,7 +6,6 @@ import io.vertx.core.Vertx;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.acq.model.invoice.Adjustment;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
@@ -128,10 +127,9 @@ public class EncumbranceServiceTest {
     List<Transaction> transactions = new ArrayList<>();
     transactions.add(encumbrance);
     transactions.add(encumbrance2);
-    TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
 
     doReturn(completedFuture(fiscalYear)).when(fiscalYearService).getCurrentFiscalYearByFundId(anyString(), eq(requestContextMock));
-    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), eq(requestContextMock));
+    doReturn(CompletableFuture.completedFuture(transactions)).when(transactionService).getTransactions(anyString(), eq(requestContextMock));
 
     //When
     CompletableFuture<List<Transaction>> result = encumbranceService.getPoLineReleasedEncumbrances(poLine, requestContextMock);
@@ -139,7 +137,7 @@ public class EncumbranceServiceTest {
     result.join();
 
     //Then
-    verify(transactionService, times(1)).getTransactions(anyString(), anyInt(), anyInt(), eq(requestContextMock));
+    verify(transactionService, times(1)).getTransactions(anyString(), eq(requestContextMock));
   }
 
   @Test
@@ -171,8 +169,7 @@ public class EncumbranceServiceTest {
     List<Transaction> transactions = new ArrayList<>();
     transactions.add(encumbrance);
     transactions.add(encumbrance2);
-    TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
-    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), eq(requestContextMock));
+    doReturn(CompletableFuture.completedFuture(transactions)).when(transactionService).getTransactions(anyString(), eq(requestContextMock));
 
     doReturn(CompletableFuture.completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), eq(requestContextMock));
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).updateTransactions(any(), eq(requestContextMock));
@@ -205,8 +202,7 @@ public class EncumbranceServiceTest {
     List<Transaction> transactions = new ArrayList<>();
     transactions.add(encumbrance);
     transactions.add(encumbrance2);
-    TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
-    doReturn(CompletableFuture.completedFuture(transactionCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
+    doReturn(CompletableFuture.completedFuture(transactions)).when(transactionService).getTransactions(anyString(), any());
 
     doReturn(CompletableFuture.completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(any(), anyInt(), eq(requestContextMock));
     doReturn(CompletableFuture.completedFuture(null)).when(transactionService).updateTransactions(any(), eq(requestContextMock));
