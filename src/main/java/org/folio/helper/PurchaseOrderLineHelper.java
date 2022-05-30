@@ -115,8 +115,8 @@ public class PurchaseOrderLineHelper {
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{1,22}-)([0-9]{1,3})");
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String CREATE_INVENTORY = "createInventory";
-  private static final String ERESOURCE = "eresource";
-  private static final String PHYSICAL = "physical";
+  public static final String ERESOURCE = "eresource";
+  public static final String PHYSICAL = "physical";
   private static final String OTHER = "other";
   private static final String QUERY_BY_PO_LINE_ID = "poLineId==";
 
@@ -597,7 +597,7 @@ public class PurchaseOrderLineHelper {
     List<PoLine> existingPoLines) {
     if (poFromStorage.getWorkflowStatus() != PENDING) {
       compPO.getCompositePoLines()
-        .forEach(poLine -> verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(),
+        .forEach(poLine -> verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(poLine.getOrderFormat().value()),
           findCorrespondingCompositePoLine(poLine, existingPoLines), JsonObject.mapFrom(poLine)));
     }
   }
@@ -930,7 +930,7 @@ public class PurchaseOrderLineHelper {
 
   private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage, CompositePurchaseOrder purchaseOrder) {
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
-      verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(), JsonObject.mapFrom(lineFromStorage.mapTo(PoLine.class)), JsonObject.mapFrom(compOrderLine));
+      verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(compOrderLine.getOrderFormat().value()), JsonObject.mapFrom(lineFromStorage.mapTo(PoLine.class)), JsonObject.mapFrom(compOrderLine));
     }
   }
 
@@ -1014,5 +1014,4 @@ public class PurchaseOrderLineHelper {
       .thenCompose(v -> getCompositePurchaseOrder(line.getPurchaseOrderId(), requestContext)
         .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext)));
   }
-
 }

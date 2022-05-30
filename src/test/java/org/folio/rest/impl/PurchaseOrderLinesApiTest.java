@@ -36,8 +36,10 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.TestUtils.getModifiedProtectedFields;
 import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
 import static org.folio.TestUtils.verifyLocationQuantity;
+import static org.folio.helper.PurchaseOrderLineHelper.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -67,11 +69,13 @@ import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
+import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORDER_ID_WITH_PO_LINES;
+import static org.folio.rest.impl.MockServer.PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
@@ -115,6 +119,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
+import org.folio.HttpStatus;
 import org.folio.TestUtils;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
@@ -124,8 +129,8 @@ import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
+import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Cost;
@@ -139,6 +144,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Tags;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -147,6 +153,8 @@ import org.junit.jupiter.api.Test;
 import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 public class PurchaseOrderLinesApiTest {
 
@@ -693,7 +701,7 @@ public class PurchaseOrderLinesApiTest {
 
 
   @Test
-  void testPutOrderLineByIdProtectedFieldsChanged() {
+  void testPutOrderLineByIdForPhysicalOrderAndProtectedFieldsChanged() {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f175d";
@@ -705,9 +713,8 @@ public class PurchaseOrderLinesApiTest {
     allProtectedFieldsModification.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(),
       TestUtils.APPROVAL_PLAN_METHOD);
     allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
-    allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName(), 100);
     // adding trial because a default value is added while sending the request
-    allProtectedFieldsModification.put(POLineProtectedFields.ERESOURCE_TRIAL.getFieldName(), true);
+    allProtectedFieldsModification.put(POLineProtectedFields.PHYSICAL_MATERIAL_TYPE.getFieldName(), UUID.randomUUID().toString());
 
     Contributor contributor = new Contributor();
     contributor.setContributor("Mr Test");
@@ -1483,6 +1490,40 @@ public class PurchaseOrderLinesApiTest {
         .as(Errors.class);
     assertEquals(1, errors.getErrors().size());
     assertEquals(GENERIC_ERROR_CODE.getCode(), errors.getErrors().get(0).getCode());
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = CompositePoLine.OrderFormat.class)
+  void testPutOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
+    logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
+
+    String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
+    JsonObject body = getMockAsJson(PO_LINES_MOCK_DATA_PATH, lineId);
+    if (CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE != orderFormat) {
+      body.remove(ERESOURCE);
+    }
+    body.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(), TestUtils.APPROVAL_PLAN_METHOD);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    Errors errors = verifyPut(url, body, "", HttpStatus.HTTP_BAD_REQUEST.toInt()).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+
+    Error error = errors.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
+
+    Object[] failedFieldNames = getModifiedProtectedFields(error);
+    Object[] expected = new Object[]{POLineProtectedFields.ACQUISITION_METHOD.getFieldName()};
+    assertThat(failedFieldNames.length, is(expected.length));
+    assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
+
+    // 2 calls each to fetch Order Line, Purchase Order
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(2, column.size());
+    assertThat(column, hasKey(PO_LINES_STORAGE));
+
+    // Verify no message sent via event bus
+    HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
   }
 
   private String getPoLineWithMinContentAndIds(String lineId, String orderId) throws IOException {
