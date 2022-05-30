@@ -44,7 +44,8 @@ public enum POLineProtectedFields {
   private String field;
 
   public static List<String> getFieldNames(String orderFormat) {
-    if (!CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value().equals(orderFormat)) {
+    if (!CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value().equals(orderFormat) &&
+                      !CompositePoLine.OrderFormat.P_E_MIX.value().equals(orderFormat) ) {
       return Arrays.stream(POLineProtectedFields.values())
                       .map(POLineProtectedFields::getFieldName)
                       .filter(protectedPath -> !protectedPath.contains(ERESOURCE))

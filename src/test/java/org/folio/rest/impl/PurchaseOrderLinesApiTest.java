@@ -1499,7 +1499,9 @@ public class PurchaseOrderLinesApiTest {
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
     JsonObject body = getMockAsJson(PO_LINES_MOCK_DATA_PATH, lineId);
-    if (CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE != orderFormat) {
+    Object[] expected = new Object[]{POLineProtectedFields.ACQUISITION_METHOD.getFieldName()};
+    if (CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE != orderFormat
+          && CompositePoLine.OrderFormat.P_E_MIX != orderFormat) {
       body.remove(ERESOURCE);
     }
     body.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(), TestUtils.APPROVAL_PLAN_METHOD);
@@ -1513,7 +1515,6 @@ public class PurchaseOrderLinesApiTest {
     assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
 
     Object[] failedFieldNames = getModifiedProtectedFields(error);
-    Object[] expected = new Object[]{POLineProtectedFields.ACQUISITION_METHOD.getFieldName()};
     assertThat(failedFieldNames.length, is(expected.length));
     assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
 
