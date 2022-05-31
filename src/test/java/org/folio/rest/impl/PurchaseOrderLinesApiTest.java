@@ -123,7 +123,7 @@ import org.folio.HttpStatus;
 import org.folio.TestUtils;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
-import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.POLineFieldNames;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -710,11 +710,11 @@ public class PurchaseOrderLinesApiTest {
 
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
 
-    allProtectedFieldsModification.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(),
+    allProtectedFieldsModification.put(POLineFieldNames.ACQUISITION_METHOD.getFieldName(),
       TestUtils.APPROVAL_PLAN_METHOD);
-    allProtectedFieldsModification.put(POLineProtectedFields.DONOR.getFieldName(), "Donor");
+    allProtectedFieldsModification.put(POLineFieldNames.DONOR.getFieldName(), "Donor");
     // adding trial because a default value is added while sending the request
-    allProtectedFieldsModification.put(POLineProtectedFields.PHYSICAL_MATERIAL_TYPE.getFieldName(), UUID.randomUUID().toString());
+    allProtectedFieldsModification.put(POLineFieldNames.PHYSICAL_MATERIAL_TYPE.getFieldName(), UUID.randomUUID().toString());
 
     Contributor contributor = new Contributor();
     contributor.setContributor("Mr Test");
@@ -722,7 +722,7 @@ public class PurchaseOrderLinesApiTest {
     List<Contributor> contributors = new ArrayList<>();
     contributors.add(contributor);
 
-    allProtectedFieldsModification.put(POLineProtectedFields.CONTRIBUTORS.getFieldName(), contributors);
+    allProtectedFieldsModification.put(POLineFieldNames.CONTRIBUTORS.getFieldName(), contributors);
 
     checkPreventProtectedFieldsModificationRule(url, body, allProtectedFieldsModification);
 
@@ -1493,16 +1493,18 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = CompositePoLine.OrderFormat.class)
-  void testPutOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
+  @EnumSource(value = CompositePoLine.OrderFormat.class, names = {"PHYSICAL_RESOURCE", "OTHER"}, mode = EnumSource.Mode.INCLUDE)
+  void testPutPhysicalOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
     String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
     JsonObject body = getMockAsJson(PO_LINES_MOCK_DATA_PATH, lineId);
-    if (CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE != orderFormat) {
+    Object[] expected = new Object[]{ POLineFieldNames.ACQUISITION_METHOD.getFieldName()};
+    if (CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE == orderFormat) {
       body.remove(ERESOURCE);
     }
-    body.put(POLineProtectedFields.ACQUISITION_METHOD.getFieldName(), TestUtils.APPROVAL_PLAN_METHOD);
+
+    body.put(POLineFieldNames.ACQUISITION_METHOD.getFieldName(), TestUtils.APPROVAL_PLAN_METHOD);
     String url = String.format(LINE_BY_ID_PATH, lineId);
 
     Errors errors = verifyPut(url, body, "", HttpStatus.HTTP_BAD_REQUEST.toInt()).as(Errors.class);
@@ -1513,7 +1515,71 @@ public class PurchaseOrderLinesApiTest {
     assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
 
     Object[] failedFieldNames = getModifiedProtectedFields(error);
-    Object[] expected = new Object[]{POLineProtectedFields.ACQUISITION_METHOD.getFieldName()};
+    assertThat(failedFieldNames.length, is(expected.length));
+    assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
+
+    // 2 calls each to fetch Order Line, Purchase Order
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(2, column.size());
+    assertThat(column, hasKey(PO_LINES_STORAGE));
+
+    // Verify no message sent via event bus
+    HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = CompositePoLine.OrderFormat.class, names = {"ELECTRONIC_RESOURCE"}, mode = EnumSource.Mode.INCLUDE)
+  void testPutElecOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
+    logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
+
+    String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
+    JsonObject body = getMockAsJson(PO_LINES_MOCK_DATA_PATH, lineId);
+    Object[] expected = new Object[]{ POLineFieldNames.ACQUISITION_METHOD.getFieldName()};
+    body.remove(ERESOURCE);
+
+    body.put(POLineFieldNames.ACQUISITION_METHOD.getFieldName(), TestUtils.APPROVAL_PLAN_METHOD);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    Errors errors = verifyPut(url, body, "", HttpStatus.HTTP_BAD_REQUEST.toInt()).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+
+    Error error = errors.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
+
+    Object[] failedFieldNames = getModifiedProtectedFields(error);
+    assertThat(failedFieldNames.length, is(expected.length));
+    assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
+
+    // 2 calls each to fetch Order Line, Purchase Order
+    Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
+    assertEquals(2, column.size());
+    assertThat(column, hasKey(PO_LINES_STORAGE));
+
+    // Verify no message sent via event bus
+    HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = CompositePoLine.OrderFormat.class, names = {"P_E_MIX"}, mode = EnumSource.Mode.INCLUDE)
+  void testPutMixedOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
+    logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
+
+    String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
+    JsonObject body = getMockAsJson(PO_LINES_MOCK_DATA_PATH, lineId);
+    Object[] expected = new Object[]{ POLineFieldNames.ACQUISITION_METHOD.getFieldName()};
+
+    body.put(POLineFieldNames.ACQUISITION_METHOD.getFieldName(), TestUtils.APPROVAL_PLAN_METHOD);
+    String url = String.format(LINE_BY_ID_PATH, lineId);
+
+    Errors errors = verifyPut(url, body, "", HttpStatus.HTTP_BAD_REQUEST.toInt()).as(Errors.class);
+
+    assertThat(errors.getErrors(), hasSize(1));
+
+    Error error = errors.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(PROHIBITED_FIELD_CHANGING.getCode()));
+
+    Object[] failedFieldNames = getModifiedProtectedFields(error);
     assertThat(failedFieldNames.length, is(expected.length));
     assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
 
