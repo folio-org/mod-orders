@@ -36,22 +36,22 @@ import java.util.stream.Stream;
 import org.apache.commons.collections4.ListUtils;
 
 public class POLineProtectedFieldsUtil {
-  private final static List<String> commonProtectedFieldNames = Stream.of(ACQUISITION_METHOD, CHECKIN_ITEMS,
+  private static final List<String> commonProtectedFieldNames = Stream.of(ACQUISITION_METHOD, CHECKIN_ITEMS,
       COLLECTION, CONTRIBUTORS, DONOR, DETAILS_PRODUCT_IDS, DETAILS_SUBSCRIPTION_INTERVAL,
       ORDER_FORMAT, RUSH, SELECTOR, VENDORDETAIL_INSTRUCTION_TO_VENDOR, LAST_EDI_EXPORT_DATE)
     .map(POLineFieldNames::getFieldName).collect(Collectors.toList());
 
-  private final static List<String> elecProtectedFieldNames = Stream.of(ERESOURCE_CREATE_INVENTORY,
+  private static final List<String> elecProtectedFieldNames = Stream.of(ERESOURCE_CREATE_INVENTORY,
       ERESOURCE_TRIAL, ERESOURCE_LICENSE, ERESOURCE_MATERIAL_TYPE, ERESOURCE_USER_LIMIT)
     .map(POLineFieldNames::getFieldName).collect(Collectors.toList());
 
-  private final static List<String> physProtectedFieldNames = Stream.of(PHYSICAL_CREATE_INVENTORY,
+  private static final List<String> physProtectedFieldNames = Stream.of(PHYSICAL_CREATE_INVENTORY,
       PHYSICAL_VOLUMES, PHYSICAL_MATERIAL_TYPE)
     .map(POLineFieldNames::getFieldName).collect(Collectors.toList());
 
-  private final static List<String> physVsElecProtectedFieldNames = ListUtils.union(elecProtectedFieldNames, physProtectedFieldNames);
+  private static final List<String> physVsElecProtectedFieldNames = ListUtils.union(elecProtectedFieldNames, physProtectedFieldNames);
 
-  private final static Map<String, List<String>> protectedFieldsMap;
+  private static final Map<String, List<String>> protectedFieldsMap;
   static {
     protectedFieldsMap = new HashMap<>();
     protectedFieldsMap.put(P_E_MIX.value(), ListUtils.union(commonProtectedFieldNames, physVsElecProtectedFieldNames));
