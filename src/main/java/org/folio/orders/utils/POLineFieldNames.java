@@ -1,10 +1,6 @@
 package org.folio.orders.utils;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
-public enum POLineProtectedFields {
+public enum POLineFieldNames {
 
   ACQUISITION_METHOD("acquisitionMethod"),
   CHECKIN_ITEMS("checkinItems"),
@@ -29,7 +25,7 @@ public enum POLineProtectedFields {
   LAST_EDI_EXPORT_DATE("lastEDIExportDate");
 
 
-  POLineProtectedFields(String field) {
+  POLineFieldNames(String field) {
     this.field = field;
   }
 
@@ -38,8 +34,4 @@ public enum POLineProtectedFields {
   }
 
   private String field;
-
-  public static List<String> getFieldNames() {
-    return Arrays.stream(POLineProtectedFields.values()).map(POLineProtectedFields::getFieldName).collect(Collectors.toList());
-  }
 }

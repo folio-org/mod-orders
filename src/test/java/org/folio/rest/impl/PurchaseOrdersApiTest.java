@@ -201,7 +201,7 @@ import org.folio.TestUtils;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.POLineFieldNames;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -3454,10 +3454,10 @@ public class PurchaseOrdersApiTest {
 
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
 
-    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.CHECKIN_ITEMS.getFieldName()), true);
-    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.ACQUISITION_METHOD.getFieldName()),
+    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.CHECKIN_ITEMS.getFieldName()), true);
+    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.ACQUISITION_METHOD.getFieldName()),
       TestUtils.DEPOSITORY_METHOD);
-    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineProtectedFields.ERESOURCE_USER_LIMIT.getFieldName()),
+    allProtectedFieldsModification.put(COMPOSITE_PO_LINES_PREFIX.concat(POLineFieldNames.ERESOURCE_USER_LIMIT.getFieldName()),
       100);
 
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
