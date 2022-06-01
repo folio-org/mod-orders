@@ -62,7 +62,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.POLineProtectedFields;
+import org.folio.orders.utils.POLineProtectedFieldsUtil;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.RestConstants;
@@ -597,7 +597,7 @@ public class PurchaseOrderLineHelper {
     List<PoLine> existingPoLines) {
     if (poFromStorage.getWorkflowStatus() != PENDING) {
       compPO.getCompositePoLines()
-        .forEach(poLine -> verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(poLine.getOrderFormat().value()),
+        .forEach(poLine -> verifyProtectedFieldsChanged(POLineProtectedFieldsUtil.getFieldNames(poLine.getOrderFormat().value()),
           findCorrespondingCompositePoLine(poLine, existingPoLines), JsonObject.mapFrom(poLine)));
     }
   }
@@ -930,7 +930,7 @@ public class PurchaseOrderLineHelper {
 
   private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, JsonObject lineFromStorage, CompositePurchaseOrder purchaseOrder) {
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
-      verifyProtectedFieldsChanged(POLineProtectedFields.getFieldNames(compOrderLine.getOrderFormat().value()), JsonObject.mapFrom(lineFromStorage.mapTo(PoLine.class)), JsonObject.mapFrom(compOrderLine));
+      verifyProtectedFieldsChanged(POLineProtectedFieldsUtil.getFieldNames(compOrderLine.getOrderFormat().value()), JsonObject.mapFrom(lineFromStorage.mapTo(PoLine.class)), JsonObject.mapFrom(compOrderLine));
     }
   }
 
