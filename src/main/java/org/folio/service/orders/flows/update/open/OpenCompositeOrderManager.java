@@ -133,10 +133,13 @@ public class OpenCompositeOrderManager {
   }
 
   private void changeReceiptStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
-    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)) {
+    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)
+    && !poLine.getReceiptStatus().equals(CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED)) {
+
       poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.ONGOING);
     }
     else if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.PENDING) {
+
       poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
     }
   }
