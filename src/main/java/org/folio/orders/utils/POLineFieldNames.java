@@ -1,14 +1,6 @@
 package org.folio.orders.utils;
 
-import static org.folio.helper.PurchaseOrderLineHelper.ERESOURCE;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.folio.rest.jaxrs.model.CompositePoLine;
-
-public enum POLineProtectedFields {
+public enum POLineFieldNames {
 
   ACQUISITION_METHOD("acquisitionMethod"),
   CHECKIN_ITEMS("checkinItems"),
@@ -33,7 +25,7 @@ public enum POLineProtectedFields {
   LAST_EDI_EXPORT_DATE("lastEDIExportDate");
 
 
-  POLineProtectedFields(String field) {
+  POLineFieldNames(String field) {
     this.field = field;
   }
 
@@ -42,16 +34,4 @@ public enum POLineProtectedFields {
   }
 
   private String field;
-
-  public static List<String> getFieldNames(String orderFormat) {
-    if (!CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value().equals(orderFormat)) {
-      return Arrays.stream(POLineProtectedFields.values())
-                      .map(POLineProtectedFields::getFieldName)
-                      .filter(protectedPath -> !protectedPath.contains(ERESOURCE))
-                      .collect(Collectors.toList());
-    }
-    return Arrays.stream(POLineProtectedFields.values())
-                 .map(POLineProtectedFields::getFieldName)
-                 .collect(Collectors.toList());
-  }
 }
