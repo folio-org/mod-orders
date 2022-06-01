@@ -1,5 +1,14 @@
 ## 12.4.0 - Unreleased
 
+## 12.3.3 - Released
+
+The primary focus of this release was to fix issue with validation protected fields
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.3.2...v12.3.3)
+
+### Bug Fixes
+* [MODORDERS-702](https://issues.folio.org/browse/MODORDERS-702) - Lotus HF1 - Receive 'protected fields can’t be modified' error for eresource fields on PO line that is a Physical Resource
+
 ## 12.3.2 - Released
 
 The primary focus of this release was to fix Holding summary info and memory leaks
