@@ -45,7 +45,7 @@ public class ReOpenCompositeOrderManager {
   public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                                        RequestContext requestContext) {
     return processEncumbrances(compPO, poFromStorage, requestContext)
-            .thenCompose(v -> updatePoLineStatuses(compPO, requestContext));
+            .thenCompose(v -> updatePoLineStatuses(compPO, poFromStorage, requestContext));
   }
 
   private CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
@@ -62,9 +62,13 @@ public class ReOpenCompositeOrderManager {
     return strategy.processEncumbrances(clonedCompPO, poFromStorage, requestContext);
   }
 
-  private CompletableFuture<Void> updatePoLineStatuses(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  private CompletableFuture<Void> updatePoLineStatuses(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(compPO.getOrderType()))
               .thenCompose(orderTypeP -> {
+                if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+                  CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
+                  compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
+                }
                 if (CompositePurchaseOrder.OrderType.ONE_TIME == compPO.getOrderType()) {
                   return oneTimeUpdatePoLineStatuses(compPO.getId(), compPO.getCompositePoLines(), requestContext);
                 } else if (CompositePurchaseOrder.OrderType.ONGOING == compPO.getOrderType()) {
@@ -101,12 +105,10 @@ public class ReOpenCompositeOrderManager {
 
   private void updatePoLinePaymentStatus(CompositePoLine poLine, Map<String, List<Invoice>> poLineInvoicesMap) {
     List<Invoice> poLineInvoices = poLineInvoicesMap.get(poLine.getId());
-    if (CollectionUtils.isNotEmpty(poLineInvoices)) {
-      if (isAnyInvoicesHasTransactions(poLineInvoices)) {
-        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PARTIALLY_PAID);
-      } else {
-        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
-      }
+    if (CollectionUtils.isNotEmpty(poLineInvoices) && isAnyInvoicesHasTransactions(poLineInvoices)) {
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PARTIALLY_PAID);
+    } else {
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
     }
   }
 
