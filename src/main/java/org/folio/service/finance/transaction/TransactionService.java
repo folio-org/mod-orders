@@ -67,20 +67,12 @@ public class TransactionService {
 
   private CompletableFuture<List<Transaction>> getTransactionsChunksByPoLineIds(Collection<String> ids, String criteria, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids, "encumbrance.sourcePoLineId") + " AND " + criteria;
-    return getTransactionsChunksByIds(query, requestContext);
+    return getTransactions(query, requestContext);
   }
 
   private CompletableFuture<List<Transaction>> getTransactionsChunksByIds(Collection<String> ids, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids) ;
-    return getTransactionsChunksByIds(query, requestContext);
-  }
-
-  private CompletableFuture<List<Transaction>> getTransactionsChunksByIds(String query, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
-      .withOffset(0)
-      .withLimit(Integer.MAX_VALUE);
-    return restClient.get(requestEntry, requestContext, TransactionCollection.class)
-      .thenApply(TransactionCollection::getTransactions);
+    return getTransactions(query, requestContext);
   }
 
   public CompletableFuture<Transaction> createTransaction(Transaction transaction, RequestContext requestContext) {
