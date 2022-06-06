@@ -2567,6 +2567,7 @@ public class MockServer {
       InvoiceLine invoiceLine = new InvoiceLine()
         .withId(UUID.randomUUID().toString())
         .withPoLineId(poLineId2)
+        .withInvoiceId(UUID.randomUUID().toString())
         .withReleaseEncumbrance(true);
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
     }

@@ -130,7 +130,6 @@ public class PurchaseOrderLineService {
           PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return compPO.withCompositePoLines(poLines);
         })
-        .thenApply(v -> compPO)
         .exceptionally(t -> {
           Parameter idParam = new Parameter().withKey("orderId").withValue(compPO.getId());
           Parameter causeParam = new Parameter().withKey("cause").withValue(t.getCause().getMessage());

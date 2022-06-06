@@ -10,6 +10,7 @@ import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
@@ -787,7 +788,7 @@ public class PurchaseOrderHelper {
         .collect(toList());
       clonedCompPO.setCompositePoLines(clonedLines);
     }
-    if (compPO.getCloseReason() != null && "Cancelled".equals(compPO.getCloseReason().getReason())) {
+    if (compPO.getCloseReason() != null && REASON_CANCELLED.equals(compPO.getCloseReason().getReason())) {
       cancelOrderLines(compPO, poFromStorage);
     }
     return strategy.processEncumbrances(clonedCompPO, poFromStorage, requestContext);
