@@ -10,6 +10,7 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
@@ -161,9 +162,10 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
 
     @Bean OrderLinePatchOperationService orderLinePatchOperationService(
+        RestClient restClient,
         OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
         PurchaseOrderLineService purchaseOrderLineService) {
-      return new OrderLinePatchOperationService(orderLinePatchOperationHandlerResolver, purchaseOrderLineService);
+      return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver, purchaseOrderLineService);
     }
 
     @Bean PatchOperationHandler orderLineUpdateInstanceHandler(
@@ -178,8 +180,8 @@ public class OrderLineUpdateInstanceHandlerTest {
       return new OrderLinePatchOperationHandlerResolver(handlers);
     }
 
-    @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy() {
-      return new WithHoldingOrderLineUpdateInstanceStrategy();
+    @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
+      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
     }
 
     @Bean OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy() {

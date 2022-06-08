@@ -387,6 +387,67 @@ public class InventoryManager {
     return restClient.post(requestEntry, holdingsRecJson, responseType, clazz, requestContext);
   }
 
+  public CompletableFuture<Void> updateInstanceForHoldingRecords(List<JsonObject> holdingRecords, String instanceId, RequestContext requestContext) {
+    if (isNotEmpty(holdingRecords)) {
+      holdingRecords = holdingRecords.stream().map(holding -> {
+        holding.put(HOLDING_INSTANCE_ID, instanceId);
+        return holding;
+      }).collect(Collectors.toList());
+      return updateHoldingRecords(holdingRecords, requestContext);
+    } else {
+      return completedFuture(null);
+    }
+  }
+
+  private CompletableFuture<Void> updateHoldingRecords(List<JsonObject> holdingRecords, RequestContext requestContext) {
+    return CompletableFuture.allOf(holdingRecords.stream()
+        .map(holdingRecord -> updateHolding(holdingRecord, requestContext))
+        .toArray(CompletableFuture[]::new));
+  }
+
+  private CompletableFuture<Void> updateHolding(JsonObject holding, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holding.getString(ID));
+    return restClient.put(requestEntry, holding, requestContext);
+  }
+
+  public CompletableFuture<String> getOrCreateHoldingRecordByInstanceAndLocation(String instanceId, Location location, RequestContext requestContext) {
+    if (Objects.isNull(location.getLocationId())) {
+      return getHoldingById(location.getHoldingId(), true, requestContext)
+          .thenCompose(holding -> {
+            String locationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
+            return getFirstHoldingRecord(instanceId, locationId, requestContext)
+                .thenCompose(jsonHolding -> {
+                  if(Objects.nonNull(jsonHolding)) {
+                    String holdingId = jsonHolding.getString(ID);
+                    return completedFuture(holdingId);
+                  }
+                  return createHoldingsRecord(instanceId, locationId, PostResponseType.UUID, String.class, requestContext);
+                });
+          });
+    } else {
+      return getFirstHoldingRecord(instanceId, location.getLocationId(), requestContext)
+          .thenCompose(jsonHolding -> {
+            if(Objects.nonNull(jsonHolding)) {
+              String holdingId = jsonHolding.getString(ID);
+              return completedFuture(holdingId);
+            }
+            return createHoldingsRecord(instanceId, location.getLocationId(), PostResponseType.UUID, String.class, requestContext);
+          });
+    }
+  }
+
+  public CompletableFuture<String> createHolding(String instanceId, Location location, RequestContext requestContext) {
+    if (Objects.isNull(location.getLocationId())) {
+      return getHoldingById(location.getHoldingId(), true, requestContext)
+          .thenCompose(holding -> {
+            String locationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
+            return createHoldingsRecord(instanceId, locationId, PostResponseType.UUID, String.class, requestContext);
+          });
+    } else {
+      return createHoldingsRecord(instanceId, location.getLocationId(), PostResponseType.UUID, String.class, requestContext);
+    }
+  }
+
   /**
    * Handles Inventory items for passed list of locations. Items are either retrieved from Inventory or new ones are created
    * if no corresponding item records exist yet.
@@ -1272,6 +1333,10 @@ public class InventoryManager {
       .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
     Optional.ofNullable(piece.getDiscoverySuppress())
       .ifPresentOrElse(discSup -> item.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> item.remove(ITEM_DISCOVERY_SUPPRESS));
+  }
+
+  private void updateItemWithNewHoldingId(JsonObject item) {
+
   }
 
   private void releaseLock(Lock lock, String lockName) {
