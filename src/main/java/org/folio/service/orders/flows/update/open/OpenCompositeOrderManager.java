@@ -124,7 +124,9 @@ public class OpenCompositeOrderManager {
   }
 
   private void changePaymentStatus(CompositePurchaseOrder compPO, CompositePoLine poLine) {
-    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)) {
+    if (compPO.getOrderType().equals(CompositePurchaseOrder.OrderType.ONGOING)
+    && !poLine.getPaymentStatus().equals(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED) ) {
+
       poLine.setPaymentStatus(CompositePoLine.PaymentStatus.ONGOING);
     }
     else if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.PENDING) {
