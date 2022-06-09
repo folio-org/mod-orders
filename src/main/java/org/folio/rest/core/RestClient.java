@@ -231,39 +231,6 @@ public class RestClient {
     return future;
   }
 
-  public CompletableFuture<Void> patch(RequestEntry requestEntry, JsonObject recordData, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-    String endpoint = requestEntry.buildEndpoint();
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sending 'PATCH {}' with body: {}", endpoint, recordData.encodePrettily());
-    }
-
-    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-    setDefaultHeaders(client);
-    try {
-      client
-          .request(HttpMethod.PATCH, recordData.toBuffer(), endpoint, requestContext.getHeaders())
-          .thenAccept(HelperUtils::verifyResponse)
-          .thenAccept(avoid -> {
-            client.closeClient();
-            future.complete(null);
-          })
-          .exceptionally(t -> {
-            client.closeClient();
-            future.completeExceptionally(t.getCause());
-            logger.error("'PATCH {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), t.getCause());
-            return null;
-          });
-    } catch (Exception e) {
-      logger.error("'PATCH {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), e);
-      client.closeClient();
-      future.completeExceptionally(e);
-    }
-
-    return future;
-  }
-
   public CompletableFuture<Void> delete(RequestEntry requestEntry, boolean skipThrowNorFoundException, RequestContext requestContext) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     String endpoint = requestEntry.buildEndpoint();
