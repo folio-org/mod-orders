@@ -49,7 +49,6 @@ import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -447,9 +446,9 @@ public class OrderReEncumberServiceTest {
     when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(completedFuture(null));
 
     CompletableFuture<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
-    TransactionCollection toTransactionCollection = new TransactionCollection().withTransactions(Collections.EMPTY_LIST).withTotalRecords(0);
-    when(transactionService.getTransactions(anyString(), eq(0), eq(Integer.MAX_VALUE), eq(requestContext)))
-        .thenReturn(completedFuture(toTransactionCollection));
+    List<Transaction> toTransactionList = Collections.emptyList();
+    when(transactionService.getTransactions(anyString(), eq(requestContext)))
+        .thenReturn(completedFuture(toTransactionList));
     when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(completedFuture(null));
     when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(completedFuture(new Transaction()));
     future.join();
@@ -539,7 +538,7 @@ public class OrderReEncumberServiceTest {
         .withCurrency("USD");
 
 
-    TransactionCollection toTransactionCollection = new TransactionCollection().withTransactions(Collections.EMPTY_LIST).withTotalRecords(0);
+    List<Transaction> toTransactionList = Collections.emptyList();
 
     FundDistribution fundDistribution1 = new FundDistribution()
         .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
@@ -615,8 +614,8 @@ public class OrderReEncumberServiceTest {
 
     when(exchangeRateProviderResolver.resolve(conversionPoLineToFyQuery, requestContext)).thenReturn(exchangeRateProvider);
     when(exchangeRateProviderResolver.resolve(conversionFyToPoLineQuery, requestContext)).thenReturn(exchangeRateProvider);
-    when(transactionService.getTransactions(anyString(), eq(0), eq(Integer.MAX_VALUE), eq(requestContext)))
-        .thenReturn(completedFuture(toTransactionCollection));
+    when(transactionService.getTransactions(anyString(), eq(requestContext)))
+        .thenReturn(completedFuture(toTransactionList));
     when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(completedFuture(null));
     when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(completedFuture(new Transaction()));
 

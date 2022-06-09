@@ -29,7 +29,6 @@ import javax.money.convert.ExchangeRateProvider;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -170,8 +169,7 @@ public class OrderRolloverServiceTest {
       .withEncumbrance(encumbranceOngoing3).withExpenseClassId(expClassId3);
 
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
-    TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(3);
-    doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
+    doReturn(completedFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
     double exchangeEurToUsdRate = 1.0d;
     doReturn(completedFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
@@ -269,8 +267,7 @@ public class OrderRolloverServiceTest {
     Transaction transactionOneTime = new Transaction().withId(currEncumbrId1).withFromFundId(fundId1)
       .withEncumbrance(encumbranceOneTime);
     List<Transaction> encumbrances = List.of(transactionOneTime);
-    TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(1);
-    doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
+    doReturn(completedFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
     double exchangeEurToUsdRate = 1.0d;
     doReturn(completedFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
@@ -387,8 +384,7 @@ public class OrderRolloverServiceTest {
       .withEncumbrance(encumbranceOngoing3).withExpenseClassId(expClassId3);
 
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
-    TransactionCollection encumbranceCollection = new TransactionCollection().withTransactions(encumbrances).withTotalRecords(3);
-    doReturn(completedFuture(encumbranceCollection)).when(transactionService).getTransactions(anyString(), anyInt(), anyInt(), any());
+    doReturn(completedFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
     double exchangeEurToUsdRate = 0.82858d;
     doReturn(completedFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
