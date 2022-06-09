@@ -40,7 +40,7 @@ public class OrderLineUpdateInstanceHolder {
     return this;
   }
 
-  public OrderLineUpdateInstanceHolder createStoragePathOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType patchOrderLineOperationType,
+  public OrderLineUpdateInstanceHolder createStoragePatchOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType patchOrderLineOperationType,
       String newInstanceId) {
     this.storagePatchOrderLineRequest = new StoragePatchOrderLineRequest()
         .withOperation(patchOrderLineOperationType)

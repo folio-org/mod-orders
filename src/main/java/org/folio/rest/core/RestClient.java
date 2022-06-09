@@ -179,11 +179,11 @@ public class RestClient {
           .exceptionally(t -> {
             client.closeClient();
             future.completeExceptionally(t.getCause());
-            logger.error("'" + httpMethod.toString() + " {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), t.getCause());
+            logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, httpMethod, endpoint, recordData.encodePrettily()), t.getCause());
             return null;
           });
     } catch (Exception e) {
-      logger.error("'" + httpMethod.toString() + " {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), e);
+      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, httpMethod, endpoint, recordData.encodePrettily()), e);
       client.closeClient();
       future.completeExceptionally(e);
     }

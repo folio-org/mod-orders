@@ -48,7 +48,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpda
       ReplaceInstanceRef replaceInstanceRef = holder.getPatchOrderLineRequest().getReplaceInstanceRef();
       String newInstanceId = replaceInstanceRef.getNewInstanceId();
 
-      holder.createStoragePathOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType.REPLACE_INSTANCE_REF, newInstanceId);
+      holder.createStoragePatchOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType.REPLACE_INSTANCE_REF, newInstanceId);
 
       switch (replaceInstanceRef.getHoldingsOperation()) {
         case MOVE:

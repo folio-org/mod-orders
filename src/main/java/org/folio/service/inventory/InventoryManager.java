@@ -1335,10 +1335,6 @@ public class InventoryManager {
       .ifPresentOrElse(discSup -> item.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> item.remove(ITEM_DISCOVERY_SUPPRESS));
   }
 
-  private void updateItemWithNewHoldingId(JsonObject item) {
-
-  }
-
   private void releaseLock(Lock lock, String lockName) {
     logger.debug("Released lock {}", lockName);
     lock.release();
