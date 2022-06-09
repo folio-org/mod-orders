@@ -110,7 +110,9 @@ public class RestTestUtils {
         .response();
 
     // Verify no messages sent via event bus
-    HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
+    if (expectedCode != 204) {
+      HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
+    }
 
     return response;
   }

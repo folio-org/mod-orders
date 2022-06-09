@@ -1,7 +1,6 @@
 package org.folio.service.orders.lines.update;
 
 import io.vertx.core.Context;
-import org.apache.commons.lang.NotImplementedException;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -10,10 +9,13 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
+import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
+import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +37,6 @@ import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class OrderLineUpdateInstanceHandlerTest {
   @Autowired
@@ -73,28 +74,30 @@ public class OrderLineUpdateInstanceHandlerTest {
   }
 
   @Test
-  public void shouldThrowNotImplementedExceptionForMIXOrderFormat() {
+  public void updateInstanceHoldingForMIXOrderFormat() {
     String orderLineId = UUID.randomUUID().toString();
     PoLine poLine = new PoLine().
         withId(orderLineId).
         withOrderFormat(PoLine.OrderFormat.P_E_MIX)
         .withPhysical(new Physical()
             .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
-        .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE));
+        .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
 
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
-    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF);
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(new ReplaceInstanceRef()
+            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+            .withDeleteAbandonedHoldings(false));
 
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    assertThrows(NotImplementedException.class, () ->
-      orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext));
-
+    orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
-  public void shouldThrowNotImplementedExceptionForPhysicalOrderFormat() {
+  public void updateInstanceHoldingForPhysicalOrderFormat() {
     String orderLineId = UUID.randomUUID().toString();
     PoLine poLine = new PoLine().
             withId(orderLineId).
@@ -103,37 +106,42 @@ public class OrderLineUpdateInstanceHandlerTest {
             .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING));
 
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
-    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF);
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(new ReplaceInstanceRef()
+            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+            .withDeleteAbandonedHoldings(false));
 
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    assertThrows(NotImplementedException.class, () ->
-        orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext));
-
+    orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
-  public void shouldThrowNotImplementedExceptionForEresourceOrderFormat() {
+  public void updateInstanceHoldingForEresourceOrderFormat() {
     String orderLineId = UUID.randomUUID().toString();
     PoLine poLine = new PoLine().
             withId(orderLineId).
             withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
-        .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE));
+        .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
 
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
-    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF);
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(new ReplaceInstanceRef()
+            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+            .withDeleteAbandonedHoldings(false));
 
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    assertThrows(NotImplementedException.class, () ->
-        orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext));
+    orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext);
 
   }
 
   @Test
-  public void shouldThrowNotImplementedExceptionForOtherOrderFormat() {
+  public void updateInstanceHoldingForOtherOrderFormat() {
     String orderLineId = UUID.randomUUID().toString();
     PoLine poLine = new PoLine().
             withId(orderLineId).
@@ -142,19 +150,37 @@ public class OrderLineUpdateInstanceHandlerTest {
             .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING));
 
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
-    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF);
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(new ReplaceInstanceRef()
+            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+            .withDeleteAbandonedHoldings(false));
 
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    assertThrows(NotImplementedException.class, () ->
-        orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext));
+    orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext);
 
   }
 
   static class ContextConfiguration {
     @Bean RestClient restClient() {
       return new RestClient();
+    }
+
+    @Bean PieceStorageService pieceStorageService(RestClient restClient) {
+      return new PieceStorageService(restClient);
+    }
+
+    @Bean
+    ConfigurationEntriesService configurationEntriesService(RestClient restClient) {
+      return new ConfigurationEntriesService(restClient);
+    }
+
+    @Bean
+    InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
+        PieceStorageService pieceStorageService) {
+      return new InventoryManager(restClient, configurationEntriesService, pieceStorageService);
     }
 
     @Bean PurchaseOrderLineService purchaseOrderLineService(RestClient restClient) {
