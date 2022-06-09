@@ -6,6 +6,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -26,6 +27,7 @@ import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -87,7 +89,7 @@ public class OrderLineUpdateInstanceHandlerTest {
     patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
         .withReplaceInstanceRef(new ReplaceInstanceRef()
             .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
-            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.MOVE)
             .withDeleteAbandonedHoldings(false));
 
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
@@ -99,11 +101,21 @@ public class OrderLineUpdateInstanceHandlerTest {
   @Test
   public void updateInstanceHoldingForPhysicalOrderFormat() {
     String orderLineId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+
+    Location location = new Location()
+        .withHoldingId(holdingId)
+        .withQuantity(1)
+        .withQuantityPhysical(1);
+
+    ArrayList<Location> locations = new ArrayList<>();
+    locations.add(location);
+
     PoLine poLine = new PoLine().
             withId(orderLineId).
             withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
         .withPhysical(new Physical()
-            .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING));
+            .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING)).withLocations(locations);
 
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
     patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
@@ -121,6 +133,7 @@ public class OrderLineUpdateInstanceHandlerTest {
   @Test
   public void updateInstanceHoldingForEresourceOrderFormat() {
     String orderLineId = UUID.randomUUID().toString();
+
     PoLine poLine = new PoLine().
             withId(orderLineId).
             withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
@@ -130,8 +143,8 @@ public class OrderLineUpdateInstanceHandlerTest {
     patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
         .withReplaceInstanceRef(new ReplaceInstanceRef()
             .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
-            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
-            .withDeleteAbandonedHoldings(false));
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.FIND_OR_CREATE)
+            .withDeleteAbandonedHoldings(true));
 
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);

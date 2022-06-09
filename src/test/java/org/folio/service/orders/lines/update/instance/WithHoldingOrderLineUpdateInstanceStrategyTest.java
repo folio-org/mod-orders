@@ -26,7 +26,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,13 +57,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-
+import static org.mockito.Mockito.spy;
 
 public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   @Autowired
-  private OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy;
+  OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy;
   @Autowired
-  private RestClient restClient;
+  InventoryManager inventoryManager;
+  @Autowired
+  RestClient restClient;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -102,7 +103,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    Mockito.reset(withHoldingOrderLineUpdateInstanceStrategy);
   }
 
   @Test
@@ -142,7 +142,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
     doReturn(completedFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
-    doReturn(completedFuture(null)).when(withHoldingOrderLineUpdateInstanceStrategy).updateInstance(orderLineUpdateInstanceHolder, requestContext);
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
@@ -179,7 +179,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
     holding.put(ID, holdingId);
     doReturn(completedFuture(holding)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
-    doReturn(completedFuture(null)).when(withHoldingOrderLineUpdateInstanceStrategy).updateInstance(orderLineUpdateInstanceHolder, requestContext);
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
@@ -216,7 +216,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     holding.put(ID, holdingId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
     doReturn(completedFuture(holding)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
-    doReturn(completedFuture(null)).when(withHoldingOrderLineUpdateInstanceStrategy).updateInstance(orderLineUpdateInstanceHolder, requestContext);
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
@@ -252,7 +252,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     JsonObject holding = new JsonObject();
     holding.put(ID, holdingId);
     doReturn(completedFuture(holding)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
-    doReturn(completedFuture(null)).when(withHoldingOrderLineUpdateInstanceStrategy).updateInstance(orderLineUpdateInstanceHolder, requestContext);
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
@@ -295,31 +295,34 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
     doReturn(completedFuture(holding)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
     doReturn(completedFuture(item)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
-    doReturn(completedFuture(null)).when(withHoldingOrderLineUpdateInstanceStrategy).updateInstance(orderLineUpdateInstanceHolder, requestContext);
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext);
   }
 
   static class ContextConfiguration {
     @Bean
-    public RestClient restClient() {
+    RestClient restClient() {
       return mock(RestClient.class);
     }
 
-    @Bean PieceStorageService pieceStorageService(RestClient restClient) {
-      return new PieceStorageService(restClient);
+    @Bean
+    public ConfigurationEntriesService configurationEntriesService() {
+      return mock(ConfigurationEntriesService.class);
     }
 
-    @Bean ConfigurationEntriesService configurationEntriesService(RestClient restClient) {
-      return new ConfigurationEntriesService(restClient);
+    @Bean
+    public PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
     }
 
-    @Bean InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
+    @Bean
+    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
         PieceStorageService pieceStorageService) {
-      return mock(InventoryManager.class);
+      return spy(new InventoryManager(restClient, configurationEntriesService, pieceStorageService));
     }
 
 
     @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
-      return mock(WithHoldingOrderLineUpdateInstanceStrategy.class);
+      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
     }
   }
 }
