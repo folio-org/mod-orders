@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -44,7 +43,6 @@ import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -680,11 +678,11 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
 
-    TransactionCollection fromTransactionCollection = new TransactionCollection().withTransactions(Arrays.asList(fromEncumbrance1, fromEncumbrance2)).withTotalRecords(2);
-    TransactionCollection toTransactionCollection = new TransactionCollection().withTransactions(Collections.singletonList(toEncumbrance1)).withTotalRecords(1);
+    List<Transaction> fromTransactionList = Arrays.asList(fromEncumbrance1, fromEncumbrance2);
+    List<Transaction> toTransactionList = Collections.singletonList(toEncumbrance1);
 
-    when(transactionService.getTransactions(contains(fromFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(fromTransactionCollection));
-    when(transactionService.getTransactions(contains(toFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(toTransactionCollection));
+    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(CompletableFuture.completedFuture(fromTransactionList));
+    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(CompletableFuture.completedFuture(toTransactionList));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext).join();
 
@@ -761,11 +759,11 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
 
-    TransactionCollection fromTransactionCollection = new TransactionCollection().withTransactions(Arrays.asList(fromEncumbrance1, fromEncumbrance2)).withTotalRecords(2);
-    TransactionCollection toTransactionCollection = new TransactionCollection().withTransactions(Collections.emptyList()).withTotalRecords(0);
+    List<Transaction> fromTransactionList = Arrays.asList(fromEncumbrance1, fromEncumbrance2);
+    List<Transaction> toTransactionList = Collections.emptyList();
 
-    when(transactionService.getTransactions(contains(fromFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(fromTransactionCollection));
-    when(transactionService.getTransactions(contains(toFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(toTransactionCollection));
+    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(CompletableFuture.completedFuture(fromTransactionList));
+    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(CompletableFuture.completedFuture(toTransactionList));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext).join();
 
@@ -837,7 +835,7 @@ public class ReEncumbranceHoldersBuilderTest {
     ManualCurrencyConversion poLineToFyConversion = mock(ManualCurrencyConversion.class, withSettings().name("poLineToFyConversion"));
     ManualCurrencyConversion poFyToPoLineConversion = mock(ManualCurrencyConversion.class, withSettings().name("poFyToPoLineConversion"));
 
-    TransactionCollection toTransactionCollection = new TransactionCollection().withTransactions(Collections.emptyList()).withTotalRecords(0);
+    List<Transaction> toTransactionList = Collections.emptyList();
 
     ReEncumbranceHolder holder1 = new ReEncumbranceHolder()
             .withPurchaseOrder(compPO)
@@ -862,7 +860,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
 
-    when(transactionService.getTransactions(contains(toFyId), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(toTransactionCollection));
+    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(CompletableFuture.completedFuture(toTransactionList));
 
     when(poLineToFyConversion.with(any())).thenReturn(poLineToFyConversion);
     when(poLineToFyConversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> {
