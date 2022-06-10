@@ -1,6 +1,7 @@
 package org.folio.service.orders.lines.update.instance;
 
 import static java.util.stream.Collectors.toList;
+import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 
 import java.util.ArrayList;
@@ -9,18 +10,23 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.service.orders.lines.update.OrderLineUpdateInstanceHolder;
+import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 
 
 public class WithHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpdateInstanceStrategy {
@@ -130,9 +136,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpda
     return FolioVertxCompletableFuture.allOf(requestContext.getContext(), futures.toArray(new CompletableFuture[0]));
   }
 
-  private CompletableFuture<Void> updateItemsHolding(String holdingId,
-      String newHoldingId, RequestContext requestContext) {
-
+  private CompletableFuture<Void> updateItemsHolding(String holdingId, String newHoldingId, RequestContext requestContext) {
     return inventoryManager.getItemsByHoldingId(holdingId, requestContext)
         .thenApply(items -> updateItemHoldingId(items, newHoldingId))
         .thenCompose(items -> updateItemsInInventory(items, requestContext));
@@ -144,9 +148,25 @@ public class WithHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpda
   }
 
   private CompletableFuture<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
+    List<Parameter> parameters = new ArrayList<>();
     return CompletableFuture.allOf(items.stream()
-        .map(item -> inventoryManager.updateItem(item, requestContext))
-        .toArray(CompletableFuture[]::new));
+        .map(item -> inventoryManager.updateItem(item, requestContext)
+            .exceptionally(ex -> {
+              Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));
+              if (ex.getCause() instanceof HttpException){
+                HttpException httpException = (HttpException) ex.getCause();
+                parameter.withAdditionalProperty("originalError", httpException.getError().getMessage());
+              }
+              parameters.add(parameter);
+              return null;
+            }))
+        .toArray(CompletableFuture[]::new))
+        .thenAccept(v -> {
+      if (CollectionUtils.isNotEmpty(parameters)) {
+        Error error = ErrorCodes.ITEM_UPDATE_FAILED.toError().withParameters(parameters);
+        throw new HttpException(500, error);
+      }
+    });
   }
 
   private CompletableFuture<Void> deleteAbandonedHoldings(boolean isDeleteAbandonedHoldings,
