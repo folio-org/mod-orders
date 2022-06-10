@@ -298,7 +298,7 @@ public class PurchaseOrdersApiTest {
   private final static String COMPOSITE_ORDERS_BY_ID_PATH = COMPOSITE_ORDERS_PATH + "/%s";
 
   static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
-  static final String LISTED_PRINT_MONOGRAPH_PATH_RECEIPT_NOT_REQUIRED = "po_listed_print_monograph_receipt_payment_not_required.json";
+  static final String LISTED_PRINT_SERIAL_RECEIPT_NOT_REQUIRED_PATH = "po_listed_print_serial_with_receipt_payment_not_required.json";
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String ORDER_FOR_FAILURE_CASE_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + PO_ID_FOR_FAILURE_CASE + ".json";
   private static final String PE_MIX_PATH = "po_listed_print_monograph_pe_mix.json";
@@ -4278,7 +4278,7 @@ public class PurchaseOrdersApiTest {
     return order;
   }
   private static JsonObject getMockOrderWithStatusPaymentNotRequired() throws Exception {
-    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH_RECEIPT_NOT_REQUIRED));
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_RECEIPT_NOT_REQUIRED_PATH));
     order.put("workflowStatus", "Pending");
 
     return order;
