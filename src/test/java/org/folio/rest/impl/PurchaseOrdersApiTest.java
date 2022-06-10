@@ -298,6 +298,7 @@ public class PurchaseOrdersApiTest {
   private final static String COMPOSITE_ORDERS_BY_ID_PATH = COMPOSITE_ORDERS_PATH + "/%s";
 
   static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
+  static final String LISTED_PRINT_MONOGRAPH_PATH_RECEIPT_NOT_REQUIRED = "po_listed_print_monograph_receipt_payment_not_required.json";
   private static final String ORDERS_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + "getOrders.json";
   private static final String ORDER_FOR_FAILURE_CASE_MOCK_DATA_PATH = COMP_ORDER_MOCK_DATA_PATH + PO_ID_FOR_FAILURE_CASE + ".json";
   private static final String PE_MIX_PATH = "po_listed_print_monograph_pe_mix.json";
@@ -2594,7 +2595,19 @@ public class PurchaseOrdersApiTest {
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
   }
+  @Test
+  void testPutOrdersByIdToChangeStatusToOpenWithPaymentNotRequired() throws Exception {
+    logger.info("=== Test Put Order By Id to change status of Order to Open ===");
 
+    // Get Open Order
+    CompositePurchaseOrder reqData = getMockOrderWithStatusPaymentNotRequired().mapTo(CompositePurchaseOrder.class);
+    MockServer.addMockTitles(reqData.getCompositePoLines());
+    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
+    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
+    verifyReceiptStatusChangedTo(ReceiptStatus.RECEIPT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
+    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), reqData.getCompositePoLines().size());
+  }
   private void verifyReceiptStatusChangedTo(String expectedStatus, int poLinesQuantity) {
     List<JsonObject> polUpdates = MockServer.getPoLineUpdates();
     assertNotNull(polUpdates);
@@ -4264,7 +4277,12 @@ public class PurchaseOrdersApiTest {
 
     return order;
   }
+  private static JsonObject getMockOrderWithStatusPaymentNotRequired() throws Exception {
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_MONOGRAPH_PATH_RECEIPT_NOT_REQUIRED));
+    order.put("workflowStatus", "Pending");
 
+    return order;
+  }
   private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
     reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().forEach(location -> {
       for (int i = 0; i < location.getQuantity(); i++) {
