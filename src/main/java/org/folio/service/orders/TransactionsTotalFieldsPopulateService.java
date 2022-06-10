@@ -7,7 +7,6 @@ import java.util.function.ToDoubleFunction;
 
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
@@ -45,8 +44,7 @@ public class TransactionsTotalFieldsPopulateService implements CompositeOrderDyn
       RequestContext requestContext) {
     String query = String.format("transactionType==Encumbrance AND encumbrance.sourcePurchaseOrderId==%s AND fiscalYearId==%s",
         holder.getOrderId(), holder.getFiscalYearId());
-    return transactionService.getTransactions(query, 0, Integer.MAX_VALUE, requestContext)
-      .thenApply(TransactionCollection::getTransactions);
+    return transactionService.getTransactions(query, requestContext);
   }
 
   private double getTransactionsTotal(List<Transaction> transactions, ToDoubleFunction<Transaction> getAmount) {
