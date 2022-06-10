@@ -1,4 +1,4 @@
-package org.folio.service.orders.lines.update;
+package org.folio.models.orders.lines.update;
 
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.acq.model.StorageReplaceOrderLineHoldingRefs;

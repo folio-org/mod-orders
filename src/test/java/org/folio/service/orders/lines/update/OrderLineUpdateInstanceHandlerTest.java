@@ -2,6 +2,7 @@ package org.folio.service.orders.lines.update;
 
 import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
+import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
