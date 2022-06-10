@@ -8,7 +8,9 @@ import org.folio.models.ItemStatus;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -19,6 +21,7 @@ import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,12 +32,13 @@ import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -48,16 +52,15 @@ import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
-import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -370,6 +373,69 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     verify(inventoryManager, times(1)).updateItem(item, requestContext);
   }
 
+  @Test
+  public void updateInstanceAndItemsWithItemsNotUpdatesCorrect() throws IOException {
+    String orderLineId = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+    String itemId = UUID.randomUUID().toString();
+
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+
+    JsonObject holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
+
+    String holdingId = holding.getString(ID);
+
+    ArrayList<Location> locations = new ArrayList<>();
+    locations.add(new Location()
+        .withHoldingId(holdingId)
+        .withQuantity(1)
+        .withQuantityPhysical(1));
+
+    JsonObject item = new JsonObject().put(TestConstants.ID, itemId);
+    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
+    item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
+
+    PoLine poLine = new PoLine().
+            withId(orderLineId).
+            withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+        .withPhysical(new Physical()
+            .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+        .withLocations(locations);
+
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(new ReplaceInstanceRef()
+            .withNewInstanceId(instanceId)
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+            .withDeleteAbandonedHoldings(false));
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+        .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager)
+        .createHolding(eq(instanceId), eq(locations.get(0)), eq(requestContext));
+    doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingId(eq(holdingId), eq(requestContext));
+    doReturn(CompletableFuture.failedFuture(new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE))).when(inventoryManager).updateItem(eq(item), eq(requestContext));
+
+
+    CompletionException thrown = assertThrows(
+        CompletionException.class,
+        () -> withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join(),      "Expected exception"
+    );
+    HttpException actHttpException = (HttpException) thrown.getCause();
+
+    Error actError = actHttpException.getErrors().getErrors().get(0);
+    Parameter actParameter = actError.getParameters().get(0);
+
+    Assertions.assertEquals(ITEM_UPDATE_FAILED.getCode(), actError.getCode());
+    Assertions.assertEquals(ITEM_UPDATE_FAILED.getDescription(), actError.getMessage());
+    Assertions.assertEquals("itemId", actParameter.getKey());
+    Assertions.assertEquals(itemId, actParameter.getValue());
+
+    verify(inventoryManager, times(1)).createHolding(instanceId, locations.get(0), requestContext);
+    verify(inventoryManager, times(1)).getItemsByHoldingId(holdingId, requestContext);
+    verify(inventoryManager, times(1)).updateItem(item, requestContext);
+  }
 
   private static class ContextConfiguration {
     @Bean
