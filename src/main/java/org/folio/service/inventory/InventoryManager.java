@@ -389,10 +389,7 @@ public class InventoryManager {
 
   public CompletableFuture<Void> updateInstanceForHoldingRecords(List<JsonObject> holdingRecords, String instanceId, RequestContext requestContext) {
     if (isNotEmpty(holdingRecords)) {
-      holdingRecords = holdingRecords.stream().map(holding -> {
-        holding.put(HOLDING_INSTANCE_ID, instanceId);
-        return holding;
-      }).collect(Collectors.toList());
+      holdingRecords.forEach(holding -> holding.put(HOLDING_INSTANCE_ID, instanceId));
       return updateHoldingRecords(holdingRecords, requestContext);
     } else {
       return completedFuture(null);

@@ -36,6 +36,7 @@ import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,6 +46,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -62,6 +64,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
@@ -92,7 +95,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -513,8 +518,8 @@ public class InventoryManagerTest {
     Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
 
     JsonObject holdingsRecJson = new JsonObject();
-    holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
-    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+    holdingsRecJson.put(InventoryManager.HOLDING_INSTANCE_ID, instanceId);
+    holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
     JsonObject emptyHoldingCollection = new JsonObject().put(HOLDINGS_RECORDS, new JsonArray());
 
     doReturn(completedFuture(emptyHoldingCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
@@ -747,6 +752,112 @@ public class InventoryManagerTest {
     CompletableFuture<String> result =  inventoryManager.openOrderCreateItemRecord(null, UUID.randomUUID().toString(), requestContext);
     //Then
     assertTrue(result.isCompletedExceptionally());
+  }
+
+  @Test
+  void shouldCheckIfThatInstanceReferenceForListOfHoldingAreUpdated() throws IOException {
+    String oldInstanceId = UUID.randomUUID().toString();
+    String newInstanceId = UUID.randomUUID().toString();
+
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    String holdingIdExp = extractId(getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS));
+    List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+
+    JsonObject holdingsRecJson = new JsonObject();
+    holdingsRecJson.put(InventoryManager.HOLDING_INSTANCE_ID, oldInstanceId);
+    holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+
+    doReturn(completedFuture(holdingIdExp)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+
+    inventoryManager.updateInstanceForHoldingRecords(List.of(holdingsRecJson), newInstanceId, requestContext).join();
+
+    assertThat(holdingsRecJson.getString(InventoryManager.HOLDING_INSTANCE_ID), equalTo(newInstanceId));
+    verify(restClient, times(1)).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+  }
+
+  @Test
+  void shouldCheckIfTheHoldingExistsWhenHoldingIdSpecifiedAndIfExistThenHoldingWillBeRetrieved() throws IOException {
+    String instanceId = UUID.randomUUID().toString();
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    String holdingIdExp = extractId(getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS));
+    List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    Location location = new Location().withHoldingId(holdingIdExp).withQuantity(1).withQuantityPhysical(1);
+
+    JsonObject holdingsRecJson = new JsonObject();
+    holdingsRecJson.put(InventoryManager.HOLDING_INSTANCE_ID, instanceId);
+    holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+
+    doReturn(completedFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+
+    JsonObject holdingIdAct = inventoryManager.getOrCreateHoldingsJsonRecord(instanceId, location, requestContext).join();
+
+    assertThat(holdingIdAct.size(), equalTo(holdingsCollection.size()));
+    verify(restClient, times(0)).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));
+    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+  }
+
+  @Test
+  void shouldCheckIfTheHoldingNotExistWhenHoldingIdSpecifiedThenErrorReturned() throws IOException {
+    String instanceId = UUID.randomUUID().toString();
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    String holdingIdExp = extractId(getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS));
+    List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    Location location = new Location().withHoldingId(holdingIdExp).withQuantity(1).withQuantityPhysical(1);
+
+    JsonObject holdingsRecJson = new JsonObject();
+    holdingsRecJson.put(InventoryManager.HOLDING_INSTANCE_ID, instanceId);
+    holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+
+    doReturn(CompletableFuture.failedFuture(new CompletionException(new HttpException(NOT_FOUND, "Not_Found"))))
+                  .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+
+    CompletionException exceptionAct = assertThrows(CompletionException.class,
+                  () -> inventoryManager.getOrCreateHoldingsJsonRecord(instanceId, location, requestContext).join());
+
+    HttpException httpException = (HttpException) exceptionAct.getCause();
+    assertThat(httpException.getError().getCode(), is(HOLDINGS_BY_ID_NOT_FOUND.getCode()));
+
+    verify(restClient, times(0)).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));
+    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+  }
+
+  @Test
+  @Disabled
+  void shouldCheckIfTheHoldingWillBeRetrievedByInstanceId() throws IOException {
+    String instanceId = UUID.randomUUID().toString();
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+    String holdingIdExp = extractId(getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS));
+    List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    Location location = new Location().withHoldingId(holdingIdExp).withQuantity(1).withQuantityPhysical(1);
+
+    JsonObject holdingsRecJson = new JsonObject();
+    holdingsRecJson.put(InventoryManager.HOLDING_INSTANCE_ID, instanceId);
+    holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+    //  JsonObject emptyHoldingCollection = new JsonObject().put(HOLDINGS_RECORDS, new JsonArray());
+
+    doReturn(completedFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+
+//    String holdingIdAct = inventoryManager.getOrCreateHoldingRecordByInstanceAndLocation(instanceId, location, requestContext).join();
+
+  //  assertThat(holdingIdAct.size(), equalTo(holdingsCollection.size()));
+  //  verify(restClient, times(0)).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));
+  //  verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
   }
 
   /**
