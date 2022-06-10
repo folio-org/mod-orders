@@ -12,7 +12,6 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -139,9 +138,12 @@ public class EncumbranceService {
     return updateEncumbrances(encumbrances, requestContext);
   }
 
+  public CompletableFuture<List<Transaction>> getOrderEncumbrances(String orderId, RequestContext requestContext) {
+    return transactionService.getTransactions(buildEncumbrancesByOrderQuery(orderId), requestContext);
+  }
+
   public CompletableFuture<List<Transaction>> getOrderUnreleasedEncumbrances(String orderId, RequestContext requestContext) {
-    return transactionService.getTransactions(buildNonReleasedEncumbranceOrderQuery(orderId), 0, Integer.MAX_VALUE, requestContext)
-              .thenApply(TransactionCollection::getTransactions);
+    return transactionService.getTransactions(buildUnreleasedEncumbrancesByOrderQuery(orderId), requestContext);
   }
 
   public CompletableFuture<List<Transaction>> getOrderEncumbrancesToUnrelease(CompositePurchaseOrder compPO,
@@ -157,9 +159,12 @@ public class EncumbranceService {
       .thenApply(listOfLists -> listOfLists.stream().flatMap(List::stream).collect(toList()));
   }
 
+  public CompletableFuture<List<Transaction>> getPoLineEncumbrances(String poLineId, RequestContext requestContext) {
+    return transactionService.getTransactions(buildEncumbrancesByPoLineQuery(poLineId), requestContext);
+  }
+
   public CompletableFuture<List<Transaction>> getPoLineUnreleasedEncumbrances(String poLineId, RequestContext requestContext) {
-    return transactionService.getTransactions(buildNonReleasedEncumbranceByPoLineQuery(poLineId), 0, Integer.MAX_VALUE, requestContext)
-      .thenApply(TransactionCollection::getTransactions);
+    return transactionService.getTransactions(buildUnreleasedEncumbrancesByPoLineQuery(poLineId), requestContext);
   }
 
   public CompletableFuture<List<Transaction>> getPoLineReleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
@@ -169,8 +174,7 @@ public class EncumbranceService {
       .orElse("");
 
     return fiscalYearService.getCurrentFiscalYearByFundId(currentFiscalYear, requestContext)
-      .thenCompose(fiscalYear -> transactionService.getTransactions(buildReleasedEncumbranceByPoLineQuery(poLine.getId(), fiscalYear.getId()), 0, Integer.MAX_VALUE, requestContext))
-      .thenApply(TransactionCollection::getTransactions);
+      .thenCompose(fiscalYear -> transactionService.getTransactions(buildReleasedEncumbranceByPoLineQuery(poLine.getId(), fiscalYear.getId()), requestContext));
   }
 
   public CompletableFuture<List<Transaction>> getEncumbrancesByIds(List<String> transactionIds, RequestContext requestContext) {
@@ -232,14 +236,15 @@ public class EncumbranceService {
   }
 
   public CompletableFuture<Void> deletePoLineEncumbrances(PoLine poline, RequestContext requestContext) {
-    return getPoLineUnreleasedEncumbrances(poline.getId(), requestContext)
-      .thenCompose(encumbrances -> transactionSummariesService.updateOrderTransactionSummary(poline.getPurchaseOrderId(), encumbrances.size(), requestContext)
-          .thenCompose(v -> releaseEncumbrances(encumbrances, requestContext))
-          .thenCompose(ok -> transactionService.deleteTransactions(encumbrances, requestContext)));
+    return getPoLineEncumbrances(poline.getId(), requestContext)
+      .thenCompose(encumbrances -> transactionSummariesService.updateOrderTransactionSummary(poline.getPurchaseOrderId(),
+          encumbrances.size(), requestContext)
+        .thenCompose(v -> releaseEncumbrances(encumbrances, requestContext))
+        .thenCompose(ok -> transactionService.deleteTransactions(encumbrances, requestContext)));
   }
 
   public CompletableFuture<Void> deleteOrderEncumbrances(String orderId, RequestContext requestContext) {
-    return getOrderUnreleasedEncumbrances(orderId, requestContext)
+    return getOrderEncumbrances(orderId, requestContext)
       .thenCompose(encumbrances -> transactionSummariesService.updateOrderTransactionSummary(orderId, encumbrances.size(), requestContext)
         .thenCompose(v -> releaseEncumbrances(encumbrances, requestContext))
         .thenCompose(v -> transactionService.deleteTransactions(encumbrances, requestContext)));
@@ -279,13 +284,22 @@ public class EncumbranceService {
       });
   }
 
-  private String buildNonReleasedEncumbranceOrderQuery(String orderId) {
+  private String buildEncumbrancesByOrderQuery(String orderId) {
+    return ENCUMBRANCE_CRITERIA
+      + AND + "encumbrance.sourcePurchaseOrderId==" + orderId;
+  }
+
+  private String buildUnreleasedEncumbrancesByOrderQuery(String orderId) {
     return ENCUMBRANCE_CRITERIA
                 + AND + "encumbrance.sourcePurchaseOrderId==" + orderId
                     + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED;
   }
 
-  private String buildNonReleasedEncumbranceByPoLineQuery(String polineId) {
+  private String buildEncumbrancesByPoLineQuery(String polineId) {
+    return ENCUMBRANCE_CRITERIA + AND + "encumbrance.sourcePoLineId==" + polineId;
+  }
+
+  private String buildUnreleasedEncumbrancesByPoLineQuery(String polineId) {
     return ENCUMBRANCE_CRITERIA
       + AND + "encumbrance.sourcePoLineId==" + polineId
       + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED;
@@ -321,8 +335,7 @@ public class EncumbranceService {
         if (hasNotInvoiceLineWithReleaseEncumbrance)
           return completedFuture(Collections.emptyList());
         return transactionService.getTransactions(
-          buildReleasedEncumbranceByPoLineQuery(poLine.getId(), currentFiscalYearId[0]), 0, Integer.MAX_VALUE, requestContext)
-            .thenApply(TransactionCollection::getTransactions);
+          buildReleasedEncumbranceByPoLineQuery(poLine.getId(), currentFiscalYearId[0]), requestContext);
       });
   }
 
