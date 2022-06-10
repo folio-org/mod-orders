@@ -132,7 +132,6 @@ public class RestClient {
   }
 
     public <T> CompletableFuture<Void> put(RequestEntry requestEntry, T entity, RequestContext requestContext) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
         String endpoint = requestEntry.buildEndpoint();
         JsonObject recordData = JsonObject.mapFrom(entity);
 
@@ -140,57 +139,51 @@ public class RestClient {
             logger.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
         }
 
-        HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-        setDefaultHeaders(client);
-        try {
-            client
-                    .request(HttpMethod.PUT, recordData.toBuffer(), endpoint, requestContext.getHeaders())
-                    .thenAccept(HelperUtils::verifyResponse)
-                    .thenAccept(avoid -> {
-                        client.closeClient();
-                        future.complete(null);
-                    })
-                    .exceptionally(t -> {
-                        client.closeClient();
-                        future.completeExceptionally(t.getCause());
-                        logger.error("'PUT {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), t.getCause());
-                        return null;
-                    });
-        } catch (Exception e) {
-            logger.error("'PUT {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), e);
-            client.closeClient();
-            future.completeExceptionally(e);
-        }
-
-        return future;
+      return requestForPutOrPatchMethod(HttpMethod.PUT, endpoint, recordData, requestContext);
     }
 
   public CompletableFuture<Void> put(RequestEntry requestEntry, JsonObject recordData, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
     String endpoint = requestEntry.buildEndpoint();
 
     if (logger.isDebugEnabled()) {
       logger.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
     }
 
+    return requestForPutOrPatchMethod(HttpMethod.PUT, endpoint, recordData, requestContext);
+  }
+
+  public <T> CompletableFuture<Void> patch(RequestEntry requestEntry, T entity, RequestContext requestContext) {
+    String endpoint = requestEntry.buildEndpoint();
+    JsonObject recordData = JsonObject.mapFrom(entity);
+    if (logger.isDebugEnabled()) {
+      logger.debug("Sending 'PATCH {}' with body: {}", endpoint, recordData.encodePrettily());
+    }
+
+    return requestForPutOrPatchMethod(HttpMethod.PATCH, endpoint, recordData, requestContext);
+  }
+
+  private CompletableFuture<Void> requestForPutOrPatchMethod(HttpMethod httpMethod, String endpoint,
+      JsonObject recordData, RequestContext requestContext) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+
     HttpClientInterface client = getHttpClient(requestContext.getHeaders());
     setDefaultHeaders(client);
     try {
       client
-        .request(HttpMethod.PUT, recordData.toBuffer(), endpoint, requestContext.getHeaders())
-        .thenAccept(HelperUtils::verifyResponse)
-        .thenAccept(avoid -> {
-          client.closeClient();
-          future.complete(null);
-        })
-        .exceptionally(t -> {
-          client.closeClient();
-          future.completeExceptionally(t.getCause());
-          logger.error("'PUT {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), t.getCause());
-          return null;
-        });
+          .request(httpMethod, recordData.toBuffer(), endpoint, requestContext.getHeaders())
+          .thenAccept(HelperUtils::verifyResponse)
+          .thenAccept(avoid -> {
+            client.closeClient();
+            future.complete(null);
+          })
+          .exceptionally(t -> {
+            client.closeClient();
+            future.completeExceptionally(t.getCause());
+            logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, httpMethod, endpoint, recordData.encodePrettily()), t.getCause());
+            return null;
+          });
     } catch (Exception e) {
-      logger.error("'PUT {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), e);
+      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, httpMethod, endpoint, recordData.encodePrettily()), e);
       client.closeClient();
       future.completeExceptionally(e);
     }

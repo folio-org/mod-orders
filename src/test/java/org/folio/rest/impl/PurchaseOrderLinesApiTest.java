@@ -139,10 +139,12 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.rest.jaxrs.model.Tags;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
@@ -1482,14 +1484,44 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
-  void shouldThrowNotImplementedExceptionFotPatchMethod() {
+  void testPatchPoLineWithNewInstanceId() {
     String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
-    String body = "{ \"operation\": \"Replace Instance Ref\" }";
 
-    Errors errors = verifyPatch(url, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 500)
-        .as(Errors.class);
-    assertEquals(1, errors.getErrors().size());
-    assertEquals(GENERIC_ERROR_CODE.getCode(), errors.getErrors().get(0).getCode());
+    PatchOrderLineRequest body = new PatchOrderLineRequest()
+        .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(new ReplaceInstanceRef()
+            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+            .withDeleteAbandonedHoldings(false));
+
+    verifyPatch(url, JsonObject.mapFrom(body).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+  }
+
+  @Test
+  void testPatchPoLineWithEmptyBody() {
+    String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
+
+    PatchOrderLineRequest body = new PatchOrderLineRequest();
+
+    Errors resp = verifyPatch(url, JsonObject.mapFrom(body).encode(), "", 422).as(Errors.class);
+
+    assertEquals(1, resp.getErrors().size());
+  }
+
+  @Test
+  void testPatchPoLineByIdNotFound() {
+    String url = String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST);
+
+    PatchOrderLineRequest body = new PatchOrderLineRequest()
+        .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+        .withReplaceInstanceRef(new ReplaceInstanceRef()
+            .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+            .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+            .withDeleteAbandonedHoldings(false));
+
+    Response actual = verifyPatch(url, JsonObject.mapFrom(body).encode(), "", 404);
+
+    assertEquals(ID_DOES_NOT_EXIST, actual.as(Errors.class).getErrors().get(0).getMessage());
   }
 
   @ParameterizedTest

@@ -1,0 +1,8 @@
+{
+  "operation": "Replace Instance Ref",
+  "replaceInstanceRef": {
+    "newInstanceId": "cd3288a4-898c-4347-a003-2d810ef70f03",
+    "holdingsOperation": "Create",
+    "deleteAbandonedHoldings": false
+  }
+}

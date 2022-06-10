@@ -44,6 +44,7 @@ import org.folio.service.orders.flows.update.open.OpenCompositeOrderManagerTest;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceServiceTest;
 import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManagerTest;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceHandlerTest;
+import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategyTest;
 import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
@@ -390,4 +391,8 @@ public class ApiTestSuite {
 
   }
 
+  @Nested
+  class WithHoldingOrderLineUpdateInstanceStrategy extends WithHoldingOrderLineUpdateInstanceStrategyTest {
+
+  }
 }
