@@ -7,14 +7,15 @@ import org.folio.rest.jaxrs.model.PoLine;
 
 import java.util.concurrent.CompletableFuture;
 
-public class OrderLineUpdateInstanceHandler implements PatchOperationHandler{
+public class OrderLineUpdateInstanceHandler implements PatchOperationHandler {
   private final OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver;
 
   public OrderLineUpdateInstanceHandler(OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver) {
     this.orderLineUpdateInstanceStrategyResolver = orderLineUpdateInstanceStrategyResolver;
   }
 
-  @Override public CompletableFuture<Void> handle(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+  @Override
+  public CompletableFuture<Void> handle(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
     PoLine storagePoLine = holder.getStoragePoLine();
 
     switch (storagePoLine.getOrderFormat()) {

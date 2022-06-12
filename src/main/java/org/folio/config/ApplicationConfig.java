@@ -612,8 +612,9 @@ public class ApplicationConfig {
     return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
   }
 
-  @Bean OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy() {
-    return new WithoutHoldingOrderLineUpdateInstanceStrategy();
+  @Bean
+  OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
+    return new WithoutHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
   }
 
   @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
