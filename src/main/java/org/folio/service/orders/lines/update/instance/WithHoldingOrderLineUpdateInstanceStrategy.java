@@ -9,47 +9,30 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.inventory.InventoryManager;
-import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
+
+import io.vertx.core.json.JsonObject;
 
 
-public class WithHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpdateInstanceStrategy {
-  private final InventoryManager inventoryManager;
+public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
 
   public WithHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
-    this.inventoryManager = inventoryManager;
+    super(inventoryManager);
   }
 
-  @Override
-  public CompletableFuture<Void> updateInstance(OrderLineUpdateInstanceHolder holder, RequestContext rqContext) {
-    if (Objects.nonNull(holder.getPatchOrderLineRequest())
-        && holder.getPatchOrderLineRequest()
-          .getOperation()
-          .value()
-          .equals(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF.value())
-        && Objects.nonNull(holder.getStoragePoLine())) {
-      return processHoldings(holder, rqContext);
-    }
-    return CompletableFuture.completedFuture(null);
-  }
-
-  private CompletableFuture<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+  protected CompletableFuture<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
     if (Objects.nonNull(holder.getPatchOrderLineRequest().getReplaceInstanceRef())) {
       ReplaceInstanceRef replaceInstanceRef = holder.getPatchOrderLineRequest().getReplaceInstanceRef();
       String newInstanceId = replaceInstanceRef.getNewInstanceId();
@@ -77,9 +60,12 @@ public class WithHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpda
 
 
   private CompletableFuture<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
-    List<String> holdingIds = holder.getStoragePoLine().getLocations().stream()
-        .filter(loc -> Objects.nonNull(loc.getHoldingId()))
-        .map(Location::getHoldingId).collect(toList());
+    List<String> holdingIds = holder.getStoragePoLine()
+      .getLocations()
+      .stream()
+      .map(Location::getHoldingId)
+      .filter(Objects::nonNull)
+      .collect(toList());
     holdingIds.forEach(id -> holder.addHoldingRefsToStoragePatchOrderLineRequest(id, id));
 
     return inventoryManager.getHoldingsByIds(holdingIds, requestContext)
@@ -108,7 +94,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpda
       }
     });
 
-    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), futures.toArray(new CompletableFuture[0]));
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
   }
 
   private CompletableFuture<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
@@ -133,7 +119,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpda
       }
     });
 
-    return FolioVertxCompletableFuture.allOf(requestContext.getContext(), futures.toArray(new CompletableFuture[0]));
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
   }
 
   private CompletableFuture<Void> updateItemsHolding(String holdingId, String newHoldingId, RequestContext requestContext) {
@@ -169,22 +155,4 @@ public class WithHoldingOrderLineUpdateInstanceStrategy implements OrderLineUpda
     });
   }
 
-  private CompletableFuture<Void> deleteAbandonedHoldings(boolean isDeleteAbandonedHoldings,
-      PoLine poLine, RequestContext requestContext) {
-    if (isDeleteAbandonedHoldings) {
-      poLine.getLocations().forEach(location -> {
-        String holdingId = location.getHoldingId();
-        if (holdingId != null) {
-          inventoryManager.getItemsByHoldingId(holdingId, requestContext)
-              .thenCompose(items -> {
-                if (items.isEmpty()) {
-                  return inventoryManager.deleteHoldingById(holdingId, true, requestContext);
-                }
-                return CompletableFuture.completedFuture(null);
-              });
-        }
-      });
-    }
-    return CompletableFuture.completedFuture(null);
-  }
 }
