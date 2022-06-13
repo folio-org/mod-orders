@@ -859,8 +859,9 @@
           "modulePermissions": [
             "configuration.entries.collection.get",
             "finance-storage.funds.collection.get",
-            "finance.transactions.collection.get",
+            "finance.encumbrances.item.delete",
             "finance.exchange-rate.item.get",
+            "finance.transactions.collection.get",
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines.item.put"
@@ -1578,6 +1579,7 @@
         "finance.funds.collection.get",
         "finance.budgets.collection.get",
         "finance.ledgers.collection.get",
+        "finance.encumbrances.item.delete",
         "finance.encumbrances.item.post",
         "finance.encumbrances.item.put",
         "finance.transactions.collection.get",
