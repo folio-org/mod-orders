@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -66,42 +67,17 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 public class WithHoldingOrderLineUpdateInstanceStrategyTest {
-  @Autowired
-  private OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy;
-  @Autowired
+  @InjectMocks
+  private WithHoldingOrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy;
+  @Mock
   private InventoryManager inventoryManager;
 
-
-  @Spy
-  private Context ctxMock = getFirstContextFromVertx(getVertx());
   @Mock
-  private Map<String, String> okapiHeadersMock;
-
-  private RequestContext requestContext;
-  private static boolean runningOnOwn;
+  RequestContext requestContext;
 
   @BeforeEach
   void initMocks(){
     MockitoAnnotations.openMocks(this);
-    autowireDependencies(this);
-    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
-  }
-
-  @BeforeAll
-  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
-    if (isVerticleNotDeployed()) {
-      ApiTestSuite.before();
-      runningOnOwn = true;
-    }
-    initSpringContext(WithHoldingOrderLineUpdateInstanceStrategyTest.ContextConfiguration.class);
-  }
-
-  @AfterAll
-  public static void after() {
-    clearVertxContext();
-    if (runningOnOwn) {
-      ApiTestSuite.after();
-    }
   }
 
   @AfterEach
@@ -437,15 +413,4 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     verify(inventoryManager, times(1)).updateItem(item, requestContext);
   }
 
-  private static class ContextConfiguration {
-    @Bean
-    InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
-    }
-
-    @Bean
-    OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
-      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
-    }
-  }
 }

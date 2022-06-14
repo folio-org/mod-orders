@@ -224,10 +224,6 @@ public class OrderLineUpdateInstanceHandlerTest {
       return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
     }
 
-    @Bean OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy() {
-      return new WithoutHoldingOrderLineUpdateInstanceStrategy();
-    }
-
     @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
         OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
       Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies = new HashMap<>();
