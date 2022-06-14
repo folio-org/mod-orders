@@ -286,7 +286,9 @@
           ],
           "pathPattern": "/orders/order-lines/{id}",
           "permissionsRequired": [
-            "orders.po-lines.item.patch",
+            "orders.po-lines.item.patch"
+          ],
+          "modulePermissions": [
             "inventory-storage.holdings.item.get",
             "inventory-storage.holdings.item.delete",
             "inventory-storage.holdings.collection.get",
