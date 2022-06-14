@@ -1,0 +1,201 @@
+package org.folio.service.orders.lines.update.instance;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.toList;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
+import static org.folio.service.inventory.InventoryManager.ID;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
+import org.folio.service.inventory.InventoryManager;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+
+import io.vertx.core.json.JsonObject;
+
+public class WithoutHoldingOrderLineUpdateInstanceStrategyTest {
+
+  @InjectMocks
+  private WithoutHoldingOrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy;
+  @Mock
+  private InventoryManager inventoryManager;
+  @Mock
+  private RequestContext requestContext;
+
+  @BeforeEach
+  void initMocks(){
+    MockitoAnnotations.openMocks(this);
+  }
+
+  @AfterEach
+  void resetMocks() {
+    clearServiceInteractions();
+    Mockito.reset(inventoryManager);
+  }
+
+
+  @Test
+  void updateInstanceOnlyTest() throws IOException {
+    String orderLineId = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+
+    List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
+
+    ArrayList<Location> locations = new ArrayList<>();
+    locations.add(new Location()
+      .withHoldingId(holdingIds.get(0))
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+    locations.add(new Location()
+      .withHoldingId(holdingIds.get(1))
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    PoLine poLine = new PoLine()
+      .withId(orderLineId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE))
+      .withLocations(locations);
+
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(false));
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join());
+
+  }
+
+  @Test
+  void updateInstanceAndDeleteAbandonedHoldingsTest() throws IOException {
+    String orderLineId = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+
+    List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
+
+    ArrayList<Location> locations = new ArrayList<>();
+    locations.add(new Location()
+      .withHoldingId(holdingIds.get(0))
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    PoLine poLine = new PoLine()
+      .withId(orderLineId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE))
+      .withLocations(locations);
+
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(true));
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    doReturn(completedFuture(new ArrayList<>()))
+      .when(inventoryManager).getItemsByHoldingId(anyString(), eq(requestContext));
+
+    doReturn(completedFuture(null))
+      .when(inventoryManager).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
+
+    assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join());
+    verify(inventoryManager, times(1)).getItemsByHoldingId(anyString(), eq(requestContext));
+    verify(inventoryManager, times(1)).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
+
+  }
+
+  @Test
+  void updateInstanceAndCantDeleteAbandonedHoldingsTest() throws IOException {
+    String orderLineId = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+
+    List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
+
+    ArrayList<Location> locations = new ArrayList<>();
+    locations.add(new Location()
+      .withHoldingId(holdingIds.get(0))
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    PoLine poLine = new PoLine()
+      .withId(orderLineId)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE))
+      .withLocations(locations);
+
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(true));
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    // holding has linked items
+    List<JsonObject> itemsList = new ArrayList<>();
+    itemsList.add(new JsonObject());
+
+    doReturn(completedFuture(itemsList))
+      .when(inventoryManager).getItemsByHoldingId(anyString(), eq(requestContext));
+
+    doReturn(completedFuture(null))
+      .when(inventoryManager).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
+
+    assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join());
+    verify(inventoryManager, times(1)).getItemsByHoldingId(anyString(), eq(requestContext));
+    verify(inventoryManager, times(0)).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
+
+  }
+}

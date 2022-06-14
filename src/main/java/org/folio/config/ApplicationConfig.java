@@ -590,9 +590,10 @@ public class ApplicationConfig {
   }
 
   @Bean OrderLinePatchOperationService orderLinePatchOperationService(
+      RestClient restClient,
       OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
       PurchaseOrderLineService purchaseOrderLineService) {
-    return new OrderLinePatchOperationService(orderLinePatchOperationHandlerResolver, purchaseOrderLineService);
+    return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver, purchaseOrderLineService);
   }
 
   @Bean PatchOperationHandler orderLineUpdateInstanceHandler(
@@ -607,12 +608,13 @@ public class ApplicationConfig {
     return new OrderLinePatchOperationHandlerResolver(handlers);
   }
 
-  @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy() {
-    return new WithHoldingOrderLineUpdateInstanceStrategy();
+  @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
+    return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
   }
 
-  @Bean OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy() {
-    return new WithoutHoldingOrderLineUpdateInstanceStrategy();
+  @Bean
+  OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
+    return new WithoutHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
   }
 
   @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,

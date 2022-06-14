@@ -167,6 +167,25 @@ public class RestClientTest {
   }
 
   @Test
+  void testPatchShouldCreateEntity() throws Exception {
+    RestClient restClient = Mockito.spy(new RestClient());
+
+    String uuid = UUID.randomUUID().toString();
+    Transaction expTransaction = new Transaction().withId(uuid);
+    Response response = new Response();
+    response.setCode(204);
+
+    doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
+    String endpoint = resourcesPath(PURCHASE_ORDER_STORAGE) + "/{id}";
+    RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
+    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.PATCH), any(), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
+
+    restClient.patch(requestEntry, expTransaction, requestContext).get();
+
+    verify(httpClient).request(eq(HttpMethod.PATCH), any(), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
+  }
+
+  @Test
   void testDeleteShouldDeleteEntity() throws Exception {
     RestClient restClient = Mockito.spy(new RestClient());
 

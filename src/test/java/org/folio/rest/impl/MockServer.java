@@ -162,6 +162,7 @@ public class MockServer {
   private static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
   public static final String BUDGETS_PATH = BASE_MOCK_DATA_PATH + "budgets/budgets.json";
   public static final String LEDGERS_PATH = BASE_MOCK_DATA_PATH + "ledgers/ledgers.json";
+  public static final String PATCH_ORDER_LINES_REQUEST_PATCH = BASE_MOCK_DATA_PATH + "patchOrderLines/patch.json";
   public static final String ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/valid_encumbrances.json";
   public static final String ENCUMBRANCE_FOR_TAGS_PATH = BASE_MOCK_DATA_PATH + "encumbrances/encumbrance_for_tags_inheritance.json";
   public static final String HOLDINGS_OLD_NEW_PATH = BASE_MOCK_DATA_PATH + "holdingsRecords/holdingRecords-old-new.json";
@@ -548,6 +549,8 @@ public class MockServer {
     router.delete("/inventory/items/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, ITEM_RECORDS));
 
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
+
+    router.patch(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePatchOrderLines(ctx, PATCH_ORDER_LINES_REQUEST_PATCH));
     return router;
   }
 
@@ -2578,5 +2581,25 @@ public class MockServer {
     JsonObject jo = JsonObject.mapFrom(invoiceLineCollection);
     serverResponse(ctx, 200, APPLICATION_JSON, jo.encodePrettily());
     addServerRqRsData(HttpMethod.GET, "invoiceLines", jo);
+  }
+
+  private void handlePatchOrderLines(RoutingContext ctx, String subObj) {
+    logger.info("handlePatchOrderLines got: PATCH " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+
+    addServerRqRsData(HttpMethod.PATCH, subObj, ctx.getBodyAsJson());
+
+    if (ID_DOES_NOT_EXIST.equals(id)) {
+      serverResponse(ctx, 404, APPLICATION_JSON, id);
+    } if (ID_BAD_FORMAT.equals(id)) {
+      serverResponse(ctx, 400, APPLICATION_JSON, id);
+    } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ctx.getBodyAsString().contains("500500500500")) {
+      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else {
+      ctx.response()
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .setStatusCode(204)
+          .end();
+    }
   }
 }
