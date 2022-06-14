@@ -176,7 +176,7 @@ public class OrderRolloverService {
   private CompletableFuture<List<PoLine>> rolloverOpenOrders(String systemCurrency, List<String> orderIds,
       LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
 
-    if (orderIds.size() == 0)
+    if (orderIds.isEmpty())
       return completedFuture(emptyList());
     return getPoLinesByOrderIds(orderIds, requestContext)
       .thenCompose(poLines -> getEncumbrancesForRollover(orderIds, ledgerFYRollover, requestContext)
@@ -187,12 +187,12 @@ public class OrderRolloverService {
   private CompletableFuture<List<PoLine>> rolloverClosedOrders(List<String> orderIds,
      LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
 
-    if (orderIds.size() == 0)
+    if (orderIds.isEmpty())
       return completedFuture(emptyList());
     return getPoLinesByOrderIds(orderIds, requestContext)
       .thenCompose(poLines -> getEncumbrancesForRollover(orderIds, ledgerFYRollover, requestContext)
         .thenCompose(transactions -> {
-          if (transactions.size() == 0)
+          if (transactions.isEmpty())
             return completedFuture(null);
           return transactionService.deleteTransactions(transactions, requestContext);
         })
