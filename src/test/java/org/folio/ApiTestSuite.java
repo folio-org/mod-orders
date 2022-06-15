@@ -11,6 +11,7 @@ import org.folio.helper.PurchaseOrderLineHelperTest;
 import org.folio.orders.events.handlers.CheckInOrderStatusChangeChangeHandlerTest;
 import org.folio.orders.events.handlers.ReceiptStatusConsistencyTest;
 import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
+import org.folio.orders.utils.FundDistributionUtilsTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.orders.utils.PoLineCommonUtilTest;
 import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorTest;
@@ -179,6 +180,10 @@ public class ApiTestSuite {
 
   @Nested
   class PurchaseOrderLineHelperTestNested extends PurchaseOrderLineHelperTest {
+  }
+
+  @Nested
+  class FundDistributionUtilsTestNested extends FundDistributionUtilsTest {
   }
 
   @Nested
