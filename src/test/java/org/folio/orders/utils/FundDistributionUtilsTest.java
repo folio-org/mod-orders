@@ -20,19 +20,29 @@ public class FundDistributionUtilsTest {
 
   @ParameterizedTest
   @CsvSource(value = {
-    "amount:0:::",
-    "amount:0:amount:0:",
-    "percentage:100:::",
-    "percentage:50:percentage:50:",
-    "amount:0:percentage:100:cannotMixTypesForZeroPrice",
-    "percentage:0:amount:0:cannotMixTypesForZeroPrice",
-    "amount:10:amount:10:incorrectFundDistributionTotal",
-    "percentage:10:percentage:10:incorrectFundDistributionTotal"
+    "10:amount:10:::",
+    "20:amount:10:amount:10:",
+    "10:percentage:100:::",
+    "10:percentage:50:percentage:50:",
+    "9.99:percentage:50:percentage:50:",
+    "10:amount:5:percentage:50:",
+    "0:amount:0:::",
+    "0:amount:0:amount:0:",
+    "0:percentage:100:::",
+    "0:percentage:50:percentage:50:",
+    "10:amount:10:amount:10:incorrectFundDistributionTotal",
+    "10:percentage:20:percentage:50:incorrectFundDistributionTotal",
+    "10:amount:5:percentage:60:incorrectFundDistributionTotal",
+    "0:amount:0:percentage:100:cannotMixTypesForZeroPrice",
+    "0:percentage:0:amount:0:cannotMixTypesForZeroPrice",
+    "0:amount:10:amount:10:incorrectFundDistributionTotal",
+    "0:percentage:10:percentage:10:incorrectFundDistributionTotal"
   }, delimiter = ':')
-  void testValidateFundDistributionTotal(String fd1Type, Double fd1Value, String fd2Type, Double fd2Value, String errorCode) {
+  void testValidateFundDistributionTotal(Double estimatedPrice, String fd1Type, Double fd1Value, String fd2Type,
+      Double fd2Value, String errorCode) {
+
     Cost cost = new Cost()
-      .withListUnitPrice(0d)
-      .withPoLineEstimatedPrice(0d);
+      .withPoLineEstimatedPrice(estimatedPrice);
 
     ArrayList<FundDistribution> fdList = new ArrayList<>();
     fdList.add(new FundDistribution().withDistributionType(DistributionType.fromValue(fd1Type)).withValue(fd1Value));
