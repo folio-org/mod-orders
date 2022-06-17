@@ -50,6 +50,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           return createHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
               .thenAccept(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(),
                   holder.getStoragePoLine(), requestContext));
+      case NONE:
         default:
           return CompletableFuture.completedFuture(null);
       }

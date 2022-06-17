@@ -1,16 +1,22 @@
 package org.folio.service.orders;
 
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.rest.jaxrs.model.PurchaseOrder.OrderType.ONE_TIME;
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -420,4 +426,87 @@ public class OrderRolloverServiceTest {
     assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(0.0d));
     assertThat(costOngoing3.getFyroAdjustmentAmount(), equalTo(0.0d));
   }
+
+  @Test
+  @DisplayName("Should remove encumbrance links and encumbrances if needed for closed orders")
+  void shouldRemoveEncumbranceLinksAndEncumbrancesIfNeededForClosedOrders() {
+    String fromFiscalYearId = UUID.randomUUID().toString();
+    String ledgerId = UUID.randomUUID().toString();
+    String toFiscalYearId = UUID.randomUUID().toString();
+    String fundId = UUID.randomUUID().toString();
+    String orderId = UUID.randomUUID().toString();
+    String poLineId = UUID.randomUUID().toString();
+    String prevEncumbrId = UUID.randomUUID().toString();
+    String currEncumbrId = UUID.randomUUID().toString();
+
+    EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONE_TIME)
+      .withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
+
+    LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
+      .withId(UUID.randomUUID().toString())
+      .withFromFiscalYearId(fromFiscalYearId)
+      .withLedgerId(ledgerId)
+      .withToFiscalYearId(toFiscalYearId)
+      .withEncumbrancesRollover(singletonList(oneTimeEncumbrance));
+
+    List<Fund> funds = singletonList(new Fund().withId(fundId).withLedgerId(ledgerId));
+
+    PurchaseOrder purchaseOrder = new PurchaseOrder()
+      .withId(orderId)
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED)
+      .withOrderType(ONE_TIME);
+    List<PurchaseOrder> orders = singletonList(purchaseOrder);
+    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection().withPurchaseOrders(orders).withTotalRecords(1);
+
+    FundDistribution fundDistribution = new FundDistribution()
+      .withFundId(fundId)
+      .withValue(100d)
+      .withDistributionType(DistributionType.PERCENTAGE)
+      .withEncumbrance(prevEncumbrId);
+
+    Cost cost = new Cost()
+      .withListUnitPrice(595d)
+      .withQuantityPhysical(1)
+      .withCurrency("USD")
+      .withPoLineEstimatedPrice(595d);
+    PoLine poLine = new PoLine()
+      .withId(poLineId)
+      .withPurchaseOrderId(orderId)
+      .withCost(cost)
+      .withFundDistribution(singletonList(fundDistribution));
+    List<PoLine> poLines = singletonList(poLine);
+
+    doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
+    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
+      .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
+    doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
+    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
+
+    doReturn(completedFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
+
+    Encumbrance encumbrance = new Encumbrance()
+      .withSourcePurchaseOrderId(orderId)
+      .withSourcePoLineId(poLineId)
+      .withOrderType(Encumbrance.OrderType.ONE_TIME)
+      .withInitialAmountEncumbered(580d);
+    Transaction transaction = new Transaction()
+      .withId(currEncumbrId)
+      .withFromFundId(fundId)
+      .withEncumbrance(encumbrance);
+    List<Transaction> encumbrances = singletonList(transaction);
+    doReturn(completedFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
+
+    doReturn(completedFuture(null)).when(transactionService).deleteTransactions(anyList(), any());
+
+    CompletableFuture<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    future.join();
+    assertFalse(future.isCompletedExceptionally());
+
+    assertThat(fundDistribution.getEncumbrance(), equalTo(null));
+    verify(transactionService, times(1)).deleteTransactions(
+      argThat(transactions -> transactions.size() == 1 && currEncumbrId.equals(transactions.get(0).getId())), any());
+    verify(purchaseOrderLineService, times(1)).saveOrderLines(eq(poLines), any());
+  }
+
 }

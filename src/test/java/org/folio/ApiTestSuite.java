@@ -33,6 +33,7 @@ import org.folio.service.finance.FundServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
+import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
@@ -220,6 +221,10 @@ public class ApiTestSuite {
 
   @Nested
   class OrderRolloverServiceTestNested extends OrderRolloverServiceTest {
+  }
+
+  @Nested
+  class OpenToClosedEncumbranceStrategyTestNested extends OpenToClosedEncumbranceStrategyTest {
   }
 
   @Nested
