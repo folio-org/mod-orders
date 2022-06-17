@@ -1,5 +1,6 @@
 package org.folio.service.finance.transaction;
 
+import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
 
 import java.util.List;
@@ -47,15 +48,16 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
         .thenCompose(mapFiscalYearIdsWithCompPOLines -> encumbranceService.getOrderEncumbrancesToUnrelease(compPO, mapFiscalYearIdsWithCompPOLines, requestContext))
         .thenCompose(transactions -> {
           // stop if nothing needs to be done
-          if (transactions.isEmpty())
+          if (transactions.isEmpty() && compPO.getCompositePoLines().stream().noneMatch(
+              pol -> pol.getFundDistribution().stream().anyMatch(f -> f.getEncumbrance() == null)))
             return CompletableFuture.completedFuture(null);
           // check encumbrance restrictions as in PendingToOpenEncumbranceStrategy
           // (except we use a different list of polines/transactions)
           List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder
-            .buildBaseHolders(compPO);
-          // only keep holders with a matching selected transaction
-          encumbranceRelationsHolders = encumbranceRelationsHolders.stream()
-            .filter(h -> transactions.stream()
+            .buildBaseHolders(compPO)
+            // only keep holders with a missing encumbrance or a matching selected transaction
+            .stream()
+            .filter(h -> h.getFundDistribution().getEncumbrance() == null || transactions.stream()
               .anyMatch(t -> t.getEncumbrance().getSourcePoLineId().equals(h.getPoLineId())))
             .collect(Collectors.toList());
           return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
@@ -67,8 +69,12 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
             .thenApply(fundsDistributionService::distributeFunds)
             .thenAccept(budgetRestrictionService::checkEncumbranceRestrictions)
             .thenCompose(aVoid -> {
-              // unrelease the encumbrances
+              // create missing encumbrances and unrelease existing ones
               EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
+              List<EncumbranceRelationsHolder> toBeCreatedHolders = encumbranceRelationsHolders.stream()
+                .filter(h -> h.getOldEncumbrance() == null)
+                .collect(toList());
+              holder.withEncumbrancesForCreate(toBeCreatedHolders);
               holder.withEncumbrancesFromStorage(transactions);
               holder.withEncumbrancesForUnrelease(transactions);
               return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);
