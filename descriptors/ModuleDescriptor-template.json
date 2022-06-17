@@ -297,7 +297,8 @@
             "inventory.items.item.put",
             "inventory.items.item.delete",
             "inventory.items.collection.get",
-            "orders-storage.po-lines.item.patch"
+            "orders-storage.po-lines.item.patch",
+            "orders-storage.po-lines.item.get"
           ]
         }
       ]
