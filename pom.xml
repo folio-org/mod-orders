@@ -40,7 +40,7 @@
   </licenses>
 
   <properties>
-    <aspectj.version>1.9.6</aspectj.version>
+    <aspectj.version>1.9.7</aspectj.version>
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
     <jsonschema_paths>
@@ -51,14 +51,14 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>33.0.0</raml-module-builder.version>
+    <raml-module-builder.version>34.1.0</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <mod-configuration-client.version>5.5.0</mod-configuration-client.version>
     <sonar.exclusions>**/models/**.java, **/completablefuture/FolioVertxCompletableFuture.java,**/unopen/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
-    <spring.version>5.2.11.RELEASE</spring.version>
-    <vertx.version>4.1.0.CR1</vertx.version>
+    <spring.version>5.3.20</spring.version>
+    <vertx.version>4.3.1</vertx.version>
     <log4j.version>2.17.2</log4j.version>
     <argLine />
   </properties>
@@ -120,7 +120,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>folio-di-support</artifactId>
-      <version>1.2.0</version>
+      <version>1.6.0</version>
     </dependency>
     <dependency>
       <groupId>commons-lang</groupId>
@@ -140,7 +140,7 @@
     <dependency>
       <groupId>io.rest-assured</groupId>
       <artifactId>rest-assured</artifactId>
-      <version>4.3.1</version>
+      <version>5.1.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -179,6 +179,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
+      <version>5.8.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -189,7 +190,7 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-junit-jupiter</artifactId>
-      <version>3.4.6</version>
+      <version>4.6.1</version>
       <scope>test</scope>
     </dependency>
     <!-- The RMB runtime defines usage of log4j2 for vert.x logging interface. Including Log4j 2 SLF4J Binding to allow SLF4J API to use Log4j 2 as the implementation. -->
@@ -665,7 +666,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson</groupId>
         <artifactId>jackson-bom</artifactId>
-        <version>2.11.3</version>
+        <version>2.13.3</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
