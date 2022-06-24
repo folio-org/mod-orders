@@ -66,6 +66,7 @@ public enum ErrorCodes {
   FUND_CANNOT_BE_PAID("fundCannotBePaid", "Fund cannot be paid due to restrictions"),
   MISSING_ONGOING("missingOngoing", "Ongoing field must be present for Ongoing order"),
   ONGOING_NOT_ALLOWED("ongoingNotAllowed", "Ongoing field must be absent for One-time order"),
+  CANNOT_MIX_TYPES_FOR_ZERO_PRICE("cannotMixTypesForZeroPrice", "Fund distribution types cannot be mixed for a price of 0"),
   INCORRECT_FUND_DISTRIBUTION_TOTAL("incorrectFundDistributionTotal","Fund distribution total must add to 100% or totalPrice"),
   INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline"),
   PREFIX_IS_USED("prefixIsUsed", "The prefix cannot be deleted as it is used by one or more orders"),
