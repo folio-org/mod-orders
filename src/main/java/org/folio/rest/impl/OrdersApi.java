@@ -40,8 +40,6 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   private static final Logger logger = LogManager.getLogger();
 
-  private static final String ORDERS_LOCATION_PREFIX = "/orders/composite-orders/%s";
-
   @Autowired
   private OrderRolloverService orderRolloverService;
   @Autowired
@@ -121,7 +119,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
             });
         } else {
           Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
-          logger.error("Validation error. Failed to update purchase order : " + JsonObject.mapFrom(errors).encodePrettily());
+          logger.error("Validation error. Failed to update purchase order : {}", JsonObject.mapFrom(errors).encodePrettily());
           throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
       })
