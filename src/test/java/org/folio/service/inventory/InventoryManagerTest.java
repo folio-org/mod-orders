@@ -32,6 +32,7 @@ import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLD
 import static org.folio.service.inventory.InventoryManager.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
+import static org.folio.service.inventory.InventoryManager.HOLDINGS_SOURCES;
 import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -71,6 +72,7 @@ import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -106,7 +108,6 @@ public class InventoryManagerTest {
 
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
-  public static final String HOLDING_INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
   public static final String OLD_LOCATION_ID = "758258bc-ecc1-41b8-abca-f7b610822fff";
   public static final String NEW_LOCATION_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
   public static final String NON_EXISTED_NEW_HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d23";
@@ -117,6 +118,8 @@ public class InventoryManagerTest {
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instance.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
+  private static final JsonObject HOLDINGS_SOURCE_ID_RESPONSE = new JsonObject()
+    .put(HOLDINGS_SOURCES, "f32d531e-df79-46b3-8932-cdd35f7a2264");
 
   @Autowired
   InventoryManager inventoryManager;
@@ -235,7 +238,7 @@ public class InventoryManagerTest {
     List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
 
     doReturn(completedFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    JsonObject actHoldings = inventoryManager.getFirstHoldingRecord(instanceId, locationIds.get(0), requestContext).get();
+    inventoryManager.getFirstHoldingRecord(instanceId, locationIds.get(0), requestContext).get();
     verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
   }
 
@@ -361,7 +364,7 @@ public class InventoryManagerTest {
       .map(o -> ((JsonObject) o))
       .filter(item -> item.getString(TestConstants.ID).equals(itemId))
       .map(item -> item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId))
-      .collect(toList());;
+      .collect(toList());
 
     String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", poLineId);
     PieceCollection existedPieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
@@ -492,6 +495,7 @@ public class InventoryManagerTest {
     Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
 
     doReturn(completedFuture(holdingIdExp)).when(restClient).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));
+    doReturn(completedFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), eq(requestContext));
 
     String holdingIdAct = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).join();
 
@@ -513,17 +517,18 @@ public class InventoryManagerTest {
     Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
 
     JsonObject holdingsRecJson = new JsonObject();
-    holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
-    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
+    holdingsRecJson.put(InventoryManager.HOLDING_INSTANCE_ID, instanceId);
+    holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
     JsonObject emptyHoldingCollection = new JsonObject().put(HOLDINGS_RECORDS, new JsonArray());
 
     doReturn(completedFuture(emptyHoldingCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     doReturn(completedFuture(holdingIdExp)).when(restClient).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));
+    doReturn(completedFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), eq(requestContext));
 
     String holdingIdAct = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).join();
 
     assertThat(holdingIdAct, equalTo(holdingIdExp));
-    verify(restClient, times(1)).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));;
+    verify(restClient, times(1)).post(any(RequestEntry.class), any(JsonObject.class), eq(PostResponseType.UUID), eq(String.class), eq(requestContext));
   }
 
   @Test
@@ -606,7 +611,7 @@ public class InventoryManagerTest {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     title.setInstanceId(null);
-    PieceService pieceService = mock(PieceService.class, CALLS_REAL_METHODS);
+    mock(PieceService.class, CALLS_REAL_METHODS);
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager).getOrCreateInstanceRecord(any(Title.class), any(Boolean.class), eq(requestContext));
     //When
     inventoryManager.openOrderHandlePackageLineInstance(title, false, requestContext).get();
@@ -663,7 +668,6 @@ public class InventoryManagerTest {
     line.setEresource(eresource);
     line.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
     String expItemId = UUID.randomUUID().toString();
-    Piece piece = new Piece().withHoldingId(HOLDING_ID).withChronology("CH").withEnumeration("EN").withDiscoverySuppress(true);
     doReturn(completedFuture(Collections.singletonList(expItemId)))
       .when(inventoryManager).createMissingElectronicItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
     //When
@@ -679,7 +683,6 @@ public class InventoryManagerTest {
     //given
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     String expItemId = UUID.randomUUID().toString();
-    Piece piece = new Piece().withHoldingId(HOLDING_ID).withChronology("CH").withEnumeration("EN").withDiscoverySuppress(true);
 
     doReturn(completedFuture(Collections.singletonList(expItemId)))
       .when(inventoryManager).createMissingPhysicalItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));

@@ -1,6 +1,7 @@
 package org.folio.service.inventory;
 
 import static java.util.Collections.singletonList;
+import static java.util.Map.entry;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.joining;
@@ -26,6 +27,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_STATUS;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_HOLDINGS_SOURCE_ID;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 
 import java.util.ArrayList;
@@ -99,6 +101,7 @@ public class InventoryManager {
   public static final String INSTANCE_IDENTIFIER_TYPE_VALUE = "value";
   public static final String HOLDING_INSTANCE_ID = "instanceId";
   public static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
+  public static final String HOLDING_SOURCE = "sourceId";
   public static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
   public static final String ITEM_BARCODE = "barcode";
   public static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
@@ -120,14 +123,17 @@ public class InventoryManager {
   public static final String ITEMS = "items";
   public static final String LOAN_TYPES = "loantypes";
   public static final String REQUESTS = "requests";
+  public static final String HOLDINGS_SOURCES = "holdingsRecordsSources";
 
   // mod-configuration: config names and default values
   public static final String CONFIG_NAME_INSTANCE_TYPE_CODE = "inventory-instanceTypeCode";
   public static final String CONFIG_NAME_INSTANCE_STATUS_CODE = "inventory-instanceStatusCode";
   public static final String CONFIG_NAME_LOAN_TYPE_NAME = "inventory-loanTypeName";
+  public static final String CONFIG_NAME_HOLDINGS_SOURCE_NAME = "inventory-holdingsSourceName";
   public static final String DEFAULT_INSTANCE_TYPE_CODE = "zzz";
   public static final String DEFAULT_INSTANCE_STATUS_CODE = "temp";
   public static final String DEFAULT_LOAN_TYPE_NAME = "Can circulate";
+  public static final String DEFAULT_HOLDINGS_SOURCE_NAME = "FOLIO";
 
   public static final String HOLDINGS_RECORDS = "holdingsRecords";
   public static final String HOLDINGS_RECORDS_BY_ID_ENDPOINT = "holdingsRecordsById";
@@ -155,17 +161,19 @@ public class InventoryManager {
   }
 
   static {
-    INVENTORY_LOOKUP_ENDPOINTS = Map.of(
-      CONTRIBUTOR_NAME_TYPES, "/contributor-name-types",
-      HOLDINGS_RECORDS, "/holdings-storage/holdings",
-      HOLDINGS_RECORDS_BY_ID_ENDPOINT, "/holdings-storage/holdings/{id}",
-      LOAN_TYPES, "/loan-types?query=name==%s&limit=1",
-      INSTANCE_STATUSES, "/instance-statuses?query=code==%s&limit=1",
-      INSTANCE_TYPES, "/instance-types?query=code==%s",
-      INSTANCES, "/inventory/instances",
-      ITEMS, "/inventory/items",
-      ITEM_BY_ID_ENDPOINT, "/inventory/items/{id}",
-      REQUESTS, "/circulation/requests");
+    INVENTORY_LOOKUP_ENDPOINTS = Map.ofEntries(
+      entry(CONTRIBUTOR_NAME_TYPES, "/contributor-name-types"),
+      entry(HOLDINGS_RECORDS, "/holdings-storage/holdings"),
+      entry(HOLDINGS_RECORDS_BY_ID_ENDPOINT, "/holdings-storage/holdings/{id}"),
+      entry(LOAN_TYPES, "/loan-types?query=name==%s&limit=1"),
+      entry(INSTANCE_STATUSES, "/instance-statuses?query=code==%s&limit=1"),
+      entry(INSTANCE_TYPES, "/instance-types?query=code==%s"),
+      entry(INSTANCES, "/inventory/instances"),
+      entry(ITEMS, "/inventory/items"),
+      entry(ITEM_BY_ID_ENDPOINT, "/inventory/items/{id}"),
+      entry(REQUESTS, "/circulation/requests"),
+      entry(HOLDINGS_SOURCES, "/holdings-sources?query=name==%s")
+    );
   }
 
 
@@ -380,11 +388,15 @@ public class InventoryManager {
 
   private <T> CompletableFuture<T> createHoldingsRecord(String instanceId, String locationId, PostResponseType responseType,
                                                         Class<T> clazz, RequestContext requestContext) {
-    JsonObject holdingsRecJson = new JsonObject();
-    holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
-    holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS));
-    return restClient.post(requestEntry, holdingsRecJson, responseType, clazz, requestContext);
+    return getSourceId(requestContext)
+      .thenCompose(sourceId -> {
+        JsonObject holdingsRecJson = new JsonObject();
+        holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
+        holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
+        holdingsRecJson.put(HOLDING_SOURCE, sourceId);
+        RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS));
+        return restClient.post(requestEntry, holdingsRecJson, responseType, clazz, requestContext);
+      });
   }
 
   /**
@@ -901,6 +913,11 @@ public class InventoryManager {
       .thenApply(jsonObject -> jsonObject.getString(LOAN_TYPES));
   }
 
+  private CompletableFuture<String> getSourceId(RequestContext requestContext) {
+    return getEntryId(HOLDINGS_SOURCES, MISSING_HOLDINGS_SOURCE_ID, requestContext)
+      .thenApply(jsonObject -> jsonObject.getString(HOLDINGS_SOURCES));
+  }
+
   /**
    * Caches id's in Vert.X Context and returns it by tenantId.entryType.key.
    *
@@ -1126,6 +1143,8 @@ public class InventoryManager {
             return configs.getString(CONFIG_NAME_INSTANCE_TYPE_CODE, DEFAULT_INSTANCE_TYPE_CODE);
           case LOAN_TYPES:
             return configs.getString(CONFIG_NAME_LOAN_TYPE_NAME, DEFAULT_LOAN_TYPE_NAME);
+          case HOLDINGS_SOURCES:
+            return configs.getString(CONFIG_NAME_HOLDINGS_SOURCE_NAME, DEFAULT_HOLDINGS_SOURCE_NAME);
           default:
             throw new IllegalArgumentException("Unexpected inventory entry type: " + entryType);
         }
