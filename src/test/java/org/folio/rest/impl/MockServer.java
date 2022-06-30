@@ -143,6 +143,7 @@ public class MockServer {
   private static final String EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "expenseClasses/expense_classes.json";
   public static final String INSTANCE_STATUSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceStatuses/";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/";
+  private static final String HOLDINGS_SOURCE_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "holdingsSources/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   public static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
   public static final String TITLES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "titles/";
@@ -193,6 +194,7 @@ public class MockServer {
   private static final String INSTANCE_TYPES = "instanceTypes";
   private static final String INSTANCE_STATUSES = "instanceStatuses";
   private static final String IDENTIFIER_TYPES = "identifierTypes";
+  private static final String HOLDINGS_SOURCES = "holdingsRecordsSources";
   private static final String ISBN_CONVERT13 = "ISBN13";
   private static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
   private static final String ORGANIZATIONS = "organizations";
@@ -467,6 +469,7 @@ public class MockServer {
     router.get("/organizations-storage/organizations/:id").handler(this::getOrganizationById);
     router.get("/organizations-storage/organizations").handler(this::handleGetAccessProviders);
     router.get("/identifier-types").handler(this::handleGetIdentifierType);
+    router.get("/holdings-sources").handler(this::handleGetHoldingsSource);
     router.get("/circulation/requests").handler(this::handleGetItemRequests);
     router.get(resourcesPath(PO_LINES_STORAGE)).handler(ctx -> handleGetPoLines(ctx, PO_LINES_STORAGE));
     router.get(resourcePath(PO_LINES_STORAGE)).handler(this::handleGetPoLineById);
@@ -1272,6 +1275,29 @@ public class MockServer {
 
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encode());
         addServerRqRsData(HttpMethod.GET, INSTANCE_TYPES, entries);
+      }
+    } catch (IOException e) {
+      serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
+    }
+  }
+
+  private void handleGetHoldingsSource(RoutingContext ctx) {
+    logger.info("got: " + ctx.request().path());
+
+    String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
+    try {
+      if (NON_EXIST_HOLDINGS_SOURCE_TENANT.equals(tenantId)) {
+        String body = buildEmptyCollection(HOLDINGS_SOURCES);
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+        addServerRqRsData(HttpMethod.GET, HOLDINGS_SOURCES, new JsonObject(body));
+      } else {
+        // Filter result based on code from query
+        String name = ctx.request().getParam("query").split("==")[1];
+        JsonObject entries = new JsonObject(getMockData(HOLDINGS_SOURCE_MOCK_DATA_PATH + "sources.json"));
+        filterByKeyValue("name", name, entries.getJsonArray(HOLDINGS_SOURCES));
+
+        serverResponse(ctx, 200, APPLICATION_JSON, entries.encode());
+        addServerRqRsData(HttpMethod.GET, HOLDINGS_SOURCES, entries);
       }
     } catch (IOException e) {
       serverResponse(ctx, HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), TEXT_PLAIN, "Mock-server error");
