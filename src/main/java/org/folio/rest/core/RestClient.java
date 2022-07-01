@@ -10,6 +10,7 @@ import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -80,7 +81,7 @@ public class RestClient {
   }
 
   public <T> CompletableFuture<T> post(RequestEntry requestEntry, JsonObject recordData, PostResponseType postResponseType,
-                                       Class<T> responseType, RequestContext requestContext) {
+    Class<T> responseType, RequestContext requestContext) {
     CompletableFuture<T> future = new CompletableFuture<>();
     String endpoint = requestEntry.buildEndpoint();
 
@@ -285,11 +286,17 @@ public class RestClient {
                                                         RequestContext requestContext) {
     CompletableFuture<JsonObject> future = new CompletableFuture<>();
     String endpoint = requestEntry.buildEndpoint();
-    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
+    Map<String, String> requestContextHeaders = new HashMap<>(requestContext.getHeaders());
+    if (requestContextHeaders.get("x-okapi-tenant") != null) {
+      String tenantId = requestContextHeaders.get("x-okapi-tenant");
+      requestContextHeaders.remove("x-okapi-tenant");
+      requestContextHeaders.put(OKAPI_HEADER_TENANT, tenantId);
+    }
+    HttpClientInterface client = getHttpClient(requestContextHeaders);
     logger.debug("Calling GET {}", endpoint);
     try {
       client
-        .request(HttpMethod.GET, endpoint, requestContext.getHeaders())
+        .request(HttpMethod.GET, endpoint, requestContextHeaders)
         .thenApply(response -> {
           int code = response.getCode();
           if (code == NOT_FOUND && skipThrowNorFoundException) {
