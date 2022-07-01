@@ -10,6 +10,7 @@ import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -54,7 +55,7 @@ public class RestClient {
 
     HttpClientInterface client = getHttpClient(requestContext.getHeaders());
     try {
-      client.request(HttpMethod.POST, recordData.toBuffer(), endpoint, requestContext.getHeaders())
+      client.request(HttpMethod.POST, recordData.toBuffer(), endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
         .thenApply(HelperUtils::verifyAndExtractBody)
         .thenAccept(body -> {
           client.closeClient();
@@ -91,7 +92,7 @@ public class RestClient {
     HttpClientInterface client = getHttpClient(requestContext.getHeaders());
     try {
       client
-        .request(HttpMethod.POST, recordData.toBuffer(), endpoint, requestContext.getHeaders())
+        .request(HttpMethod.POST, recordData.toBuffer(), endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
         .thenApply(response -> {
           client.closeClient();
           if (postResponseType == PostResponseType.BODY) {
@@ -170,7 +171,7 @@ public class RestClient {
     setDefaultHeaders(client);
     try {
       client
-          .request(httpMethod, recordData.toBuffer(), endpoint, requestContext.getHeaders())
+          .request(httpMethod, recordData.toBuffer(), endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
           .thenAccept(HelperUtils::verifyResponse)
           .thenAccept(avoid -> {
             client.closeClient();
@@ -201,7 +202,7 @@ public class RestClient {
     setDefaultHeaders(client);
 
     try {
-      client.request(HttpMethod.DELETE, endpoint, requestContext.getHeaders())
+      client.request(HttpMethod.DELETE, endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
         .thenAccept(response -> {
           client.closeClient();
           int code = response.getCode();
@@ -242,7 +243,7 @@ public class RestClient {
 
     try {
       client
-        .request(HttpMethod.GET, endpoint, requestContext.getHeaders())
+        .request(HttpMethod.GET, endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
         .thenApply(response -> {
           int code = response.getCode();
           if (code == NOT_FOUND && skipThrowNorFoundException) {
@@ -289,7 +290,7 @@ public class RestClient {
     logger.debug("Calling GET {}", endpoint);
     try {
       client
-        .request(HttpMethod.GET, endpoint, requestContext.getHeaders())
+        .request(HttpMethod.GET, endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
         .thenApply(response -> {
           int code = response.getCode();
           if (code == NOT_FOUND && skipThrowNorFoundException) {
@@ -338,5 +339,15 @@ public class RestClient {
   private void setDefaultHeaders(HttpClientInterface httpClient) {
     // The RMB's HttpModuleClient2.ACCEPT is in sentence case. Using the same format to avoid duplicates
     httpClient.setDefaultHeaders(Collections.singletonMap("Accept", APPLICATION_JSON + ", " + TEXT_PLAIN));
+  }
+
+  private Map<String, String> fixHeadersForRMB34(Map<String, String> requestHeaders) {
+    Map<String, String> headers = new HashMap<>(requestHeaders);
+    if (headers.get("x-okapi-tenant") != null) {
+      String tenantId = headers.get("x-okapi-tenant");
+      headers.remove("x-okapi-tenant");
+      headers.put(OKAPI_HEADER_TENANT, tenantId);
+    }
+    return headers;
   }
 }
