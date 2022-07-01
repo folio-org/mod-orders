@@ -287,7 +287,8 @@ public class PurchaseOrderLineHelper {
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   public CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, RequestContext requestContext) {
-    return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId(), requestContext)
+    return validateAndNormalizeISBN(compOrderLine, requestContext)
+        .thenCompose(v -> getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId(), requestContext))
         .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId(), requestContext)
           .thenApply(compOrder -> addLineToCompOrder(compOrder, lineFromStorage))
           .thenCompose(compOrder -> {
@@ -297,7 +298,6 @@ public class PurchaseOrderLineHelper {
             checkLocationCanBeModified(compOrderLine, lineFromStorage.mapTo(PoLine.class), compOrder);
 
             return protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
-                .thenCompose(v -> validateAndNormalizeISBN(compOrderLine, requestContext))
                 .thenCompose(v -> validateAccessProviders(compOrderLine, requestContext))
                 .thenCompose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
                 .thenCompose(v -> processPoLineEncumbrances(compOrder, compOrderLine, lineFromStorage, requestContext))
