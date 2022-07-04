@@ -728,9 +728,9 @@ public class PurchaseOrderLinesApiTest {
 
     checkPreventProtectedFieldsModificationRule(url, body, allProtectedFieldsModification);
 
-    // 2 calls each to fetch Order Line, Purchase Order
+    // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
@@ -1550,9 +1550,9 @@ public class PurchaseOrderLinesApiTest {
     assertThat(failedFieldNames.length, is(expected.length));
     assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
 
-    // 2 calls each to fetch Order Line, Purchase Order
+    // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
@@ -1583,9 +1583,9 @@ public class PurchaseOrderLinesApiTest {
     assertThat(failedFieldNames.length, is(expected.length));
     assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
 
-    // 2 calls each to fetch Order Line, Purchase Order
+    // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
@@ -1615,9 +1615,9 @@ public class PurchaseOrderLinesApiTest {
     assertThat(failedFieldNames.length, is(expected.length));
     assertThat(expected, Matchers.arrayContainingInAnyOrder(failedFieldNames));
 
-    // 2 calls each to fetch Order Line, Purchase Order
+    // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(2, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
