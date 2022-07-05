@@ -1,5 +1,14 @@
 ## 12.4.0 - Unreleased
 
+## 12.3.4 - Released
+
+The primary focus of this release was to fix issue with creating holdings after opening order
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.3.3...v12.3.4)
+
+### Bug Fixes
+* [MODORDERS-717](https://issues.folio.org/browse/MODORDERS-717) - Holdings source gets updated to MARC during importing from bib - happens when holdings was created by Order app (Lotus HF2)
+
 ## 12.3.3 - Released
 
 The primary focus of this release was to fix issue with validation protected fields
