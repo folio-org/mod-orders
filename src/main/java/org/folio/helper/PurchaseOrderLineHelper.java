@@ -316,7 +316,7 @@ public class PurchaseOrderLineHelper {
 
   private CompletableFuture<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage,
     RequestContext requestContext) {
-    return FolioVertxCompletableFuture.supplyBlockingAsync(requestContext.getContext(), () -> lineFromStorage.mapTo(PoLine.class))
+    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(lineFromStorage.mapTo(PoLine.class)))
       .thenCompose(poLine -> {
         if(isReleaseEncumbrances(compOrderLine, poLine)) {
           logger.info("Encumbrances releasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
