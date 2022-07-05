@@ -571,7 +571,7 @@ public class PurchaseOrderLineHelper {
                   .thenCompose(id -> validateIsbnValues(compPOL, id, normalizedIsbnCache, requestContext)
                   .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
     }
-    return completedFuture(null);
+    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(null));
   }
 
   public CompletableFuture<Void> updatePoLines(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO, RequestContext requestContext) {
