@@ -7,6 +7,7 @@ import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
 import static org.folio.orders.utils.HelperUtils.verifyResponse;
 import static org.folio.rest.RestConstants.ERROR_MESSAGE;
 import static org.folio.rest.RestConstants.NOT_FOUND;
+import static org.folio.rest.RestConstants.OKAPI_TENANT_LOWCASE;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import java.util.Collections;
@@ -343,9 +344,9 @@ public class RestClient {
 
   private Map<String, String> fixHeadersForRMB34(Map<String, String> requestHeaders) {
     Map<String, String> headers = new HashMap<>(requestHeaders);
-    if (headers.get("x-okapi-tenant") != null) {
-      String tenantId = headers.get("x-okapi-tenant");
-      headers.remove("x-okapi-tenant");
+    if (headers.get(OKAPI_TENANT_LOWCASE) != null) {
+      String tenantId = headers.get(OKAPI_TENANT_LOWCASE);
+      headers.remove(OKAPI_TENANT_LOWCASE);
       headers.put(OKAPI_HEADER_TENANT, tenantId);
     }
     return headers;
