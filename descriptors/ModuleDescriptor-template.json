@@ -35,8 +35,7 @@
             "orders.item.approve"
           ],
           "modulePermissions": [
-            "modperms.orders.item.post",
-            "inventory-storage.holdings-sources.collection.get"
+            "modperms.orders.item.post"
           ]
         },
         {
@@ -81,8 +80,7 @@
             "orders.item.reopen"
           ],
           "modulePermissions": [
-            "modperms.orders.item.put",
-            "inventory-storage.holdings-sources.collection.get"
+            "modperms.orders.item.put"
           ]
         },
         {
@@ -1607,6 +1605,7 @@
         "inventory.items.item.delete",
         "inventory-storage.instance-types.collection.get",
         "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.holdings-sources.collection.get",
         "inventory-storage.holdings.item.get",
         "inventory-storage.holdings.item.post",
         "inventory-storage.holdings.item.delete",
@@ -1676,6 +1675,7 @@
         "inventory.items.collection.get",
         "inventory-storage.instance-types.collection.get",
         "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.holdings-sources.collection.get",
         "inventory-storage.holdings.item.get",
         "inventory-storage.holdings.item.post",
         "inventory-storage.holdings.collection.get",
