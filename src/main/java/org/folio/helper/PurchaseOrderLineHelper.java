@@ -287,7 +287,8 @@ public class PurchaseOrderLineHelper {
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   public CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, RequestContext requestContext) {
-    return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId(), requestContext)
+    return validateAndNormalizeISBN(compOrderLine, requestContext)
+        .thenCompose(v -> getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId(), requestContext))
         .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId(), requestContext)
           .thenApply(compOrder -> addLineToCompOrder(compOrder, lineFromStorage))
           .thenCompose(compOrder -> {
@@ -297,7 +298,6 @@ public class PurchaseOrderLineHelper {
             checkLocationCanBeModified(compOrderLine, lineFromStorage.mapTo(PoLine.class), compOrder);
 
             return protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
-                .thenCompose(v -> validateAndNormalizeISBN(compOrderLine, requestContext))
                 .thenCompose(v -> validateAccessProviders(compOrderLine, requestContext))
                 .thenCompose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
                 .thenCompose(v -> processPoLineEncumbrances(compOrder, compOrderLine, lineFromStorage, requestContext))
@@ -316,7 +316,7 @@ public class PurchaseOrderLineHelper {
 
   private CompletableFuture<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage,
     RequestContext requestContext) {
-    return FolioVertxCompletableFuture.supplyBlockingAsync(requestContext.getContext(), () -> lineFromStorage.mapTo(PoLine.class))
+    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(lineFromStorage.mapTo(PoLine.class)))
       .thenCompose(poLine -> {
         if(isReleaseEncumbrances(compOrderLine, poLine)) {
           logger.info("Encumbrances releasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
@@ -571,7 +571,7 @@ public class PurchaseOrderLineHelper {
                   .thenCompose(id -> validateIsbnValues(compPOL, id, normalizedIsbnCache, requestContext)
                   .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
     }
-    return completedFuture(null);
+    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(null));
   }
 
   public CompletableFuture<Void> updatePoLines(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO, RequestContext requestContext) {
