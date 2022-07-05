@@ -44,31 +44,30 @@ public class ReOpenCompositeOrderManager {
 
   public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                                        RequestContext requestContext) {
+    addPoLinesIfNeeded(compPO, poFromStorage);
     return processEncumbrances(compPO, poFromStorage, requestContext)
-            .thenCompose(v -> updatePoLineStatuses(compPO, poFromStorage, requestContext));
+            .thenCompose(v -> updatePoLineStatuses(compPO, requestContext));
+  }
+
+  private void addPoLinesIfNeeded(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
+    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+      List<CompositePoLine> clonedLines = poFromStorage.getCompositePoLines()
+        .stream()
+        .map(line -> JsonObject.mapFrom(line).mapTo(CompositePoLine.class))
+        .collect(toList());
+      compPO.setCompositePoLines(clonedLines);
+    }
   }
 
   private CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                                                       RequestContext requestContext) {
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.CLOSED_TO_OPEN);
-    CompositePurchaseOrder clonedCompPO = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
-    if (CollectionUtils.isEmpty(clonedCompPO.getCompositePoLines())) {
-      List<CompositePoLine> clonedLines = poFromStorage.getCompositePoLines()
-        .stream()
-        .map(line -> JsonObject.mapFrom(line).mapTo(CompositePoLine.class))
-        .collect(toList());
-      clonedCompPO.setCompositePoLines(clonedLines);
-    }
-    return strategy.processEncumbrances(clonedCompPO, poFromStorage, requestContext);
+    return strategy.processEncumbrances(compPO, poFromStorage, requestContext);
   }
 
-  private CompletableFuture<Void> updatePoLineStatuses(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+  private CompletableFuture<Void> updatePoLineStatuses(CompositePurchaseOrder compPO, RequestContext requestContext) {
     return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(compPO.getOrderType()))
               .thenCompose(orderTypeP -> {
-                if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-                  CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
-                  compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
-                }
                 if (CompositePurchaseOrder.OrderType.ONE_TIME == compPO.getOrderType()) {
                   return oneTimeUpdatePoLineStatuses(compPO.getId(), compPO.getCompositePoLines(), requestContext);
                 } else if (CompositePurchaseOrder.OrderType.ONGOING == compPO.getOrderType()) {
