@@ -1,0 +1,14 @@
+{
+  "holdingsRecordsSources": [
+    {
+      "id": "f32d531e-df79-46b3-8932-cdd35f7a2264",
+      "name": "FOLIO",
+      "source": "folio",
+      "metadata": {
+        "createdDate": "2022-06-24T01:51:28.598+00:00",
+        "updatedDate": "2022-06-24T01:51:28.598+00:00"
+      }
+    }
+  ],
+  "totalRecords": 1
+}

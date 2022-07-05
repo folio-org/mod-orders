@@ -44,6 +44,7 @@ public enum ErrorCodes {
   MISSING_INSTANCE_STATUS("missingInstanceStatus", "Instance-status is a required field for creating an Instance in Inventory"),
   MISSING_CONTRIBUTOR_NAME_TYPE("missingContributorNameType", "The specified contributor-name-types were not found in inventory-storage"),
   MISSING_LOAN_TYPE("missingLoanType", "Loan-type is a required field for creating an Item in Inventory"),
+  MISSING_HOLDINGS_SOURCE_ID("missingHoldingsSourceId", "Holdings source id were not found in inventory-storage"),
   ENCUMBRANCE_CREATION_FAILURE("encumbranceCreationFailure", "One or more encumbrance record(s) failed to be created"),
   PROHIBITED_FIELD_CHANGING("protectedFieldChanging","Protected fields can't be modified"),
   ORDER_UNITS_NOT_FOUND("orderAcqUnitsNotFound", "Acquisitions units assigned to order cannot be found"),
