@@ -1,6 +1,7 @@
 ## 12.5.0 - Unreleased
 
 ## 12.4.0 Morning Glory R2 2022 - Released
+This release focused on implementing edit instance connection logic of POL, updating POL when an order is closed with the "Cancelled" reason, defining new Business API for updating Instance Reference for Non-package order line, removing Renewal date and renewal interval requirement for opening order
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.3.0...v12.4.0)
 
