@@ -1,4 +1,38 @@
-## 12.4.0 - Unreleased
+## 12.5.0 - Unreleased
+
+## 12.4.0 Morning Glory R2 2022 - Released
+This release focused on implementing edit instance connection logic of POL, updating POL when an order is closed with the "Cancelled" reason, defining new Business API for updating Instance Reference for Non-package order line, removing Renewal date and renewal interval requirement for opening order
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.3.0...v12.4.0)
+
+### Stories
+* [MODORDERS-725](https://issues.folio.org/browse/MODORDERS-725) - Temporary workaround for issue with x-okapi-tenant header
+* [MODORDERS-710](https://issues.folio.org/browse/MODORDERS-710) - mod-orders: Upgrade RAML Module Builder
+* [MODORDERS-706](https://issues.folio.org/browse/MODORDERS-706) - Create encumbrances if needed when reopening an order
+* [MODORDERS-685](https://issues.folio.org/browse/MODORDERS-685) - Implement edit instance connection logic of POL - create inventory set to Instance or none
+* [MODORDERS-684](https://issues.folio.org/browse/MODORDERS-684) - Implement edit instance connection logic of POL - create inventory set to Instance, holding or Instance, holding, item
+* [MODORDERS-683](https://issues.folio.org/browse/MODORDERS-683) - Define new Business API for updating Instance Reference for Non-package order line
+* [MODORDERS-682](https://issues.folio.org/browse/MODORDERS-682) - Remove Renewal date and renewal interval requirement for opening order
+* [MODORDERS-664](https://issues.folio.org/browse/MODORDERS-664) - Release encumbrances when POL payment status is set to canceled and update POL statuses
+* [MODORDERS-663](https://issues.folio.org/browse/MODORDERS-664) - Update PO workflow status based on cancelation of POLs.
+* [MODORDERS-662](https://issues.folio.org/browse/MODORDERS-662) - Fix randomly failing tests
+* [MODORDERS-660](https://issues.folio.org/browse/MODORDERS-660) - Improve validation to preventing creation order lines with wrong expense classes
+* [MODORDERS-636](https://issues.folio.org/browse/MODORDERS-636) - Update po lines when an order is closed with the "Cancelled" reason
+
+### Bug Fixes
+* [MODORDERS-727](https://issues.folio.org/browse/MODORDERS-727) - Create encumbrances if needed when reopening an order
+* [MODORDERS-722](https://issues.folio.org/browse/MODORDERS-722) - Holdings source gets updated to MARC during importing from bib - happens when holdings was created by Order app (Morning Glory)
+* [MODORDERS-716](https://issues.folio.org/browse/MODORDERS-716) - Failing change instance connection from POL when Create inventory is "None"
+* [MODORDERS-715](https://issues.folio.org/browse/MODORDERS-715) - Resolve issue with failing test
+* [MODORDERS-712](https://issues.folio.org/browse/MODORDERS-712) - Encumbrances are created for closed orders during FYRO
+* [MODORDERS-700](https://issues.folio.org/browse/MODORDERS-700) - Receive 'protected fields can’t be modified' error for eresource fields on PO line that is a Physical Resource
+* [MODORDERS-699](https://issues.folio.org/browse/MODORDERS-699) - Encumbrances are not deleted after deleting Cancelled order
+* [MODORDERS-697](https://issues.folio.org/browse/MODORDERS-697) - Instructions to vendor field in POL cannot be changed to blank after text has been added and saved
+* [MODORDERS-694](https://issues.folio.org/browse/MODORDERS-694) - PendingToOpenEncumbranceStrategy is not thread-safe
+* [MODORDERS-691](https://issues.folio.org/browse/MODORDERS-691) - Opening an Ongoing order changes resolved POL statuses
+* [MODORDERS-681](https://issues.folio.org/browse/MODORDERS-681) - Errors when creating pieces in quick succession
+* [MODORDERS-673](https://issues.folio.org/browse/MODORDERS-673) - After edit Encumbrance detail not shown on POL fund distribution
+* [MODORDERS-658](https://issues.folio.org/browse/MODORDERS-658) - Protected fields can't be modified" on productIds field error when attempting to update unmodified order
 
 ## 12.3.0 - Released
 This release focused on adding support of EDI export and fixing po line processing 
