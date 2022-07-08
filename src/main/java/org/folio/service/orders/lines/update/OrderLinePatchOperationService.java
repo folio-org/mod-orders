@@ -55,13 +55,8 @@ public class OrderLinePatchOperationService {
   }
 
   public CompletableFuture<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
-    return patchOrderLine(request, lineId, requestContext).thenCompose(v -> {
-      if(request.getOperation() == PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF) {
-        return updateInventoryInstanceInformation(request, lineId, requestContext);
-      } else {
-        return null;
-      }
-    });
+    return patchOrderLine(request, lineId, requestContext)
+      .thenCompose(v -> updateInventoryInstanceInformation(request, lineId, requestContext));
   }
 
   private CompletableFuture<Void> patchOrderLine(PatchOrderLineRequest request,

@@ -880,7 +880,7 @@ public class MockServer {
     try {
       JsonObject instance;
       if (ctx.request().getParam("query").contains("ocn956625961")) {
-        instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
+        instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instances.json"));
       } else {
         instance = new JsonObject().put("instances", new JsonArray());
       }
