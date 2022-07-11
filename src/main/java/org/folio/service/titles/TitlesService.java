@@ -3,9 +3,10 @@ package org.folio.service.titles;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 
 import java.util.List;
@@ -22,11 +23,8 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.jaxrs.model.TitleCollection;
+import org.folio.rest.jaxrs.model.*;
+import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import one.util.streamex.StreamEx;
@@ -39,9 +37,13 @@ public class TitlesService {
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final RestClient restClient;
 
-  public TitlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService) {
+  private final AcquisitionsUnitsService acquisitionsUnitsService;
+
+  public TitlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService,
+                       AcquisitionsUnitsService acquisitionsUnitsService) {
     this.restClient = restClient;
     this.purchaseOrderLineService = purchaseOrderLineService;
+    this.acquisitionsUnitsService = acquisitionsUnitsService;
   }
 
   public CompletableFuture<Title> createTitle(Title title, RequestContext requestContext) {
@@ -60,8 +62,18 @@ public class TitlesService {
   }
 
   public CompletableFuture<TitleCollection> getTitles(int limit, int offset, String query, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
-    return restClient.get(requestEntry, requestContext, TitleCollection.class);
+    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords("purchaseOrder.", requestContext)
+      .thenCompose(acqUnitsCqlExpr -> {
+        String resultQuery = acqUnitsCqlExpr;
+        if (!isEmpty(query)) {
+          resultQuery = combineCqlExpressions("and", acqUnitsCqlExpr, query);
+        }
+        RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(resultQuery)
+          .withOffset(offset)
+          .withLimit(limit);
+        return restClient.get(requestEntry, requestContext, TitleCollection.class);
+      });
+
   }
 
   public CompletableFuture<Title> getTitleById(String titleId, RequestContext requestContext) {
