@@ -368,8 +368,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  TitlesService titlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService) {
-    return new TitlesService(restClient, purchaseOrderLineService);
+  TitlesService titlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService,
+      AcquisitionsUnitsService acquisitionsUnitsService) {
+    return new TitlesService(restClient, purchaseOrderLineService, acquisitionsUnitsService);
   }
 
   @Bean

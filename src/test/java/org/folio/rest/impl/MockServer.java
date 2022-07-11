@@ -1761,7 +1761,7 @@ public class MockServer {
       try {
 
         List<String> ids = Collections.emptyList();
-        if (query.startsWith("poLineId==")) {
+        if (query.contains("poLineId==")) {
           ids = extractValuesFromQuery("poLineId", query);
         }
 
