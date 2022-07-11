@@ -2,9 +2,7 @@ package org.folio.rest.impl.protection;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConfig.*;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.encodePrettily;
@@ -29,6 +27,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
@@ -76,35 +75,35 @@ public class LinesProtectionTest extends ProtectedEntityTestBase {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {
-    "CREATE",
-    "READ",
-    "UPDATE",
-    "DELETE"
+  @CsvSource({
+    "CREATE,1,0",
+    "UPDATE,1,0",
+    "DELETE,1,0",
+    "READ,2,1"
   })
-  void testOperationWithAllowedUnits(ProtectedOperations operation) {
+  void testOperationWithAllowedUnits(ProtectedOperations operation, int numOfUnitRqs, int numOfMembershipRqs) {
     logger.info("=== Test corresponding order has units allowed operation - expecting of call only to Units API ===");
 
     final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID);
     operation.process(LINES_PATH, encodePrettily(preparePoLine(NOT_PROTECTED_UNITS, PENDING)), headers, operation.getContentType(), operation.getCode());
 
-    validateNumberOfRequests(1, 0);
+    validateNumberOfRequests(numOfUnitRqs, numOfMembershipRqs );
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {
-    "CREATE",
-    "UPDATE",
-    "DELETE",
-    "READ"
+  @CsvSource({
+    "CREATE,1,0",
+    "UPDATE,1,0",
+    "DELETE,1,0",
+    "READ,2,1"
   })
-  void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation) {
+  void testWithRestrictedUnitsAndAllowedUser(ProtectedOperations operation, int numOfUnitRqs) {
     logger.info("=== Test corresponding order has units, units protect operation, user is member of order's units - expecting of calls to Units, Memberships APIs and allowance of operation ===");
 
     operation.process(LINES_PATH, encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER), operation.getContentType(), operation.getCode());
 
-    validateNumberOfRequests(1, 1);
+    validateNumberOfRequests(numOfUnitRqs, numOfUnitRqs);
   }
 
   @ParameterizedTest

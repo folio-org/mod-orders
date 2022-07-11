@@ -700,7 +700,11 @@
           "methods": ["GET"],
           "pathPattern": "/orders/titles",
           "permissionsRequired": ["orders.titles.collection.get"],
-          "modulePermissions": ["orders-storage.titles.collection.get"]
+          "modulePermissions": [
+            "orders-storage.titles.collection.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
+          ]
         },
         {
           "methods": ["POST"],
