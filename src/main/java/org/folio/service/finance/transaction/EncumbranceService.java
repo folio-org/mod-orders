@@ -1,5 +1,28 @@
 package org.folio.service.finance.transaction;
 
+import static java.util.Objects.requireNonNullElse;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.rest.core.exceptions.ErrorCodes.ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.rest.core.exceptions.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+
+import javax.money.MonetaryAmount;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -7,11 +30,11 @@ import org.folio.HttpStatus;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -24,32 +47,11 @@ import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.javamoney.moneta.function.MonetaryOperators;
 
-import javax.money.MonetaryAmount;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-
-import static java.util.Objects.requireNonNullElse;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.toList;
-import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
-import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.rest.core.exceptions.ErrorCodes.ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES;
-import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
-import static org.folio.rest.core.exceptions.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-
 public class EncumbranceService {
 
   private static final String ENCUMBRANCE_CRITERIA = "transactionType==Encumbrance";
   public static final String AND = " and ";
+  public static final String OR = " or ";
   public static final String FUND_CODE = "fundCode";
   public static final String EXPENSE_CLASS_NAME = "expenseClassName";
   private static final Logger logger = LogManager.getLogger();
@@ -153,7 +155,7 @@ public class EncumbranceService {
     List<CompletableFuture<List<Transaction>>> futures =
       compPO.getCompositePoLines()
         .stream()
-        .map(poLine -> getPoLineEncumbrancesToUnrelease(poLine, mapFiscalYearWithCompPOLines, requestContext))
+        .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithCompPOLines, requestContext))
         .collect(toList());
     return collectResultsOnSuccess(futures)
       .thenApply(listOfLists -> listOfLists.stream().flatMap(List::stream).collect(toList()));
@@ -312,9 +314,9 @@ public class EncumbranceService {
       + AND + "fiscalYearId == " + fiscalYearId;
   }
 
-  private CompletableFuture<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePoLine poLine,
-                                                                                Map<String, List<CompositePoLine>> mapFiscalYearWithCompPOLines,
-                                                                                RequestContext requestContext) {
+  private CompletableFuture<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePurchaseOrder.OrderType orderType,
+                                            CompositePoLine poLine, Map<String, List<CompositePoLine>> mapFiscalYearWithCompPOLines,
+                                            RequestContext requestContext) {
     final String[] currentFiscalYearId = new String[1];
     for (Map.Entry<String, List<CompositePoLine>> entry : mapFiscalYearWithCompPOLines.entrySet()) {
       for (CompositePoLine pLine : entry.getValue()) {
@@ -330,13 +332,15 @@ public class EncumbranceService {
                                            .withValue(poLine.getPoLineNumber()));
       throw new HttpException(404, error.withParameters(parameters));
     }
-    return hasNotInvoiceLineWithReleaseEncumbrance(poLine, requestContext)
-      .thenCompose(hasNotInvoiceLineWithReleaseEncumbrance -> {
-        if (hasNotInvoiceLineWithReleaseEncumbrance)
+    if (orderType == CompositePurchaseOrder.OrderType.ONE_TIME) {
+      return hasNotInvoiceLineWithReleaseEncumbrance(poLine, requestContext).thenCompose(hasNotInvoiceLineWithReleaseEncumbrance -> {
+        if (hasNotInvoiceLineWithReleaseEncumbrance) {
           return completedFuture(Collections.emptyList());
-        return transactionService.getTransactions(
-          buildReleasedEncumbranceByPoLineQuery(poLine.getId(), currentFiscalYearId[0]), requestContext);
+        }
+        return transactionService.getTransactions(buildReleasedEncumbranceByPoLineQuery(poLine.getId(), currentFiscalYearId[0]), requestContext);
       });
+    }
+    return transactionService.getTransactions(buildReleasedEncumbranceByPoLineQuery(poLine.getId(), currentFiscalYearId[0]), requestContext);
   }
 
   private CompletableFuture<Boolean> hasNotInvoiceLineWithReleaseEncumbrance(CompositePoLine poLine, RequestContext requestContext) {
@@ -364,5 +368,4 @@ public class EncumbranceService {
       throw new CompletionException(fail.getCause());
     }
   }
-
 }
