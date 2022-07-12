@@ -95,7 +95,7 @@ public class OrderLinePatchOperationService {
       .thenApply(poLine -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
         return restClient.getAsJsonObject(requestEntry, requestContext)
-          .thenApply(instanceRecord -> updatePoLineInstanceRecordInfo(instanceRecord, poLine))
+          .thenApply(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine))
           .thenCompose(updatedPoLine -> purchaseOrderLineService.saveOrderLine(updatedPoLine, requestContext))
           .thenAccept(v -> future.complete(null))
           .exceptionally(t -> {
@@ -121,7 +121,7 @@ public class OrderLinePatchOperationService {
     return CompletableFuture.completedFuture(null);
   }
 
-  private PoLine updatePoLineInstanceRecordInfo(JsonObject lookupObj, PoLine poLine) {
+  private PoLine updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine) {
     Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_PUBLICATION)).orElse(new JsonArray())
       .stream()
       .map(JsonObject.class::cast)
