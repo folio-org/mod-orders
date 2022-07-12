@@ -565,6 +565,32 @@ public class InventoryManagerTest {
   }
 
   @Test
+  void shouldRetrieveItemIfHoldingIdAndOrderLineProvided() throws ExecutionException, InterruptedException {
+    String itemId = UUID.randomUUID().toString();
+    String poLineId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String holdingsRecordId = UUID.randomUUID().toString();
+
+    JsonObject item = new JsonObject();
+    item.put(ID, itemId);
+
+    JsonObject holdingsRecJson = new JsonObject();
+    holdingsRecJson.put(ID, holdingId);
+    holdingsRecJson.put(InventoryManager.ITEM_HOLDINGS_RECORD_ID, holdingsRecordId);
+    holdingsRecJson.put(InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId);
+
+    JsonObject holdingsRecJsonColl = new JsonObject();
+    holdingsRecJsonColl.put(HOLDINGS_RECORDS, new JsonArray().add(holdingsRecJson));
+    holdingsRecJsonColl.put(ITEMS, new JsonArray().add(item));
+
+    doReturn(completedFuture(holdingsRecJsonColl)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    List<JsonObject> items = inventoryManager.getItemsByHoldingIdAndOrderLineId(holdingsRecordId, poLineId, requestContext).get();
+
+    assertThat(1, equalTo(items.size()));
+    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+  }
+
+  @Test
   void shouldRetrieveItemIfHoldingIdProvidedAndHoldingFoundAndNotSkipNotFound() {
     String holdingId = UUID.randomUUID().toString();
     JsonObject holding = new JsonObject();
