@@ -888,6 +888,11 @@ public class InventoryManager {
       });
   }
 
+  public CompletableFuture<List<JsonObject>> getItemsByHoldingIdAndOrderLineId(String holdingId, String purchaseOrderLineId, RequestContext requestContext) {
+    String query = String.format("holdingsRecordId==%s and purchaseOrderLineIdentifier==%s", holdingId, purchaseOrderLineId);
+    return getItemRecordsByQuery(query, requestContext);
+  }
+
   /**
    * Return id of created  Item
    */

@@ -86,7 +86,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                 holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
                 CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine());
                 if (PoLineCommonUtil.isItemsUpdateRequired(compositePoLine)) {
-                  return updateItemsHolding(holdingId, newHoldingId, requestContext);
+                  return updateItemsHolding(holdingId, newHoldingId, compositePoLine.getId(), requestContext);
                 } else {
                   return CompletableFuture.completedFuture(null);
                 }
@@ -111,7 +111,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                 holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
                 CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine());
                 if (PoLineCommonUtil.isItemsUpdateRequired(compositePoLine)) {
-                  return updateItemsHolding(holdingId, newHoldingId, requestContext);
+                  return updateItemsHolding(holdingId, newHoldingId, compositePoLine.getId(), requestContext);
                 } else {
                   return CompletableFuture.completedFuture(null);
                 }
@@ -123,8 +123,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
   }
 
-  private CompletableFuture<Void> updateItemsHolding(String holdingId, String newHoldingId, RequestContext requestContext) {
-    return inventoryManager.getItemsByHoldingId(holdingId, requestContext)
+  private CompletableFuture<Void> updateItemsHolding(String holdingId, String newHoldingId, String poLineId, RequestContext requestContext) {
+    return inventoryManager.getItemsByHoldingIdAndOrderLineId(holdingId, poLineId, requestContext)
         .thenApply(items -> updateItemHoldingId(items, newHoldingId))
         .thenCompose(items -> updateItemsInInventory(items, requestContext));
   }
