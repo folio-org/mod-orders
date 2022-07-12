@@ -1,10 +1,9 @@
 package org.folio.service.orders.lines.update;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.assertj.core.util.IterableUtil;
-import org.assertj.core.util.Lists;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.RestClient;
@@ -18,6 +17,7 @@ import org.folio.service.orders.PurchaseOrderLineService;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -122,40 +122,39 @@ public class OrderLinePatchOperationService {
   }
 
   private PoLine updatePoLineInstanceRecordInfo(JsonObject lookupObj, PoLine poLine) {
+    Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_PUBLICATION)).orElse(new JsonArray())
+      .stream()
+      .map(JsonObject.class::cast)
+      .findFirst()
+      .ifPresentOrElse(publication -> {
+        poLine.setPublisher(publication.getString(INSTANCE_PUBLISHER));
+        poLine.setPublicationDate(publication.getString(INSTANCE_DATE_OF_PUBLICATION));
+      }, () -> {
+        poLine.setPublisher(null);
+        poLine.setPublicationDate(null);
+      });
+
+    List<Contributor> contributors = Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_CONTRIBUTORS))
+      .orElse(new JsonArray())
+      .stream()
+      .map(JsonObject.class::cast)
+      .map(jsonObject -> new Contributor()
+        .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
+        .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
+      .collect(Collectors.toList());
+
+    List<ProductId> productIds = Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_IDENTIFIERS))
+      .orElse(new JsonArray())
+      .stream()
+      .map(JsonObject.class::cast)
+      .map(jsonObject -> new ProductId()
+        .withProductId(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_VALUE))
+        .withProductIdType(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_ID)))
+      .collect(Collectors.toList());
+
     poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
-
-    if(!IterableUtil.isNullOrEmpty(lookupObj.getJsonArray(INSTANCE_PUBLICATION))) {
-      JsonObject publications = lookupObj.getJsonArray(INSTANCE_PUBLICATION).getJsonObject(0);
-      poLine.setPublisher(publications.getString(INSTANCE_PUBLISHER));
-      poLine.setPublicationDate(publications.getString(INSTANCE_DATE_OF_PUBLICATION));
-    } else {
-      poLine.setPublisher(null);
-      poLine.setPublicationDate(null);
-    }
-
-    if(!IterableUtil.isNullOrEmpty(lookupObj.getJsonArray(INSTANCE_CONTRIBUTORS))) {
-      List<Contributor> contributors = lookupObj.getJsonArray(INSTANCE_CONTRIBUTORS).stream()
-        .map(JsonObject.class::cast)
-        .map(jsonObject -> new Contributor()
-          .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
-          .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
-        .collect(Collectors.toList());
-      poLine.setContributors(contributors);
-    } else {
-      poLine.setContributors(Lists.emptyList());
-    }
-
-    if(!IterableUtil.isNullOrEmpty(lookupObj.getJsonArray(INSTANCE_IDENTIFIERS))) {
-      List<ProductId> productIds = lookupObj.getJsonArray(INSTANCE_IDENTIFIERS).stream()
-        .map(JsonObject.class::cast)
-        .map(jsonObject -> new ProductId()
-          .withProductId(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_VALUE))
-          .withProductIdType(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_ID)))
-        .collect(Collectors.toList());
-      poLine.getDetails().setProductIds(productIds);
-    } else {
-      poLine.getDetails().setProductIds(Lists.emptyList());
-    }
+    poLine.setContributors(contributors);
+    poLine.getDetails().setProductIds(productIds);
 
     return poLine;
   }
