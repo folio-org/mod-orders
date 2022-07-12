@@ -2,6 +2,8 @@ package org.folio.service.orders.lines.update;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
@@ -122,17 +124,12 @@ public class OrderLinePatchOperationService {
   }
 
   private PoLine updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine) {
-    Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_PUBLICATION)).orElse(new JsonArray())
+    Pair<String, String> instancePublication = Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_PUBLICATION)).orElse(new JsonArray())
       .stream()
       .map(JsonObject.class::cast)
       .findFirst()
-      .ifPresentOrElse(publication -> {
-        poLine.setPublisher(publication.getString(INSTANCE_PUBLISHER));
-        poLine.setPublicationDate(publication.getString(INSTANCE_DATE_OF_PUBLICATION));
-      }, () -> {
-        poLine.setPublisher(null);
-        poLine.setPublicationDate(null);
-      });
+      .map(publication -> Pair.of(publication.getString(INSTANCE_PUBLISHER), publication.getString(INSTANCE_DATE_OF_PUBLICATION)))
+      .orElse(new MutablePair<>());
 
     List<Contributor> contributors = Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_CONTRIBUTORS))
       .orElse(new JsonArray())
@@ -153,6 +150,8 @@ public class OrderLinePatchOperationService {
       .collect(Collectors.toList());
 
     poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
+    poLine.setPublisher(instancePublication.getLeft());
+    poLine.setPublicationDate(instancePublication.getRight());
     poLine.setContributors(contributors);
     poLine.getDetails().setProductIds(productIds);
 
