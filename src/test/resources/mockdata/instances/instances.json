@@ -1,0 +1,88 @@
+{
+  "instances": [
+    {
+      "@context": "http://localhost:9130/inventory/instances/context",
+      "id": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
+      "_version": 3,
+      "hrid": "in000005",
+      "source": "MARC",
+      "title": "Bridget Jones's Baby: the diaries",
+      "alternativeTitles": [],
+      "editions": [
+        "First American Edition"
+      ],
+      "series": [],
+      "identifiers": [
+        {
+          "identifierTypeId": "5d164f4b-0b15-4e42-ae75-cfcf85318ad9",
+          "value": "ocn956625961"
+        }
+      ],
+      "contributors": [
+        {
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a",
+          "name": "Fielding, Helen",
+          "contributorTypeId": null,
+          "contributorTypeText": null
+        }
+      ],
+      "subjects": [
+        "Jones, Bridget",
+        "Pregnant women",
+        "England",
+        "Humorous fiction",
+        "Diary fiction"
+      ],
+      "classifications": [
+        {
+          "classificationNumber": "PR6056.I4588",
+          "classificationTypeId": "ce176ace-a53e-4b4d-aa89-725ed7b2edac"
+        }
+      ],
+      "publication": [
+        {
+          "publisher": "Alfred A. Knopf",
+          "place": "New York",
+          "dateOfPublication": "2016",
+          "role": null
+        }
+      ],
+      "publicationFrequency": [
+        "A frequency description"
+      ],
+      "publicationRange": [
+        "A publication range"
+      ],
+      "electronicAccess": [
+        {
+          "uri": "http://www.folio.org/",
+          "linkText": "Electronic resource (audio streaming)",
+          "materialsSpecification": "Novel",
+          "publicNote": "Access to audio file",
+          "relationshipId": null
+        }
+      ],
+      "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+      "instanceFormatIds": [],
+      "physicalDescriptions": [
+        "219 pages ; 20 cm."
+      ],
+      "languages": [
+        "eng"
+      ],
+      "previouslyHeld": true,
+      "staffSuppress": true,
+      "discoverySuppress": true,
+      "statisticalCodeIds": [],
+      "metadata": {
+        "createdDate": "2018-12-20T06:24:36.654+0000",
+        "createdByUserId": "b245d382-d91f-5d2d-a352-de48a4648ea9",
+        "updatedDate": "2018-12-20T06:24:36.654+0000",
+        "updatedByUserId": "b245d382-d91f-5d2d-a352-de48a4648ea9"
+      },
+      "links": {
+        "self": "http://localhost:9130/inventory/instances/7fbd5d84-62d1-44c6-9c45-6cb173998bbd"
+      }
+    }
+  ]
+}
