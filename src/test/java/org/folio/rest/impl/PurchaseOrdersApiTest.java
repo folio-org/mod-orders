@@ -282,6 +282,9 @@ public class PurchaseOrdersApiTest {
   static final String VENDOR_WITH_BAD_CONTENT = "5a34ae0e-5a11-4337-be95-1a20cfdc3161";
   static final String ORGANIZATION_NOT_VENDOR = "52a7669b-0e6d-4513-92be-14086c7d10e6";
   private static final String EXISTING_REQUIRED_VENDOR_UUID = "168f8a86-d26c-406e-813f-c7527f241ac3";
+  private static final String FULLY_RECEIVED_POL_UUID = "1b02d557-c7c5-418b-a61a-077f804b630b";
+  private static final String AWAITING_RECEIPT_POL_UUID = "d3fb56ac-918e-4d5f-b84d-ce121f9f8a21";
+  private static final String EMPTY_RECEIPT_POL_UUID = "e92ef562-c77d-4306-8089-2607eff9b921";
 
   static final String ID_FOR_PRINT_MONOGRAPH_ORDER = "00000000-1111-2222-8888-999999999999";
   private static final String PO_ID_FOR_FAILURE_CASE = "bad500aa-aaaa-500a-aaaa-aaaaaaaaaaaa";
@@ -3485,18 +3488,17 @@ public class PurchaseOrdersApiTest {
     reqData.remove("compositePoLines");
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getString("id")), JsonObject.mapFrom(reqData), "", 204);
-    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(),
-      is(PurchaseOrder.WorkflowStatus.CLOSED));
+    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.CLOSED));
     List<JsonObject> polUpdates = MockServer.getPoLineUpdates();
     assertNotNull(polUpdates);
     // check the payment and receipt status of the last 3 updated polines
-    JsonObject line1 = polUpdates.get(polUpdates.size() - 3);
+    JsonObject line1 = polUpdates.stream().filter(pol -> EMPTY_RECEIPT_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().get();
     assertEquals(ReceiptStatus.CANCELLED.value(), line1.getString(RECEIPT_STATUS));
     assertEquals(PaymentStatus.CANCELLED.value(), line1.getString(PAYMENT_STATUS));
-    JsonObject line2 = polUpdates.get(polUpdates.size() - 2);
+    JsonObject line2 = polUpdates.stream().filter(pol -> AWAITING_RECEIPT_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().get();
     assertEquals(ReceiptStatus.CANCELLED.value(), line2.getString(RECEIPT_STATUS));
     assertEquals(PaymentStatus.PAYMENT_NOT_REQUIRED.value(), line2.getString(PAYMENT_STATUS));
-    JsonObject line3 = polUpdates.get(polUpdates.size() - 1);
+    JsonObject line3 = polUpdates.stream().filter(pol -> FULLY_RECEIVED_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().get();
     assertEquals(ReceiptStatus.FULLY_RECEIVED.value(), line3.getString(RECEIPT_STATUS));
     assertEquals(PaymentStatus.CANCELLED.value(), line3.getString(PAYMENT_STATUS));
   }
