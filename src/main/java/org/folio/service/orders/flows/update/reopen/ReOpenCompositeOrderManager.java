@@ -94,24 +94,35 @@ public class ReOpenCompositeOrderManager {
   private CompletableFuture<Void> oneTimeUpdatePoLineStatuses(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
     return buildHolder(orderId, poLines, requestContext)
             .thenAccept(holder -> {
-              var poLineInvoicesMap = getInvoicesByPoLineId(holder.getOrderInvoices(), holder.getOrderLineInvoiceLines());
               poLines.forEach(poLine -> {
                 updatePoLineReceiptStatus(poLine, holder);
-                updatePoLinePaymentStatus(poLine, poLineInvoicesMap);
+                updatePoLinePaymentStatus(poLine, holder);
                });
             });
   }
 
-  private void updatePoLinePaymentStatus(CompositePoLine poLine, Map<String, List<Invoice>> poLineInvoicesMap) {
+  private void updatePoLinePaymentStatus(CompositePoLine poLine, ReOpenCompositeOrderHolder holder) {
+    var poLineInvoicesMap = getInvoicesByPoLineId(holder.getOrderInvoices(), holder.getOrderLineInvoiceLines());
+    var poLineInvoiceLinesMap = holder.getOrderLineInvoiceLines().stream().collect(groupingBy(InvoiceLine::getPoLineId));
+
     List<Invoice> poLineInvoices = poLineInvoicesMap.get(poLine.getId());
-    if (CollectionUtils.isNotEmpty(poLineInvoices) && isAnyInvoicesHasTransactions(poLineInvoices)) {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PARTIALLY_PAID);
+    if (CollectionUtils.isNotEmpty(poLineInvoices) && isAnyInvoicesApprovedOrPaid(poLineInvoices)) {
+      var invoiceLines = poLineInvoiceLinesMap.get(poLine.getId());
+      if (isAnyInvoiceLineReleaseEncumbrance(invoiceLines)) {
+        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+      } else {
+        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PARTIALLY_PAID);
+      }
     } else {
       poLine.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
     }
   }
 
-  private boolean isAnyInvoicesHasTransactions(List<Invoice> poLineInvoices) {
+  private boolean isAnyInvoiceLineReleaseEncumbrance(List<InvoiceLine> invoiceLines) {
+    return invoiceLines.stream().anyMatch(InvoiceLine::getReleaseEncumbrance);
+  }
+
+  private boolean isAnyInvoicesApprovedOrPaid(List<Invoice> poLineInvoices) {
     return poLineInvoices.stream().anyMatch(invoice -> Invoice.Status.APPROVED.equals(invoice.getStatus()) ||
                                                             Invoice.Status.PAID.equals(invoice.getStatus()));
   }
