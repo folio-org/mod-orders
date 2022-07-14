@@ -138,6 +138,7 @@ public class InventoryManager {
   public static final String HOLDINGS_RECORDS = "holdingsRecords";
   public static final String HOLDINGS_RECORDS_BY_ID_ENDPOINT = "holdingsRecordsById";
   public static final String INSTANCES = "instances";
+  public static final String INSTANCE_RECORDS_BY_ID_ENDPOINT = "instanceRecordsById";
 
   private static final String TENANT_SPECIFIC_KEY_FORMAT = "%s.%s.%s";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
@@ -172,7 +173,8 @@ public class InventoryManager {
       entry(ITEMS, "/inventory/items"),
       entry(ITEM_BY_ID_ENDPOINT, "/inventory/items/{id}"),
       entry(REQUESTS, "/circulation/requests"),
-      entry(HOLDINGS_SOURCES, "/holdings-sources?query=name==%s")
+      entry(HOLDINGS_SOURCES, "/holdings-sources?query=name==%s"),
+      entry(INSTANCE_RECORDS_BY_ID_ENDPOINT, "/inventory/instances/{id}")
     );
   }
 

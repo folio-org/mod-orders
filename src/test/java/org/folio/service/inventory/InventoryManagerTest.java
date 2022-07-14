@@ -116,7 +116,7 @@ public class InventoryManagerTest {
   public static final String HOLDING_INSTANCE_ID_2_HOLDING = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d48";
   private static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
-  private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instance.json";
+  private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instances.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
   private static final JsonObject HOLDINGS_SOURCE_ID_RESPONSE = new JsonObject()
