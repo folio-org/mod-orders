@@ -935,14 +935,12 @@ public class PurchaseOrderLineHelper {
   }
 
   private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
-    FolioVertxCompletableFuture.supplyBlockingAsync(requestContext.getContext(), () -> lineFromStorage.mapTo(PoLine.class))
-      .thenAccept(poLine -> {
-        // See MODORDERS-218
-        if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
+    PoLine poLine =  lineFromStorage.mapTo(PoLine.class);
+   // See MODORDERS-218
+    if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
           || !StringUtils.equals(poLine.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value())) {
-          HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, createUpdateOrderMessage(compOrderLine), requestContext);
-        }
-      });
+      HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, createUpdateOrderMessage(compOrderLine), requestContext);
+    }
   }
 
   private JsonObject createUpdateOrderMessage(CompositePoLine compOrderLine) {
