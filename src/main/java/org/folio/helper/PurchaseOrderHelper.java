@@ -698,8 +698,7 @@ public class PurchaseOrderHelper {
     List<String> updatedAcqUnitIds = updatedOrder.getAcqUnitIds();
     List<String> currentAcqUnitIds = poFromStorage.getAcqUnitIds();
 
-    return FolioVertxCompletableFuture.runAsync(requestContext.getContext(),
-                              () -> verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds, requestContext))
+    return verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds, requestContext)
       // Check that all newly assigned units are active/exist
       .thenCompose(ok -> protectionService.verifyIfUnitsAreActive(ListUtils.subtract(updatedAcqUnitIds, currentAcqUnitIds), requestContext))
       .thenApply(ok -> getInvolvedOperations(updatedOrder, poFromStorage))
@@ -715,13 +714,14 @@ public class PurchaseOrderHelper {
    * @param newAcqUnitIds acquisitions units assigned to purchase order from request
    * @param currentAcqUnitIds acquisitions units assigned to purchase order from storage
    */
-  private void verifyUserHasManagePermission(List<String> newAcqUnitIds, List<String> currentAcqUnitIds, RequestContext requestContext) {
+  private CompletableFuture<Void> verifyUserHasManagePermission(List<String> newAcqUnitIds, List<String> currentAcqUnitIds, RequestContext requestContext) {
     Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newAcqUnitIds));
     Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(currentAcqUnitIds));
 
     if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && isUserDoesNotHaveDesiredPermission(MANAGE, requestContext)){
-      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
+      return CompletableFuture.failedFuture(new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS));
     }
+    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(null));
   }
 
   private CompletionStage<Void> processPoLineTags(CompositePurchaseOrder compPO, RequestContext requestContext) {
