@@ -12,6 +12,8 @@ import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -200,16 +202,28 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         .withStoragePoLine(poLine)
         .withPathOrderLineRequest(patchOrderLineRequest);
 
+    List<JsonObject> items = holdingIds.stream().map(holdingId -> {
+      JsonObject item = new JsonObject().put(TestConstants.ID, UUID.randomUUID().toString());
+      item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
+      item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
+      return item;
+    }).collect(toList());
+
 
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager)
         .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(0)), eq(requestContext));
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager)
         .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(1)), eq(requestContext));
+    doReturn(completedFuture(List.of(items.get(0)))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(0)), eq(orderLineId), eq(requestContext));
+    doReturn(completedFuture(List.of(items.get(1)))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(1)), eq(orderLineId), eq(requestContext));
+    doReturn(completedFuture(null)).when(inventoryManager).updateItem(any(JsonObject.class), eq(requestContext));
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join();
 
     verify(inventoryManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(0), requestContext);
     verify(inventoryManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(1), requestContext);
+    verify(inventoryManager, times(2)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
+    verify(inventoryManager, times(2)).updateItem(any(JsonObject.class), any(RequestContext.class));
   }
 
   @Test
@@ -304,6 +318,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         .withStoragePoLine(poLine)
         .withPathOrderLineRequest(patchOrderLineRequest);
 
+    List<JsonObject> items = holdingIds.stream().map(holdingId -> {
+      JsonObject item = new JsonObject().put(TestConstants.ID, UUID.randomUUID().toString());
+      item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
+      item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
+      return item;
+    }).collect(toList());
+
 
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager)
         .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(0)), eq(requestContext));
@@ -313,6 +334,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(eq(holdingIds.get(1)), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).deleteHoldingById(eq(holdingIds.get(0)), eq(true), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).deleteHoldingById(eq(holdingIds.get(0)), eq(true), eq(requestContext));
+    doReturn(completedFuture(List.of(items.get(0)))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(0)), eq(orderLineId), eq(requestContext));
+    doReturn(completedFuture(List.of(items.get(1)))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(1)), eq(orderLineId), eq(requestContext));
+    doReturn(completedFuture(null)).when(inventoryManager).updateItem(any(JsonObject.class), eq(requestContext));
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join();
 
@@ -320,6 +344,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     verify(inventoryManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(1), requestContext);
     verify(inventoryManager, times(1)).deleteHoldingById(eq(holdingIds.get(0)), eq(true), eq(requestContext));
     verify(inventoryManager, times(1)).deleteHoldingById(eq(holdingIds.get(1)), eq(true), eq(requestContext));
+    verify(inventoryManager, times(2)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
+    verify(inventoryManager, times(2)).updateItem(any(JsonObject.class), any(RequestContext.class));
   }
 
   @Test

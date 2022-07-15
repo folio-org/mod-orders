@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
@@ -85,7 +86,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
               .thenCompose(newHoldingId -> {
                 holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
                 CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine());
-                if (PoLineCommonUtil.isItemsUpdateRequired(compositePoLine)) {
+                if (ObjectUtils.notEqual(holdingId, newHoldingId)) {
                   return updateItemsHolding(holdingId, newHoldingId, compositePoLine.getId(), requestContext);
                 } else {
                   return CompletableFuture.completedFuture(null);
