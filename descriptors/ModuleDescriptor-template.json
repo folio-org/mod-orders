@@ -299,7 +299,8 @@
             "inventory.items.collection.get",
             "inventory.instances.item.get",
             "orders-storage.po-lines.item.patch",
-            "orders-storage.po-lines.item.get"
+            "orders-storage.po-lines.item.get",
+            "orders-storage.po-lines.item.put"
           ]
         }
       ]
