@@ -150,7 +150,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   public void putOrdersOrderLinesFundDistributionsValidate(ValidateFundDistributionsRequest request, Map<String, String> okapiHeaders,
                                                            Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     try {
-      FundDistributionUtils.validateFundDistributionTotal(request.getCost(), request.getFundDistribution());
+      FundDistributionUtils.validateFundDistributionForPoLine(request.getCost(), request.getFundDistribution());
       asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
     } catch (HttpException e) {
       handleErrorResponse(asyncResultHandler, e);

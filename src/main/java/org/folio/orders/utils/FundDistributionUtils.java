@@ -27,11 +27,11 @@ public final class FundDistributionUtils {
 
   public static void validateFundDistributionTotal(List<CompositePoLine> compositePoLines) {
     for (CompositePoLine cPoLine : compositePoLines) {
-      validateFundDistributionTotal(cPoLine.getCost(), cPoLine.getFundDistribution());
+      validateFundDistributionForPoLine(cPoLine.getCost(), cPoLine.getFundDistribution());
     }
   }
 
-  public static void validateFundDistributionTotal(Cost cost, List<FundDistribution> fundDistributions) {
+  public static void validateFundDistributionForPoLine(Cost cost, List<FundDistribution> fundDistributions) {
     if (cost.getPoLineEstimatedPrice() != null && CollectionUtils.isNotEmpty(fundDistributions)) {
       Double poLineEstimatedPrice = cost.getPoLineEstimatedPrice();
       if (poLineEstimatedPrice == 0d) {
