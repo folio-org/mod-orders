@@ -53,11 +53,7 @@ public final class FundDistributionUtils {
           remainingPercent = remainingPercent.subtract(percentageValue);
         }
       }
-      BigDecimal epsilon = BigDecimal.valueOf(1e-10);
-      if (remainingPercent.abs().compareTo(epsilon) > 0) {
-        throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL,
-          Lists.newArrayList(new Parameter().withKey(REMAINING_AMOUNT_FIELD).withValue(remainingPercent.toString())));
-      }
+      checkRemainingPercentMatchesToZero(remainingPercent);
     }
   }
 
@@ -71,15 +67,23 @@ public final class FundDistributionUtils {
           throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
       }
     } else {
-      double percentTotal = 0;
-      for (FundDistribution fd : fdList)
-        percentTotal += fd.getValue();
-      if (percentTotal != 100)
-        throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
+      BigDecimal remainingPercent = BigDecimal.valueOf(100);
+      for (FundDistribution fd : fdList) {
+        remainingPercent = remainingPercent.subtract(BigDecimal.valueOf(fd.getValue()));
+      }
+      checkRemainingPercentMatchesToZero(remainingPercent);
     }
   }
 
   public static boolean isFundDistributionsPresent(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
+  }
+
+  private static void checkRemainingPercentMatchesToZero(BigDecimal remainingPercent) {
+    BigDecimal epsilon = BigDecimal.valueOf(1e-10);
+    if (remainingPercent.abs().compareTo(epsilon) > 0) {
+      throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL,
+        Lists.newArrayList(new Parameter().withKey(REMAINING_AMOUNT_FIELD).withValue(remainingPercent.toString())));
+    }
   }
 }
