@@ -18,6 +18,7 @@ types:
   UUID:
     type: string
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+  validate_fund_distributions_request: !include acq-models/mod-orders/schemas/validate_fund_distributions_request.json
 
 traits:
   pageable: !include raml-util/traits/pageable.raml
@@ -82,3 +83,18 @@ resourceTypes:
           body:
             text/plain:
               example: "internal server error, contact administrator"
+  /fund-distributions/validate:
+    displayName: Validate fund distributions amount
+    put:
+      description: Validate is cost amount equals to sum of all fund distributions
+      body:
+        application/json:
+          type: validate_fund_distributions_request
+          example:
+            strict: false
+            value: !include acq-models/mod-orders/examples/validate_fund_distributions_request.sample
+      responses:
+        204:
+          description: "Validation passes"
+        422:
+          description: "Validation failed, error with description and codes provided"
