@@ -137,7 +137,7 @@
     },
     {
       "id": "order-lines",
-      "version": "3.1",
+      "version": "3.2",
       "handlers": [
         {
           "methods": [
@@ -301,6 +301,15 @@
             "orders-storage.po-lines.item.patch",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put"
+          ]
+        },
+        {
+          "methods": [
+            "PUT"
+          ],
+          "pathPattern": "/orders/order-lines/fund-distributions/validate",
+          "permissionsRequired": [
+            "orders.po-lines.fund-distributions.validate"
           ]
         }
       ]
@@ -1128,6 +1137,11 @@
       "description": "Partial modify an existing PO line"
     },
     {
+      "permissionName": "orders.po-lines.fund-distributions.validate",
+      "displayName": "Orders - validate fund distributions for a PO line",
+      "description": "Validate fund distributions for a PO line"
+    },
+    {
       "permissionName": "orders.po-number.item.get",
       "displayName": "Orders - generate a PO Number",
       "description": "Generate a PO Number"
@@ -1530,6 +1544,7 @@
         "orders.po-lines.item.put",
         "orders.po-lines.item.delete",
         "orders.po-lines.item.patch",
+        "orders.po-lines.fund-distributions.validate",
         "orders.po-number.item.get",
         "orders.po-number.item.post",
         "orders.receiving.collection.post",
