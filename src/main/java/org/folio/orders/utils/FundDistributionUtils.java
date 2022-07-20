@@ -21,6 +21,9 @@ public final class FundDistributionUtils {
 
   public static final String REMAINING_AMOUNT_FIELD = "remainingAmount";
 
+  private static final BigDecimal ZERO_REMAINING_AMOUNT = BigDecimal.ZERO.setScale(2, HALF_EVEN);
+  private static final BigDecimal ONE_HUNDRED_PERCENT = BigDecimal.valueOf(100);
+
   private FundDistributionUtils() {
 
   }
@@ -38,7 +41,7 @@ public final class FundDistributionUtils {
         validateZeroPrice(fundDistributions);
         return;
       }
-      BigDecimal remainingPercent = BigDecimal.valueOf(100);
+      BigDecimal remainingPercent = ONE_HUNDRED_PERCENT;
 
       for (FundDistribution fundDistribution : fundDistributions) {
 
@@ -53,7 +56,7 @@ public final class FundDistributionUtils {
           remainingPercent = remainingPercent.subtract(percentageValue);
         }
       }
-      checkRemainingPercentMatchesToZero(remainingPercent);
+      checkRemainingPercentMatchesToZero(remainingPercent, poLineEstimatedPrice);
     }
   }
 
@@ -64,14 +67,14 @@ public final class FundDistributionUtils {
     if (firstFdType == AMOUNT) {
       for (FundDistribution fd : fdList) {
         if (fd.getValue() != 0)
-          throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL);
+          throwExceptionWithIncorrectAmount(ZERO_REMAINING_AMOUNT);
       }
     } else {
-      BigDecimal remainingPercent = BigDecimal.valueOf(100);
+      BigDecimal remainingPercent = ONE_HUNDRED_PERCENT;
       for (FundDistribution fd : fdList) {
         remainingPercent = remainingPercent.subtract(BigDecimal.valueOf(fd.getValue()));
       }
-      checkRemainingPercentMatchesToZero(remainingPercent);
+      checkRemainingPercentMatchesToZero(remainingPercent, 0d);
     }
   }
 
@@ -79,11 +82,23 @@ public final class FundDistributionUtils {
     return compositePoLines.stream().mapToLong(compositePoLine -> compositePoLine.getFundDistribution().size()).sum() >= 1;
   }
 
-  private static void checkRemainingPercentMatchesToZero(BigDecimal remainingPercent) {
+  private static void checkRemainingPercentMatchesToZero(BigDecimal remainingPercent, Double poLineEstimatedPrice) {
     BigDecimal epsilon = BigDecimal.valueOf(1e-10);
     if (remainingPercent.abs().compareTo(epsilon) > 0) {
-      throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL,
-        Lists.newArrayList(new Parameter().withKey(REMAINING_AMOUNT_FIELD).withValue(remainingPercent.toString())));
+      throwExceptionWithIncorrectAmount(remainingPercent, poLineEstimatedPrice);
     }
+  }
+
+  private static void throwExceptionWithIncorrectAmount(BigDecimal remainingPercent, Double poLineEstimatedPrice) {
+    BigDecimal total = BigDecimal.valueOf(poLineEstimatedPrice);
+    BigDecimal remainingAmount = remainingPercent.multiply(total).divide(ONE_HUNDRED_PERCENT, 2, HALF_EVEN);
+
+    throwExceptionWithIncorrectAmount(remainingAmount);
+  }
+
+  private static void throwExceptionWithIncorrectAmount(BigDecimal remainingAmount) {
+    throw new HttpException(422, INCORRECT_FUND_DISTRIBUTION_TOTAL, Lists.newArrayList(new Parameter()
+      .withKey(REMAINING_AMOUNT_FIELD)
+      .withValue(remainingAmount.toString())));
   }
 }
