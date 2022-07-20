@@ -22,7 +22,7 @@ public final class FundDistributionUtils {
   public static final String REMAINING_AMOUNT_FIELD = "remainingAmount";
 
   private static final BigDecimal ZERO_REMAINING_AMOUNT = BigDecimal.ZERO.setScale(2, HALF_EVEN);
-  private static final BigDecimal ONE_HUNDRED_PERCENT_VALUE = BigDecimal.valueOf(100);
+  private static final BigDecimal ONE_HUNDRED_PERCENT = BigDecimal.valueOf(100);
 
   private FundDistributionUtils() {
 
@@ -41,7 +41,7 @@ public final class FundDistributionUtils {
         validateZeroPrice(fundDistributions);
         return;
       }
-      BigDecimal remainingPercent = ONE_HUNDRED_PERCENT_VALUE;
+      BigDecimal remainingPercent = ONE_HUNDRED_PERCENT;
 
       for (FundDistribution fundDistribution : fundDistributions) {
 
@@ -70,7 +70,7 @@ public final class FundDistributionUtils {
           throwExceptionWithIncorrectAmount(ZERO_REMAINING_AMOUNT);
       }
     } else {
-      BigDecimal remainingPercent = ONE_HUNDRED_PERCENT_VALUE;
+      BigDecimal remainingPercent = ONE_HUNDRED_PERCENT;
       for (FundDistribution fd : fdList) {
         remainingPercent = remainingPercent.subtract(BigDecimal.valueOf(fd.getValue()));
       }
@@ -91,7 +91,7 @@ public final class FundDistributionUtils {
 
   private static void throwExceptionWithIncorrectAmount(BigDecimal remainingPercent, Double poLineEstimatedPrice) {
     BigDecimal total = BigDecimal.valueOf(poLineEstimatedPrice);
-    BigDecimal remainingAmount = remainingPercent.multiply(total).divide(ONE_HUNDRED_PERCENT_VALUE, 2, HALF_EVEN);
+    BigDecimal remainingAmount = remainingPercent.multiply(total).divide(ONE_HUNDRED_PERCENT, 2, HALF_EVEN);
 
     throwExceptionWithIncorrectAmount(remainingAmount);
   }
