@@ -1,5 +1,6 @@
 package org.folio.orders.utils;
 
+import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
@@ -20,26 +21,28 @@ public class FundDistributionUtilsTest {
 
   @ParameterizedTest
   @CsvSource(value = {
-    "10:amount:10:::",
-    "20:amount:10:amount:10:",
-    "10:percentage:100:::",
-    "10:percentage:50:percentage:50:",
-    "9.99:percentage:50:percentage:50:",
-    "10:amount:5:percentage:50:",
-    "0:amount:0:::",
-    "0:amount:0:amount:0:",
-    "0:percentage:100:::",
-    "0:percentage:50:percentage:50:",
-    "10:amount:10:amount:10:incorrectFundDistributionTotal",
-    "10:percentage:20:percentage:50:incorrectFundDistributionTotal",
-    "10:amount:5:percentage:60:incorrectFundDistributionTotal",
-    "0:amount:0:percentage:100:cannotMixTypesForZeroPrice",
-    "0:percentage:0:amount:0:cannotMixTypesForZeroPrice",
-    "0:amount:10:amount:10:incorrectFundDistributionTotal",
-    "0:percentage:10:percentage:10:incorrectFundDistributionTotal"
+    "90:percentage:93:percentage:3:incorrectFundDistributionTotal:3.60",
+    "90:amount:50:amount:35:incorrectFundDistributionTotal:5.00",
+    "10:amount:10::::",
+    "20:amount:10:amount:10::",
+    "10:percentage:100::::",
+    "10:percentage:50:percentage:50::",
+    "9.99:percentage:50:percentage:50::",
+    "10:amount:5:percentage:50::",
+    "0:amount:0::::",
+    "0:amount:0:amount:0::",
+    "0:percentage:100::::",
+    "0:percentage:50:percentage:50::",
+    "10:amount:10:amount:10:incorrectFundDistributionTotal:-10.00",
+    "10:percentage:20:percentage:50:incorrectFundDistributionTotal:3.00",
+    "10:amount:5:percentage:60:incorrectFundDistributionTotal:-1.00",
+    "0:amount:0:percentage:100:cannotMixTypesForZeroPrice:",
+    "0:percentage:0:amount:0:cannotMixTypesForZeroPrice:",
+    "0:amount:10:amount:10:incorrectFundDistributionTotal:0.00",
+    "0:percentage:10:percentage:10:incorrectFundDistributionTotal:0.00"
   }, delimiter = ':')
   void testValidateFundDistributionTotal(Double estimatedPrice, String fd1Type, Double fd1Value, String fd2Type,
-      Double fd2Value, String errorCode) {
+      Double fd2Value, String errorCode, String remainingAmount) {
 
     Cost cost = new Cost()
       .withPoLineEstimatedPrice(estimatedPrice);
@@ -60,6 +63,9 @@ public class FundDistributionUtilsTest {
       HttpException exception = assertThrows(HttpException.class, () ->
         FundDistributionUtils.validateFundDistributionTotal(compositePoLines));
       assertEquals(exception.getError().getCode(), errorCode);
+      if (exception.getError().getCode().equals(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode())) {
+        assertEquals(remainingAmount, exception.getError().getParameters().get(0).getValue());
+      }
     }
   }
 
