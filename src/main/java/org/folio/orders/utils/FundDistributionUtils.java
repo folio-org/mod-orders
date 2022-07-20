@@ -1,14 +1,14 @@
 package org.folio.orders.utils;
 
-import com.google.common.collect.Lists;
 import static java.math.RoundingMode.HALF_EVEN;
-import org.apache.commons.collections4.CollectionUtils;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_MIX_TYPES_FOR_ZERO_PRICE;
 import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
-import org.folio.rest.jaxrs.model.Cost;
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.AMOUNT;
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.PERCENTAGE;
 
+import com.google.common.collect.Lists;
+import org.apache.commons.collections4.CollectionUtils;
+import org.folio.rest.jaxrs.model.Cost;
 import java.math.BigDecimal;
 import java.util.List;
 

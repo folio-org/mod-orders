@@ -1517,8 +1517,7 @@ public class PurchaseOrderLinesApiTest {
     ValidateFundDistributionsRequest request = new ValidateFundDistributionsRequest()
       .withCost(new Cost()
         .withCurrency("USD")
-        .withQuantityPhysical(1)
-        .withListUnitPrice(100d))
+        .withPoLineEstimatedPrice(100d))
       .withFundDistribution(Lists.newArrayList(
         new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString()),
         new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString())));
@@ -1531,8 +1530,7 @@ public class PurchaseOrderLinesApiTest {
     // currency param is missed in request body
     ValidateFundDistributionsRequest request = new ValidateFundDistributionsRequest()
       .withCost(new Cost()
-        .withQuantityPhysical(1)
-        .withListUnitPrice(100d))
+        .withPoLineEstimatedPrice(100d))
       .withFundDistribution(Lists.newArrayList(
         new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString()),
         new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString())));
@@ -1549,8 +1547,7 @@ public class PurchaseOrderLinesApiTest {
     ValidateFundDistributionsRequest request = new ValidateFundDistributionsRequest()
       .withCost(new Cost()
         .withCurrency("USD")
-        .withQuantityPhysical(1)
-        .withListUnitPrice(100d))
+        .withPoLineEstimatedPrice(100d))
       .withFundDistribution(Lists.newArrayList(
         new FundDistribution().withValue(49.99d).withFundId(UUID.randomUUID().toString()),
         new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString())));
@@ -1570,8 +1567,7 @@ public class PurchaseOrderLinesApiTest {
     ValidateFundDistributionsRequest request = new ValidateFundDistributionsRequest()
       .withCost(new Cost()
         .withCurrency("USD")
-        .withQuantityPhysical(1)
-        .withListUnitPrice(0d))
+        .withPoLineEstimatedPrice(0d))
       .withFundDistribution(Lists.newArrayList(
         new FundDistribution().withValue(49.99d).withFundId(UUID.randomUUID().toString()).withDistributionType(FundDistribution.DistributionType.PERCENTAGE),
         new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString()).withDistributionType(FundDistribution.DistributionType.AMOUNT)));
