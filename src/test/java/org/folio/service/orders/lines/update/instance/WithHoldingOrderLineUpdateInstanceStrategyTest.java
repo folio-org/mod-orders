@@ -378,6 +378,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
             .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
         .withLocations(locations);
 
+    List<JsonObject> items = holdingIds.stream().map(holdingId -> {
+      JsonObject item = new JsonObject().put(TestConstants.ID, UUID.randomUUID().toString());
+      item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
+      item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
+      return item;
+    }).collect(toList());
+
     PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
     patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
         .withReplaceInstanceRef(new ReplaceInstanceRef()
@@ -392,11 +399,16 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         .createHolding(eq(instanceId), eq(locations.get(0)), eq(requestContext));
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager)
         .createHolding(eq(instanceId), eq(locations.get(1)), eq(requestContext));
+    doReturn(completedFuture(List.of(items.get(0)))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(0)), eq(orderLineId), eq(requestContext));
+    doReturn(completedFuture(List.of(items.get(1)))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingIds.get(1)), eq(orderLineId), eq(requestContext));
+    doReturn(completedFuture(null)).when(inventoryManager).updateItem(any(JsonObject.class), eq(requestContext));
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join();
 
     verify(inventoryManager, times(1)).createHolding(instanceId, locations.get(0), requestContext);
     verify(inventoryManager, times(1)).createHolding(instanceId, locations.get(1), requestContext);
+    verify(inventoryManager, times(2)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
+    verify(inventoryManager, times(2)).updateItem(any(JsonObject.class), any(RequestContext.class));
   }
 
   @Test

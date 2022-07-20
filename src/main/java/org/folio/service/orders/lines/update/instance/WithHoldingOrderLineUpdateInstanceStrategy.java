@@ -111,11 +111,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
             .thenCompose(newHoldingId -> {
                 holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
                 CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine());
-                if (PoLineCommonUtil.isItemsUpdateRequired(compositePoLine)) {
-                  return updateItemsHolding(holdingId, newHoldingId, compositePoLine.getId(), requestContext);
-                } else {
-                  return CompletableFuture.completedFuture(null);
-                }
+                return updateItemsHolding(holdingId, newHoldingId, compositePoLine.getId(), requestContext);
             })
         );
       }
