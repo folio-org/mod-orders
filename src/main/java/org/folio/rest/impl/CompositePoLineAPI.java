@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_BUSINESS;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestConstants.OKAPI_URL;
@@ -150,7 +151,9 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   public void putOrdersOrderLinesFundDistributionsValidate(ValidateFundDistributionsRequest request, Map<String, String> okapiHeaders,
                                                            Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     try {
-      FundDistributionUtils.validateFundDistributionForPoLine(request.getCost(), request.getFundDistribution());
+      Cost cost = request.getCost();
+      cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
+      FundDistributionUtils.validateFundDistributionForPoLine(cost, request.getFundDistribution());
       asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
     } catch (HttpException e) {
       handleErrorResponse(asyncResultHandler, e);
