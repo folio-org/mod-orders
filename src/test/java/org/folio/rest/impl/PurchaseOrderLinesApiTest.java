@@ -1547,7 +1547,8 @@ public class PurchaseOrderLinesApiTest {
     ValidateFundDistributionsRequest request = new ValidateFundDistributionsRequest()
       .withCost(new Cost()
         .withCurrency("USD")
-        .withPoLineEstimatedPrice(100d))
+        .withQuantityPhysical(1)
+        .withListUnitPrice(100d))
       .withFundDistribution(Lists.newArrayList(
         new FundDistribution().withValue(49.99d).withFundId(UUID.randomUUID().toString()),
         new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString())));
