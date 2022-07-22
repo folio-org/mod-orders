@@ -510,10 +510,8 @@ public class HelperUtils {
    * @return String representing CQL query to get records by some property values
    */
   public static String convertFieldListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
-
     String prefix = fieldName + (strictMatch ? "==(\"" : "=(\"");
     return StreamEx.of(values).joining("\" or \"", prefix, "\")");
-
   }
 
   public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface
