@@ -29,7 +29,7 @@ public class TagService {
 
   public CompletableFuture<Void> createTagsIfMissing(Set<String> tagLabels, RequestContext requestContext) {
     List<String> tagList = new ArrayList<>(tagLabels);
-    String query = HelperUtils.convertFieldListToCqlQuery(tagList, "label", true);
+    String query = HelperUtils.convertTagListToCqlQuery(tagList, "label", true);
 
     return getTags(query, 0, Integer.MAX_VALUE, requestContext)
       .thenApply(existingTagsCollection -> {
