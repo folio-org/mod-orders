@@ -646,6 +646,7 @@ public class HelperUtils {
   }
 
   public static String convertTagListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
+
     String prefix = fieldName + (strictMatch ? "==(\"" : "=(\"");
     return StreamEx.of(values).joining("\" or \"", prefix, "\")");
   }
