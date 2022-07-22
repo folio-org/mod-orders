@@ -1,10 +1,31 @@
 package org.folio.service.orders.lines.update.instance;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonObject;
-import org.folio.ApiTestSuite;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.toList;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
+import static org.folio.service.inventory.InventoryManager.ID;
+import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
 import org.folio.TestConstants;
 import org.folio.models.ItemStatus;
+import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -16,55 +37,16 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.inventory.InventoryManager;
-
-import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
-import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.toList;
-import static org.folio.TestConfig.autowireDependencies;
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.clearVertxContext;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestUtils.getMockData;
-import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
-import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
-import static org.folio.service.inventory.InventoryManager.ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import io.vertx.core.json.JsonObject;
 
 public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   @InjectMocks
@@ -136,6 +118,48 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   }
 
   @Test
+  public void updateInstanceWithNullReplaceInstanceRef() throws IOException {
+    String orderLineId = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+
+    List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
+      .map(o -> ((JsonObject) o))
+      .collect(toList());
+
+    List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
+
+    ArrayList<Location> locations = new ArrayList<>();
+    locations.add(new Location()
+      .withHoldingId(holdingIds.get(0))
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+    locations.add(new Location()
+      .withHoldingId(holdingIds.get(1))
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+
+    PoLine poLine = new PoLine().
+        withId(orderLineId).
+        withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical()
+        .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
+      .withLocations(locations);
+
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF);
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
+
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join();
+
+    verify(inventoryManager, times(0)).getHoldingsByIds(holdingIds, requestContext);
+    verify(inventoryManager, times(0)).updateInstanceForHoldingRecords(holdings, instanceId, requestContext);
+  }
+
+  @Test
   public void updateInstanceForFindOrCreateHoldingOperation() throws IOException {
     String orderLineId = UUID.randomUUID().toString();
     String instanceId = UUID.randomUUID().toString();
@@ -189,8 +213,58 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   }
 
   @Test
+  public void updateInstanceAndItemsForFindOrCreateHoldingOperation() throws IOException {
+    String itemId = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+
+    JsonObject holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
+
+    String holdingId = holding.getString(ID);
+    String orderLineId = holding.getString("purchaseOrderLineIdentifier");
+
+    ArrayList<Location> locations = new ArrayList<>();
+    locations.add(new Location()
+      .withHoldingId(holdingId)
+      .withQuantity(1)
+      .withQuantityPhysical(1));
+    PoLine poLine = new PoLine().
+        withId(orderLineId).
+        withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical()
+        .withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withLocations(locations);
+
+    PatchOrderLineRequest patchOrderLineRequest = new PatchOrderLineRequest();
+    patchOrderLineRequest.withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId(instanceId)
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.FIND_OR_CREATE)
+        .withDeleteAbandonedHoldings(false));
+
+    OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
+      .withStoragePoLine(poLine)
+      .withPathOrderLineRequest(patchOrderLineRequest);
+
+    JsonObject item = new JsonObject().put(TestConstants.ID, itemId);
+    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
+    item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
+
+    doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager)
+      .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(0)), eq(requestContext));
+    doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
+    doReturn(completedFuture(null)).when(inventoryManager).updateItem(eq(item), eq(requestContext));
+
+    withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join();
+
+    verify(inventoryManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(0), requestContext);
+    verify(inventoryManager, times(1)).getItemsByHoldingIdAndOrderLineId(holdingId, orderLineId, requestContext);
+    verify(inventoryManager, times(1)).updateItem(item, requestContext);
+  }
+
+  @Test
   public void updateInstanceForFindOrCreateHoldingOperationAndDeleteAbandonedHoldings() throws IOException {
-    String orderLineId = UUID.randomUUID().toString();
     String instanceId = UUID.randomUUID().toString();
 
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
@@ -200,6 +274,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         .collect(toList());
 
     List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
+    String orderLineId = holdings.get(0).getString("purchaseOrderLineIdentifier");
 
     ArrayList<Location> locations = new ArrayList<>();
     locations.add(new Location()
@@ -300,7 +375,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
 
   @Test
   public void updateInstanceAndItemsForCreateHoldingOperation() throws IOException {
-    String orderLineId = UUID.randomUUID().toString();
     String instanceId = UUID.randomUUID().toString();
     String itemId = UUID.randomUUID().toString();
 
@@ -309,6 +383,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     JsonObject holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
 
     String holdingId = holding.getString(ID);
+    String orderLineId = holding.getString("purchaseOrderLineIdentifier");
 
     ArrayList<Location> locations = new ArrayList<>();
     locations.add(new Location()
@@ -339,19 +414,18 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
 
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager)
         .createHolding(eq(instanceId), eq(locations.get(0)), eq(requestContext));
-    doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingId(eq(holdingId), eq(requestContext));
+    doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
     doReturn(completedFuture(null)).when(inventoryManager).updateItem(eq(item), eq(requestContext));
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join();
 
     verify(inventoryManager, times(1)).createHolding(instanceId, locations.get(0), requestContext);
-    verify(inventoryManager, times(1)).getItemsByHoldingId(holdingId, requestContext);
+    verify(inventoryManager, times(1)).getItemsByHoldingIdAndOrderLineId(holdingId, orderLineId, requestContext);
     verify(inventoryManager, times(1)).updateItem(item, requestContext);
   }
 
   @Test
   public void updateInstanceAndItemsWithItemsNotUpdatesCorrect() throws IOException {
-    String orderLineId = UUID.randomUUID().toString();
     String instanceId = UUID.randomUUID().toString();
     String itemId = UUID.randomUUID().toString();
 
@@ -360,6 +434,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     JsonObject holding = holdingsCollection.getJsonArray("holdingsRecords").getJsonObject(0);
 
     String holdingId = holding.getString(ID);
+    String orderLineId = holding.getString("purchaseOrderLineIdentifier");
 
     ArrayList<Location> locations = new ArrayList<>();
     locations.add(new Location()
@@ -390,7 +465,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
 
     doReturn(completedFuture(UUID.randomUUID().toString())).when(inventoryManager)
         .createHolding(eq(instanceId), eq(locations.get(0)), eq(requestContext));
-    doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingId(eq(holdingId), eq(requestContext));
+    doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
     doReturn(CompletableFuture.failedFuture(new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE))).when(inventoryManager).updateItem(eq(item), eq(requestContext));
 
 
@@ -409,7 +484,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     Assertions.assertEquals(itemId, actParameter.getValue());
 
     verify(inventoryManager, times(1)).createHolding(instanceId, locations.get(0), requestContext);
-    verify(inventoryManager, times(1)).getItemsByHoldingId(holdingId, requestContext);
+    verify(inventoryManager, times(1)).getItemsByHoldingIdAndOrderLineId(holdingId, orderLineId, requestContext);
     verify(inventoryManager, times(1)).updateItem(item, requestContext);
   }
 

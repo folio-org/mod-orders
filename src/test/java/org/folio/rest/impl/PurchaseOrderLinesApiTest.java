@@ -57,7 +57,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
-import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
@@ -104,6 +103,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.Lists;
+import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.orders.utils.FundDistributionUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -128,24 +131,8 @@ import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Contributor;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Eresource;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
-import org.folio.rest.jaxrs.model.Tags;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -167,6 +154,7 @@ public class PurchaseOrderLinesApiTest {
   public final static String LINES_PATH = "/orders/order-lines";
   public static final String LINE_BY_ID_PATH = "/orders/order-lines/%s";
   public static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
+  public static final String PO_LINE_VALIDATE_FUND_DISTRIBUTIONS_PATH = LINES_PATH + "/fund-distributions/validate";
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   public static final String ISBN_PRODUCT_TYPE_ID = "8261054f-be78-422d-bd51-4ed9f33c3422";
   public static final String INVALID_ISBN = "1234";
@@ -1522,6 +1510,74 @@ public class PurchaseOrderLinesApiTest {
     Response actual = verifyPatch(url, JsonObject.mapFrom(body).encode(), "", 404);
 
     assertEquals(ID_DOES_NOT_EXIST, actual.as(Errors.class).getErrors().get(0).getMessage());
+  }
+
+  @Test
+  public void testFundDistributionsValidationSuccessCase() {
+    ValidateFundDistributionsRequest request = new ValidateFundDistributionsRequest()
+      .withCost(new Cost()
+        .withCurrency("USD")
+        .withPoLineEstimatedPrice(100d))
+      .withFundDistribution(Lists.newArrayList(
+        new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString()),
+        new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString())));
+
+    verifyPut(PO_LINE_VALIDATE_FUND_DISTRIBUTIONS_PATH, JsonObject.mapFrom(request).encode(), "", 204);
+  }
+
+  @Test
+  public void testFundDistributionsValidationWhenRequiredParamNotPresented() {
+    // currency param is missed in request body
+    ValidateFundDistributionsRequest request = new ValidateFundDistributionsRequest()
+      .withCost(new Cost()
+        .withPoLineEstimatedPrice(100d))
+      .withFundDistribution(Lists.newArrayList(
+        new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString()),
+        new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString())));
+
+    Response actual = verifyPut(PO_LINE_VALIDATE_FUND_DISTRIBUTIONS_PATH, JsonObject.mapFrom(request).encode(), "", 422);
+
+    Error error = actual.as(Errors.class).getErrors().get(0);
+    assertEquals("must not be null", error.getMessage());
+    assertEquals("cost.currency", error.getParameters().get(0).getKey());
+  }
+
+  @Test
+  public void testFundDistributionValidationWhenAmountNotMatches() {
+    ValidateFundDistributionsRequest request = new ValidateFundDistributionsRequest()
+      .withCost(new Cost()
+        .withCurrency("USD")
+        .withQuantityPhysical(1)
+        .withListUnitPrice(100d))
+      .withFundDistribution(Lists.newArrayList(
+        new FundDistribution().withValue(49.99d).withFundId(UUID.randomUUID().toString()),
+        new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString())));
+
+    Response actual = verifyPut(PO_LINE_VALIDATE_FUND_DISTRIBUTIONS_PATH, JsonObject.mapFrom(request).encode(), "", 422);
+
+    Error error = actual.as(Errors.class).getErrors().get(0);
+    assertEquals(ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL.getDescription(), error.getMessage());
+    assertEquals(ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode(), error.getCode());
+    Parameter remainingAmountParam = error.getParameters().get(0);
+    assertEquals(FundDistributionUtils.REMAINING_AMOUNT_FIELD, remainingAmountParam.getKey());
+    assertEquals(0.01d, Double.parseDouble(remainingAmountParam.getValue()));
+  }
+
+  @Test
+  public void testFundDistributionValidationWhenZeroPriceAndDifferentDistributionTypes() {
+    ValidateFundDistributionsRequest request = new ValidateFundDistributionsRequest()
+      .withCost(new Cost()
+        .withCurrency("USD")
+        .withPoLineEstimatedPrice(0d))
+      .withFundDistribution(Lists.newArrayList(
+        new FundDistribution().withValue(49.99d).withFundId(UUID.randomUUID().toString()).withDistributionType(FundDistribution.DistributionType.PERCENTAGE),
+        new FundDistribution().withValue(50d).withFundId(UUID.randomUUID().toString()).withDistributionType(FundDistribution.DistributionType.AMOUNT)));
+
+    Response actual = verifyPut(PO_LINE_VALIDATE_FUND_DISTRIBUTIONS_PATH, JsonObject.mapFrom(request).encode(), "", 422);
+
+    Error error = actual.as(Errors.class).getErrors().get(0);
+    assertEquals(ErrorCodes.CANNOT_MIX_TYPES_FOR_ZERO_PRICE.getDescription(), error.getMessage());
+    assertEquals(ErrorCodes.CANNOT_MIX_TYPES_FOR_ZERO_PRICE.getCode(), error.getCode());
   }
 
   @ParameterizedTest

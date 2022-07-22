@@ -116,7 +116,7 @@ public class InventoryManagerTest {
   public static final String HOLDING_INSTANCE_ID_2_HOLDING = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d48";
   private static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
-  private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instance.json";
+  private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instances.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
   private static final JsonObject HOLDINGS_SOURCE_ID_RESPONSE = new JsonObject()
@@ -562,6 +562,32 @@ public class InventoryManagerTest {
 
     assertThat(holding, equalTo(holdingIdAct));
     verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
+  }
+
+  @Test
+  void shouldRetrieveItemIfHoldingIdAndOrderLineProvided() throws ExecutionException, InterruptedException {
+    String itemId = UUID.randomUUID().toString();
+    String poLineId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String holdingsRecordId = UUID.randomUUID().toString();
+
+    JsonObject item = new JsonObject();
+    item.put(ID, itemId);
+
+    JsonObject holdingsRecJson = new JsonObject();
+    holdingsRecJson.put(ID, holdingId);
+    holdingsRecJson.put(InventoryManager.ITEM_HOLDINGS_RECORD_ID, holdingsRecordId);
+    holdingsRecJson.put(InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId);
+
+    JsonObject holdingsRecJsonColl = new JsonObject();
+    holdingsRecJsonColl.put(HOLDINGS_RECORDS, new JsonArray().add(holdingsRecJson));
+    holdingsRecJsonColl.put(ITEMS, new JsonArray().add(item));
+
+    doReturn(completedFuture(holdingsRecJsonColl)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    List<JsonObject> items = inventoryManager.getItemsByHoldingIdAndOrderLineId(holdingsRecordId, poLineId, requestContext).get();
+
+    assertThat(1, equalTo(items.size()));
+    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
   }
 
   @Test

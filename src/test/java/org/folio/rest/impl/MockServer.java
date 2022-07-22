@@ -460,6 +460,7 @@ public class MockServer {
     router.get("/instance-types").handler(this::handleGetInstanceType);
     router.get("/instance-statuses").handler(this::handleGetInstanceStatus);
     router.get("/inventory/instances").handler(this::handleGetInstanceRecord);
+    router.get("/inventory/instances/:id").handler(this::handleGetInstanceRecordById);
     router.get("/item-storage/items").handler(this::handleGetItemRecordsFromStorage);
     router.get("/inventory/items").handler(this::handleGetInventoryItemRecords);
     router.get("/inventory/items/:id").handler(this::handleGetInventoryItemRecordById);
@@ -879,10 +880,24 @@ public class MockServer {
     try {
       JsonObject instance;
       if (ctx.request().getParam("query").contains("ocn956625961")) {
-        instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
+        instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instances.json"));
       } else {
         instance = new JsonObject().put("instances", new JsonArray());
       }
+      addServerRqRsData(HttpMethod.GET, INSTANCE_RECORD, instance);
+      serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
+    } catch (IOException e) {
+      ctx.response()
+        .setStatusCode(404)
+        .end();
+    }
+  }
+
+  private void handleGetInstanceRecordById(RoutingContext ctx) {
+    logger.info("handleGetInstanceRecordId got: " + ctx.request().path());
+
+    try {
+      JsonObject instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
       addServerRqRsData(HttpMethod.GET, INSTANCE_RECORD, instance);
       serverResponse(ctx, 200, APPLICATION_JSON, instance.encodePrettily());
     } catch (IOException e) {
@@ -1761,7 +1776,7 @@ public class MockServer {
       try {
 
         List<String> ids = Collections.emptyList();
-        if (query.startsWith("poLineId==")) {
+        if (query.contains("poLineId==")) {
           ids = extractValuesFromQuery("poLineId", query);
         }
 

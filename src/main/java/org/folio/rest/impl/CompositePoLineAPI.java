@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_BUSINESS;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestConstants.OKAPI_URL;
@@ -18,15 +19,14 @@ import org.apache.logging.log4j.Logger;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.resource.OrdersOrderLines;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.orders.CompositePoLineValidationService;
-import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -145,5 +145,18 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
     orderLinePatchOperationService.patch(lineId, request, requestContext)
         .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
         .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+  }
+
+  @Override
+  public void putOrdersOrderLinesFundDistributionsValidate(ValidateFundDistributionsRequest request, Map<String, String> okapiHeaders,
+                                                           Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    try {
+      Cost cost = request.getCost();
+      cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
+      FundDistributionUtils.validateFundDistributionForPoLine(cost, request.getFundDistribution());
+      asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
+    } catch (HttpException e) {
+      handleErrorResponse(asyncResultHandler, e);
+    }
   }
 }

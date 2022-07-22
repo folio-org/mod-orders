@@ -151,7 +151,7 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
 
     verifyAllowedCase(results);
-    validateNumberOfRequests(1, 0);
+    validateNumberOfRequests(2, 1);
   }
 
   @ParameterizedTest
@@ -163,7 +163,7 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
 
     verifyAllowedCase(results);
-    validateNumberOfRequests(1, 1);
+    validateNumberOfRequests(2, 2);
   }
 
   @ParameterizedTest

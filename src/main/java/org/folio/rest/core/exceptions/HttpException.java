@@ -3,10 +3,12 @@ package org.folio.rest.core.exceptions;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Parameter;
 
 public class HttpException extends RuntimeException {
   private final int code;
@@ -21,9 +23,16 @@ public class HttpException extends RuntimeException {
   }
 
   public HttpException(int code, ErrorCodes errCodes) {
+    this(code, errCodes, Lists.newArrayList());
+  }
+
+  public HttpException(int code, ErrorCodes errCodes, List<Parameter> parameters) {
     super(errCodes.getDescription());
     this.errors = new Errors()
-      .withErrors(Collections.singletonList(new Error().withCode(errCodes.getCode()).withMessage(errCodes.getDescription())))
+      .withErrors(Collections.singletonList(new Error()
+        .withCode(errCodes.getCode())
+        .withMessage(errCodes.getDescription())
+        .withParameters(parameters)))
       .withTotalRecords(1);
     this.code = code;
   }

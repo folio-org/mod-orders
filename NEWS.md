@@ -1,5 +1,18 @@
 ## 12.5.0 - Unreleased
 
+## 12.4.1 (Bug Fix) - Released
+This release focused on fixing bugs for updating PO Line details after instance connection change,
+fixing issues with Receipt and Payment statuses, restricting search result by current acq unit and providing REST endpoint for correct fund distribution validation.
+
+### Bug Fixes
+* [MODORDERS-728](https://issues.folio.org/browse/MODORDERS-728)  - Fix periodically failing PurchaseOrderLinesApiTestNested test
+* [MODORDERS-720](https://issues.folio.org/browse/MODORDERS-720)  - All existing items in Holdings (not only items related to POL) are moved with Holdings when editing instance connection from POL
+* [MODORDERS-718](https://issues.folio.org/browse/MODORDERS-718)  - PO Line details are not updating after changing instance connection from POL
+* [MODORDERS-714](https://issues.folio.org/browse/MODORDERS-714)  - Fix issue with Receipt and Payment statuses when order is transited from Cancel to Open(ReOpen)
+* [MODORDERS-708](https://issues.folio.org/browse/MODORDERS-708)  - Update total validation(ew endpoint for fund distributions validation)
+* [MODORDERS-619](https://issues.folio.org/browse/MODORDERS-619)  - Can see titles in search results that are assigned to other acq units
+
+
 ## 12.4.0 Morning Glory R2 2022 - Released
 This release focused on implementing edit instance connection logic of POL, updating POL when an order is closed with the "Cancelled" reason, defining new Business API for updating Instance Reference for Non-package order line, removing Renewal date and renewal interval requirement for opening order
 

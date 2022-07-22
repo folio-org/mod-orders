@@ -109,8 +109,8 @@ public class ReOpenCompositeOrderManagerTest {
 
   @ParameterizedTest
   @CsvSource(value = {"Open:Expected:Awaiting Receipt:Awaiting Payment",
-                      "Approved:Received:Partially Received:Partially Paid",
-                      "Paid:Received:Partially Received:Partially Paid"}, delimiter = ':')
+                      "Approved:Received:Partially Received:Fully Paid",
+                      "Paid:Received:Partially Received:Fully Paid"}, delimiter = ':')
   void shouldCheckPaymentAndReceiptStatusesIfInvoicesAndPiecesHaveSameStatuses(
         String invoiceStatus, String pieceStatus, String expReceiptStatus, String expPaymentStatus)
                       throws ExecutionException, InterruptedException {
@@ -172,12 +172,16 @@ public class ReOpenCompositeOrderManagerTest {
   }
 
   @ParameterizedTest
-  @CsvSource(value = {"Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Partially Paid",
-                      "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Partially Paid:Awaiting Payment",
-                      "Paid:Open:Expected:Received:Awaiting Receipt:Partially Received:Partially Paid:Awaiting Payment"}, delimiter = ':')
+  @CsvSource(value = {"Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Partially Paid:true:false",
+                      "Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Fully Paid:true:true",
+                      "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Fully Paid:Awaiting Payment:true:true",
+                      "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Fully Paid:Awaiting Payment:true:false",
+                      "Paid:Open:Expected:Received:Awaiting Receipt:Partially Received:Fully Paid:Awaiting Payment:true:true",
+                      "Paid:Open:Expected:Received:Awaiting Receipt:Partially Received:Partially Paid:Awaiting Payment:false:true"}, delimiter = ':')
   void shouldCheckPaymentAndReceiptStatusesIfInvoicesAndPiecesHaveDifferentStatuses(
                   String invoiceStatus1, String invoiceStatus2, String pieceStatus1, String pieceStatus2,
-                  String expReceiptStatus1,  String expReceiptStatus2, String expPaymentStatus1, String expPaymentStatus2)
+                  String expReceiptStatus1,  String expReceiptStatus2, String expPaymentStatus1, String expPaymentStatus2,
+                  boolean releaseEncumbrances1, boolean releaseEncumbrances2)
     throws ExecutionException, InterruptedException {
     CompositePurchaseOrder oldOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine poLine1 = oldOrder.getCompositePoLines().get(0);
@@ -203,12 +207,14 @@ public class ReOpenCompositeOrderManagerTest {
       .withId(UUID.randomUUID().toString())
       .withInvoiceId(invoice1.getId())
       .withPoLineId(poLineId1)
+      .withReleaseEncumbrance(releaseEncumbrances1)
       .withFundDistributions(List.of(new org.folio.rest.acq.model.invoice.FundDistribution()
         .withEncumbrance(encumbrance1Id)));
     InvoiceLine invoiceLine2 = new InvoiceLine()
       .withId(UUID.randomUUID().toString())
       .withInvoiceId(invoice2.getId())
       .withPoLineId(poLineId2)
+      .withReleaseEncumbrance(releaseEncumbrances2)
       .withFundDistributions(List.of(new org.folio.rest.acq.model.invoice.FundDistribution()
         .withEncumbrance(encumbrance2Id)));
     List<InvoiceLine> invoiceLines = List.of(invoiceLine1, invoiceLine2);
@@ -238,9 +244,9 @@ public class ReOpenCompositeOrderManagerTest {
 
   @ParameterizedTest
   @CsvSource(value = {
-    "Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Partially Paid",
-    "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Partially Paid:Awaiting Payment",
-    "Paid:Open:Expected:Received:Awaiting Receipt:Partially Received:Partially Paid:Awaiting Payment"
+    "Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Fully Paid",
+    "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Fully Paid:Awaiting Payment",
+    "Paid:Open:Expected:Received:Awaiting Receipt:Partially Received:Fully Paid:Awaiting Payment"
   }, delimiter = ':')
   void shouldCheckPaymentAndReceiptStatusesIfInvoicesAndPiecesHaveDifferentStatusesAndPolCoveredMoreThenOneInvoice(
     String invoiceStatus1, String invoiceStatus2, String pieceStatus1, String pieceStatus2,
