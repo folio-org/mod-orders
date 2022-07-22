@@ -102,7 +102,7 @@ public class FundServiceTest {
     List<Fund> funds = List.of(new Fund().withId(fundId1), new Fund().withId(fundId2));
     FundCollection fundCollection = new FundCollection().withFunds(funds).withTotalRecords(1);
 
-    String query = URLEncoder.encode("id==(\"" + fundId1 + "\" or \"" +  fundId2 +"\")", StandardCharsets.UTF_8.toString());
+    String query = URLEncoder.encode("id==(" + fundId1 + " or " +  fundId2 +")", StandardCharsets.UTF_8.toString());
     doReturn(completedFuture(fundCollection)).when(restClient).get(any(), any(),  any());
     //When
     List<Fund> actFund = fundService.getAllFunds(fundIds, requestContext).join();
