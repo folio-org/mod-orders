@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
@@ -72,17 +73,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private CompletableFuture<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
     return pieceStorageService.getPiecesByPoLineId(PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine()), requestContext)
       .thenApply(pieces -> {
-        List<String> pieceHoldingIds = pieces
-          .stream()
-          .map(Piece::getHoldingId)
-          .collect(toList());
-        List<String> storageHoldingIds = holder.getStoragePoLine()
-          .getLocations()
-          .stream()
-          .map(Location::getHoldingId)
-          .collect(toList());
-        List<String> holdingIds = ListUtils.union(pieceHoldingIds, storageHoldingIds)
-          .stream()
+        List<String> holdingIds = Stream.concat(pieces.stream().map(Piece::getHoldingId),
+          holder.getStoragePoLine().getLocations().stream().map(Location::getHoldingId))
           .distinct()
           .filter(Objects::nonNull)
           .collect(toList());
