@@ -72,17 +72,17 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private CompletableFuture<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
     return pieceStorageService.getPiecesByPoLineId(PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine()), requestContext)
-      .thenApply(pieces -> {
-        List<String> holdingIds = Stream.concat(pieces.stream().map(Piece::getHoldingId),
-          holder.getStoragePoLine().getLocations().stream().map(Location::getHoldingId))
+      // Extraction unique holdingIds from pieces and POL
+      .thenApply(pieces ->
+        Stream.concat(pieces.stream().map(Piece::getHoldingId),
+            holder.getStoragePoLine().getLocations().stream().map(Location::getHoldingId))
           .distinct()
           .filter(Objects::nonNull)
-          .collect(toList());
+          .collect(toList()))
+      .thenCompose(holdingIds -> {
         holdingIds.forEach(holdingId -> holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, holdingId));
-        return holdingIds;
-      })
-      .thenCompose(holdingIds -> inventoryManager.getHoldingsByIds(holdingIds, requestContext))
-      .thenCompose(holdings -> inventoryManager.updateInstanceForHoldingRecords(holdings, newInstanceId, requestContext));
+        return inventoryManager.getHoldingsByIds(holdingIds, requestContext);
+      }).thenCompose(holdings -> inventoryManager.updateInstanceForHoldingRecords(holdings, newInstanceId, requestContext));
   }
 
   private CompletableFuture<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
