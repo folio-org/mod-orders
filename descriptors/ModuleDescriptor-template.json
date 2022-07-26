@@ -300,7 +300,8 @@
             "inventory.instances.item.get",
             "orders-storage.po-lines.item.patch",
             "orders-storage.po-lines.item.get",
-            "orders-storage.po-lines.item.put"
+            "orders-storage.po-lines.item.put",
+            "orders-storage.pieces.collection.get"
           ]
         },
         {
