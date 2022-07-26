@@ -21,7 +21,6 @@ import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Location;
@@ -72,13 +71,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private CompletableFuture<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
     return pieceStorageService.getPiecesByPoLineId(PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine()), requestContext)
-      // Extraction unique holdingIds from pieces and POL
-      .thenApply(pieces ->
-        Stream.concat(pieces.stream().map(Piece::getHoldingId),
-            holder.getStoragePoLine().getLocations().stream().map(Location::getHoldingId))
-          .distinct()
-          .filter(Objects::nonNull)
-          .collect(toList()))
+      .thenApply(pieces -> extractUniqueHoldingIds(pieces, holder.getStoragePoLine().getLocations()))
       .thenCompose(holdingIds -> {
         holdingIds.forEach(holdingId -> holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, holdingId));
         return inventoryManager.getHoldingsByIds(holdingIds, requestContext);
@@ -88,14 +81,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private CompletableFuture<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
       String newInstanceId, RequestContext requestContext) {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    return prepareHoldings(holder, requestContext, location -> {
+    return retrieveUniqueLocationsAndConsume(holder, requestContext, location -> {
       String holdingId = location.getHoldingId();
       futures.add(inventoryManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, requestContext)
         .thenCompose(newHoldingId -> {
           holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
-          CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine());
           if (ObjectUtils.notEqual(holdingId, newHoldingId)) {
-            return updateItemsHolding(holdingId, newHoldingId, compositePoLine.getId(), requestContext);
+            return updateItemsHolding(holdingId, newHoldingId, holder.getStoragePoLine().getId(), requestContext);
           } else {
             return CompletableFuture.completedFuture(null);
           }
@@ -106,18 +98,18 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private CompletableFuture<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
       String newInstanceId, RequestContext requestContext) {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    return prepareHoldings(holder, requestContext, location -> {
+    return retrieveUniqueLocationsAndConsume(holder, requestContext, location -> {
       String holdingId = location.getHoldingId();
       futures.add(inventoryManager.createHolding(newInstanceId, location, requestContext)
         .thenCompose(newHoldingId -> {
           holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
-          CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine());
-          return updateItemsHolding(holdingId, newHoldingId, compositePoLine.getId(), requestContext);
+          return updateItemsHolding(holdingId, newHoldingId, holder.getStoragePoLine().getId(), requestContext);
         }));
     }).thenCompose(v -> CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])));
   }
 
-  private CompletableFuture<Void> prepareHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext, Consumer<Location> consumer) {
+  private CompletableFuture<Void> retrieveUniqueLocationsAndConsume(OrderLineUpdateInstanceHolder holder, RequestContext requestContext,
+                                                                    Consumer<Location> consumer) {
     return pieceStorageService.getPiecesByPoLineId(PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine()), requestContext)
       .thenAccept(pieces -> {
         List<Location> pieceHoldingIds = pieces
@@ -164,6 +156,14 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         throw new HttpException(500, error);
       }
     });
+  }
+
+  private List<String> extractUniqueHoldingIds(List<Piece> pieces, List<Location> locations) {
+    return Stream.concat(pieces.stream().map(Piece::getHoldingId),
+        locations.stream().map(Location::getHoldingId))
+      .distinct()
+      .filter(Objects::nonNull)
+      .collect(toList());
   }
 
 }
