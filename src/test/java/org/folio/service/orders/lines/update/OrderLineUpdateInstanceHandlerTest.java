@@ -1,5 +1,6 @@
 package org.folio.service.orders.lines.update;
 
+import com.google.common.collect.Lists;
 import io.vertx.core.Context;
 import org.folio.ApiTestSuite;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
@@ -16,7 +17,6 @@ import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
-import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,11 +35,14 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 
 public class OrderLineUpdateInstanceHandlerTest {
   @Autowired
@@ -47,6 +50,8 @@ public class OrderLineUpdateInstanceHandlerTest {
 
   @Mock
   private Map<String, String> okapiHeadersMock;
+  @Mock
+  private PieceStorageService pieceStorageService;
   @Spy
   private Context ctxMock = getFirstContextFromVertx(getVertx());
 
@@ -58,6 +63,7 @@ public class OrderLineUpdateInstanceHandlerTest {
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    doReturn(completedFuture(Lists.newArrayList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
   }
 
   @BeforeAll
@@ -220,8 +226,8 @@ public class OrderLineUpdateInstanceHandlerTest {
       return new OrderLinePatchOperationHandlerResolver(handlers);
     }
 
-    @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
-      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
+    @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager, PieceStorageService pieceStorageService) {
+      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryManager, pieceStorageService);
     }
 
     @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,

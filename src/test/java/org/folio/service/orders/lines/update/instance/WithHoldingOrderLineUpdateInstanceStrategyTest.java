@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import com.google.common.collect.Lists;
 import org.folio.TestConstants;
 import org.folio.models.ItemStatus;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
@@ -40,6 +41,7 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +58,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   private WithHoldingOrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy;
   @Mock
   private InventoryManager inventoryManager;
+  @Mock
+  private PieceStorageService pieceStorageService;
 
   @Mock
   RequestContext requestContext;
@@ -63,12 +67,14 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   @BeforeEach
   void initMocks(){
     MockitoAnnotations.openMocks(this);
+    doReturn(completedFuture(Lists.newArrayList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
   }
 
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
     Mockito.reset(inventoryManager);
+    Mockito.reset(pieceStorageService);
   }
 
   @Test
@@ -549,7 +555,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         .createHolding(eq(instanceId), eq(locations.get(0)), eq(requestContext));
     doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
     doReturn(CompletableFuture.failedFuture(new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE))).when(inventoryManager).updateItem(eq(item), eq(requestContext));
-
 
     CompletionException thrown = assertThrows(
         CompletionException.class,
