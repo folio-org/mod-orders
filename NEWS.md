@@ -1,5 +1,15 @@
 ## 12.5.0 - Unreleased
 
+## 12.4.2 (Bug Fix) - Released
+This release focused on fixing bugs for creating tags with slashes, item not appearing after instance connection change
+and improving performance for rollover
+
+### Bug Fixes
+* [MODORDERS-735](https://issues.folio.org/browse/MODORDERS-735)  - GOBI orders fail if using FOLIO tags that contain forward slashes
+* [MODORDERS-732](https://issues.folio.org/browse/MODORDERS-732)  - Performance: additional indexes required for orders rollover process
+* [MODORDERS-730](https://issues.folio.org/browse/MODORDERS-730)  - Item not appearing under holdings after instance connection change
+
+
 ## 12.4.1 (Bug Fix) - Released
 This release focused on fixing bugs for updating PO Line details after instance connection change,
 fixing issues with Receipt and Payment statuses, restricting search result by current acq unit and providing REST endpoint for correct fund distribution validation.
