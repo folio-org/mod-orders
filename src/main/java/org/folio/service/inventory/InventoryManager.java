@@ -997,13 +997,7 @@ public class InventoryManager {
       Context ctx = requestContext.getContext();
       Map<String, String> okapiHeaders = requestContext.getHeaders();
 
-      String entryTypeCachedValue = ctx.get(entryTypeKey);
-
-      if (entryTypeCachedValue != null) {
-        entryTypeValueFuture = CompletableFuture.completedFuture(entryTypeCachedValue);
-      } else {
-        entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
-      }
+      entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
 
       return entryTypeValueFuture.thenCompose(key -> {
         // save entryType to context
