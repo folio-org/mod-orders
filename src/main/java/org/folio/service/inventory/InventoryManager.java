@@ -984,20 +984,12 @@ public class InventoryManager {
   }
 
   /**
-   * Caches id's in Vert.X Context and returns it by tenantId.entryType.key.
-   *
-   * @param entryType name of object whose id we want to get from cache
    * @return configuration value by entry type
    */
   public CompletableFuture<JsonObject> getEntryValue(String entryType, RequestContext requestContext) {
       CompletableFuture<String> entryTypeValueFuture;
-      String tenantId = TenantTool.tenantId(requestContext.getHeaders());
-      var entryTypeKey = String.format("%s.%s", tenantId, entryType);
-
       Context ctx = requestContext.getContext();
-
       Map<String, String> okapiHeaders = requestContext.getHeaders();
-
       entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
 
     return entryTypeValueFuture.thenCompose(key -> {
