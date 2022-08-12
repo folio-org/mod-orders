@@ -748,7 +748,7 @@ public class InventoryManager {
         Lock lock = lockResult.result();
         try {
           vertx.setTimer(30000, timerId -> releaseLock(lock, lockName));
-          getAndCache(entryType, requestContext).whenComplete((ok, err) -> {
+          getEntryValue(entryType, requestContext).whenComplete((ok, err) -> {
             releaseLock(lock, lockName);
             if (err == null) {
               future.complete(ok);
@@ -989,19 +989,18 @@ public class InventoryManager {
    * @param entryType name of object whose id we want to get from cache
    * @return configuration value by entry type
    */
-  public CompletableFuture<JsonObject> getAndCache(String entryType, RequestContext requestContext) {
+  public CompletableFuture<JsonObject> getEntryValue(String entryType, RequestContext requestContext) {
       CompletableFuture<String> entryTypeValueFuture;
       String tenantId = TenantTool.tenantId(requestContext.getHeaders());
       var entryTypeKey = String.format("%s.%s", tenantId, entryType);
 
       Context ctx = requestContext.getContext();
+
       Map<String, String> okapiHeaders = requestContext.getHeaders();
+
       entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
 
-      return entryTypeValueFuture.thenCompose(key -> {
-        // save entryType to context
-        ctx.put(entryTypeKey, key);
-
+    return entryTypeValueFuture.thenCompose(key -> {
         String tenantSpecificKey = buildTenantSpecificKey(key, entryType, okapiHeaders);
         JsonObject response = ctx.get(tenantSpecificKey);
         if (response == null) {
