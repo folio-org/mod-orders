@@ -990,10 +990,9 @@ public class InventoryManager {
    * @return configuration value by entry type
    */
   public CompletableFuture<JsonObject> getAndCache(String entryType, RequestContext requestContext) {
-      CompletableFuture<String> entryTypeValueFuture;
       Context ctx = requestContext.getContext();
       Map<String, String> okapiHeaders = requestContext.getHeaders();
-      entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
+      CompletableFuture<String> entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
 
     return entryTypeValueFuture.thenCompose(key -> {
         String tenantSpecificKey = buildTenantSpecificKey(key, entryType, okapiHeaders);
