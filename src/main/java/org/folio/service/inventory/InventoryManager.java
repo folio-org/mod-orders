@@ -748,7 +748,7 @@ public class InventoryManager {
         Lock lock = lockResult.result();
         try {
           vertx.setTimer(30000, timerId -> releaseLock(lock, lockName));
-          getEntryValue(entryType, requestContext).whenComplete((ok, err) -> {
+          getAndCache(entryType, requestContext).whenComplete((ok, err) -> {
             releaseLock(lock, lockName);
             if (err == null) {
               future.complete(ok);
@@ -984,9 +984,12 @@ public class InventoryManager {
   }
 
   /**
+   * Caches id's in Vert.X Context and returns it by tenantId.entryType.key.
+   *
+   * @param entryType name of object whose id we want to get from cache
    * @return configuration value by entry type
    */
-  public CompletableFuture<JsonObject> getEntryValue(String entryType, RequestContext requestContext) {
+  public CompletableFuture<JsonObject> getAndCache(String entryType, RequestContext requestContext) {
       CompletableFuture<String> entryTypeValueFuture;
       Context ctx = requestContext.getContext();
       Map<String, String> okapiHeaders = requestContext.getHeaders();
