@@ -24,7 +24,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ReEncumbranceHolder;
-import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverLog;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
@@ -185,8 +184,8 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   private boolean isRolloverNotCompleted(List<LedgerFiscalYearRolloverProgress> progresses) {
     return progresses.isEmpty() || progresses.stream()
-            .anyMatch(progress -> progress.getOverallRolloverStatus() == LedgerFiscalYearRolloverLog.RolloverStatus.IN_PROGRESS
-                    || progress.getOverallRolloverStatus() == LedgerFiscalYearRolloverLog.RolloverStatus.NOT_STARTED);
+            .anyMatch(progress -> progress.getOverallRolloverStatus() == LedgerFiscalYearRolloverProgress.RolloverStatus.IN_PROGRESS
+                    || progress.getOverallRolloverStatus() == LedgerFiscalYearRolloverProgress.RolloverStatus.NOT_STARTED);
   }
 
   private List<ReEncumbranceHolder> filterNeedReEncumbranceHolders(List<ReEncumbranceHolder> reEncumbranceHolders) {
