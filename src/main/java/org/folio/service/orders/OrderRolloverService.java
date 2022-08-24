@@ -57,7 +57,7 @@ import org.javamoney.moneta.Money;
 public class OrderRolloverService {
   private static final Logger logger = LogManager.getLogger();
 
-  private static final String PO_LINE_FUND_DISTR_QUERY = "poLine.fundDistribution = /@fundId ==\"%s\"";
+  private static final String PO_LINE_FUND_DISTR_QUERY = "poLine.fundDistribution = \"/@fundId == \"%s\"";
   private static final String ORDER_TYPE_QUERY = "orderType == %s";
   private static final String ORDER_LINE_BY_ORDER_ID_QUERY = "(purchaseOrderId == %s)";
   private static final String ENCUMBR_FY_QUERY = "fiscalYearId == %s";
