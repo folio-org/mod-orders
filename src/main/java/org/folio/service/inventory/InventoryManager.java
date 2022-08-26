@@ -990,25 +990,11 @@ public class InventoryManager {
    * @return configuration value by entry type
    */
   public CompletableFuture<JsonObject> getAndCache(String entryType, RequestContext requestContext) {
-      CompletableFuture<String> entryTypeValueFuture;
-      String tenantId = TenantTool.tenantId(requestContext.getHeaders());
-      var entryTypeKey = String.format("%s.%s", tenantId, entryType);
+    Context ctx = requestContext.getContext();
+    Map<String, String> okapiHeaders = requestContext.getHeaders();
+    CompletableFuture<String> entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
 
-      Context ctx = requestContext.getContext();
-      Map<String, String> okapiHeaders = requestContext.getHeaders();
-
-      String entryTypeCachedValue = ctx.get(entryTypeKey);
-
-      if (entryTypeCachedValue != null) {
-        entryTypeValueFuture = CompletableFuture.completedFuture(entryTypeCachedValue);
-      } else {
-        entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
-      }
-
-      return entryTypeValueFuture.thenCompose(key -> {
-        // save entryType to context
-        ctx.put(entryTypeKey, key);
-
+    return entryTypeValueFuture.thenCompose(key -> {
         String tenantSpecificKey = buildTenantSpecificKey(key, entryType, okapiHeaders);
         JsonObject response = ctx.get(tenantSpecificKey);
         if (response == null) {
