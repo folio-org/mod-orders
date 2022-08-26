@@ -1,5 +1,16 @@
 ## 12.5.0 - Unreleased
 
+## 12.4.3 (Morning Glory R2 2022 Bug Fix) - Released
+This release focused on fixing bugs for fetching orders for rollover and adjusting Instance status, instance 
+type and loan type defaults is ignored buy order creation 
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.4.2...v12.4.3)
+
+### Bug Fixes
+* [MODORDERS-755](https://issues.folio.org/browse/MODORDERS-755) - Fixing issue with fetching orders for rollover
+* [MODORDERS-748](https://issues.folio.org/browse/MODORDERS-748) - Adjusting Instance status, instance type and loan type defaults is ignored buy order creation
+
+
 ## 12.4.2 (Bug Fix) - Released
 This release focused on fixing bugs for creating tags with slashes, item not appearing after instance connection change
 and improving performance for rollover
