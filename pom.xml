@@ -171,6 +171,21 @@
       <type>pom</type>
     </dependency>
     <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-kafka-wrapper</artifactId>
+      <version>2.6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>data-import-processing-core</artifactId>
+      <version>3.4.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <version>2.8.5</version>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-junit5</artifactId>
       <version>${vertx.version}</version>
@@ -203,6 +218,17 @@
       <artifactId>folio-isbn-util</artifactId>
       <version>1.1.0</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>mod-data-import-converter-storage-client</artifactId>
+      <version>1.14.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpcore</artifactId>
+      <version>4.4.13</version>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 
