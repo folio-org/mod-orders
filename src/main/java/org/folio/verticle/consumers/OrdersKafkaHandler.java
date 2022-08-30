@@ -29,6 +29,7 @@ public class OrdersKafkaHandler implements AsyncRecordHandler<String, String> {
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
+    LOGGER.debug("OrdersKafkaHandler :: handle");
     List<KafkaHeader> kafkaHeaders = record.headers();
     OkapiConnectionParams okapiParams = new OkapiConnectionParams(KafkaHeaderUtils.kafkaHeadersToMap(kafkaHeaders), vertx);
     try {
