@@ -72,12 +72,14 @@ public class ApiTestSuite {
   @BeforeAll
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
     startMockServer();
+    startKafkaMockServer();
     deployVerticle();
   }
 
   @AfterAll
   public static void after() {
     closeMockServer();
+    closeKafkaMockServer();
     closeVertx();
   }
 

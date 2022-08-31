@@ -27,9 +27,14 @@ import io.vertx.core.json.JsonObject;
 public final class TestConfig {
 
   public static final int mockPort = NetworkUtils.nextFreePort();
+  public static final int kafkaMockPort = NetworkUtils.nextFreePort();
   public static final Header X_OKAPI_URL = new Header(TestConstants.OKAPI_URL, "http://localhost:" + mockPort);
 
+  private static final String KAFKA_HOST = "KAFKA_HOST";
+  private static final String KAFKA_PORT = "KAFKA_PORT";
+
   private static MockServer mockServer;
+  private static MockServer kafkaMockServer;
   private static final Vertx vertx = Vertx.vertx();
 
   private TestConfig() {}
@@ -45,6 +50,10 @@ public final class TestConfig {
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     CompletableFuture<String> deploymentComplete = new CompletableFuture<>();
+
+    System.setProperty(KAFKA_HOST, "http://localhost");
+    System.setProperty(KAFKA_PORT, String.valueOf(kafkaMockPort));
+
     vertx.deployVerticle(RestVerticle.class.getName(), opt, res -> {
       if(res.succeeded()) {
         deploymentComplete.complete(res.result());
@@ -74,6 +83,11 @@ public final class TestConfig {
     mockServer.start();
   }
 
+  public static void startKafkaMockServer() throws InterruptedException, ExecutionException, TimeoutException {
+    kafkaMockServer = new MockServer(kafkaMockPort);
+    kafkaMockServer.start();
+  }
+
   public static Vertx getVertx() {
     return vertx;
   }
@@ -86,6 +100,10 @@ public final class TestConfig {
 
   public static void closeMockServer() {
     mockServer.close();
+  }
+
+  public static void closeKafkaMockServer() {
+    kafkaMockServer.close();
   }
 
   public static void closeVertx() {
