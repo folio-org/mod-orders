@@ -39,6 +39,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.restassured.response.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -60,7 +61,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
 import io.vertx.core.json.JsonObject;
-
+import scala.collection.JavaConverters;
+import scala.collection.immutable.Seq;
 
 
 public class OrdersProtectionTest extends ProtectedEntityTestBase {
@@ -254,18 +256,18 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
     Errors errors = operation
       .process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, APPLICATION_JSON,
-          HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt())
-      .as(Errors.class);
+        HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
     Error error = errors.getErrors().get(0);
     assertThat(error.getCode(), equalTo(ORDER_UNITS_NOT_FOUND.getCode()));
-    assertThat(error.getAdditionalProperties().get(ACQUISITIONS_UNIT_IDS), instanceOf(List.class));
+
+    List<String> ids = JavaConverters.asJava((scala.collection.Seq) error.getAdditionalProperties().get(ACQUISITIONS_UNIT_IDS));
+    assertThat(ids, instanceOf(List.class));
 
     // Verify number of sub-requests
     validateNumberOfRequests(1, 0);
 
-    List<String> ids = (List<String>) error.getAdditionalProperties().get(ACQUISITIONS_UNIT_IDS);
     if (operation == UPDATE) {
       assertThat(ids, contains(unit3.getId()));
     } else {
