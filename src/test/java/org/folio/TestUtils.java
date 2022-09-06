@@ -103,7 +103,7 @@ public final class TestUtils {
   public static Object[] getModifiedProtectedFields(Error error) {
     return Optional.of(error.getAdditionalProperties()
             .get("protectedAndModifiedFields"))
-            .map(obj -> JavaConverters.asJava((scala.collection.Seq) obj))
+            .map(obj -> (List<?>) obj)
             .get()
             .toArray();
   }
