@@ -256,18 +256,18 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
     Errors errors = operation
       .process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, APPLICATION_JSON,
-        HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(Errors.class);
+          HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt())
+      .as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
     Error error = errors.getErrors().get(0);
     assertThat(error.getCode(), equalTo(ORDER_UNITS_NOT_FOUND.getCode()));
-
-    List<String> ids = JavaConverters.asJava((scala.collection.Seq) error.getAdditionalProperties().get(ACQUISITIONS_UNIT_IDS));
-    assertThat(ids, instanceOf(List.class));
+    assertThat(error.getAdditionalProperties().get(ACQUISITIONS_UNIT_IDS), instanceOf(List.class));
 
     // Verify number of sub-requests
     validateNumberOfRequests(1, 0);
 
+    List<String> ids = (List<String>) error.getAdditionalProperties().get(ACQUISITIONS_UNIT_IDS);
     if (operation == UPDATE) {
       assertThat(ids, contains(unit3.getId()));
     } else {
