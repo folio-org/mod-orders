@@ -55,6 +55,7 @@ import org.folio.rest.jaxrs.model.ToBeReceived;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxTestContext;
+import scala.collection.JavaConverters;
 
 public final class TestUtils {
 
@@ -102,7 +103,7 @@ public final class TestUtils {
   public static Object[] getModifiedProtectedFields(Error error) {
     return Optional.of(error.getAdditionalProperties()
             .get("protectedAndModifiedFields"))
-            .map(obj -> (List<?>) obj)
+            .map(obj -> JavaConverters.asJava((scala.collection.Seq) obj))
             .get()
             .toArray();
   }
