@@ -1,19 +1,5 @@
 package org.folio;
 
-import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
-
-import java.lang.reflect.Field;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import org.folio.rest.RestVerticle;
-import org.folio.rest.impl.MockServer;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.folio.spring.SpringContextUtil;
-
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.vertx.core.AbstractVerticle;
@@ -23,18 +9,35 @@ import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxImpl;
 import io.vertx.core.json.JsonObject;
+import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.impl.MockServer;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.spring.SpringContextUtil;
+
+import java.lang.reflect.Field;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
 
 public final class TestConfig {
 
   public static final int mockPort = NetworkUtils.nextFreePort();
-  public static final int kafkaMockPort = NetworkUtils.nextFreePort();
   public static final Header X_OKAPI_URL = new Header(TestConstants.OKAPI_URL, "http://localhost:" + mockPort);
 
   private static final String KAFKA_HOST = "KAFKA_HOST";
   private static final String KAFKA_PORT = "KAFKA_PORT";
+  private static final String KAFKA_ENV = "ENV";
+  private static final String KAFKA_ENV_VALUE = "test-env";
 
   private static MockServer mockServer;
-  private static MockServer kafkaMockServer;
+  public static EmbeddedKafkaCluster kafkaCluster;
   private static final Vertx vertx = Vertx.vertx();
 
   private TestConfig() {}
@@ -51,8 +54,10 @@ public final class TestConfig {
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     CompletableFuture<String> deploymentComplete = new CompletableFuture<>();
 
-    System.setProperty(KAFKA_HOST, "http://localhost");
-    System.setProperty(KAFKA_PORT, String.valueOf(kafkaMockPort));
+    String[] hostAndPort = kafkaCluster.getBrokerList().split(":");
+    System.setProperty(KAFKA_HOST, hostAndPort[0]);
+    System.setProperty(KAFKA_PORT, hostAndPort[1]);
+    System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
 
     vertx.deployVerticle(RestVerticle.class.getName(), opt, res -> {
       if(res.succeeded()) {
@@ -84,8 +89,8 @@ public final class TestConfig {
   }
 
   public static void startKafkaMockServer() throws InterruptedException, ExecutionException, TimeoutException {
-    kafkaMockServer = new MockServer(kafkaMockPort);
-    kafkaMockServer.start();
+    kafkaCluster = provisionWith(defaultClusterConfig());
+    kafkaCluster.start();
   }
 
   public static Vertx getVertx() {
@@ -103,7 +108,7 @@ public final class TestConfig {
   }
 
   public static void closeKafkaMockServer() {
-    kafkaMockServer.close();
+    kafkaCluster.stop();
   }
 
   public static void closeVertx() {

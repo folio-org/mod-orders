@@ -1,21 +1,16 @@
 package org.folio;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.folio.TestConstants.ID;
-import static org.folio.TestConstants.EXISTED_ITEM_ID;
-import static org.folio.TestConstants.LOCATION_ID;
-import static org.folio.TestConstants.MIN_PO_ID;
-import static org.folio.TestConstants.MIN_PO_LINE_ID;
-import static org.folio.TestConstants.PIECE_ID;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
-import static org.folio.rest.impl.MockServer.getPoLineSearches;
-import static org.folio.rest.impl.MockServer.getPoLineUpdates;
-import static org.folio.rest.impl.MockServer.serverRqRs;
-import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxTestContext;
+import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.rest.impl.MockServer;
+import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,30 +27,17 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.rest.impl.MockServer;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ReceivedItem;
-import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-import org.folio.rest.jaxrs.model.ToBeReceived;
-
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxTestContext;
-import scala.collection.JavaConverters;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.TestConstants.*;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.rest.impl.MockServer.getPoLineSearches;
+import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.impl.MockServer.serverRqRs;
+import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public final class TestUtils {
 

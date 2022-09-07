@@ -14,8 +14,8 @@ import java.util.stream.Collectors;
 
 @Component
 public class KafkaConsumersStorageImpl implements KafkaConsumersStorage {
-  private static final Logger LOGGER = LogManager.getLogger();
 
+  private static final Logger LOGGER = LogManager.getLogger();
   private final Map<String, List<KafkaConsumerWrapper<String, String>>> consumerWrappersMap = new ConcurrentHashMap<>();
 
   @Override
