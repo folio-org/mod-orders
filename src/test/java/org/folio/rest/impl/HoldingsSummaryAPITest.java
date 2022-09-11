@@ -44,7 +44,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
-import org.springframework.context.annotation.Primary;
 
 public class HoldingsSummaryAPITest {
 
@@ -112,7 +111,6 @@ public class HoldingsSummaryAPITest {
    */
   static class ContextConfiguration {
     @Bean
-    @Primary
     public HoldingsSummaryService holdingsSummaryService() {
       return mock(HoldingsSummaryService.class);
     }
