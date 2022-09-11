@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.DeserializationConfig;
 import com.fasterxml.jackson.databind.SerializationConfig;
 
 import io.vertx.core.json.jackson.DatabindCodec;
-import org.folio.verticle.OrderConsumerVerticle;
+import org.folio.verticle.DataImportConsumerVerticle;
 import org.folio.verticle.consumers.SpringVerticleFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.support.AbstractApplicationContext;
@@ -52,7 +52,7 @@ public class InitAPIs implements InitAPI {
         DatabindCodec.prettyMapper().setConfig(deserializationConfig);
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
         SpringContextUtil.autowireDependencies(this, context);
-        deployConsumersVerticles(vertx).onSuccess(car -> {
+        deployConsumersVerticles(vertx).onSuccess(hdr -> {
             handler.handle(Future.succeededFuture());
             LOGGER.info("Consumer Verticles were successfully started");
           })
@@ -76,15 +76,14 @@ public class InitAPIs implements InitAPI {
     VerticleFactory verticleFactory = springContext.getBean(SpringVerticleFactory.class);
     vertx.registerVerticleFactory(verticleFactory);
 
-    Promise<String> deployRawMarcChunkConsumer = Promise.promise();
+    Promise<String> handler = Promise.promise();
 
-    vertx.deployVerticle(getVerticleName(verticleFactory, OrderConsumerVerticle.class),
+    vertx.deployVerticle(getVerticleName(verticleFactory, DataImportConsumerVerticle.class),
       new DeploymentOptions()
         .setWorker(true)
-        .setInstances(orderConsumerInstancesNumber), deployRawMarcChunkConsumer);
+        .setInstances(orderConsumerInstancesNumber), handler);
 
-    return GenericCompositeFuture.all(Arrays.asList(
-      deployRawMarcChunkConsumer.future()));
+    return GenericCompositeFuture.all(Arrays.asList(handler.future()));
   }
 
   private <T> String getVerticleName(VerticleFactory verticleFactory, Class<T> clazz) {

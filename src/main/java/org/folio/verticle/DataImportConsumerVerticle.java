@@ -21,8 +21,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import org.folio.verticle.consumers.consumerstorage.KafkaConsumersStorage;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +30,7 @@ import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROT
 
 @Component
 @Scope(SCOPE_PROTOTYPE)
-public class OrderConsumerVerticle extends AbstractVerticle {
+public class DataImportConsumerVerticle extends AbstractVerticle {
 
   private static final GlobalLoadSensor globalLoadSensor = new GlobalLoadSensor();
 
@@ -44,9 +42,6 @@ public class OrderConsumerVerticle extends AbstractVerticle {
 
   @Value("${orders.kafka.OrderConsumer.loadLimit:5}")
   private int loadLimit;
-
-  @Autowired
-  private KafkaConsumersStorage kafkaConsumersStorage;
 
   @Autowired
   @Qualifier("OrdersKafkaHandler")
@@ -81,7 +76,6 @@ public class OrderConsumerVerticle extends AbstractVerticle {
         .subscriptionDefinition(subscriptionDefinition)
         .processRecordErrorHandler(getErrorHandler())
         .build();
-      kafkaConsumersStorage.addConsumer(event, consumerWrapper);
 
       futures.add(consumerWrapper.start(getHandler(),
         constructModuleName() + "_" + getClass().getSimpleName()));
