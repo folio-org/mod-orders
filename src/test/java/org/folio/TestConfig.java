@@ -1,8 +1,8 @@
 package org.folio;
 
+import com.github.tomakehurst.wiremock.admin.NotFoundException;
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Verticle;
@@ -15,8 +15,8 @@ import org.folio.rest.impl.MockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 
-import java.lang.reflect.Field;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -43,6 +43,7 @@ public final class TestConfig {
   private TestConfig() {}
 
   public static void deployVerticle() throws InterruptedException, ExecutionException, TimeoutException {
+
     int okapiPort = NetworkUtils.nextFreePort();
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;
@@ -122,19 +123,23 @@ public final class TestConfig {
   public static Context getFirstContextFromVertx(Vertx vertx) {
     return vertx.deploymentIDs().stream().flatMap((id) -> ((VertxImpl)vertx)
       .getDeployment(id).getVerticles().stream())
-      .map(TestConfig::getContextWithReflection)
+      .map(TestConfig::getContext)
       .filter(Objects::nonNull)
       .findFirst()
       .orElseThrow(() -> new IllegalStateException("Spring context was not created"));
   }
 
-  private static Context getContextWithReflection(Verticle verticle) {
-    try {
-      Field field = AbstractVerticle.class.getDeclaredField("context");
-      field.setAccessible(true);
-      return ((Context)field.get(verticle));
-    } catch (NoSuchFieldException | IllegalAccessException var2) {
-      return null;
-    }
+  private static Context getContext(Verticle verticle) {
+      String parentVerticleUUID = vertx.deploymentIDs().stream()
+        .filter(v -> !((VertxImpl) vertx).getDeployment(v).isChild())
+        .findFirst()
+        .orElseThrow(() -> new NotFoundException("Couldn't find the parent verticle."));
+
+      Optional<Context> context = Optional.of(((VertxImpl) vertx)
+          .getDeployment(parentVerticleUUID).getContexts().stream()
+          .findFirst())
+        .orElseThrow(() -> new NotFoundException("Couldn't find the spring context."));
+
+    return context.orElseThrow(() -> new NotFoundException("Couldn't find the spring context."));
   }
 }

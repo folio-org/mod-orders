@@ -16,22 +16,23 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
-@Qualifier("OrdersKafkaHandler")
-public class OrdersKafkaHandler implements AsyncRecordHandler<String, String> {
+@Qualifier("DataImportKafkaHandler")
+public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger();
 
   private final Vertx vertx;
 
-  public OrdersKafkaHandler(@Autowired Vertx vertx) {
+  public DataImportKafkaHandler(@Autowired Vertx vertx) {
     this.vertx = vertx;
   }
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
-    LOGGER.debug("OrdersKafkaHandler :: handle");
+    LOGGER.debug("DataImportKafkaHandler :: handle");
     List<KafkaHeader> kafkaHeaders = record.headers();
-    OkapiConnectionParams okapiParams = new OkapiConnectionParams(KafkaHeaderUtils.kafkaHeadersToMap(kafkaHeaders), vertx);
+    OkapiConnectionParams okapiParams =
+      new OkapiConnectionParams(KafkaHeaderUtils.kafkaHeadersToMap(kafkaHeaders), vertx);
     try {
       return Future.succeededFuture();
     } catch (Exception e) {

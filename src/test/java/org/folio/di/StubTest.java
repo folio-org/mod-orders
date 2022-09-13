@@ -12,9 +12,10 @@ import java.util.UUID;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(VertxUnitRunner.class)
-public class StubTest extends  DiAbstractRestTest {
+public class StubTest extends DiAbstractRestTest {
   private String handlerId;
   private String eventId;
+
   @Before
   public void setUp(TestContext context) throws IOException {
     super.setUp(context);

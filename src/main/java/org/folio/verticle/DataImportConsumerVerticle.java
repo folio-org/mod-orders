@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
-import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
 
 @Component
@@ -44,15 +43,15 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   private int loadLimit;
 
   @Autowired
-  @Qualifier("OrdersKafkaHandler")
+  @Qualifier("DataImportKafkaHandler")
   private AsyncRecordHandler<String, String> ordersKafkaHandler;
 
   @Autowired
-  @Qualifier("OrdersErrorHandler")
+  @Qualifier("DataImportErrorHandler")
   private ProcessRecordErrorHandler<String, String> errorHandler;
 
   public List<String> getEvents() {
-    return List.of(DI_COMPLETED.value(), DI_ERROR.value());
+    return List.of(DI_COMPLETED.value());
   }
 
   @Override

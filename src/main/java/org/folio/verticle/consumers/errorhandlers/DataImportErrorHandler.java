@@ -8,8 +8,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Component
-@Qualifier("OrdersErrorHandler")
-public class OrdersErrorHandler implements ProcessRecordErrorHandler<String, String> {
+@Qualifier("DataImportErrorHandler")
+public class DataImportErrorHandler implements ProcessRecordErrorHandler<String, String> {
   private static final Logger LOGGER = LogManager.getLogger();
 
   @Override
