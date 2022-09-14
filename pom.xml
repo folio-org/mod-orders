@@ -232,8 +232,12 @@
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
       <artifactId>kafka</artifactId>
-      <version>1.16.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -260,12 +264,6 @@
           <artifactId>jackson-module-scala_2.13</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>1.16.0</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
@@ -755,6 +753,13 @@
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
         <version>5.7.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>1.17.3</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
