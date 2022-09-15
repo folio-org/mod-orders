@@ -34,14 +34,14 @@ public class InstallUpgradeIT {
   private static final boolean IS_LOG_ENABLED = false;
   private static final Network NETWORK = Network.newNetwork();
 
-  @ClassRule
+  @ClassRule(order = 1)
   public static final KafkaContainer KAFKA =
     new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.0.3"))
       .withNetwork(NETWORK)
       .withNetworkAliases("mykafka");
 
-  @ClassRule
-  public static final GenericContainer<?> MOD_MIS =
+  @ClassRule(order = 2)
+  public static final GenericContainer<?> MOD_ORDERS =
     new GenericContainer<>(
       new ImageFromDockerfile("mod-orders").withFileFromPath(".", Path.of(".")))
       .withNetwork(NETWORK)
@@ -53,10 +53,10 @@ public class InstallUpgradeIT {
   public static void beforeClass() {
     RestAssured.reset();
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
-    RestAssured.baseURI = "http://" + MOD_MIS.getHost() + ":" + MOD_MIS.getFirstMappedPort();
+    RestAssured.baseURI = "http://" + MOD_ORDERS.getHost() + ":" + MOD_ORDERS.getFirstMappedPort();
     if (IS_LOG_ENABLED) {
       KAFKA.followOutput(new Slf4jLogConsumer(LOG).withSeparateOutputStreams());
-      MOD_MIS.followOutput(new Slf4jLogConsumer(LOG).withSeparateOutputStreams());
+      MOD_ORDERS.followOutput(new Slf4jLogConsumer(LOG).withSeparateOutputStreams());
     }
   }
 
