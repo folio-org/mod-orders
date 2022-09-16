@@ -1,5 +1,7 @@
 package org.folio.rest.impl;
 
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.SerializationConfig;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
@@ -7,25 +9,18 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.core.spi.VerticleFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.dbschema.ObjectMapperTool;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.resource.interfaces.InitAPI;
 import org.folio.spring.SpringContextUtil;
-
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.SerializationConfig;
-
-import io.vertx.core.json.jackson.DatabindCodec;
 import org.folio.verticle.DataImportConsumerVerticle;
 import org.folio.verticle.consumers.SpringVerticleFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.support.AbstractApplicationContext;
-
-import java.util.Arrays;
 
 /**
  * The class initializes vertx context adding spring context
@@ -83,7 +78,7 @@ public class InitAPIs implements InitAPI {
         .setWorker(true)
         .setInstances(dataImportConsumerInstancesNumber), deployDataImportConsumerPromise);
 
-    return GenericCompositeFuture.all(Arrays.asList(deployDataImportConsumerPromise.future()));
+    return deployDataImportConsumerPromise.future();
   }
 
   private <T> String getVerticleName(VerticleFactory verticleFactory, Class<T> clazz) {
