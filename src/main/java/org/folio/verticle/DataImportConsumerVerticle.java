@@ -57,7 +57,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   @Override
   public void start(Promise<Void> startPromise) {
 
-    LOGGER.debug("OrderConsumerVerticle :: start");
+    LOGGER.debug("DataImportConsumerVerticle :: start");
 
     List<Future<Void>> futures = new ArrayList<>();
 
