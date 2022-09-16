@@ -19,8 +19,13 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.consumer.impl.KafkaConsumerRecordImpl;
 import net.mguenther.kafka.junit.*;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.folio.DataImportEventPayload;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Event;
@@ -33,6 +38,7 @@ import org.junit.Rule;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -49,6 +55,7 @@ import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultCluste
 import static org.folio.dataimport.util.RestUtil.OKAPI_TENANT_HEADER;
 import static org.folio.dataimport.util.RestUtil.OKAPI_URL_HEADER;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 
 public abstract class DiAbstractRestTest {
 
@@ -64,6 +71,7 @@ public abstract class DiAbstractRestTest {
   private static final String HTTP_PORT = "http.port";
   private static int port;
   protected static final String TENANT_ID = "diku";
+  protected static final String TOKEN = "token";
   private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
   protected static RequestSpecification spec;
 
@@ -144,6 +152,21 @@ public abstract class DiAbstractRestTest {
 
     String topic = formatToKafkaTopicName(eventType);
     return SendKeyValues.to(topic, singletonList(kafkaRecord)).useDefaults();
+  }
+
+  protected KafkaConsumerRecord<String, String> buildKafkaConsumerRecord(DataImportEventPayload record) {
+    String topic = KafkaTopicNameHelper.formatTopicName("folio", getDefaultNameSpace(), TENANT_ID, record.getEventType());
+    Event event = new Event().withEventPayload(Json.encode(record));
+    ConsumerRecord<String, String> consumerRecord = buildConsumerRecord(topic, event);
+    return new KafkaConsumerRecordImpl<>(consumerRecord);
+  }
+
+  protected ConsumerRecord<String, String> buildConsumerRecord(String topic, Event event) {
+    ConsumerRecord<java.lang.String, java.lang.String> consumerRecord = new ConsumerRecord("folio", 0, 0, topic, Json.encode(event));
+    consumerRecord.headers().add(new RecordHeader(OkapiConnectionParams.OKAPI_TENANT_HEADER, TENANT_ID.getBytes(StandardCharsets.UTF_8)));
+    consumerRecord.headers().add(new RecordHeader(OKAPI_URL_HEADER, ("http://localhost:" + snapshotMockServer.port()).getBytes(StandardCharsets.UTF_8)));
+    consumerRecord.headers().add(new RecordHeader(OKAPI_TOKEN_HEADER, (TOKEN).getBytes(StandardCharsets.UTF_8)));
+    return consumerRecord;
   }
 
   protected  <T> T getBeanFromSpringContext(Vertx vtx, Class<T> clazz) {
