@@ -13,7 +13,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.validation.constraints.AssertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -23,7 +22,7 @@ import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(VertxUnitRunner.class)
-public class StubTest extends DiAbstractRestTest {
+public class DataImportTest extends DiAbstractRestTest {
 
   DataImportKafkaHandler dataImportKafkaHandler;
 

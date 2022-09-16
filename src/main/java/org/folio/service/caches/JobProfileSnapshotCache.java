@@ -25,8 +25,9 @@ import java.util.concurrent.TimeUnit;
 public class JobProfileSnapshotCache {
 
   private static final Logger LOGGER = LogManager.getLogger();
+  public static final String DATA_IMPORT_PROFILES_JOB_PROFILE_SNAPSHOTS = "/data-import-profiles/jobProfileSnapshots/";
 
-  @Value("${orders.profile-snapshot-cache.expiration.time.seconds:3600}")
+  @Value("${orders.cache.jobprofile.expiration.seconds:3600}")
   private long cacheExpirationTime;
   private AsyncCache<String, Optional<ProfileSnapshotWrapper>> cache;
 
@@ -50,7 +51,7 @@ public class JobProfileSnapshotCache {
   private CompletableFuture<Optional<ProfileSnapshotWrapper>> loadJobProfileSnapshot(String profileSnapshotId, OkapiConnectionParams params) {
     LOGGER.debug("Trying to load jobProfileSnapshot by id  '{}' for cache, okapi url: {}, tenantId: {}", profileSnapshotId, params.getOkapiUrl(), params.getTenantId());
 
-    return RestUtil.doRequest(params, "/data-import-profiles/jobProfileSnapshots/" + profileSnapshotId, HttpMethod.GET, null)
+    return RestUtil.doRequest(params, DATA_IMPORT_PROFILES_JOB_PROFILE_SNAPSHOTS + profileSnapshotId, HttpMethod.GET, null)
       .toCompletionStage()
       .toCompletableFuture()
       .thenCompose(httpResponse -> {

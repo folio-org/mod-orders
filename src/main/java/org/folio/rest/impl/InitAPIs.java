@@ -36,8 +36,8 @@ public class InitAPIs implements InitAPI {
 
   private static final String SPRING_CONTEXT_KEY = "springContext";
 
-  @Value("${orders.kafka.OrderConsumer.instancesNumber:1}")
-  private int orderConsumerInstancesNumber;
+  @Value("${orders.kafka.consumer.instancesNumber:1}")
+  private int dataImportConsumerInstancesNumber;
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
@@ -76,14 +76,14 @@ public class InitAPIs implements InitAPI {
     VerticleFactory verticleFactory = springContext.getBean(SpringVerticleFactory.class);
     vertx.registerVerticleFactory(verticleFactory);
 
-    Promise<String> handler = Promise.promise();
+    Promise<String> deployDataImportConsumerPromise = Promise.promise();
 
     vertx.deployVerticle(getVerticleName(verticleFactory, DataImportConsumerVerticle.class),
       new DeploymentOptions()
         .setWorker(true)
-        .setInstances(orderConsumerInstancesNumber), handler);
+        .setInstances(dataImportConsumerInstancesNumber), deployDataImportConsumerPromise);
 
-    return GenericCompositeFuture.all(Arrays.asList(handler.future()));
+    return GenericCompositeFuture.all(Arrays.asList(deployDataImportConsumerPromise.future()));
   }
 
   private <T> String getVerticleName(VerticleFactory verticleFactory, Class<T> clazz) {

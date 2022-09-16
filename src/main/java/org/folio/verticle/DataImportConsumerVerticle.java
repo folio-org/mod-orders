@@ -44,12 +44,14 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   @Autowired
   @Qualifier("DataImportKafkaHandler")
-  private AsyncRecordHandler<String, String> ordersKafkaHandler;
+  private AsyncRecordHandler<String, String> dataImportKafkaHandler;
 
   @Autowired
   @Qualifier("DataImportErrorHandler")
   private ProcessRecordErrorHandler<String, String> errorHandler;
 
+
+  //TODO: should be changed to the real value
   public List<String> getEvents() {
     return List.of(DI_COMPLETED.value());
   }
@@ -89,7 +91,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   }
 
   public AsyncRecordHandler<String, String> getHandler() {
-    return this.ordersKafkaHandler;
+    return this.dataImportKafkaHandler;
   }
 
   public ProcessRecordErrorHandler<String, String> getErrorHandler() {
