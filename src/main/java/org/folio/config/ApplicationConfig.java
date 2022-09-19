@@ -135,7 +135,7 @@ public class ApplicationConfig {
       .maxRequestSize(maxRequestSize)
       .build();
 
-    LOGGER.info("kafkaConfig: " + kafkaConfig);
+    LOGGER.info("kafkaConfig: {}", kafkaConfig);
     return kafkaConfig;
   }
 
