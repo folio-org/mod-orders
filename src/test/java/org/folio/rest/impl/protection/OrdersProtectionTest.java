@@ -39,6 +39,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.restassured.response.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -60,7 +61,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
 import io.vertx.core.json.JsonObject;
-
+import scala.collection.JavaConverters;
+import scala.collection.immutable.Seq;
 
 
 public class OrdersProtectionTest extends ProtectedEntityTestBase {
