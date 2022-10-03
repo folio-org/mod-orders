@@ -12,7 +12,6 @@ import static org.folio.orders.utils.POLineFieldNames.ERESOURCE_LICENSE;
 import static org.folio.orders.utils.POLineFieldNames.ERESOURCE_MATERIAL_TYPE;
 import static org.folio.orders.utils.POLineFieldNames.ERESOURCE_TRIAL;
 import static org.folio.orders.utils.POLineFieldNames.ERESOURCE_USER_LIMIT;
-import static org.folio.orders.utils.POLineFieldNames.LAST_EDI_EXPORT_DATE;
 import static org.folio.orders.utils.POLineFieldNames.ORDER_FORMAT;
 import static org.folio.orders.utils.POLineFieldNames.PHYSICAL_CREATE_INVENTORY;
 import static org.folio.orders.utils.POLineFieldNames.PHYSICAL_MATERIAL_TYPE;
