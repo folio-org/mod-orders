@@ -12,7 +12,6 @@ import static org.folio.orders.utils.POLineFieldNames.ERESOURCE_LICENSE;
 import static org.folio.orders.utils.POLineFieldNames.ERESOURCE_MATERIAL_TYPE;
 import static org.folio.orders.utils.POLineFieldNames.ERESOURCE_TRIAL;
 import static org.folio.orders.utils.POLineFieldNames.ERESOURCE_USER_LIMIT;
-import static org.folio.orders.utils.POLineFieldNames.LAST_EDI_EXPORT_DATE;
 import static org.folio.orders.utils.POLineFieldNames.ORDER_FORMAT;
 import static org.folio.orders.utils.POLineFieldNames.PHYSICAL_CREATE_INVENTORY;
 import static org.folio.orders.utils.POLineFieldNames.PHYSICAL_MATERIAL_TYPE;
@@ -38,7 +37,7 @@ import org.apache.commons.collections4.ListUtils;
 public class POLineProtectedFieldsUtil {
   private static final List<String> commonProtectedFieldNames = Stream.of(ACQUISITION_METHOD, CHECKIN_ITEMS,
       COLLECTION, CONTRIBUTORS, DONOR, DETAILS_PRODUCT_IDS, DETAILS_SUBSCRIPTION_INTERVAL,
-      ORDER_FORMAT, RUSH, SELECTOR, VENDORDETAIL_INSTRUCTION_TO_VENDOR, LAST_EDI_EXPORT_DATE)
+      ORDER_FORMAT, RUSH, SELECTOR, VENDORDETAIL_INSTRUCTION_TO_VENDOR)
     .map(POLineFieldNames::getFieldName).collect(Collectors.toList());
 
   private static final List<String> elecProtectedFieldNames = Stream.of(ERESOURCE_CREATE_INVENTORY,
