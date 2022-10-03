@@ -38,7 +38,7 @@ import org.apache.commons.collections4.ListUtils;
 public class POLineProtectedFieldsUtil {
   private static final List<String> commonProtectedFieldNames = Stream.of(ACQUISITION_METHOD, CHECKIN_ITEMS,
       COLLECTION, CONTRIBUTORS, DONOR, DETAILS_PRODUCT_IDS, DETAILS_SUBSCRIPTION_INTERVAL,
-      ORDER_FORMAT, RUSH, SELECTOR, VENDORDETAIL_INSTRUCTION_TO_VENDOR, LAST_EDI_EXPORT_DATE)
+      ORDER_FORMAT, RUSH, SELECTOR, VENDORDETAIL_INSTRUCTION_TO_VENDOR)
     .map(POLineFieldNames::getFieldName).collect(Collectors.toList());
 
   private static final List<String> elecProtectedFieldNames = Stream.of(ERESOURCE_CREATE_INVENTORY,
