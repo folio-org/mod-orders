@@ -10,6 +10,7 @@ import org.folio.rest.jaxrs.model.Event;
 import org.folio.verticle.consumers.DataImportKafkaHandler;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -21,6 +22,8 @@ import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.junit.Assert.assertTrue;
 
+// TODO: tests will be enabled in scope of the https://issues.folio.org/browse/MODORDERS-773
+@Ignore()
 @RunWith(VertxUnitRunner.class)
 public class DataImportTest extends DiAbstractRestTest {
 
