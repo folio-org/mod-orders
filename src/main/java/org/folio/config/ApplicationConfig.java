@@ -15,14 +15,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
-import org.folio.service.AcquisitionMethodsService;
-import org.folio.service.AcquisitionsUnitsService;
-import org.folio.service.FundsDistributionService;
-import org.folio.service.PrefixService;
-import org.folio.service.ProtectionService;
-import org.folio.service.ReasonForClosureService;
-import org.folio.service.SuffixService;
-import org.folio.service.TagService;
+import org.folio.service.*;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.FinanceExchangeRateService;
@@ -36,48 +29,15 @@ import org.folio.service.finance.expenceclass.ExpenseClassService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.rollover.RolloverErrorService;
 import org.folio.service.finance.rollover.RolloverRetrieveService;
-import org.folio.service.finance.transaction.ClosedToOpenEncumbranceStrategy;
-import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilder;
-import org.folio.service.finance.transaction.EncumbranceService;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.finance.transaction.EncumbrancesProcessingHolderBuilder;
-import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategy;
-import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
-import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
-import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
-import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
-import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.finance.transaction.TransactionSummariesService;
+import org.folio.service.finance.transaction.*;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.invoice.InvoiceService;
-import org.folio.service.orders.CombinedOrderDataPopulateService;
-import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
-import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
-import org.folio.service.orders.CompositePoLineValidationService;
-import org.folio.service.orders.HoldingsSummaryService;
-import org.folio.service.orders.OrderInvoiceRelationService;
-import org.folio.service.orders.OrderLinesSummaryPopulateService;
-import org.folio.service.orders.OrderReEncumberService;
-import org.folio.service.orders.OrderRolloverService;
-import org.folio.service.orders.PurchaseOrderLineService;
-import org.folio.service.orders.PurchaseOrderStorageService;
-import org.folio.service.orders.ReEncumbranceHoldersBuilder;
-import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderHolderBuilder;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryService;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
+import org.folio.service.orders.*;
+import org.folio.service.orders.flows.update.open.*;
 import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
-import org.folio.service.orders.lines.update.OrderLinePatchOperationHandlerResolver;
-import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
-import org.folio.service.orders.lines.update.OrderLineUpdateInstanceHandler;
-import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
-import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategyResolver;
-import org.folio.service.orders.lines.update.PatchOperationHandler;
+import org.folio.service.orders.lines.update.*;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
@@ -91,11 +51,7 @@ import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
-import org.folio.service.pieces.flows.strategies.ProcessInventoryElectronicStrategy;
-import org.folio.service.pieces.flows.strategies.ProcessInventoryMixedStrategy;
-import org.folio.service.pieces.flows.strategies.ProcessInventoryPhysicalStrategy;
-import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategy;
-import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
+import org.folio.service.pieces.flows.strategies.*;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
@@ -405,6 +361,11 @@ public class ApplicationConfig {
   TitlesService titlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService,
       AcquisitionsUnitsService acquisitionsUnitsService) {
     return new TitlesService(restClient, purchaseOrderLineService, acquisitionsUnitsService);
+  }
+
+  @Bean
+  ExportHistoryService exportHistoryService(RestClient restClient) {
+    return new ExportHistoryService(restClient);
   }
 
   @Bean

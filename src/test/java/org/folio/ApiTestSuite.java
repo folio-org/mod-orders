@@ -23,16 +23,7 @@ import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorT
 import org.folio.rest.core.ResponseUtilTest;
 import org.folio.rest.core.RestClientTest;
 import org.folio.rest.core.exceptions.ExceptionUtilTest;
-import org.folio.rest.impl.AcquisitionMethodAPITest;
-import org.folio.rest.impl.CheckinReceivingApiTest;
-import org.folio.rest.impl.HoldingsSummaryAPITest;
-import org.folio.rest.impl.OrderTemplateTest;
-import org.folio.rest.impl.PieceApiTest;
-import org.folio.rest.impl.PoNumberApiTest;
-import org.folio.rest.impl.PurchaseOrderLinesApiTest;
-import org.folio.rest.impl.PurchaseOrdersApiTest;
-import org.folio.rest.impl.ReceivingHistoryApiTest;
-import org.folio.rest.impl.TitlesApiTest;
+import org.folio.rest.impl.*;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
@@ -435,5 +426,9 @@ public class ApiTestSuite {
 
   @Nested
   class WithoutHoldingOrderLineUpdateInstanceStrategy extends WithoutHoldingOrderLineUpdateInstanceStrategyTest {
+  }
+
+  @Nested
+  class ExportHistoryImplTestNested extends ExportHistoryImplTest {
   }
 }

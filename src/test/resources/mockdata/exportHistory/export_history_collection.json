@@ -1,0 +1,30 @@
+{
+  "exportHistories":
+  [
+    {
+      "id": "99fb699a-cdf1-11e9-a9d9-f2801f1b9aa1",
+      "exportType": "EDIFACT_ORDERS_EXPORT",
+      "exportJobId": "22fb627a-cdf1-11e8-a8d5-f2801f1b9aa1",
+      "exportDate": "2020-12-25",
+      "exportedPoLineIds": [
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd2",
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd3",
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd4"
+      ]
+    },
+    {
+      "id": "99fb699a-cdf1-11e9-a9d9-f2801f1b9aa2",
+      "exportType": "EDIFACT_ORDERS_EXPORT",
+      "exportJobId": "22fb627a-cdf1-11e8-a8d5-f2801f1b9aa2",
+      "exportDate": "2020-12-26",
+      "exportedPoLineIds": [
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd4",
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd2",
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd5",
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd4"
+      ]
+    }
+  ],
+  "totalRecords": 2
+}
