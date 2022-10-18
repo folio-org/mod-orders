@@ -319,13 +319,8 @@ public class EncumbranceService {
                                             RequestContext requestContext) {
     final String[] currentFiscalYearId = new String[1];
     for (Map.Entry<String, List<CompositePoLine>> entry : mapFiscalYearWithCompPOLines.entrySet()) {
-      for (CompositePoLine pLine : entry.getValue()) {
-        if (poLine.getId().equals(pLine.getId())) {
           currentFiscalYearId[0] = entry.getKey();
-          break;
-        }
       }
-    }
     if (currentFiscalYearId[0] == null) {
         Error error = ErrorCodes.CURRENT_FISCAL_YEAR_ID_NOT_FOUND.toError();
         List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("poLineNumber")
