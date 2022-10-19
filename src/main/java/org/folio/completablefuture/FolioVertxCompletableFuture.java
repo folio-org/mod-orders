@@ -17,7 +17,7 @@ import io.vertx.core.Vertx;
 /**
  *  * NOTICE:
  *  <p>
- *  Original class <a href="https://github.com/cescoffier/vertx-completable-future/blob/master/src/main/java/me/escoffier/vertx/completablefuture/VertxCompletableFuture.java">VertxCompletableFuture</a>
+ *  Original class <a href="https://github.com/cescoffier/vertx-completable-future/blob/vertx-completable-future-0.1.2/src/main/java/me/escoffier/vertx/completablefuture/VertxCompletableFuture.java">VertxCompletableFuture</a>
  *  had been developed by <a href="https://github.com/cescoffier">Clement Escoffier</a>
  *  <br/>
  *  Original class had been copied from the repository above and updated with following changes: <br/>
