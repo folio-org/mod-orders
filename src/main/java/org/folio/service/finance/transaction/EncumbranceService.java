@@ -62,6 +62,8 @@ public class EncumbranceService {
   private final OrderInvoiceRelationService orderInvoiceRelationService;
   private final FiscalYearService fiscalYearService;
 
+  final String[] currentFiscalYearId = new String[1];
+
   public EncumbranceService(TransactionService transactionService,
                             TransactionSummariesService transactionSummariesService,
                             InvoiceLineService invoiceLineService,
@@ -317,10 +319,14 @@ public class EncumbranceService {
   private CompletableFuture<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePurchaseOrder.OrderType orderType,
                                             CompositePoLine poLine, Map<String, List<CompositePoLine>> mapFiscalYearWithCompPOLines,
                                             RequestContext requestContext) {
-    final String[] currentFiscalYearId = new String[1];
     for (Map.Entry<String, List<CompositePoLine>> entry : mapFiscalYearWithCompPOLines.entrySet()) {
+      for (CompositePoLine pLine : entry.getValue()) {
+        if (poLine.getId().equals(pLine.getId())) {
           currentFiscalYearId[0] = entry.getKey();
+          break;
+        }
       }
+    }
     if (currentFiscalYearId[0] == null) {
         Error error = ErrorCodes.CURRENT_FISCAL_YEAR_ID_NOT_FOUND.toError();
         List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("poLineNumber")
