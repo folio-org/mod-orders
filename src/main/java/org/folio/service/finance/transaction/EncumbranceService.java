@@ -62,6 +62,7 @@ public class EncumbranceService {
   private final OrderInvoiceRelationService orderInvoiceRelationService;
   private final FiscalYearService fiscalYearService;
 
+
   public EncumbranceService(TransactionService transactionService,
                             TransactionSummariesService transactionSummariesService,
                             InvoiceLineService invoiceLineService,
@@ -154,7 +155,7 @@ public class EncumbranceService {
     // Check invoice line's releaseEncumbrance value for each order line
     List<CompletableFuture<List<Transaction>>> futures =
       compPO.getCompositePoLines()
-        .stream()
+        .stream().filter(poLines->poLines.getFundDistribution().size() > 0)
         .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithCompPOLines, requestContext))
         .collect(toList());
     return collectResultsOnSuccess(futures)
@@ -317,6 +318,7 @@ public class EncumbranceService {
   private CompletableFuture<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePurchaseOrder.OrderType orderType,
                                             CompositePoLine poLine, Map<String, List<CompositePoLine>> mapFiscalYearWithCompPOLines,
                                             RequestContext requestContext) {
+
     final String[] currentFiscalYearId = new String[1];
     for (Map.Entry<String, List<CompositePoLine>> entry : mapFiscalYearWithCompPOLines.entrySet()) {
       for (CompositePoLine pLine : entry.getValue()) {
