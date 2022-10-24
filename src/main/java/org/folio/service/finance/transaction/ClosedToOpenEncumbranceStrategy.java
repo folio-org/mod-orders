@@ -48,9 +48,12 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
         .thenCompose(mapFiscalYearIdsWithCompPOLines -> encumbranceService.getOrderEncumbrancesToUnrelease(compPO, mapFiscalYearIdsWithCompPOLines, requestContext))
         .thenCompose(transactions -> {
           // stop if nothing needs to be done
+
           if (transactions.isEmpty() && compPO.getCompositePoLines().stream().noneMatch(
-              pol -> pol.getFundDistribution().stream().anyMatch(f -> f.getEncumbrance() == null)))
+              pol -> pol.getFundDistribution().stream().anyMatch(f -> f.getEncumbrance() == null))) {
             return CompletableFuture.completedFuture(null);
+          }
+
           // check encumbrance restrictions as in PendingToOpenEncumbranceStrategy
           // (except we use a different list of polines/transactions)
           List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder
