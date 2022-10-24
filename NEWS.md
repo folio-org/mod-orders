@@ -1,5 +1,14 @@
 ## 12.5.0 - Unreleased
 
+## 12.4.4 - Released Morning Glory 2022 R2 Hot Fix 1
+The focus of this release was to add copyright notice for FolioVertxCompletableFuture
+
+[Full Changelog](https://github.com/folio-org/mod-invoice/compare/v12.4.3...v12.4.4)
+
+### Stories
+* [FOLIO-3604](https://issues.folio.org/browse/FOLIO-3604) - FolioVertxCompletableFuture copyright violation
+
+
 ## 12.4.3 (Morning Glory R2 2022 Bug Fix) - Released
 This release focused on fixing bugs for fetching orders for rollover and adjusting Instance status, instance 
 type and loan type defaults is ignored buy order creation 
