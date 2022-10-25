@@ -6,8 +6,8 @@ This release focused on upgrade RMB and module interface dependencies
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.4.0...v12.5.0)
 
 ### Stories
-* [MODORDERS-776](https://issues.folio.org/browse/MODORDERS-776) - Upgrade RAML Module Builder
 * [MODORDERS-778](https://issues.folio.org/browse/MODORDERS-778) - Temporary disable data-import verticle deployment
+* [MODORDERS-776](https://issues.folio.org/browse/MODORDERS-776) - Upgrade RAML Module Builder
 * [MODORDERS-761](https://issues.folio.org/browse/MODORDERS-761) - Support inventory 12.0 in ModuleDescriptor "requires"
 * [MODORDERS-757](https://issues.folio.org/browse/MODORDERS-757) - Support holdings-storage 6.0, item-storage 10.0
 * [MODORDERS-753](https://issues.folio.org/browse/MODORDERS-753) - Implement processing of DI Kafka events by mod-orders
