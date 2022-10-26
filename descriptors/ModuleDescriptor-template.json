@@ -1547,7 +1547,7 @@
     {
       "permissionName" : "orders.export-history.all",
       "displayName" : "All orders suffixes perms",
-      "description" : "All permissions for the orders configuration - suffixes",
+      "description" : "All permissions for the export history",
       "subPermissions" : [
         "orders.export-history.collection.get"
       ]
