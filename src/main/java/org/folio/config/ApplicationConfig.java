@@ -17,6 +17,7 @@ import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.ExportHistoryService;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.PrefixService;
 import org.folio.service.ProtectionService;
@@ -405,6 +406,11 @@ public class ApplicationConfig {
   TitlesService titlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService,
       AcquisitionsUnitsService acquisitionsUnitsService) {
     return new TitlesService(restClient, purchaseOrderLineService, acquisitionsUnitsService);
+  }
+
+  @Bean
+  ExportHistoryService exportHistoryService(RestClient restClient) {
+    return new ExportHistoryService(restClient);
   }
 
   @Bean

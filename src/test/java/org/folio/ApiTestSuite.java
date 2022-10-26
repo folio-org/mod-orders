@@ -25,6 +25,7 @@ import org.folio.rest.core.RestClientTest;
 import org.folio.rest.core.exceptions.ExceptionUtilTest;
 import org.folio.rest.impl.AcquisitionMethodAPITest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
+import org.folio.rest.impl.ExportHistoryImplTest;
 import org.folio.rest.impl.HoldingsSummaryAPITest;
 import org.folio.rest.impl.OrderTemplateTest;
 import org.folio.rest.impl.PieceApiTest;
@@ -435,5 +436,9 @@ public class ApiTestSuite {
 
   @Nested
   class WithoutHoldingOrderLineUpdateInstanceStrategy extends WithoutHoldingOrderLineUpdateInstanceStrategyTest {
+  }
+
+  @Nested
+  class ExportHistoryImplTestNested extends ExportHistoryImplTest {
   }
 }
