@@ -46,6 +46,7 @@ public class ResourcePathResolver {
   public static final String LEDGER_FY_ROLLOVERS = "finance.ledger-rollovers";
   public static final String LEDGER_FY_ROLLOVER_ERRORS = "finance.ledger-rollovers-errors";
   public static final String ORDER_INVOICE_RELATIONSHIP = "order-invoice-relationship";
+  public static final String EXPORT_HISTORY = "export-history";
   public static final String TAGS = "tags";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
@@ -85,6 +86,7 @@ public class ResourcePathResolver {
     apis.put(LEDGER_FY_ROLLOVERS, "/finance/ledger-rollovers");
     apis.put(LEDGER_FY_ROLLOVER_ERRORS, "/finance/ledger-rollovers-errors");
     apis.put(ORDER_INVOICE_RELATIONSHIP, "/orders-storage/order-invoice-relns");
+    apis.put(EXPORT_HISTORY, "/orders-storage/export-history");
     apis.put(TAGS, "/tags");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);

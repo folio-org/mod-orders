@@ -115,7 +115,6 @@ import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURC
 import static org.folio.rest.impl.crud.CrudTestEntities.PREFIX;
 import static org.folio.rest.impl.crud.CrudTestEntities.REASON_FOR_CLOSURE;
 import static org.folio.rest.impl.crud.CrudTestEntities.SUFFIX;
-import static org.folio.service.ExportHistoryService.EXPORT_HISTORY_ENDPOINT;
 import static org.folio.service.ProtectionService.ACQUISITIONS_UNIT_ID;
 import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
@@ -518,7 +517,7 @@ public class MockServer {
     router.get("/invoice/invoice-lines").handler(this::handleGetInvoiceLines);
     router.get(resourcesPath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethods);
     router.get(resourcePath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethod);
-    router.get(EXPORT_HISTORY_ENDPOINT).handler(this::handleGetExportHistoryMethod);
+    router.get(resourcesPath(EXPORT_HISTORY)).handler(this::handleGetExportHistoryMethod);
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));

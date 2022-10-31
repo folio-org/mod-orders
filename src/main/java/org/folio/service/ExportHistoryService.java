@@ -13,7 +13,7 @@ import lombok.extern.log4j.Log4j2;
 public class ExportHistoryService {
 
   private final RestClient restClient;
-  public static final String EXPORT_HISTORY_ENDPOINT = "/orders/export-history";
+  public static final String EXPORT_HISTORY_STORAGE_ENDPOINT = "/orders-storage/export-history";
 
   public ExportHistoryService(RestClient restClient) {
     this.restClient = restClient;
@@ -21,7 +21,7 @@ public class ExportHistoryService {
 
   public CompletableFuture<ExportHistoryCollection> getExportHistoryByQuery(String query, int offset, int limit,
       RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(EXPORT_HISTORY_ENDPOINT).withQuery(query)
+    RequestEntry requestEntry = new RequestEntry(EXPORT_HISTORY_STORAGE_ENDPOINT).withQuery(query)
       .withOffset(offset)
       .withLimit(limit);
     return restClient.get(requestEntry, requestContext, ExportHistoryCollection.class);
