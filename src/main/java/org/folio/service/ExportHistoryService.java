@@ -13,7 +13,7 @@ import lombok.extern.log4j.Log4j2;
 public class ExportHistoryService {
 
   private final RestClient restClient;
-  public static final String EXPORT_HISTORY_ENDPOINT = "/orders/export-history";
+  public static final String EXPORT_HISTORY_ENDPOINT = "/orders-storage/export-history";
 
   public ExportHistoryService(RestClient restClient) {
     this.restClient = restClient;
