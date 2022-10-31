@@ -517,7 +517,7 @@ public class MockServer {
     router.get("/invoice/invoice-lines").handler(this::handleGetInvoiceLines);
     router.get(resourcesPath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethods);
     router.get(resourcePath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethod);
-    router.get(resourcePath(EXPORT_HISTORY)).handler(this::handleGetExportHistoryMethod);
+    router.get(resourcesPath(EXPORT_HISTORY)).handler(this::handleGetExportHistoryMethod);
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
