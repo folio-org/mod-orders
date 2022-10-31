@@ -115,7 +115,6 @@ import static org.folio.rest.impl.ReceivingHistoryApiTest.RECEIVING_HISTORY_PURC
 import static org.folio.rest.impl.crud.CrudTestEntities.PREFIX;
 import static org.folio.rest.impl.crud.CrudTestEntities.REASON_FOR_CLOSURE;
 import static org.folio.rest.impl.crud.CrudTestEntities.SUFFIX;
-import static org.folio.service.ExportHistoryService.EXPORT_HISTORY_ENDPOINT;
 import static org.folio.service.ProtectionService.ACQUISITIONS_UNIT_ID;
 import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;

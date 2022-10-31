@@ -8,7 +8,6 @@ import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
-import static org.folio.service.ExportHistoryService.EXPORT_HISTORY_ENDPOINT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -26,6 +25,7 @@ import org.junit.jupiter.api.Test;
 public class ExportHistoryImplTest {
 
   private static boolean runningOnOwn;
+  public static final String EXPORT_HISTORY_ENDPOINT = "/orders/export-history";
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
