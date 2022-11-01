@@ -38,6 +38,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.finance.rollover.RolloverErrorService;
 import org.folio.service.finance.rollover.RolloverRetrieveService;
@@ -185,8 +186,8 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   private boolean isRolloverNotCompleted(List<LedgerFiscalYearRolloverProgress> progresses) {
     return progresses.isEmpty() || progresses.stream()
-            .anyMatch(progress -> progress.getOverallRolloverStatus() == LedgerFiscalYearRolloverLog.RolloverStatus.IN_PROGRESS
-                    || progress.getOverallRolloverStatus() == LedgerFiscalYearRolloverLog.RolloverStatus.NOT_STARTED);
+            .anyMatch(progress -> progress.getOverallRolloverStatus() == RolloverStatus.IN_PROGRESS
+                    || progress.getOverallRolloverStatus() == RolloverStatus.NOT_STARTED);
   }
 
   private List<ReEncumbranceHolder> filterNeedReEncumbranceHolders(List<ReEncumbranceHolder> reEncumbranceHolders) {
