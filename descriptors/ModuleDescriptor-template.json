@@ -1703,6 +1703,7 @@
         "inventory-storage.holdings.collection.get",
         "inventory-storage.items.collection.get",
         "inventory-storage.items.item.post",
+        "inventory.items.item.get",
         "inventory.items.item.put",
         "inventory-storage.loan-types.collection.get",
         "inventory-storage.contributor-name-types.collection.get",
