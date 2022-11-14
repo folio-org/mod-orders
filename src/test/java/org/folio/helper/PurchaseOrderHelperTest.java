@@ -10,9 +10,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.AcquisitionsUnitsService;
-import org.folio.service.ProtectionService;
-import org.folio.service.TagService;
+import org.folio.service.*;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -286,20 +284,20 @@ public class PurchaseOrderHelperTest {
 
     @Bean
     public PurchaseOrderHelper purchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
-              OrderLinesSummaryPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
-              CompositeOrderDynamicDataPopulateService combinedPopulateService,
-              EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
-              TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-              AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager,
-              UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
-              PurchaseOrderStorageService purchaseOrderStorageService,
-              ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
-              OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-              CompositePoLineValidationService compositePoLineValidationService,
-              ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
+                                                   OrderLinesSummaryPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
+                                                   CompositeOrderDynamicDataPopulateService combinedPopulateService,
+                                                   EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
+                                                   TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
+                                                   AcquisitionsUnitsService acquisitionsUnitsService, PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
+                                                   UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
+                                                   PurchaseOrderStorageService purchaseOrderStorageService,
+                                                   ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
+                                                   OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+                                                   CompositePoLineValidationService compositePoLineValidationService,
+                                                   ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-        purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
+        purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
         unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
         poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager);
     }

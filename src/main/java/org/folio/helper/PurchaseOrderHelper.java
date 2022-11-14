@@ -38,13 +38,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
-import static org.folio.rest.core.exceptions.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
-import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_REOPEN_PERMISSIONS;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS;
+import static org.folio.rest.core.exceptions.ErrorCodes.*;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
@@ -79,21 +73,13 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
-import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.service.AcquisitionsUnitsService;
-import org.folio.service.ProtectionService;
-import org.folio.service.TagService;
+import org.folio.service.*;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
@@ -138,6 +124,8 @@ public class PurchaseOrderHelper {
   private final TitlesService titlesService;
   private final AcquisitionsUnitsService acquisitionsUnitsService;
   private final ProtectionService protectionService;
+  private final PrefixService prefixService;
+  private final SuffixService suffixService;
   private final InventoryManager inventoryManager;
   private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
   private final OpenCompositeOrderManager openCompositeOrderManager;
@@ -149,12 +137,12 @@ public class PurchaseOrderHelper {
   private final ReOpenCompositeOrderManager reOpenCompositeOrderManager;
 
   public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper, CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
-    CompositeOrderDynamicDataPopulateService combinedPopulateService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
-    TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager,
-    UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
-    PurchaseOrderStorageService purchaseOrderStorageService, ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
-    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
+                             CompositeOrderDynamicDataPopulateService combinedPopulateService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
+                             TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, PrefixService prefixService, SuffixService suffixService, InventoryManager inventoryManager,
+                             UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
+                             PurchaseOrderStorageService purchaseOrderStorageService, ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
+                             OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+                             CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
     this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.orderLinesSummaryPopulateService = orderLinesSummaryPopulateService;
     this.encumbranceService = encumbranceService;
@@ -166,6 +154,8 @@ public class PurchaseOrderHelper {
     this.titlesService = titlesService;
     this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.protectionService = protectionService;
+    this.prefixService = prefixService;
+    this.suffixService = suffixService;
     this.inventoryManager = inventoryManager;
     this.unOpenCompositeOrderManager = unOpenCompositeOrderManager;
     this.openCompositeOrderManager = openCompositeOrderManager;
@@ -219,11 +209,11 @@ public class PurchaseOrderHelper {
         .thenApply(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
         .thenCompose(tenantConfiguration -> validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), requestContext))
         .thenAccept(ok -> checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext))
-        .thenCompose(ok -> setPoNumberIfMissing(compPO, requestContext)
+        .thenCompose(ok -> setPoNumberIfMissing(compPO, requestContext))
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext))
         .thenCompose(v -> processPoLineTags(compPO, requestContext))
         .thenCompose(v -> createPOandPOLines(compPO, cachedTenantConfiguration, requestContext))
-        .thenCompose(aCompPO -> populateOrderSummary(aCompPO, requestContext)))
+        .thenCompose(aCompPO -> populateOrderSummary(aCompPO, requestContext))
         .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
                 .thenApply(v -> compOrder));
   }
@@ -511,6 +501,22 @@ public class PurchaseOrderHelper {
     }
     return completedFuture(null);
   }
+  private void setPoNumberPrefix(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    if(Objects.nonNull(compPO.getPoNumberPrefix())) {
+      prefixService.isPrefixAvailable(compPO.getPoNumberPrefix(),requestContext)
+        .thenAccept(aVoid->
+          compPO.setPoNumber(compPO.getPoNumberPrefix() + compPO.getPoNumber())
+        );
+    }
+  }
+  private void setPoNumberSuffix(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    if(Objects.nonNull(compPO.getPoNumberSuffix())) {
+      suffixService.isSuffixAvailable(compPO.getPoNumberSuffix(),requestContext)
+        .thenAccept(aVoid->
+          compPO.setPoNumber(compPO.getPoNumber() + compPO.getPoNumberSuffix())
+        );
+    }
+  }
 
   private CompletableFuture<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
     if (compPO.getWorkflowStatus() == WorkflowStatus.OPEN) {
@@ -551,13 +557,13 @@ public class PurchaseOrderHelper {
   private CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO, JsonObject cachedTenantConfiguration,
                                                                       RequestContext requestContext) {
     final WorkflowStatus finalStatus = compPO.getWorkflowStatus();
-
+    setPoNumberPrefix(compPO,requestContext);
+    setPoNumberSuffix(compPO,requestContext);
     // we should always create PO and PO lines in PENDING status and transition to OPEN only when it's all set
     // (e.g. PO lines are created, Inventory is updated, etc.)
     if (finalStatus == OPEN) {
       compPO.setWorkflowStatus(PENDING);
     }
-
     return purchaseOrderStorageService.createPurchaseOrder(convertToPurchaseOrder(compPO), requestContext)
       .thenApply(createdOrder -> compPO.withId(createdOrder.getId()))
       .thenCompose(compPOWithId -> createPoLines(compPOWithId, requestContext))
