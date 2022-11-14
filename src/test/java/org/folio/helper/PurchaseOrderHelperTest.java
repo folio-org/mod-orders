@@ -274,6 +274,15 @@ public class PurchaseOrderHelperTest {
     }
 
     @Bean
+    public PrefixService prefixService() {
+      return mock(PrefixService.class);
+    }
+    @Bean
+    public SuffixService suffixService() {
+      return mock(SuffixService.class);
+    }
+
+    @Bean
     public ReOpenCompositeOrderManager reOpenCompositeOrderManager() {
       return mock(ReOpenCompositeOrderManager.class);
     }
