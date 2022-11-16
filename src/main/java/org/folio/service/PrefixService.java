@@ -83,7 +83,7 @@ public class PrefixService {
       return restClient.get(requestEntry, requestContext, PrefixCollection.class)
         .thenAccept(totalRecords -> {
           if(totalRecords.getTotalRecords() == 0) {
-            logger.error("Prefix may not be available", prefixName);
+            logger.error("Prefix {} may not be available", prefixName);
             throw new HttpException(404, PREFIX_NOT_FOUND);
           }
         });
