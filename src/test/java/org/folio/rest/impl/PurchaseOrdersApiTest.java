@@ -1931,7 +1931,30 @@ public class PurchaseOrdersApiTest {
   }
 
   @Test
-  void testUpdatePoNumberWithPrefix() throws IOException {
+  void testUpdatePoNumberWithPrefixAndSuffix() throws IOException {
+    logger.info("=== Test Put Order By Id without POLines, with new PO number  ===");
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(2).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject storeData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
+    String newPoNumber = reqData.getString(PO_NUMBER) + "A";
+    reqData.put(PO_NUMBER, newPoNumber);
+    reqData.put(PREFIX,"TestP");
+    reqData.put(PREFIX,"TestS");
+    Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT));
+    assertEquals(MockServer.getPoLineUpdates().size(), storeData.getJsonArray(COMPOSITE_PO_LINES).size());
+    MockServer.getPoLineUpdates().forEach(poLine -> {
+    });
+    assertNull(MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.DELETE));
+  }
+
+  @Test
+  void testUpdatePoNumberWithNoPrefixAndSuffix() throws IOException {
     logger.info("=== Test Put Order By Id without POLines, with new PO number  ===");
     JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
     String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
@@ -1940,7 +1963,8 @@ public class PurchaseOrdersApiTest {
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
     String newPoNumber = reqData.getString(PO_NUMBER) + "A";
     reqData.put(PO_NUMBER, newPoNumber);
-    reqData.put(PREFIX,"Test");
+    reqData.put(PREFIX,"TestP");
+    reqData.put(PREFIX,"TestS");
     Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
@@ -1949,6 +1973,28 @@ public class PurchaseOrdersApiTest {
     assertEquals(MockServer.getPoLineUpdates().size(), storData.getJsonArray(COMPOSITE_PO_LINES).size());
     MockServer.getPoLineUpdates().forEach(poLine -> {
       Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
+      assertTrue(matcher.find());
+    });
+    assertNull(MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.DELETE));
+  }
+
+  @Test
+  void testUpdatePoNumberWithNoPrefixAndSuffixInCurrentOrder() throws IOException {
+    logger.info("=== Test Put Order By Id without POLines, with new PO number  ===");
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(2).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject storeData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
+    String newPoNumber = reqData.getString(PO_NUMBER) + "A";
+    reqData.put(PO_NUMBER, newPoNumber);
+    Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT));
+    assertEquals(MockServer.getPoLineUpdates().size(), storeData.getJsonArray(COMPOSITE_PO_LINES).size());
+    MockServer.getPoLineUpdates().forEach(poLine -> {
     });
     assertNull(MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.DELETE));
   }
