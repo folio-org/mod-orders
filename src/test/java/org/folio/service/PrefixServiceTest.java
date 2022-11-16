@@ -71,6 +71,7 @@ public class PrefixServiceTest {
     verify(restClient, never()).delete(any(), any());
     verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberPrefix==test"), eq(0), eq(0), any());
   }
+
   @Test
   void testSetPrefixFailedIfSuffixIsNotAvailable() {
     //given

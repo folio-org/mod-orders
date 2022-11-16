@@ -218,10 +218,8 @@ public class PurchaseOrderHelper {
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext))
         .thenCompose(v -> processPoLineTags(compPO, requestContext))
         .thenCompose(v -> createPOandPOLines(compPO, cachedTenantConfiguration, requestContext))
-
-          .thenCompose(aCompPO -> populateOrderSummary(aCompPO, requestContext)))
-
-      .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
+        .thenCompose(aCompPO -> populateOrderSummary(aCompPO, requestContext)))
+        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
                 .thenApply(v -> compOrder));
   }
 
@@ -610,6 +608,7 @@ public class PurchaseOrderHelper {
   private CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO, JsonObject cachedTenantConfiguration,
                                                                       RequestContext requestContext) {
     final WorkflowStatus finalStatus = compPO.getWorkflowStatus();
+
     // we should always create PO and PO lines in PENDING status and transition to OPEN only when it's all set
     // (e.g. PO lines are created, Inventory is updated, etc.)
     if (finalStatus == OPEN) {

@@ -75,6 +75,7 @@ public class PrefixService {
         }
       });
   }
+
   public CompletableFuture<Void> isPrefixAvailable(String prefixName, RequestContext requestContext) {
     if(Objects.nonNull(prefixName)) {
       String query = "name==" + prefixName;
