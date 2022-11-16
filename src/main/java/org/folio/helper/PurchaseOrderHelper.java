@@ -138,12 +138,12 @@ public class PurchaseOrderHelper {
   private final ReOpenCompositeOrderManager reOpenCompositeOrderManager;
 
   public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper, CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
-                             CompositeOrderDynamicDataPopulateService combinedPopulateService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
-                             TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, PrefixService prefixService, SuffixService suffixService, InventoryManager inventoryManager,
-                             UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
-                             PurchaseOrderStorageService purchaseOrderStorageService, ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
-                             OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-                             CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
+    CompositeOrderDynamicDataPopulateService combinedPopulateService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
+    TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, PrefixService prefixService, SuffixService suffixService, InventoryManager inventoryManager,
+    UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
+    PurchaseOrderStorageService purchaseOrderStorageService, ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
     this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.orderLinesSummaryPopulateService = orderLinesSummaryPopulateService;
     this.encumbranceService = encumbranceService;
@@ -240,7 +240,7 @@ public class PurchaseOrderHelper {
       .thenCompose(poFromStorage -> purchaseOrderLineService.populateOrderLines(poFromStorage, requestContext))
       .thenCompose(poFromStorage -> {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
-        return  validateAcqUnitsOnUpdate(compPO, poFromStorage, requestContext)
+        return validateAcqUnitsOnUpdate(compPO, poFromStorage, requestContext)
           .thenCompose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
           .thenCompose(p -> prefixService.isPrefixAvailable(compPO.getPoNumberPrefix(),requestContext))
           .thenCompose(s -> suffixService.isSuffixAvailable(compPO.getPoNumberSuffix(),requestContext))
@@ -298,7 +298,6 @@ public class PurchaseOrderHelper {
 
   public CompletableFuture<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus,
                                                         RequestContext requestContext) {
-
     PurchaseOrder purchaseOrder = convertToPurchaseOrder(compPO).mapTo(PurchaseOrder.class);
     CompletableFuture<List<PoLine>> future;
 
@@ -512,6 +511,7 @@ public class PurchaseOrderHelper {
     }
     return completedFuture(null);
   }
+
   private CompletionStage<Void> setPoNumberPrefix(CompositePurchaseOrder compPO) {
     if(Objects.nonNull(compPO.getPoNumberPrefix())) {
       compPO.setPoNumber(compPO.getPoNumberPrefix() + compPO.getPoNumber());
@@ -527,24 +527,35 @@ public class PurchaseOrderHelper {
   }
 
   public CompletableFuture<Void> updatePrefixAndSuffix(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
+    String poNumber = "";
     if(isPrefixChanged(poFromStorage, updatedPo)) {
       if(Objects.nonNull(updatedPo.getPoNumberPrefix()) && !updatedPo.getPoNumberPrefix().isEmpty()) {
-          String poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
+        if(Objects.nonNull(poFromStorage.getPoNumberPrefix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberPrefix())) {
+          poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
           updatedPo.setPoNumber(updatedPo.getPoNumberPrefix() + poNumber);
+        }
+        else {
+          updatedPo.setPoNumber(updatedPo.getPoNumberPrefix() + updatedPo.getPoNumber());
+        }
       }
       else {
-        String poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
+        poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
         updatedPo.setPoNumber(poNumber);
       }
     }
 
     if(isSuffixChanged(poFromStorage, updatedPo)) {
       if(Objects.nonNull(updatedPo.getPoNumberSuffix()) && !updatedPo.getPoNumberSuffix().isEmpty()) {
-        String poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
-        updatedPo.setPoNumber(poNumber + updatedPo.getPoNumberSuffix());
+        if(Objects.nonNull(poFromStorage.getPoNumberPrefix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberSuffix())) {
+          poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
+          updatedPo.setPoNumber(poNumber + updatedPo.getPoNumberSuffix());
+        }
+        else {
+          updatedPo.setPoNumber(updatedPo.getPoNumber() + updatedPo.getPoNumberSuffix());
+        }
       }
       else {
-        String poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
+        poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
         updatedPo.setPoNumber(poNumber);
       }
     }
@@ -599,13 +610,12 @@ public class PurchaseOrderHelper {
   private CompletableFuture<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO, JsonObject cachedTenantConfiguration,
                                                                       RequestContext requestContext) {
     final WorkflowStatus finalStatus = compPO.getWorkflowStatus();
-//    setPoNumberPrefix(compPO,requestContext);
-//    setPoNumberSuffix(compPO,requestContext);
     // we should always create PO and PO lines in PENDING status and transition to OPEN only when it's all set
     // (e.g. PO lines are created, Inventory is updated, etc.)
     if (finalStatus == OPEN) {
       compPO.setWorkflowStatus(PENDING);
     }
+
     return purchaseOrderStorageService.createPurchaseOrder(convertToPurchaseOrder(compPO), requestContext)
       .thenApply(createdOrder -> compPO.withId(createdOrder.getId()))
       .thenCompose(compPOWithId -> createPoLines(compPOWithId, requestContext))

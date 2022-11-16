@@ -77,18 +77,7 @@ import static org.folio.helper.PurchaseOrderHelper.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
-import static org.folio.orders.utils.ResourcePathResolver.PAYMENT_STATUS;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
-import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
+import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
@@ -1937,6 +1926,29 @@ public class PurchaseOrdersApiTest {
     MockServer.getPoLineUpdates().forEach(poLine -> {
       Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
       assertTrue(matcher.find());
+    });
+    assertNull(MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.DELETE));
+  }
+
+  @Test
+  void testUpdatePoNumberWithPrefix() throws IOException {
+    logger.info("=== Test Put Order By Id without POLines, with new PO number  ===");
+    JsonObject ordersList = new JsonObject(getMockData(ORDERS_MOCK_DATA_PATH));
+    String id = ordersList.getJsonArray("compositePurchaseOrders").getJsonObject(0).getString(ID);
+    logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
+    JsonObject storData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
+    JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
+    String newPoNumber = reqData.getString(PO_NUMBER) + "A";
+    reqData.put(PO_NUMBER, newPoNumber);
+    reqData.put(PREFIX,"Test");
+    Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
+
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
+
+    assertNotNull(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT));
+    assertEquals(MockServer.getPoLineUpdates().size(), storData.getJsonArray(COMPOSITE_PO_LINES).size());
+    MockServer.getPoLineUpdates().forEach(poLine -> {
+      Matcher matcher = poLinePattern.matcher(poLine.getString(PO_LINE_NUMBER));
     });
     assertNull(MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.DELETE));
   }
