@@ -1,6 +1,6 @@
 package org.folio.service.pieces.flows.delete;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -123,9 +123,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then
@@ -165,9 +165,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then
@@ -207,9 +207,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
         incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
           incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
         pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then
@@ -249,9 +249,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then
@@ -288,9 +288,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then
@@ -327,9 +327,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then
@@ -372,9 +372,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then
@@ -416,9 +416,9 @@ public class PieceDeleteFlowPoLineServiceTest {
     PieceDeletionHolder incomingUpdateHolder = new PieceDeletionHolder().withPieceToDelete(piece).withDeleteHolding(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
     pieceDeleteFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then

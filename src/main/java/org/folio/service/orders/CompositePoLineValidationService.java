@@ -17,7 +17,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -33,6 +32,8 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 
+import io.vertx.core.Future;
+
 
 public class CompositePoLineValidationService {
 
@@ -42,19 +43,19 @@ public class CompositePoLineValidationService {
     this.expenseClassValidationService = expenseClassValidationService;
   }
 
-  public CompletableFuture<List<Error>> validatePoLine(CompositePoLine compPOL, RequestContext requestContext) {
+  public Future<List<Error>> validatePoLine(CompositePoLine compPOL, RequestContext requestContext) {
     List<Error> errors = new ArrayList<>();
     errors.addAll(validatePackagePoLine(compPOL));
 
     if (getPhysicalCostQuantity(compPOL) == 0 && getElectronicCostQuantity(compPOL) == 0
       && CollectionUtils.isEmpty(compPOL.getLocations())) {
-      return CompletableFuture.completedFuture(errors);
+      return Future.succeededFuture(errors);
     }
 
     return expenseClassValidationService.validateExpenseClasses(List.of(compPOL), false, requestContext)
-      .thenAccept(v -> errors.addAll(validatePoLineFormats(compPOL)))
-      .thenAccept(v -> errors.addAll(validateLocations(compPOL)))
-      .thenApply(v -> {
+      .onSuccess(v -> errors.addAll(validatePoLineFormats(compPOL)))
+      .onSuccess(v -> errors.addAll(validateLocations(compPOL)))
+      .map(v -> {
         errors.addAll(validateCostPrices(compPOL));
         return errors;
       });

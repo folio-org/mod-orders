@@ -1,6 +1,6 @@
 package org.folio.service.orders.flows.update.open;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static java.util.stream.Collectors.toList;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
@@ -136,13 +136,13 @@ public class OpenCompositeOrderPieceServiceTest {
     Piece pieceFromStorage = JsonObject.mapFrom(piece).mapTo(Piece.class);
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), eq(ProtectedOperationType.UPDATE), eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
-    doReturn(completedFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
-    doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), eq(ProtectedOperationType.UPDATE), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
+    doReturn(succeededFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
+    doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
     //When
-    openCompositeOrderPieceService.updatePieceRecord(piece, requestContext).join();
+    openCompositeOrderPieceService.updatePieceRecord(piece, requestContext).result();
     //Then
     verify(receiptStatusPublisher, times(0)).sendEvent(eq(MessageAddress.RECEIPT_STATUS), any(JsonObject.class), eq(requestContext));
   }
@@ -155,13 +155,13 @@ public class OpenCompositeOrderPieceServiceTest {
     pieceFromStorage.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), eq(ProtectedOperationType.UPDATE), eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
-    doReturn(completedFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
-    doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), eq(ProtectedOperationType.UPDATE), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
+    doReturn(succeededFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
+    doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
     //When
-    openCompositeOrderPieceService.updatePieceRecord(piece, requestContext).join();
+    openCompositeOrderPieceService.updatePieceRecord(piece, requestContext).result();
     //Then
     verify(receiptStatusPublisher, times(1)).sendEvent(eq(MessageAddress.RECEIPT_STATUS), any(JsonObject.class), eq(requestContext));
   }
@@ -172,8 +172,8 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPieceWithLocationId(line, title);
-    doReturn(completedFuture(null)).when(inventoryManager).updateItemWithPieceFields(piece, requestContext);
-    doReturn(completedFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).updateItemWithPieceFields(piece, requestContext);
+    doReturn(succeededFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).get();
     //Then
@@ -192,16 +192,16 @@ public class OpenCompositeOrderPieceServiceTest {
     String holdingId = UUID.randomUUID().toString();
     Location location = new Location().withLocationId(piece.getLocationId());
 
-    doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
+    doReturn(succeededFuture(null)).when(titlesService).saveTitle(title, requestContext);
 
-    doReturn(completedFuture(title.withInstanceId(UUID.randomUUID().toString())))
+    doReturn(succeededFuture(title.withInstanceId(UUID.randomUUID().toString())))
       .when(inventoryManager).openOrderHandlePackageLineInstance(any(Title.class), any(Boolean.class), eq(requestContext));
-    doReturn(completedFuture(holdingId))
+    doReturn(succeededFuture(holdingId))
       .when(inventoryManager).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
-    doReturn(completedFuture(itemId)).when(inventoryManager).openOrderCreateItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
+    doReturn(succeededFuture(itemId)).when(inventoryManager).openOrderCreateItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
 
-    doReturn(completedFuture(itemId)).when(inventoryManager).createInstanceRecord(eq(title), eq(requestContext));
+    doReturn(succeededFuture(itemId)).when(inventoryManager).createInstanceRecord(eq(title), eq(requestContext));
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).get();
     //Then
@@ -222,10 +222,10 @@ public class OpenCompositeOrderPieceServiceTest {
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPieceWithHoldingId(line, title);
 
-    doReturn(completedFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(completedFuture(null)).when(titlesService).saveTitle(title, requestContext);
-    doReturn(completedFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
-    doReturn(completedFuture(itemId)).when(inventoryManager).openOrderCreateItemRecord(line, holdingId, requestContext);
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
+    doReturn(succeededFuture(null)).when(titlesService).saveTitle(title, requestContext);
+    doReturn(succeededFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
+    doReturn(succeededFuture(itemId)).when(inventoryManager).openOrderCreateItemRecord(line, holdingId, requestContext);
 
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).get();
@@ -254,19 +254,19 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
 
 
-    doReturn(completedFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
-    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(completedFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
+    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<CompletableFuture<Piece>>) invocation -> {
+    doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
-      return completedFuture(piece);
+      return succeededFuture(piece);
     }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
-    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).join();
+    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
                                           .collect(toList());
@@ -310,19 +310,19 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
 
 
-    doReturn(completedFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
-    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(completedFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
+    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<CompletableFuture<Piece>>) invocation -> {
+    doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
-      return completedFuture(piece);
+      return succeededFuture(piece);
     }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
-    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).join();
+    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
       .collect(toList());
@@ -368,19 +368,19 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
 
 
-    doReturn(completedFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
-    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(completedFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
+    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<CompletableFuture<Piece>>) invocation -> {
+    doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
-      return completedFuture(piece);
+      return succeededFuture(piece);
     }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
-    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).join();
+    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
       .collect(toList());
@@ -425,19 +425,19 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
 
 
-    doReturn(completedFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
-    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(completedFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
+    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<CompletableFuture<Piece>>) invocation -> {
+    doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
-      return completedFuture(piece);
+      return succeededFuture(piece);
     }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
-    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).join();
+    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> locationId1.equals(piece.getLocationId()))
       .collect(toList());
@@ -496,19 +496,19 @@ public class OpenCompositeOrderPieceServiceTest {
       .withOrderFormat(CompositePoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
 
-    doReturn(completedFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
-    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
-    doReturn(completedFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
+    doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
-    doAnswer((Answer<CompletableFuture<Piece>>) invocation -> {
+    doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
-      return completedFuture(piece);
+      return succeededFuture(piece);
     }).when(pieceStorageService).insertPiece(pieceArgumentCaptor.capture(), eq(requestContext));
 
     //When
-    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, expectedPiecesWithItem, false, requestContext).join();
+    List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, expectedPiecesWithItem, false, requestContext).result();
     //Then
     List<Piece> piecesLocElec = createdPieces.stream().filter(piece -> Piece.Format.ELECTRONIC.equals(piece.getFormat()))
       .collect(toList());

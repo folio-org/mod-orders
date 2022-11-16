@@ -1,10 +1,13 @@
 package org.folio.service.orders;
 
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import org.folio.models.CompositeOrderRetrieveHolder;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.core.models.RequestContext;
+
+import io.vertx.core.Future;
 
 public class CombinedOrderDataPopulateService implements CompositeOrderDynamicDataPopulateService {
 
@@ -18,17 +21,16 @@ public class CombinedOrderDataPopulateService implements CompositeOrderDynamicDa
   }
 
   @Override
-  public CompletableFuture<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder retrieveHolder,
-      RequestContext requestContext) {
+  public Future<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder retrieveHolder, RequestContext requestContext) {
     return holderBuilder.withCurrentFiscalYear(retrieveHolder, requestContext)
-      .thenCompose(holder -> populateAllDynamicData(holder, requestContext));
+      .compose(holder -> populateAllDynamicData(holder, requestContext));
   }
 
-  private CompletableFuture<CompositeOrderRetrieveHolder> populateAllDynamicData(CompositeOrderRetrieveHolder holder,
+  private Future<CompositeOrderRetrieveHolder> populateAllDynamicData(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
-    return CompletableFuture.allOf(populateServices.stream()
+    return GenericCompositeFuture.all(populateServices.stream()
       .map(service -> service.populate(holder, requestContext))
-      .toArray(CompletableFuture[]::new))
-      .thenApply(aVoid -> holder);
+      .collect(Collectors.toList()))
+      .map(aVoid -> holder);
   }
 }

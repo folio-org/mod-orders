@@ -53,12 +53,12 @@ public class PrefixServiceTest {
   @Test
   void testDeletePrefixFailedIfSuffixUsedByOrder() {
     //given
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(new Prefix().withName("test")));
-    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(1)));
+    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(new Prefix().withName("test")));
+    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.succeededFuture(null));
+    when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.succeededFuture(new PurchaseOrderCollection().withTotalRecords(1)));
 
     String id = UUID.randomUUID().toString();
-    CompletableFuture<Void> result = prefixService.deletePrefix(id, requestContext);
+    Future<Void> result = prefixService.deletePrefix(id, requestContext);
     CompletionException expectedException = assertThrows(CompletionException.class, result::join);
 
     HttpException httpException = (HttpException) expectedException.getCause();
@@ -73,14 +73,14 @@ public class PrefixServiceTest {
   @Test
   void testDeletePrefixSuccessIfNotUsed() {
     //given
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(new Prefix().withName("test")));
-    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
-    when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.completedFuture(new PurchaseOrderCollection().withTotalRecords(0)));
+    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(new Prefix().withName("test")));
+    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.succeededFuture(null));
+    when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any())).thenReturn(CompletableFuture.succeededFuture(new PurchaseOrderCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
-    CompletableFuture<Void> result = prefixService.deletePrefix(id, requestContext);
+    Future<Void> result = prefixService.deletePrefix(id, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     verify(restClient).get(any(), any(), any());
     verify(restClient).delete(any(), any());
@@ -90,12 +90,12 @@ public class PrefixServiceTest {
   @Test
   void testGetPrefixById() {
     Prefix prefix = new Prefix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test prefix");
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(prefix));
+    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(prefix));
 
-    CompletableFuture<Prefix> result = prefixService.getPrefixById(prefix.getId(), requestContext);
+    Future<Prefix> result = prefixService.getPrefixById(prefix.getId(), requestContext);
     assertFalse(result.isCompletedExceptionally());
 
-    Prefix resultPrefix = result.join();
+    Prefix resultPrefix = result.result();
     assertEquals(prefix, resultPrefix);
 
     verify(restClient).get(any(), any(), any());
@@ -106,12 +106,12 @@ public class PrefixServiceTest {
     String query = "name==pref";
     Prefix prefix = new Prefix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test prefix");
     PrefixCollection prefixCollection = new PrefixCollection().withTotalRecords(1).withPrefixes(Collections.singletonList(prefix));
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(prefixCollection));
+    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(prefixCollection));
 
-    CompletableFuture<PrefixCollection> result = prefixService.getPrefixes(query, 1, 0, requestContext);
+    Future<PrefixCollection> result = prefixService.getPrefixes(query, 1, 0, requestContext);
     assertFalse(result.isCompletedExceptionally());
 
-    PrefixCollection resultPrefixCollection = result.join();
+    PrefixCollection resultPrefixCollection = result.result();
 
     assertEquals(prefixCollection, resultPrefixCollection);
     verify(restClient).get(any(), any(), any());
@@ -122,11 +122,11 @@ public class PrefixServiceTest {
     Prefix prefix = new Prefix().withId(UUID.randomUUID().toString())
       .withName("pref");
 
-    when(restClient.put(any(), eq(prefix), any())).thenReturn(CompletableFuture.completedFuture(null));
+    when(restClient.put(any(), eq(prefix), any())).thenReturn(CompletableFuture.succeededFuture(null));
 
-    CompletableFuture<Void> result = prefixService.updatePrefix(prefix.getId(), prefix, requestContext);
+    Future<Void> result = prefixService.updatePrefix(prefix.getId(), prefix, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     verify(restClient).put(any(), eq(prefix), any());
   }
@@ -137,11 +137,11 @@ public class PrefixServiceTest {
       .withName("pref");
 
     String id = UUID.randomUUID().toString();
-    when(restClient.put(any(), eq(prefix), any())).thenReturn(CompletableFuture.completedFuture(null));
+    when(restClient.put(any(), eq(prefix), any())).thenReturn(CompletableFuture.succeededFuture(null));
 
-    CompletableFuture<Void> result = prefixService.updatePrefix(id, prefix, requestContext);
+    Future<Void> result = prefixService.updatePrefix(id, prefix, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     assertEquals(id, prefix.getId());
     verify(restClient).put(any(), eq(prefix), any());
@@ -151,7 +151,7 @@ public class PrefixServiceTest {
   void testUpdateSuffixWithIdMismatchFails() {
     Prefix prefix = new Prefix().withId(UUID.randomUUID().toString());
 
-    CompletableFuture<Void> result = prefixService.updatePrefix(UUID.randomUUID().toString(), prefix, requestContext);
+    Future<Void> result = prefixService.updatePrefix(UUID.randomUUID().toString(), prefix, requestContext);
     CompletionException expectedException = assertThrows(CompletionException.class, result::join);
 
     HttpException httpException = (HttpException) expectedException.getCause();
@@ -163,11 +163,11 @@ public class PrefixServiceTest {
   void testCreateSuffix() {
     Prefix prefix = new Prefix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test prefix");
 
-    when(restClient.post(any(), any(), any(), any())).thenReturn(CompletableFuture.completedFuture(prefix));
+    when(restClient.post(any(), any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(prefix));
 
-    CompletableFuture<Prefix> result = prefixService.createPrefix(prefix, requestContext);
+    Future<Prefix> result = prefixService.createPrefix(prefix, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    Prefix resultPrefix = result.join();
+    Prefix resultPrefix = result.result();
     assertEquals(prefix, resultPrefix);
 
     verify(restClient).post(any(), any(), any(), any());

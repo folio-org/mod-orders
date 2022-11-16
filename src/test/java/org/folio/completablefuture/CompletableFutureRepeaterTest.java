@@ -1,6 +1,6 @@
 package org.folio.completablefuture;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.folio.completablefuture.CompletableFutureRepeater.repeat;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -17,18 +17,18 @@ import org.junit.jupiter.api.function.Executable;
 
 class CompletableFutureRepeaterTest {
 
-  private final static CompletableFuture<String> a = completedFuture("a");
-  private final static CompletableFuture<String> b = completedFuture("b");
+  private final static Future<String> a = succeededFuture("a");
+  private final static Future<String> b = succeededFuture("b");
   private static class Fail1 extends RuntimeException {
   };
   private static class Fail2 extends RuntimeException {
   };
-  private final static CompletableFuture<String> fail1 = failedFuture(new Fail1());
-  private final static CompletableFuture<String> fail2 = failedFuture(new Fail2());
+  private final static Future<String> fail1 = failedFuture(new Fail1());
+  private final static Future<String> fail2 = failedFuture(new Fail2());
 
   @SafeVarargs
-  private Supplier<CompletableFuture<String>> task(CompletableFuture<String> ...completableFutures) {
-    Iterator<CompletableFuture<String>> iterator = List.of(completableFutures).iterator();
+  private Supplier<Future<String>> task(Future<String> ...completableFutures) {
+    Iterator<Future<String>> iterator = List.of(completableFutures).iterator();
     return () -> iterator.next();
   }
 

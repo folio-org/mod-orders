@@ -61,10 +61,10 @@ public class TransactionsTotalFieldsPopulateServiceTest {
 
     List<Transaction> transactions = List.of(paidEncumbrance, notPaidEncumbrance);
 
-    when(transactionService.getTransactions(anyString(), any())).thenReturn(CompletableFuture.completedFuture(transactions));
+    when(transactionService.getTransactions(anyString(), any())).thenReturn(CompletableFuture.succeededFuture(transactions));
 
     CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext)
-      .join();
+      .result();
 
     assertEquals(27.54, resultHolder.getOrder().getTotalEncumbered());
     assertEquals(13.45, resultHolder.getOrder().getTotalExpended());
@@ -76,7 +76,7 @@ public class TransactionsTotalFieldsPopulateServiceTest {
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
 
-    CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).join();
+    CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).result();
 
     assertEquals(0d, resultHolder.getOrder()
             .getTotalExpended());
@@ -90,9 +90,9 @@ public class TransactionsTotalFieldsPopulateServiceTest {
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
             .withFiscalYear(new FiscalYear().withId(UUID.randomUUID().toString()));
 
-    when(transactionService.getTransactions(anyString(), any())).thenReturn(CompletableFuture.completedFuture(Collections.emptyList()));
+    when(transactionService.getTransactions(anyString(), any())).thenReturn(CompletableFuture.succeededFuture(Collections.emptyList()));
 
-    CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).join();
+    CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).result();
 
     assertEquals(0d, resultHolder.getOrder().getTotalExpended());
   }

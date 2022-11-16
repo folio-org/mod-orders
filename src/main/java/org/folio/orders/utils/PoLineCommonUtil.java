@@ -2,30 +2,37 @@ package org.folio.orders.utils;
 
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
+import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
-import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.tools.parser.JsonPathParser;
 
 import io.vertx.core.json.JsonObject;
 
 public final class PoLineCommonUtil {
   public static final String DASH_SEPARATOR = "-";
+  private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
 
   private PoLineCommonUtil() {
 
@@ -194,5 +201,25 @@ public final class PoLineCommonUtil {
 
   public static int getElectronicCostQuantity(CompositePoLine compPOL) {
     return defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
+  }
+
+  public static JsonObject verifyProtectedFieldsChanged(List<String> protectedFields, JsonObject objectFromStorage,
+    JsonObject requestObject) {
+    Set<String> fields = new HashSet<>();
+    JsonPathParser oldObject = new JsonPathParser(objectFromStorage);
+    JsonPathParser newObject = new JsonPathParser(requestObject);
+    for (String field : protectedFields) {
+      if (!Objects.equals(oldObject.getValueAt(field), newObject.getValueAt(field))) {
+        fields.add(field);
+      }
+    }
+
+    if (CollectionUtils.isNotEmpty(fields)) {
+      Error error = PROHIBITED_FIELD_CHANGING.toError()
+        .withAdditionalProperty(PROTECTED_AND_MODIFIED_FIELDS, fields);
+      throw new HttpException(400, error);
+    }
+
+    return objectFromStorage;
   }
 }

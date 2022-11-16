@@ -1,6 +1,6 @@
 package org.folio.service;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
@@ -65,11 +65,11 @@ class TagServiceTest {
       .withTags(new ArrayList<>())
       .withTotalRecords(0);
 
-    doReturn(completedFuture(emptyTagCollection)).when(restClient).get(any(), any(),  any());
-    doReturn(completedFuture(postTagResponse)).when(restClient).post(any(), any(),  any(), any());
+    doReturn(succeededFuture(emptyTagCollection)).when(restClient).get(any(), any(),  any());
+    doReturn(succeededFuture(postTagResponse)).when(restClient).post(any(), any(),  any(), any());
 
-    CompletableFuture<Void> response = tagService.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
-    response.join();
+    Future<Void> response = tagService.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
+    response.result();
 
     Assertions.assertTrue(response.isDone());
 

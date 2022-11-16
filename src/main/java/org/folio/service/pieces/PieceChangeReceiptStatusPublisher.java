@@ -1,14 +1,17 @@
 package org.folio.service.pieces;
 
-import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.rest.core.models.RequestContext;
-import java.util.HashMap;
-import java.util.Map;
-import io.vertx.core.eventbus.DeliveryOptions;
-import io.vertx.core.json.JsonObject;
-import static org.folio.helper.AbstractHelper.OKAPI_HEADERS;
+import static org.folio.helper.BaseHelper.OKAPI_HEADERS;
 import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.rest.RestConstants.OKAPI_URL;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.rest.core.models.RequestContext;
+
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.json.JsonObject;
 
 public class PieceChangeReceiptStatusPublisher {
   public void sendEvent(MessageAddress messageAddress, JsonObject data, RequestContext requestContext) {

@@ -1,51 +1,52 @@
 package org.folio.completablefuture;
 
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 
 public final class AsyncUtil {
 
-  public static <T> Handler<AsyncResult<T>> asyncResultHandler(CompletableFuture<T> future) {
-    Objects.requireNonNull(future);
+  public static <T> Handler<AsyncResult<T>> asyncResultHandler(Promise<T> promise) {
+    Objects.requireNonNull(promise);
     return result -> {
       if (result.succeeded()) {
-        future.complete(result.result());
+        promise.complete(result.result());
       } else {
-        future.completeExceptionally(result.cause());
+        promise.fail(result.cause());
       }
     };
   }
 
-  public static <T> CompletableFuture<T> executeBlocking(Context ctx, boolean isOrdered, Supplier<T> supplier) {
+  public static <T> Future<T> executeBlocking(Context ctx, boolean isOrdered, Supplier<T> supplier) {
     Objects.requireNonNull(supplier);
-    CompletableFuture<T> future = new CompletableFuture<>();
+    Promise<T> promise = Promise.promise();
     ctx.owner().executeBlocking(blockingFeature -> {
       try {
         T result = supplier.get();
         blockingFeature.complete(result);
-      } catch (Throwable e) {
+      } catch (Exception e) {
         blockingFeature.fail(e);
       }
-    }, isOrdered, asyncResultHandler(future));
-    return future;
+    }, isOrdered, asyncResultHandler(promise));
+    return promise.future();
   }
 
-  public static CompletableFuture<Void> executeBlocking(Context ctx, boolean isOrdered, Runnable runnable) {
+  public static Future<Void> executeBlocking(Context ctx, boolean isOrdered, Runnable runnable) {
     Objects.requireNonNull(runnable);
-    CompletableFuture<Void> future = new CompletableFuture<>();
+    Promise<Void> promise = Promise.promise();
     ctx.owner().executeBlocking(blockingFeature -> {
       try {
         runnable.run();
         blockingFeature.complete(null);
-      } catch (Throwable e) {
+      } catch (Exception e) {
         blockingFeature.fail(e);
       }
-    }, isOrdered, asyncResultHandler(future));
-    return future;
+    }, isOrdered, asyncResultHandler(promise));
+    return promise.future();
   }
 }

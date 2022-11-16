@@ -1,7 +1,6 @@
 package org.folio.service.finance.transaction;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,6 +10,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.orders.OrderWorkflowType;
+
+import io.vertx.core.Future;
 
 public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
   private static final Logger LOG = LogManager.getLogger(ReceivingEncumbranceStrategy.class);
@@ -35,24 +36,24 @@ public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy
   }
 
   @Override
-  public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+  public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
                                                         RequestContext requestContext) {
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
     return prepareEncumbranceRelationsHolder(encumbranceRelationsHolders, poAndLinesFromStorage, requestContext)
-      .thenApply(fundsDistributionService::distributeFunds)
-      .thenAccept(budgetRestrictionService::checkEncumbranceRestrictions)
-      .thenApply(aVoid -> encumbrancesProcessingHolderBuilder.distributeHoldersByOperation(encumbranceRelationsHolders))
-      .thenCompose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext))
-      .thenAccept(holders -> LOG.debug("End processing encumbrances for piece add/delete"));
+      .map(fundsDistributionService::distributeFunds)
+      .onSuccess(budgetRestrictionService::checkEncumbranceRestrictions)
+      .map(aVoid -> encumbrancesProcessingHolderBuilder.distributeHoldersByOperation(encumbranceRelationsHolders))
+      .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext))
+      .onSuccess(holders -> LOG.debug("End processing encumbrances for piece add/delete"));
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(List<EncumbranceRelationsHolder> encumbranceRelationsHolders,
+  public Future<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(List<EncumbranceRelationsHolder> encumbranceRelationsHolders,
                   CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poFromStorage, requestContext));
+      .compose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
+      .compose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
+      .compose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
+      .compose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poFromStorage, requestContext));
   }
 
   @Override

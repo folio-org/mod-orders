@@ -1,6 +1,6 @@
 package org.folio.service.pieces.flows.create;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -119,9 +119,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
                                       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -162,9 +162,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
 
@@ -203,9 +203,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
     //Then
@@ -243,9 +243,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -287,9 +287,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -332,9 +332,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -377,9 +377,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -422,9 +422,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -467,9 +467,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -510,9 +510,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -555,9 +555,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -615,9 +615,9 @@ public class PieceCreateFlowPoLineServiceTest {
     PieceCreationHolder incomingUpdateHolder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     incomingUpdateHolder.withOrderInformation(purchaseOrder, originPoLine);
 
-    doReturn(completedFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
+    doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();

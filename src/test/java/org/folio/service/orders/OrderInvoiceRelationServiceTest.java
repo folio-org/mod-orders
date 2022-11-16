@@ -1,6 +1,6 @@
 package org.folio.service.orders;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -61,7 +61,7 @@ public class OrderInvoiceRelationServiceTest {
       .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
       .withTotalRecords(1);
 
-    doReturn(completedFuture(oirCollection)).when(restClient).get(any(), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(), any(), any());
 
     PoLine poLineLinkedToInvoice = new PoLine().withId(poLineIdConnectedToInvoice);
     InvoiceLine invoiceLine1 = new InvoiceLine().withInvoiceId(invoiceId).withPoLineId(poLineIdConnectedToInvoice);
@@ -71,8 +71,8 @@ public class OrderInvoiceRelationServiceTest {
     invoiceLineCollection.setInvoiceLines(invoiceLines);
 
     // WHEN
-    when(invoiceLineService.getInvoiceLinesByOrderLineId(eq(poLineIdConnectedToInvoice), any())).thenReturn(completedFuture(invoiceLines));
-    CompletableFuture<Void> future = orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(poLineLinkedToInvoice, requestContext);
+    when(invoiceLineService.getInvoiceLinesByOrderLineId(eq(poLineIdConnectedToInvoice), any())).thenReturn(succeededFuture(invoiceLines));
+    Future<Void> future = orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(poLineLinkedToInvoice, requestContext);
 
     // THEN
     CompletionException exception = assertThrows(CompletionException.class, future::join);
@@ -86,12 +86,12 @@ public class OrderInvoiceRelationServiceTest {
       .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
       .withTotalRecords(0);
 
-    doReturn(completedFuture(oirCollection)).when(restClient).get(any(), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(), any(), any());
 
     PoLine poLineNotLinkedToInvoice = new PoLine().withId(poLineIdNotConnectedToInvoice);
     // WHEN
-    when(invoiceLineService.getInvoiceLinesByOrderLineId(eq(poLineIdNotConnectedToInvoice), any())).thenReturn(completedFuture(
+    when(invoiceLineService.getInvoiceLinesByOrderLineId(eq(poLineIdNotConnectedToInvoice), any())).thenReturn(succeededFuture(
       Collections.emptyList()));
-    orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(poLineNotLinkedToInvoice, requestContext).join();
+    orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(poLineNotLinkedToInvoice, requestContext).result();
   }
 }

@@ -35,8 +35,8 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
     logger.info("Receiving {} items", entity.getTotalRecords());
     ReceivingHelper helper = new ReceivingHelper(entity, okapiHeaders, vertxContext, lang);
     helper.receiveItems(entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -46,8 +46,8 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
     logger.info("Checkin {} items", entity.getTotalRecords());
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext, lang);
     helper.checkinPieces(entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -58,12 +58,12 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
     ReceivingHelper helper = new ReceivingHelper(okapiHeaders, vertxContext, lang);
 
     helper.getReceivingHistory(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(receivingHistory -> {
+      .onSuccess(receivingHistory -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved receiving history: {} ", JsonObject.mapFrom(receivingHistory).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(receivingHistory)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 }

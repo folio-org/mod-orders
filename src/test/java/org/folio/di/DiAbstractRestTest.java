@@ -117,7 +117,7 @@ public abstract class DiAbstractRestTest {
     final DeploymentOptions options = new DeploymentOptions()
       .setConfig(new JsonObject()
         .put(HTTP_PORT, port));
-    CompletableFuture<String> deploymentComplete = new CompletableFuture<>();
+    Future<String> deploymentComplete = new Future<>();
 
     vertx.deployVerticle(RestVerticle.class.getName(), options, res -> {
       if(res.succeeded()) {

@@ -1,10 +1,8 @@
 package org.folio.service.pieces;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -19,6 +17,8 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 public class PieceUpdateInventoryService {
@@ -32,75 +32,75 @@ public class PieceUpdateInventoryService {
     this.pieceStorageService = pieceStorageService;
   }
 
-  public CompletableFuture<String> handleHoldingsRecord(final CompositePoLine compPOL, Location location, String instanceId,
+  public Future<String> handleHoldingsRecord(final CompositePoLine compPOL, Location location, String instanceId,
     RequestContext requestContext) {
     try {
       if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
         return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
       } else {
-        return CompletableFuture.completedFuture(null);
+        return Future.succeededFuture();
       }
     }
     catch (Exception e) {
-      return CompletableFuture.failedFuture(e);
+      return Future.failedFuture(e);
     }
   }
 
   /**
    * Return id of created  Item
    */
-  public CompletableFuture<String> manualPieceFlowCreateItemRecord(Piece piece, CompositePoLine compPOL, RequestContext requestContext) {
+  public Future<String> manualPieceFlowCreateItemRecord(Piece piece, CompositePoLine compPOL, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
-    CompletableFuture<String> itemFuture = new CompletableFuture<>();
+    Promise<String> itemFuture = Promise.promise();
     try {
       logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
         if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
           inventoryManager.createMissingElectronicItems(compPOL, piece, ITEM_QUANTITY, requestContext)
-            .thenApply(idS -> itemFuture.complete(idS.get(0)))
-            .exceptionally(itemFuture::completeExceptionally);
+            .onSuccess(idS -> itemFuture.complete(idS.get(0)))
+            .onFailure(itemFuture::fail);
         } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPOL)) {
           inventoryManager.createMissingPhysicalItems(compPOL, piece, ITEM_QUANTITY, requestContext)
-            .thenApply(idS -> itemFuture.complete(idS.get(0)))
-            .exceptionally(itemFuture::completeExceptionally);
+            .onSuccess(idS -> itemFuture.complete(idS.get(0)))
+            .onFailure(itemFuture::fail);
         }
       else {
         itemFuture.complete(null);
       }
     } catch (Exception e) {
-      itemFuture.completeExceptionally(e);
+      itemFuture.fail(e);
     }
-    return itemFuture;
+    return itemFuture.future();
   }
 
-  public CompletableFuture<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext rqContext) {
+  public Future<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext requestContext) {
     if (piece != null && piece.getHoldingId() != null) {
       String holdingId = piece.getHoldingId();
-      return inventoryManager.getHoldingById(holdingId, true, rqContext)
-                  .thenCompose(holding -> {
+      return inventoryManager.getHoldingById(holdingId, true, requestContext)
+                  .compose(holding -> {
                       if (holding != null && !holding.isEmpty()) {
-                          return pieceStorageService.getPiecesByHoldingId(holdingId, rqContext)
-                            .thenApply(pieces -> skipPieceToProcess(piece, pieces))
-                                  .thenCombine(inventoryManager.getItemsByHoldingId(holdingId, rqContext),
-                                    (existingPieces, existingItems) -> {
+                          return pieceStorageService.getPiecesByHoldingId(holdingId, requestContext)
+                            .map(pieces -> skipPieceToProcess(piece, pieces))
+                                  .compose(existingPieces -> inventoryManager.getItemsByHoldingId(holdingId, requestContext)
+                                    .map(existingItems-> {
                                       List<Piece> remainingPieces = skipPieceToProcess(piece, existingPieces);
                                       if (CollectionUtils.isEmpty(remainingPieces) && CollectionUtils.isEmpty(existingItems)) {
                                         return Pair.of(true, holding);
                                       }
                                       return Pair.of(false, new JsonObject());
-                                    });
+                                    }));
                       }
-                      return completedFuture(Pair.of(false, new JsonObject()));
+                      return Future.succeededFuture(Pair.of(false, new JsonObject()));
                   })
-                  .thenCompose(isUpdatePossibleVsHolding -> {
+                  .compose(isUpdatePossibleVsHolding -> {
                     if (isUpdatePossibleVsHolding.getKey() && !isUpdatePossibleVsHolding.getValue().isEmpty()) {
                       String permanentLocationId = isUpdatePossibleVsHolding.getValue().getString(HOLDING_PERMANENT_LOCATION_ID);
-                      return inventoryManager.deleteHoldingById(holdingId, true, rqContext)
-                                              .thenApply(v -> Pair.of(holdingId, permanentLocationId));
+                      return inventoryManager.deleteHoldingById(holdingId, true, requestContext)
+                                              .map(v -> Pair.of(holdingId, permanentLocationId));
                     }
-                    return completedFuture(null);
+                    return Future.succeededFuture();
                   });
     }
-    return completedFuture(null);
+    return Future.succeededFuture();
   }
 
   private List<Piece> skipPieceToProcess(Piece piece, List<Piece> pieces) {

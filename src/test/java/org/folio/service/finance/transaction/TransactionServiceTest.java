@@ -1,6 +1,6 @@
 package org.folio.service.finance.transaction;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,7 +41,7 @@ public class TransactionServiceTest {
 
     Response response = new Response();
     response.setCode(204);
-    doReturn(completedFuture(response)).when(restClient).put(any(RequestEntry.class), eq(encumbrance), eq(requestContext));
+    doReturn(succeededFuture(response)).when(restClient).put(any(RequestEntry.class), eq(encumbrance), eq(requestContext));
     //When
     transactionService.updateTransaction(encumbrance, requestContext).get();
     //Then

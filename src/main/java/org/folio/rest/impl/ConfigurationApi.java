@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.OKAPI_URL;
 import static org.folio.orders.utils.ResourcePathResolver.PREFIXES;
@@ -47,8 +46,8 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
   @Validate
   public void getOrdersConfigurationReasonsForClosure(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     reasonForClosureService.getReasonsForClosure(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(reasonForClosureCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(reasonForClosureCollection))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(reasonForClosureCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(reasonForClosureCollection))))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
@@ -56,111 +55,111 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
   public void putOrdersConfigurationReasonsForClosureById(String id, String lang, ReasonForClosure entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     reasonForClosureService.updateReasonForClosure(id, entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void postOrdersConfigurationReasonsForClosure(String lang, ReasonForClosure entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     reasonForClosureService.createReasonForClosure(entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(obj -> asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(REASONS_FOR_CLOSURE, obj.getId()), obj))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(obj -> asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(REASONS_FOR_CLOSURE, obj.getId()), obj))))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void getOrdersConfigurationReasonsForClosureById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     reasonForClosureService.getReasonForClosureById(id, new RequestContext(vertxContext, okapiHeaders))
-    .thenAccept(reasonForClosure -> asyncResultHandler.handle(succeededFuture(buildOkResponse(reasonForClosure))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+    .onSuccess(reasonForClosure -> asyncResultHandler.handle(succeededFuture(buildOkResponse(reasonForClosure))))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void deleteOrdersConfigurationReasonsForClosureById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     reasonForClosureService.deleteReasonForClosure(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void getOrdersConfigurationSuffixes(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.getSuffixes(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
-    .thenAccept(suffixCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(suffixCollection))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+    .onSuccess(suffixCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(suffixCollection))))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void putOrdersConfigurationSuffixesById(String id, String lang, Suffix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.updateSuffix(id, entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void postOrdersConfigurationSuffixes(String lang, Suffix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.createSuffix(entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(suffix -> asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(SUFFIXES, suffix.getId()), suffix))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(suffix -> asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(SUFFIXES, suffix.getId()), suffix))))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void getOrdersConfigurationSuffixesById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.getSuffixById(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(suffix -> asyncResultHandler.handle(succeededFuture(buildOkResponse(suffix))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(suffix -> asyncResultHandler.handle(succeededFuture(buildOkResponse(suffix))))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void deleteOrdersConfigurationSuffixesById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.deleteSuffix(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void getOrdersConfigurationPrefixes(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.getPrefixes(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(prefixCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(prefixCollection))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(prefixCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(prefixCollection))))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void putOrdersConfigurationPrefixesById(String id, String lang, Prefix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.updatePrefix(id, entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void postOrdersConfigurationPrefixes(String lang, Prefix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.createPrefix(entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(prefix -> asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(PREFIXES, prefix.getId()), prefix))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(prefix -> asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(PREFIXES, prefix.getId()), prefix))))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void getOrdersConfigurationPrefixesById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.getPrefixById(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(prefix -> asyncResultHandler.handle(succeededFuture(buildOkResponse(prefix))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(prefix -> asyncResultHandler.handle(succeededFuture(buildOkResponse(prefix))))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void deleteOrdersConfigurationPrefixesById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.deletePrefix(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 }

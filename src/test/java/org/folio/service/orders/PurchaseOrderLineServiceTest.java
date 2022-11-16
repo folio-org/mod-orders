@@ -98,10 +98,10 @@ public class PurchaseOrderLineServiceTest {
       .withPoLines(purchaseOrderLines)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(expLines));
+    when(restClientMock.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(expLines));
 
     String expectedQuery =  String.format("id==%s", orderLineId);
-    List<PoLine> actLines = purchaseOrderLineService.getOrderLines(expectedQuery,  0, Integer.MAX_VALUE, requestContext).join();
+    List<PoLine> actLines = purchaseOrderLineService.getOrderLines(expectedQuery,  0, Integer.MAX_VALUE, requestContext).result();
 
     verify(restClientMock).get(any(), eq(requestContext), eq(PoLineCollection.class));
     assertEquals(purchaseOrderLines, actLines);
@@ -113,9 +113,9 @@ public class PurchaseOrderLineServiceTest {
     String orderLineId = UUID.randomUUID().toString();
     PoLine purchaseOrderLine = new PoLine().withId(orderLineId);
 
-    when(restClientMock.put(any(RequestEntry.class), any(PoLine.class), eq(requestContext))).thenReturn(CompletableFuture.completedFuture(null));
+    when(restClientMock.put(any(RequestEntry.class), any(PoLine.class), eq(requestContext))).thenReturn(CompletableFuture.succeededFuture(null));
 
-    purchaseOrderLineService.saveOrderLine(purchaseOrderLine, requestContext).join();
+    purchaseOrderLineService.saveOrderLine(purchaseOrderLine, requestContext).result();
 
     verify(restClientMock).put(any(), eq(purchaseOrderLine), eq(requestContext));
   }
@@ -125,9 +125,9 @@ public class PurchaseOrderLineServiceTest {
     String orderLineId1 = UUID.randomUUID().toString();
     String orderLineId2 = UUID.randomUUID().toString();
     List<PoLine> purchaseOrderLines = List.of(new PoLine().withId(orderLineId1), new PoLine().withId(orderLineId2));
-    when(restClientMock.put(any(RequestEntry.class), any(PoLine.class), eq(requestContext))).thenReturn(CompletableFuture.completedFuture(null));
+    when(restClientMock.put(any(RequestEntry.class), any(PoLine.class), eq(requestContext))).thenReturn(CompletableFuture.succeededFuture(null));
 
-    purchaseOrderLineService.saveOrderLines(purchaseOrderLines, requestContext).join();
+    purchaseOrderLineService.saveOrderLines(purchaseOrderLines, requestContext).result();
 
     verify(restClientMock).put(any(), eq(purchaseOrderLines.get(0)), eq(requestContext));
     verify(restClientMock).put(any(), eq(purchaseOrderLines.get(1)), eq(requestContext));

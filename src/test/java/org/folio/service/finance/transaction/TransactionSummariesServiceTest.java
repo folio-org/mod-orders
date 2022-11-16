@@ -1,6 +1,6 @@
 package org.folio.service.finance.transaction;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
@@ -85,11 +85,11 @@ public class TransactionSummariesServiceTest {
     Response response = new Response();
     response.setBody(new JsonObject("{\"id\": \"" + uuid + "\"}"));
     response.setCode(201);
-    doReturn(completedFuture(response)).when(restClient)
+    doReturn(succeededFuture(response)).when(restClient)
       .post(any(), any(), any(), any());
     // When
     OrderTransactionSummary summary = transactionSummariesService.createOrderTransactionSummary(uuid, 2, requestContext)
-      .join();
+      .result();
     // Then
     assertEquals(uuid, summary.getId());
     verify(restClient).post(any(), any(), any(), any());

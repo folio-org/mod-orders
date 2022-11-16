@@ -5,7 +5,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
 import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
@@ -23,8 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -45,6 +42,8 @@ import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
@@ -60,7 +59,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   public CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders,
                 Context ctx, String lang) {
-    super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+    super(okapiHeaders, ctx);
     // Convert request to map representation
     CheckinCollection checkinCollectionClone = JsonObject.mapFrom(checkinCollection).mapTo(CheckinCollection.class);
     checkinPieces = groupCheckinPiecesByPoLineId(checkinCollectionClone);
@@ -75,57 +74,51 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     }
   }
 
-  public CompletableFuture<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
+  public Future<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     return getPoLines(new ArrayList<>(checkinPieces.keySet()), requestContext)
-      .thenCompose(poLines -> removeForbiddenEntities(poLines, checkinPieces, requestContext))
-      .thenCompose(vVoid -> processCheckInPieces(checkinCollection, requestContext));
+      .compose(poLines -> removeForbiddenEntities(poLines, checkinPieces, requestContext))
+      .compose(vVoid -> processCheckInPieces(checkinCollection, requestContext));
   }
 
-  private CompletionStage<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
+  private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
      // 1. Get piece records from storage
     return createItemsWithPieceUpdate(checkinCollection, requestContext)
       // 2. Filter locationId
-      .thenCompose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
+      .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
-      .thenCompose(pieces -> updateInventoryItemsAndHoldings(pieceLocationsGroupedByPoLine, pieces, requestContext))
+      .compose(pieces -> updateInventoryItemsAndHoldings(pieceLocationsGroupedByPoLine, pieces, requestContext))
       // 4. Update piece records with checkIn details which do not have
       // associated item
-      .thenApply(this::updatePieceRecordsWithoutItems)
+      .map(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
-      .thenCompose(this::storeUpdatedPieceRecords)
+      .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
       // 6. Update PO Line status
-      .thenCompose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(piecesGroupedByPoLine, checkinCollection, requestContext))
+      .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(piecesGroupedByPoLine, checkinCollection, requestContext))
       // 7. Return results to the client
-      .thenApply(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
+      .map(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
-  private CompletableFuture<Map<String, List<Piece>>> createItemsWithPieceUpdate(CheckinCollection checkinCollection, RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> createItemsWithPieceUpdate(CheckinCollection checkinCollection, RequestContext requestContext) {
     Map<String, List<CheckInPiece>> poLineIdVsCheckInPiece = getItemCreateNeededCheckinPieces(checkinCollection);
-    List<CompletableFuture<Pair<String, Piece>>> futures = new ArrayList<>();
+    List<Future<Pair<String, Piece>>> futures = new ArrayList<>();
     return retrievePieceRecords(checkinPieces, requestContext)
-      .thenAccept(piecesGroupedByPoLine -> {
-        piecesGroupedByPoLine.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
-          .forEach(checkInPiece -> {
-              pieces.forEach(piece -> {
-                if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
-                  futures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-                                  .thenApply(PoLineCommonUtil::convertToCompositePoLine)
-                                  .thenCompose(compPOL -> pieceCreateFlowInventoryManager.processInventory(compPOL, piece,
-                                                                                      checkInPiece.getCreateItem(), requestContext))
-                                  .thenApply(aVoid -> Pair.of(poLineId, piece)));
-                } else {
-                  futures.add(CompletableFuture.completedFuture(Pair.of(poLineId, piece)));
-                }
-              });
-        }));
-    })
-    .thenCompose(v -> collectResultsOnSuccess(futures).thenApply(poLineIdVsPieceList -> {
-      return StreamEx.of(poLineIdVsPieceList)
+      .onSuccess(piecesGroupedByPoLine -> piecesGroupedByPoLine.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
+        .forEach(checkInPiece -> pieces.forEach(piece -> {
+          if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
+            futures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
+                            .map(PoLineCommonUtil::convertToCompositePoLine)
+                            .compose(compPOL -> pieceCreateFlowInventoryManager.processInventory(compPOL, piece,
+                                                                                checkInPiece.getCreateItem(), requestContext))
+                            .map(aVoid -> Pair.of(poLineId, piece)));
+          } else {
+            futures.add(Future.succeededFuture(Pair.of(poLineId, piece)));
+          }
+        }))))
+      .compose(v -> collectResultsOnSuccess(futures).map(poLineIdVsPieceList -> StreamEx.of(poLineIdVsPieceList)
         .distinct()
-        .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(),
-          lists -> StreamEx.of(lists).collect(toList()))));
-    }));
+        .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists)
+          .collect(toList()))))));
   }
 
   private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
@@ -215,23 +208,25 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   @Override
-  protected CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
-
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
+    Promise<Boolean> promise = Promise.promise();
     CheckInPiece checkinPiece = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
-    return checkinItem(item, checkinPiece, requestContext)
+    checkinItem(item, checkinPiece, requestContext)
       // Update Piece record object with check-in details if item updated
       // successfully
-      .thenApply(v -> {
+      .map(v -> {
         updatePieceWithCheckinInfo(piece);
+        promise.complete(true);
         return true;
       })
       // Add processing error if item failed to be updated
-      .exceptionally(e -> {
+       .onFailure(e -> {
         logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
         addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
-        return false;
+         promise.complete(false);
       });
+    return promise.future();
   }
 
   private void updatePieceWithCheckinInfo(Piece piece) {
@@ -285,24 +280,24 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       });
   }
 
-  private CompletableFuture<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
                             CheckinCollection checkinCollection, RequestContext requestContext) {
     List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
     // Once all PO Lines are retrieved from storage check if receipt status
     // requires update and persist in storage
-    return getPoLines(poLineIdsForUpdatedPieces, requestContext).thenCompose(poLines -> {
+    return getPoLines(poLineIdsForUpdatedPieces, requestContext).compose(poLines -> {
       // Calculate expected status for each PO Line and update with new one if required
       // Skip status update if PO line status is Ongoing
-      List<CompletableFuture<String>> futures = new ArrayList<>();
+      List<Future<String>> futures = new ArrayList<>();
       for (PoLine poLine : poLines) {
         if (!poLine.getPaymentStatus().equals(PoLine.PaymentStatus.ONGOING)) {
           List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
-          futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
-            .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, okapiHeaders, logger)));
+          futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces, requestContext)
+            .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext)));
         }
       }
 
-      return collectResultsOnSuccess(futures).thenAccept(updatedPoLines -> {
+      return collectResultsOnSuccess(futures).onSuccess(updatedPoLines -> {
         logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
 
         // Send event to check order status for successfully processed PO Lines
@@ -312,7 +307,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         updateOrderStatus(successPoLines, checkinCollection, requestContext);
       });
     })
-      .thenApply(ok -> piecesGroupedByPoLine);
+      .map(ok -> piecesGroupedByPoLine);
   }
 
   private void updateOrderStatus(List<PoLine> poLines, CheckinCollection checkinCollection, RequestContext requestContext) {
@@ -352,7 +347,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     return orderClosedStatusesMap;
   }
 
-  private CompletableFuture<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece, RequestContext requestContext) {
+  private Future<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece, RequestContext requestContext) {
 
     // Update item record with checkIn details
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));

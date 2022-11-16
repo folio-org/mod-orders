@@ -1,5 +1,7 @@
 package org.folio.models;
 
+import java.util.Optional;
+
 import javax.money.convert.CurrencyConversion;
 
 import org.folio.rest.acq.model.finance.Budget;
@@ -8,8 +10,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Ongoing;
-
-import java.util.Optional;
 
 public class EncumbranceRelationsHolder {
   private CompositePurchaseOrder purchaseOrder;

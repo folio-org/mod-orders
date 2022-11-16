@@ -6,16 +6,18 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.tag.Tag;
 import org.folio.rest.acq.model.tag.TagCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+
+import io.vertx.core.Future;
 
 public class TagService {
 
@@ -27,12 +29,12 @@ public class TagService {
     this.restClient = restClient;
   }
 
-  public CompletableFuture<Void> createTagsIfMissing(Set<String> tagLabels, RequestContext requestContext) {
+  public Future<Void> createTagsIfMissing(Set<String> tagLabels, RequestContext requestContext) {
     List<String> tagList = new ArrayList<>(tagLabels);
     String query = HelperUtils.convertTagListToCqlQuery(tagList, "label", true);
 
     return getTags(query, 0, Integer.MAX_VALUE, requestContext)
-      .thenApply(existingTagsCollection -> {
+      .map(existingTagsCollection -> {
         List<String> existingTags = existingTagsCollection.getTags().stream()
           .map(Tag::getLabel)
           .collect(Collectors.toList());
@@ -42,26 +44,26 @@ public class TagService {
         }
         return tagList;
       })
-      .thenCompose(tagsForCreate -> {
-        List<CompletableFuture<Tag>> futures = new ArrayList<>();
+      .compose(tagsForCreate -> {
+        List<Future<Tag>> futures = new ArrayList<>();
         tagsForCreate.forEach(tag -> futures.add(createTag(tag, requestContext)));
 
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        return GenericCompositeFuture.all(futures)
+          .mapEmpty();
       });
   }
 
-  public CompletableFuture<TagCollection> getTags(String query, int offset, int limit,
-      RequestContext requestContext) {
+  public Future<TagCollection> getTags(String query, int offset, int limit, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(TAG_ENDPOINT).withQuery(query)
       .withLimit(limit)
       .withOffset(offset);
-    return restClient.get(requestEntry, requestContext, TagCollection.class);
+    return restClient.get(requestEntry, TagCollection.class, requestContext);
   }
 
-  public CompletableFuture<Tag> createTag(String tagName, RequestContext requestContext) {
+  public Future<Tag> createTag(String tagName, RequestContext requestContext) {
     Tag tag = new Tag().withLabel(tagName);
     RequestEntry requestEntry = new RequestEntry(TAG_ENDPOINT);
-    return restClient.post(requestEntry, tag, requestContext, Tag.class);
+    return restClient.post(requestEntry, tag, Tag.class, requestContext);
   }
 
 }

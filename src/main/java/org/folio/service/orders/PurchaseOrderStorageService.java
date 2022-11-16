@@ -9,11 +9,9 @@ import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -21,6 +19,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderStorageService {
@@ -38,72 +37,72 @@ public class PurchaseOrderStorageService {
     this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
-  public CompletableFuture<PurchaseOrder> getPurchaseOrderById(String id, RequestContext requestContext) {
+  public Future<PurchaseOrder> getPurchaseOrderById(String id, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
-    return restClient.get(requestEntry, requestContext, PurchaseOrder.class);
+    return restClient.get(requestEntry, PurchaseOrder.class, requestContext);
   }
 
-  public CompletableFuture<JsonObject> getPurchaseOrderByIdAsJson(String id, RequestContext requestContext) {
+  public Future<JsonObject> getPurchaseOrderByIdAsJson(String id, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
     return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 
-  public CompletableFuture<CompositePurchaseOrder> getCompositeOrderById(String orderId, RequestContext requestContext) {
+  public Future<CompositePurchaseOrder> getCompositeOrderById(String orderId, RequestContext requestContext) {
     return getPurchaseOrderById(orderId, requestContext)
-      .thenCompose(purchaseOrder -> purchaseOrderLineService.getCompositePoLinesByOrderId( orderId, requestContext)
-        .thenApply(poLines -> convertToCompositePurchaseOrder(JsonObject.mapFrom(purchaseOrder)).withCompositePoLines(poLines)));
+      .compose(purchaseOrder -> purchaseOrderLineService.getCompositePoLinesByOrderId(orderId, requestContext)
+        .map(poLines -> convertToCompositePurchaseOrder(JsonObject.mapFrom(purchaseOrder)).withCompositePoLines(poLines)));
   }
 
-  public CompletableFuture<PurchaseOrderCollection> getPurchaseOrders(String query, int limit, int offset, RequestContext requestContext) {
+  public Future<PurchaseOrderCollection> getPurchaseOrders(String query, int limit, int offset, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT)
             .withQuery(query)
             .withLimit(limit)
             .withOffset(offset);
-    return restClient.get(requestEntry, requestContext, PurchaseOrderCollection.class);
+    return restClient.get(requestEntry, PurchaseOrderCollection.class, requestContext);
   }
-  public CompletableFuture<List<PurchaseOrder>> getPurchaseOrdersByIds(List<String> orderIds, RequestContext requestContext) {
+  public Future<List<PurchaseOrder>> getPurchaseOrdersByIds(List<String> orderIds, RequestContext requestContext) {
 
     return collectResultsOnSuccess(ofSubLists(orderIds, MAX_IDS_FOR_GET_RQ)
       .map(ids -> getOrdersChunk(ids, requestContext)).toList())
-      .thenApply(lists -> lists.stream()
+      .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(toList()));
   }
 
-  public CompletableFuture<CompositePurchaseOrder> getCompositeOrderByPoLineId(String poLineId, RequestContext requestContext) {
+  public Future<CompositePurchaseOrder> getCompositeOrderByPoLineId(String poLineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-      .thenCompose(poLine -> getCompositeOrderById(poLine.getPurchaseOrderId(), requestContext));
+      .compose(poLine -> getCompositeOrderById(poLine.getPurchaseOrderId(), requestContext));
   }
 
 
-  public CompletableFuture<JsonObject> getPurchaseOrderByPONumber(String poNumber, RequestContext requestContext) {
+  public Future<JsonObject> getPurchaseOrderByPONumber(String poNumber, RequestContext requestContext) {
     String query = String.format("poNumber==%s", poNumber);
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(0).withLimit(1);
     return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 
 
-  private CompletableFuture<List<PurchaseOrder>> getOrdersChunk(List<String> orderIds, RequestContext requestContext) {
+  private Future<List<PurchaseOrder>> getOrdersChunk(List<String> orderIds, RequestContext requestContext) {
 
     String query = convertIdsToCqlQuery(orderIds);
     RequestEntry requestEntry = new RequestEntry(ENDPOINT)
       .withQuery(query)
       .withOffset(0)
       .withLimit(MAX_IDS_FOR_GET_RQ);
-    return restClient.get(requestEntry, requestContext, PurchaseOrderCollection.class)
-      .thenApply(PurchaseOrderCollection::getPurchaseOrders);
+    return restClient.get(requestEntry, PurchaseOrderCollection.class, requestContext)
+      .map(PurchaseOrderCollection::getPurchaseOrders);
   }
 
-  public CompletableFuture<Void> deleteOrderById(String orderId, RequestContext requestContext) {
+  public Future<Void> deleteOrderById(String orderId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(orderId);
     return restClient.delete(requestEntry, requestContext);
   }
 
-  public CompletableFuture<PurchaseOrder> createPurchaseOrder(JsonObject jsonOrder, RequestContext requestContext) {
+  public Future<PurchaseOrder> createPurchaseOrder(PurchaseOrder jsonOrder, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT);
-    return restClient.post(requestEntry, jsonOrder, PostResponseType.BODY, PurchaseOrder.class, requestContext);
+    return restClient.post(requestEntry, jsonOrder, PurchaseOrder.class, requestContext);
   }
-  public CompletableFuture<Void> saveOrder(PurchaseOrder purchaseOrder, RequestContext requestContext) {
+  public Future<Void> saveOrder(PurchaseOrder purchaseOrder, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(purchaseOrder.getId());
     return restClient.put(requestEntry, purchaseOrder, requestContext);
   }

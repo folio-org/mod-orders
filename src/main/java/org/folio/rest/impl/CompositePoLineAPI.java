@@ -17,16 +17,20 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.PurchaseOrderLineHelper;
+import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
+import org.folio.rest.jaxrs.model.ValidateFundDistributionsRequest;
 import org.folio.rest.jaxrs.resource.OrdersOrderLines;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.orders.CompositePoLineValidationService;
-import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,8 +62,8 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   public void getOrdersOrderLines(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     helper.getOrderLines(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(lines -> asyncResultHandler.handle(succeededFuture(buildOkResponse(lines))))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+      .onSuccess(lines -> asyncResultHandler.handle(succeededFuture(buildOkResponse(lines))))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -67,12 +71,12 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   public void postOrdersOrderLines(String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     helper.createPoLine(poLine, new RequestContext(vertxContext, okapiHeaders))
-          .thenAccept(pol -> {
+          .onSuccess(pol -> {
             String okapiUrl = okapiHeaders.get(OKAPI_URL);
             String url = resourceByIdPath(PO_LINES_BUSINESS, poLine.getId());
             asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiUrl, url, poLine)));
           })
-          .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+           .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -81,14 +85,14 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Started Invocation of POLine Request with id = {}", lineId);
     helper.getCompositePoLine(lineId, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(poLine -> {
+      .onSuccess(poLine -> {
         if (logger.isInfoEnabled()) {
           logger.info("Received PO Line Response: {}", JsonObject.mapFrom(poLine)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(poLine)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -96,8 +100,8 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   public void deleteOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     helper.deleteLine(lineId, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -118,10 +122,10 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
       errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
     }
     configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .thenCompose(tenantConfig -> helper.setTenantDefaultCreateInventoryValues(poLine, tenantConfig))
-      .thenCompose(v -> compositePoLineValidationService.validatePoLine(poLine, requestContext))
-      .thenAccept(errors::addAll)
-      .thenAccept(empty -> {
+      .compose(tenantConfig -> helper.setTenantDefaultCreateInventoryValues(poLine, tenantConfig))
+      .compose(v -> compositePoLineValidationService.validatePoLine(poLine, requestContext))
+      .onSuccess(errors::addAll)
+      .onSuccess(empty -> {
         if (!errors.isEmpty()) {
           PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse
             .respond422WithApplicationJson(new Errors().withErrors(errors));
@@ -129,10 +133,10 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
           return;
         }
         helper.updateOrderLine(poLine, requestContext)
-          .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-          .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+          .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+           .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -143,8 +147,8 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
 
     orderLinePatchOperationService.patch(lineId, request, requestContext)
-        .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-        .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+        .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+         .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override

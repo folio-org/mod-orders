@@ -15,7 +15,7 @@ import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.checkVertxContextCompletion;
-import static org.folio.helper.AbstractHelper.ORDER_ID;
+import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;

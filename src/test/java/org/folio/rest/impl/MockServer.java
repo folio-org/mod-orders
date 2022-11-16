@@ -18,7 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
-import org.folio.helper.AbstractHelper;
+import org.folio.helper.BaseHelper;
 import org.folio.isbn.IsbnUtil;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.acq.model.SequenceNumbers;
@@ -233,7 +233,7 @@ public class MockServer {
   public void start() throws InterruptedException, ExecutionException, TimeoutException {
     // Setup Mock Server...
     HttpServer server = vertx.createHttpServer();
-    CompletableFuture<HttpServer> deploymentComplete = new CompletableFuture<>();
+    Future<HttpServer> deploymentComplete = new Future<>();
     server.requestHandler(defineRoutes()).listen(port, result -> {
       if(result.succeeded()) {
         deploymentComplete.complete(result.result());
@@ -410,7 +410,7 @@ public class MockServer {
 
   private Optional<JsonObject> getMockEntry(String objName, String id) {
     return getRqRsEntries(HttpMethod.SEARCH, objName).stream()
-      .filter(obj -> id.equals(obj.getString(AbstractHelper.ID)))
+      .filter(obj -> id.equals(obj.getString(BaseHelper.ID)))
       .findAny();
   }
 

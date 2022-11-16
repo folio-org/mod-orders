@@ -1,7 +1,7 @@
 package org.folio.service.orders;
 
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.OrderType.ONE_TIME;
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -155,11 +155,11 @@ public class OrderRolloverServiceTest {
 
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing2, poLineOngoing3);
 
-    doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
+    doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
+    doReturn(succeededFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
+    doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(60d);
@@ -175,10 +175,10 @@ public class OrderRolloverServiceTest {
       .withEncumbrance(encumbranceOngoing3).withExpenseClassId(expClassId3);
 
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
-    doReturn(completedFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
+    doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
     double exchangeEurToUsdRate = 1.0d;
-    doReturn(completedFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
+    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
     String polCurrency = systemCurrency;
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
     ExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
@@ -193,8 +193,8 @@ public class OrderRolloverServiceTest {
     when(exchangeRate.getBaseCurrency()).thenReturn(Monetary.getCurrency(polCurrency));
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
 
-    CompletableFuture<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
-    future.join();
+    Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    future.result();
     assertFalse(future.isCompletedExceptionally());
 
     assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
@@ -262,21 +262,21 @@ public class OrderRolloverServiceTest {
       .withFundDistribution(List.of(fundDistributionOneTime, fundDistributionOngoing));
     List<PoLine> poLines = List.of(poLineOneTime);
 
-    doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
+    doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
+    doReturn(succeededFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
+    doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(580d);
     Transaction transactionOneTime = new Transaction().withId(currEncumbrId1).withFromFundId(fundId1)
       .withEncumbrance(encumbranceOneTime);
     List<Transaction> encumbrances = List.of(transactionOneTime);
-    doReturn(completedFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
+    doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
     double exchangeEurToUsdRate = 1.0d;
-    doReturn(completedFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
+    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
     String polCurrency = systemCurrency;
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
     ExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
@@ -291,8 +291,8 @@ public class OrderRolloverServiceTest {
     when(exchangeRate.getBaseCurrency()).thenReturn(Monetary.getCurrency(polCurrency));
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
 
-    CompletableFuture<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
-    future.join();
+    Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    future.result();
     assertFalse(future.isCompletedExceptionally());
 
     assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
@@ -370,11 +370,11 @@ public class OrderRolloverServiceTest {
       .withFundDistribution(List.of(fundDistributionOngoing3));
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing2, poLineOngoing3);
 
-    doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
+    doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
+    doReturn(succeededFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
+    doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(30.16d);
@@ -390,10 +390,10 @@ public class OrderRolloverServiceTest {
       .withEncumbrance(encumbranceOngoing3).withExpenseClassId(expClassId3);
 
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
-    doReturn(completedFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
+    doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
     double exchangeEurToUsdRate = 0.82858d;
-    doReturn(completedFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
+    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
     ExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
     ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of());
@@ -407,8 +407,8 @@ public class OrderRolloverServiceTest {
     when(exchangeRate.getBaseCurrency()).thenReturn(Monetary.getCurrency(polCurrency));
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
 
-    CompletableFuture<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
-    future.join();
+    Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    future.result();
     assertFalse(future.isCompletedExceptionally());
 
     assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
@@ -477,13 +477,13 @@ public class OrderRolloverServiceTest {
       .withFundDistribution(singletonList(fundDistribution));
     List<PoLine> poLines = singletonList(poLine);
 
-    doReturn(completedFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(completedFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
+    doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
+    doReturn(succeededFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
       .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
+    doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
-    doReturn(completedFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
+    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
 
     Encumbrance encumbrance = new Encumbrance()
       .withSourcePurchaseOrderId(orderId)
@@ -495,12 +495,12 @@ public class OrderRolloverServiceTest {
       .withFromFundId(fundId)
       .withEncumbrance(encumbrance);
     List<Transaction> encumbrances = singletonList(transaction);
-    doReturn(completedFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
+    doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    doReturn(completedFuture(null)).when(transactionService).deleteTransactions(anyList(), any());
+    doReturn(succeededFuture(null)).when(transactionService).deleteTransactions(anyList(), any());
 
-    CompletableFuture<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
-    future.join();
+    Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    future.result();
     assertFalse(future.isCompletedExceptionally());
 
     assertThat(fundDistribution.getEncumbrance(), equalTo(null));

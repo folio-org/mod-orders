@@ -1,26 +1,21 @@
 package org.folio.helper;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
-import static java.util.concurrent.CompletableFuture.allOf;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEqualCollection;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.helper.AbstractHelper.EVENT_PAYLOAD;
-import static org.folio.helper.AbstractHelper.ID;
-import static org.folio.helper.AbstractHelper.ORDER_ID;
+import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
+import static org.folio.helper.BaseHelper.ID;
+import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.helper.PoNumberHelper.buildPoLineNumber;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
-import static org.folio.orders.utils.HelperUtils.deletePoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
-import static org.folio.orders.utils.HelperUtils.operateOnObject;
-import static org.folio.orders.utils.HelperUtils.verifyProtectedFieldsChanged;
+import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -46,7 +41,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,7 +53,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFieldsUtil;
@@ -67,7 +61,6 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.RestConstants;
 import org.folio.rest.acq.model.SequenceNumbers;
-import org.folio.rest.core.PostResponseType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -89,7 +82,6 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
@@ -103,14 +95,19 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
+import org.folio.service.organization.OrganizationService;
 import org.folio.service.titles.TitlesService;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderLineHelper {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderLineHelper.class);
+
+  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
 
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{1,22}-)([0-9]{1,3})");
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
@@ -133,6 +130,7 @@ public class PurchaseOrderLineHelper {
   private final ConfigurationEntriesService configurationEntriesService;
   private final RestClient restClient;
   private final CompositePoLineValidationService compositePoLineValidationService;
+  private final OrganizationService organizationService;
 
   public PurchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
     ExpenseClassValidationService expenseClassValidationService,
@@ -140,7 +138,7 @@ public class PurchaseOrderLineHelper {
     TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
     PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesService configurationEntriesService, RestClient restClient,
-    CompositePoLineValidationService compositePoLineValidationService) {
+    CompositePoLineValidationService compositePoLineValidationService, OrganizationService organizationService) {
     this.inventoryManager = inventoryManager;
     this.encumbranceService = encumbranceService;
     this.expenseClassValidationService = expenseClassValidationService;
@@ -154,6 +152,7 @@ public class PurchaseOrderLineHelper {
     this.configurationEntriesService = configurationEntriesService;
     this.restClient = restClient;
     this.compositePoLineValidationService = compositePoLineValidationService;
+    this.organizationService = organizationService;
   }
 
   /**
@@ -166,16 +165,16 @@ public class PurchaseOrderLineHelper {
    * @param query A query expressed as a CQL string (see dev.folio.org/reference/glossary#cql) using valid searchable fields.
    * @return Completable future which holds {@link PoLineCollection} on success or an exception on any error
    */
-  public CompletableFuture<PoLineCollection> getOrderLines(int limit, int offset, String query, RequestContext requestContext) {
+  public Future<PoLineCollection> getOrderLines(int limit, int offset, String query, RequestContext requestContext) {
     return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords("purchaseOrder.", requestContext)
-      .thenCompose(acqUnitsCqlExpr -> {
+      .compose(acqUnitsCqlExpr -> {
         String finalQuery = acqUnitsCqlExpr;
         if (!isEmpty(query)) {
           finalQuery = combineCqlExpressions("and", acqUnitsCqlExpr, query);
         }
         RequestEntry requestEntry = new RequestEntry(resourcesPath(PO_LINES_STORAGE))
                                               .withQuery(finalQuery).withLimit(limit).withOffset(offset);
-        return restClient.get(requestEntry, requestContext, PoLineCollection.class);
+        return restClient.get(requestEntry, PoLineCollection.class, requestContext);
       });
   }
 
@@ -184,21 +183,20 @@ public class PurchaseOrderLineHelper {
    * @param compPOL {@link CompositePoLine} to be created
    * @return completable future which might hold {@link CompositePoLine} on success, {@code null} if validation fails or an exception if any issue happens
    */
-  public CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPOL, RequestContext requestContext) {
+  public Future<CompositePoLine> createPoLine(CompositePoLine compPOL, RequestContext requestContext) {
     // Validate PO Line content and retrieve order only if this operation is allowed
     JsonObject cachedTenantConfiguration= new JsonObject();
     return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .thenApply(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
-      .thenCompose(tenantConfiguration -> setTenantDefaultCreateInventoryValues(compPOL, tenantConfiguration))
-      .thenCompose(v -> validateNewPoLine(compPOL, cachedTenantConfiguration, requestContext))
-      .thenCompose(validationErrors -> {
+      .map(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
+      .compose(tenantConfiguration -> setTenantDefaultCreateInventoryValues(compPOL, tenantConfiguration))
+      .compose(v -> validateNewPoLine(compPOL, cachedTenantConfiguration, requestContext))
+      .compose(validationErrors -> {
         if (CollectionUtils.isEmpty(validationErrors)) {
           return getCompositePurchaseOrder(compPOL.getPurchaseOrderId(), requestContext)
             // The PO Line can be created only for order in Pending state
-            .thenApply(this::validateOrderState)
-            .thenCompose(po -> protectionService.isOperationRestricted(po.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
-                                                .thenApply(vVoid -> po))
-            .thenCompose(po -> createPoLine(compPOL, po, requestContext));
+            .map(this::validateOrderState)
+            .compose(po -> protectionService.isOperationRestricted(po.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
+            .compose(v -> createPoLine(compPOL, po, requestContext)));
         } else {
             Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
             logger.error("Create POL validation error : " + JsonObject.mapFrom(errors).encodePrettily());
@@ -213,7 +211,7 @@ public class PurchaseOrderLineHelper {
    * @param compOrder associated {@link CompositePurchaseOrder} object
    * @return completable future which might hold {@link CompositePoLine} on success or an exception if any issue happens
    */
-  public CompletableFuture<CompositePoLine> createPoLine(CompositePoLine compPoLine, CompositePurchaseOrder compOrder, RequestContext requestContext) {
+  public Future<CompositePoLine> createPoLine(CompositePoLine compPoLine, CompositePurchaseOrder compOrder, RequestContext requestContext) {
     // The id is required because sub-objects are being created first
     if (isEmpty(compPoLine.getId())) {
       compPoLine.setId(UUID.randomUUID().toString());
@@ -223,30 +221,32 @@ public class PurchaseOrderLineHelper {
     PoLineCommonUtil.updateLocationsQuantity(compPoLine.getLocations());
 
     JsonObject line = mapFrom(compPoLine);
-    List<CompletableFuture<Void>> subObjFuts = new ArrayList<>();
+    List<Future<Void>> subObjFuts = new ArrayList<>();
 
     subObjFuts.add(createAlerts(compPoLine, line, requestContext));
     subObjFuts.add(createReportingCodes(compPoLine, line, requestContext));
 
-    return allOf(subObjFuts.toArray(new CompletableFuture[0]))
-      .thenCompose(v -> generateLineNumber(compOrder, requestContext))
-      .thenAccept(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
-      .thenCompose(v -> createPoLineSummary(compPoLine, line, requestContext));
+    return GenericCompositeFuture.all(new ArrayList<>(subObjFuts))
+      .compose(v -> generateLineNumber(compOrder, requestContext))
+      .onSuccess(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
+      .compose(v -> createPoLineSummary(compPoLine, line, requestContext));
   }
 
-  public CompletableFuture<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL, JsonObject tenantConfiguration) {
-    CompletableFuture<JsonObject> future = new CompletableFuture<>();
+  public Future<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL, JsonObject tenantConfiguration) {
+    Promise<JsonObject> promise = Promise.promise();
 
     if (isCreateInventoryNull(compPOL)) {
       if (tenantConfiguration != null && !tenantConfiguration.isEmpty() &&
                       StringUtils.isNotEmpty(tenantConfiguration.getString(CREATE_INVENTORY))) {
-        future.complete(new JsonObject(tenantConfiguration.getString(CREATE_INVENTORY)));
+        promise.complete(new JsonObject(tenantConfiguration.getString(CREATE_INVENTORY)));
       } else {
-        future.complete(new JsonObject());
+        promise.complete(new JsonObject());
       }
-      return future.thenAccept(jsonConfig -> updateCreateInventory(compPOL, jsonConfig));
+      return promise.future()
+        .onSuccess(jsonConfig -> updateCreateInventory(compPOL, jsonConfig))
+        .mapEmpty();
     } else {
-      return completedFuture(null);
+      return Future.succeededFuture();
     }
   }
 
@@ -265,72 +265,70 @@ public class PurchaseOrderLineHelper {
     }
   }
 
-  public CompletableFuture<CompositePoLine> getCompositePoLine(String polineId, RequestContext requestContext) {
+  public Future<CompositePoLine> getCompositePoLine(String polineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(polineId, requestContext)
-      .thenCompose(line -> getCompositePurchaseOrder(line.getPurchaseOrderId(), requestContext)
-        .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.READ, requestContext))
-        .thenCompose(ok -> populateCompositeLine(line, requestContext)));
+      .compose(line -> getCompositePurchaseOrder(line.getPurchaseOrderId(), requestContext)
+        .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.READ, requestContext))
+        .compose(ok -> populateCompositeLine(line, requestContext)));
   }
 
-  public CompletableFuture<Void> deleteLine(String lineId, RequestContext requestContext) {
+  public Future<Void> deleteLine(String lineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .thenCompose(line -> verifyDeleteAllowed(line, requestContext)
-        .thenCompose(ok -> {
+      .compose(line -> verifyDeleteAllowed(line, requestContext)
+        .compose(ok -> {
           logger.debug("Deleting PO line...");
           return encumbranceService.deletePoLineEncumbrances(line, requestContext)
-            .thenCompose(v -> deletePoLine(line, requestContext.getHeaders(), logger));
+            .compose(v -> deletePoLine(line, requestContext));
       }))
-      .thenAccept(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
+      .onSuccess(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
   }
 
   /**
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
-  public CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, RequestContext requestContext) {
+  public Future<Void> updateOrderLine(CompositePoLine compOrderLine, RequestContext requestContext) {
     return validateAndNormalizeISBN(compOrderLine, requestContext)
-        .thenCompose(v -> getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId(), requestContext))
-        .thenCompose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId(), requestContext)
-          .thenApply(compOrder -> addLineToCompOrder(compOrder, lineFromStorage))
-          .thenCompose(compOrder -> {
+        .compose(v -> getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId(), requestContext))
+        .compose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId(), requestContext)
+          .map(compOrder -> addLineToCompOrder(compOrder, lineFromStorage))
+          .compose(compOrder -> {
             validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
             PoLineCommonUtil.updateLocationsQuantity(compOrderLine.getLocations());
             updateEstimatedPrice(compOrderLine);
             checkLocationCanBeModified(compOrderLine, lineFromStorage.mapTo(PoLine.class), compOrder);
 
             return protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
-                .thenCompose(v -> validateAccessProviders(compOrderLine, requestContext))
-                .thenCompose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
-                .thenCompose(v -> processPoLineEncumbrances(compOrder, compOrderLine, lineFromStorage, requestContext))
-                .thenApply(v -> lineFromStorage);
+                .compose(v -> validateAccessProviders(compOrderLine, requestContext))
+                .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
+                .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, lineFromStorage, requestContext))
+                .map(v -> lineFromStorage);
           }))
-        .thenCompose(lineFromStorage -> {
+        .compose(lineFromStorage -> {
           // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
           // update
           compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
           return updateOrderLine(compOrderLine, lineFromStorage, requestContext)
-            .thenCompose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
-            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext));
+            .compose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
+            .onSuccess(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext));
         });
 
   }
 
-  private CompletableFuture<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage,
+  private Future<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage,
     RequestContext requestContext) {
-    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(lineFromStorage.mapTo(PoLine.class)))
-      .thenCompose(poLine -> {
+    PoLine poLine = lineFromStorage.mapTo(PoLine.class);
         if(isReleaseEncumbrances(compOrderLine, poLine)) {
           logger.info("Encumbrances releasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
           return encumbranceService.getPoLineUnreleasedEncumbrances(compOrderLine.getId(), requestContext)
-            .thenCompose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
-              .thenCompose(v -> encumbranceService.releaseEncumbrances(transactionList, requestContext)));
+            .compose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
+              .compose(v -> encumbranceService.releaseEncumbrances(transactionList, requestContext)));
         } else if (isUnreleasedEncumbrances(compOrderLine, poLine)) {
           logger.info("Encumbrances unreleasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
           return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
-            .thenCompose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
-              .thenCompose(v -> encumbranceService.unreleaseEncumbrances(transactionList, requestContext)));
+            .compose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
+              .compose(v -> encumbranceService.unreleaseEncumbrances(transactionList, requestContext)));
         }
-        return CompletableFuture.completedFuture(null);
-      });
+        return Future.succeededFuture();
   }
 
   private boolean isReleaseEncumbrances(CompositePoLine compOrderLine, PoLine poLine) {
@@ -355,26 +353,25 @@ public class PurchaseOrderLineHelper {
    * @param compOrderLine The composite {@link CompositePoLine} to use for storage data update
    * @param lineFromStorage {@link JsonObject} representing PO line from storage (/acq-models/mod-orders-storage/schemas/po_line.json)
    */
-  public CompletableFuture<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
+  public Future<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
+    Promise<Void> promise = Promise.promise();
 
     updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext)
-      .thenCompose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
-      .thenAccept(json -> future.complete(null))
-      .exceptionally(throwable -> {
+      .compose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
+      .onSuccess(json -> promise.complete())
+       .onFailure(throwable -> {
         String message = String.format("PO Line with '%s' id partially updated but there are issues processing some PO Line sub-objects", compOrderLine.getId());
         logger.error(message);
-        future.completeExceptionally(throwable);
-        return null;
+         promise.fail(throwable);
       });
-    return future;
+    return promise.future();
   }
 
 
-  public CompletableFuture<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine, RequestContext requestContext) {
+  public Future<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine, RequestContext requestContext) {
     logger.debug("Updating PO line...");
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES_STORAGE, poLineId), EN);
-    return operateOnObject(HttpMethod.PUT, endpoint, poLine, requestContext.getHeaders(), logger);
+    return operateOnObject(HttpMethod.PUT, endpoint, poLine, requestContext);
   }
 
   public String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {
@@ -396,21 +393,21 @@ public class PurchaseOrderLineHelper {
     cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
   }
 
-  private CompletionStage<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
+  private Future<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     JsonObject updatedLineJson = mapFrom(compOrderLine);
     logger.debug("Updating PO line sub-objects...");
 
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    List<Future<Void>> futures = new ArrayList<>();
 
     futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage, requestContext));
     futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage, requestContext));
 
     // Once all operations completed, return updated PO Line with new sub-object id's as json object
-    return allOf(futures.toArray(new CompletableFuture[0]))
-                .thenApply(v -> updatedLineJson);
+    return GenericCompositeFuture.all(new ArrayList<>(futures))
+                .map(v -> updatedLineJson);
   }
 
-  private CompletableFuture<String> handleSubObjOperation(String prop, JsonObject subObjContent, String storageId, RequestContext requestContext) {
+  private Future<String> handleSubObjOperation(String prop, JsonObject subObjContent, String storageId, RequestContext requestContext) {
     final String url;
     final HttpMethod operation;
     // In case the id is available in the PO line from storage, depending on the request content the sub-object is going to be updated or removed
@@ -422,11 +419,11 @@ public class PurchaseOrderLineHelper {
       url = String.format(URL_WITH_LANG_PARAM, resourcesPath(prop), EN);
     } else {
       // There is no object in storage nor in request - skipping operation
-      return completedFuture(null);
+      return Future.succeededFuture();
     }
 
-    return operateOnObject(operation, url, subObjContent, requestContext.getHeaders(), logger)
-      .thenApply(json -> {
+    return operateOnObject(operation, url, subObjContent, requestContext)
+      .map(json -> {
         if (operation == HttpMethod.PUT) {
           return storageId;
         } else if (operation == HttpMethod.POST && json.getString(ID) != null) {
@@ -436,9 +433,8 @@ public class PurchaseOrderLineHelper {
       });
   }
 
-  private CompletableFuture<Void> handleSubObjsOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage,
-                                                         RequestContext requestContext) {
-    List<CompletableFuture<String>> futures = new ArrayList<>();
+  private Future<Void> handleSubObjsOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage, RequestContext requestContext) {
+    List<Future<String>> futures = new ArrayList<>();
     JsonArray idsInStorage = lineFromStorage.getJsonArray(prop);
     JsonArray jsonObjects = updatedLine.getJsonArray(prop);
 
@@ -452,7 +448,7 @@ public class PurchaseOrderLineHelper {
           String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
 
           futures.add(handleSubObjOperation(prop, subObj, id, requestContext)
-            .exceptionally(throwable -> {
+             .onFailure(throwable -> {
               Error error = handleProcessingError(throwable, prop, id);
               throw new HttpException(500, error);
             })
@@ -466,7 +462,7 @@ public class PurchaseOrderLineHelper {
       String id = idsInStorage.getString(i);
       if (id != null) {
         futures.add(handleSubObjOperation(prop, null, id, requestContext)
-          .exceptionally(throwable -> {
+           .otherwise(throwable -> {
             handleProcessingError(throwable, prop, id);
             // In case the object is not deleted, still keep reference to old id
             return id;
@@ -475,8 +471,9 @@ public class PurchaseOrderLineHelper {
       }
     }
 
-    return collectResultsOnSuccess(futures)
-      .thenAccept(newIds -> updatedLine.put(prop, newIds));
+    return GenericCompositeFuture.all(new ArrayList<>(futures))
+      .onSuccess(newIds -> updatedLine.put(prop, newIds))
+      .mapEmpty();
   }
 
   private Error handleProcessingError(Throwable exc, String propName, String propId) {
@@ -491,10 +488,10 @@ public class PurchaseOrderLineHelper {
   /**
    * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
    */
-  private CompletableFuture<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId, RequestContext requestContext) {
+  private Future<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .thenApply(JsonObject::mapFrom)
-      .thenApply(line -> {
+      .map(JsonObject::mapFrom)
+      .map(line -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");
         validateOrderId(orderId, line);
         return line;
@@ -512,69 +509,66 @@ public class PurchaseOrderLineHelper {
     }
   }
 
-  private CompletionStage<CompositePoLine> createPoLineSummary(CompositePoLine compPOL, JsonObject line, RequestContext requestContext) {
+  private Future<CompositePoLine> createPoLineSummary(CompositePoLine compPOL, JsonObject jsonLine, RequestContext requestContext) {
     RequestEntry rqEntry = new RequestEntry(resourcesPath(PO_LINES_STORAGE));
-    return restClient.post(rqEntry, line, PostResponseType.BODY, PoLine.class, requestContext)
-                    .thenApply(createdLine -> compPOL.withId(createdLine.getId()).withPoLineNumber(createdLine.getPoLineNumber()));
+    var poLine = jsonLine.mapTo(PoLine.class);
+    return restClient.post(rqEntry, poLine, PoLine.class, requestContext)
+                    .map(createdLine -> compPOL.withId(createdLine.getId()).withPoLineNumber(createdLine.getPoLineNumber()));
   }
 
-  private CompletableFuture<Void> createReportingCodes(CompositePoLine compPOL, JsonObject line, RequestContext requestContext) {
-    List<CompletableFuture<String>> futures = new ArrayList<>();
+  private Future<Void> createReportingCodes(CompositePoLine compPOL, JsonObject line, RequestContext requestContext) {
+    List<Future<String>> futures = new ArrayList<>();
 
     List<ReportingCode> reportingCodes = compPOL.getReportingCodes();
     if (null != reportingCodes) {
       RequestEntry rqEntry = new RequestEntry(resourcesPath(REPORTING_CODES));
-      reportingCodes.forEach(reportingObject -> {
-        futures.add(restClient.post(rqEntry, reportingObject, requestContext, ReportingCode.class)
-                              .thenApply(ReportingCode::getId));
-        });
+      reportingCodes
+        .forEach(reportingObject -> futures.add(restClient.post(rqEntry, reportingObject, ReportingCode.class, requestContext)
+          .map(ReportingCode::getId)));
     }
-    return collectResultsOnSuccess(futures)
-      .thenAccept(reportingIds -> line.put(REPORTING_CODES, reportingIds))
-      .exceptionally(t -> {
+    return GenericCompositeFuture.all(new ArrayList<>(futures))
+      .onSuccess(reportingIds -> line.put(REPORTING_CODES, reportingIds.list()))
+      .onFailure(t -> {
         logger.error("failed to create Reporting Codes", t);
         throw new CompletionException(t.getCause());
-      });
+      })
+      .mapEmpty();
   }
 
-  private CompletableFuture<Void> createAlerts(CompositePoLine compPOL, JsonObject line, RequestContext requestContext) {
-    List<CompletableFuture<String>> futures = new ArrayList<>();
+  private Future<Void> createAlerts(CompositePoLine compPOL, JsonObject line, RequestContext requestContext) {
+    List<Future<String>> futures = new ArrayList<>();
 
     List<Alert> alerts = compPOL.getAlerts();
     if (null != alerts) {
       RequestEntry rqEntry = new RequestEntry(resourcesPath(ALERTS));
-      alerts.forEach(alertObject -> {
-        futures.add(restClient.post(rqEntry, alertObject, requestContext, Alert.class)
-                              .thenApply(Alert::getId)
-        );
-      });
+      alerts.forEach(alertObject -> futures.add(restClient.post(rqEntry, alertObject, Alert.class, requestContext).map(Alert::getId)));
     }
 
-    return collectResultsOnSuccess(futures)
-      .thenAccept(ids -> line.put(ALERTS, ids))
-      .exceptionally(t -> {
+    return GenericCompositeFuture.all(new ArrayList<>(futures))
+      .onSuccess(ids -> line.put(ALERTS, ids.list()))
+      .onFailure(t -> {
         logger.error("failed to create Alerts", t);
         throw new CompletionException(t.getCause());
-      });
-
+      })
+      .mapEmpty();
   }
 
-  public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL, String isbnId, Map<String, String> normalizedIsbnCache, RequestContext requestContext) {
+  public Future<Void> validateAndNormalizeISBN(CompositePoLine compPOL, String isbnId, Map<String, String> normalizedIsbnCache, RequestContext requestContext) {
     return validateIsbnValues(compPOL, isbnId, normalizedIsbnCache, requestContext)
-      .thenAccept(aVoid -> removeISBNDuplicates(compPOL, isbnId));
+      .onSuccess(aVoid -> removeISBNDuplicates(compPOL, isbnId));
   }
 
-  public CompletableFuture<Void> validateAndNormalizeISBN(CompositePoLine compPOL, RequestContext requestContext) {
+  public Future<Void> validateAndNormalizeISBN(CompositePoLine compPOL, RequestContext requestContext) {
     Map<String, String> normalizedIsbnCache = new HashMap<>();
     if (HelperUtils.isProductIdsExist(compPOL)) {
       return inventoryManager.getProductTypeUuidByIsbn(requestContext)
-                  .thenCompose(id -> validateIsbnValues(compPOL, id, normalizedIsbnCache, requestContext)
-                  .thenAccept(aVoid -> removeISBNDuplicates(compPOL, id)));
+                  .compose(id -> validateIsbnValues(compPOL, id, normalizedIsbnCache, requestContext)
+                  .onSuccess(aVoid -> removeISBNDuplicates(compPOL, id)));
     }
-    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(null));
+    return Future.succeededFuture();
   }
 
-  public CompletableFuture<Void> updatePoLines(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO, RequestContext requestContext) {
+  public Future<Void> updatePoLines(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO, RequestContext requestContext) {
     logger.debug("updatePoLines start");
     if (isPoLinesUpdateRequired(poFromStorage, compPO)) {
       List<PoLine> existingPoLines = HelperUtils.convertToPoLines(poFromStorage.getCompositePoLines());
@@ -590,7 +584,7 @@ public class PurchaseOrderLineHelper {
         return updatePoLinesNumber(compPO, existingPoLines, requestContext);
       }
     }
-    return completedFuture(null);
+    return Future.succeededFuture();
   }
 
   private void validatePOLineProtectedFieldsChangedInPO(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO,
@@ -615,37 +609,38 @@ public class PurchaseOrderLineHelper {
     return isNotEmpty(compPO.getCompositePoLines()) || isPoNumberChanged(poFromStorage, compPO);
   }
 
-  private CompletableFuture<Void> updatePoLinesNumber(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
-    RequestContext requestContext) {
-    CompletableFuture<?>[] futures = poLinesFromStorage
+  private Future<Void> updatePoLinesNumber(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage, RequestContext requestContext) {
+    List<Future<Void>> futures = poLinesFromStorage
       .stream()
       .map(lineFromStorage -> {
         lineFromStorage.setPoLineNumber(buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
         return purchaseOrderLineService.saveOrderLine(lineFromStorage, requestContext);
       })
-      .toArray(CompletableFuture[]::new);
+      .collect(toList());
 
-    return CompletableFuture.allOf(futures);
+    return GenericCompositeFuture.all(new ArrayList<>(futures))
+      .mapEmpty();
   }
 
-  private CompletableFuture<Void> handlePoLines(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage, RequestContext requestContext) {
+  private Future<Void> handlePoLines(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage, RequestContext requestContext) {
     logger.debug("handlePoLines start");
-    List<CompletableFuture<?>> futures = new ArrayList<>(processPoLinesCreation(compOrder, poLinesFromStorage, requestContext));
+    List<Future<?>> futures = new ArrayList<>(processPoLinesCreation(compOrder, poLinesFromStorage, requestContext));
     if (!poLinesFromStorage.isEmpty()) {
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage, requestContext));
       // The remaining unprocessed PoLines should be removed
       poLinesFromStorage
         .forEach(poLine -> futures.add(orderInvoiceRelationService.checkOrderInvoiceRelationship(compOrder.getId(), requestContext)
-          .thenCompose(v -> encumbranceService.deletePoLineEncumbrances(poLine, requestContext)
-            .thenCompose(ok -> HelperUtils.deletePoLine(poLine, requestContext.getHeaders(), logger)))));
+          .compose(v -> encumbranceService.deletePoLineEncumbrances(poLine, requestContext)
+            .compose(ok -> deletePoLine(poLine, requestContext)))));
 
     }
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+    return GenericCompositeFuture.all(futures)
+      .mapEmpty();
   }
 
-  private List<CompletableFuture<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
+  private List<Future<?>> processPoLinesUpdate(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
     RequestContext requestContext) {
-    List<CompletableFuture<?>> futures = new ArrayList<>();
+    List<Future<?>> futures = new ArrayList<>();
     Iterator<PoLine> iterator = poLinesFromStorage.iterator();
     while (iterator.hasNext()) {
       PoLine lineFromStorage = iterator.next();
@@ -664,7 +659,7 @@ public class PurchaseOrderLineHelper {
     return futures;
   }
 
-  private List<CompletableFuture<CompositePoLine>> processPoLinesCreation(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
+  private List<Future<CompositePoLine>> processPoLinesCreation(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
     RequestContext requestContext) {
     return getNewPoLines(compOrder, poLinesFromStorage)
       .map(compPOL -> createPoLine(compPOL, compOrder, requestContext))
@@ -690,28 +685,27 @@ public class PurchaseOrderLineHelper {
     return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
   }
 
-  private CompletableFuture<Void> validateIsbnValues(CompositePoLine compPOL, String isbnTypeId,
+  private Future<Void> validateIsbnValues(CompositePoLine compPOL, String isbnTypeId,
       Map<String, String> normalizedIsbnCache, RequestContext requestContext) {
-    CompletableFuture<?>[] futures = compPOL.getDetails()
+    List<Future<?>> futures = compPOL.getDetails()
       .getProductIds()
       .stream()
       .filter(productId -> isISBN(isbnTypeId, productId))
       .map(productID -> {
         if (normalizedIsbnCache.get(productID.getProductId()) != null) {
           productID.setProductId(normalizedIsbnCache.get(productID.getProductId()));
-          return completedFuture(null);
+          return Future.succeededFuture();
         } else {
           return inventoryManager.convertToISBN13(productID.getProductId(), requestContext)
-            .thenAccept(normalizedIsbn -> {
+            .onSuccess(normalizedIsbn -> {
               normalizedIsbnCache.put(productID.getProductId(), normalizedIsbn);
               productID.setProductId(normalizedIsbn);
             });
         }
-      })
+      }).collect(toList());
 
-      .toArray(CompletableFuture[]::new);
-
-    return CompletableFuture.allOf(futures);
+    return GenericCompositeFuture.all(futures)
+      .mapEmpty();
   }
 
   private void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
@@ -772,7 +766,7 @@ public class PurchaseOrderLineHelper {
    * @param tenantConfiguration Tenant configuration
    * @return completable future which might be completed with {@code true} if line is valid, {@code false} if not valid or an exception if processing fails
    */
-  private CompletableFuture<List<Error>> validateNewPoLine(CompositePoLine compPOL, JsonObject tenantConfiguration,
+  private Future<List<Error>> validateNewPoLine(CompositePoLine compPOL, JsonObject tenantConfiguration,
     RequestContext requestContext) {
     logger.debug("Validating if PO Line is valid...");
     List<Error> errors = new ArrayList<>();
@@ -782,35 +776,34 @@ public class PurchaseOrderLineHelper {
 
     // If static validation has failed, no need to call other services
     if (CollectionUtils.isNotEmpty(errors)) {
-      return completedFuture(errors);
+      return Future.succeededFuture(errors);
     }
 
     return compositePoLineValidationService.validatePoLine(compPOL, requestContext)
-      .thenCompose(poLineErrors -> {
+      .compose(poLineErrors -> {
       if (CollectionUtils.isEmpty(poLineErrors)) {
         return validatePoLineLimit(compPOL, tenantConfiguration, requestContext)
-          .thenCompose(aErrors -> {
+          .compose(aErrors -> {
             if (CollectionUtils.isEmpty(aErrors)) {
               return validateAndNormalizeISBN(compPOL, requestContext)
-                .thenApply(v -> errors);
+                .map(v -> errors);
             } else {
               errors.addAll(aErrors);
-              return completedFuture(errors);
+              return Future.succeededFuture(errors);
             }
           });
       } else {
         errors.addAll(poLineErrors);
-        return completedFuture(errors);
+        return Future.succeededFuture(errors);
       }
     });
   }
 
 
-  private CompletableFuture<List<Error>> validatePoLineLimit(CompositePoLine compPOL, JsonObject tenantConfiguration,
-    RequestContext requestContext) {
+  private Future<List<Error>> validatePoLineLimit(CompositePoLine compPOL, JsonObject tenantConfiguration, RequestContext requestContext) {
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
     return purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
-      .thenApply(poLines -> {
+      .map(poLines -> {
         boolean isValid = poLines.getTotalRecords() < getPoLineLimit(tenantConfiguration);
         if (!isValid) {
           return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
@@ -819,10 +812,10 @@ public class PurchaseOrderLineHelper {
       });
   }
 
-  private CompletableFuture<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
+  private Future<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
     return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(purchaseOrderId, requestContext)
-      .thenApply(HelperUtils::convertToCompositePurchaseOrder)
-      .exceptionally(t -> {
+      .map(HelperUtils::convertToCompositePurchaseOrder)
+       .onFailure(t -> {
         Throwable cause = t.getCause();
         // The case when specified order does not exist
         if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
@@ -832,24 +825,23 @@ public class PurchaseOrderLineHelper {
       });
   }
 
-  private CompletableFuture<String> generateLineNumber(CompositePurchaseOrder compOrder, RequestContext requestContext) {
+  private Future<String> generateLineNumber(CompositePurchaseOrder compOrder, RequestContext requestContext) {
     RequestEntry rqEntry = new RequestEntry(resourcesPath(PO_LINE_NUMBER)).withQueryParameter(PURCHASE_ORDER_ID, compOrder.getId());
     return restClient.getAsJsonObject(rqEntry, requestContext)
-      .thenApply(sequenceNumbersJson -> {
+      .map(sequenceNumbersJson -> {
         SequenceNumbers sequenceNumbers = JsonObject.mapFrom(sequenceNumbersJson).mapTo(SequenceNumbers.class);
         return buildPoLineNumber(compOrder.getPoNumber(), sequenceNumbers.getSequenceNumbers().get(0));
       });
   }
 
-  private CompletionStage<CompositePoLine> populateCompositeLine(PoLine poline, RequestContext requestContext) {
-    return HelperUtils.operateOnPoLine(HttpMethod.GET, JsonObject.mapFrom(poline), requestContext.getHeaders(), logger)
-      .thenCompose(compPol -> getLineWithInstanceId(compPol, requestContext));
-  }
+  private Future<CompositePoLine> populateCompositeLine(PoLine poline, RequestContext requestContext) {
+    return operateOnPoLine(HttpMethod.GET, JsonObject.mapFrom(poline), requestContext)
+      .compose(compPol -> getLineWithInstanceId(compPol, requestContext));  }
 
-  private CompletableFuture<CompositePoLine> getLineWithInstanceId(CompositePoLine line, RequestContext requestContext) {
+  private Future<CompositePoLine> getLineWithInstanceId(CompositePoLine line, RequestContext requestContext) {
     if (!Boolean.TRUE.equals(line.getIsPackage())) {
       return titlesService.getTitles(1, 0, QUERY_BY_PO_LINE_ID + line.getId(), requestContext)
-        .thenApply(titleCollection -> {
+        .map(titleCollection -> {
           List<Title> titles = titleCollection.getTitles();
           if (!titles.isEmpty()) {
             line.setInstanceId(titles.get(0).getInstanceId());
@@ -857,7 +849,7 @@ public class PurchaseOrderLineHelper {
           return line;
         });
     } else {
-      return CompletableFuture.completedFuture(line);
+      return Future.succeededFuture(line);
     }
   }
 
@@ -870,7 +862,7 @@ public class PurchaseOrderLineHelper {
     return compOrder;
   }
 
-  private CompletableFuture<Void> processPoLineEncumbrances(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine,
+  private Future<Void> processPoLineEncumbrances(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine,
     JsonObject lineFromStorage, RequestContext requestContext) {
     PoLine storagePoLine = lineFromStorage.mapTo(PoLine.class);
 
@@ -893,7 +885,7 @@ public class PurchaseOrderLineHelper {
       return strategy.processEncumbrances(compOrder.withCompositePoLines(Collections.singletonList(compositePoLine)),
         poFromStorage, requestContext);
     }
-    return completedFuture(null);
+    return Future.succeededFuture();
   }
 
   private boolean isEncumbranceUpdateNeeded(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine, PoLine storagePoLine) {
@@ -913,18 +905,15 @@ public class PurchaseOrderLineHelper {
     return !CollectionUtils.isEqualCollection(requestFundDistros, storageFundDistros);
   }
 
-  private CompletableFuture<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {
-    HttpClientInterface httpClient = AbstractHelper.getHttpClient(requestContext.getHeaders());
-    return new VendorHelper(httpClient, requestContext.getHeaders(), requestContext.getContext(), EN)
-      .validateAccessProviders(Collections.singletonList(compOrderLine)).thenAccept(errors -> {
-        httpClient.closeClient();
+  private Future<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {
+    return organizationService.validateAccessProviders(Collections.singletonList(compOrderLine), requestContext).onSuccess(errors -> {
         if (!errors.getErrors().isEmpty()) {
           throw new HttpException(422, errors.getErrors().get(0));
         }
-    }).exceptionally(t -> {
-      httpClient.closeClient();
+    }) .onFailure(t -> {
       throw new CompletionException(t.getCause());
-    });
+    })
+      .mapEmpty();
   }
 
 
@@ -1007,9 +996,100 @@ public class PurchaseOrderLineHelper {
     }
   }
 
-  private CompletableFuture<Void> verifyDeleteAllowed(PoLine line, RequestContext requestContext) {
+  private Future<Void> verifyDeleteAllowed(PoLine line, RequestContext requestContext) {
     return orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(line, requestContext)
-      .thenCompose(v -> getCompositePurchaseOrder(line.getPurchaseOrderId(), requestContext)
-        .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext)));
+      .compose(v -> getCompositePurchaseOrder(line.getPurchaseOrderId(), requestContext)
+        .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext)));
   }
+
+  public Future<Void> deletePoLine(PoLine line, RequestContext requestContext) {
+    return operateOnPoLine(HttpMethod.DELETE, JsonObject.mapFrom(line), requestContext)
+      .compose(poline -> {
+        String polineId = poline.getId();
+        return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES_STORAGE, polineId), requestContext)
+          .mapEmpty();
+      });
+  }
+
+  public Future<CompositePoLine> operateOnPoLine(HttpMethod operation, JsonObject line, RequestContext requestContext) {
+    Promise<CompositePoLine> promise = Promise.promise();
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("The PO line prior to {} operation: {}", operation, line.encodePrettily());
+    }
+
+    List<Future<Void>> futures = new ArrayList<>();
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, requestContext));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, requestContext));
+
+    GenericCompositeFuture.all(new ArrayList<>(futures))
+      .onSuccess(v -> {
+        if (logger.isDebugEnabled()) {
+          logger.debug("The PO line after {} operation on sub-objects: {}", operation, line.encodePrettily());
+        }
+        promise.complete(line.mapTo(CompositePoLine.class));
+      })
+      .onFailure(t -> {
+        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation", operation,t);
+        promise.fail(t);
+      });
+    return promise.future();
+  }
+
+
+  private List<Future<Void>> operateOnSubObjsIfPresent(HttpMethod operation, JsonObject pol, String field, RequestContext requestContext) {
+    JsonArray array = new JsonArray();
+    List<Future<Void>> futures = new ArrayList<>();
+    ((Iterable<?>) pol.remove(field)).forEach(
+      fieldId -> futures.add(operateOnObject(operation, resourceByIdPath(field) + fieldId, requestContext)
+        .map(value -> {
+        if (value != null && !value.isEmpty()) {
+          array.add(value);
+        }
+        return null;
+      })));
+    pol.put(field, array);
+    return futures;
+  }
+
+  public Future<JsonObject> operateOnObject(HttpMethod operation, String url, RequestContext requestContext) {
+    return operateOnObject(operation, url, null, requestContext);
+  }
+
+  public Future<JsonObject> operateOnObject(HttpMethod operation, String url, JsonObject jsonObject, RequestContext requestContext) {
+    Promise<JsonObject> promise = Promise.promise();
+    Future<JsonObject> future = Future.succeededFuture();
+    logger.info("Calling {} {}", operation, url);
+    if (operation.equals(HttpMethod.GET)) {
+      future = restClient.getAsJsonObject(url, true, requestContext);
+    }
+    else if (operation.equals(HttpMethod.POST)) {
+      future = restClient.post(url, jsonObject, JsonObject.class, requestContext);
+    }
+    else if (operation.equals(HttpMethod.PUT)) {
+      future = restClient.put(url, jsonObject, requestContext)
+        .map(v -> new JsonObject());
+    }
+    else if (operation.equals(HttpMethod.DELETE))
+    {
+      future = restClient.delete(url, requestContext)
+        .map(v -> new JsonObject());
+    }
+
+    future
+      .onSuccess(ok -> {
+      logger.info("The {} {} operation completed with following response body: {}", operation, url, jsonObject.encodePrettily());
+      promise.complete();
+    })
+      .onFailure(t -> {
+        Throwable cause = t instanceof CompletionException ? t.getCause() : t;
+        int code = cause instanceof HttpException ? ((HttpException) cause).getCode() : 500;
+        String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, url, cause.getMessage());
+        logger.error(message, t);
+        promise.fail(new HttpException(code, message));
+      });
+
+    return promise.future();
+  }
+
 }

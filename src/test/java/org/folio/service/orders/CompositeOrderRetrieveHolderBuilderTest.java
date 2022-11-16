@@ -51,12 +51,12 @@ public class CompositeOrderRetrieveHolderBuilderTest {
       .toString())
       .withCompositePoLines(Collections.singletonList(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-    CompletableFuture<FiscalYear> failedFuture = new CompletableFuture<>();
+    Future<FiscalYear> failedFuture = new Future<>();
     failedFuture.completeExceptionally(new HttpException(404, ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND));
     when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
 
     CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext)
-      .join();
+      .result();
 
     assertNull(resultHolder.getFiscalYear());
   }
@@ -70,13 +70,13 @@ public class CompositeOrderRetrieveHolderBuilderTest {
       .toString())
       .withCompositePoLines(Collections.singletonList(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-    CompletableFuture<FiscalYear> failedFuture = new CompletableFuture<>();
+    Future<FiscalYear> failedFuture = new Future<>();
     HttpException thrownException = new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE);
     failedFuture.completeExceptionally(thrownException);
     when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
     CompletionException exception = assertThrows(CompletionException.class,
         () -> holderBuilder.withCurrentFiscalYear(holder, requestContext)
-          .join());
+          .result());
 
     assertEquals(thrownException, exception.getCause());
   }
@@ -88,7 +88,7 @@ public class CompositeOrderRetrieveHolderBuilderTest {
       .toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
     CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext)
-      .join();
+      .result();
 
     assertNull(resultHolder.getFiscalYear());
   }

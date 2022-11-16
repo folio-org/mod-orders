@@ -1,6 +1,6 @@
 package org.folio.rest.core;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
@@ -73,9 +73,9 @@ public class RestClientTest {
     response.setCode(200);
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.GET), anyString(), eq(okapiHeaders));
+    doReturn(succeededFuture(response)).when(httpClient).request(eq(HttpMethod.GET), anyString(), eq(okapiHeaders));
 
-    Transaction actTransaction = restClient.getById(endpoint, uuid, requestContext, Transaction.class).join();
+    Transaction actTransaction = restClient.getById(endpoint, uuid, requestContext, Transaction.class).result();
 
     assertThat(actTransaction, equalTo(expTransaction));
   }
@@ -91,10 +91,10 @@ public class RestClientTest {
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
     String endpoint = resourcesPath(PURCHASE_ORDER_STORAGE) + "/{id}";
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
+    doReturn(succeededFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
 
     RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
-    CompletableFuture<PurchaseOrder> resultFuture = restClient.get(requestEntry, false,  requestContext, PurchaseOrder.class);
+    Future<PurchaseOrder> resultFuture = restClient.get(requestEntry, false,  requestContext, PurchaseOrder.class);
 
     ExecutionException executionException = assertThrows(ExecutionException.class, resultFuture::get);
     verify(httpClient).request(eq(HttpMethod.GET), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
@@ -111,7 +111,7 @@ public class RestClientTest {
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
     String endpoint = resourcesPath(PURCHASE_ORDER_STORAGE) + "/{id}";
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.GET), anyString(), eq(okapiHeaders));
+    doReturn(succeededFuture(response)).when(httpClient).request(eq(HttpMethod.GET), anyString(), eq(okapiHeaders));
 
     RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
     restClient.get(requestEntry, true,  requestContext, PurchaseOrder.class).get();
@@ -124,7 +124,7 @@ public class RestClientTest {
     RestClient restClient = Mockito.spy(new RestClient());
     String uuid = UUID.randomUUID().toString();
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
-    CompletableFuture<Transaction> result = restClient.getById(resourcesPath(PURCHASE_ORDER_STORAGE), uuid, requestContext, Transaction.class);
+    Future<Transaction> result = restClient.getById(resourcesPath(PURCHASE_ORDER_STORAGE), uuid, requestContext, Transaction.class);
     assertThrows(CompletionException.class, result::join);
   }
 
@@ -139,10 +139,10 @@ public class RestClientTest {
     response.setCode(201);
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.POST), any(), eq(resourcesPath(
+    doReturn(succeededFuture(response)).when(httpClient).request(eq(HttpMethod.POST), any(), eq(resourcesPath(
         PURCHASE_ORDER_STORAGE)), eq(okapiHeaders));
     RequestEntry requestEntry = new RequestEntry(resourcesPath(PURCHASE_ORDER_STORAGE));
-    Transaction actTransaction = restClient.post(requestEntry, expTransaction, requestContext, Transaction.class).join();
+    Transaction actTransaction = restClient.post(requestEntry, expTransaction, requestContext, Transaction.class).result();
 
     assertThat(actTransaction, equalTo(expTransaction));
   }
@@ -159,7 +159,7 @@ public class RestClientTest {
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
     String endpoint = resourcesPath(PURCHASE_ORDER_STORAGE) + "/{id}";
     RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.PUT), any(), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
+    doReturn(succeededFuture(response)).when(httpClient).request(eq(HttpMethod.PUT), any(), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
 
     restClient.put(requestEntry, expTransaction, requestContext).get();
 
@@ -178,7 +178,7 @@ public class RestClientTest {
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
     String endpoint = resourcesPath(PURCHASE_ORDER_STORAGE) + "/{id}";
     RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.PATCH), any(), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
+    doReturn(succeededFuture(response)).when(httpClient).request(eq(HttpMethod.PATCH), any(), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
 
     restClient.patch(requestEntry, expTransaction, requestContext).get();
 
@@ -195,7 +195,7 @@ public class RestClientTest {
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
     String endpoint = resourcesPath(PURCHASE_ORDER_STORAGE) + "/{id}";
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
+    doReturn(succeededFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
 
     RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
     restClient.delete(requestEntry, requestContext).get();
@@ -213,7 +213,7 @@ public class RestClientTest {
 
     doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
     String endpoint = resourcesPath(PURCHASE_ORDER_STORAGE) + "/{id}";
-    doReturn(completedFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
+    doReturn(succeededFuture(response)).when(httpClient).request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
 
     RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
     restClient.delete(requestEntry, true, requestContext).get();
@@ -234,11 +234,11 @@ public class RestClientTest {
     doReturn(httpClient).when(restClient)
       .getHttpClient(okapiHeaders);
     String endpoint = resourcesPath(PURCHASE_ORDER_STORAGE) + "/{id}";
-    doReturn(completedFuture(response)).when(httpClient)
+    doReturn(succeededFuture(response)).when(httpClient)
       .request(eq(HttpMethod.DELETE), anyString(), eq(okapiHeaders));
 
     RequestEntry requestEntry = new RequestEntry(endpoint).withId(uuid);
-    CompletableFuture<Void> resultFuture = restClient.delete(requestEntry, false, requestContext);
+    Future<Void> resultFuture = restClient.delete(requestEntry, false, requestContext);
 
     ExecutionException executionException = assertThrows(ExecutionException.class, resultFuture::get);
     verify(httpClient).request(eq(HttpMethod.DELETE), eq(requestEntry.buildEndpoint()), eq(okapiHeaders));
@@ -254,7 +254,7 @@ public class RestClientTest {
       Transaction expTransaction = new Transaction().withId(uuid);
       doReturn(httpClient).when(restClient).getHttpClient(okapiHeaders);
       RequestEntry requestEntry = new RequestEntry(resourcesPath(PURCHASE_ORDER_STORAGE));
-      restClient.post(requestEntry, expTransaction, requestContext, Transaction.class).join();
+      restClient.post(requestEntry, expTransaction, requestContext, Transaction.class).result();
     });
   }
 }

@@ -35,7 +35,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
@@ -63,7 +63,7 @@ public class OrderLineUpdateInstanceHandlerTest {
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
-    doReturn(completedFuture(Lists.newArrayList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
+    doReturn(succeededFuture(Lists.newArrayList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
   }
 
   @BeforeAll

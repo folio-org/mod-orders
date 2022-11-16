@@ -5,15 +5,16 @@ import static org.folio.rest.core.exceptions.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Parameter;
+
+import io.vertx.core.Future;
 
 public class FiscalYearService {
 
@@ -29,10 +30,10 @@ public class FiscalYearService {
     this.fundService = fundService;
   }
 
-  public CompletableFuture<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
+  public Future<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(CURRENT_FISCAL_YEAR).withId(ledgerId);
-    return restClient.get(requestEntry, requestContext, FiscalYear.class)
-      .exceptionally(t -> {
+    return restClient.get(requestEntry, FiscalYear.class, requestContext)
+      .onFailure(t -> {
         Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
         if (isFiscalYearNotFound(cause)) {
           List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(ledgerId)
@@ -44,17 +45,17 @@ public class FiscalYearService {
       });
   }
 
-    public CompletableFuture<FiscalYear> getCurrentFiscalYearByFundId(String fundId, RequestContext requestContext) {
+    public Future<FiscalYear> getCurrentFiscalYearByFundId(String fundId, RequestContext requestContext) {
         return fundService.retrieveFundById(fundId, requestContext)
-                .thenCompose(fund -> getCurrentFiscalYear(fund.getLedgerId(), requestContext));
+                .compose(fund -> getCurrentFiscalYear(fund.getLedgerId(), requestContext));
     }
 
   private boolean isFiscalYearNotFound(Throwable t) {
     return t instanceof HttpException && ((HttpException) t).getCode() == 404;
   }
 
-  public CompletableFuture<FiscalYear> getFiscalYearById(String fiscalYearId, RequestContext requestContext) {
+  public Future<FiscalYear> getFiscalYearById(String fiscalYearId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(FISCAL_YEAR).withId(fiscalYearId);
-    return restClient.get(requestEntry, requestContext, FiscalYear.class);
+    return restClient.get(requestEntry, FiscalYear.class, requestContext);
   }
 }

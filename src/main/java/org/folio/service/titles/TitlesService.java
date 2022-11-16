@@ -6,31 +6,36 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
-import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.*;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.orders.PurchaseOrderLineService;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 
+@Log4j2
 public class TitlesService {
-  private static final Logger logger = LogManager.getLogger(TitlesService.class);
   private static final String ENDPOINT = resourcesPath(TITLES);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
 
@@ -46,24 +51,17 @@ public class TitlesService {
     this.acquisitionsUnitsService = acquisitionsUnitsService;
   }
 
-  public CompletableFuture<Title> createTitle(Title title, RequestContext requestContext) {
-    CompletableFuture<Title> future = new CompletableFuture<>();
-    populateTitle(title, title.getPoLineId(), requestContext)
-      .thenCompose(v -> {
+  public Future<Title> createTitle(Title title, RequestContext requestContext) {
+    return populateTitle(title, title.getPoLineId(), requestContext)
+      .compose(v -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
-        return restClient.post(requestEntry, title, requestContext, Title.class);
-      })
-      .thenAccept(future::complete)
-      .exceptionally(t -> {
-        future.completeExceptionally(t);
-        return null;
+        return restClient.post(requestEntry, title, Title.class, requestContext);
       });
-    return future;
   }
 
-  public CompletableFuture<TitleCollection> getTitles(int limit, int offset, String query, RequestContext requestContext) {
+  public Future<TitleCollection> getTitles(int limit, int offset, String query, RequestContext requestContext) {
     return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords("purchaseOrder.", requestContext)
-      .thenCompose(acqUnitsCqlExpr -> {
+      .compose(acqUnitsCqlExpr -> {
         String resultQuery = acqUnitsCqlExpr;
         if (!isEmpty(query)) {
           resultQuery = combineCqlExpressions("and", acqUnitsCqlExpr, query);
@@ -71,27 +69,27 @@ public class TitlesService {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(resultQuery)
           .withOffset(offset)
           .withLimit(limit);
-        return restClient.get(requestEntry, requestContext, TitleCollection.class);
+        return restClient.get(requestEntry, TitleCollection.class, requestContext);
       });
 
   }
 
-  public CompletableFuture<Title> getTitleById(String titleId, RequestContext requestContext) {
+  public Future<Title> getTitleById(String titleId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(titleId);
-    return restClient.get(requestEntry, requestContext, Title.class);
+    return restClient.get(requestEntry, Title.class, requestContext);
   }
 
-  public CompletableFuture<Void> saveTitle(Title title, RequestContext requestContext) {
+  public Future<Void> saveTitle(Title title, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
     return restClient.put(requestEntry, title, requestContext);
   }
 
-  public CompletableFuture<Void> deleteTitle(String id, RequestContext requestContext) {
+  public Future<Void> deleteTitle(String id, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
     return restClient.delete(requestEntry, requestContext);
   }
 
-  public CompletableFuture<Map<String, List<Title>>> getTitlesByPoLineIds(List<String> poLineIds, RequestContext requestContext) {
+  public Future<Map<String, List<Title>>> getTitlesByPoLineIds(List<String> poLineIds, RequestContext requestContext) {
     return collectResultsOnSuccess(StreamEx
       .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
       // Transform piece id's to CQL query
@@ -99,36 +97,32 @@ public class TitlesService {
       // Send get request for each CQL query
       .map(query -> getTitlesByQuery(query, requestContext))
       .toList())
-      .thenApply(lists -> StreamEx.of(lists)
+      .map(lists -> StreamEx.of(lists)
         .toFlatList(Function.identity()).stream().collect(groupingBy(Title::getPoLineId)));
   }
 
-  private CompletableFuture<Void> populateTitle(Title title, String poLineId, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-
+  private Future<Void> populateTitle(Title title, String poLineId, RequestContext requestContext) {
+    Promise<Void> promise = Promise.promise();
     purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-      .thenAccept(poLine -> {
+      .onSuccess(poLine -> {
         if(Boolean.TRUE.equals(poLine.getIsPackage())) {
           populateTitleByPoLine(title, poLine);
-          future.complete(null);
+          promise.complete();
         }
         else {
           getTitlesByPoLineIds(singletonList(poLineId), requestContext)
-            .thenAccept(titles -> {
+            .onSuccess(titles -> {
               if (titles.isEmpty()) {
                 populateTitleByPoLine(title, poLine);
-                future.complete(null);
+                promise.complete();
               } else {
-                future.completeExceptionally(new HttpException(422, ErrorCodes.TITLE_EXIST));
+                promise.fail(new HttpException(422, ErrorCodes.TITLE_EXIST));
               }
             });
         }
       })
-      .exceptionally(t -> {
-        future.completeExceptionally(t);
-        return null;
-      });
-    return future;
+       .onFailure(promise::fail);
+    return promise.future();
   }
 
   private void populateTitleByPoLine(Title title, PoLine poLine) {
@@ -140,16 +134,12 @@ public class TitlesService {
     }
   }
 
-  private CompletableFuture<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
+  private Future<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
     return getTitles(MAX_IDS_FOR_GET_RQ, 0, query, requestContext)
-      .thenApply(TitleCollection::getTitles)
-      .exceptionally(e -> {
-        logger.error("The issue happened getting PO Lines", e);
-        return null;
-      });
+      .map(TitleCollection::getTitles);
   }
 
-  public CompletableFuture<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  public Future<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO, RequestContext requestContext) {
     List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());
     return getTitlesByPoLineIds(lineIds, requestContext);
   }

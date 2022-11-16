@@ -117,13 +117,13 @@ public class UnOpenCompositeOrderManagerTest {
 //      new UnOpenCompositeOrderManager(piece, "en", orderLineHelper));
 //    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 //
-//    doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
+//    doReturn(succeededFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
 //    doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OPEN_TO_PENDING));
-//    doReturn(completedFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(eq(order), any());
+//    doReturn(succeededFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(eq(order), any());
 //    doNothing().when(orderLineHelper).closeHttpClient();
-//    doReturn(completedFuture(null)).when(purchaseOrderLineService).updateOrderLine(any(), eq(requestContext));
+//    doReturn(succeededFuture(null)).when(purchaseOrderLineService).updateOrderLine(any(), eq(requestContext));
 //    //When
-//    serviceSpy.unOpenOrder(order, requestContext).join();
+//    serviceSpy.unOpenOrder(order, requestContext).result();
 //    //Then
 //
 //    verify(serviceSpy).unOpenOrderUpdatePoLinesSummary(any(), eq(requestContext));
@@ -137,13 +137,13 @@ public class UnOpenCompositeOrderManagerTest {
 //    UnOpenCompositeOrderManager serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en", orderLineHelper));
 //    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 //
-//    doReturn(completedFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
+//    doReturn(succeededFuture(order)).when(serviceSpy).updateAndGetOrderWithLines(any(CompositePurchaseOrder.class));
 //    doReturn(openToPendingEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(any());
-//    doReturn(completedFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(any(), any());
+//    doReturn(succeededFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(any(), any());
 //
 //    doNothing().when(orderLineHelper).closeHttpClient();
 //    //When
-//    CompletableFuture<Void> act = serviceSpy.unOpenOrder(order, requestContext);
+//    Future<Void> act = serviceSpy.unOpenOrder(order, requestContext);
 //    //Then
 //    assertTrue(act.isCompletedExceptionally());
 //  }

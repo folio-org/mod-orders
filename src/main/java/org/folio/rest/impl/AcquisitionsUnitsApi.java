@@ -1,11 +1,11 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 
 import java.util.Map;
 
@@ -46,14 +46,14 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.createAcquisitionsUnit(entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(unit -> {
+      .onSuccess(unit -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully created new acquisitions unit: {} ", JsonObject.mapFrom(unit).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(
           okapiHeaders.get(OKAPI_URL), resourceByIdPath(ACQUISITIONS_UNITS, unit.getId()), unit)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -62,13 +62,13 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.getAcquisitionsUnits(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(units -> {
+      .onSuccess(units -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully created new acquisitions units: {}", JsonObject.mapFrom(units).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(units)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -81,11 +81,11 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
       asyncResultHandler.handle(succeededFuture(buildErrorResponse(422)));
     } else {
       acquisitionsUnitsService.updateAcquisitionsUnit(entity.withId(id), new RequestContext(vertxContext, okapiHeaders))
-        .thenAccept(units -> {
+        .onSuccess(units -> {
           logger.info("Successfully updated acquisitions unit with id={}", id);
           asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
         })
-        .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+         .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
     }
   }
 
@@ -95,13 +95,13 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.getAcquisitionsUnit(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(unit -> {
+      .onSuccess(unit -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved acquisitions unit: {}", JsonObject.mapFrom(unit).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(unit)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -110,13 +110,13 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.deleteAcquisitionsUnit(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(ok -> {
+      .onSuccess(ok -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully deleted acquisitions unit with id={}", id);
         }
         asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -125,14 +125,14 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
                                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.createAcquisitionsUnitsMembership(entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(membership -> {
+      .onSuccess(membership -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully created new acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
         }
         asyncResultHandler.handle(
           succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, membership.getId()), membership)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -140,13 +140,13 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
   public void getAcquisitionsUnitsMemberships(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
                                               Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(memberships -> {
+      .onSuccess(memberships -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully created new acquisitions units memberships: {}", JsonObject.mapFrom(memberships).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(memberships)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -157,11 +157,11 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
       asyncResultHandler.handle(succeededFuture(buildErrorResponse(422)));
     } else {
       acquisitionsUnitsService.updateAcquisitionsUnitsMembership(entity.withId(id), new RequestContext(vertxContext, okapiHeaders))
-        .thenAccept(membership -> {
+        .onSuccess(membership -> {
           logger.info("Successfully updated acquisitions units membership with id={}", id);
           asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
         })
-        .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+         .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
     }
   }
 
@@ -169,13 +169,13 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
   @Validate
   public void getAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionsUnitsService.getAcquisitionsUnitsMembership(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(membership -> {
+      .onSuccess(membership -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(membership)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -183,13 +183,13 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
   public void deleteAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders,
                                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
    acquisitionsUnitsService.deleteAcquisitionsUnitsMembership(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(ok -> {
+      .onSuccess(ok -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully deleted acquisitions units membership with id={}", id);
         }
         asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
 }

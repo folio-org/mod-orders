@@ -3,10 +3,10 @@ package org.folio.models;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.money.convert.CurrencyConversion;
+
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.PoLine;
-
-import javax.money.convert.CurrencyConversion;
 
 public class PoLineEncumbrancesHolder {
   private final PoLine poLine;

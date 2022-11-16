@@ -21,7 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
 import static org.folio.TestUtils.getMockAsJson;
@@ -61,7 +61,7 @@ public class OpenToClosedEncumbranceStrategyTest {
     mapFiscalYearsWithCompPOLines.put(fiscalYearId, singletonList(new CompositePoLine().withId(UUID.randomUUID().toString())));
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
     order.setWorkflowStatus(WorkflowStatus.CLOSED);
-    doReturn(completedFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder)
+    doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder)
       .retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
 
     Encumbrance encumbrance = new Encumbrance()
@@ -76,14 +76,14 @@ public class OpenToClosedEncumbranceStrategyTest {
       .withFromFundId(fundDistribution.getFundId())
       .withEncumbrance(encumbrance);
     List<Transaction> encumbrances = singletonList(transaction);
-    doReturn(completedFuture(encumbrances)).when(encumbranceService).getEncumbrancesByPoLinesFromCurrentFy(any(), any());
-    doReturn(completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(eq(order.getId()), anyInt(), any());
-    doReturn(completedFuture(null)).when(encumbranceService).updateEncumbrances(any(), any());
+    doReturn(succeededFuture(encumbrances)).when(encumbranceService).getEncumbrancesByPoLinesFromCurrentFy(any(), any());
+    doReturn(succeededFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(eq(order.getId()), anyInt(), any());
+    doReturn(succeededFuture(null)).when(encumbranceService).updateEncumbrances(any(), any());
 
     // When
-    CompletableFuture<Void> result = openToClosedEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+    Future<Void> result = openToClosedEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     // Then
     verify(encumbranceService, times(1)).updateEncumbrances(

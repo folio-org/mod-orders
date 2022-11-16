@@ -46,12 +46,12 @@ public class ReasonForClosureServiceTest {
   @Test
   void testDeleteReasonForClosureSuccessIfNotUsed() {
     //given
-    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.succeededFuture(null));
 
     String id = UUID.randomUUID().toString();
-    CompletableFuture<Void> result = reasonForClosureService.deleteReasonForClosure(id, requestContext);
+    Future<Void> result = reasonForClosureService.deleteReasonForClosure(id, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     verify(restClient).delete(any(), any());
   }
@@ -62,12 +62,12 @@ public class ReasonForClosureServiceTest {
       .withReason("suf")
       .withId(UUID.randomUUID().toString())
       .withSource(ReasonForClosure.Source.SYSTEM);
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(reasonForClosure));
+    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(reasonForClosure));
 
-    CompletableFuture<ReasonForClosure> result = reasonForClosureService.getReasonForClosureById(reasonForClosure.getId(), requestContext);
+    Future<ReasonForClosure> result = reasonForClosureService.getReasonForClosureById(reasonForClosure.getId(), requestContext);
     assertFalse(result.isCompletedExceptionally());
 
-    ReasonForClosure resultReasonForClosure = result.join();
+    ReasonForClosure resultReasonForClosure = result.result();
     assertEquals(reasonForClosure, resultReasonForClosure);
 
     verify(restClient).get(any(), any(), any());
@@ -82,12 +82,12 @@ public class ReasonForClosureServiceTest {
       .withSource(ReasonForClosure.Source.SYSTEM);
     ReasonForClosureCollection suffixCollection = new ReasonForClosureCollection().withTotalRecords(1).withReasonsForClosure(Collections.singletonList(reasonForClosure));
     when(restClient.get(any(), any(), any()))
-      .thenReturn(CompletableFuture.completedFuture(suffixCollection));
+      .thenReturn(CompletableFuture.succeededFuture(suffixCollection));
 
-    CompletableFuture<ReasonForClosureCollection> result = reasonForClosureService.getReasonsForClosure(query, 1, 0, requestContext);
+    Future<ReasonForClosureCollection> result = reasonForClosureService.getReasonsForClosure(query, 1, 0, requestContext);
     assertFalse(result.isCompletedExceptionally());
 
-    ReasonForClosureCollection resultReasonForClosureCollection = result.join();
+    ReasonForClosureCollection resultReasonForClosureCollection = result.result();
 
     assertEquals(suffixCollection, resultReasonForClosureCollection);
     verify(restClient).get(any(), any(), any());
@@ -100,11 +100,11 @@ public class ReasonForClosureServiceTest {
       .withId(UUID.randomUUID().toString())
       .withSource(ReasonForClosure.Source.SYSTEM);
 
-    when(restClient.put(any(), eq(reasonForClosure), any())).thenReturn(CompletableFuture.completedFuture(null));
+    when(restClient.put(any(), eq(reasonForClosure), any())).thenReturn(CompletableFuture.succeededFuture(null));
 
-    CompletableFuture<Void> result = reasonForClosureService.updateReasonForClosure(reasonForClosure.getId(), reasonForClosure, requestContext);
+    Future<Void> result = reasonForClosureService.updateReasonForClosure(reasonForClosure.getId(), reasonForClosure, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     verify(restClient).put(any(), eq(reasonForClosure), any());
   }
@@ -116,11 +116,11 @@ public class ReasonForClosureServiceTest {
       .withSource(ReasonForClosure.Source.SYSTEM);
 
     String id = UUID.randomUUID().toString();
-    when(restClient.put(any(), eq(reasonForClosure), any())).thenReturn(CompletableFuture.completedFuture(null));
+    when(restClient.put(any(), eq(reasonForClosure), any())).thenReturn(CompletableFuture.succeededFuture(null));
 
-    CompletableFuture<Void> result = reasonForClosureService.updateReasonForClosure(id, reasonForClosure, requestContext);
+    Future<Void> result = reasonForClosureService.updateReasonForClosure(id, reasonForClosure, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     assertEquals(id, reasonForClosure.getId());
     verify(restClient).put(any(), eq(reasonForClosure), any());
@@ -129,7 +129,7 @@ public class ReasonForClosureServiceTest {
   @Test
   void testUpdateReasonForClosureWithIdMismatchFails() {
     ReasonForClosure suffix = new ReasonForClosure().withId(UUID.randomUUID().toString());
-    CompletableFuture<Void> result = reasonForClosureService.updateReasonForClosure(UUID.randomUUID().toString(),
+    Future<Void> result = reasonForClosureService.updateReasonForClosure(UUID.randomUUID().toString(),
       suffix, requestContext);
     CompletionException expectedException = assertThrows(CompletionException.class, result::join);
 
@@ -144,11 +144,11 @@ public class ReasonForClosureServiceTest {
     ReasonForClosure reasonForClosure = new ReasonForClosure()
       .withReason("reason");
 
-    when(restClient.post(any(), any(), any(), any())).thenReturn(CompletableFuture.completedFuture(reasonForClosure));
+    when(restClient.post(any(), any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(reasonForClosure));
 
-    CompletableFuture<ReasonForClosure> result = reasonForClosureService.createReasonForClosure(reasonForClosure, requestContext);
+    Future<ReasonForClosure> result = reasonForClosureService.createReasonForClosure(reasonForClosure, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    ReasonForClosure resultReasonForClosure = result.join();
+    ReasonForClosure resultReasonForClosure = result.result();
     assertEquals(reasonForClosure, resultReasonForClosure);
 
     assertEquals(ReasonForClosure.Source.USER, reasonForClosure.getSource());

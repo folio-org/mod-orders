@@ -63,16 +63,16 @@ public class HoldingsSummaryServiceTest {
     polines.add(line);
 
     when(purchaseOrderStorageService.getPurchaseOrdersByIds(any(), any()))
-      .thenReturn(CompletableFuture.completedFuture(purchaseOrders));
+      .thenReturn(CompletableFuture.succeededFuture(purchaseOrders));
 
     when(purchaseOrderLineService.getOrderLines(anyString(), anyInt(), anyInt(), any()))
-      .thenReturn(CompletableFuture.completedFuture(polines));
+      .thenReturn(CompletableFuture.succeededFuture(polines));
 
     when(pieceStorageService.getPieces(anyInt(), anyInt(), anyString(), any()))
-      .thenReturn(CompletableFuture.completedFuture(pieces));
+      .thenReturn(CompletableFuture.succeededFuture(pieces));
 
     var hs = holdingsSummaryService.getHoldingsSummary(UUID.randomUUID().toString(), requestContext)
-      .join();
+      .result();
 
     assertThat(hs.getHoldingSummaries().size(), greaterThan(0));
 

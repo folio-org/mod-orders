@@ -30,7 +30,7 @@ public class ExportHistoryImpl extends BaseApi implements OrdersExportHistory {
   public void getOrdersExportHistory(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     exportHistoryService.getExportHistoryByQuery(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(titles -> asyncResultHandler.handle(succeededFuture(buildOkResponse(titles))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(exportHistoryCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(exportHistoryCollection))))
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 }

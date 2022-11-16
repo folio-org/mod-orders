@@ -1,17 +1,12 @@
 package org.folio.helper;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.PoLineCommonUtil.DASH_SEPARATOR;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -21,6 +16,9 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoNumber;
 import org.folio.service.orders.PurchaseOrderStorageService;
+
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 public class PoNumberHelper {
   private static final Logger logger = LogManager.getLogger(PoNumberHelper.class);
@@ -33,55 +31,50 @@ public class PoNumberHelper {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
   }
 
-  public CompletableFuture<Void> checkPONumberUnique(PoNumber poNumber, RequestContext requestContext) {
-    FolioVertxCompletableFuture<Void> future = new FolioVertxCompletableFuture<>(requestContext.getContext());
+  public Future<Void> checkPONumberUnique(PoNumber poNumber, RequestContext requestContext) {
+    Promise<Void> promise = Promise.promise();
     checkPONumberUnique(poNumber.getPoNumber(), requestContext)
-      .thenAccept(v -> {
+      .onSuccess(v -> {
         logger.info("The PO Number '{}' is not in use yet", poNumber.getPoNumber());
-        future.complete(null);
+        promise.complete();
       })
-      .exceptionally(t -> {
-        future.completeExceptionally(t.getCause());
-        return null;
-      });
-    return future;
+       .onFailure(t -> promise.fail(t.getCause()));
+    return promise.future();
   }
 
-  public CompletableFuture<PoNumber> getPoNumber(RequestContext requestContext) {
-    FolioVertxCompletableFuture<PoNumber> future = new FolioVertxCompletableFuture<>(requestContext.getContext());
+  public Future<PoNumber> getPoNumber(RequestContext requestContext) {
+    Promise<PoNumber> promise = Promise.promise();
     generatePoNumber(requestContext)
-      .thenAccept(number -> {
+      .onSuccess(number -> {
         logger.info("The PO Number '{}' is not in use yet", number);
-        future.complete(new PoNumber().withPoNumber(number));
+        promise.complete(new PoNumber().withPoNumber(number));
       })
-      .exceptionally(t -> {
-        future.completeExceptionally(t.getCause());
-        return null;
-      });
-    return future;
+       .onFailure(t -> promise.fail(t.getCause()));
+    return promise.future();
   }
 
-  public CompletableFuture<Void> checkPONumberUnique(String poNumber, RequestContext requestContext) {
+  public Future<Void> checkPONumberUnique(String poNumber, RequestContext requestContext) {
     return purchaseOrderStorageService.getPurchaseOrderByPONumber(poNumber, requestContext)
-      .thenAccept(po -> {
+      .onSuccess(po -> {
          if (po.getInteger("totalRecords") != 0) {
            logger.error("Exception validating PO Number existence");
            throw new HttpException(400, ErrorCodes.PO_NUMBER_ALREADY_EXISTS);
          }
-      });
+      })
+      .mapEmpty();
   }
 
-  public CompletableFuture<String> generatePoNumber(RequestContext requestContext) {
+  public Future<String> generatePoNumber(RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(resourcesPath(PO_NUMBER));
     return restClient.getAsJsonObject(requestEntry, requestContext)
-                      .thenApply(seqNumber -> seqNumber.mapTo(SequenceNumber.class).getSequenceNumber());
+                      .map(seqNumber -> seqNumber.mapTo(SequenceNumber.class).getSequenceNumber());
   }
 
-  public CompletionStage<Void> validatePoNumber(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo, RequestContext requestContext) {
+  public Future<Void> validatePoNumber(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo, RequestContext requestContext) {
     if (isPoNumberChanged(poFromStorage, updatedPo)) {
        return checkPONumberUnique(updatedPo.getPoNumber(), requestContext);
     }
-    return completedFuture(null);
+    return Future.succeededFuture();
   }
 
   public static boolean isPoNumberChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {

@@ -1,5 +1,11 @@
 package org.folio.service.orders;
 
+import static org.folio.orders.utils.HelperUtils.getConversionQuery;
+
+import java.util.List;
+
+import javax.money.convert.ConversionQuery;
+
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
@@ -9,11 +15,7 @@ import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 
-import javax.money.convert.ConversionQuery;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.orders.utils.HelperUtils.getConversionQuery;
+import io.vertx.core.Future;
 
 public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDataPopulateService {
 
@@ -27,12 +29,12 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
   }
 
   @Override
-  public CompletableFuture<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder,
+  public Future<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
     CompositePurchaseOrder compPO = holder.getOrder();
     List<CompositePoLine> compositePoLines = holder.getOrder()
       .getCompositePoLines();
-    return calculateTotalEstimatedPrice(compositePoLines, requestContext).thenApply(totalAmount -> {
+    return calculateTotalEstimatedPrice(compositePoLines, requestContext).map(totalAmount -> {
       compPO.setTotalEstimatedPrice(totalAmount);
       compPO.setTotalItems(calculateTotalItemsQuantity(compositePoLines));
       return holder;
@@ -46,10 +48,10 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
    * @param compositePoLines list of composite PO Lines
    * @return estimated purchase order's total price
    */
-  public CompletableFuture<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines,
+  public Future<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines,
       RequestContext requestContext) {
     return configurationEntriesService.getSystemCurrency(requestContext)
-      .thenApply(toCurrency -> compositePoLines.stream()
+      .map(toCurrency -> compositePoLines.stream()
         .map(CompositePoLine::getCost)
         .map(cost -> {
           Money money = Money.of(cost.getPoLineEstimatedPrice(), cost.getCurrency());

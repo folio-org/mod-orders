@@ -47,10 +47,10 @@ public class PurchaseOrderStorageServiceTest {
       .withTotalRecords(1);
 
     when(restClientMock.get(any(), any(), any()))
-      .thenReturn(CompletableFuture.completedFuture(purchaseOrderCollection));
+      .thenReturn(CompletableFuture.succeededFuture(purchaseOrderCollection));
 
     String expectedQuery =  String.format("id==%s", orderId);
-    PurchaseOrderCollection actOrders = purchaseOrderStorageService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).join();
+    PurchaseOrderCollection actOrders = purchaseOrderStorageService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).result();
 
     verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
     assertEquals(purchaseOrderCollection, actOrders);
@@ -67,9 +67,9 @@ public class PurchaseOrderStorageServiceTest {
       .withTotalRecords(1);
 
     when(restClientMock.get(any(), any(), any()))
-      .thenReturn(CompletableFuture.completedFuture(purchaseOrderCollection));
+      .thenReturn(CompletableFuture.succeededFuture(purchaseOrderCollection));
 
-    List<PurchaseOrder> actOrders = purchaseOrderStorageService.getPurchaseOrdersByIds(List.of(orderId), requestContext).join();
+    List<PurchaseOrder> actOrders = purchaseOrderStorageService.getPurchaseOrdersByIds(List.of(orderId), requestContext).result();
 
     verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
     assertEquals(purchaseOrderCollection.getPurchaseOrders(), actOrders);

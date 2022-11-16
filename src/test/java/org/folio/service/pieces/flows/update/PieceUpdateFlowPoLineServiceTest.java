@@ -1,6 +1,6 @@
 package org.folio.service.pieces.flows.update;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -129,7 +129,7 @@ public class PieceUpdateFlowPoLineServiceTest {
 
     ArgumentCaptor<CompositePurchaseOrder> purchaseOrderToSaveCapture = ArgumentCaptor.forClass(CompositePurchaseOrder.class);
       ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -179,7 +179,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -237,7 +237,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -297,7 +297,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
@@ -358,7 +358,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(completedFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();

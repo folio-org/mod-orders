@@ -1,6 +1,6 @@
 package org.folio.service.pieces;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -98,11 +98,11 @@ public class PieceStorageServiceTest {
     PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(pieceCollection));
+    when(restClientMock.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(pieceCollection));
 
     String expectedQuery = String.format("id==%s", pieceId);
     PieceCollection retrievedPieces = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, expectedQuery, requestContext)
-      .join();
+      .result();
 
     verify(restClientMock).get(any(), eq(requestContext), eq(PieceCollection.class));
     assertEquals(pieceCollection, retrievedPieces);
@@ -111,9 +111,9 @@ public class PieceStorageServiceTest {
   @Test
   void testShouldDeleteItems() {
     //given
-    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(any(String.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(any(String.class), eq(requestContext));
     //When
-    pieceStorageService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).join();
+    pieceStorageService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).result();
     //Then
     verify(pieceStorageService, times(1)).deletePiece(any(String.class), eq(requestContext));
   }

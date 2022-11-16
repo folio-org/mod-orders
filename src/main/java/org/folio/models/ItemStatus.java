@@ -1,9 +1,10 @@
 package org.folio.models;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 
 public enum ItemStatus {
@@ -15,7 +16,7 @@ public enum ItemStatus {
   UNDEFINED("Undefined"),
   ORDER_CLOSED("Order closed");
   private final String value;
-  private final static Map<String, ItemStatus> CONSTANTS = new HashMap<>();
+  private static final Map<String, ItemStatus> CONSTANTS = new HashMap<>();
 
   static {
     for (ItemStatus c: values()) {

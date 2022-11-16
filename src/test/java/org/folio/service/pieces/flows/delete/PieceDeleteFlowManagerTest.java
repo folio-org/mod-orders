@@ -1,6 +1,6 @@
 package org.folio.service.pieces.flows.delete;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -133,24 +133,24 @@ public class PieceDeleteFlowManagerTest {
                                 .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
-    doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true),eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
-    doReturn(completedFuture(item)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
+    doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true),eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(item)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
     final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+    doAnswer((Answer<Future<Void>>) invocation -> {
       PieceDeletionHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
-      return completedFuture(null);
+      return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
-    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
-    doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
+    doReturn(succeededFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
 
     final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doReturn(completedFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
 
     //When
     pieceDeleteFlowManager.deletePiece(piece.getId(), true, requestContext).get();
@@ -189,23 +189,23 @@ public class PieceDeleteFlowManagerTest {
       .withLocations(List.of(loc)).withCost(cost).withCheckinItems(true);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
-    doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
-    doReturn(completedFuture(item)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
-    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
-    doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
+    doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(item)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
+    doReturn(succeededFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
     final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+    doAnswer((Answer<Future<Void>>) invocation -> {
       PieceDeletionHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
-      return completedFuture(null);
+      return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
    final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doReturn(completedFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
     //When
     pieceDeleteFlowManager.deletePiece(piece.getId(), true, requestContext).get();
     //Then
@@ -238,22 +238,22 @@ public class PieceDeleteFlowManagerTest {
                   .withPurchaseOrderId(orderId).withId(lineId).withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
-    doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
-    doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
+    doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
+    doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
     final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+    doAnswer((Answer<Future<Void>>) invocation -> {
       PieceDeletionHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
-      return completedFuture(null);
+      return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
     final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doReturn(completedFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
 
     //When
     pieceDeleteFlowManager.deletePiece(piece.getId(), true, requestContext).get();
@@ -290,26 +290,26 @@ public class PieceDeleteFlowManagerTest {
       .withPurchaseOrderId(orderId).withId(lineId).withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
-    doReturn(completedFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    doReturn(completedFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
-    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).deleteHoldingById(piece.getHoldingId(), true, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
-    doReturn(completedFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
-    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(completedFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
-    doReturn(completedFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
+    doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).deleteHoldingById(piece.getHoldingId(), true, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
+    doReturn(succeededFuture(new ArrayList())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
     final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+    doAnswer((Answer<Future<Void>>) invocation -> {
       PieceDeletionHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
-      return completedFuture(null);
+      return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
     final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
-    doReturn(completedFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
     //When
     pieceDeleteFlowManager.deletePiece(piece.getId(), true, requestContext).get();
     //Then

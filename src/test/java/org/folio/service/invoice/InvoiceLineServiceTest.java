@@ -78,13 +78,13 @@ public class InvoiceLineServiceTest {
     expectedInvoiceLine2.getAdjustments().get(0).getFundDistributions().get(0).setEncumbrance(null);
 
     when(restClient.put(any(RequestEntry.class), any(InvoiceLine.class), eq(requestContextMock)))
-      .thenReturn(CompletableFuture.completedFuture(null));
+      .thenReturn(CompletableFuture.succeededFuture(null));
     when(requestContextMock.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
 
     //When
-    CompletableFuture<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContextMock);
+    Future<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContextMock);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     //Then
     verify(restClient, times(1)).put(
@@ -102,11 +102,11 @@ public class InvoiceLineServiceTest {
     //Given
     List<String> poLineIds = List.of("1", "2");
     when(restClient.get(any(RequestEntry.class), eq(requestContextMock), eq(InvoiceLineCollection.class)))
-      .thenReturn(CompletableFuture.completedFuture(new InvoiceLineCollection()));
+      .thenReturn(CompletableFuture.succeededFuture(new InvoiceLineCollection()));
     //When
-    CompletableFuture<List<InvoiceLine>> result = invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContextMock);
+    Future<List<InvoiceLine>> result = invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContextMock);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
     //Then
     verify(restClient, times(1)).get(
       argThat(requestEntry -> encodeQuery("poLineId == (\"1\" OR \"2\")")

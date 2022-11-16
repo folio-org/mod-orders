@@ -27,7 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
@@ -91,10 +91,10 @@ public class OpenToPendingEncumbranceStrategyTest {
       CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
       Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
 
-      doReturn(completedFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getOrderUnreleasedEncumbrances(any(), any());
+      doReturn(succeededFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getOrderUnreleasedEncumbrances(any(), any());
 
-      doReturn(completedFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(eq(order.getId()), anyInt(), any());
-      doReturn(completedFuture(null)).when(encumbranceService).updateEncumbrances(any(), any());
+      doReturn(succeededFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(eq(order.getId()), anyInt(), any());
+      doReturn(succeededFuture(null)).when(encumbranceService).updateEncumbrances(any(), any());
 
       List<EncumbranceRelationsHolder> encumbranceRelationsHolders = new ArrayList<>();
       encumbranceRelationsHolders.add(new EncumbranceRelationsHolder()
@@ -102,12 +102,12 @@ public class OpenToPendingEncumbranceStrategyTest {
         .withCurrentFiscalYearId(UUID.randomUUID().toString()));
 
       doReturn(new ArrayList<EncumbranceRelationsHolder>()).when(encumbranceRelationsHoldersBuilder).buildBaseHolders(any());
-      doReturn(completedFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withBudgets(any(), any());
-      doReturn(completedFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withLedgersData(any(),any());
-      doReturn(completedFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withFiscalYearData(any(), any());
-      doReturn(completedFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withConversion(any(), any());
-      doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withExistingTransactions(any(), any(), any());
-      doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
+      doReturn(succeededFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withBudgets(any(), any());
+      doReturn(succeededFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withLedgersData(any(),any());
+      doReturn(succeededFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withFiscalYearData(any(), any());
+      doReturn(succeededFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withConversion(any(), any());
+      doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withExistingTransactions(any(), any(), any());
+      doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
 
       Map<String, List<CompositePoLine>> mapFiscalYearsWithCompPOLines = new HashMap<>();
       String fiscalYearId = UUID.randomUUID().toString();
@@ -115,17 +115,17 @@ public class OpenToPendingEncumbranceStrategyTest {
       CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
       orderFromStorage.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
 
-      doReturn(completedFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+      doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
       String compositePoLineId = UUID.randomUUID().toString();
       List<CompositePoLine> compositePoLines = Arrays.asList(new CompositePoLine().withId(compositePoLineId));
       List<String> poLineIds = Arrays.asList(compositePoLineId);
       List<Transaction> allTransactions = Arrays.asList(encumbrance);
-      doReturn(completedFuture(Arrays.asList(encumbrance))).when(transactionService).getTransactionsByPoLinesIds(eq(poLineIds), eq(fiscalYearId), eq(requestContext));
-      doReturn(completedFuture(Arrays.asList(encumbrance))).when(encumbranceService).getCurrentPoLinesEncumbrances(eq(compositePoLines), eq(fiscalYearId), eq(requestContext));
-      doReturn(completedFuture(allTransactions)).when(encumbranceService).getEncumbrancesByPoLinesFromCurrentFy(eq(mapFiscalYearsWithCompPOLines), eq(requestContext));
+      doReturn(succeededFuture(Arrays.asList(encumbrance))).when(transactionService).getTransactionsByPoLinesIds(eq(poLineIds), eq(fiscalYearId), eq(requestContext));
+      doReturn(succeededFuture(Arrays.asList(encumbrance))).when(encumbranceService).getCurrentPoLinesEncumbrances(eq(compositePoLines), eq(fiscalYearId), eq(requestContext));
+      doReturn(succeededFuture(allTransactions)).when(encumbranceService).getEncumbrancesByPoLinesFromCurrentFy(eq(mapFiscalYearsWithCompPOLines), eq(requestContext));
 
       // When
-      openToPendingEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext).join();
+      openToPendingEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext).result();
 
       // Then
       assertEquals(0d, encumbrance.getAmount(), 0.0);

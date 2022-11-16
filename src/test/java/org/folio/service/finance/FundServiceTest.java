@@ -1,6 +1,6 @@
 package org.folio.service.finance;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -56,9 +56,9 @@ public class FundServiceTest {
     String fundId = UUID.randomUUID().toString();
     CompositeFund compositeFund = new CompositeFund().withFund(new Fund().withId(fundId).withLedgerId(ledgerId));
 
-    doReturn(completedFuture(compositeFund)).when(restClient).get(any(), eq(requestContext), eq(CompositeFund.class));
+    doReturn(succeededFuture(compositeFund)).when(restClient).get(any(), eq(requestContext), eq(CompositeFund.class));
     //When
-    Fund actFund = fundService.retrieveFundById(fundId,requestContext).join();
+    Fund actFund = fundService.retrieveFundById(fundId,requestContext).result();
     //Then
     assertThat(actFund, equalTo(compositeFund.getFund()));
 
@@ -79,9 +79,9 @@ public class FundServiceTest {
     FundCollection fundCollection = new FundCollection().withFunds(funds).withTotalRecords(1);
 
     String query = URLEncoder.encode("ledgerId==" + ledgerId, StandardCharsets.UTF_8.toString());
-    doReturn(completedFuture(fundCollection)).when(restClient).get(any(),  eq(requestContext), eq(FundCollection.class));
+    doReturn(succeededFuture(fundCollection)).when(restClient).get(any(),  eq(requestContext), eq(FundCollection.class));
     //When
-    List<Fund> actFund = fundService.getFundsByLedgerId(ledgerId, requestContext).join();
+    List<Fund> actFund = fundService.getFundsByLedgerId(ledgerId, requestContext).result();
     //Then
     ArgumentCaptor<RequestEntry> argumentCaptor = ArgumentCaptor.forClass(RequestEntry.class);
     verify(restClient).get(argumentCaptor.capture(), eq(requestContext), eq(FundCollection.class));
@@ -103,9 +103,9 @@ public class FundServiceTest {
     FundCollection fundCollection = new FundCollection().withFunds(funds).withTotalRecords(1);
 
     String query = URLEncoder.encode("id==(" + fundId1 + " or " +  fundId2 +")", StandardCharsets.UTF_8.toString());
-    doReturn(completedFuture(fundCollection)).when(restClient).get(any(), any(),  any());
+    doReturn(succeededFuture(fundCollection)).when(restClient).get(any(), any(),  any());
     //When
-    List<Fund> actFund = fundService.getAllFunds(fundIds, requestContext).join();
+    List<Fund> actFund = fundService.getAllFunds(fundIds, requestContext).result();
     //Then
     ArgumentCaptor<RequestEntry> argumentCaptor = ArgumentCaptor.forClass(RequestEntry.class);
     verify(restClient).get(argumentCaptor.capture(), any(), eq(FundCollection.class));
@@ -127,7 +127,7 @@ public class FundServiceTest {
     //When
     CompletionException thrown = assertThrows(
       CompletionException.class,
-      () -> fundService.retrieveFundById(fundId, requestContext).join(), "Expected exception"
+      () -> fundService.retrieveFundById(fundId, requestContext).result(), "Expected exception"
     );
     HttpException actHttpException = (HttpException)thrown.getCause();
     Error actError = actHttpException.getError();
@@ -146,7 +146,7 @@ public class FundServiceTest {
     //When
     CompletionException thrown = assertThrows(
       CompletionException.class,
-      () -> fundService.retrieveFundById(fundId,requestContext).join(),"Expected exception"
+      () -> fundService.retrieveFundById(fundId,requestContext).result(),"Expected exception"
     );
     assertEquals(RuntimeException.class, thrown.getCause().getClass());
     //Then

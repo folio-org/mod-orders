@@ -270,10 +270,10 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder2);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(CompletableFuture.completedFuture(singletonList(encumbranceFromStorage)));
+      .thenReturn(CompletableFuture.succeededFuture(singletonList(encumbranceFromStorage)));
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
-        .withExistingTransactions(holders, order, requestContextMock).join();
+        .withExistingTransactions(holders, order, requestContextMock).result();
     //Then
     assertThat(resultHolders, hasSize(2));
     assertEquals(encumbranceFromStorage, holder1.getOldEncumbrance());
@@ -334,11 +334,11 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder3);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(CompletableFuture.completedFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
+      .thenReturn(CompletableFuture.succeededFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
 
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
-      .withExistingTransactions(holders, order, requestContextMock).join();
+      .withExistingTransactions(holders, order, requestContextMock).result();
     //Then
     assertThat(resultHolders, hasSize(5));
     assertNull(holder1.getOldEncumbrance());
@@ -362,10 +362,10 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder3);
 
     when(budgetService.getBudgets(anyCollection(), any()))
-        .thenReturn(CompletableFuture.completedFuture(List.of(budget1, budget2, budget3)));
+        .thenReturn(CompletableFuture.succeededFuture(List.of(budget1, budget2, budget3)));
 
     //When
-    encumbranceRelationsHoldersBuilder.withBudgets(holders, requestContextMock).join();
+    encumbranceRelationsHoldersBuilder.withBudgets(holders, requestContextMock).result();
     //Then
     assertEquals(budget1, holder1.getBudget());
     assertEquals(budget2, holder2.getBudget());
@@ -389,11 +389,11 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder2);
     holders.add(holder3);
 
-    when(fundService.getAllFunds(anyCollection(), any())).thenReturn(CompletableFuture.completedFuture(List.of(fund1, fund2, fund3)));
-    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(CompletableFuture.completedFuture(List.of(ledger2, ledger1, ledger3)));
+    when(fundService.getAllFunds(anyCollection(), any())).thenReturn(CompletableFuture.succeededFuture(List.of(fund1, fund2, fund3)));
+    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(CompletableFuture.succeededFuture(List.of(ledger2, ledger1, ledger3)));
 
     //When
-    encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContextMock).join();
+    encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContextMock).result();
     //Then
     assertEquals(ledger1.getId(), holder1.getLedgerId());
     assertEquals(ledger1.getRestrictEncumbrance(), holder1.getRestrictEncumbrance());
@@ -417,9 +417,9 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder1.withBudget(budget1));
     holders.add(holder2.withBudget(budget2));
     holders.add(holder3.withBudget(budget3));
-   when(fiscalYearService.getFiscalYearById(anyString(), any())).thenReturn(CompletableFuture.completedFuture(fiscalYear));
+   when(fiscalYearService.getFiscalYearById(anyString(), any())).thenReturn(CompletableFuture.succeededFuture(fiscalYear));
     //When
-    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContextMock).join();
+    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContextMock).result();
     //Then
     assertThat(resultHolders, everyItem(hasProperty("newEncumbrance", allOf(
         hasProperty("fiscalYearId", is(fiscalYear.getId())),
@@ -444,7 +444,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
     });
     when(requestContextMock.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
     //When
-    encumbranceRelationsHoldersBuilder.withConversion(holders, requestContextMock).join();
+    encumbranceRelationsHoldersBuilder.withConversion(holders, requestContextMock).result();
     //Then
     assertEquals("USD", holder1.getPoLineToFyConversion().toString());
     assertEquals("USD", holder2.getPoLineToFyConversion().toString());

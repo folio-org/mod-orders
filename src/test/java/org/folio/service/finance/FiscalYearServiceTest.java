@@ -62,14 +62,14 @@ public class FiscalYearServiceTest {
     String ledgerId = UUID.randomUUID()
       .toString();
     FiscalYear fy = fiscalYearService.getCurrentFiscalYear(ledgerId, requestContextMock)
-      .join();
+      .result();
     assertNotNull(fy);
   }
 
   @Test
   void testShouldThrowHttpException() {
 
-    CompletableFuture<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
+    Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
     CompletionException expectedException = assertThrows(CompletionException.class, result::join);
 
     HttpException httpException = (HttpException) expectedException.getCause();

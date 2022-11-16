@@ -53,7 +53,7 @@ public final class TestConfig {
     conf.put("http.port", okapiPort);
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
-    CompletableFuture<String> deploymentComplete = new CompletableFuture<>();
+    Future<String> deploymentComplete = new Future<>();
 
     String[] hostAndPort = kafkaCluster.getBrokerList().split(":");
     System.setProperty(KAFKA_HOST, hostAndPort[0]);

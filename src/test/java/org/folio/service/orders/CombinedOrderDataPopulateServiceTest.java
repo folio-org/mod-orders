@@ -42,10 +42,10 @@ public class CombinedOrderDataPopulateServiceTest {
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
 
     when(holderBuilder.withCurrentFiscalYear(any(), any()))
-      .thenReturn(CompletableFuture.completedFuture(holder));
+      .thenReturn(CompletableFuture.succeededFuture(holder));
 
 
-    populateService.populate(holder, requestContext).join();
+    populateService.populate(holder, requestContext).result();
 
     InOrder inOrder = inOrder(holderBuilder, populateServices);
     inOrder.verify(holderBuilder).withCurrentFiscalYear(any(), any());

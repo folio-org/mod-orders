@@ -1,6 +1,6 @@
 package org.folio.rest.impl;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -61,7 +61,7 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
 import static org.folio.TestUtils.verifyLocationQuantity;
-import static org.folio.helper.AbstractHelper.ERROR_CAUSE;
+import static org.folio.helper.BaseHelper.ERROR_CAUSE;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.helper.InventoryInteractionTestHelper.joinExistingAndNewItems;
@@ -1703,7 +1703,7 @@ public class PurchaseOrdersApiTest {
       .sum();
 
     //PurchaseOrderHelper serviceSpy = spy(new PurchaseOrderHelper(httpClient, okapiHeadersMock, ctxMock, "en"));
-    //double expectedPrice = serviceSpy.calculateTotalEstimatedPrice(resp.getCompositePoLines()).join();
+    //double expectedPrice = serviceSpy.calculateTotalEstimatedPrice(resp.getCompositePoLines()).result();
 
     assertThat(resp.getTotalItems(), equalTo(expectedQuantity));
     //assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedPrice));
@@ -4240,9 +4240,9 @@ public class PurchaseOrdersApiTest {
         return null;
       }
     }).when(transactionService).updateTransactions(transactions, requestContext);
-    doReturn(completedFuture(transactionCollection)).when(restClient).get(requestEntry, requestContext, TransactionCollection.class);
-    doReturn(completedFuture(transactions)).when(transactionService).getTransactionsByIds(transactionIds, requestContext);
-    List<Transaction> updatedTransactions = encumbranceService.getEncumbrancesByIds(transactionIds, requestContext).join();
+    doReturn(succeededFuture(transactionCollection)).when(restClient).get(requestEntry, requestContext, TransactionCollection.class);
+    doReturn(succeededFuture(transactions)).when(transactionService).getTransactionsByIds(transactionIds, requestContext);
+    List<Transaction> updatedTransactions = encumbranceService.getEncumbrancesByIds(transactionIds, requestContext).result();
     assertThat(updatedTransactions.size(), equalTo(1));
     Transaction updatedEncumbrance1 = updatedTransactions.get(0);
     assertThat(updatedEncumbrance1.getEncumbrance().getSourcePoLineId(), equalTo(poLineId1));

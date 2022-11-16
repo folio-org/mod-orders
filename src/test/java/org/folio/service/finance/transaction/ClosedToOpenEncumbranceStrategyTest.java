@@ -25,7 +25,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -67,27 +67,27 @@ public class ClosedToOpenEncumbranceStrategyTest {
     mapFiscalYearsWithCompPOLines.put(fiscalYearId, singletonList(new CompositePoLine().withId(UUID.randomUUID().toString())));
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
     orderFromStorage.setWorkflowStatus(WorkflowStatus.CLOSED);
-    doReturn(completedFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+    doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
 
-    doReturn(completedFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
+    doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
 
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = new ArrayList<>();
     encumbranceRelationsHolders.add(new EncumbranceRelationsHolder()
       .withFundDistribution(new FundDistribution()));
     doReturn(encumbranceRelationsHolders).when(encumbranceRelationsHoldersBuilder).buildBaseHolders(any());
-    doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withBudgets(any(), any());
-    doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withLedgersData(any(),any());
-    doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withFiscalYearData(any(), any());
-    doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withConversion(any(), any());
+    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withBudgets(any(), any());
+    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withLedgersData(any(),any());
+    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withFiscalYearData(any(), any());
+    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withConversion(any(), any());
 
     doReturn(encumbranceRelationsHolders).when(encumbranceRelationsHoldersBuilder).withKnownTransactions(any(), any());
     doReturn(encumbranceRelationsHolders).when(fundsDistributionService).distributeFunds(any());
-    doReturn(completedFuture(null)).when(encumbranceService).createOrUpdateEncumbrances(any(), any());
+    doReturn(succeededFuture(null)).when(encumbranceService).createOrUpdateEncumbrances(any(), any());
 
     // When
-    CompletableFuture<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+    Future<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     // Then
     verify(encumbranceService, times(1)).createOrUpdateEncumbrances(
@@ -115,14 +115,14 @@ public class ClosedToOpenEncumbranceStrategyTest {
     mapFiscalYearsWithCompPOLines.put(fiscalYearId, singletonList(new CompositePoLine().withId(UUID.randomUUID().toString())));
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
     orderFromStorage.setWorkflowStatus(WorkflowStatus.CLOSED);
-    doReturn(completedFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+    doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
 
-    doReturn(completedFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
+    doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
 
     // When
-    CompletableFuture<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+    Future<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
     assertFalse(result.isCompletedExceptionally());
-    result.join();
+    result.result();
 
     // Then
     verify(encumbranceRelationsHoldersBuilder, never()).buildBaseHolders(any());

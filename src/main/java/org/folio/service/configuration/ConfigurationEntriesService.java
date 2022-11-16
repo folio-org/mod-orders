@@ -2,8 +2,6 @@ package org.folio.service.configuration;
 
 import static org.folio.orders.utils.HelperUtils.SYSTEM_CONFIG_MODULE_NAME;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,6 +10,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Configs;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class ConfigurationEntriesService {
@@ -28,16 +27,13 @@ public class ConfigurationEntriesService {
     this.restClient = restClient;
   }
 
-  public CompletableFuture<JsonObject> loadConfiguration(String moduleConfig, RequestContext requestContext) {
+  public Future<JsonObject> loadConfiguration(String moduleConfig, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(TENANT_CONFIGURATION_ENTRIES).withQuery(String.format(CONFIG_QUERY, moduleConfig))
             .withOffset(0).withLimit(Integer.MAX_VALUE);
-    logger.info("GET request: {}", CONFIG_QUERY);
-    return restClient
-      .get(requestEntry, requestContext, Configs.class)
-      .thenApply(configs -> {
+    return restClient.get(requestEntry, Configs.class, requestContext)
+      .map(configs -> {
         if (logger.isDebugEnabled()) {
-          logger.debug("The response from mod-configuration: {}", JsonObject.mapFrom(configs)
-            .encodePrettily());
+          logger.debug("The response from mod-configuration: {}", JsonObject.mapFrom(configs).encodePrettily());
         }
         JsonObject config = new JsonObject();
 
@@ -53,18 +49,18 @@ public class ConfigurationEntriesService {
    * @param searchCriteria name of the module for which the configuration is to be retrieved
    * @return CompletableFuture with Configs
    */
-  public CompletableFuture<Configs> getConfigurationsEntries(RequestContext requestContext, String... searchCriteria) {
+  public Future<Configs> getConfigurationsEntries(RequestContext requestContext, String... searchCriteria) {
     String query = buildSearchingQuery(searchCriteria);
     RequestEntry requestEntry = new RequestEntry(TENANT_CONFIGURATION_ENTRIES)
       .withQuery(query)
       .withOffset(0)
       .withLimit(Integer.MAX_VALUE);
-    return restClient.get(requestEntry, requestContext, Configs.class);
+    return restClient.get(requestEntry, Configs.class, requestContext);
   }
 
-  public CompletableFuture<String> getSystemCurrency(RequestContext requestContext) {
-    CompletableFuture<String> future = new CompletableFuture<>();
-    loadConfiguration(SYSTEM_CONFIG_MODULE_NAME, requestContext).thenApply(config -> {
+  public Future<String> getSystemCurrency(RequestContext requestContext) {
+    return loadConfiguration(SYSTEM_CONFIG_MODULE_NAME, requestContext)
+      .compose(config -> {
       String localeSettings = config.getString(LOCALE_SETTINGS);
       String systemCurrency;
       if (StringUtils.isEmpty(localeSettings)) {
@@ -72,10 +68,8 @@ public class ConfigurationEntriesService {
       } else {
         systemCurrency = new JsonObject(config.getString(LOCALE_SETTINGS)).getString("currency", "USD");
       }
-      return future.complete(systemCurrency);
-    })
-      .exceptionally(future::completeExceptionally);
-    return future;
+      return Future.succeededFuture(systemCurrency);
+    });
   }
 
   private String extractLocalSettingConfigValueByName(JsonObject config, String name, String defaultValue) {

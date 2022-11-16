@@ -59,8 +59,8 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     purchaseOrderHelper.deleteOrder(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -69,8 +69,8 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     purchaseOrderHelper.getCompositeOrder(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(order -> asyncResultHandler.handle(succeededFuture(buildOkResponse(order))))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+      .onSuccess(order -> asyncResultHandler.handle(succeededFuture(buildOkResponse(order))))
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -81,12 +81,12 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     // First validate content of the PO and proceed only if all is okay
     configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .thenCompose(tenantConfig -> purchaseOrderHelper.validateOrder(compPO, tenantConfig, requestContext))
-      .thenCompose(errors -> {
+      .compose(tenantConfig -> purchaseOrderHelper.validateOrder(compPO, tenantConfig, requestContext))
+      .compose(errors -> {
         if (CollectionUtils.isEmpty(errors)) {
           logger.info("Creating PO and POLines...");
-          return purchaseOrderHelper.createPurchaseOrder(compPO, new RequestContext(vertxContext, okapiHeaders))
-            .thenAccept(withIds -> {
+          return purchaseOrderHelper.createPurchaseOrder(compPO, requestContext)
+            .onSuccess(withIds -> {
               logger.info("Successfully Placed Order: {}", JsonObject.mapFrom(withIds).encodePrettily());
               String okapiUrl = okapiHeaders.get(OKAPI_URL);
               String url = resourceByIdPath(PO_LINES_BUSINESS, compPO.getId());
@@ -96,7 +96,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
           throw new HttpException(422, new Errors().withErrors(errors).withTotalRecords(errors.size()));
         }
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -108,10 +108,10 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     purchaseOrderHelper.validateExistingOrder(orderId, compPO, requestContext)
-      .thenCompose(validationErrors -> {
+      .compose(validationErrors -> {
         if (CollectionUtils.isEmpty(validationErrors)) {
           return purchaseOrderHelper.updateOrder(compPO, requestContext)
-            .thenAccept(v -> {
+            .onSuccess(v -> {
               if (logger.isInfoEnabled()) {
                 logger.info("Successfully Updated Order: {}", JsonObject.mapFrom(compPO).encodePrettily());
               }
@@ -123,7 +123,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
           throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   private void populateOrderId(String orderId, CompositePurchaseOrder compPO) {
@@ -146,28 +146,28 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
     purchaseOrderHelper
       .getPurchaseOrders(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(orders -> {
+      .onSuccess(orders -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved orders: {}", JsonObject.mapFrom(orders).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(orders)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
   @Validate
   public void postOrdersCompositeOrdersReEncumberById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     orderReEncumberService.reEncumber(id, new RequestContext(vertxContext, okapiHeaders))
-          .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-          .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void postOrdersRollover(String lang, LedgerFiscalYearRollover ledgerFYRollover, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     orderRolloverService.rollover(ledgerFYRollover, new RequestContext(vertxContext, okapiHeaders))
-        .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-        .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 }

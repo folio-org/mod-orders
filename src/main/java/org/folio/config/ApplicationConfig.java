@@ -81,6 +81,7 @@ import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategyReso
 import org.folio.service.orders.lines.update.PatchOperationHandler;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
+import org.folio.service.organization.OrganizationService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
@@ -219,6 +220,10 @@ public class ApplicationConfig {
   @Bean
   ExpenseClassValidationService expenseClassValidationService(BudgetExpenseClassService budgetExpenseClassService, ExpenseClassService expenseClassService) {
     return new ExpenseClassValidationService(budgetExpenseClassService, expenseClassService);
+  }
+  @Bean
+  OrganizationService organizationService(RestClient restClient) {
+    return new OrganizationService(restClient);
   }
 
   @Bean
@@ -483,7 +488,7 @@ public class ApplicationConfig {
   }
 
   @Bean
-  EncumbranceWorkflowStrategy receivingEncumbranceStrategy(EncumbranceService encumbranceService,
+  ReceivingEncumbranceStrategy receivingEncumbranceStrategy(EncumbranceService encumbranceService,
                           FundsDistributionService fundsDistributionService,
                           BudgetRestrictionService budgetRestrictionService,
                           EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
@@ -576,12 +581,13 @@ public class ApplicationConfig {
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
+    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
       unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
-      poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager);
+      poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager,
+      organizationService);
   }
 
   @Bean PurchaseOrderLineHelper purchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
@@ -590,10 +596,11 @@ public class ApplicationConfig {
         TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
         PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
         ConfigurationEntriesService configurationEntriesService, RestClient restClient,
-        CompositePoLineValidationService compositePoLineValidationService) {
+        CompositePoLineValidationService compositePoLineValidationService, OrganizationService organizationService) {
     return new PurchaseOrderLineHelper(inventoryManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, acquisitionsUnitsService, protectionService,
-      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient, compositePoLineValidationService);
+      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient, compositePoLineValidationService,
+      organizationService);
   }
 
   @Bean CompositePoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService) {

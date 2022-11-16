@@ -3,6 +3,7 @@ package org.folio.orders.events.handlers;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -15,8 +16,9 @@ public class ReceiveOrderStatusChangeHandler extends AbstractOrderStatusHandler 
 
   @Autowired
   public ReceiveOrderStatusChangeHandler(Vertx vertx, EncumbranceService encumbranceService,
-    PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderHelper purchaseOrderHelper) {
-    super(vertx.getOrCreateContext(), encumbranceService, purchaseOrderStorageService, purchaseOrderHelper);
+    PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineService purchaseOrderLineService) {
+    super(vertx.getOrCreateContext(), encumbranceService, purchaseOrderStorageService, purchaseOrderHelper,
+        purchaseOrderLineService);
   }
 
   @Override

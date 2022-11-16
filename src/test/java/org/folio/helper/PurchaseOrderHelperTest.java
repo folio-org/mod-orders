@@ -53,7 +53,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -146,9 +146,9 @@ public class PurchaseOrderHelperTest {
             .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
             .withTotalRecords(1);
 
-    doReturn(completedFuture(oirCollection)).when(restClient).get(any(), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(), any(), any());
 
-    CompletableFuture<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, new RequestContext(ctxMock, okapiHeadersMock));
+    Future<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, new RequestContext(ctxMock, okapiHeadersMock));
     CompletionException exception = assertThrows(CompletionException.class, future::join);
     HttpException httpException = (HttpException) exception.getCause();
     assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), httpException.getMessage());

@@ -10,15 +10,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
 
-import org.folio.models.ReEncumbranceHolder;
 import org.folio.completablefuture.AsyncUtil;
+import org.folio.models.ReEncumbranceHolder;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -41,6 +40,7 @@ import org.folio.service.finance.rollover.RolloverRetrieveService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class ReEncumbranceHoldersBuilder {
@@ -81,9 +81,9 @@ public class ReEncumbranceHoldersBuilder {
       .collect(toList());
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withFundsData(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
+  public Future<List<ReEncumbranceHolder>> withFundsData(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
     if (holders.isEmpty()) {
-      return CompletableFuture.completedFuture(holders);
+      return Future.succeededFuture(holders);
     }
 
     var fundIds = holders.stream()
@@ -92,26 +92,25 @@ public class ReEncumbranceHoldersBuilder {
             .collect(toList());
 
     return fundService.getFunds(fundIds, requestContext)
-            .thenApply(funds -> withFundsData(holders, funds));
+            .map(funds -> withFundsData(holders, funds));
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withLedgersData(List<ReEncumbranceHolder> holders,
-                                                                      RequestContext requestContext) {
+  public Future<List<ReEncumbranceHolder>> withLedgersData(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
     List<String> ledgerIds = holders.stream()
       .map(ReEncumbranceHolder::getLedgerId)
       .filter(Objects::nonNull)
        .distinct()
       .collect(toList());
     if (ledgerIds.isEmpty()) {
-      return CompletableFuture.completedFuture(holders);
+      return Future.succeededFuture(holders);
     }
     return ledgerService.getLedgersByIds(ledgerIds, requestContext)
-      .thenApply(ledgers -> {
+      .map(ledgers -> {
         Map<String, Boolean> idLedgerMap = ledgers.stream()
           .collect(toMap(Ledger::getId, Ledger::getRestrictEncumbrance));
         return holders.stream()
                 .map(holder -> {
-                  String ledgerId = Optional.ofNullable(holder.getLedgerId()).orElse(null);
+                  String ledgerId = holder.getLedgerId();
                   return holder.withRestrictEncumbrances(idLedgerMap.getOrDefault(ledgerId, false));
                 })
                 .collect(toList());
@@ -119,20 +118,20 @@ public class ReEncumbranceHoldersBuilder {
       });
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withCurrentFiscalYearData(List<ReEncumbranceHolder> holders,
+  public Future<List<ReEncumbranceHolder>> withCurrentFiscalYearData(List<ReEncumbranceHolder> holders,
                                                                                 RequestContext requestContext) {
     return holders.stream()
             .map(ReEncumbranceHolder::getLedgerId)
             .filter(Objects::nonNull)
             .findFirst().map(ledgerId -> fiscalYearService.getCurrentFiscalYear(ledgerId, requestContext)
-              .thenApply(fiscalYear -> holders.stream()
+              .map(fiscalYear -> holders.stream()
                   .map(holder -> holder.withCurrentFiscalYearId(fiscalYear.getId()).withCurrency(fiscalYear.getCurrency()))
                   .collect(toList())))
-            .orElseGet(() -> CompletableFuture.completedFuture(holders));
+            .orElseGet(() ->  Future.succeededFuture(holders));
 
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withBudgets(List<ReEncumbranceHolder> holders,
+  public Future<List<ReEncumbranceHolder>> withBudgets(List<ReEncumbranceHolder> holders,
       RequestContext requestContext) {
     List<String> fundIds = holders.stream()
       .map(ReEncumbranceHolder::getFundId)
@@ -140,10 +139,10 @@ public class ReEncumbranceHoldersBuilder {
       .distinct()
       .collect(toList());
     if (fundIds.isEmpty()) {
-      return CompletableFuture.completedFuture(holders);
+      return Future.succeededFuture(holders);
     }
     return budgetService.fetchBudgetsByFundIds(fundIds, requestContext)
-      .thenApply(budgets -> {
+      .map(budgets -> {
         Map<String, Budget> idBudgetMap = budgets.stream()
           .collect(toMap(Budget::getFundId, Function.identity()));
         return holders.stream()
@@ -154,8 +153,7 @@ public class ReEncumbranceHoldersBuilder {
       });
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withRollovers(List<ReEncumbranceHolder> holders,
-      RequestContext requestContext) {
+  public Future<List<ReEncumbranceHolder>> withRollovers(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
     List<String> ledgerIds = holders.stream()
       .map(ReEncumbranceHolder::getLedgerId)
       .filter(Objects::nonNull)
@@ -166,20 +164,20 @@ public class ReEncumbranceHoldersBuilder {
             .filter(Objects::nonNull)
             .findFirst();
     if (ledgerIds.isEmpty() || fiscalYearId.isEmpty()) {
-      return CompletableFuture.completedFuture(holders);
+      return Future.succeededFuture(holders);
     }
     return rolloverRetrieveService.getLedgerFyRollovers(fiscalYearId.get(), ledgerIds, requestContext)
-      .thenApply(rollovers -> withRollovers(rollovers, holders));
+      .map(rollovers -> withRollovers(rollovers, holders));
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withConversions(List<ReEncumbranceHolder> reEncumbranceHolders,
+  public Future<List<ReEncumbranceHolder>> withConversions(List<ReEncumbranceHolder> reEncumbranceHolders,
                                                                       RequestContext requestContext) {
     Optional<String> fyCurrency = reEncumbranceHolders.stream()
         .map(ReEncumbranceHolder::getCurrency)
         .filter(Objects::nonNull)
         .findFirst();
     if (fyCurrency.isEmpty()) {
-      return CompletableFuture.completedFuture(reEncumbranceHolders);
+      return Future.succeededFuture(reEncumbranceHolders);
     }
     return AsyncUtil.executeBlocking(requestContext.getContext(), false, () -> {
 
@@ -208,23 +206,23 @@ public class ReEncumbranceHoldersBuilder {
 
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withPreviousFyEncumbrances(List<ReEncumbranceHolder> holders,
+  public Future<List<ReEncumbranceHolder>> withPreviousFyEncumbrances(List<ReEncumbranceHolder> holders,
                                                                                  RequestContext requestContext) {
     return holders.stream()
       .filter(reEncumbranceHolder -> Objects.nonNull(reEncumbranceHolder.getRollover()))
       .findFirst()
       .map(reEncumbranceHolder -> populateFromFyEncumbrances(holders, requestContext))
-      .orElseGet(() -> CompletableFuture.completedFuture(holders));
+      .orElseGet(() ->  Future.succeededFuture(holders));
 
   }
 
-  public CompletableFuture<List<ReEncumbranceHolder>> withToEncumbrances(List<ReEncumbranceHolder> holders,
+  public Future<List<ReEncumbranceHolder>> withToEncumbrances(List<ReEncumbranceHolder> holders,
                                                                          RequestContext requestContext) {
     return holders.stream()
       .filter(reEncumbranceHolder -> Objects.nonNull(reEncumbranceHolder.getRollover()))
       .findFirst()
       .map(reEncumbranceHolder -> withToTransactions(holders, requestContext))
-      .orElseGet(() -> CompletableFuture.completedFuture(holders));
+      .orElseGet(() ->  Future.succeededFuture(holders));
 
   }
 
@@ -251,7 +249,7 @@ public class ReEncumbranceHoldersBuilder {
     }).collect(toList());
   }
 
-  private CompletableFuture<List<ReEncumbranceHolder>> withToTransactions(List<ReEncumbranceHolder> holders,
+  private Future<List<ReEncumbranceHolder>> withToTransactions(List<ReEncumbranceHolder> holders,
       RequestContext requestContext) {
     ReEncumbranceHolder reEncumbranceHolder = holders.get(0);
     String toQuery = String.format(GET_ORDER_TRANSACTIONS_QUERY_TEMPLATE, reEncumbranceHolder.getRollover()
@@ -260,7 +258,7 @@ public class ReEncumbranceHoldersBuilder {
           .getId());
 
     return transactionService.getTransactions(toQuery, requestContext)
-      .thenApply(transactions -> {
+      .map(transactions -> {
         populateExistingToFYEncumbrances(holders, transactions);
         populateNonExistingToFYEncumbrances(holders);
         return holders;
@@ -302,7 +300,7 @@ public class ReEncumbranceHoldersBuilder {
       });
   }
 
-  private CompletableFuture<List<ReEncumbranceHolder>> populateFromFyEncumbrances(List<ReEncumbranceHolder> holders,
+  private Future<List<ReEncumbranceHolder>> populateFromFyEncumbrances(List<ReEncumbranceHolder> holders,
                                                                                   RequestContext requestContext) {
     return holders.stream()
       .filter(holder -> Objects.nonNull(holder.getRollover()))
@@ -310,13 +308,13 @@ public class ReEncumbranceHoldersBuilder {
       .map(holder -> String.format(GET_ORDER_TRANSACTIONS_QUERY_TEMPLATE, holder.getRollover()
         .getFromFiscalYearId(), holder.getPurchaseOrder().getId()))
       .map(fromQuery -> transactionService.getTransactions(fromQuery, requestContext)
-        .thenApply(transactions -> {
+        .map(transactions -> {
           var idTransactionMap = transactions.stream().collect(toMap(Transaction::getId, Function.identity()));
           return holders.stream()
                   .map(holder -> holder.withPreviousFyEncumbrance(idTransactionMap.get(holder.getFundDistribution().getEncumbrance())))
                   .collect(toList());
         }))
-      .orElseGet(() -> CompletableFuture.completedFuture(holders));
+      .orElseGet(() ->  Future.succeededFuture(holders));
   }
 
   private boolean isTransactionRelatedToHolder(ReEncumbranceHolder holder, Transaction transaction) {

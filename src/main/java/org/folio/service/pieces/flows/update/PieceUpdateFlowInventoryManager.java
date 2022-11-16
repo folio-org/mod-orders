@@ -1,17 +1,14 @@
 package org.folio.service.pieces.flows.update;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -24,6 +21,7 @@ import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class PieceUpdateFlowInventoryManager {
@@ -41,9 +39,9 @@ public class PieceUpdateFlowInventoryManager {
     this.inventoryManager = inventoryManager;
   }
 
-  public CompletableFuture<Void> processInventory(PieceUpdateHolder holder, RequestContext requestContext) {
+  public Future<Void> processInventory(PieceUpdateHolder holder, RequestContext requestContext) {
     return inventoryManager.updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext)
-      .thenCompose(aVoid -> {
+      .compose(aVoid -> {
         if (Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage())) {
           return packagePoLineUpdateInventory(holder, requestContext);
         }
@@ -54,45 +52,47 @@ public class PieceUpdateFlowInventoryManager {
       });
   }
 
-  private CompletableFuture<Void> nonPackagePoLineUpdateInventory(PieceUpdateHolder holder, RequestContext requestContext) {
+  private Future<Void> nonPackagePoLineUpdateInventory(PieceUpdateHolder holder, RequestContext requestContext) {
     return nonPackageUpdateTitleWithInstance(holder, requestContext)
-      .thenAccept(holder::withInstanceId)
-      .thenCompose(instanceId -> handleHolding(holder, requestContext))
-      .thenCompose(holdingId -> handleItem(holder, requestContext))
-      .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
-      .thenCompose(aVoid -> deleteHolding(holder, requestContext))
-      .thenAccept(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE));
+      .onSuccess(holder::withInstanceId)
+      .compose(instanceId -> handleHolding(holder, requestContext))
+      .compose(holdingId -> handleItem(holder, requestContext))
+      .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
+      .compose(aVoid -> deleteHolding(holder, requestContext))
+      .onSuccess(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE))
+      .mapEmpty();
   }
 
-  private CompletableFuture<Void> packagePoLineUpdateInventory(PieceUpdateHolder holder, RequestContext requestContext) {
+  private Future<Void> packagePoLineUpdateInventory(PieceUpdateHolder holder, RequestContext requestContext) {
     return titlesService.getTitleById(holder.getPieceToUpdate().getTitleId(), requestContext)
-      .thenCompose(title -> packageUpdateTitleWithInstance(title, requestContext))
-      .thenAccept(title -> holder.withInstanceId(title.getInstanceId()))
-      .thenCompose(title -> handleHolding(holder, requestContext))
-      .thenCompose(holdingId -> handleItem(holder, requestContext))
-      .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
-      .thenCompose(aVoid -> deleteHolding(holder, requestContext))
-      .thenAccept(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE));
+      .compose(title -> packageUpdateTitleWithInstance(title, requestContext))
+      .onSuccess(title -> holder.withInstanceId(title.getInstanceId()))
+      .compose(title -> handleHolding(holder, requestContext))
+      .compose(holdingId -> handleItem(holder, requestContext))
+      .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
+      .compose(aVoid -> deleteHolding(holder, requestContext))
+      .onSuccess(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE))
+      .mapEmpty();
   }
 
-  private CompletableFuture<Pair<String, String>> deleteHolding(PieceUpdateHolder holder, RequestContext requestContext) {
+  private Future<Pair<String, String>> deleteHolding(PieceUpdateHolder holder, RequestContext requestContext) {
     if (holder.isDeleteHolding()) {
       return pieceUpdateInventoryService.deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     }
-    return completedFuture(null);
+    return Future.succeededFuture();
   }
 
-  private CompletableFuture<Location> handleHolding(PieceUpdateHolder holder, RequestContext requestContext) {
+  private Future<Location> handleHolding(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
     if (pieceToUpdate.getHoldingId() != null) {
-      return completedFuture(new Location().withHoldingId(pieceToUpdate.getHoldingId()));
+      return Future.succeededFuture(new Location().withHoldingId(pieceToUpdate.getHoldingId()));
     }
     String instanceId = holder.getInstanceId();
     if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(pieceToUpdate, poLineToSave)) {
       Location location = new Location().withLocationId(pieceToUpdate.getLocationId());
       return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
-                      .thenApply(holdingId -> {
+                      .map(holdingId -> {
                           Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
                             pieceToUpdate.setLocationId(null);
                             pieceToUpdate.setHoldingId(holdingId);
@@ -102,68 +102,66 @@ public class PieceUpdateFlowInventoryManager {
                           return location;
                         });
     }
-    return completedFuture(new Location().withLocationId(pieceToUpdate.getLocationId()));
+    return Future.succeededFuture(new Location().withLocationId(pieceToUpdate.getLocationId()));
   }
 
-  private CompletableFuture<String> handleItem(PieceUpdateHolder holder, RequestContext requestContext) {
+  private Future<String> handleItem(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
     if (DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
-      return inventoryManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext).thenCompose(jsonItem -> {
+      return inventoryManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext)
+        .compose(jsonItem -> {
         if (holder.isCreateItem() && (jsonItem == null || jsonItem.isEmpty()) && pieceToUpdate.getHoldingId() != null) {
           return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);
         } else if (jsonItem != null && !jsonItem.isEmpty()) {
-          return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate, requestContext).thenCompose(
-            aVoid -> inventoryManager.updateItem(jsonItem, requestContext).thenApply(item -> jsonItem.getString(ID)));
+          return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate).compose(
+            aVoid -> inventoryManager.updateItem(jsonItem, requestContext).map(item -> jsonItem.getString(ID)));
         } else {
-          return completedFuture(null);
+          return Future.succeededFuture();
         }
       });
     }
-    return completedFuture(null);
+    return Future.succeededFuture();
   }
 
-  private CompletableFuture<Void> updateItemWithFields(JsonObject item, CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
-    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(item))
-      .thenAccept(itemP -> {
-        Optional.ofNullable(piece.getHoldingId()).ifPresent(pieceHoldingId -> {
-          itemP.put(ITEM_HOLDINGS_RECORD_ID, piece.getHoldingId());
-        });
-       itemP.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
-      });
+  private Future<Void> updateItemWithFields(JsonObject item, CompositePoLine compPOL, Piece piece) {
+    Optional.ofNullable(piece.getHoldingId())
+      .ifPresent(pieceHoldingId -> item.put(ITEM_HOLDINGS_RECORD_ID, piece.getHoldingId()));
+    item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
+    return Future.succeededFuture();
   }
 
-  private CompletableFuture<String> nonPackageUpdateTitleWithInstance(PieceUpdateHolder holder, RequestContext requestContext) {
+  private Future<String> nonPackageUpdateTitleWithInstance(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
     if (poLineToSave.getInstanceId() == null && !PoLineCommonUtil.isInventoryUpdateNotRequired(poLineToSave)) {
       return titlesService.getTitleById(pieceToUpdate.getTitleId(), requestContext)
-        .thenCompose(title -> {
+        .compose(title -> {
           if (title.getInstanceId() == null) {
             return createTitleInstance(title, requestContext);
           }
-          return completedFuture(title.getInstanceId());
+          return Future.succeededFuture(title.getInstanceId());
         })
-        .thenApply(instanceId -> poLineToSave.withInstanceId(instanceId).getInstanceId());
+        .map(instanceId -> poLineToSave.withInstanceId(instanceId).getInstanceId());
     }
-    return completedFuture(poLineToSave.getInstanceId());
+    return Future.succeededFuture(poLineToSave.getInstanceId());
   }
 
-  private CompletableFuture<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
+  private Future<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
     if (title.getInstanceId() != null) {
-      return CompletableFuture.completedFuture(title);
+      return Future.succeededFuture(title);
     } else {
       return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
-        .thenApply(title::withInstanceId)
-        .thenCompose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(json -> title));
+        .map(title::withInstanceId)
+        .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext))
+        .map(v -> title);
     }
   }
 
-  private CompletableFuture<String> createTitleInstance(Title title, RequestContext requestContext) {
+  private Future<String> createTitleInstance(Title title, RequestContext requestContext) {
     return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
-      .thenApply(title::withInstanceId)
-      .thenCompose(titleWithInstanceId ->
-        titlesService.saveTitle(titleWithInstanceId, requestContext).thenApply(aVoid -> title.getInstanceId())
-      );
+      .map(title::withInstanceId)
+      .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext))
+      .map(aVoid -> title.getInstanceId());
   }
 }

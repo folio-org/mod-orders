@@ -1,6 +1,5 @@
 package org.folio.service.pieces.flows.strategies;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
@@ -9,7 +8,6 @@ import static org.folio.service.inventory.InventoryManager.ID;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -18,6 +16,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryManager;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
@@ -25,27 +24,26 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
   public ProcessInventoryMixedStrategy() {
   }
 
-  public CompletableFuture<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL,
+  public Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL,
                                                                       InventoryManager inventoryManager,
                                                                       RequestContext requestContext) {
-    List<CompletableFuture<Void>> itemsPerHolding = new ArrayList<>();
-    compPOL.getLocations().forEach(location -> {
-      itemsPerHolding.add(inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getInstanceId(), location, requestContext)
-        .thenAccept(holding -> updateLocationWithHoldingInfo(holding, location)));
-    });
+    List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
+    compPOL.getLocations()
+      .forEach(location -> itemsPerHolding.add(inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getInstanceId(), location, requestContext)
+        .onSuccess(holding -> updateLocationWithHoldingInfo(holding, location))));
     return collectResultsOnSuccess(itemsPerHolding)
-      .thenAccept(aVoid -> updateLocations(compPOL))
-      .thenCompose(aVoid -> {
-          List<CompletableFuture<List<Piece>>> pieceFutures = new ArrayList<>();
+      .onSuccess(aVoid -> updateLocations(compPOL))
+      .compose(aVoid -> {
+          List<Future<List<Piece>>> pieceFutures = new ArrayList<>();
           if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
             for (Location location : compPOL.getLocations()) {
               pieceFutures.add(inventoryManager.handleItemRecords(compPOL, location, requestContext));
             }
           } else {
-            pieceFutures.add(completedFuture(Collections.emptyList()));
+            pieceFutures.add(Future.succeededFuture(Collections.emptyList()));
           }
           return collectResultsOnSuccess(pieceFutures)
-            .thenApply(itemCreated -> itemCreated.stream()
+            .map(itemCreated -> itemCreated.stream()
               .flatMap(List::stream)
               .collect(toList())
             );

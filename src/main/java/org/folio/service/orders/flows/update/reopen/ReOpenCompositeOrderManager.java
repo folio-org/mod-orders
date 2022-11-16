@@ -1,6 +1,5 @@
 package org.folio.service.orders.flows.update.reopen;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
@@ -8,10 +7,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.orders.flows.update.reopen.ReOpenCompositeOrderHolder;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
@@ -26,6 +23,7 @@ import org.folio.service.invoice.InvoiceService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.pieces.PieceStorageService;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class ReOpenCompositeOrderManager {
@@ -42,11 +40,11 @@ public class ReOpenCompositeOrderManager {
     this.invoiceService = invoiceService;
   }
 
-  public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
+  public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                                        RequestContext requestContext) {
     addPoLinesIfNeeded(compPO, poFromStorage);
     return processEncumbrances(compPO, poFromStorage, requestContext)
-            .thenCompose(v -> updatePoLineStatuses(compPO, requestContext));
+            .compose(v -> updatePoLineStatuses(compPO, requestContext));
   }
 
   private void addPoLinesIfNeeded(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
@@ -59,46 +57,42 @@ public class ReOpenCompositeOrderManager {
     }
   }
 
-  private CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
+  private Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                                                       RequestContext requestContext) {
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.CLOSED_TO_OPEN);
     return strategy.processEncumbrances(compPO, poFromStorage, requestContext);
   }
 
-  private CompletableFuture<Void> updatePoLineStatuses(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(compPO.getOrderType()))
-              .thenCompose(orderTypeP -> {
-                if (CompositePurchaseOrder.OrderType.ONE_TIME == compPO.getOrderType()) {
-                  return oneTimeUpdatePoLineStatuses(compPO.getId(), compPO.getCompositePoLines(), requestContext);
-                } else if (CompositePurchaseOrder.OrderType.ONGOING == compPO.getOrderType()) {
-                  return ongoingUpdatePoLineStatuses(compPO.getCompositePoLines(), requestContext);
-                }
-                return CompletableFuture.completedFuture(null);
-              });
+  private Future<Void> updatePoLineStatuses(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    if (CompositePurchaseOrder.OrderType.ONE_TIME == compPO.getOrderType()) {
+      return oneTimeUpdatePoLineStatuses(compPO.getId(), compPO.getCompositePoLines(), requestContext);
+    } else if (CompositePurchaseOrder.OrderType.ONGOING == compPO.getOrderType()) {
+      return ongoingUpdatePoLineStatuses(compPO.getCompositePoLines());
+    }
+    return Future.succeededFuture();
   }
 
   /**
    * Ongoing orders always stay with Payment and Receipt status
+   *
    * @param poLines
+   * @return
    */
-  private CompletableFuture<Void> ongoingUpdatePoLineStatuses(List<CompositePoLine> poLines, RequestContext requestContext) {
-   return FolioVertxCompletableFuture.from(requestContext.getContext(), completedFuture(poLines))
-                   .thenAccept(poLinesP -> {
-                     poLinesP.forEach(poLine -> {
-                       poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.ONGOING);
-                       poLine.setPaymentStatus(CompositePoLine.PaymentStatus.ONGOING);
-                     });
-                   });
+  private Future<Void> ongoingUpdatePoLineStatuses(List<CompositePoLine> poLines) {
+    poLines.forEach(poLine -> {
+      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.ONGOING);
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.ONGOING);
+    });
+    return Future.succeededFuture();
   }
 
-  private CompletableFuture<Void> oneTimeUpdatePoLineStatuses(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
+  private Future<Void> oneTimeUpdatePoLineStatuses(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
     return buildHolder(orderId, poLines, requestContext)
-            .thenAccept(holder -> {
-              poLines.forEach(poLine -> {
-                updatePoLineReceiptStatus(poLine, holder);
-                updatePoLinePaymentStatus(poLine, holder);
-               });
-            });
+            .onSuccess(holder -> poLines.forEach(poLine -> {
+              updatePoLineReceiptStatus(poLine, holder);
+              updatePoLinePaymentStatus(poLine, holder);
+             }))
+      .mapEmpty();
   }
 
   private void updatePoLinePaymentStatus(CompositePoLine poLine, ReOpenCompositeOrderHolder holder) {
@@ -137,19 +131,19 @@ public class ReOpenCompositeOrderManager {
     }
   }
 
-  private CompletableFuture<ReOpenCompositeOrderHolder> buildHolder(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
+  private Future<ReOpenCompositeOrderHolder> buildHolder(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
     ReOpenCompositeOrderHolder holder = new ReOpenCompositeOrderHolder(orderId);
     return getPieces(poLines, requestContext)
-              .thenAccept(holder::withPieces)
-              .thenApply(v -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
-              .thenCompose(poLineIds -> invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext))
-              .thenAccept(holder::withInvoiceLines)
-              .thenCompose(v -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
-              .thenApply(holder::withOrderInvoices)
-              .thenApply(v -> holder);
+              .onSuccess(holder::withPieces)
+              .map(v -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
+              .compose(poLineIds -> invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext))
+              .onSuccess(holder::withInvoiceLines)
+              .compose(v -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
+              .map(holder::withOrderInvoices)
+              .map(v -> holder);
   }
 
-  private CompletableFuture<List<Piece>> getPieces(List<CompositePoLine> poLines, RequestContext requestContext) {
+  private Future<List<Piece>> getPieces(List<CompositePoLine> poLines, RequestContext requestContext) {
     List<String> poLineIds = poLines.stream().map(CompositePoLine::getId).distinct().collect(toList());
     return pieceStorageService.getPiecesByLineIdsByChunks(poLineIds, requestContext);
   }

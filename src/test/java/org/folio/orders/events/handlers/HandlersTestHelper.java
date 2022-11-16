@@ -3,7 +3,7 @@ package org.folio.orders.events.handlers;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
-import static org.folio.helper.AbstractHelper.EVENT_PAYLOAD;
+import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;

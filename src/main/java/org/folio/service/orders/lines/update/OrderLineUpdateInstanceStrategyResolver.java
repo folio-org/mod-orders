@@ -1,8 +1,8 @@
 package org.folio.service.orders.lines.update;
 
-import org.folio.rest.jaxrs.model.CreateInventoryType;
-
 import java.util.Map;
+
+import org.folio.rest.jaxrs.model.CreateInventoryType;
 
 public class OrderLineUpdateInstanceStrategyResolver {
   private final Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies;

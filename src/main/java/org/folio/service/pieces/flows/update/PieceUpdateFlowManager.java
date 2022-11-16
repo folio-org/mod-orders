@@ -2,11 +2,8 @@ package org.folio.service.pieces.flows.update;
 
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
@@ -16,6 +13,8 @@ import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 public class PieceUpdateFlowManager {
@@ -44,18 +43,21 @@ public class PieceUpdateFlowManager {
   // 1. Before update, get piece by id from storage and store receiving status
   // 2. Update piece with new content and complete future
   // 3. Create a message and check if receivingStatus is not consistent with storage; if yes - send a message to event bus
-  public CompletableFuture<Void> updatePiece(Piece pieceToUpdate, boolean createItem, boolean deleteHolding, RequestContext requestContext) {
-    CompletableFuture<Void> future = new FolioVertxCompletableFuture<>(requestContext.getContext());
-    PieceUpdateHolder holder = new PieceUpdateHolder().withPieceToUpdate(pieceToUpdate).withCreateItem(createItem)
-                                                      .withDeleteHolding(deleteHolding);
+  public Future<Void> updatePiece(Piece pieceToUpdate, boolean createItem, boolean deleteHolding, RequestContext requestContext) {
+    PieceUpdateHolder holder = new PieceUpdateHolder()
+      .withPieceToUpdate(pieceToUpdate)
+      .withCreateItem(createItem)
+      .withDeleteHolding(deleteHolding);
+
+    Promise<Void> promise = Promise.promise();
     pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
-      .thenAccept(holder::withPieceFromStorage)
-      .thenCompose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
-      .thenAccept(v -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPoLine(), createItem))
-      .thenCompose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), UPDATE, requestContext))
-      .thenCompose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
-      .thenCompose(vVoid -> updatePoLine(holder, requestContext))
-      .thenAccept(afterUpdate -> {
+      .onSuccess(holder::withPieceFromStorage)
+      .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
+      .onSuccess(v -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPoLine(), createItem))
+      .compose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), UPDATE, requestContext))
+      .compose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
+      .compose(vVoid -> updatePoLine(holder, requestContext))
+      .onSuccess(afterUpdate -> {
         JsonObject messageToEventBus = new JsonObject();
         messageToEventBus.put("poLineIdUpdate", holder.getPieceToUpdate().getPoLineId());
         Piece.ReceivingStatus receivingStatusStorage = holder.getPieceFromStorage().getReceivingStatus();
@@ -66,21 +68,20 @@ public class PieceUpdateFlowManager {
           pieceService.receiptConsistencyPiecePoLine(messageToEventBus, requestContext);
         }
       })
-      .thenCompose(aVoid -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext))
-      .thenAccept(future::complete)
-      .exceptionally(t -> {
+      .compose(aVoid -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext))
+      .onSuccess(promise::complete)
+      .onFailure(t -> {
         logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause());
-        future.completeExceptionally(t);
-        return null;
+        promise.fail(t);
       });
-    return future;
+    return promise.future();
   }
 
-  protected CompletableFuture<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
+  protected Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
     if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems())) {
       return updatePoLineService.updatePoLine(holder, requestContext);
     }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture();
   }
 
 }

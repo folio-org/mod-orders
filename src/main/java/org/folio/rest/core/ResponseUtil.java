@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.folio.rest.core.exceptions.ExceptionUtil;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.Errors;

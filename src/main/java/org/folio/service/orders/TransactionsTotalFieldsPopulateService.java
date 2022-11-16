@@ -2,7 +2,6 @@ package org.folio.service.orders;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.ToDoubleFunction;
 
 import org.folio.models.CompositeOrderRetrieveHolder;
@@ -11,6 +10,8 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
+
+import io.vertx.core.Future;
 
 public class TransactionsTotalFieldsPopulateService implements CompositeOrderDynamicDataPopulateService {
 
@@ -23,24 +24,24 @@ public class TransactionsTotalFieldsPopulateService implements CompositeOrderDyn
   }
 
   @Override
-  public CompletableFuture<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder,
+  public Future<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
     return Optional.of(holder)
       .map(CompositeOrderRetrieveHolder::getFiscalYear)
       .map(s -> withTotalFields(holder, requestContext))
-      .orElseGet(() -> CompletableFuture.completedFuture(holder.withTotalExpended(0d)
+      .orElseGet(() ->  Future.succeededFuture(holder.withTotalExpended(0d)
         .withTotalEncumbered(0d)));
   }
 
-  private CompletableFuture<CompositeOrderRetrieveHolder> withTotalFields(CompositeOrderRetrieveHolder holder,
+  private Future<CompositeOrderRetrieveHolder> withTotalFields(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
-    return getCurrentEncumbrances(holder, requestContext).thenApply(transactions -> {
+    return getCurrentEncumbrances(holder, requestContext).map(transactions -> {
       holder.withTotalEncumbered(getTransactionsTotal(transactions, Transaction::getAmount));
       return holder.withTotalExpended(getTransactionsTotal(transactions, GET_AMOUNT_EXPENDED_FUNCTION));
     });
   }
 
-  public CompletableFuture<List<Transaction>> getCurrentEncumbrances(CompositeOrderRetrieveHolder holder,
+  public Future<List<Transaction>> getCurrentEncumbrances(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
     String query = String.format("transactionType==Encumbrance AND encumbrance.sourcePurchaseOrderId==%s AND fiscalYearId==%s",
         holder.getOrderId(), holder.getFiscalYearId());
