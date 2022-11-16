@@ -3,6 +3,7 @@ package org.folio.service;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.rest.core.exceptions.ErrorCodes.*;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
@@ -75,14 +76,18 @@ public class SuffixService {
       });
   }
   public CompletableFuture<Void> isSuffixAvailable(String suffixName, RequestContext requestContext) {
-    String query = "name==" + suffixName;
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);
-    return restClient.get(requestEntry, requestContext, SuffixCollection.class).thenAccept(suffix -> {
-      if(suffix.getTotalRecords() == 0) {
-        logger.error("Suffix {} is not present", suffixName);
-        throw new HttpException(404, SUFFIX_NOT_FOUND);
-      }
-    });
+    if(Objects.nonNull(suffixName)){
+      String query = "name==" + suffixName;
+      RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);
+      return restClient.get(requestEntry, requestContext, SuffixCollection.class)
+        .thenAccept(suffix -> {
+          if(suffix.getTotalRecords() == 0) {
+            logger.error("Suffix {} may not be available", suffixName);
+            throw new HttpException(404, SUFFIX_NOT_FOUND);
+          }
+        });
+    }
+    return CompletableFuture.completedFuture(null);
   }
 
 }

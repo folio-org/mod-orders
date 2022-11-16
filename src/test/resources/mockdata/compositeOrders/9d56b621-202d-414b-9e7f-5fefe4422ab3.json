@@ -4,6 +4,8 @@
   "approved" : true,
   "poNumber": "10000",
   "orderType": "One-Time",
+  "poNumberPrefix":"test",
+  "poNumberSuffix":"ll",
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Open",
   "compositePoLines": [
