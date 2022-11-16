@@ -35,6 +35,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.C
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -60,6 +61,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.FolioVertxCompletableFuture;
+import org.folio.models.ItemStatus;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFieldsUtil;
@@ -896,6 +898,36 @@ public class PurchaseOrderLineHelper {
     return completedFuture(null);
   }
 
+  private CompletableFuture<Void> updateInventoryItemStatus(CompositePoLine compOrderLine, RequestContext requestContext) {
+    return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
+      .thenCompose(poLines -> {
+        if (poLines.size() > 1) {
+          List<String> poLinesId = poLines.stream().map(PoLine::getId).collect(toList());
+          return inventoryManager.getItemsByPoLineIdsAndStatus(poLinesId, ItemStatus.ON_ORDER.value(), requestContext)
+            .thenCompose(items -> {
+              if (items.size() > 1) {
+                Optional<JsonObject> poLineItem = items.stream()
+                  .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
+                if (poLineItem.isPresent()) {
+                  JsonObject updatedItem = updateItemStatus(poLineItem.get());
+                  inventoryManager.updateItem(updatedItem, requestContext);
+                }
+              }
+              return CompletableFuture.completedFuture(null);
+            });
+        }
+        return CompletableFuture.completedFuture(null);
+      });
+  }
+
+  private JsonObject updateItemStatus(JsonObject poLineItem) {
+    JsonObject status = new JsonObject();
+    status.put("name", ItemStatus.ORDER_CLOSED);
+    status.put("date", Instant.now());
+    poLineItem.put("status", status);
+    return poLineItem;
+  }
+
   private boolean isEncumbranceUpdateNeeded(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine, PoLine storagePoLine) {
     List<FundDistribution> requestFundDistros = compositePoLine.getFundDistribution();
     List<FundDistribution> storageFundDistros = storagePoLine.getFundDistribution();
@@ -939,7 +971,8 @@ public class PurchaseOrderLineHelper {
    // See MODORDERS-218
     if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
           || !StringUtils.equals(poLine.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value())) {
-      HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, createUpdateOrderMessage(compOrderLine), requestContext);
+      updateInventoryItemStatus(compOrderLine, requestContext)
+        .thenAccept(v -> HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, createUpdateOrderMessage(compOrderLine), requestContext));
     }
   }
 
