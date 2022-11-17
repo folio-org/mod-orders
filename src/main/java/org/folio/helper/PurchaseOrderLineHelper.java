@@ -98,6 +98,7 @@ import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.invoice.PoLineInvoiceLineHolderBuilder;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderWorkflowType;
@@ -133,6 +134,7 @@ public class PurchaseOrderLineHelper {
   private final ConfigurationEntriesService configurationEntriesService;
   private final RestClient restClient;
   private final CompositePoLineValidationService compositePoLineValidationService;
+  private final PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder;
 
   public PurchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
     ExpenseClassValidationService expenseClassValidationService,
@@ -140,7 +142,7 @@ public class PurchaseOrderLineHelper {
     TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
     PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesService configurationEntriesService, RestClient restClient,
-    CompositePoLineValidationService compositePoLineValidationService) {
+    CompositePoLineValidationService compositePoLineValidationService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
     this.inventoryManager = inventoryManager;
     this.encumbranceService = encumbranceService;
     this.expenseClassValidationService = expenseClassValidationService;
@@ -154,6 +156,7 @@ public class PurchaseOrderLineHelper {
     this.configurationEntriesService = configurationEntriesService;
     this.restClient = restClient;
     this.compositePoLineValidationService = compositePoLineValidationService;
+    this.poLineInvoiceLineHolderBuilder = poLineInvoiceLineHolderBuilder;
   }
 
   /**
@@ -309,9 +312,19 @@ public class PurchaseOrderLineHelper {
           compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
           return updateOrderLine(compOrderLine, lineFromStorage, requestContext)
             .thenCompose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
+            .thenCompose(v -> updateInvoiceLineConnection(compOrderLine, lineFromStorage, requestContext))
             .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext));
         });
 
+  }
+
+  private CompletableFuture<Void> updateInvoiceLineConnection(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
+    if (CollectionUtils.isEqualCollection(compOrderLine.getFundDistribution(), lineFromStorage.mapTo(PoLine.class).getFundDistribution())) {
+      return CompletableFuture.completedFuture(null);
+    } else {
+      return poLineInvoiceLineHolderBuilder.buildHolder(compOrderLine, requestContext)
+        .thenCompose(holder -> CompletableFuture.completedFuture(null)); // Continue implementing other flows from here
+    }
   }
 
   private CompletableFuture<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage,
