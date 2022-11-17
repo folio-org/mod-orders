@@ -211,9 +211,9 @@ public class PurchaseOrderHelper {
         .thenAccept(ok -> checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext))
         .thenCompose(ok -> setPoNumberIfMissing(compPO, requestContext)
         .thenCompose(p -> prefixService.isPrefixAvailable(compPO.getPoNumberPrefix(),requestContext))
-        .thenCompose(p -> setPoNumberPrefix(compPO))
+        .thenAccept(p -> setPoNumberPrefix(compPO))
         .thenCompose(s -> suffixService.isSuffixAvailable(compPO.getPoNumberSuffix(),requestContext))
-        .thenCompose(s -> setPoNumberSuffix(compPO))
+        .thenAccept(s -> setPoNumberSuffix(compPO))
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext))
         .thenCompose(v -> processPoLineTags(compPO, requestContext))
         .thenCompose(v -> createPOandPOLines(compPO, cachedTenantConfiguration, requestContext))
@@ -241,7 +241,7 @@ public class PurchaseOrderHelper {
           .thenCompose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
           .thenCompose(p -> prefixService.isPrefixAvailable(compPO.getPoNumberPrefix(),requestContext))
           .thenCompose(s -> suffixService.isSuffixAvailable(compPO.getPoNumberSuffix(),requestContext))
-          .thenCompose(ps -> updatePrefixAndSuffix(poFromStorage,compPO))
+          .thenAccept(ps -> updatePrefixAndSuffix(poFromStorage,compPO))
           .thenAccept(ok -> {
             if (isTransitionToApproved(poFromStorage, compPO)) {
               checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext);
@@ -509,21 +509,19 @@ public class PurchaseOrderHelper {
     return completedFuture(null);
   }
 
-  private CompletionStage<Void> setPoNumberPrefix(CompositePurchaseOrder compPO) {
+  private void setPoNumberPrefix(CompositePurchaseOrder compPO) {
     if(Objects.nonNull(compPO.getPoNumberPrefix())) {
       compPO.setPoNumber(compPO.getPoNumberPrefix() + compPO.getPoNumber());
     }
-    return completedFuture(null);
   }
 
-  private CompletionStage<Void> setPoNumberSuffix(CompositePurchaseOrder compPO) {
+  private void setPoNumberSuffix(CompositePurchaseOrder compPO) {
     if(Objects.nonNull(compPO.getPoNumberSuffix())) {
       compPO.setPoNumber(compPO.getPoNumber() + compPO.getPoNumberSuffix());
     }
-    return completedFuture(null);
   }
 
-  public CompletableFuture<Void> updatePrefixAndSuffix(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
+  public void updatePrefixAndSuffix(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
     String poNumber = "";
     if(isPrefixChanged(poFromStorage, updatedPo)) {
       if(Objects.nonNull(updatedPo.getPoNumberPrefix()) && !updatedPo.getPoNumberPrefix().isEmpty()) {
@@ -532,7 +530,7 @@ public class PurchaseOrderHelper {
           updatedPo.setPoNumber(updatedPo.getPoNumberPrefix() + poNumber);
         }
         else {
-          updatedPo.setPoNumber(updatedPo.getPoNumberPrefix() + updatedPo.getPoNumber());
+          setPoNumberPrefix(updatedPo);
         }
       }
       else {
@@ -548,7 +546,7 @@ public class PurchaseOrderHelper {
           updatedPo.setPoNumber(poNumber + updatedPo.getPoNumberSuffix());
         }
         else {
-          updatedPo.setPoNumber(updatedPo.getPoNumber() + updatedPo.getPoNumberSuffix());
+          setPoNumberSuffix(updatedPo);
         }
       }
       else {
@@ -557,7 +555,6 @@ public class PurchaseOrderHelper {
       }
     }
 
-    return CompletableFuture.completedFuture(null);
   }
 
   public static boolean isPrefixChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
