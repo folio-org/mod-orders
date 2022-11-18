@@ -927,7 +927,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private boolean isStatusChanged(CompositePoLine compOrderLine, PoLine lineFromStorage) {
-    return !StringUtils.equals(lineFromStorage.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value()) &&
+    return !StringUtils.equals(lineFromStorage.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value()) ||
       !StringUtils.equals(lineFromStorage.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value());
   }
 
@@ -985,8 +985,7 @@ public class PurchaseOrderLineHelper {
   private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     PoLine poLine =  lineFromStorage.mapTo(PoLine.class);
    // See MODORDERS-218
-    if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
-          || !StringUtils.equals(poLine.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value())) {
+    if (isStatusChanged(compOrderLine, poLine)) {
       HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, createUpdateOrderMessage(compOrderLine), requestContext);
     }
   }
