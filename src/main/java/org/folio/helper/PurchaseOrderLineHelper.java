@@ -909,7 +909,7 @@ public class PurchaseOrderLineHelper {
                 Optional<JsonObject> poLineItem = items.stream()
                   .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
                 if (poLineItem.isPresent()) {
-                  JsonObject updatedItem = updateItemStatus(poLineItem.get());
+                  JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
                   inventoryManager.updateItem(updatedItem, requestContext);
                 }
               }
@@ -920,9 +920,9 @@ public class PurchaseOrderLineHelper {
       });
   }
 
-  private JsonObject updateItemStatus(JsonObject poLineItem) {
+  private JsonObject updateItemStatus(JsonObject poLineItem, ItemStatus itemStatus) {
     JsonObject status = new JsonObject();
-    status.put("name", ItemStatus.ORDER_CLOSED);
+    status.put("name", itemStatus);
     status.put("date", Instant.now());
     poLineItem.put("status", status);
     return poLineItem;
