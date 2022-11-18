@@ -311,7 +311,7 @@ public class PurchaseOrderLineHelper {
           compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
           return updateOrderLine(compOrderLine, lineFromStorage, requestContext)
             .thenCompose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
-            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext));
+            .thenAccept(ok -> updateInventoryItemAndOrderStatuses(compOrderLine, lineFromStorage, requestContext));
         });
 
   }
@@ -966,7 +966,7 @@ public class PurchaseOrderLineHelper {
     }
   }
 
-  private void updateOrderStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
+  private void updateInventoryItemAndOrderStatuses(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     PoLine poLine =  lineFromStorage.mapTo(PoLine.class);
    // See MODORDERS-218
     if (!StringUtils.equals(poLine.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value())
