@@ -1649,7 +1649,46 @@
         "id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
         "name": "Main"
       }
+    },
+    {
+      "id": "365ab8be-88ef-431b-a3b0-0c1b680a1160",
+      "status": {
+        "name": "On order"
+      },
+      "title": "BEST AMERICAN SCIENCE FICTION AND FANTASY.",
+      "hrid": "it00001229",
+      "formerIds": [],
+      "discoverySuppress": null,
+      "holdingsRecordId": "73499948-6b8d-45bb-ad81-c25fda22ced2",
+      "barcode": "",
+      "notes": [],
+      "circulationNotes": [],
+      "yearCaption": [],
+      "electronicAccess": [],
+      "statisticalCodeIds": [],
+      "purchaseOrderLineIdentifier": "cc189777-fd26-4ae8-b0e5-08abebb50b51",
+      "materialType": {
+        "id": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "name": "Physical resource"
+      },
+      "permanentLoanType": {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe27",
+        "name": "Can circulate"
+      },
+      "metadata": {
+        "createdDate": "2019-03-05T07:52:48.657+0000",
+        "createdByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9",
+        "updatedDate": "2019-03-05T08:43:38.089+0000",
+        "updatedByUserId": "3b1b3a38-76a0-5b65-887f-278d728034d9"
+      },
+      "links": {
+        "self": "http://10.0.2.15:9130/inventory/items/365ab8be-88ef-431b-a3b0-0c1b680a1160"
+      },
+      "effectiveLocation": {
+        "id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+        "name": "ORWIG ETHNO CD"
+      }
     }
   ],
-  "totalRecords": 42
+  "totalRecords": 43
 }
