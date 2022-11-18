@@ -2615,6 +2615,7 @@ public class MockServer {
 
     String poLineId1 = "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1";
     String poLineId2 = "4d3d5eb0-b32a-11eb-8529-0242ac130003";
+    String poLineId3 = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     InvoiceLineCollection invoiceLineCollection;
     if (query.equals("poLineId == " + poLineId1 + " and releaseEncumbrance == true")) {
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(Collections.emptyList()).withTotalRecords(0);
@@ -2624,6 +2625,8 @@ public class MockServer {
         .withPoLineId(poLineId2)
         .withReleaseEncumbrance(true);
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
+    } else if (query.contains("poLineId==")) {
+      invoiceLineCollection = new InvoiceLineCollection();
     } else if (query.matches("poLineId(.*)")) {
       InvoiceLine invoiceLine = new InvoiceLine()
         .withId(UUID.randomUUID().toString())

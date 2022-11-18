@@ -35,12 +35,12 @@ public class PoLineInvoiceLineHolderBuilder {
   public CompletableFuture<PoLineInvoiceLineHolder> buildHolder(CompositePoLine compOrderLine, RequestContext requestContext) {
     PoLineInvoiceLineHolder holder = new PoLineInvoiceLineHolder(compOrderLine);
     return invoiceLineService.getInvoiceLinesByOrderLineId(compOrderLine.getId(), requestContext)
-      .thenAccept(holder::withInvoiceLines)
-      .thenApply(aVoid -> getOpenOrReviewedInvoiceLines(holder.getInvoiceLines()))
-      .thenAccept(holder::withOpenOrReviewedInvoiceLines)
-      .thenCompose(aVoid -> validateAndRetrievePaidInvoiceLines(compOrderLine, holder.getInvoiceLines(), requestContext))
-      .thenAccept(holder::withCurrentYearPaidInvoiceLines)
-      .thenApply(aVoid -> holder);
+      .thenCompose(invoiceLines -> CollectionUtils.isEmpty(invoiceLines) ? CompletableFuture.completedFuture(holder) :
+        CompletableFuture.completedFuture(getOpenOrReviewedInvoiceLines(holder.getInvoiceLines()))
+          .thenAccept(holder::withOpenOrReviewedInvoiceLines)
+          .thenCompose(aVoid -> validateAndRetrievePaidInvoiceLines(compOrderLine, holder.getInvoiceLines(), requestContext))
+          .thenAccept(holder::withCurrentYearPaidInvoiceLines)
+          .thenApply(aVoid -> holder));
   }
 
   private CompletableFuture<List<InvoiceLine>> validateAndRetrievePaidInvoiceLines(CompositePoLine compOrderLine, List<InvoiceLine> invoiceLines, RequestContext requestContext) {
@@ -50,7 +50,7 @@ public class PoLineInvoiceLineHolderBuilder {
       return getCurrentFiscalYearInvoiceLines(poLineFundId, invoiceLines, requestContext)
         .thenApply(currentYearInvoiceLines -> {
           validateInvoiceLinesStatus(currentYearInvoiceLines);
-          return getApprovedInvoiceLines(currentYearInvoiceLines);
+          return getPaidInvoiceLines(currentYearInvoiceLines);
         });
     } else {
       return CompletableFuture.completedFuture(null); //Should ask Dennis what we should do in case of POL doesn't have fund distribution
@@ -95,7 +95,7 @@ public class PoLineInvoiceLineHolderBuilder {
     return filterInvoiceLinesByStatuses(invoiceLines, EDITABLE_STATUSES);
   }
 
-  private List<InvoiceLine> getApprovedInvoiceLines(List<InvoiceLine> invoiceLines) {
+  private List<InvoiceLine> getPaidInvoiceLines(List<InvoiceLine> invoiceLines) {
     return filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.PAID));
   }
 

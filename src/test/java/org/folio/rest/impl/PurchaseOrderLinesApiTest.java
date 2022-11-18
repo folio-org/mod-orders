@@ -501,7 +501,7 @@ public class PurchaseOrderLinesApiTest {
 
     //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(4, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
 
@@ -660,7 +660,7 @@ public class PurchaseOrderLinesApiTest {
     // + 1 call to get the line encumbrances
     // + 1 call to check invoice relationships
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(6, column.size());
+    assertEquals(7, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
