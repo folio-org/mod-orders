@@ -932,7 +932,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private boolean isCurrentStatusCanceled(CompositePoLine compOrderLine) {
-    return CompositePoLine.ReceiptStatus.CANCELLED.equals(compOrderLine.getReceiptStatus()) &&
+    return CompositePoLine.ReceiptStatus.CANCELLED.equals(compOrderLine.getReceiptStatus()) ||
       CompositePoLine.PaymentStatus.CANCELLED.equals(compOrderLine.getPaymentStatus());
   }
 
