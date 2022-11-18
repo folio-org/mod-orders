@@ -1321,6 +1321,8 @@ public class PurchaseOrderLinesApiTest {
       .collect(Collectors.toList());
 
     assertThat(errorCodes, containsInAnyOrder(LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN.getCode()));
+
+    cleanMockEntry();
   }
 
   @Test
@@ -1373,6 +1375,38 @@ public class PurchaseOrderLinesApiTest {
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+
+    cleanMockEntry();
+  }
+
+  @Test
+  void testShouldChangeItemStatusAfterCancelledPoLine() {
+    logger.info("=== Test change item status to 'Order closed' after cancelled PoLine  ===");
+
+    CompositePoLine firstLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    CompositePoLine secondLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(CompositePoLine.class);
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(CompositePoLine.class);
+    reqData.setReceiptStatus(ReceiptStatus.CANCELLED);
+    reqData.setPaymentStatus(PaymentStatus.CANCELLED);
+
+    Fund fund = new Fund()
+      .withId("7fbd5d84-62d1-44c6-9c45-6cb173998bbd")
+      .withName("Fund")
+      .withExternalAccountNo("externalNo")
+      .withLedgerId("133a7916-f05e-4df4-8f7f-09eb2a7076d1");
+
+    addMockEntry(PIECES_STORAGE, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES_STORAGE, firstLineFromStorage);
+    addMockEntry(PO_LINES_STORAGE, secondLineFromStorage);
+    addMockEntry(FUNDS, fund);
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+
+    cleanMockEntry();
   }
 
   @Test
@@ -1685,6 +1719,15 @@ public class PurchaseOrderLinesApiTest {
     poLine.setId(lineId);
     poLine.setPurchaseOrderId(orderId);
     return JsonObject.mapFrom(poLine).encode();
+  }
+
+  private void cleanMockEntry() {
+    try {
+      clearServiceInteractions();
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }
