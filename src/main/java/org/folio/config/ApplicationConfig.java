@@ -53,6 +53,7 @@ import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.invoice.InvoiceService;
+import org.folio.service.invoice.POLInvoiceLineRelationService;
 import org.folio.service.invoice.PoLineInvoiceLineHolderBuilder;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
@@ -591,10 +592,10 @@ public class ApplicationConfig {
         TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
         PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
         ConfigurationEntriesService configurationEntriesService, RestClient restClient,
-        CompositePoLineValidationService compositePoLineValidationService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
+        CompositePoLineValidationService compositePoLineValidationService, POLInvoiceLineRelationService polInvoiceLineRelationService) {
     return new PurchaseOrderLineHelper(inventoryManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, acquisitionsUnitsService, protectionService,
-      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient, compositePoLineValidationService, poLineInvoiceLineHolderBuilder);
+      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient, compositePoLineValidationService, polInvoiceLineRelationService);
   }
 
   @Bean CompositePoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService) {
@@ -677,5 +678,9 @@ public class ApplicationConfig {
   @Bean PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder(FiscalYearService fiscalYearService, InvoiceLineService invoiceLineService,
                                                                       EncumbranceService encumbranceService) {
     return new PoLineInvoiceLineHolderBuilder(fiscalYearService, invoiceLineService, encumbranceService);
+  }
+
+  @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
+    return new POLInvoiceLineRelationService(poLineInvoiceLineHolderBuilder);
   }
 }

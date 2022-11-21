@@ -1,5 +1,6 @@
 package org.folio.models;
 
+import io.vertx.core.json.JsonObject;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 
@@ -9,12 +10,14 @@ import java.util.ArrayList;
 
 public class PoLineInvoiceLineHolder {
   private CompositePoLine poLine;
+  private JsonObject poLineFromStorage;
   private List<InvoiceLine> invoiceLines;
   private List<InvoiceLine> openOrReviewedInvoiceLines;
   private List<InvoiceLine> currentYearPaidInvoiceLines;
 
-  public PoLineInvoiceLineHolder(CompositePoLine poLine) {
+  public PoLineInvoiceLineHolder(CompositePoLine poLine, JsonObject poLineFromStorage) {
     this.poLine = poLine;
+    this.poLineFromStorage = poLineFromStorage;
     this.invoiceLines = new ArrayList<>();
     this.openOrReviewedInvoiceLines = new ArrayList<>();
     this.currentYearPaidInvoiceLines = new ArrayList<>();
@@ -37,6 +40,10 @@ public class PoLineInvoiceLineHolder {
 
   public CompositePoLine getPoLine() {
     return poLine;
+  }
+
+  public JsonObject getPoLineFromStorage() {
+    return poLineFromStorage;
   }
 
   public List<InvoiceLine> getInvoiceLines() {

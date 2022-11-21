@@ -1,5 +1,6 @@
 package org.folio.service.invoice;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -32,10 +33,11 @@ public class PoLineInvoiceLineHolderBuilder {
     this.encumbranceService = encumbranceService;
   }
 
-  public CompletableFuture<PoLineInvoiceLineHolder> buildHolder(CompositePoLine compOrderLine, RequestContext requestContext) {
-    PoLineInvoiceLineHolder holder = new PoLineInvoiceLineHolder(compOrderLine);
+  public CompletableFuture<PoLineInvoiceLineHolder> buildHolder(CompositePoLine compOrderLine, JsonObject poLineFromStorage, RequestContext requestContext) {
+    PoLineInvoiceLineHolder holder = new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage);
     return invoiceLineService.getInvoiceLinesByOrderLineId(compOrderLine.getId(), requestContext)
-      .thenCompose(invoiceLines -> CollectionUtils.isEmpty(invoiceLines) ? CompletableFuture.completedFuture(holder) :
+      .thenAccept(holder::withInvoiceLines)
+      .thenCompose(aResult -> CollectionUtils.isEmpty(holder.getInvoiceLines()) ? CompletableFuture.completedFuture(holder) :
         CompletableFuture.completedFuture(getOpenOrReviewedInvoiceLines(holder.getInvoiceLines()))
           .thenAccept(holder::withOpenOrReviewedInvoiceLines)
           .thenCompose(aVoid -> validateAndRetrievePaidInvoiceLines(compOrderLine, holder.getInvoiceLines(), requestContext))
