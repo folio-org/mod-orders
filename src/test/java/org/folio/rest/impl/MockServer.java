@@ -2128,6 +2128,24 @@ public class MockServer {
         body = getMockData(ENCUMBRANCE_FOR_TAGS_PATH);
       } else if (query.equals("id==(eb506834-6c70-4239-8d1a-6414a5b08015 or eb506834-6c70-4239-8d1a-6414a5b08ac3 or 0466cb77-0344-43c6-85eb-0a64aa2934e5)")) {
         body = getMockData(LISTED_PRINT_MONOGRAPH_ENCUMBRANCES_PATH);
+      } else if (query.equals("id==(9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1 or 109ecaa0-207d-5ebd-89f2-1fda1ae9108c)")) {
+        Transaction transaction1 = new Transaction()
+          .withId(UUID.randomUUID().toString())
+          .withFromFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
+          .withEncumbrance(new Encumbrance()
+            .withSourcePurchaseOrderId("477f9ca8-b295-11eb-8529-0242ac130003")
+            .withSourcePoLineId("50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")
+            .withStatus(Encumbrance.Status.UNRELEASED));
+        Transaction transaction2 = new Transaction()
+          .withId(UUID.randomUUID().toString())
+          .withFromFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
+          .withEncumbrance(new Encumbrance()
+            .withSourcePurchaseOrderId("477f9ca8-b295-11eb-8529-0242ac130003")
+            .withSourcePoLineId("50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")
+            .withStatus(Encumbrance.Status.UNRELEASED));
+        List<Transaction> transactions = List.of(transaction1);
+        TransactionCollection transactionCollection = new TransactionCollection().withTransactions(List.of(transaction1, transaction2)).withTotalRecords(2);
+        body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else if (query.contains("encumbrance.sourcePoLineId == 50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")) {
         // for testReopenOrderUnreleasesEncumbrancesUnlessInvoiceLineHasReleaseEncumbrance
         Transaction transaction1 = new Transaction()
@@ -2616,6 +2634,7 @@ public class MockServer {
     String poLineId1 = "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1";
     String poLineId2 = "4d3d5eb0-b32a-11eb-8529-0242ac130003";
     String poLineId3 = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+    String poLineId4 = "a6edc906-2f9f-5fb2-a373-efac406f0ef2";
     InvoiceLineCollection invoiceLineCollection;
     if (query.equals("poLineId == " + poLineId1 + " and releaseEncumbrance == true")) {
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(Collections.emptyList()).withTotalRecords(0);
@@ -2626,7 +2645,23 @@ public class MockServer {
         .withReleaseEncumbrance(true);
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
     } else if (query.contains("poLineId==")) {
-      invoiceLineCollection = new InvoiceLineCollection();
+      if (query.contains(poLineId3)) {
+        InvoiceLine invoiceLine = new InvoiceLine()
+          .withId(UUID.randomUUID().toString())
+          .withPoLineId(poLineId2)
+          .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.PAID)
+          .withReleaseEncumbrance(true);
+        invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
+      } else if(query.contains(poLineId4)) {
+        InvoiceLine invoiceLine = new InvoiceLine()
+          .withId(UUID.randomUUID().toString())
+          .withPoLineId(poLineId2)
+          .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.APPROVED)
+          .withReleaseEncumbrance(true);
+        invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
+      } else {
+        invoiceLineCollection = new InvoiceLineCollection();
+      }
     } else if (query.matches("poLineId(.*)")) {
       InvoiceLine invoiceLine = new InvoiceLine()
         .withId(UUID.randomUUID().toString())

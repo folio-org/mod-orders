@@ -2,6 +2,7 @@ package org.folio.service.invoice;
 
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.http.HttpStatus;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
@@ -86,7 +87,8 @@ public class PoLineInvoiceLineHolderBuilder {
   private void validateInvoiceLinesStatus(List<InvoiceLine> invoiceLines) {
     List<InvoiceLine> approvedInvoices = filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.APPROVED));
     if (CollectionUtils.isNotEmpty(approvedInvoices)) {
-      throw new HttpException(401, "Composite POL related invoice lines contains lines which has status APPROVED for the current fiscal year");
+      String invoiceLineIds = approvedInvoices.stream().map(InvoiceLine::getId).collect(Collectors.joining(", "));
+      throw new HttpException(HttpStatus.SC_FORBIDDEN, String.format("Composite POL related invoice lines contains lines which has status APPROVED for the current fiscal year, invoice line ids: %s", invoiceLineIds));
     }
   }
 

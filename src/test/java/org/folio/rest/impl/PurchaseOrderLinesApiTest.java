@@ -1107,6 +1107,28 @@ public class PurchaseOrderLinesApiTest {
 
   }
 
+  @Test
+  void testUpdatePoLineForOpenedOrderShouldFailedWhenRelatedInvoiceLineApprovedForCurrentFY() {
+    logger.info("=== Test update poline for opened order should failed when related invoice line is approved  ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    reqData.setId("a6edc906-2f9f-5fb2-a373-efac406f0ef2");
+    reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
+    reqData.getFundDistribution().get(0).setEncumbrance("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
+    reqData.getFundDistribution().get(1).setEncumbrance("109ecaa0-207d-5ebd-89f2-1fda1ae9108c");
+
+
+    CompositePoLine compositePoLine = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
+
+    compositePoLine.getFundDistribution().get(0).setValue(70.0);
+    compositePoLine.getFundDistribution().get(1).setValue(30.0);
+
+
+    verifyPut(String.format(LINE_BY_ID_PATH, compositePoLine.getId()), JsonObject.mapFrom(compositePoLine).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 403);
+  }
+
   private ProductId createIsbnProductId(String isbn) {
     return new ProductId().withProductIdType(ISBN_PRODUCT_TYPE_ID)
       .withProductId(isbn);
