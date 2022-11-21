@@ -84,7 +84,7 @@ public class SuffixServiceTest {
       .thenReturn(CompletableFuture.completedFuture(new SuffixCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
-    CompletableFuture<Void> result = suffixService.isSuffixAvailable("Test", requestContext);
+    CompletableFuture<Void> result = suffixService.validateSuffixAvailability("Test", requestContext);
     CompletionException expectedException = assertThrows(CompletionException.class, result::join);
 
     HttpException httpException = (HttpException) expectedException.getCause();

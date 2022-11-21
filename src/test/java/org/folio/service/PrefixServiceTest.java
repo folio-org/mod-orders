@@ -78,7 +78,7 @@ public class PrefixServiceTest {
     when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(new PrefixCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
-    CompletableFuture<Void> result = prefixService.isPrefixAvailable("Test", requestContext);
+    CompletableFuture<Void> result = prefixService.validatePrefixAvailability("Test", requestContext);
     CompletionException expectedException = assertThrows(CompletionException.class, result::join);
 
     HttpException httpException = (HttpException) expectedException.getCause();

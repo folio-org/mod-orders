@@ -76,7 +76,7 @@ public class SuffixService {
       });
   }
 
-  public CompletableFuture<Void> isSuffixAvailable(String suffixName, RequestContext requestContext) {
+  public CompletableFuture<Void> validateSuffixAvailability(String suffixName, RequestContext requestContext) {
     if(Objects.nonNull(suffixName)){
       String query = "name==" + suffixName;
       RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);

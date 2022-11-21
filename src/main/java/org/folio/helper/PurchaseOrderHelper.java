@@ -210,10 +210,10 @@ public class PurchaseOrderHelper {
         .thenCompose(tenantConfiguration -> validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), requestContext))
         .thenAccept(ok -> checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext))
         .thenCompose(ok -> setPoNumberIfMissing(compPO, requestContext)
-        .thenCompose(p -> prefixService.isPrefixAvailable(compPO.getPoNumberPrefix(),requestContext))
-        .thenAccept(p -> setPoNumberPrefix(compPO))
-        .thenCompose(s -> suffixService.isSuffixAvailable(compPO.getPoNumberSuffix(),requestContext))
-        .thenAccept(s -> setPoNumberSuffix(compPO))
+        .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
+        .thenAccept(p -> HelperUtils.setPoNumberPrefix(compPO))
+        .thenCompose(s -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
+        .thenAccept(s -> HelperUtils.setPoNumberSuffix(compPO))
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext))
         .thenCompose(v -> processPoLineTags(compPO, requestContext))
         .thenCompose(v -> createPOandPOLines(compPO, cachedTenantConfiguration, requestContext))
@@ -239,8 +239,8 @@ public class PurchaseOrderHelper {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return validateAcqUnitsOnUpdate(compPO, poFromStorage, requestContext)
           .thenCompose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
-          .thenCompose(p -> prefixService.isPrefixAvailable(compPO.getPoNumberPrefix(),requestContext))
-          .thenCompose(s -> suffixService.isSuffixAvailable(compPO.getPoNumberSuffix(),requestContext))
+          .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
+          .thenCompose(s -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
           .thenAccept(ps -> updatePrefixAndSuffix(poFromStorage,compPO))
           .thenAccept(ok -> {
             if (isTransitionToApproved(poFromStorage, compPO)) {
@@ -509,28 +509,16 @@ public class PurchaseOrderHelper {
     return completedFuture(null);
   }
 
-  private void setPoNumberPrefix(CompositePurchaseOrder compPO) {
-    if(Objects.nonNull(compPO.getPoNumberPrefix())) {
-      compPO.setPoNumber(compPO.getPoNumberPrefix() + compPO.getPoNumber());
-    }
-  }
-
-  private void setPoNumberSuffix(CompositePurchaseOrder compPO) {
-    if(Objects.nonNull(compPO.getPoNumberSuffix())) {
-      compPO.setPoNumber(compPO.getPoNumber() + compPO.getPoNumberSuffix());
-    }
-  }
-
   public void updatePrefixAndSuffix(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
     String poNumber = "";
-    if(isPrefixChanged(poFromStorage, updatedPo)) {
+    if(HelperUtils.isPrefixChanged(poFromStorage, updatedPo)) {
       if(Objects.nonNull(updatedPo.getPoNumberPrefix()) && !updatedPo.getPoNumberPrefix().isEmpty()) {
         if(Objects.nonNull(poFromStorage.getPoNumberPrefix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberPrefix())) {
           poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
           updatedPo.setPoNumber(updatedPo.getPoNumberPrefix() + poNumber);
         }
         else {
-          setPoNumberPrefix(updatedPo);
+          HelperUtils.setPoNumberPrefix(updatedPo);
         }
       }
       else {
@@ -539,14 +527,14 @@ public class PurchaseOrderHelper {
       }
     }
 
-    if(isSuffixChanged(poFromStorage, updatedPo)) {
+    if(HelperUtils.isSuffixChanged(poFromStorage, updatedPo)) {
       if(Objects.nonNull(updatedPo.getPoNumberSuffix()) && !updatedPo.getPoNumberSuffix().isEmpty()) {
-        if(Objects.nonNull(poFromStorage.getPoNumberPrefix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberSuffix())) {
+        if(Objects.nonNull(poFromStorage.getPoNumberSuffix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberSuffix())) {
           poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
           updatedPo.setPoNumber(poNumber + updatedPo.getPoNumberSuffix());
         }
         else {
-          setPoNumberSuffix(updatedPo);
+          HelperUtils.setPoNumberSuffix(updatedPo);
         }
       }
       else {
@@ -555,14 +543,6 @@ public class PurchaseOrderHelper {
       }
     }
 
-  }
-
-  public static boolean isPrefixChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
-    return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumberPrefix(), updatedPo.getPoNumberPrefix());
-  }
-
-  public static boolean isSuffixChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
-    return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumberSuffix(), updatedPo.getPoNumberSuffix());
   }
 
   private CompletableFuture<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
