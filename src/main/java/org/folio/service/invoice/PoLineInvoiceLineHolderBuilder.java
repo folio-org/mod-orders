@@ -55,25 +55,29 @@ public class PoLineInvoiceLineHolderBuilder {
           return getPaidInvoiceLines(currentYearInvoiceLines);
         });
     } else {
-      return CompletableFuture.completedFuture(null); //Should ask Dennis what we should do in case of POL doesn't have fund distribution
+      return CompletableFuture.completedFuture(null); //Should ask Dennis what we should do in case of POL doesn't have fund distribution (Delete the comment after receiving a response)
     }
   }
 
   private CompletableFuture<List<InvoiceLine>> getCurrentFiscalYearInvoiceLines(String poLineFundId, List<InvoiceLine> invoiceLines, RequestContext requestContext) {
-    Map<String, String> invoiceLineEncumbranceMap = appendInvoiceLineAndEncumbranceIds(invoiceLines);
-    List<String> encumbranceIds = invoiceLineEncumbranceMap.values().stream().filter(Objects::nonNull).collect(Collectors.toList());
+    Map<String, String> encumbranceIdsByInvoiceLineId = getEncumbranceIdsByInvoiceLines(invoiceLines);
+    List<String> encumbranceIds = encumbranceIdsByInvoiceLineId.values().stream().filter(Objects::nonNull).collect(Collectors.toList());
 
+    // One low-cost way to determine the fiscal year of an invoice line is to extract the fiscalYearId field from the encumbrance body.
     return encumbranceService.getEncumbrancesByIds(encumbranceIds, requestContext)
+      // We need to determine the current fiscal year of CompositePOL to cut off invoices that belong to other fiscal years.
       .thenCombine(fiscalYearService.getCurrentFiscalYearByFundId(poLineFundId, requestContext), (encumbrances, fiscalYear) -> {
+        // The list contains all encumbranceIds belonging to the current fiscal year.
         List<String> currentFYEncumbranceIds = encumbrances
           .stream()
           .filter(encumbrance -> Objects.equals(encumbrance.getFiscalYearId(), fiscalYear.getId()))
           .map(Transaction::getId)
           .collect(Collectors.toList());
 
-        return invoiceLines.stream()
-          .filter(invoiceLine -> {
-            String encumbranceId = invoiceLineEncumbranceMap.get(invoiceLine.getId());
+        return invoiceLines.stream().filter(invoiceLine -> {
+            String encumbranceId = encumbranceIdsByInvoiceLineId.get(invoiceLine.getId());
+            // When encumbranceId is null encumbrance for the invoice line has not yet been created.
+            // We can assign it to the current fiscal year.
             return currentFYEncumbranceIds.contains(encumbranceId) || Objects.isNull(encumbranceId);
           }).collect(Collectors.toList());
       });
@@ -86,7 +90,7 @@ public class PoLineInvoiceLineHolderBuilder {
     }
   }
 
-  private Map<String, String> appendInvoiceLineAndEncumbranceIds(List<InvoiceLine> invoiceLines) {
+  private Map<String, String> getEncumbranceIdsByInvoiceLines(List<InvoiceLine> invoiceLines) {
     return invoiceLines.stream()
       .map(invoiceLine -> invoiceLine.getFundDistributions().stream().findFirst())
       .flatMap(Optional::stream)
