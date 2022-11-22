@@ -56,6 +56,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.models.ItemStatus;
+import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFieldsUtil;
@@ -92,6 +93,7 @@ import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.invoice.POLInvoiceLineRelationService;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderWorkflowType;
@@ -132,6 +134,7 @@ public class PurchaseOrderLineHelper {
   private final RestClient restClient;
   private final CompositePoLineValidationService compositePoLineValidationService;
   private final OrganizationService organizationService;
+  private final POLInvoiceLineRelationService polInvoiceLineRelationService;
 
   public PurchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
     ExpenseClassValidationService expenseClassValidationService,
@@ -139,6 +142,7 @@ public class PurchaseOrderLineHelper {
     TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
     PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesService configurationEntriesService, RestClient restClient,
+    CompositePoLineValidationService compositePoLineValidationService, POLInvoiceLineRelationService polInvoiceLineRelationService) {
     CompositePoLineValidationService compositePoLineValidationService, OrganizationService organizationService) {
     this.inventoryManager = inventoryManager;
     this.encumbranceService = encumbranceService;
@@ -153,6 +157,7 @@ public class PurchaseOrderLineHelper {
     this.configurationEntriesService = configurationEntriesService;
     this.restClient = restClient;
     this.compositePoLineValidationService = compositePoLineValidationService;
+    this.polInvoiceLineRelationService = polInvoiceLineRelationService;
     this.organizationService = organizationService;
   }
 
@@ -310,8 +315,11 @@ public class PurchaseOrderLineHelper {
         .compose(lineFromStorage -> {
           // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
           // update
+          PoLineInvoiceLineHolder poLineInvoiceLineHolder = new PoLineInvoiceLineHolder(compOrderLine, lineFromStorage);
           compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
-          return updateOrderLine(compOrderLine, lineFromStorage, requestContext)
+
+          return polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
+            .thenCompose(v -> updateOrderLine(compOrderLine, lineFromStorage, requestContext))
             .thenCompose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
             .thenCompose(v -> updateInventoryItemStatus(compOrderLine, lineFromStorage, requestContext))
             .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext));
