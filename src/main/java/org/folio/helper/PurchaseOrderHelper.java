@@ -512,7 +512,7 @@ public class PurchaseOrderHelper {
   public void updatePrefixAndSuffix(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
     String poNumber = "";
     if(HelperUtils.isPrefixChanged(poFromStorage, updatedPo)) {
-      if(Objects.nonNull(updatedPo.getPoNumberPrefix()) && !updatedPo.getPoNumberPrefix().isEmpty()) {
+      if(StringUtils.isNotEmpty(updatedPo.getPoNumberPrefix())) {
         if(Objects.nonNull(poFromStorage.getPoNumberPrefix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberPrefix())) {
           poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
           updatedPo.setPoNumber(updatedPo.getPoNumberPrefix() + poNumber);
@@ -528,7 +528,7 @@ public class PurchaseOrderHelper {
     }
 
     if(HelperUtils.isSuffixChanged(poFromStorage, updatedPo)) {
-      if(Objects.nonNull(updatedPo.getPoNumberSuffix()) && !updatedPo.getPoNumberSuffix().isEmpty()) {
+      if(StringUtils.isNotEmpty(updatedPo.getPoNumberSuffix())) {
         if(Objects.nonNull(poFromStorage.getPoNumberSuffix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberSuffix())) {
           poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
           updatedPo.setPoNumber(poNumber + updatedPo.getPoNumberSuffix());
