@@ -1,11 +1,11 @@
 package org.folio.service;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
-import static org.folio.rest.core.exceptions.ErrorCodes.SUFFIX_IS_USED;
+import static org.folio.rest.core.exceptions.ErrorCodes.*;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.exceptions.HttpException;
@@ -75,4 +75,20 @@ public class SuffixService {
         }
       });
   }
+
+  public CompletableFuture<Void> validateSuffixAvailability(String suffixName, RequestContext requestContext) {
+    if(StringUtils.isNotEmpty(suffixName)){
+      String query = "name==" + suffixName;
+      RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);
+      return restClient.get(requestEntry, requestContext, SuffixCollection.class)
+        .thenAccept(suffix -> {
+          if(suffix.getTotalRecords() == 0) {
+            logger.error("Suffix {} may not be available", suffixName);
+            throw new HttpException(404, SUFFIX_NOT_FOUND);
+          }
+        });
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
 }

@@ -1,11 +1,11 @@
 package org.folio.service;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
-import static org.folio.rest.core.exceptions.ErrorCodes.PREFIX_IS_USED;
+import static org.folio.rest.core.exceptions.ErrorCodes.*;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.exceptions.HttpException;
@@ -74,5 +74,20 @@ public class PrefixService {
           throw new HttpException(400, PREFIX_IS_USED);
         }
       });
+  }
+
+  public CompletableFuture<Void> validatePrefixAvailability(String prefixName, RequestContext requestContext) {
+    if(StringUtils.isNotEmpty(prefixName)) {
+      String query = "name==" + prefixName;
+      RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);
+      return restClient.get(requestEntry, requestContext, PrefixCollection.class)
+        .thenAccept(totalRecords -> {
+          if(totalRecords.getTotalRecords() == 0) {
+            logger.error("Prefix {} may not be available", prefixName);
+            throw new HttpException(404, PREFIX_NOT_FOUND);
+          }
+        });
+    }
+    return CompletableFuture.completedFuture(null);
   }
 }

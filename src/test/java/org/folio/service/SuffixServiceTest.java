@@ -1,7 +1,6 @@
 package org.folio.service;
 
-import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
-import static org.folio.rest.core.exceptions.ErrorCodes.SUFFIX_IS_USED;
+import static org.folio.rest.core.exceptions.ErrorCodes.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -76,6 +75,23 @@ public class SuffixServiceTest {
     verify(restClient).get(any(), any(), any());
     verify(restClient, never()).delete(any(), any());
     verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
+  }
+
+  @Test
+  void testSetSuffixFailedIfSuffixNotAvailable() {
+    //given
+    when(restClient.get(any(), any(), any()))
+      .thenReturn(CompletableFuture.completedFuture(new SuffixCollection().withTotalRecords(0)));
+
+    String id = UUID.randomUUID().toString();
+    CompletableFuture<Void> result = suffixService.validateSuffixAvailability("Test", requestContext);
+    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
+
+    HttpException httpException = (HttpException) expectedException.getCause();
+    assertEquals(404, httpException.getCode());
+    assertEquals(SUFFIX_NOT_FOUND.toError(), httpException.getError());
+
+    verify(restClient).get(any(), any(), any());
   }
 
   @Test
