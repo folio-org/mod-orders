@@ -48,6 +48,8 @@ public class ResourcePathResolver {
   public static final String ORDER_INVOICE_RELATIONSHIP = "order-invoice-relationship";
   public static final String EXPORT_HISTORY = "export-history";
   public static final String TAGS = "tags";
+  public static final String PREFIX = "poNumberPrefix";
+  public static final String SUFFIX = "poNumberSuffix";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;

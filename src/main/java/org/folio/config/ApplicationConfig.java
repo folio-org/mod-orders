@@ -575,7 +575,7 @@ public class ApplicationConfig {
     CompositeOrderDynamicDataPopulateService combinedPopulateService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-    AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager,
+    AcquisitionsUnitsService acquisitionsUnitsService, PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
     UnOpenCompositeOrderManager unOpenCompositeOrderManager,
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
@@ -583,7 +583,7 @@ public class ApplicationConfig {
     CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-      purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
+      purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
       unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
       poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager,
       organizationService);

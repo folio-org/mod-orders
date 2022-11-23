@@ -42,9 +42,7 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.service.AcquisitionsUnitsService;
-import org.folio.service.ProtectionService;
-import org.folio.service.TagService;
+import org.folio.service.*;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -286,6 +284,15 @@ public class PurchaseOrderHelperTest {
     }
 
     @Bean
+    public PrefixService prefixService() {
+      return mock(PrefixService.class);
+    }
+    @Bean
+    public SuffixService suffixService() {
+      return mock(SuffixService.class);
+    }
+
+    @Bean
     public OrganizationService organizationService () {
       return mock(OrganizationService.class);
     }
@@ -305,7 +312,7 @@ public class PurchaseOrderHelperTest {
               CompositeOrderDynamicDataPopulateService combinedPopulateService,
               EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
               TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-              AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager,
+              AcquisitionsUnitsService acquisitionsUnitsService, PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
               UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
               PurchaseOrderStorageService purchaseOrderStorageService,
               ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
@@ -314,7 +321,7 @@ public class PurchaseOrderHelperTest {
               ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-        purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
+        purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
         unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
         poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager, organizationService);
     }

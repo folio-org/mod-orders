@@ -1,0 +1,297 @@
+{
+  "id": "2ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
+  "approved": true,
+  "assignedTo": "",
+  "poNumberPrefix": "TestP",
+  "poNumberSuffix": "TestS",
+  "manualPo": false,
+  "notes": [],
+  "poNumber": "TestP268758TestS",
+  "orderType": "One-Time",
+  "reEncumber": false,
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflowStatus": "Pending",
+  "metadata": {
+    "createdDate": "2018-06-29T00:00:00.000",
+    "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+  },
+  "compositePoLines": [
+    {
+      "id": "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
+      "alerts": [],
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
+      "claims": [
+        {
+          "claimed": false,
+          "grace": 90
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Steinar Imsen (ed.)",
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 68.00,
+        "quantityPhysical": 1
+      },
+      "description": "",
+      "details": {
+        "receivingNote": "",
+        "productIds": [
+          {
+            "productId": "10407849",
+            "productIdType": "913300b2-03ed-469a-8179-c1092c991227"
+          }
+        ],
+        "subscriptionFrom": null,
+        "subscriptionInterval": 0,
+        "subscriptionTo": null
+      },
+      "donor": "",
+      "fundDistribution": [
+        {
+          "code": "EUROHIST",
+          "fundId": "e9285a1c-1dfc-4380-868c-e74073003f43",
+          "distributionType": "percentage",
+          "value": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08003"
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "",
+        "receiptDue": "2018-09-29T00:00:00.000Z",
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
+      },
+      "poLineDescription": "",
+      "poLineNumber": "268758-01",
+      "publicationDate": "2011",
+      "publisher": "Tapir Academic Press",
+      "purchaseOrderId": "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
+      "receiptDate": null,
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
+      "requester": "",
+      "rush": false,
+      "selector": "Stevens",
+      "source": "User",
+      "tags": {
+        "tagList": []
+      },
+      "titleOrPackage": "Taxes, tributes and tributary lands in the making of Scandinavian kingdoms in the Middle Ages",
+      "isPackage": false,
+      "vendorDetail": {
+        "instructions": "",
+        "noteFromVendor": "",
+        "vendorAccount": ""
+      },
+      "metadata": {
+        "createdDate": "2018-06-29T00:00:00.000",
+        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+      }
+    },
+    {
+      "id": "50fb4e66-cdf1-11e8-a8d5-f2801f1b9fd2",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
+      "alerts": [],
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
+      "claims": [
+        {
+          "claimed": false,
+          "grace": 90
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Steinar Imsen (ed.)",
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 34.95,
+        "quantityPhysical": 1
+      },
+      "description": "",
+      "details": {
+        "receivingNote": "",
+        "productIds": [
+          {
+            "productId": "9780820350790",
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
+          }
+        ],
+        "subscriptionFrom": null,
+        "subscriptionInterval": 0,
+        "subscriptionTo": null
+      },
+      "donor": "",
+      "fundDistribution": [
+        {
+          "code": "USHIST",
+          "fundId": "65032151-39a5-4cef-8810-5350eb316300",
+          "distributionType": "percentage",
+          "value": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08004"
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "",
+        "receiptDue": "2018-09-29T00:00:00.000Z",
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
+      },
+      "poLineDescription": "",
+      "poLineNumber": "268758-02",
+      "publicationDate": "2011",
+      "publisher": "Tapir Academic Press",
+      "purchaseOrderId": "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
+      "receiptDate": null,
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
+      "requester": "",
+      "rush": false,
+      "selector": "Brown",
+      "source": "User",
+      "tags": {
+        "tagList": []
+      },
+      "titleOrPackage": "Alabama Women: Their Lives and Times",
+      "vendorDetail": {
+        "instructions": "",
+        "noteFromVendor": "",
+        "vendorAccount": ""
+      },
+      "metadata": {
+        "createdDate": "2018-06-29T00:00:00.000",
+        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+      }
+    },
+    {
+      "id": "c2755a78-2f8d-47d0-a218-059a9b7391b4",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
+      "alerts": [],
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
+      "claims": [
+        {
+          "claimed": false,
+          "grace": 90
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Steinar Imsen (ed.)",
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 24.99,
+        "quantityPhysical": 1
+      },
+      "description": "",
+      "details": {
+        "receivingNote": "",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
+          }
+        ],
+        "subscriptionFrom": null,
+        "subscriptionInterval": 0,
+        "subscriptionTo": null
+      },
+      "donor": "",
+      "fundDistribution": [
+        {
+          "code": "USHIST",
+          "fundId": "65032151-39a5-4cef-8810-5350eb316300",
+          "distributionType": "percentage",
+          "value": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08005"
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "",
+        "receiptDue": "2018-09-29T00:00:00.000Z",
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8"
+      },
+      "poLineDescription": "",
+      "poLineNumber": "268758-03",
+      "publicationDate": "2011",
+      "publisher": "Tapir Academic Press",
+      "purchaseOrderId": "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
+      "receiptDate": null,
+      "receiptStatus": "Awaiting Receipt",
+      "reportingCodes": [],
+      "requester": "",
+      "rush": false,
+      "selector": "Brown",
+      "source": "User",
+      "tags": {
+        "tagList": []
+      },
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
+      "vendorDetail": {
+        "instructions": "",
+        "noteFromVendor": "",
+        "vendorAccount": ""
+      },
+      "metadata": {
+        "createdDate": "2018-06-29T00:00:00.000",
+        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+      }
+    }
+  ]
+}
