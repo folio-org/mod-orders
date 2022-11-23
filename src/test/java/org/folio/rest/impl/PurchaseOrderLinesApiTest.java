@@ -501,7 +501,7 @@ public class PurchaseOrderLinesApiTest {
 
     //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(4, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
 
@@ -660,7 +660,7 @@ public class PurchaseOrderLinesApiTest {
     // + 1 call to get the line encumbrances
     // + 1 call to check invoice relationships
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(6, column.size());
+    assertEquals(8, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
@@ -1105,6 +1105,28 @@ public class PurchaseOrderLinesApiTest {
     assertThat(resp.getDetails().getProductIds().get(3).getQualifier(), nullValue());
     assertThat(resp.getDetails().getProductIds().get(3).getProductId(), equalTo(INVALID_ISBN));
 
+  }
+
+  @Test
+  void testUpdatePoLineForOpenedOrderShouldFailedWhenRelatedInvoiceLineApprovedForCurrentFY() {
+    logger.info("=== Test update poline for opened order should failed when related invoice line is approved  ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    reqData.setId("a6edc906-2f9f-5fb2-a373-efac406f0ef2");
+    reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
+    reqData.getFundDistribution().get(0).setEncumbrance("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
+    reqData.getFundDistribution().get(1).setEncumbrance("109ecaa0-207d-5ebd-89f2-1fda1ae9108c");
+
+
+    CompositePoLine compositePoLine = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
+
+    compositePoLine.getFundDistribution().get(0).setValue(70.0);
+    compositePoLine.getFundDistribution().get(1).setValue(30.0);
+
+
+    verifyPut(String.format(LINE_BY_ID_PATH, compositePoLine.getId()), JsonObject.mapFrom(compositePoLine).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 403);
   }
 
   private ProductId createIsbnProductId(String isbn) {
