@@ -3,9 +3,9 @@ package org.folio.service;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.rest.core.exceptions.ErrorCodes.*;
 
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.exceptions.HttpException;
@@ -77,7 +77,7 @@ public class SuffixService {
   }
 
   public CompletableFuture<Void> validateSuffixAvailability(String suffixName, RequestContext requestContext) {
-    if(Objects.nonNull(suffixName)){
+    if(StringUtils.isNotEmpty(suffixName)){
       String query = "name==" + suffixName;
       RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);
       return restClient.get(requestEntry, requestContext, SuffixCollection.class)

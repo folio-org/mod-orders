@@ -3,9 +3,9 @@ package org.folio.service;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.rest.core.exceptions.ErrorCodes.*;
 
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.exceptions.HttpException;
@@ -77,7 +77,7 @@ public class PrefixService {
   }
 
   public CompletableFuture<Void> validatePrefixAvailability(String prefixName, RequestContext requestContext) {
-    if(Objects.nonNull(prefixName)) {
+    if(StringUtils.isNotEmpty(prefixName)) {
       String query = "name==" + prefixName;
       RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);
       return restClient.get(requestEntry, requestContext, PrefixCollection.class)
