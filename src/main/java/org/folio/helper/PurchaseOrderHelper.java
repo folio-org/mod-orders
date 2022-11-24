@@ -172,7 +172,7 @@ public class PurchaseOrderHelper {
    *
    * @param limit limit the number of elements returned in the response
    * @param offset skip over a number of elements by specifying an offset value for the query
-   * @param query A query expressed as a CQL string usin  g valid searchable fields.
+   * @param query A query expressed as a CQL string using valid searchable fields.
    * @return completable future with {@link PurchaseOrderCollection} object on success or an exception if processing fails
    */
   public CompletableFuture<PurchaseOrderCollection> getPurchaseOrders(int limit, int offset, String query, RequestContext requestContext) {
