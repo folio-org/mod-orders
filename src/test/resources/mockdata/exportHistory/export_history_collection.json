@@ -1,0 +1,30 @@
+{
+  "exportHistories": [
+    {
+      "exportJobId": "392e8635-f215-4159-8f80-e052b1d659e4",
+      "exportType": "EDIFACT",
+      "jobName": "000029",
+      "exportMethod": "EDIFACT 1",
+      "exportFileName": "GOBI_EDIFACT 1_2022-10-31_12:07:55.edi",
+      "vendorId": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "vendorName": "GOBI",
+      "exportDate": "2022-10-31T12:07:56.003+00:00",
+      "exportedPoLineIds": [
+        "0ab3373f-314c-479d-9f5d-afcbd0c300fd"
+      ]
+    },
+    {
+      "id": "99fb699a-cdf1-11e9-a9d9-f2801f1b9aa2",
+      "exportType": "EDIFACT_ORDERS_EXPORT",
+      "exportJobId": "22fb627a-cdf1-11e8-a8d5-f2801f1b9aa2",
+      "exportDate": "2020-12-26",
+      "exportedPoLineIds": [
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd4",
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd2",
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd5",
+        "11fb627a-cdf1-11e8-a8d5-f2801f1b9fd4"
+      ]
+    }
+  ],
+  "totalRecords": 2
+}
