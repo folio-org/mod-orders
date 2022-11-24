@@ -3021,7 +3021,6 @@ public class PurchaseOrdersApiTest {
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
-    assertThat(purchaseOrders.getTotalRecords(), is(1));
 
     List<String> queryParams = getQueryParams(PURCHASE_ORDER_STORAGE);
     assertThat(queryParams, hasSize(1));
