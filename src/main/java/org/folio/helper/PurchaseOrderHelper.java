@@ -402,8 +402,8 @@ public class PurchaseOrderHelper {
     CompletableFuture<CompositePurchaseOrder> future = new CompletableFuture<>();
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(orderId, requestContext)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
-      .thenApply(compositePurchaseOrder -> HelperUtils.setPoNumberPrefix(compositePurchaseOrder))
-      .thenApply(compositePurchaseOrder -> HelperUtils.setPoNumberSuffix(compositePurchaseOrder))
+      .thenApply(HelperUtils::setPoNumberPrefix)
+      .thenApply(HelperUtils::setPoNumberSuffix)
       .thenAccept(compPO -> protectionService.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ, requestContext)
         .thenAccept(ok -> purchaseOrderLineService.populateOrderLines(compPO, requestContext)
           .thenCompose(compPOWithLines -> titlesService.fetchNonPackageTitles(compPOWithLines, requestContext))
