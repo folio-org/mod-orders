@@ -761,16 +761,18 @@ public class HelperUtils {
     return null;
   }
 
-  public static void setPoNumberPrefix(CompositePurchaseOrder compPO) {
+  public static CompositePurchaseOrder setPoNumberPrefix(CompositePurchaseOrder compPO) {
     if(Objects.nonNull(compPO.getPoNumberPrefix())) {
       compPO.setPoNumber(compPO.getPoNumberPrefix() + compPO.getPoNumber());
     }
+    return compPO;
   }
 
-  public static void setPoNumberSuffix(CompositePurchaseOrder compPO) {
+  public static CompositePurchaseOrder setPoNumberSuffix(CompositePurchaseOrder compPO) {
     if(Objects.nonNull(compPO.getPoNumberSuffix())) {
       compPO.setPoNumber(compPO.getPoNumber() + compPO.getPoNumberSuffix());
     }
+   return compPO;
   }
 
   public static boolean isPrefixChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {

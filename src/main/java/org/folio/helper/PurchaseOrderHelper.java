@@ -172,7 +172,7 @@ public class PurchaseOrderHelper {
    *
    * @param limit limit the number of elements returned in the response
    * @param offset skip over a number of elements by specifying an offset value for the query
-   * @param query A query expressed as a CQL string using valid searchable fields.
+   * @param query A query expressed as a CQL string usin  g valid searchable fields.
    * @return completable future with {@link PurchaseOrderCollection} object on success or an exception if processing fails
    */
   public CompletableFuture<PurchaseOrderCollection> getPurchaseOrders(int limit, int offset, String query, RequestContext requestContext) {
@@ -183,8 +183,15 @@ public class PurchaseOrderHelper {
       buildGetOrdersPath(limit, offset, query, requestContext)
         .thenCompose(endpoint -> handleGetRequest(endpoint, httpClient, requestContext.getHeaders(), logger))
         .thenAccept(jsonOrders -> {
+          List<PurchaseOrder> purchaseOrdersList = jsonOrders.mapTo(PurchaseOrderCollection.class).getPurchaseOrders().stream()
+          .map(purchaseOrder -> {
+              CompositePurchaseOrder comPO = convertToCompositePurchaseOrder(JsonObject.mapFrom(purchaseOrder));
+              HelperUtils.setPoNumberPrefix(comPO);
+              HelperUtils.setPoNumberSuffix(comPO);
+            return convertToPurchaseOrder(comPO).mapTo(PurchaseOrder.class);
+          }).collect(Collectors.toList());
           httpClient.closeClient();
-          future.complete(jsonOrders.mapTo(PurchaseOrderCollection.class));
+          future.complete(new PurchaseOrderCollection().withPurchaseOrders(purchaseOrdersList).withTotalRecords(purchaseOrdersList.size()));
         })
         .exceptionally(t -> {
           httpClient.closeClient();
@@ -211,9 +218,7 @@ public class PurchaseOrderHelper {
         .thenAccept(ok -> checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext))
         .thenCompose(ok -> setPoNumberIfMissing(compPO, requestContext)
         .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
-        .thenAccept(p -> HelperUtils.setPoNumberPrefix(compPO))
         .thenCompose(s -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
-        .thenAccept(s -> HelperUtils.setPoNumberSuffix(compPO))
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext))
         .thenCompose(v -> processPoLineTags(compPO, requestContext))
         .thenCompose(v -> createPOandPOLines(compPO, cachedTenantConfiguration, requestContext))
@@ -241,7 +246,6 @@ public class PurchaseOrderHelper {
           .thenCompose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
           .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
           .thenCompose(s -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
-          .thenAccept(ps -> updatePrefixAndSuffix(poFromStorage,compPO))
           .thenAccept(ok -> {
             if (isTransitionToApproved(poFromStorage, compPO)) {
               checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext);
@@ -398,6 +402,8 @@ public class PurchaseOrderHelper {
     CompletableFuture<CompositePurchaseOrder> future = new CompletableFuture<>();
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(orderId, requestContext)
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
+      .thenApply(compositePurchaseOrder -> HelperUtils.setPoNumberPrefix(compositePurchaseOrder))
+      .thenApply(compositePurchaseOrder -> HelperUtils.setPoNumberSuffix(compositePurchaseOrder))
       .thenAccept(compPO -> protectionService.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ, requestContext)
         .thenAccept(ok -> purchaseOrderLineService.populateOrderLines(compPO, requestContext)
           .thenCompose(compPOWithLines -> titlesService.fetchNonPackageTitles(compPOWithLines, requestContext))
@@ -507,42 +513,6 @@ public class PurchaseOrderHelper {
                            .thenAccept(compPO::setPoNumber);
     }
     return completedFuture(null);
-  }
-
-  public void updatePrefixAndSuffix(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
-    String poNumber = "";
-    if(HelperUtils.isPrefixChanged(poFromStorage, updatedPo)) {
-      if(StringUtils.isNotEmpty(updatedPo.getPoNumberPrefix())) {
-        if(Objects.nonNull(poFromStorage.getPoNumberPrefix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberPrefix())) {
-          poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
-          updatedPo.setPoNumber(updatedPo.getPoNumberPrefix() + poNumber);
-        }
-        else {
-          HelperUtils.setPoNumberPrefix(updatedPo);
-        }
-      }
-      else {
-        poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
-        updatedPo.setPoNumber(poNumber);
-      }
-    }
-
-    if(HelperUtils.isSuffixChanged(poFromStorage, updatedPo)) {
-      if(StringUtils.isNotEmpty(updatedPo.getPoNumberSuffix())) {
-        if(Objects.nonNull(poFromStorage.getPoNumberSuffix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberSuffix())) {
-          poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
-          updatedPo.setPoNumber(poNumber + updatedPo.getPoNumberSuffix());
-        }
-        else {
-          HelperUtils.setPoNumberSuffix(updatedPo);
-        }
-      }
-      else {
-        poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
-        updatedPo.setPoNumber(poNumber);
-      }
-    }
-
   }
 
   private CompletableFuture<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
