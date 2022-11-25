@@ -1938,7 +1938,7 @@ public class PurchaseOrdersApiTest {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject storeData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
-    reqData.put(PO_NUMBER,"TestP268758TestS");
+    reqData.put(PO_NUMBER,"268758");
     reqData.put(PREFIX,"TestP1");
     reqData.put(SUFFIX,"TestS1");
 
@@ -3021,7 +3021,6 @@ public class PurchaseOrdersApiTest {
     assertThat(MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
-    assertThat(purchaseOrders.getTotalRecords(), is(1));
 
     List<String> queryParams = getQueryParams(PURCHASE_ORDER_STORAGE);
     assertThat(queryParams, hasSize(1));
