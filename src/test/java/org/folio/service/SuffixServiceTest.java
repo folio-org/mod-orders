@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import io.vertx.core.Future;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -59,55 +60,56 @@ public class SuffixServiceTest {
   @Test
   void testDeleteSuffixFailedIfSuffixUsedByOrder() {
     //given
-    when(restClient.get(any(), any(), any()))
-      .thenReturn(CompletableFuture.succeededFuture(new Suffix().withName("test")));
-    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.succeededFuture(null));
+    when(restClient.get(anyString(), any(), any()))
+      .thenReturn(Future.succeededFuture(new Suffix().withName("test")));
+    when(restClient.delete(anyString(), any())).thenReturn(Future.succeededFuture(null));
     when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
-      .thenReturn(CompletableFuture.succeededFuture(new PurchaseOrderCollection().withTotalRecords(1)));
+      .thenReturn(Future.succeededFuture(new PurchaseOrderCollection().withTotalRecords(1)));
 
     String id = UUID.randomUUID().toString();
     Future<Void> result = suffixService.deleteSuffix(id, requestContext);
-    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
+    CompletionException expectedException = assertThrows(CompletionException.class, result::result);
 
     HttpException httpException = (HttpException) expectedException.getCause();
     assertEquals(400, httpException.getCode());
     assertEquals(SUFFIX_IS_USED.toError(), httpException.getError());
 
-    verify(restClient).get(any(), any(), any());
-    verify(restClient, never()).delete(any(), any());
+    verify(restClient).get(anyString(), any(), any());
+    verify(restClient, never()).delete(anyString(), any());
     verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
   }
 
   @Test
   void testDeleteSuffixSuccessIfNotUsed() {
     //given
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(new Suffix().withName("test")));
-    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.succeededFuture(null));
+    when(restClient.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(new Suffix().withName("test")));
+    when(restClient.delete(anyString(), any())).thenReturn(Future.succeededFuture(null));
     when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
-      .thenReturn(CompletableFuture.succeededFuture(new PurchaseOrderCollection().withTotalRecords(0)));
+      .thenReturn(Future.succeededFuture(new PurchaseOrderCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
     Future<Void> result = suffixService.deleteSuffix(id, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
-    verify(restClient).get(any(), any(), any());
-    verify(restClient).delete(any(), any());
+    verify(restClient).get(anyString(), any(), any());
+    verify(restClient).delete(anyString(), any());
     verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
   }
 
   @Test
   void testGetSuffixById() {
     Suffix suffix = new Suffix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test suffix");
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(suffix));
+    when(restClient.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(suffix));
 
     Future<Suffix> result = suffixService.getSuffixById(suffix.getId(), requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    // TODO check async completed in time
+    assertFalse(result.failed());
 
     Suffix resultSuffix = result.result();
     assertEquals(suffix, resultSuffix);
 
-    verify(restClient).get(any(), any(), any());
+    verify(restClient).get(anyString(), any(), any());
   }
 
   @Test
@@ -115,15 +117,15 @@ public class SuffixServiceTest {
     String query = "name==suf";
     Suffix suffix = new Suffix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test suffix");
     SuffixCollection suffixCollection = new SuffixCollection().withTotalRecords(1).withSuffixes(Collections.singletonList(suffix));
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(suffixCollection));
+    when(restClient.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(suffixCollection));
 
     Future<SuffixCollection> result = suffixService.getSuffixes(query, 1, 0, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
 
     SuffixCollection resultSuffixCollection = result.result();
 
     assertEquals(suffixCollection, resultSuffixCollection);
-    verify(restClient).get(any(), any(), any());
+    verify(restClient).get(anyString(), any(), any());
   }
 
   @Test
@@ -131,13 +133,13 @@ public class SuffixServiceTest {
     Suffix suffix = new Suffix().withId(UUID.randomUUID().toString())
       .withName("suff");
 
-    when(restClient.put(any(), eq(suffix), any())).thenReturn(CompletableFuture.succeededFuture(null));
+    when(restClient.put(anyString(), eq(suffix), any())).thenReturn(Future.succeededFuture(null));
 
     Future<Void> result = suffixService.updateSuffix(suffix.getId(), suffix, requestContext);
-    assertFalse(result.isCompletedExceptionally());
     result.result();
+    assertFalse(result.failed());
 
-    verify(restClient).put(any(), eq(suffix), any());
+    verify(restClient).put(anyString(), eq(suffix), any());
   }
 
   @Test
@@ -146,14 +148,14 @@ public class SuffixServiceTest {
       .withName("suff");
 
     String id = UUID.randomUUID().toString();
-    when(restClient.put(any(), eq(suffix), any())).thenReturn(CompletableFuture.succeededFuture(null));
+    when(restClient.put(anyString(), eq(suffix), any())).thenReturn(Future.succeededFuture(null));
 
     Future<Void> result = suffixService.updateSuffix(id, suffix, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
     assertEquals(id, suffix.getId());
-    verify(restClient).put(any(), eq(suffix), any());
+    verify(restClient).put(anyString(), eq(suffix), any());
   }
 
   @Test
@@ -162,8 +164,8 @@ public class SuffixServiceTest {
 
     CompletionException expectedException = assertThrows(CompletionException.class, () -> {
       Future<Void> result = suffixService.updateSuffix(UUID.randomUUID().toString(), suffix, requestContext);
-      assertTrue(result.isCompletedExceptionally());
       result.result();
+      assertTrue(result.failed());
     });
     HttpException httpException = (HttpException) expectedException.getCause();
     assertEquals(422, httpException.getCode());
@@ -174,15 +176,14 @@ public class SuffixServiceTest {
   void testCreateSuffix() {
     Suffix suffix = new Suffix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test suffix");
 
-    when(restClient.post(any(), eq(suffix), any(), any())).thenReturn(CompletableFuture.succeededFuture(suffix));
+    when(restClient.post(anyString(), eq(suffix), any(), any())).thenReturn(Future.succeededFuture(suffix));
 
     Future<Suffix> result = suffixService.createSuffix(suffix, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     Suffix resultSuffix = result.result();
     assertEquals(suffix, resultSuffix);
 
-    verify(restClient).post(any(), eq(suffix), any(), any());
-
+    verify(restClient).post(anyString(), eq(suffix), any(), any());
 
   }
 

@@ -1,5 +1,7 @@
 package org.folio.service.orders;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -51,9 +53,9 @@ public class CompositeOrderRetrieveHolderBuilderTest {
       .toString())
       .withCompositePoLines(Collections.singletonList(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-    Future<FiscalYear> failedFuture = new Future<>();
-    failedFuture.completeExceptionally(new HttpException(404, ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND));
-    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
+    Promise<FiscalYear> failedFuture = Promise.promise();
+    failedFuture.fail(new HttpException(404, ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND));
+    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture.future());
 
     CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext)
       .result();
@@ -70,10 +72,10 @@ public class CompositeOrderRetrieveHolderBuilderTest {
       .toString())
       .withCompositePoLines(Collections.singletonList(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-    Future<FiscalYear> failedFuture = new Future<>();
+    Promise<FiscalYear> failedFuture = Promise.promise();
     HttpException thrownException = new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE);
-    failedFuture.completeExceptionally(thrownException);
-    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
+    failedFuture.fail(thrownException);
+    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture.future());
     CompletionException exception = assertThrows(CompletionException.class,
         () -> holderBuilder.withCurrentFiscalYear(holder, requestContext)
           .result());

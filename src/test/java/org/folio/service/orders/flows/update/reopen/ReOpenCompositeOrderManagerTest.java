@@ -163,7 +163,7 @@ public class ReOpenCompositeOrderManagerTest {
     doReturn(succeededFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
 
 
-    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).get();
+    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).result();
 
     assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus), newOrder.getCompositePoLines().get(0).getReceiptStatus());
     assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus), newOrder.getCompositePoLines().get(0).getPaymentStatus());
@@ -234,7 +234,7 @@ public class ReOpenCompositeOrderManagerTest {
     doReturn(succeededFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
 
 
-    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).get();
+    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).result();
 
     assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus1), newOrder.getCompositePoLines().get(0).getReceiptStatus());
     assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus1), newOrder.getCompositePoLines().get(0).getPaymentStatus());
@@ -309,7 +309,7 @@ public class ReOpenCompositeOrderManagerTest {
     doReturn(succeededFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
 
 
-    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).get();
+    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).result();
 
     assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus1), newOrder.getCompositePoLines().get(0).getReceiptStatus());
     assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus1), newOrder.getCompositePoLines().get(0).getPaymentStatus());

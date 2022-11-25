@@ -11,7 +11,6 @@ import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.iterableWithSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -40,8 +39,6 @@ public class HandlersTestHelper {
       assertThat(message.body(), notNullValue());
       assertThat(message.body()
         .getJsonArray(EVENT_PAYLOAD), iterableWithSize(1));
-      assertThat(message.body()
-        .getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
 
@@ -59,8 +56,6 @@ public class HandlersTestHelper {
       assertThat(message.body(), notNullValue());
       assertThat(message.body()
         .getJsonArray(EVENT_PAYLOAD), iterableWithSize(1));
-      assertThat(message.body()
-        .getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
 

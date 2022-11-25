@@ -60,7 +60,7 @@ public class BudgetService {
   public Future<Budget> getActiveBudgetByFundId(String fundId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withId(fundId).withQueryParameter("status", "Active");
     return restClient.get(requestEntry, Budget.class, requestContext)
-       .onFailure(t -> {
+       .recover(t -> {
         Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
         if (cause instanceof HttpException) {
           throw new HttpException(404, BUDGET_NOT_FOUND_FOR_TRANSACTION.toError()

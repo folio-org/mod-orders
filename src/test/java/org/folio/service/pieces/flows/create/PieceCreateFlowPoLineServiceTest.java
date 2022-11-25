@@ -124,7 +124,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
@@ -166,7 +166,7 @@ public class PieceCreateFlowPoLineServiceTest {
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
 
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
@@ -207,7 +207,7 @@ public class PieceCreateFlowPoLineServiceTest {
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());
@@ -248,7 +248,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
@@ -292,7 +292,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
@@ -337,7 +337,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(1, poLineToSave.getLocations().size());
@@ -382,7 +382,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(1, poLineToSave.getLocations().size());
@@ -427,7 +427,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(1, poLineToSave.getLocations().size());
@@ -472,7 +472,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(1, poLineToSave.getLocations().size());
@@ -515,7 +515,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertEquals(0, poLineToSave.getLocations().size());
@@ -560,7 +560,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityPhysical());
@@ -620,7 +620,7 @@ public class PieceCreateFlowPoLineServiceTest {
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
 
     //When
-    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).get();
+    pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
     CompositePoLine poLineToSave = incomingUpdateHolder.getPoLineToSave();
     assertNull(poLineToSave.getCost().getQuantityElectronic());

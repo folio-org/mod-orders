@@ -61,7 +61,6 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
 import static org.folio.TestUtils.verifyLocationQuantity;
-import static org.folio.helper.BaseHelper.ERROR_CAUSE;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.helper.InventoryInteractionTestHelper.joinExistingAndNewItems;
@@ -89,6 +88,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE
 import static org.folio.orders.utils.ResourcePathResolver.RECEIPT_STATUS;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.VENDOR_ID;
+import static org.folio.rest.RestConstants.ERROR_CAUSE;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
@@ -192,6 +192,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import io.vertx.junit5.VertxExtension;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -249,6 +250,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -264,6 +266,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
+@ExtendWith(VertxExtension.class)
 public class PurchaseOrdersApiTest {
   private static final Logger logger = LogManager.getLogger();
 
@@ -351,7 +354,7 @@ public class PurchaseOrdersApiTest {
 
   @BeforeEach
   public void initMocks() {
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this);
     Context context = Vertx.vertx().getOrCreateContext();
     Map<String, String> okapiHeaders = new HashMap<>();
     okapiHeaders.put(OKAPI_URL, "http://localhost:" + mockPort);
@@ -885,8 +888,8 @@ public class PurchaseOrdersApiTest {
     CompositePoLine respLine2 = resp.getCompositePoLines().get(1);
     List<JsonObject> createdInstances = getCreatedInstances();
     assertEquals(2, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
-    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
-    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine2.getInstanceId());
+    assertNotNull(respLine1.getInstanceId(), "Line must be connected to instance, if create inventory include instance");
+    assertNotNull(respLine2.getInstanceId(), "Line must be connected to instance, if create inventory include instance");
 
     List<JsonObject> createdHoldings = getCreatedHoldings();
     assertEquals(5, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
@@ -4240,7 +4243,7 @@ public class PurchaseOrdersApiTest {
         return null;
       }
     }).when(transactionService).updateTransactions(transactions, requestContext);
-    doReturn(succeededFuture(transactionCollection)).when(restClient).get(requestEntry, requestContext, TransactionCollection.class);
+    doReturn(succeededFuture(transactionCollection)).when(restClient).get(requestEntry, TransactionCollection.class, requestContext);
     doReturn(succeededFuture(transactions)).when(transactionService).getTransactionsByIds(transactionIds, requestContext);
     List<Transaction> updatedTransactions = encumbranceService.getEncumbrancesByIds(transactionIds, requestContext).result();
     assertThat(updatedTransactions.size(), equalTo(1));

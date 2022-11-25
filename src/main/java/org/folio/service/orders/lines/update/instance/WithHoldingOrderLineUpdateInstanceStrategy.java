@@ -95,7 +95,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           }
         }));
     })
-      .compose(v -> GenericCompositeFuture.all(new ArrayList<>(futures))
+      .compose(v -> GenericCompositeFuture.join(new ArrayList<>(futures))
         .map(ok -> null));
   }
 
@@ -109,7 +109,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
           return updateItemsHolding(holdingId, newHoldingId, holder.getStoragePoLine().getId(), requestContext);
         }));
-    }).compose(v -> GenericCompositeFuture.all(new ArrayList<>(futures)))
+    }).compose(v -> GenericCompositeFuture.join(new ArrayList<>(futures)))
       .mapEmpty();
   }
 
@@ -144,7 +144,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
     List<Parameter> parameters = new ArrayList<>();
-    return GenericCompositeFuture.all(items.stream()
+    return GenericCompositeFuture.join(items.stream()
         .map(item -> inventoryManager.updateItem(item, requestContext)
              .onFailure(ex -> {
               Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));

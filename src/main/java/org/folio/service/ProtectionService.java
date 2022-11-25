@@ -14,7 +14,10 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
+import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.HttpException;
@@ -27,6 +30,7 @@ import org.folio.rest.jaxrs.model.Error;
 import io.vertx.core.Future;
 
 public class ProtectionService {
+  private static final Logger log = LogManager.getLogger(ProtectionService.class);
 
   public static final String ACQUISITIONS_UNIT_ID = "acquisitionsUnitId";
   private static final String IS_DELETED_PROP = "isDeleted";
@@ -91,7 +95,7 @@ public class ProtectionService {
       return Future.succeededFuture();
     }
 
-    return getUnitsByIds(acqUnitIds, requestContext).onSuccess(units -> {
+    return getUnitsByIds(acqUnitIds, requestContext).map(units -> {
       List<String> activeUnitIds = units.stream()
         .filter(unit -> !unit.getIsDeleted())
         .map(AcquisitionsUnit::getId)
@@ -100,8 +104,8 @@ public class ProtectionService {
       if (acqUnitIds.size() != activeUnitIds.size()) {
         throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), buildUnitsNotFoundError(acqUnitIds, activeUnitIds));
       }
-    })
-      .mapEmpty();
+      return null;
+    });
   }
 
   private Error buildUnitsNotFoundError(List<String> expectedUnitIds, List<String> availableUnitIds) {
@@ -121,10 +125,11 @@ public class ProtectionService {
   private Future<Void> verifyUserIsMemberOfOrdersUnits(List<String> unitIdsAssignedToOrder, RequestContext requestContext) {
     String query = String.format("userId==%s AND %s", getCurrentUserId(requestContext.getHeaders()), HelperUtils.convertFieldListToCqlQuery(unitIdsAssignedToOrder, ACQUISITIONS_UNIT_ID, true));
     return acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, 0, 0, requestContext)
-      .onSuccess(unit -> {
+      .map(unit -> {
         if (unit.getTotalRecords() == 0) {
           throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_PERMISSIONS);
         }
+        return null;
       })
       .mapEmpty();
   }

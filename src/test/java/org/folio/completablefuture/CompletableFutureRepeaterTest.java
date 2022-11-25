@@ -1,7 +1,7 @@
 package org.folio.completablefuture;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
-import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.folio.completablefuture.CompletableFutureRepeater.repeat;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
@@ -12,6 +12,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+
+import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -38,21 +40,21 @@ class CompletableFutureRepeaterTest {
 
   @Test
   void fail() {
-    assertThrowsCause(Fail1.class, () -> repeat(1, task(fail1, a, b)).getNow(""));
-    assertThrowsCause(Fail2.class, () -> repeat(2, task(fail1, fail2, a, b)).getNow(""));
+    assertThrowsCause(Fail1.class, () -> repeat(1, task(fail1, a, b)).result());
+    assertThrowsCause(Fail2.class, () -> repeat(2, task(fail1, fail2, a, b)).result());
   }
 
   @Test
   void success() {
-    assertThat(repeat(1, task(a, b)).getNow(""), is("a"));
-    assertThat(repeat(2, task(a, b)).getNow(""), is("a"));
+    assertThat(repeat(1, task(a, b)).result(), is("a"));
+    assertThat(repeat(2, task(a, b)).result(), is("a"));
   }
 
   @Test
   void failSuccess() {
-    assertThat(repeat(2, task(fail1, a, b)).getNow(""), is("a"));
-    assertThat(repeat(3, task(fail1, a, b)).getNow(""), is("a"));
-    assertThat(repeat(3, task(fail1, fail2, a, b)).getNow(""), is("a"));
-    assertThat(repeat(4, task(fail1, fail2, a, b)).getNow(""), is("a"));
+    assertThat(repeat(2, task(fail1, a, b)).result(), is("a"));
+    assertThat(repeat(3, task(fail1, a, b)).result(), is("a"));
+    assertThat(repeat(3, task(fail1, fail2, a, b)).result(), is("a"));
+    assertThat(repeat(4, task(fail1, fail2, a, b)).result(), is("a"));
   }
 }

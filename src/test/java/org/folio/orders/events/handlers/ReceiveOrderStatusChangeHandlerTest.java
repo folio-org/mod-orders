@@ -49,6 +49,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
 import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -85,6 +86,9 @@ public class ReceiveOrderStatusChangeHandlerTest {
   @Autowired
   private PurchaseOrderHelper purchaseOrderHelper;
 
+  @Autowired
+  private PurchaseOrderLineService purchaseOrderLineService;
+
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
     if (isVerticleNotDeployed()) {
@@ -99,7 +103,7 @@ public class ReceiveOrderStatusChangeHandlerTest {
   void initMocks(){
     SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
     vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx, encumbranceService,
-        purchaseOrderStorageService, purchaseOrderHelper));
+        purchaseOrderStorageService, purchaseOrderHelper, purchaseOrderLineService));
   }
 
   @AfterEach

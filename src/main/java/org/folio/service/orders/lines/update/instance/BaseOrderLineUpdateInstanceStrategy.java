@@ -46,7 +46,7 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
         }
       });
     }
-    return GenericCompositeFuture.all(futures)
+    return GenericCompositeFuture.join(futures)
       .mapEmpty();
 
   }

@@ -10,6 +10,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isOneOf;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.oneOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,6 +37,7 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRate;
 
+import io.vertx.core.Future;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -121,7 +123,7 @@ public class ReEncumbranceHoldersBuilderTest {
     assertThat(resultHolders, everyItem(allOf(
       hasProperty("purchaseOrder", is(compPO)),
       hasProperty("poLine", is(compositePoLine1)),
-      hasProperty("fundDistribution", isOneOf(fundDistribution1, fundDistribution2))
+      hasProperty("fundDistribution", is(oneOf(fundDistribution1, fundDistribution2)))
     )));
   }
 
@@ -136,7 +138,7 @@ public class ReEncumbranceHoldersBuilderTest {
     Fund fund1 = new Fund().withId(fundDistribution1.getFundId()).withLedgerId(UUID.randomUUID().toString());
     Fund fund2 = new Fund().withId(fundDistribution2.getFundId()).withLedgerId(UUID.randomUUID().toString());
 
-    when(fundService.getFunds(anyCollection(), any())).thenReturn(CompletableFuture.succeededFuture(Arrays.asList(fund2, fund1)));
+    when(fundService.getFunds(anyCollection(), any())).thenReturn(Future.succeededFuture(Arrays.asList(fund2, fund1)));
 
 
     reEncumbranceHoldersBuilder.withFundsData(holders, requestContext).result();
@@ -157,7 +159,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     Fund fund1 = new Fund().withId(fundDistribution1.getFundId()).withLedgerId(UUID.randomUUID().toString());
 
-    when(fundService.getFunds(anyCollection(), any())).thenReturn(CompletableFuture.succeededFuture(Collections.singletonList(fund1)));
+    when(fundService.getFunds(anyCollection(), any())).thenReturn(Future.succeededFuture(Collections.singletonList(fund1)));
 
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withFundsData(holders, requestContext).result();
@@ -193,7 +195,7 @@ public class ReEncumbranceHoldersBuilderTest {
     Ledger ledger2 = new Ledger().withId(ledgerId2).withRestrictEncumbrance(false);
 
 
-    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(CompletableFuture.succeededFuture(Arrays.asList(ledger1, ledger2)));
+    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(Future.succeededFuture(Arrays.asList(ledger1, ledger2)));
 
 
    reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext).result();
@@ -224,7 +226,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     Ledger ledger1 = new Ledger().withId(fund1.getLedgerId()).withRestrictEncumbrance(true);
 
-    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(CompletableFuture.succeededFuture(Collections.singletonList(ledger1)));
+    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(Future.succeededFuture(Collections.singletonList(ledger1)));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext).result();
 
@@ -244,7 +246,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     FiscalYear fiscalYear = new FiscalYear().withId(UUID.randomUUID().toString());
 
-    when(fiscalYearService.getCurrentFiscalYear(anyString(), any())).thenReturn(CompletableFuture.succeededFuture(fiscalYear));
+    when(fiscalYearService.getCurrentFiscalYear(anyString(), any())).thenReturn(Future.succeededFuture(fiscalYear));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).result();
 
@@ -276,7 +278,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     FiscalYear fiscalYear = new FiscalYear().withId(UUID.randomUUID().toString());
 
-    when(fiscalYearService.getCurrentFiscalYear(anyString(), any())).thenReturn(CompletableFuture.succeededFuture(fiscalYear));
+    when(fiscalYearService.getCurrentFiscalYear(anyString(), any())).thenReturn(Future.succeededFuture(fiscalYear));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).result();
 
@@ -316,7 +318,7 @@ public class ReEncumbranceHoldersBuilderTest {
     Budget budget1 = new Budget().withId(UUID.randomUUID().toString()).withFundId(fund1.getId());
     Budget budget2 = new Budget().withId(UUID.randomUUID().toString()).withFundId(fund2.getId());
 
-    when(budgetService.fetchBudgetsByFundIds(anyList(), any())).thenReturn(CompletableFuture.succeededFuture(Arrays.asList(budget1, budget2)));
+    when(budgetService.fetchBudgetsByFundIds(anyList(), any())).thenReturn(Future.succeededFuture(Arrays.asList(budget1, budget2)));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withBudgets(holders, requestContext).result();
 
@@ -359,7 +361,7 @@ public class ReEncumbranceHoldersBuilderTest {
     LedgerFiscalYearRollover rollover2 = new LedgerFiscalYearRollover().withLedgerId(ledgerId2);
 
 
-    when(rolloverRetrieveService.getLedgerFyRollovers(anyString(), anyList(), any())).thenReturn(CompletableFuture.succeededFuture(Arrays.asList(rollover1, rollover2)));
+    when(rolloverRetrieveService.getLedgerFyRollovers(anyString(), anyList(), any())).thenReturn(Future.succeededFuture(Arrays.asList(rollover1, rollover2)));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withRollovers(holders, requestContext).result();
 
@@ -681,8 +683,8 @@ public class ReEncumbranceHoldersBuilderTest {
     List<Transaction> fromTransactionList = Arrays.asList(fromEncumbrance1, fromEncumbrance2);
     List<Transaction> toTransactionList = Collections.singletonList(toEncumbrance1);
 
-    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(CompletableFuture.succeededFuture(fromTransactionList));
-    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(CompletableFuture.succeededFuture(toTransactionList));
+    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(Future.succeededFuture(fromTransactionList));
+    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(Future.succeededFuture(toTransactionList));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext).result();
 
@@ -762,8 +764,8 @@ public class ReEncumbranceHoldersBuilderTest {
     List<Transaction> fromTransactionList = Arrays.asList(fromEncumbrance1, fromEncumbrance2);
     List<Transaction> toTransactionList = Collections.emptyList();
 
-    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(CompletableFuture.succeededFuture(fromTransactionList));
-    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(CompletableFuture.succeededFuture(toTransactionList));
+    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(Future.succeededFuture(fromTransactionList));
+    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(Future.succeededFuture(toTransactionList));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext).result();
 
@@ -860,7 +862,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
 
-    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(CompletableFuture.succeededFuture(toTransactionList));
+    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(Future.succeededFuture(toTransactionList));
 
     when(poLineToFyConversion.with(any())).thenReturn(poLineToFyConversion);
     when(poLineToFyConversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> {

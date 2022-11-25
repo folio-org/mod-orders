@@ -32,6 +32,7 @@ import javax.money.convert.ConversionQueryBuilder;
 import javax.money.convert.ExchangeRate;
 import javax.money.convert.ExchangeRateProvider;
 
+import io.vertx.core.Future;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -195,7 +196,7 @@ public class OrderRolloverServiceTest {
 
     Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
     future.result();
-    assertFalse(future.isCompletedExceptionally());
+    assertFalse(future.failed());
 
     assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
     assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
@@ -293,7 +294,7 @@ public class OrderRolloverServiceTest {
 
     Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
     future.result();
-    assertFalse(future.isCompletedExceptionally());
+    assertFalse(future.failed());
 
     assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
 
@@ -409,7 +410,7 @@ public class OrderRolloverServiceTest {
 
     Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
     future.result();
-    assertFalse(future.isCompletedExceptionally());
+    assertFalse(future.failed());
 
     assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
     assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
@@ -501,7 +502,7 @@ public class OrderRolloverServiceTest {
 
     Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
     future.result();
-    assertFalse(future.isCompletedExceptionally());
+    assertFalse(future.failed());
 
     assertThat(fundDistribution.getEncumbrance(), equalTo(null));
     verify(transactionService, times(1)).deleteTransactions(

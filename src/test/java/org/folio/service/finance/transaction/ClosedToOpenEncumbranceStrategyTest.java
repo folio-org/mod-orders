@@ -1,5 +1,6 @@
 package org.folio.service.finance.transaction;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.core.models.RequestContext;
@@ -86,7 +87,7 @@ public class ClosedToOpenEncumbranceStrategyTest {
 
     // When
     Future<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
     // Then
@@ -121,7 +122,7 @@ public class ClosedToOpenEncumbranceStrategyTest {
 
     // When
     Future<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
     // Then

@@ -2,6 +2,7 @@ package org.folio.service.orders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -9,7 +10,6 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import io.vertx.core.Future;
 
 public class PurchaseOrderStorageServiceTest {
   @InjectMocks
@@ -46,13 +48,13 @@ public class PurchaseOrderStorageServiceTest {
       .withPurchaseOrders(purchaseOrders)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(), any(), any()))
-      .thenReturn(CompletableFuture.succeededFuture(purchaseOrderCollection));
+    when(restClientMock.get(anyString(), any(), any()))
+      .thenReturn(Future.succeededFuture(purchaseOrderCollection));
 
     String expectedQuery =  String.format("id==%s", orderId);
     PurchaseOrderCollection actOrders = purchaseOrderStorageService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).result();
 
-    verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
+    verify(restClientMock).get(anyString(), eq(PurchaseOrderCollection.class), eq(requestContext));
     assertEquals(purchaseOrderCollection, actOrders);
   }
 
@@ -66,12 +68,12 @@ public class PurchaseOrderStorageServiceTest {
       .withPurchaseOrders(purchaseOrders)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(), any(), any()))
-      .thenReturn(CompletableFuture.succeededFuture(purchaseOrderCollection));
+    when(restClientMock.get(anyString(), any(), any()))
+      .thenReturn(Future.succeededFuture(purchaseOrderCollection));
 
     List<PurchaseOrder> actOrders = purchaseOrderStorageService.getPurchaseOrdersByIds(List.of(orderId), requestContext).result();
 
-    verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
+    verify(restClientMock).get(anyString(), eq(PurchaseOrderCollection.class), eq(requestContext));
     assertEquals(purchaseOrderCollection.getPurchaseOrders(), actOrders);
   }
 

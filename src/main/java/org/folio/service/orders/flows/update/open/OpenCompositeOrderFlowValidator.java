@@ -46,10 +46,13 @@ public class OpenCompositeOrderFlowValidator {
                                           RequestContext requestContext) {
     return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), true, requestContext)
       .compose(v -> checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext))
-      .onSuccess(v -> FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines()))
+      .map(v -> {
+        FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines());
+        return null;
+      })
       .map(v -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN))
       .compose(strategy -> strategy.prepareProcessEncumbrancesAndValidate(compPO, poFromStorage, requestContext))
-      .onSuccess(holders -> validateMaterialTypes(compPO))
+      .map(holders -> validateMaterialTypes(compPO))
       .mapEmpty();
   }
 

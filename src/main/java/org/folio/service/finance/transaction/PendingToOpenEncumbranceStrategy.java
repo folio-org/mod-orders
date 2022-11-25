@@ -42,7 +42,10 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
       .compose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
       .compose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage, requestContext))
       .map(fundsDistributionService::distributeFunds)
-      .onSuccess(budgetRestrictionService::checkEncumbranceRestrictions)
+      .map(dataHolders -> {
+        budgetRestrictionService.checkEncumbranceRestrictions(dataHolders);
+        return null;
+      })
       .map(v -> encumbranceRelationsHolders);
   }
 

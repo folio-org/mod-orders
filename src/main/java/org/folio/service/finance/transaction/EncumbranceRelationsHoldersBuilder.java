@@ -174,7 +174,7 @@ public class EncumbranceRelationsHoldersBuilder {
   public Future<List<EncumbranceRelationsHolder>> withConversion(List<EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
     return encumbranceHolders.stream().map(EncumbranceRelationsHolder::getCurrency)
         .filter(Objects::nonNull).findFirst().map(transactionCurrency ->
-        Vertx.vertx().getOrCreateContext().<List<EncumbranceRelationsHolder>>executeBlocking(execBlockingFuture ->  {
+        requestContext.getContext().<List<EncumbranceRelationsHolder>>executeBlocking(execBlockingFuture ->  {
           Map<String, List<EncumbranceRelationsHolder>> currencyHolderMap = encumbranceHolders.stream().filter(holder -> Objects.nonNull(holder.getPoLine())).collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
           currencyHolderMap.forEach((poLineCurrency, encumbranceRelationsHolders) -> {
             Double exchangeRate = encumbranceRelationsHolders.stream()

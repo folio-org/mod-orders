@@ -71,12 +71,13 @@ public class PieceDeleteFlowManager {
         if (numOfRequests != null && numOfRequests > 0) {
           combinedErrors.add(ErrorCodes.REQUEST_FOUND.toError());
         }
-      }).onSuccess(numOfRequests -> {
+      }).map(numOfRequests -> {
         if (CollectionUtils.isNotEmpty(combinedErrors)) {
           Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
           logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
           throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
+        return null;
       })
         .mapEmpty();
     }

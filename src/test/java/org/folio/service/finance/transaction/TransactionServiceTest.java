@@ -38,12 +38,9 @@ public class TransactionServiceTest {
   void testShouldInvokeUpdateTransaction() throws Exception {
     //given
     Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
-
-    Response response = new Response();
-    response.setCode(204);
-    doReturn(succeededFuture(response)).when(restClient).put(any(RequestEntry.class), eq(encumbrance), eq(requestContext));
+    doReturn(succeededFuture()).when(restClient).put(any(RequestEntry.class), eq(encumbrance), eq(requestContext));
     //When
-    transactionService.updateTransaction(encumbrance, requestContext).get();
+    transactionService.updateTransaction(encumbrance, requestContext).result();
     //Then
     ArgumentCaptor<RequestEntry> argumentCaptor = ArgumentCaptor.forClass(RequestEntry.class);
     verify(restClient).put(argumentCaptor.capture(), eq(encumbrance), eq(requestContext));

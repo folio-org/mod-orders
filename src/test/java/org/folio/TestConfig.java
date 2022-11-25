@@ -5,6 +5,8 @@ import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxImpl;
@@ -53,11 +55,11 @@ public final class TestConfig {
     conf.put("http.port", okapiPort);
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
-    Future<String> deploymentComplete = new Future<>();
+    Promise<String> deploymentComplete = Promise.promise();
 
-    String[] hostAndPort = kafkaCluster.getBrokerList().split(":");
-    System.setProperty(KAFKA_HOST, hostAndPort[0]);
-    System.setProperty(KAFKA_PORT, hostAndPort[1]);
+    //    String[] hostAndPort = kafkaCluster.getBrokerList().split(":");
+  //  System.setProperty(KAFKA_HOST, hostAndPort[0]);
+  //  System.setProperty(KAFKA_PORT, hostAndPort[1]);
     System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
 
     vertx.deployVerticle(RestVerticle.class.getName(), opt, res -> {
@@ -65,10 +67,10 @@ public final class TestConfig {
         deploymentComplete.complete(res.result());
       }
       else {
-        deploymentComplete.completeExceptionally(res.cause());
+        deploymentComplete.fail(res.cause());
       }
     });
-    deploymentComplete.get(60, TimeUnit.SECONDS);
+    deploymentComplete.future().toCompletionStage().toCompletableFuture().get(60, TimeUnit.SECONDS);
   }
 
   public static void initSpringContext(Class<?> defaultConfiguration) {
@@ -109,7 +111,7 @@ public final class TestConfig {
   }
 
   public static void closeKafkaMockServer() {
-    kafkaCluster.stop();
+    //kafkaCluster.stop();
   }
 
   public static void closeVertx() {

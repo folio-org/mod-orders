@@ -98,7 +98,7 @@ public class ApiTestSuite {
   @BeforeAll
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
     startMockServer();
-    startKafkaMockServer();
+ //   startKafkaMockServer();
     deployVerticle();
   }
 

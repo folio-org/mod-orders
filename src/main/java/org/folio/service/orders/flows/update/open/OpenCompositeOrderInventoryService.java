@@ -46,7 +46,7 @@ public class OpenCompositeOrderInventoryService {
         futures.add(processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext));
       }
     }
-    return GenericCompositeFuture.all(new ArrayList<>(futures))
+    return GenericCompositeFuture.join(new ArrayList<>(futures))
       .mapEmpty();
   }
 

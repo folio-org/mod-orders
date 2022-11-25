@@ -67,10 +67,11 @@ public class AcquisitionMethodsService {
       if (!isSystem) {
         String query = String.format(PO_LINE_BY_ACQUISITION_METHOD_QUERY, acquisitionMethod.getId());
         return purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
-           .onSuccess(poLines -> {
+           .map(poLines -> {
              if (!poLines.isEmpty()) {
                throw new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), FORBIDDEN_DELETE_USED_VALUE);
              }
+             return null;
            });
       } else {
         throw new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), FORBIDDEN_DELETE_SYSTEM_VALUE);

@@ -19,6 +19,7 @@ import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ExportHistoryService;
 import org.folio.service.FundsDistributionService;
+import org.folio.service.OrderTemplatesService;
 import org.folio.service.PrefixService;
 import org.folio.service.ProtectionService;
 import org.folio.service.ReasonForClosureService;
@@ -667,6 +668,13 @@ public class ApplicationConfig {
   OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
     return new WithoutHoldingOrderLineUpdateInstanceStrategy(inventoryManager);
   }
+
+  @Bean
+  OrderTemplatesService orderTemplatesService() {
+    return new OrderTemplatesService();
+  }
+
+
 
   @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
       OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {

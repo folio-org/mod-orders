@@ -33,20 +33,12 @@ public class OrderTemplatesService {
   }
 
   public Future<OrderTemplate> getOrderTemplateById(String id, RequestContext requestContext) {
-    return restClient.getById(resourcesPath(ORDER_TEMPLATES), id, false,  OrderTemplate.class, requestContext);
+    return restClient.get(resourceByIdPath(ORDER_TEMPLATES)+ id, OrderTemplate.class, requestContext);
   }
 
   public Future<OrderTemplateCollection> getOrderTemplates(String query, int offset, int limit, RequestContext requestContext) {
-    Promise<OrderTemplateCollection> promise = Promise.promise();
-    try {
-      String endpoint = String.format(GET_ORDER_TEMPLATES_BY_QUERY, limit, offset, buildQuery(query));
-      restClient.get(endpoint, OrderTemplateCollection.class, requestContext)
-        .onSuccess(promise::complete)
-        .onFailure(t -> promise.fail(t.getCause()));
-    } catch (Exception e) {
-      promise.fail(e);
-    }
-    return promise.future();
+    String endpoint = String.format(GET_ORDER_TEMPLATES_BY_QUERY, limit, offset, buildQuery(query));
+    return restClient.get(endpoint, OrderTemplateCollection.class, requestContext);
   }
 
   public Future<Void> deleteOrderTemplate(String id, RequestContext requestContext) {

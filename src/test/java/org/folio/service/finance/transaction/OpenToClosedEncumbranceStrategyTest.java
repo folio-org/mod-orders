@@ -1,6 +1,24 @@
 package org.folio.service.finance.transaction;
 
-import io.vertx.core.json.JsonObject;
+import static io.vertx.core.Future.succeededFuture;
+import static java.util.Collections.singletonList;
+import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
+import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
@@ -14,25 +32,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
-import static java.util.Collections.singletonList;
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
-import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
-import static org.folio.TestUtils.getMockAsJson;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 @ExtendWith(MockitoExtension.class)
 public class OpenToClosedEncumbranceStrategyTest {
@@ -82,7 +83,7 @@ public class OpenToClosedEncumbranceStrategyTest {
 
     // When
     Future<Void> result = openToClosedEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
     // Then

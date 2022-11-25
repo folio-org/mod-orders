@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import io.vertx.core.Future;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.core.models.RequestContext;
@@ -43,8 +44,7 @@ public class FiscalYearServiceTest {
 
   @BeforeEach
   public void initMocks() {
-    ctxMock = Vertx.vertx()
-      .getOrCreateContext();
+    ctxMock = Vertx.vertx().getOrCreateContext();
     okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
@@ -52,7 +52,6 @@ public class FiscalYearServiceTest {
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     requestContextMock = new RequestContext(ctxMock, okapiHeadersMock);
-    httpClient = HttpClientFactory.getHttpClient(okapiURL, TENANT_ID);
     MockitoAnnotations.openMocks(this);
   }
 
@@ -70,7 +69,7 @@ public class FiscalYearServiceTest {
   void testShouldThrowHttpException() {
 
     Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
-    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
+    CompletionException expectedException = assertThrows(CompletionException.class, result::result);
 
     HttpException httpException = (HttpException) expectedException.getCause();
     assertEquals(404, httpException.getCode());

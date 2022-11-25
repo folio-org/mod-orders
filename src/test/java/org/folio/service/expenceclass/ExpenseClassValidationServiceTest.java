@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import io.vertx.core.Future;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -56,7 +57,7 @@ public class ExpenseClassValidationServiceTest {
     Future<Void> response = expenseClassValidationService.validateExpenseClasses(compositePoLineList, true, requestContext);
     response.result();
 
-    Assertions.assertTrue(response.isDone());
+    Assertions.assertTrue(response.succeeded());
 
   }
 }

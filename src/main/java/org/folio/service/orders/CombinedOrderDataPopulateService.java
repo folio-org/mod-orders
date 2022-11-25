@@ -28,7 +28,7 @@ public class CombinedOrderDataPopulateService implements CompositeOrderDynamicDa
 
   private Future<CompositeOrderRetrieveHolder> populateAllDynamicData(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
-    return GenericCompositeFuture.all(populateServices.stream()
+    return GenericCompositeFuture.join(populateServices.stream()
       .map(service -> service.populate(holder, requestContext))
       .collect(Collectors.toList()))
       .map(aVoid -> holder);

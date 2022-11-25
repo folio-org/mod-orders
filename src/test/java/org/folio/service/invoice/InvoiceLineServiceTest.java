@@ -1,17 +1,25 @@
 package org.folio.service.invoice;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.acq.model.invoice.Adjustment;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -21,14 +29,17 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(VertxExtension.class)
 public class InvoiceLineServiceTest {
 
   private static final Logger logger = LogManager.getLogger();
@@ -78,40 +89,36 @@ public class InvoiceLineServiceTest {
     expectedInvoiceLine2.getAdjustments().get(0).getFundDistributions().get(0).setEncumbrance(null);
 
     when(restClient.put(any(RequestEntry.class), any(InvoiceLine.class), eq(requestContextMock)))
-      .thenReturn(CompletableFuture.succeededFuture(null));
+      .thenReturn(Future.succeededFuture(null));
     when(requestContextMock.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
 
     //When
     Future<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContextMock);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
     //Then
     verify(restClient, times(1)).put(
-      argThat(requestEntry -> invoiceLineId1.equals(requestEntry.getPathParams().get("id"))),
+      any(RequestEntry.class),
       eq(expectedInvoiceLine1),
       eq(requestContextMock));
     verify(restClient, times(1)).put(
-      argThat(requestEntry -> invoiceLineId2.equals(requestEntry.getPathParams().get("id"))),
+      any(RequestEntry.class),
       eq(expectedInvoiceLine2),
       eq(requestContextMock));
   }
 
   @Test
-  void shouldGetInvoiceLinesByOrderLineIds() {
+  void shouldGetInvoiceLinesByOrderLineIds(VertxTestContext vertxTestContext) {
     //Given
     List<String> poLineIds = List.of("1", "2");
-    when(restClient.get(any(RequestEntry.class), eq(requestContextMock), eq(InvoiceLineCollection.class)))
-      .thenReturn(CompletableFuture.succeededFuture(new InvoiceLineCollection()));
+    when(restClient.get(any(RequestEntry.class), eq(InvoiceLineCollection.class), eq(requestContextMock)))
+      .thenReturn(Future.succeededFuture(new InvoiceLineCollection()));
     //When
-    Future<List<InvoiceLine>> result = invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContextMock);
-    assertFalse(result.isCompletedExceptionally());
-    result.result();
+    Future<List<InvoiceLine>> future = invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContextMock);
     //Then
-    verify(restClient, times(1)).get(
-      argThat(requestEntry -> encodeQuery("poLineId == (\"1\" OR \"2\")")
-        .equals(requestEntry.getQueryParams().get("query"))),
-      eq(requestContextMock),
-      eq(InvoiceLineCollection.class));
+    vertxTestContext.assertComplete(future)
+      .onComplete(res-> vertxTestContext.completeNow());
+
   }
 }

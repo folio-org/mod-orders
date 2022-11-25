@@ -51,7 +51,7 @@ public class InvoiceLineService {
       .withOffset(0)
       .withLimit(Integer.MAX_VALUE);
     return getInvoiceLines(requestEntry, requestContext)
-       .onFailure(t -> {
+       .recover(t -> {
         logger.error(GET_INVOICE_LINES_ERROR + ". Query: " + query, t);
         throw new HttpException(t.getCause() instanceof HttpException ? ((HttpException)t.getCause()).getCode() :
           HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), GET_INVOICE_LINES_ERROR);

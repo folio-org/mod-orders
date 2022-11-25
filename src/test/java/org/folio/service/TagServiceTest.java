@@ -8,6 +8,7 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import io.vertx.core.Future;
 import org.folio.rest.acq.model.tag.Tag;
 import org.folio.rest.acq.model.tag.TagCollection;
 import org.folio.rest.core.RestClient;
@@ -65,13 +67,13 @@ class TagServiceTest {
       .withTags(new ArrayList<>())
       .withTotalRecords(0);
 
-    doReturn(succeededFuture(emptyTagCollection)).when(restClient).get(any(), any(),  any());
-    doReturn(succeededFuture(postTagResponse)).when(restClient).post(any(), any(),  any(), any());
+    doReturn(succeededFuture(emptyTagCollection)).when(restClient).get(anyString(), any(),  any());
+    doReturn(succeededFuture(postTagResponse)).when(restClient).post(anyString(), any(),  any(), any());
 
     Future<Void> response = tagService.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
     response.result();
 
-    Assertions.assertTrue(response.isDone());
+    Assertions.assertTrue(response.succeeded());
 
   }
 

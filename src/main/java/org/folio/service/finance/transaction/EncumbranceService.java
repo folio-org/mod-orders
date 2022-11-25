@@ -93,8 +93,11 @@ public class EncumbranceService {
     for (EncumbranceRelationsHolder holder : relationsHolders) {
 // TODO: fix sequantial processing with parallel using semaphores
       future = future.compose(v -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
-        .onSuccess(transaction -> holder.getFundDistribution().setEncumbrance(transaction.getId()))
-        .onFailure(fail -> {
+        .map(transaction -> {
+          holder.getFundDistribution().setEncumbrance(transaction.getId());
+          return null;
+        })
+        .recover(fail -> {
           checkCustomTransactionError(fail);
           // TODO: replace CompletionException
           throw new CompletionException(fail);
@@ -278,7 +281,7 @@ public class EncumbranceService {
         return invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
           .compose(invoiceLines -> invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContext));
       })
-       .onFailure(t -> {
+       .recover(t -> {
         Throwable cause = requireNonNullElse(t.getCause(), t);
         String message = String.format(ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES.getDescription(), cause.getMessage());
         logger.error(message);

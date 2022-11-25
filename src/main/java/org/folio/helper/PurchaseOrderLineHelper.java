@@ -107,9 +107,8 @@ import io.vertx.core.json.JsonObject;
 public class PurchaseOrderLineHelper {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderLineHelper.class);
 
-  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
 
-  private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{1,22}-)([0-9]{1,3})");
+  private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{1,22}-)(\\d{1,3})");
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
   private static final String CREATE_INVENTORY = "createInventory";
   public static final String ERESOURCE = "eresource";
@@ -199,7 +198,7 @@ public class PurchaseOrderLineHelper {
             .compose(v -> createPoLine(compPOL, po, requestContext)));
         } else {
             Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
-            logger.error("Create POL validation error : " + JsonObject.mapFrom(errors).encodePrettily());
+            logger.error("Create POL validation error : {}", JsonObject.mapFrom(errors).encodePrettily());
             throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
       });
@@ -228,7 +227,7 @@ public class PurchaseOrderLineHelper {
 
     return GenericCompositeFuture.all(new ArrayList<>(subObjFuts))
       .compose(v -> generateLineNumber(compOrder, requestContext))
-      .onSuccess(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
+      .map(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
       .compose(v -> createPoLineSummary(compPoLine, line, requestContext));
   }
 
@@ -243,8 +242,10 @@ public class PurchaseOrderLineHelper {
         promise.complete(new JsonObject());
       }
       return promise.future()
-        .onSuccess(jsonConfig -> updateCreateInventory(compPOL, jsonConfig))
-        .mapEmpty();
+        .map(jsonConfig -> {
+          updateCreateInventory(compPOL, jsonConfig);
+          return null;
+        });
     } else {
       return Future.succeededFuture();
     }
@@ -278,7 +279,7 @@ public class PurchaseOrderLineHelper {
         .compose(ok -> {
           logger.debug("Deleting PO line...");
           return encumbranceService.deletePoLineEncumbrances(line, requestContext)
-            .compose(v -> deletePoLine(line, requestContext));
+            .compose(v -> purchaseOrderLineService.deletePoLine(line, requestContext));
       }))
       .onSuccess(json -> logger.info("The PO Line with id='{}' has been deleted successfully", lineId));
   }
@@ -309,7 +310,10 @@ public class PurchaseOrderLineHelper {
           compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
           return updateOrderLine(compOrderLine, lineFromStorage, requestContext)
             .compose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
-            .onSuccess(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext));
+            .map(ok -> {
+              updateOrderStatus(compOrderLine, lineFromStorage, requestContext);
+              return null;
+            });
         });
 
   }
@@ -357,9 +361,9 @@ public class PurchaseOrderLineHelper {
     Promise<Void> promise = Promise.promise();
 
     updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext)
-      .compose(poLine -> updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
+      .compose(poLine -> purchaseOrderLineService.updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
       .onSuccess(json -> promise.complete())
-       .onFailure(throwable -> {
+      .onFailure(throwable -> {
         String message = String.format("PO Line with '%s' id partially updated but there are issues processing some PO Line sub-objects", compOrderLine.getId());
         logger.error(message);
          promise.fail(throwable);
@@ -367,12 +371,6 @@ public class PurchaseOrderLineHelper {
     return promise.future();
   }
 
-
-  public Future<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine, RequestContext requestContext) {
-    logger.debug("Updating PO line...");
-    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES_STORAGE, poLineId), EN);
-    return operateOnObject(HttpMethod.PUT, endpoint, poLine, requestContext);
-  }
 
   public String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {
     String oldPoLineNumber = poLineFromStorage.getPoLineNumber();
@@ -422,7 +420,7 @@ public class PurchaseOrderLineHelper {
       return Future.succeededFuture();
     }
 
-    return operateOnObject(operation, url, subObjContent, requestContext)
+    return purchaseOrderLineService.operateOnObject(operation, url, subObjContent, requestContext)
       .map(json -> {
         if (operation == HttpMethod.PUT) {
           return storageId;
@@ -448,7 +446,7 @@ public class PurchaseOrderLineHelper {
           String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
 
           futures.add(handleSubObjOperation(prop, subObj, id, requestContext)
-             .onFailure(throwable -> {
+             .recover(throwable -> {
               Error error = handleProcessingError(throwable, prop, id);
               throw new HttpException(500, error);
             })
@@ -472,7 +470,7 @@ public class PurchaseOrderLineHelper {
     }
 
     return GenericCompositeFuture.all(new ArrayList<>(futures))
-      .onSuccess(newIds -> updatedLine.put(prop, newIds))
+      .map(newIds -> updatedLine.put(prop, newIds))
       .mapEmpty();
   }
 
@@ -527,8 +525,8 @@ public class PurchaseOrderLineHelper {
           .map(ReportingCode::getId)));
     }
     return GenericCompositeFuture.all(new ArrayList<>(futures))
-      .onSuccess(reportingIds -> line.put(REPORTING_CODES, reportingIds.list()))
-      .onFailure(t -> {
+      .map(reportingIds -> line.put(REPORTING_CODES, reportingIds.list()))
+      .recover(t -> {
         logger.error("failed to create Reporting Codes", t);
         throw new CompletionException(t.getCause());
       })
@@ -545,8 +543,8 @@ public class PurchaseOrderLineHelper {
     }
 
     return GenericCompositeFuture.all(new ArrayList<>(futures))
-      .onSuccess(ids -> line.put(ALERTS, ids.list()))
-      .onFailure(t -> {
+      .map(ids -> line.put(ALERTS, ids.list()))
+      .recover(t -> {
         logger.error("failed to create Alerts", t);
         throw new CompletionException(t.getCause());
       })
@@ -555,7 +553,10 @@ public class PurchaseOrderLineHelper {
 
   public Future<Void> validateAndNormalizeISBN(CompositePoLine compPOL, String isbnId, Map<String, String> normalizedIsbnCache, RequestContext requestContext) {
     return validateIsbnValues(compPOL, isbnId, normalizedIsbnCache, requestContext)
-      .onSuccess(aVoid -> removeISBNDuplicates(compPOL, isbnId));
+      .map(aVoid -> {
+        removeISBNDuplicates(compPOL, isbnId);
+        return null;
+      });
   }
 
   public Future<Void> validateAndNormalizeISBN(CompositePoLine compPOL, RequestContext requestContext) {
@@ -563,7 +564,10 @@ public class PurchaseOrderLineHelper {
     if (HelperUtils.isProductIdsExist(compPOL)) {
       return inventoryManager.getProductTypeUuidByIsbn(requestContext)
                   .compose(id -> validateIsbnValues(compPOL, id, normalizedIsbnCache, requestContext)
-                  .onSuccess(aVoid -> removeISBNDuplicates(compPOL, id)));
+                  .map(aVoid -> {
+                    removeISBNDuplicates(compPOL, id);
+                    return null;
+                  }));
     }
     return Future.succeededFuture();
   }
@@ -631,7 +635,7 @@ public class PurchaseOrderLineHelper {
       poLinesFromStorage
         .forEach(poLine -> futures.add(orderInvoiceRelationService.checkOrderInvoiceRelationship(compOrder.getId(), requestContext)
           .compose(v -> encumbranceService.deletePoLineEncumbrances(poLine, requestContext)
-            .compose(ok -> deletePoLine(poLine, requestContext)))));
+            .compose(ok -> purchaseOrderLineService.deletePoLine(poLine, requestContext)))));
 
     }
     return GenericCompositeFuture.all(futures)
@@ -697,9 +701,10 @@ public class PurchaseOrderLineHelper {
           return Future.succeededFuture();
         } else {
           return inventoryManager.convertToISBN13(productID.getProductId(), requestContext)
-            .onSuccess(normalizedIsbn -> {
+            .map(normalizedIsbn -> {
               normalizedIsbnCache.put(productID.getProductId(), normalizedIsbn);
               productID.setProductId(normalizedIsbn);
+              return null;
             });
         }
       }).collect(toList());
@@ -815,7 +820,7 @@ public class PurchaseOrderLineHelper {
   private Future<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
     return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(purchaseOrderId, requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
-       .onFailure(t -> {
+       .recover(t -> {
         Throwable cause = t.getCause();
         // The case when specified order does not exist
         if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
@@ -835,7 +840,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<CompositePoLine> populateCompositeLine(PoLine poline, RequestContext requestContext) {
-    return operateOnPoLine(HttpMethod.GET, JsonObject.mapFrom(poline), requestContext)
+    return purchaseOrderLineService.operateOnPoLine(HttpMethod.GET, poline, requestContext)
       .compose(compPol -> getLineWithInstanceId(compPol, requestContext));  }
 
   private Future<CompositePoLine> getLineWithInstanceId(CompositePoLine line, RequestContext requestContext) {
@@ -906,13 +911,14 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {
-    return organizationService.validateAccessProviders(Collections.singletonList(compOrderLine), requestContext).onSuccess(errors -> {
-        if (!errors.getErrors().isEmpty()) {
+    return organizationService.validateAccessProviders(Collections.singletonList(compOrderLine), requestContext)
+      .map(errors -> {
+        if (!errors.getErrors()
+          .isEmpty()) {
           throw new HttpException(422, errors.getErrors().get(0));
         }
-    }) .onFailure(t -> {
-      throw new CompletionException(t.getCause());
-    })
+        return null;
+      })
       .mapEmpty();
   }
 
@@ -1002,94 +1008,6 @@ public class PurchaseOrderLineHelper {
         .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext)));
   }
 
-  public Future<Void> deletePoLine(PoLine line, RequestContext requestContext) {
-    return operateOnPoLine(HttpMethod.DELETE, JsonObject.mapFrom(line), requestContext)
-      .compose(poline -> {
-        String polineId = poline.getId();
-        return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES_STORAGE, polineId), requestContext)
-          .mapEmpty();
-      });
-  }
 
-  public Future<CompositePoLine> operateOnPoLine(HttpMethod operation, JsonObject line, RequestContext requestContext) {
-    Promise<CompositePoLine> promise = Promise.promise();
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("The PO line prior to {} operation: {}", operation, line.encodePrettily());
-    }
-
-    List<Future<Void>> futures = new ArrayList<>();
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, requestContext));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, requestContext));
-
-    GenericCompositeFuture.all(new ArrayList<>(futures))
-      .onSuccess(v -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("The PO line after {} operation on sub-objects: {}", operation, line.encodePrettily());
-        }
-        promise.complete(line.mapTo(CompositePoLine.class));
-      })
-      .onFailure(t -> {
-        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation", operation,t);
-        promise.fail(t);
-      });
-    return promise.future();
-  }
-
-
-  private List<Future<Void>> operateOnSubObjsIfPresent(HttpMethod operation, JsonObject pol, String field, RequestContext requestContext) {
-    JsonArray array = new JsonArray();
-    List<Future<Void>> futures = new ArrayList<>();
-    ((Iterable<?>) pol.remove(field)).forEach(
-      fieldId -> futures.add(operateOnObject(operation, resourceByIdPath(field) + fieldId, requestContext)
-        .map(value -> {
-        if (value != null && !value.isEmpty()) {
-          array.add(value);
-        }
-        return null;
-      })));
-    pol.put(field, array);
-    return futures;
-  }
-
-  public Future<JsonObject> operateOnObject(HttpMethod operation, String url, RequestContext requestContext) {
-    return operateOnObject(operation, url, null, requestContext);
-  }
-
-  public Future<JsonObject> operateOnObject(HttpMethod operation, String url, JsonObject jsonObject, RequestContext requestContext) {
-    Promise<JsonObject> promise = Promise.promise();
-    Future<JsonObject> future = Future.succeededFuture();
-    logger.info("Calling {} {}", operation, url);
-    if (operation.equals(HttpMethod.GET)) {
-      future = restClient.getAsJsonObject(url, true, requestContext);
-    }
-    else if (operation.equals(HttpMethod.POST)) {
-      future = restClient.post(url, jsonObject, JsonObject.class, requestContext);
-    }
-    else if (operation.equals(HttpMethod.PUT)) {
-      future = restClient.put(url, jsonObject, requestContext)
-        .map(v -> new JsonObject());
-    }
-    else if (operation.equals(HttpMethod.DELETE))
-    {
-      future = restClient.delete(url, requestContext)
-        .map(v -> new JsonObject());
-    }
-
-    future
-      .onSuccess(ok -> {
-      logger.info("The {} {} operation completed with following response body: {}", operation, url, jsonObject.encodePrettily());
-      promise.complete();
-    })
-      .onFailure(t -> {
-        Throwable cause = t instanceof CompletionException ? t.getCause() : t;
-        int code = cause instanceof HttpException ? ((HttpException) cause).getCode() : 500;
-        String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, url, cause.getMessage());
-        logger.error(message, t);
-        promise.fail(new HttpException(code, message));
-      });
-
-    return promise.future();
-  }
 
 }

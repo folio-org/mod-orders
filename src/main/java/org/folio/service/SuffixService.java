@@ -66,11 +66,12 @@ public class SuffixService {
   private Future<Void> checkSuffixNotUsed(Suffix suffix, RequestContext requestContext) {
     String query = "poNumberSuffix==" + suffix.getName();
     return purchaseOrderStorageService.getPurchaseOrders(query, 0, 0, requestContext)
-      .onSuccess(purchaseOrders -> {
+      .map(purchaseOrders -> {
         if (purchaseOrders.getTotalRecords() > 0) {
           logger.error("Suffix is used by {} orders", purchaseOrders.getTotalRecords());
           throw new HttpException(400, SUFFIX_IS_USED);
         }
+        return null;
       })
       .mapEmpty();
   }

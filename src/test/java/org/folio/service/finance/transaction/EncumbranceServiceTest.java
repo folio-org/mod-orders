@@ -2,6 +2,7 @@ package org.folio.service.finance.transaction;
 
 import io.restassured.http.Header;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -129,11 +130,11 @@ public class EncumbranceServiceTest {
     transactions.add(encumbrance2);
 
     doReturn(succeededFuture(fiscalYear)).when(fiscalYearService).getCurrentFiscalYearByFundId(anyString(), eq(requestContextMock));
-    doReturn(CompletableFuture.succeededFuture(transactions)).when(transactionService).getTransactions(anyString(), eq(requestContextMock));
+    doReturn(Future.succeededFuture(transactions)).when(transactionService).getTransactions(anyString(), eq(requestContextMock));
 
     //When
     Future<List<Transaction>> result = encumbranceService.getPoLineReleasedEncumbrances(poLine, requestContextMock);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
     //Then
@@ -169,11 +170,11 @@ public class EncumbranceServiceTest {
     List<Transaction> transactions = new ArrayList<>();
     transactions.add(encumbrance);
     transactions.add(encumbrance2);
-    doReturn(CompletableFuture.succeededFuture(transactions)).when(transactionService).getTransactions(anyString(), eq(requestContextMock));
+    doReturn(Future.succeededFuture(transactions)).when(transactionService).getTransactions(anyString(), eq(requestContextMock));
 
-    doReturn(CompletableFuture.succeededFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), eq(requestContextMock));
-    doReturn(CompletableFuture.succeededFuture(null)).when(transactionService).updateTransactions(any(), eq(requestContextMock));
-    doReturn(CompletableFuture.succeededFuture(null)).when(transactionService).deleteTransactions(any(), eq(requestContextMock));
+    doReturn(Future.succeededFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(anyString(), anyInt(), eq(requestContextMock));
+    doReturn(Future.succeededFuture(null)).when(transactionService).updateTransactions(any(), eq(requestContextMock));
+    doReturn(Future.succeededFuture(null)).when(transactionService).deleteTransactions(any(), eq(requestContextMock));
     //When
     encumbranceService.deleteOrderEncumbrances(orderId, requestContextMock).result();
 
@@ -202,11 +203,11 @@ public class EncumbranceServiceTest {
     List<Transaction> transactions = new ArrayList<>();
     transactions.add(encumbrance);
     transactions.add(encumbrance2);
-    doReturn(CompletableFuture.succeededFuture(transactions)).when(transactionService).getTransactions(anyString(), any());
+    doReturn(Future.succeededFuture(transactions)).when(transactionService).getTransactions(anyString(), any());
 
-    doReturn(CompletableFuture.succeededFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(any(), anyInt(), eq(requestContextMock));
-    doReturn(CompletableFuture.succeededFuture(null)).when(transactionService).updateTransactions(any(), eq(requestContextMock));
-    doReturn(CompletableFuture.succeededFuture(null)).when(transactionService).deleteTransactions(any(), eq(requestContextMock));
+    doReturn(Future.succeededFuture(null)).when(transactionSummariesService).updateOrderTransactionSummary(any(), anyInt(), eq(requestContextMock));
+    doReturn(Future.succeededFuture(null)).when(transactionService).updateTransactions(any(), eq(requestContextMock));
+    doReturn(Future.succeededFuture(null)).when(transactionService).deleteTransactions(any(), eq(requestContextMock));
     //When
     encumbranceService.deletePoLineEncumbrances(new PoLine(), requestContextMock).result();
 
@@ -258,15 +259,15 @@ public class EncumbranceServiceTest {
     List<InvoiceLine> invoiceLines = List.of(invoiceLine1, invoiceLine2);
 
     when(orderInvoiceRelationService.isOrderLinkedToAnInvoice(eq(orderId), eq(requestContextMock)))
-      .thenReturn(CompletableFuture.succeededFuture(true));
+      .thenReturn(Future.succeededFuture(true));
     when(invoiceLineService.getInvoiceLinesByOrderLineIds(anyList(), eq(requestContextMock)))
-      .thenReturn(CompletableFuture.succeededFuture(invoiceLines));
+      .thenReturn(Future.succeededFuture(invoiceLines));
     when(invoiceLineService.removeEncumbranceLinks(anyList(), anyList(), eq(requestContextMock)))
-      .thenReturn(CompletableFuture.succeededFuture(null));
+      .thenReturn(Future.succeededFuture(null));
 
     //When
     Future<Void> result = encumbranceService.deleteEncumbranceLinksInInvoiceLines(transactions, requestContextMock);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
     //Then
@@ -296,11 +297,11 @@ public class EncumbranceServiceTest {
     List<Transaction> transactions = List.of(encumbrance1, encumbrance2);
 
     when(orderInvoiceRelationService.isOrderLinkedToAnInvoice(eq(orderId), eq(requestContextMock)))
-      .thenReturn(CompletableFuture.succeededFuture(false));
+      .thenReturn(Future.succeededFuture(false));
 
     //When
     Future<Void> result = encumbranceService.deleteEncumbranceLinksInInvoiceLines(transactions, requestContextMock);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
     //Then

@@ -70,7 +70,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
     purchaseOrderHelper.getCompositeOrder(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(order -> asyncResultHandler.handle(succeededFuture(buildOkResponse(order))))
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override

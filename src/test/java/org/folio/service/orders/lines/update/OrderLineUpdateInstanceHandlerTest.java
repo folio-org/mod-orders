@@ -2,6 +2,7 @@ package org.folio.service.orders.lines.update;
 
 import com.google.common.collect.Lists;
 import io.vertx.core.Context;
+import io.vertx.core.Vertx;
 import org.folio.ApiTestSuite;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.rest.core.RestClient;
@@ -41,6 +42,11 @@ import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.core.RestClientTest.X_OKAPI_TENANT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
@@ -52,7 +58,7 @@ public class OrderLineUpdateInstanceHandlerTest {
   private Map<String, String> okapiHeadersMock;
   @Mock
   private PieceStorageService pieceStorageService;
-  @Spy
+
   private Context ctxMock = getFirstContextFromVertx(getVertx());
 
   private RequestContext requestContext;
@@ -61,8 +67,15 @@ public class OrderLineUpdateInstanceHandlerTest {
   @BeforeEach
   public void initMocks() {
     MockitoAnnotations.openMocks(this);
-    autowireDependencies(this);
+    ctxMock = Vertx.vertx().getOrCreateContext();
+    okapiHeadersMock = new HashMap<>();
+    okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
+    okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
+    okapiHeadersMock.put("x-okapi-tenant", X_OKAPI_TENANT.getValue());
+    okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
+    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    autowireDependencies(this);
     doReturn(succeededFuture(Lists.newArrayList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
   }
 

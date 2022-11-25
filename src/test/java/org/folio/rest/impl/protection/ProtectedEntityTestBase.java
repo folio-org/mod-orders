@@ -15,6 +15,8 @@ import static org.hamcrest.Matchers.hasSize;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.folio.rest.impl.MockServer;
@@ -30,11 +32,11 @@ import io.vertx.core.json.JsonObject;
 public abstract class ProtectedEntityTestBase {
 
   static final String DELETE_PROTECTED_UNIT = "2e6a170f-ae20-4889-813f-641831e24b84";
-  public static final List<String> DELETE_PROTECTED_UNITS = Arrays.asList(DELETE_PROTECTED_UNIT);
+  public static final List<String> DELETE_PROTECTED_UNITS = Collections.singletonList(DELETE_PROTECTED_UNIT);
   static final String CREATE_PROTECTED_UNIT = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
-  public static final List<String> CREATE_PROTECTED_UNITS = Arrays.asList(CREATE_PROTECTED_UNIT);
+  public static final List<String> CREATE_PROTECTED_UNITS = Collections.singletonList(CREATE_PROTECTED_UNIT);
   static final String FULL_PROTECTED_USERS_UNIT_ID = "e68c18fc-833f-494e-9a0e-b236eb4b310b";
-  public static final List<String> PROTECTED_UNITS = Arrays.asList(FULL_PROTECTED_USERS_UNIT_ID);
+  public static final List<String> PROTECTED_UNITS = Collections.singletonList(FULL_PROTECTED_USERS_UNIT_ID);
   static final String NOT_PROTECTED_UNIT_ID = "0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
   public static final List<String> NOT_PROTECTED_UNITS = Arrays.asList(NOT_PROTECTED_UNIT_ID, FULL_PROTECTED_USERS_UNIT_ID);
   static final String NON_EXISTENT_UNIT_ID = "b548d790-07da-456f-b4ea-7a77c0e34a0f";
@@ -51,7 +53,7 @@ public abstract class ProtectedEntityTestBase {
     assertThat(MockServer.getAcqMembershipsSearches(), getMatcher(numOfMembershipRqs));
   }
 
-  static Matcher getMatcher(int value) {
+  static Matcher<Collection<?>> getMatcher(Integer value) {
     return value > 0 ? hasSize(value) : empty();
   }
 

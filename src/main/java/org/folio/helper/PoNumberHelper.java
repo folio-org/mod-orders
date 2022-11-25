@@ -55,13 +55,13 @@ public class PoNumberHelper {
 
   public Future<Void> checkPONumberUnique(String poNumber, RequestContext requestContext) {
     return purchaseOrderStorageService.getPurchaseOrderByPONumber(poNumber, requestContext)
-      .onSuccess(po -> {
+      .map(po -> {
          if (po.getInteger("totalRecords") != 0) {
            logger.error("Exception validating PO Number existence");
            throw new HttpException(400, ErrorCodes.PO_NUMBER_ALREADY_EXISTS);
          }
-      })
-      .mapEmpty();
+         return null;
+      });
   }
 
   public Future<String> generatePoNumber(RequestContext requestContext) {

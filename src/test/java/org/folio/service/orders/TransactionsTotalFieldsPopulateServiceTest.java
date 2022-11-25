@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import io.vertx.core.Future;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -61,7 +62,7 @@ public class TransactionsTotalFieldsPopulateServiceTest {
 
     List<Transaction> transactions = List.of(paidEncumbrance, notPaidEncumbrance);
 
-    when(transactionService.getTransactions(anyString(), any())).thenReturn(CompletableFuture.succeededFuture(transactions));
+    when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(transactions));
 
     CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext)
       .result();
@@ -90,7 +91,7 @@ public class TransactionsTotalFieldsPopulateServiceTest {
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
             .withFiscalYear(new FiscalYear().withId(UUID.randomUUID().toString()));
 
-    when(transactionService.getTransactions(anyString(), any())).thenReturn(CompletableFuture.succeededFuture(Collections.emptyList()));
+    when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).result();
 

@@ -154,9 +154,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     String query = convertIdsToCqlQuery(ids);
     String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, ids.size(), encodeQuery(query));
     return restClient.get(endpoint, PieceCollection.class, requestContext)
-      .onSuccess(pieces -> {
+      .map(pieces -> {
         pieces.getPieces().forEach(piece -> addPieceIfValid(piece, piecesByPoLine));
         checkIfAllPiecesFound(ids, pieces.getPieces());
+        return null;
       })
        .onFailure(e -> {
         logger.error("Error fetching piece records", e);
@@ -730,13 +731,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       Map<String, List<PoLine>> poLinesGroupedByOrderId, Map<String, Map<String, T>> pieces, RequestContext requestContext) {
     return orders.stream()
       .map(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)
-        .onFailure(t -> {
+        .otherwise(t -> {
           for (PoLine line : poLinesGroupedByOrderId.get(order.getId())) {
-            for (String pieceId : pieces.remove(line.getId())
-              .keySet()) {
+            for (String pieceId : pieces.remove(line.getId()).keySet()) {
               addError(line.getId(), pieceId, USER_HAS_NO_PERMISSIONS.toError());
             }
           }
+          return null;
         }))
       .collect(Collectors.toList());
   }
@@ -750,7 +751,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       return restClient.get(url, PurchaseOrderCollection.class, requestContext)
         .map(PurchaseOrderCollection::getPurchaseOrders)
         .compose(orders -> GenericCompositeFuture
-          .all(getListOfRestrictionCheckingFutures(orders, poLinesGroupedByOrderId, pieces, requestContext))
+          .join(getListOfRestrictionCheckingFutures(orders, poLinesGroupedByOrderId, pieces, requestContext))
           .mapEmpty());
     } else {
       return Future.succeededFuture();

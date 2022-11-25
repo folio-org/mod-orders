@@ -99,7 +99,7 @@ public class OpenCompositeOrderPieceService {
       piecesToCreateFutures.add(createPiece(piece, isInstanceMatchingDisabled, requestContext))
     );
     return collectResultsOnSuccess(piecesToCreateFutures)
-       .onFailure(th -> {
+       .recover(th -> {
         logger.error("Piece creation error");
         throw new CompletionException("Piece creation error", th);
       });

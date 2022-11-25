@@ -11,6 +11,7 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.helper.BaseHelper;
 import org.folio.helper.OrderTemplatesHelper;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.jaxrs.model.OrderTemplate;
@@ -25,14 +26,13 @@ import io.vertx.core.json.JsonObject;
 public class OrderTemplatesAPI implements OrdersOrderTemplates {
 
   private static final Logger logger = LogManager.getLogger();
-  @Autowired
-  OrderTemplatesHelper orderTemplatesHelper;
   private static final String ORDER_TEMPLATE_LOCATION_PREFIX = "/orders/order-templates/%s";
 
   @Override
   @Validate
   public void postOrdersOrderTemplates(String lang, OrderTemplate entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    OrderTemplatesHelper orderTemplatesHelper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     orderTemplatesHelper.createOrderTemplate(entity)
       .onSuccess(template -> {
         if (logger.isInfoEnabled()) {
@@ -53,8 +53,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     helper.getOrderTemplates(query, offset, limit)
       .onSuccess(templates -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved order templates collection: {}", JsonObject.mapFrom(templates)
-            .encodePrettily());
+          logger.info("Successfully retrieved order templates collection: {}", JsonObject.mapFrom(templates).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(templates)));
       })

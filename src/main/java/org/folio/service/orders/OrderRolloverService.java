@@ -127,9 +127,9 @@ public class OrderRolloverService {
     return purchaseOrderStorageService.getPurchaseOrders(query, 0, 0, requestContext)
       .map(PurchaseOrderCollection::getTotalRecords)
       .compose(orderTotalRecords -> getOrdersByChunks(query, orderTotalRecords, requestContext))
-       .onFailure(t -> {
+       .recover(t -> {
         logger.error(ErrorCodes.RETRIEVE_ROLLOVER_ORDER_ERROR.getDescription());
-        throw new CompletionException(new HttpException(500, ErrorCodes.RETRIEVE_ROLLOVER_ORDER_ERROR));
+        throw new HttpException(500, ErrorCodes.RETRIEVE_ROLLOVER_ORDER_ERROR);
       });
   }
 
@@ -163,7 +163,7 @@ public class OrderRolloverService {
       .compose(openPoLines -> rolloverClosedOrders(closedOrderIds, ledgerFYRollover, requestContext)
         .map(closedPoLines -> Stream.concat(openPoLines.stream(), closedPoLines.stream())
           .collect(Collectors.toList())))
-       .onFailure(t -> {
+       .recover(t -> {
         logger.error(ErrorCodes.ROLLOVER_PO_LINES_ERROR.getDescription());
         throw new CompletionException(new HttpException(500, ErrorCodes.ROLLOVER_PO_LINES_ERROR));
       });

@@ -10,6 +10,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -26,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.vertx.core.Future;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -98,13 +100,13 @@ public class PieceStorageServiceTest {
     PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(pieceCollection));
+    when(restClientMock.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
 
     String expectedQuery = String.format("id==%s", pieceId);
     PieceCollection retrievedPieces = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, expectedQuery, requestContext)
       .result();
 
-    verify(restClientMock).get(any(), eq(requestContext), eq(PieceCollection.class));
+    verify(restClientMock).get(anyString(), eq(PieceCollection.class), eq(requestContext));
     assertEquals(pieceCollection, retrievedPieces);
   }
 

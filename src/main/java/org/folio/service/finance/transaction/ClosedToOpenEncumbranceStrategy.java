@@ -84,7 +84,7 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
               return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);
             });
         })
-         .onFailure(t -> {
+         .recover(t -> {
           logger.error(PROCESS_ENCUMBRANCES_ERROR, t);
           throw new HttpException(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), PROCESS_ENCUMBRANCES_ERROR +
             (t.getMessage() != null ? ": " + t.getMessage() : ""));

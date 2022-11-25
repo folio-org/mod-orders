@@ -59,7 +59,7 @@ public class OrderInvoiceRelationService {
       .compose(oirs -> {
         if (oirs.getTotalRecords() > 0) {
           return invoiceLineService.getInvoiceLinesByOrderLineId(line.getId(), requestContext)
-            .onSuccess(invoiceLines -> {
+            .map(invoiceLines -> {
                 boolean notAllowedDeletePOLine = invoiceLines.stream()
                   .filter(invoiceLine -> invoiceLine.getPoLineId() != null)
                   .anyMatch(invoiceLine -> invoiceLine.getPoLineId().equals(line.getId()));
@@ -67,8 +67,9 @@ public class OrderInvoiceRelationService {
                   logger.error("Order or order line {} is linked to the invoice and can not be deleted", line.getId());
                   throw new HttpException(400, ORDER_RELATES_TO_INVOICE);
                 }
+                return null;
               }
-            ).mapEmpty();
+            );
         }
         return Future.succeededFuture();
       });

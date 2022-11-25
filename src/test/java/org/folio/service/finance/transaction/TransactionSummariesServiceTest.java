@@ -7,6 +7,7 @@ import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -52,7 +53,7 @@ public class TransactionSummariesServiceTest {
     transactionSummariesService.updateOrderTransactionSummary(UUID.randomUUID()
       .toString(), 0, requestContext);
     // Then
-    verify(restClient, never()).put(any(), any(), any());
+    verify(restClient, never()).put(anyString(), any(), any());
   }
 
   @Test
@@ -80,18 +81,14 @@ public class TransactionSummariesServiceTest {
   void testShouldCreateTransactionSummaryInStorageTransactions() {
     // given
 
-    String uuid = UUID.randomUUID()
-      .toString();
-    Response response = new Response();
-    response.setBody(new JsonObject("{\"id\": \"" + uuid + "\"}"));
-    response.setCode(201);
-    doReturn(succeededFuture(response)).when(restClient)
-      .post(any(), any(), any(), any());
+    String uuid = UUID.randomUUID().toString();
+    var response = new JsonObject("{\"id\": \"" + uuid + "\"}");
+    doReturn(succeededFuture(response)).when(restClient).post(anyString(), any(), any(), any());
     // When
     OrderTransactionSummary summary = transactionSummariesService.createOrderTransactionSummary(uuid, 2, requestContext)
       .result();
     // Then
     assertEquals(uuid, summary.getId());
-    verify(restClient).post(any(), any(), any(), any());
+    verify(restClient).post(anyString(), any(), any(), any());
   }
 }

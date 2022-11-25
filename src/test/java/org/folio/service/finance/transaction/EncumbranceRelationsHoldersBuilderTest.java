@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ExchangeRateProvider;
@@ -61,6 +60,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
 public class EncumbranceRelationsHoldersBuilderTest {
@@ -270,7 +270,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder2);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(CompletableFuture.succeededFuture(singletonList(encumbranceFromStorage)));
+      .thenReturn(Future.succeededFuture(singletonList(encumbranceFromStorage)));
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
         .withExistingTransactions(holders, order, requestContextMock).result();
@@ -334,7 +334,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder3);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(CompletableFuture.succeededFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
+      .thenReturn(Future.succeededFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
 
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
@@ -362,7 +362,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder3);
 
     when(budgetService.getBudgets(anyCollection(), any()))
-        .thenReturn(CompletableFuture.succeededFuture(List.of(budget1, budget2, budget3)));
+        .thenReturn(Future.succeededFuture(List.of(budget1, budget2, budget3)));
 
     //When
     encumbranceRelationsHoldersBuilder.withBudgets(holders, requestContextMock).result();
@@ -389,8 +389,8 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder2);
     holders.add(holder3);
 
-    when(fundService.getAllFunds(anyCollection(), any())).thenReturn(CompletableFuture.succeededFuture(List.of(fund1, fund2, fund3)));
-    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(CompletableFuture.succeededFuture(List.of(ledger2, ledger1, ledger3)));
+    when(fundService.getAllFunds(anyCollection(), any())).thenReturn(Future.succeededFuture(List.of(fund1, fund2, fund3)));
+    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(Future.succeededFuture(List.of(ledger2, ledger1, ledger3)));
 
     //When
     encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContextMock).result();
@@ -417,7 +417,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder1.withBudget(budget1));
     holders.add(holder2.withBudget(budget2));
     holders.add(holder3.withBudget(budget3));
-   when(fiscalYearService.getFiscalYearById(anyString(), any())).thenReturn(CompletableFuture.succeededFuture(fiscalYear));
+   when(fiscalYearService.getFiscalYearById(anyString(), any())).thenReturn(Future.succeededFuture(fiscalYear));
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContextMock).result();
     //Then

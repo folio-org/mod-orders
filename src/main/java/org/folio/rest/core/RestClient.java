@@ -5,11 +5,13 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.rest.RestConstants.ID;
 import static org.folio.rest.RestConstants.OKAPI_TENANT_LOWCASE;
+import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import io.vertx.ext.web.client.WebClientOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.WebClientFactory;
@@ -31,23 +33,14 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 public class RestClient {
 
   private static final Logger logger = LogManager.getLogger(RestClient.class);
-
-  public static final String X_OKAPI_URL = "X-Okapi-Url";
-  private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
+    private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
   private static final ErrorConverter ERROR_CONVERTER = ErrorConverter.createFullBody(
     result -> new HttpException(result.response().statusCode(), result.response().bodyAsString()));
   private static final ResponsePredicate SUCCESS_RESPONSE_PREDICATE =
     ResponsePredicate.create(ResponsePredicate.SC_SUCCESS, ERROR_CONVERTER);
 
+  private static final ResponsePredicate NOT_FOUND_RESPONSE_PREDICATE = ResponsePredicate.create(ResponsePredicate.SC_NOT_FOUND);
 
-  public <T> Future<T> getById(String baseEndpoint, String id, boolean skip404Error, Class<T> responseType, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(baseEndpoint).withPathParameter("id", id);
-    return get(requestEntry, skip404Error, responseType, requestContext);
-  }
-
-  public <T> Future<T> getById(String baseEndpoint, String id, Class<T> responseType, RequestContext requestContext) {
-    return getById(baseEndpoint, id, false, responseType, requestContext);
-  }
 
   public <T> Future<T> post(RequestEntry requestEntry, T entity, Class<T> responseType, RequestContext requestContext) {
     return post(requestEntry.buildEndpoint(), entity, responseType, requestContext);
@@ -57,8 +50,9 @@ public class RestClient {
     if (logger.isDebugEnabled()) {
       logger.debug("Sending 'POST {}' with body: {}", endpoint, JsonObject.mapFrom(entity).encodePrettily());
     }
-    return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(requestContext.getHeaders(), endpoint))
-      .putHeaders(convertToMultiMap(requestContext.getHeaders()))
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+    return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
       .expect(SUCCESS_RESPONSE_PREDICATE)
       .sendJson(entity)
       .map(bufferHttpResponse -> {
@@ -66,11 +60,12 @@ public class RestClient {
         return bufferHttpResponse.bodyAsJsonObject()
           .put(ID, id)
           .mapTo(responseType);
-      });
+      })      .onFailure(t -> logger.error("error ocured invoking POST {}", endpoint));
   }
 
   private MultiMap convertToMultiMap(Map<String, String> okapiHeaders) {
-    return MultiMap.caseInsensitiveMultiMap().addAll(okapiHeaders);
+    return MultiMap.caseInsensitiveMultiMap()
+      .addAll(fixHeadersForRMB34(okapiHeaders));
   }
 
   public <T> Future<Void> put(RequestEntry requestEntry, T dataObject, RequestContext requestContext) {
@@ -81,10 +76,13 @@ public class RestClient {
     if (logger.isDebugEnabled()) {
       logger.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
     }
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+
     return getVertxWebClient(requestContext.getContext())
-      .putAbs(buildAbsEndpoint(requestContext.getHeaders(), endpoint))
-      .putHeaders(convertToMultiMap(requestContext.getHeaders()))
-      .expect(SUCCESS_RESPONSE_PREDICATE).sendJsonObject(recordData)
+      .putAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJsonObject(recordData)
       .mapEmpty();
   }
 
@@ -98,9 +96,11 @@ public class RestClient {
     if (logger.isDebugEnabled()) {
       logger.debug("Sending 'PATCH {}' with body: {}", endpoint, recordData.encodePrettily());
     }
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+
     return getVertxWebClient(requestContext.getContext())
-      .patch(buildAbsEndpoint(requestContext.getHeaders(), endpoint))
-      .putHeaders(convertToMultiMap(requestContext.getHeaders()))
+      .patch(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
       .expect(SUCCESS_RESPONSE_PREDICATE).sendJsonObject(recordData)
       .mapEmpty();
   }
@@ -113,13 +113,20 @@ public class RestClient {
   public Future<Void> delete(String endpointById, boolean skip404Error, RequestContext requestContext) {
     logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpointById);
 
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+
     return getVertxWebClient(requestContext.getContext())
-      .deleteAbs(buildAbsEndpoint(requestContext.getHeaders(), endpointById))
-      .putHeaders(convertToMultiMap(requestContext.getHeaders()))
+      .deleteAbs(buildAbsEndpoint(caseInsensitiveHeader, endpointById))
+      .putHeaders(caseInsensitiveHeader)
       .putHeader("Accept", APPLICATION_JSON + ", " + TEXT_PLAIN)
-      .expect(SUCCESS_RESPONSE_PREDICATE).send()
-      .mapEmpty();
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .expect(get404ResponsePredicate(skip404Error))
+      .send()
+      .mapEmpty()
+;
   }
+
+
 
   public Future<Void> delete(String endpoint, RequestContext requestContext) {
     return delete(endpoint, false, requestContext);
@@ -139,10 +146,13 @@ public class RestClient {
 
   public <T> Future<T> get(String endpoint, Class<T> responseType, RequestContext requestContext) {
     logger.debug("Calling GET {}", endpoint);
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+
     return getVertxWebClient(requestContext.getContext())
-      .getAbs(buildAbsEndpoint(requestContext.getHeaders(), endpoint))
-      .putHeaders(convertToMultiMap(requestContext.getHeaders()))
-      .expect(SUCCESS_RESPONSE_PREDICATE).send()
+      .getAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .send()
       .map(HttpResponse::bodyAsJsonObject)
       .map(jsonObject -> jsonObject.mapTo(responseType));
   }
@@ -150,19 +160,32 @@ public class RestClient {
 
   public Future<JsonObject> getAsJsonObject(String endpoint, boolean skip404Error, RequestContext requestContext) {
     logger.debug("Calling GET {}", endpoint);
+
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+
     return getVertxWebClient(requestContext.getContext())
-      .getAbs(buildAbsEndpoint(requestContext.getHeaders(), endpoint))
-      .putHeaders(convertToMultiMap(requestContext.getHeaders()))
-      .expect(SUCCESS_RESPONSE_PREDICATE).send()
+      .getAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .expect(get404ResponsePredicate(skip404Error))
+      .send()
       .map(HttpResponse::bodyAsJsonObject);
   }
 
+  private ResponsePredicate get404ResponsePredicate(boolean skip404Error) {
+    return skip404Error ? NOT_FOUND_RESPONSE_PREDICATE : ResponsePredicate.SC_SUCCESS;
+  }
+
   public Future<JsonObject> getAsJsonObject(RequestEntry requestEntry, boolean skip404Error, RequestContext requestContext) {
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+
     return getVertxWebClient(requestContext.getContext())
-      .getAbs(buildAbsEndpoint(requestContext.getHeaders(), requestEntry.buildEndpoint()))
-      .putHeaders(convertToMultiMap(requestContext.getHeaders()))
-      .expect(SUCCESS_RESPONSE_PREDICATE).send()
-      .map(HttpResponse::bodyAsJsonObject);
+      .getAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(get404ResponsePredicate(skip404Error))
+      .send()
+      .map(HttpResponse::bodyAsJsonObject)
+      .onFailure(t -> logger.error("error ocured invoking getAsJsonObject GET {}", requestEntry.buildEndpoint()));
   }
 
   public Future<JsonObject> getAsJsonObject(RequestEntry requestEntry, RequestContext requestContext) {
@@ -194,26 +217,66 @@ public class RestClient {
 
   private WebClient getVertxWebClient(Context context) {
     // TODO: get or create with WebClientOptions
-    /*
-     * WebClientOptions options = new WebClientOptions(); options.setLogActivity(true); options.setKeepAlive(keepAlive);
-     * options.setConnectTimeout(connTO); options.setIdleTimeout(idleTO);
-     */
-    return WebClientFactory.getWebClient(context.owner());
+
+     WebClientOptions options = new WebClientOptions();
+     options.setLogActivity(true);
+     options.setKeepAlive(true);
+     options.setConnectTimeout(2000);
+     options.setIdleTimeout(5000);
+
+    return WebClientFactory.getWebClient(context.owner(), options);
   }
-  private static String buildAbsEndpoint(Map<String, String> okapiHeaders, String endpoint) {
-    var okapiURL = okapiHeaders.getOrDefault(X_OKAPI_URL, "");
+  private String buildAbsEndpoint(MultiMap okapiHeaders, String endpoint) {
+    var okapiURL = okapiHeaders.get(OKAPI_URL);
     return okapiURL + endpoint;
   }
 
-  public Future<String> postAndGetId(RequestEntry requestEntry, JsonObject entity, RequestContext requestContext) {
+  public Future<String> postJsonObjectAndGetId(RequestEntry requestEntry, JsonObject entity, RequestContext requestContext) {
     if (logger.isDebugEnabled()) {
       logger.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), JsonObject.mapFrom(entity).encodePrettily());
     }
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+
     return getVertxWebClient(requestContext.getContext())
-      .postAbs(buildAbsEndpoint(requestContext.getHeaders(), requestEntry.buildEndpoint()))
-      .putHeaders(convertToMultiMap(requestContext.getHeaders()))
+      .postAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJsonObject(entity)
+      .map(this::extractRecordId)
+      .onFailure(t -> logger.error("error ocured invoking POST {}", requestEntry.buildEndpoint()));
+  }
+
+  public Future<JsonObject> postJsonObject(RequestEntry requestEntry, JsonObject jsonObject, RequestContext requestContext) {
+    if (logger.isDebugEnabled()) {
+      logger.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), jsonObject.encodePrettily());
+    }
+    var endpoint = requestEntry.buildEndpoint();
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+    return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJsonObject(jsonObject)
+      .map(bufferHttpResponse -> {
+        var id = extractRecordId(bufferHttpResponse);
+        return bufferHttpResponse
+          .bodyAsJsonObject()
+          .put(ID, id);
+      })
+      .onFailure(t -> logger.error("error ocured invoking POST {}", endpoint));
+  }
+
+
+/*  public Future<String> postJsonAndGetId(RequestEntry requestEntry, JsonObject jsonObject, RequestContext requestContext) {
+    if (logger.isDebugEnabled()) {
+      logger.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), JsonObject.mapFrom(jsonObject).encodePrettily());
+    }
+    var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
+
+    return getVertxWebClient(requestContext.getContext())
+      .postAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
+      .putHeaders(caseInsensitiveHeader)
       .expect(SUCCESS_RESPONSE_PREDICATE)
       .sendJsonObject(entity)
       .map(this::extractRecordId);
-  }
+  }*/
 }

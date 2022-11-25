@@ -43,6 +43,7 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 import javax.ws.rs.Path;
 
+import io.vertx.core.CompositeFuture;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ArrayUtils;
@@ -124,14 +125,6 @@ public class HelperUtils {
     return okapiHeaders;
   }
 
-  public static JsonObject verifyAndExtractBody(Response response) {
-    if (!Response.isSuccess(response.getCode())) {
-      throw new CompletionException(
-          new HttpException(response.getCode(), response.getError().getString(ERROR_MESSAGE)));
-    }
-
-    return response.getBody();
-  }
 
   /**
    *  Retrieves PO lines from storage by PO id as List<JsonObjects> of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
@@ -355,15 +348,7 @@ public class HelperUtils {
    */
   public static <T> Future<List<T>> collectResultsOnSuccess(List<Future<T>> futures) {
     return GenericCompositeFuture.join(new ArrayList<>(futures))
-      .onComplete(result-> {
-        if (result.succeeded()) {
-         // promise.complete((List<T>) result.result().list());
-        }
-        else {
-          //promise.fail(result.cause());
-        }
-      })
-      .map(r-> r.list());
+      .map(CompositeFuture::list);
   }
 
   /**
@@ -556,9 +541,6 @@ public class HelperUtils {
     }
     return conversionQuery;
   }
-
-
-
 
   public static void makePoLinePending(CompositePoLine poLine) {
       if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {

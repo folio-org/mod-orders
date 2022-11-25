@@ -2,10 +2,14 @@ package org.folio.service.orders;
 
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
+import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 
@@ -35,6 +39,7 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderLineService {
@@ -42,6 +47,7 @@ public class PurchaseOrderLineService {
   private static final String ENDPOINT = "/orders-storage/po-lines";
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private static final String ORDER_LINES_BY_ORDER_ID_QUERY = "purchaseOrderId == %s";
+  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
 
   private final RestClient restClient;
 
@@ -85,7 +91,7 @@ public class PurchaseOrderLineService {
 
 
   public Future<Void> saveOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
-    return GenericCompositeFuture.all(orderLines.stream()
+    return GenericCompositeFuture.join(orderLines.stream()
       .map(poLine -> saveOrderLine(poLine, requestContext).onFailure(t -> {
         throw new HttpException(400, ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
       }))
@@ -110,7 +116,7 @@ public class PurchaseOrderLineService {
         List<Future<CompositePoLine>> poLineFutures = new ArrayList<>();
         Future<CompositePoLine> lineFuture = Future.succeededFuture();
         for (PoLine line : poLines) {
-          lineFuture = lineFuture.compose(v -> operateOnPoLine(HttpMethod.GET, line));
+          lineFuture = lineFuture.compose(v -> operateOnPoLine(HttpMethod.GET, line, requestContext));
           poLineFutures.add(lineFuture);
         }
         return poLineFutures;
@@ -118,9 +124,92 @@ public class PurchaseOrderLineService {
       .compose(HelperUtils::collectResultsOnSuccess);
   }
 
-  private Future<CompositePoLine> operateOnPoLine(HttpMethod operation, PoLine line) {
-    return operateOnPoLine(operation, line);
+  public Future<CompositePoLine> operateOnPoLine(HttpMethod operation, PoLine poline, RequestContext requestContext) {
+    Promise<CompositePoLine> promise = Promise.promise();
+    JsonObject line = JsonObject.mapFrom(poline);
+    if (logger.isDebugEnabled()) {
+      logger.debug("The PO line prior to {} operation: {}", operation, line.encodePrettily());
+    }
+
+    List<Future<Void>> futures = new ArrayList<>();
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, requestContext));
+    futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, requestContext));
+
+    GenericCompositeFuture.join(new ArrayList<>(futures))
+      .onSuccess(v -> {
+        if (logger.isDebugEnabled()) {
+          logger.debug("The PO line after {} operation on sub-objects: {}", operation, line.encodePrettily());
+        }
+        promise.complete(line.mapTo(CompositePoLine.class));
+      })
+      .onFailure(t -> {
+        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation", operation,t);
+        promise.fail(t);
+      });
+    return promise.future();
   }
+
+  private List<Future<Void>> operateOnSubObjsIfPresent(HttpMethod operation, JsonObject pol, String field, RequestContext requestContext) {
+    JsonArray array = new JsonArray();
+    List<Future<Void>> futures = new ArrayList<>();
+    ((Iterable<?>) pol.remove(field)).forEach(
+      fieldId -> futures.add(operateOnObject(operation, resourceByIdPath(field) + fieldId, requestContext)
+        .map(value -> {
+          if (value != null && !value.isEmpty()) {
+            array.add(value);
+          }
+          return null;
+        })));
+    pol.put(field, array);
+    return futures;
+  }
+
+  public Future<JsonObject> operateOnObject(HttpMethod operation, String url, RequestContext requestContext) {
+    return operateOnObject(operation, url, null, requestContext);
+  }
+
+  public Future<JsonObject> operateOnObject(HttpMethod operation, String url, JsonObject jsonObject, RequestContext requestContext) {
+    Promise<JsonObject> promise = Promise.promise();
+    Future<JsonObject> future = Future.succeededFuture();
+    logger.info("Calling {} {}", operation, url);
+    if (operation.equals(HttpMethod.GET)) {
+      future = restClient.getAsJsonObject(url, true, requestContext);
+    }
+    else if (operation.equals(HttpMethod.POST)) {
+      future = restClient.post(url, jsonObject, JsonObject.class, requestContext);
+    }
+    else if (operation.equals(HttpMethod.PUT)) {
+      future = restClient.put(url, jsonObject, requestContext)
+        .map(v -> new JsonObject());
+    }
+    else if (operation.equals(HttpMethod.DELETE))
+    {
+      future = restClient.delete(url, requestContext)
+        .map(v -> new JsonObject());
+    }
+
+    future
+      .onSuccess(jsonResponse -> {
+        logger.info("The {} {} operation completed with following response body: {}", operation, url, jsonResponse.encodePrettily());
+        promise.complete();
+      })
+      .onFailure(t -> {
+        Throwable cause = t instanceof CompletionException ? t.getCause() : t;
+        int code = cause instanceof HttpException ? ((HttpException) cause).getCode() : 500;
+        String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, url, cause.getMessage());
+        logger.error(message, t);
+        promise.fail(new HttpException(code, message));
+      });
+
+    return promise.future();
+  }
+
+  public Future<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine, RequestContext requestContext) {
+    logger.debug("Updating PO line...");
+    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES_STORAGE, poLineId), EN);
+    return operateOnObject(HttpMethod.PUT, endpoint, poLine, requestContext);
+  }
+
 
   /**
    * Does nothing if the order already has lines.
@@ -133,7 +222,7 @@ public class PurchaseOrderLineService {
           PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return compPO.withCompositePoLines(poLines);
         })
-         .onFailure(t -> {
+         .recover(t -> {
           Parameter idParam = new Parameter().withKey("orderId").withValue(compPO.getId());
           Parameter causeParam = new Parameter().withKey("cause").withValue(t.getCause().getMessage());
           HttpException ex = new HttpException(500, ErrorCodes.ERROR_RETRIEVING_PO_LINES.toError()
@@ -169,13 +258,22 @@ public class PurchaseOrderLineService {
 
   public Future<Void> deletePoLinesByOrderId(String orderId, RequestContext requestContext) {
     return getLinesByOrderId(orderId, requestContext)
-      .compose(jsonObjects -> GenericCompositeFuture.all(jsonObjects.stream()
+      .compose(jsonObjects -> GenericCompositeFuture.join(jsonObjects.stream()
         .map(line -> deleteLineById(line.getId(), requestContext)).collect(toList())))
-       .onFailure(t -> {
+       .recover(t -> {
         logger.error("Exception deleting poLine data for order id={}", orderId, t);
         throw new CompletionException(t.getCause());
       })
       .mapEmpty();
+  }
+
+  public Future<Void> deletePoLine(PoLine line, RequestContext requestContext) {
+    return operateOnPoLine(HttpMethod.DELETE, line, requestContext)
+      .compose(poline -> {
+        String polineId = poline.getId();
+        return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES_STORAGE, polineId), requestContext)
+          .mapEmpty();
+      });
   }
 
   public Future<String> updatePoLineReceiptStatus(PoLine poLine, PoLine.ReceiptStatus status, RequestContext requestContext) {

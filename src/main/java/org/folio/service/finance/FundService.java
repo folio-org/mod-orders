@@ -67,13 +67,11 @@ public class FundService {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(fundId);
     return restClient.get(requestEntry, CompositeFund.class, requestContext)
       .map(CompositeFund::getFund)
-       .onFailure(t -> {
+       .recover(t -> {
         Throwable cause = t.getCause() == null ? t : t.getCause();
         if (HelperUtils.isNotFound(cause)) {
-          List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(fundId)
-            .withKey("funds"));
-          throw new HttpException(404, FUNDS_NOT_FOUND.toError()
-            .withParameters(parameters));
+          List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(fundId).withKey("funds"));
+          throw new HttpException(404, FUNDS_NOT_FOUND.toError().withParameters(parameters));
         }
         throw new CompletionException(cause);
       });
@@ -100,14 +98,10 @@ public class FundService {
           return funds;
         }
         List<Parameter> parameters = ids.stream()
-          .filter(id -> funds.stream()
-            .noneMatch(fund -> fund.getId()
-              .equals(id)))
-          .map(id -> new Parameter().withValue(id)
-            .withKey("funds"))
+          .filter(id -> funds.stream().noneMatch(fund -> fund.getId().equals(id)))
+          .map(id -> new Parameter().withValue(id).withKey("funds"))
           .collect(Collectors.toList());
-        throw new HttpException(404, FUNDS_NOT_FOUND.toError()
-          .withParameters(parameters));
+        throw new HttpException(404, FUNDS_NOT_FOUND.toError().withParameters(parameters));
       });
   }
 }

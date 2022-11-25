@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,6 +15,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import io.vertx.core.Future;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -46,14 +48,14 @@ public class ReasonForClosureServiceTest {
   @Test
   void testDeleteReasonForClosureSuccessIfNotUsed() {
     //given
-    when(restClient.delete(any(), any())).thenReturn(CompletableFuture.succeededFuture(null));
+    when(restClient.delete(anyString(), any())).thenReturn(Future.succeededFuture(null));
 
     String id = UUID.randomUUID().toString();
     Future<Void> result = reasonForClosureService.deleteReasonForClosure(id, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
-    verify(restClient).delete(any(), any());
+    verify(restClient).delete(anyString(), any());
   }
 
   @Test
@@ -62,15 +64,15 @@ public class ReasonForClosureServiceTest {
       .withReason("suf")
       .withId(UUID.randomUUID().toString())
       .withSource(ReasonForClosure.Source.SYSTEM);
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(reasonForClosure));
+    when(restClient.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(reasonForClosure));
 
     Future<ReasonForClosure> result = reasonForClosureService.getReasonForClosureById(reasonForClosure.getId(), requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
 
     ReasonForClosure resultReasonForClosure = result.result();
     assertEquals(reasonForClosure, resultReasonForClosure);
 
-    verify(restClient).get(any(), any(), any());
+    verify(restClient).get(anyString(), any(), any());
   }
 
   @Test
@@ -81,16 +83,16 @@ public class ReasonForClosureServiceTest {
       .withId(UUID.randomUUID().toString())
       .withSource(ReasonForClosure.Source.SYSTEM);
     ReasonForClosureCollection suffixCollection = new ReasonForClosureCollection().withTotalRecords(1).withReasonsForClosure(Collections.singletonList(reasonForClosure));
-    when(restClient.get(any(), any(), any()))
-      .thenReturn(CompletableFuture.succeededFuture(suffixCollection));
+    when(restClient.get(anyString(), any(), any()))
+      .thenReturn(Future.succeededFuture(suffixCollection));
 
     Future<ReasonForClosureCollection> result = reasonForClosureService.getReasonsForClosure(query, 1, 0, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
 
     ReasonForClosureCollection resultReasonForClosureCollection = result.result();
 
     assertEquals(suffixCollection, resultReasonForClosureCollection);
-    verify(restClient).get(any(), any(), any());
+    verify(restClient).get(anyString(), any(), any());
   }
 
   @Test
@@ -100,13 +102,13 @@ public class ReasonForClosureServiceTest {
       .withId(UUID.randomUUID().toString())
       .withSource(ReasonForClosure.Source.SYSTEM);
 
-    when(restClient.put(any(), eq(reasonForClosure), any())).thenReturn(CompletableFuture.succeededFuture(null));
+    when(restClient.put(anyString(), eq(reasonForClosure), any())).thenReturn(Future.succeededFuture(null));
 
     Future<Void> result = reasonForClosureService.updateReasonForClosure(reasonForClosure.getId(), reasonForClosure, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
-    verify(restClient).put(any(), eq(reasonForClosure), any());
+    verify(restClient).put(anyString(), eq(reasonForClosure), any());
   }
 
   @Test
@@ -116,14 +118,14 @@ public class ReasonForClosureServiceTest {
       .withSource(ReasonForClosure.Source.SYSTEM);
 
     String id = UUID.randomUUID().toString();
-    when(restClient.put(any(), eq(reasonForClosure), any())).thenReturn(CompletableFuture.succeededFuture(null));
+    when(restClient.put(anyString(), eq(reasonForClosure), any())).thenReturn(Future.succeededFuture(null));
 
     Future<Void> result = reasonForClosureService.updateReasonForClosure(id, reasonForClosure, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     result.result();
 
     assertEquals(id, reasonForClosure.getId());
-    verify(restClient).put(any(), eq(reasonForClosure), any());
+    verify(restClient).put(anyString(), eq(reasonForClosure), any());
   }
 
   @Test
@@ -131,7 +133,7 @@ public class ReasonForClosureServiceTest {
     ReasonForClosure suffix = new ReasonForClosure().withId(UUID.randomUUID().toString());
     Future<Void> result = reasonForClosureService.updateReasonForClosure(UUID.randomUUID().toString(),
       suffix, requestContext);
-    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
+    CompletionException expectedException = assertThrows(CompletionException.class, result::result);
 
     HttpException httpException = (HttpException) expectedException.getCause();
     assertEquals(422, httpException.getCode());
@@ -144,15 +146,15 @@ public class ReasonForClosureServiceTest {
     ReasonForClosure reasonForClosure = new ReasonForClosure()
       .withReason("reason");
 
-    when(restClient.post(any(), any(), any(), any())).thenReturn(CompletableFuture.succeededFuture(reasonForClosure));
+    when(restClient.post(anyString(), any(), any(), any())).thenReturn(Future.succeededFuture(reasonForClosure));
 
     Future<ReasonForClosure> result = reasonForClosureService.createReasonForClosure(reasonForClosure, requestContext);
-    assertFalse(result.isCompletedExceptionally());
+    assertFalse(result.failed());
     ReasonForClosure resultReasonForClosure = result.result();
     assertEquals(reasonForClosure, resultReasonForClosure);
 
     assertEquals(ReasonForClosure.Source.USER, reasonForClosure.getSource());
-    verify(restClient).post(any(), any(), any(), any());
+    verify(restClient).post(anyString(), any(), any(), any());
   }
 
 }

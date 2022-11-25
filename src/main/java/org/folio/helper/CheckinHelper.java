@@ -103,7 +103,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     Map<String, List<CheckInPiece>> poLineIdVsCheckInPiece = getItemCreateNeededCheckinPieces(checkinCollection);
     List<Future<Pair<String, Piece>>> futures = new ArrayList<>();
     return retrievePieceRecords(checkinPieces, requestContext)
-      .onSuccess(piecesGroupedByPoLine -> piecesGroupedByPoLine.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
+      .map(piecesGroupedByPoLine -> { piecesGroupedByPoLine.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
         .forEach(checkInPiece -> pieces.forEach(piece -> {
           if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
             futures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
@@ -114,7 +114,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
           } else {
             futures.add(Future.succeededFuture(Pair.of(poLineId, piece)));
           }
-        }))))
+        })));
+        return null;})
       .compose(v -> collectResultsOnSuccess(futures).map(poLineIdVsPieceList -> StreamEx.of(poLineIdVsPieceList)
         .distinct()
         .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists)
@@ -297,7 +298,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         }
       }
 
-      return collectResultsOnSuccess(futures).onSuccess(updatedPoLines -> {
+      return collectResultsOnSuccess(futures).map(updatedPoLines -> {
         logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
 
         // Send event to check order status for successfully processed PO Lines
@@ -305,6 +306,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
           .filter(line -> updatedPoLines.contains(line.getId()))
           .toList();
         updateOrderStatus(successPoLines, checkinCollection, requestContext);
+        return null;
       });
     })
       .map(ok -> piecesGroupedByPoLine);

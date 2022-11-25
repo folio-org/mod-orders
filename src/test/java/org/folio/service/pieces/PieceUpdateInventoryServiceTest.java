@@ -101,7 +101,7 @@ public class PieceUpdateInventoryServiceTest {
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
     doReturn(succeededFuture(null)).when(inventoryManager).getHoldingById(piece.getHoldingId() , true, requestContext);
 
-    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).get();
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
     verify(inventoryManager, times(0)).deleteHoldingById(piece.getHoldingId() , true, requestContext);
   }
@@ -135,7 +135,7 @@ public class PieceUpdateInventoryServiceTest {
     doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
     doReturn(succeededFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
 
-    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).get();
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
     verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
   }
@@ -152,7 +152,7 @@ public class PieceUpdateInventoryServiceTest {
     doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
     doReturn(succeededFuture(List.of(item))).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
 
-    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).get();
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
     verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
   }

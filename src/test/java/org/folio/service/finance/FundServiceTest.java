@@ -1,13 +1,14 @@
 package org.folio.service.finance;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -20,21 +21,24 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 
-import org.folio.rest.core.exceptions.HttpException;
+import io.vertx.junit5.VertxExtension;
 import org.folio.rest.acq.model.finance.CompositeFund;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Error;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+@ExtendWith(VertxExtension.class)
 public class FundServiceTest {
   @InjectMocks
   private FundService fundService;
@@ -56,14 +60,14 @@ public class FundServiceTest {
     String fundId = UUID.randomUUID().toString();
     CompositeFund compositeFund = new CompositeFund().withFund(new Fund().withId(fundId).withLedgerId(ledgerId));
 
-    doReturn(succeededFuture(compositeFund)).when(restClient).get(any(), eq(requestContext), eq(CompositeFund.class));
+    doReturn(succeededFuture(compositeFund)).when(restClient).get(anyString(), eq(CompositeFund.class), eq(requestContext));
     //When
     Fund actFund = fundService.retrieveFundById(fundId,requestContext).result();
     //Then
     assertThat(actFund, equalTo(compositeFund.getFund()));
 
     ArgumentCaptor<RequestEntry> argumentCaptor = ArgumentCaptor.forClass(RequestEntry.class);
-    verify(restClient).get(argumentCaptor.capture(), eq(requestContext), eq(CompositeFund.class));
+    verify(restClient).get(argumentCaptor.capture(), eq(CompositeFund.class), eq(requestContext));
     RequestEntry requestEntry = argumentCaptor.getValue();
 
     assertEquals("/finance/funds/" + fundId, requestEntry.buildEndpoint());
@@ -78,13 +82,13 @@ public class FundServiceTest {
     List<Fund> funds = List.of(new Fund().withId(fundId).withLedgerId(ledgerId));
     FundCollection fundCollection = new FundCollection().withFunds(funds).withTotalRecords(1);
 
-    String query = URLEncoder.encode("ledgerId==" + ledgerId, StandardCharsets.UTF_8.toString());
-    doReturn(succeededFuture(fundCollection)).when(restClient).get(any(),  eq(requestContext), eq(FundCollection.class));
+    String query = URLEncoder.encode("ledgerId==" + ledgerId, StandardCharsets.UTF_8);
+    doReturn(succeededFuture(fundCollection)).when(restClient).get(anyString(), eq(FundCollection.class),  eq(requestContext));
     //When
     List<Fund> actFund = fundService.getFundsByLedgerId(ledgerId, requestContext).result();
     //Then
     ArgumentCaptor<RequestEntry> argumentCaptor = ArgumentCaptor.forClass(RequestEntry.class);
-    verify(restClient).get(argumentCaptor.capture(), eq(requestContext), eq(FundCollection.class));
+    verify(restClient).get(argumentCaptor.capture(),eq(FundCollection.class), eq(requestContext));
     RequestEntry requestEntry = argumentCaptor.getValue();
 
     assertEquals(query, requestEntry.getQueryParams().get("query"));
@@ -102,13 +106,13 @@ public class FundServiceTest {
     List<Fund> funds = List.of(new Fund().withId(fundId1), new Fund().withId(fundId2));
     FundCollection fundCollection = new FundCollection().withFunds(funds).withTotalRecords(1);
 
-    String query = URLEncoder.encode("id==(" + fundId1 + " or " +  fundId2 +")", StandardCharsets.UTF_8.toString());
-    doReturn(succeededFuture(fundCollection)).when(restClient).get(any(), any(),  any());
+    String query = URLEncoder.encode("id==(" + fundId1 + " or " +  fundId2 +")", StandardCharsets.UTF_8);
+    doReturn(succeededFuture(fundCollection)).when(restClient).get(anyString(), any(),  any());
     //When
     List<Fund> actFund = fundService.getAllFunds(fundIds, requestContext).result();
     //Then
     ArgumentCaptor<RequestEntry> argumentCaptor = ArgumentCaptor.forClass(RequestEntry.class);
-    verify(restClient).get(argumentCaptor.capture(), any(), eq(FundCollection.class));
+    verify(restClient).get(argumentCaptor.capture(), eq(FundCollection.class), any());
 
     RequestEntry requestEntry = argumentCaptor.getValue();
     assertEquals(query, requestEntry.getQueryParams().get("query"));
@@ -123,7 +127,7 @@ public class FundServiceTest {
     String fundId = UUID.randomUUID().toString();
 
     Error expError = new Error().withCode(FUNDS_NOT_FOUND.getCode()).withMessage(String.format(FUNDS_NOT_FOUND.getDescription(), fundId));
-    doThrow(new CompletionException(new HttpException(404, expError))).when(restClient).get(any(), eq(requestContext), eq(CompositeFund.class));
+    doThrow(new CompletionException(new HttpException(404, expError))).when(restClient).get(anyString(), eq(CompositeFund.class), eq(requestContext));
     //When
     CompletionException thrown = assertThrows(
       CompletionException.class,
@@ -135,14 +139,14 @@ public class FundServiceTest {
     assertEquals(actError.getMessage(), String.format(FUNDS_NOT_FOUND.getDescription(), fundId));
     assertEquals(404, actHttpException.getCode());
     //Then
-    verify(restClient).get(any(), eq(requestContext), eq(CompositeFund.class));
+    verify(restClient).get(anyString(), eq(CompositeFund.class), eq(requestContext));
   }
 
   @Test
   void testShouldThrowNotHttpExceptionIfFundNotFound() {
     //Given
     String fundId = UUID.randomUUID().toString();
-    doThrow(new CompletionException(new RuntimeException())).when(restClient).get(any(), eq(requestContext), eq(CompositeFund.class));
+    doThrow(new CompletionException(new RuntimeException())).when(restClient).get(anyString(), eq(CompositeFund.class), eq(requestContext));
     //When
     CompletionException thrown = assertThrows(
       CompletionException.class,
@@ -150,6 +154,6 @@ public class FundServiceTest {
     );
     assertEquals(RuntimeException.class, thrown.getCause().getClass());
     //Then
-    verify(restClient).get(any(), eq(requestContext), eq(CompositeFund.class));
+    verify(restClient).get(anyString(), eq(CompositeFund.class), eq(requestContext));
   }
 }

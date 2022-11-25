@@ -85,7 +85,7 @@ public class UnOpenCompositeOrderManager {
   }
 
   public Future<Void> updatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return GenericCompositeFuture.all(compositePoLines.stream()
+    return GenericCompositeFuture.join(compositePoLines.stream()
       .map(HelperUtils::convertToPoLine)
       .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
       .collect(toList()))
@@ -93,7 +93,7 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<Void> processInventory(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return GenericCompositeFuture.all(compositePoLines.stream()
+    return GenericCompositeFuture.join(compositePoLines.stream()
       .map(line -> processInventory(line, requestContext))
         .collect(toList()))
       .mapEmpty();

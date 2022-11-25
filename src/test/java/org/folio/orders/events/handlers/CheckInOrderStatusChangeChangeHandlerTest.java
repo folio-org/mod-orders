@@ -55,6 +55,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
 import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -89,6 +90,8 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
   private PurchaseOrderStorageService purchaseOrderStorageService;
   @Autowired
   private PurchaseOrderHelper purchaseOrderHelper;
+  @Autowired
+  private PurchaseOrderLineService purchaseOrderLineService;
 
   HashMap<String, String> okapiHeadersMock;
 
@@ -112,7 +115,7 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
     vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx, encumbranceService,
-                          purchaseOrderStorageService, purchaseOrderHelper));
+                          purchaseOrderStorageService, purchaseOrderHelper, purchaseOrderLineService));
   }
 
   @AfterEach

@@ -28,8 +28,6 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.inventory.InventoryManager;
@@ -56,7 +54,6 @@ public class CheckinHelperTest {
   private Context ctxMock;
   private RequestContext requestContext;
 
-  private HttpClientInterface httpClient;
   private static boolean runningOnOwn;
 
   @BeforeAll
@@ -87,7 +84,6 @@ public class CheckinHelperTest {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
-    httpClient = HttpClientFactory.getHttpClient(okapiURL, X_OKAPI_TENANT.getValue());
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
   }
 

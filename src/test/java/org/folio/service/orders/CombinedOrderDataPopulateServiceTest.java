@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import io.vertx.core.Future;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -42,7 +43,7 @@ public class CombinedOrderDataPopulateServiceTest {
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
 
     when(holderBuilder.withCurrentFiscalYear(any(), any()))
-      .thenReturn(CompletableFuture.succeededFuture(holder));
+      .thenReturn(Future.succeededFuture(holder));
 
 
     populateService.populate(holder, requestContext).result();

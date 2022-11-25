@@ -5,6 +5,7 @@ import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
@@ -12,10 +13,13 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.exceptions.HttpException;
@@ -46,12 +50,14 @@ public class OrderInvoiceRelationServiceTest {
   public RestClient restClient;
   @Mock
   public InvoiceLineService invoiceLineService;
-  @Mock
   private RequestContext requestContext;
+  @Mock
+  private Map<String, String> okapiHeadersMock;
 
   @BeforeEach
   public void initMocks() {
     MockitoAnnotations.openMocks(this);
+    requestContext = new RequestContext(Vertx.vertx().getOrCreateContext(), okapiHeadersMock) ;
   }
 
   @Test
@@ -61,7 +67,7 @@ public class OrderInvoiceRelationServiceTest {
       .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
       .withTotalRecords(1);
 
-    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(anyString(), any(), any());
 
     PoLine poLineLinkedToInvoice = new PoLine().withId(poLineIdConnectedToInvoice);
     InvoiceLine invoiceLine1 = new InvoiceLine().withInvoiceId(invoiceId).withPoLineId(poLineIdConnectedToInvoice);
@@ -75,7 +81,7 @@ public class OrderInvoiceRelationServiceTest {
     Future<Void> future = orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(poLineLinkedToInvoice, requestContext);
 
     // THEN
-    CompletionException exception = assertThrows(CompletionException.class, future::join);
+    CompletionException exception = assertThrows(CompletionException.class, future::result);
     HttpException httpException = (HttpException) exception.getCause();
     assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), httpException.getMessage());
   }
@@ -86,7 +92,7 @@ public class OrderInvoiceRelationServiceTest {
       .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
       .withTotalRecords(0);
 
-    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(anyString(), any(), any());
 
     PoLine poLineNotLinkedToInvoice = new PoLine().withId(poLineIdNotConnectedToInvoice);
     // WHEN

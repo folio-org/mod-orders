@@ -1,10 +1,29 @@
 package org.folio.service.orders.flows.update.unopen;
 
+import static org.folio.TestConfig.autowireDependencies;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.clearVertxContext;
+import static org.folio.TestConfig.getFirstContextFromVertx;
+import static org.folio.TestConfig.getVertx;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
 import org.folio.service.TagService;
@@ -30,26 +49,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+
 import io.vertx.core.Context;
-import static org.folio.TestConfig.autowireDependencies;
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.clearVertxContext;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestConfig.mockPort;
-import static org.folio.TestConstants.X_OKAPI_TOKEN;
-import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.rest.RestConstants.OKAPI_URL;
-import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 
 public class UnOpenCompositeOrderManagerTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
@@ -68,7 +69,6 @@ public class UnOpenCompositeOrderManagerTest {
   private Context ctxMock;
   private RequestContext requestContext;
 
-  private HttpClientInterface httpClient;
   private static boolean runningOnOwn;
 
   @BeforeAll
@@ -99,7 +99,6 @@ public class UnOpenCompositeOrderManagerTest {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
-    httpClient = HttpClientFactory.getHttpClient(okapiURL, X_OKAPI_TENANT.getValue());
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
   }
 
@@ -145,7 +144,7 @@ public class UnOpenCompositeOrderManagerTest {
 //    //When
 //    Future<Void> act = serviceSpy.unOpenOrder(order, requestContext);
 //    //Then
-//    assertTrue(act.isCompletedExceptionally());
+//    assertTrue(act.failed());
 //  }
 
   /**

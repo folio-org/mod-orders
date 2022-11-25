@@ -303,7 +303,7 @@ public class InventoryManager {
       }
 
       return holdingIdFuture
-         .onFailure(throwable -> {
+         .recover(throwable -> {
           if (throwable.getCause() instanceof HttpException && ((HttpException) throwable.getCause()).getCode() == 404) {
             String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
             Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
@@ -323,7 +323,7 @@ public class InventoryManager {
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
         .withId(holdingId);
       return restClient.getAsJsonObject(requestEntry, requestContext)
-         .onFailure(throwable -> {
+         .recover(throwable -> {
           if (throwable.getCause() instanceof HttpException && ((HttpException) throwable.getCause()).getCode() == 404) {
             String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
             Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
@@ -399,7 +399,7 @@ public class InventoryManager {
       })
       .compose(holdingsRecJson -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS));
-        return restClient.post(requestEntry, holdingsRecJson, JsonObject.class, requestContext);
+        return restClient.postJsonObject(requestEntry, holdingsRecJson, requestContext);
       });
   }
 
@@ -702,7 +702,7 @@ public class InventoryManager {
       .compose(instanceRecJson -> {
         logger.debug("Instance record to save : {}", instanceRecJson);
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
-        return restClient.postAndGetId(requestEntry, instanceRecJson, requestContext);
+        return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
       });
   }
 
@@ -713,7 +713,7 @@ public class InventoryManager {
       .collect(toList());
 
     return getContributorNameTypes(ids, requestContext)
-      .onSuccess(contributorNameTypes -> {
+      .map(contributorNameTypes -> {
         List<String> retrievedIds = contributorNameTypes.stream()
           .map(o -> o.getString(ID).toLowerCase())
           .collect(toList());
@@ -721,7 +721,8 @@ public class InventoryManager {
           ids.removeAll(retrievedIds);
           throw new HttpException(500, buildErrorWithParameter(String.join(", ", ids), MISSING_CONTRIBUTOR_NAME_TYPE));
         }
-      }).mapEmpty();
+        return null;
+      });
   }
 
   private Future<List<JsonObject>> getContributorNameTypes(List<String> ids, RequestContext requestContext) {
@@ -741,7 +742,7 @@ public class InventoryManager {
         .map(JsonObject::mapFrom)
         .collect(Collectors.toList())
       )
-       .onFailure(e -> {
+       .recover(e -> {
         logger.error("The issue happened getting contributor name types", e);
         throw new CompletionException(e.getCause());
       });
@@ -1041,7 +1042,7 @@ public class InventoryManager {
 
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(json -> json.getString("isbn"))
-       .onFailure(throwable -> {
+       .recover(throwable -> {
         logger.error("Can't convert {} to isbn13", isbn);
         List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("isbn").withValue(isbn));
         throw new HttpException(400, ISBN_NOT_VALID.toError().withParameters(parameters));
@@ -1096,7 +1097,7 @@ public class InventoryManager {
 
   public Future<String> createInstance(JsonObject instanceRecJson, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
-    return restClient.postAndGetId(requestEntry, instanceRecJson, requestContext);
+    return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
   }
 
   public Future<Void> deleteHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
@@ -1238,7 +1239,7 @@ public class InventoryManager {
     Promise<String> promise = Promise.promise();
     RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT).withQueryParameter(LANG, "en");
     logger.info("Trying to create Item in inventory");
-    restClient.postAndGetId(requestEntry, itemData, requestContext)
+    restClient.postJsonObjectAndGetId(requestEntry, itemData, requestContext)
       .onSuccess(promise::complete)
       // In case item creation failed, return null instead of id
        .onFailure(throwable -> {

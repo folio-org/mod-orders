@@ -81,7 +81,7 @@ public class OpenCompositeOrderManager {
   }
 
   public Future<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return GenericCompositeFuture.all(compositePoLines.stream()
+    return GenericCompositeFuture.join(compositePoLines.stream()
       .map(this::removeLocationId)
       .map(this::convertToPoLine)
       .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
@@ -157,13 +157,14 @@ public class OpenCompositeOrderManager {
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
     return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
       // TODO: check how it works
-      .recover(throwable ->
+      .recover(throwable ->{
         // There was an error when processing the encumbrances despite the previous validations.
         // Order lines should be saved to avoid leaving an open order with locationId instead of holdingId.
-         openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext)
-          .onComplete(v -> {
+         return openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext)
+          .recover(v -> {
             throw new CompletionException(throwable.getCause());
-          }));
+          });
+      });
   }
 
   private void updateIncomingOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {

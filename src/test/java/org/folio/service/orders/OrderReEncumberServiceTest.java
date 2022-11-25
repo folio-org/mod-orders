@@ -28,19 +28,20 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ReEncumbranceHolder;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
@@ -49,6 +50,7 @@ import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -67,13 +69,18 @@ import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.AdditionalMatchers;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
+import io.vertx.core.Future;
+
+@ExtendWith(VertxExtension.class)
 public class OrderReEncumberServiceTest {
 
   @InjectMocks
@@ -102,6 +109,9 @@ public class OrderReEncumberServiceTest {
 
   @Mock
   private RequestContext requestContext;
+
+  @Captor
+  ArgumentCaptor<ArrayList<ReEncumbranceHolder>> argumentCaptorForList;
 
   private LedgerFiscalYearRolloverProgress notStarted;
   private LedgerFiscalYearRolloverProgress inProgress;
@@ -191,7 +201,7 @@ public class OrderReEncumberServiceTest {
   }
 
   @Test
-  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverHasProgressNotStartedOrInProgress() {
+  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverHasProgressNotStartedOrInProgress(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
 
     String fundId1 = UUID.randomUUID().toString();
@@ -236,21 +246,24 @@ public class OrderReEncumberServiceTest {
     when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId3), any()))
         .thenReturn(succeededFuture(Collections.singletonList(success)));
 
-    CompletionException completionException = assertThrows(CompletionException.class, () -> orderReEncumberService.reEncumber(orderId, requestContext).result());
-
-    assertNotNull(completionException.getCause());
-    assertThat(completionException.getCause(), instanceOf(HttpException.class));
-    HttpException e = (HttpException) completionException.getCause();
-    assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
-    assertThat(e.getError().getParameters(), hasSize(1));
-    Parameter parameter = e.getError().getParameters().get(0);
-    assertThat(parameter.getValue(), containsString(ledgerId1));
-    assertThat(parameter.getValue(), containsString(ledgerId2));
+    var future = orderReEncumberService.reEncumber(orderId, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException ->{
+      assertNotNull(completionException.cause());
+      assertThat(completionException.cause(), instanceOf(HttpException.class));
+      HttpException e = (HttpException) completionException.cause();
+      assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
+      assertThat(e.getError().getParameters(), hasSize(1));
+      Parameter parameter = e.getError().getParameters().get(0);
+      assertThat(parameter.getValue(), containsString(ledgerId1));
+      assertThat(parameter.getValue(), containsString(ledgerId2));
+      vertxTestContext.completeNow();
+    });
 
   }
 
   @Test
-  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverIsMissing() {
+  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverIsMissing(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
 
     String fundId1 = UUID.randomUUID().toString();
@@ -288,18 +301,21 @@ public class OrderReEncumberServiceTest {
     when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId1), any())).thenReturn(succeededFuture(Collections.singletonList(success)));
     when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId2), any())).thenReturn(succeededFuture(Collections.singletonList(error)));
 
-    CompletionException completionException = assertThrows(CompletionException.class, () -> orderReEncumberService.reEncumber(orderId, requestContext).result());
-
-    assertNotNull(completionException.getCause());
-    assertThat(completionException.getCause(), instanceOf(HttpException.class));
-    HttpException e = (HttpException) completionException.getCause();
-    assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
-    assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("ledgerIds").withValue(ledgerId3)));
+    var future = orderReEncumberService.reEncumber(orderId, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException ->{
+        assertNotNull(completionException.cause());
+        assertThat(completionException.cause(), instanceOf(HttpException.class));
+        HttpException e = (HttpException) completionException.cause();
+        assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
+        assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("ledgerIds").withValue(ledgerId3)));
+        vertxTestContext.completeNow();
+      });
 
   }
 
   @Test
-  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverHasNoProgress() {
+  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverHasNoProgress(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
 
     String fundId1 = UUID.randomUUID().toString();
@@ -342,18 +358,20 @@ public class OrderReEncumberServiceTest {
         .thenReturn(succeededFuture(Collections.singletonList(error)));
     when(rolloverRetrieveService.getRolloversProgress(AdditionalMatchers.not(eq(rolloverId3)), any())).thenReturn(succeededFuture(Collections.emptyList()));
 
-    CompletionException completionException = assertThrows(CompletionException.class, () -> orderReEncumberService.reEncumber(orderId, requestContext).result());
-
-    assertNotNull(completionException.getCause());
-    assertThat(completionException.getCause(), instanceOf(HttpException.class));
-    HttpException e = (HttpException) completionException.getCause();
-    assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
-    assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("ledgerIds").withValue(ledgerId1 + ", " + ledgerId2)));
-
+    var future = orderReEncumberService.reEncumber(orderId, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException -> {
+        assertNotNull(completionException.cause());
+        assertThat(completionException.cause(), instanceOf(HttpException.class));
+        HttpException e = (HttpException) completionException.cause();
+        assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
+        assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("ledgerIds").withValue(ledgerId1 + ", " + ledgerId2)));
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
-  void shouldThrowHttpExceptionWithFundsNotFoundCodeWhenAtLeastOneFundIsMissing() {
+  void shouldThrowHttpExceptionWithFundsNotFoundCodeWhenAtLeastOneFundIsMissing(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
 
     String fundId1 = UUID.randomUUID().toString();
@@ -370,14 +388,16 @@ public class OrderReEncumberServiceTest {
     when(purchaseOrderStorageService.getCompositeOrderById(anyString(), any())).thenReturn(succeededFuture(new CompositePurchaseOrder()));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
     when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(succeededFuture(holders));
-
-    CompletionException completionException = assertThrows(CompletionException.class, () -> orderReEncumberService.reEncumber(orderId, requestContext).result());
-
-    assertNotNull(completionException.getCause());
-    assertThat(completionException.getCause(), instanceOf(HttpException.class));
-    HttpException e = (HttpException) completionException.getCause();
-    assertEquals(FUNDS_NOT_FOUND.getCode(), e.getError().getCode());
-    assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("fund").withValue(fundId2)));
+    var future = orderReEncumberService.reEncumber(orderId, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException ->{
+        assertNotNull(completionException.cause());
+        assertThat(completionException.cause(), instanceOf(HttpException.class));
+        HttpException e = (HttpException) completionException.cause();
+        assertEquals(FUNDS_NOT_FOUND.getCode(), e.getError().getCode());
+        assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("fund").withValue(fundId2)));
+        vertxTestContext.completeNow();
+      });
 
   }
 
@@ -408,7 +428,7 @@ public class OrderReEncumberServiceTest {
     Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
 
     future.result();
-    assertFalse(future.isCompletedExceptionally());
+    assertFalse(future.failed());
   }
 
   @Test
@@ -452,11 +472,10 @@ public class OrderReEncumberServiceTest {
     when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
     when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(succeededFuture(new Transaction()));
     future.result();
-    assertFalse(future.isCompletedExceptionally());
+    assertFalse(future.failed());
 
-    ArgumentCaptor<List<ReEncumbranceHolder>> argumentCaptor = ArgumentCaptor.forClass(List.class);
-    verify(spyReEncumbranceHoldersBuilder).withPreviousFyEncumbrances(argumentCaptor.capture(), any());
-    List<ReEncumbranceHolder> argumentHolders = argumentCaptor.getValue();
+    verify(spyReEncumbranceHoldersBuilder).withPreviousFyEncumbrances(argumentCaptorForList.capture(), any());
+    List<ReEncumbranceHolder> argumentHolders = argumentCaptorForList.getValue();
     assertThat(argumentHolders, hasSize(0));
   }
 
@@ -623,7 +642,7 @@ public class OrderReEncumberServiceTest {
     Future<Void> future = orderReEncumberService.reEncumber(UUID.randomUUID().toString(), requestContext);
     future.result();
      //Then
-    assertFalse(future.isCompletedExceptionally());
+    assertFalse(future.failed());
 
     assertEquals(-35.3d, line1.getCost().getFyroAdjustmentAmount());
     assertEquals(50d, line1.getFundDistribution().get(0).getValue());

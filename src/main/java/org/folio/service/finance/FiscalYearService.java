@@ -33,7 +33,7 @@ public class FiscalYearService {
   public Future<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(CURRENT_FISCAL_YEAR).withId(ledgerId);
     return restClient.get(requestEntry, FiscalYear.class, requestContext)
-      .onFailure(t -> {
+      .recover(t -> {
         Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
         if (isFiscalYearNotFound(cause)) {
           List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(ledgerId)

@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.SEARCH_PARAMS;
@@ -32,6 +33,7 @@ import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -133,7 +135,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
           }
         }
 
-        return collectResultsOnSuccess(futures).onSuccess(updatedPoLines -> {
+        return collectResultsOnSuccess(futures).map(updatedPoLines -> {
           logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
 
           // Send event to check order status for successfully processed PO Lines
@@ -141,6 +143,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
             // Leave only successfully updated PO Lines
             .filter(line -> updatedPoLines.contains(line.getId()))
             .toList(), requestContext);
+          return null;
         });
       })
         .map(ok -> piecesGroupedByPoLine);
@@ -189,8 +192,11 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
         .compose(acqUnitsCqlExpr -> {
           String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
-          String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, buildQuery(cql));
-          return new RestClient().get(endpoint, ReceivingHistoryCollection.class, requestContext);
+          RequestEntry rq = new RequestEntry(GET_RECEIVING_HISTORY_BY_QUERY)
+            .withLimit(limit)
+            .withOffset(offset)
+            .withQuery(buildQuery(cql));
+          return new RestClient().get(rq, ReceivingHistoryCollection.class, requestContext);
         })
          .onFailure(t -> {
           logger.error("Error happened retrieving receiving history", t);

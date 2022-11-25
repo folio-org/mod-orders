@@ -104,7 +104,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
               return Future.succeededFuture(orderRetrieveHolder.withNeedReEncumber(true));
             }
             return rolloverErrorService.getLedgerFyRolloverErrors(orderRetrieveHolder.getOrderId(), requestContext)
-              .map(LedgerFiscalYearRolloverErrorCollection::getLedgerFiscalYearRolloverErrors)
+              .map(ledgerFiscalYearRolloverErrorCollection -> ledgerFiscalYearRolloverErrorCollection.getLedgerFiscalYearRolloverErrors())
               .map(ledgerFyRolloverErrors -> orderRetrieveHolder.withNeedReEncumber(!ledgerFyRolloverErrors.isEmpty()));
           }));
       });
@@ -147,15 +147,15 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   private Future<List<ReEncumbranceHolder>> checkRolloverHappensForAllLedgers(List<ReEncumbranceHolder> holders,
                                                                                          RequestContext requestContext) {
     return getLedgersIdsRolloverNotCompleted(holders, requestContext)
-            .onSuccess(ledgerIds -> {
+            .map(ledgerIds -> {
               if (isRolloversPartiallyCompleted(holders, ledgerIds)) {
                 Parameter parameter = new Parameter().withKey("ledgerIds")
                         .withValue(String.join(", ", ledgerIds));
                 throw new HttpException(400, ROLLOVER_NOT_COMPLETED.toError()
                         .withParameters(Collections.singletonList(parameter)));
               }
-            })
-            .map(aVoid -> holders);
+              return holders;
+            });
   }
 
   private boolean isRolloversPartiallyCompleted(List<ReEncumbranceHolder> holders, List<String> ledgerIds) {
@@ -171,7 +171,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
             .distinct()
             .collect(toList());
 
-    return GenericCompositeFuture.all(holders.stream()
+    return GenericCompositeFuture.join(holders.stream()
             .filter(holder -> Objects.nonNull(holder.getRollover()))
             .map(ReEncumbranceHolder::getRollover)
             .map(rollover -> rolloverRetrieveService.getRolloversProgress(rollover.getId(), requestContext)
@@ -280,7 +280,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
         String orderId = purchaseOrder.getId();
         return transactionSummaryService.updateOrderTransactionSummary(orderId, holderForCreateEncumbrances.size(), requestContext)
-          .compose(aVoid -> GenericCompositeFuture.all(holderForCreateEncumbrances.stream()
+          .compose(aVoid -> GenericCompositeFuture.join(holderForCreateEncumbrances.stream()
             .map(holder -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
               .onSuccess(holder::withNewEncumbrance))
             .collect(toList())))

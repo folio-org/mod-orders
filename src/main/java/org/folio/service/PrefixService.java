@@ -66,11 +66,12 @@ public class PrefixService {
   private Future<Void> checkPrefixNotUsed(Prefix prefix, RequestContext requestContext) {
     String query = "poNumberPrefix==" + prefix.getName();
     return purchaseOrderStorageService.getPurchaseOrders(query, 0, 0, requestContext)
-      .onSuccess(purchaseOrders -> {
+      .map(purchaseOrders -> {
         if (purchaseOrders.getTotalRecords() > 0) {
           logger.error("Prefix is used by {} orders", purchaseOrders.getTotalRecords());
           throw new HttpException(400, PREFIX_IS_USED);
         }
-      }).mapEmpty();
+        return  null;
+      });
   }
 }
