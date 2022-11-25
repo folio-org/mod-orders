@@ -231,7 +231,10 @@ public class PurchaseOrderHelper {
     JsonObject cachedTenantConfiguration = new JsonObject();
     return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .thenApply(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
+      .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
+      .thenCompose(s -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
       .thenCompose(tenantConfiguration -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(compPO.getId(), requestContext))
+      .thenApply(storagePO -> updatePrefixAndSuffix(storagePO,compPO))
       .thenCompose(jsonPoFromStorage -> validateIfPOProtectedFieldsChanged(compPO, jsonPoFromStorage))
       .thenApply(HelperUtils::convertToCompositePurchaseOrder)
       .thenCompose(poFromStorage -> purchaseOrderLineService.populateOrderLines(poFromStorage, requestContext))
@@ -239,9 +242,6 @@ public class PurchaseOrderHelper {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return validateAcqUnitsOnUpdate(compPO, poFromStorage, requestContext)
           .thenCompose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
-          .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
-          .thenCompose(s -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
-          .thenAccept(ps -> updatePrefixAndSuffix(poFromStorage,compPO))
           .thenAccept(ok -> {
             if (isTransitionToApproved(poFromStorage, compPO)) {
               checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext);
@@ -509,7 +509,8 @@ public class PurchaseOrderHelper {
     return completedFuture(null);
   }
 
-  public void updatePrefixAndSuffix(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
+  public JsonObject updatePrefixAndSuffix( JsonObject compPOFromStorageJson, CompositePurchaseOrder updatedPo) {
+    CompositePurchaseOrder poFromStorage = HelperUtils.convertToCompositePurchaseOrder(compPOFromStorageJson);
     String poNumber = "";
     if(HelperUtils.isPrefixChanged(poFromStorage, updatedPo)) {
       if(StringUtils.isNotEmpty(updatedPo.getPoNumberPrefix())) {
@@ -525,6 +526,9 @@ public class PurchaseOrderHelper {
         poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
         updatedPo.setPoNumber(poNumber);
       }
+    }
+    else {
+      HelperUtils.setPoNumberPrefix(updatedPo);
     }
 
     if(HelperUtils.isSuffixChanged(poFromStorage, updatedPo)) {
@@ -542,7 +546,11 @@ public class PurchaseOrderHelper {
         updatedPo.setPoNumber(poNumber);
       }
     }
+    else {
+      HelperUtils.setPoNumberSuffix(updatedPo);
+    }
 
+    return compPOFromStorageJson;
   }
 
   private CompletableFuture<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
