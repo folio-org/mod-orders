@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import com.google.common.collect.Lists;
 import io.vertx.core.Future;
@@ -69,18 +67,17 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
 
   @Mock
   RequestContext requestContext;
-
+  AutoCloseable mockitoMocks;
   @BeforeEach
   void initMocks(){
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
     doReturn(succeededFuture(Lists.newArrayList())).when(pieceStorageService).getPiecesByPoLineId(any(), any());
   }
 
   @AfterEach
-  void resetMocks() {
+  void resetMocks() throws Exception {
     clearServiceInteractions();
-    Mockito.reset(inventoryManager);
-    Mockito.reset(pieceStorageService);
+    mockitoMocks.close();
   }
 
   @Test

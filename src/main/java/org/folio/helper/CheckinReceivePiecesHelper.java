@@ -94,14 +94,14 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected PurchaseOrderLineService purchaseOrderLineService;
   @Autowired
   protected PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
-  @Autowired
-  private RestClient restClient;
+  private final RestClient restClient;
 
   private List<PoLine> poLineList;
 
 
   protected CheckinReceivePiecesHelper(Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
+    this.restClient = new RestClient();
     processedHoldingsParams = new HashSet<>();
     processedHoldings = new HashMap<>();
     processingErrors = new HashMap<>();

@@ -20,6 +20,7 @@ import java.util.concurrent.CompletionException;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
 import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.exceptions.HttpException;
@@ -32,10 +33,12 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.invoice.InvoiceLineService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+@ExtendWith(VertxExtension.class)
 public class OrderInvoiceRelationServiceTest {
 
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";

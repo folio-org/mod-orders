@@ -192,7 +192,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import io.vertx.core.Future;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -208,6 +210,7 @@ import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
 import org.folio.rest.acq.model.PaymentStatus;
 import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -1664,6 +1667,8 @@ public class PurchaseOrdersApiTest {
 
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     CompositePurchaseOrder order = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id).mapTo(CompositePurchaseOrder.class);
+    var exchangeRate = new ExchangeRate().withFrom("EUR").withTo("USD").withExchangeRate(1.1d);
+  //  doReturn(succeededFuture(exchangeRate)).when(restClient).get(requestEntry, ExchangeRate.class, requestContext);
 
     order.getCompositePoLines()
       .forEach(poLine -> {
@@ -4188,7 +4193,7 @@ public class PurchaseOrdersApiTest {
   }
 
   @Test
-  void testReopenOrderUnreleasesEncumbrancesUnlessInvoiceLineHasReleaseEncumbrance() {
+  void testReopenOrderUnreleasesEncumbrancesUnlessInvoiceLineHasReleaseEncumbrance(VertxTestContext vertxTestContext) {
     logger.info("=== Check encumbrances are unreleased when an order is reopened, except for po lines having a linked invoice line with releaseEncumbrance = true ===");
 
     String purchaseOrderId = "0fb18568-cf8d-442b-b74a-cad7cfa557a0";
@@ -4245,11 +4250,17 @@ public class PurchaseOrdersApiTest {
     }).when(transactionService).updateTransactions(transactions, requestContext);
     doReturn(succeededFuture(transactionCollection)).when(restClient).get(requestEntry, TransactionCollection.class, requestContext);
     doReturn(succeededFuture(transactions)).when(transactionService).getTransactionsByIds(transactionIds, requestContext);
-    List<Transaction> updatedTransactions = encumbranceService.getEncumbrancesByIds(transactionIds, requestContext).result();
-    assertThat(updatedTransactions.size(), equalTo(1));
-    Transaction updatedEncumbrance1 = updatedTransactions.get(0);
-    assertThat(updatedEncumbrance1.getEncumbrance().getSourcePoLineId(), equalTo(poLineId1));
-    assertThat(updatedEncumbrance1.getEncumbrance().getStatus(), equalTo(Encumbrance.Status.UNRELEASED));
+    Future<List<Transaction>> future = encumbranceService.getEncumbrancesByIds(transactionIds, requestContext);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertThat(result.result().size(), equalTo(1));
+        Transaction updatedEncumbrance1 = result.result().get(0);
+        assertThat(updatedEncumbrance1.getEncumbrance().getSourcePoLineId(), equalTo(poLineId1));
+        assertThat(updatedEncumbrance1.getEncumbrance().getStatus(), equalTo(Encumbrance.Status.UNRELEASED));
+        vertxTestContext.completeNow();
+      });
+
   }
 
   private CompositePurchaseOrder prepareCompositeOrderOpenRequest(CompositePurchaseOrder po) {

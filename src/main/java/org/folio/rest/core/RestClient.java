@@ -154,7 +154,8 @@ public class RestClient {
       .expect(SUCCESS_RESPONSE_PREDICATE)
       .send()
       .map(HttpResponse::bodyAsJsonObject)
-      .map(jsonObject -> jsonObject.mapTo(responseType));
+      .map(jsonObject -> jsonObject.mapTo(responseType))
+      .onFailure(logger::error);
   }
 
 
@@ -162,12 +163,11 @@ public class RestClient {
     logger.debug("Calling GET {}", endpoint);
 
     var caseInsensitiveHeader = convertToMultiMap(requestContext.getHeaders());
-
-    return getVertxWebClient(requestContext.getContext())
-      .getAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+    var webClient = getVertxWebClient(requestContext.getContext());
+    return webClient.getAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
       .putHeaders(caseInsensitiveHeader)
-      .expect(SUCCESS_RESPONSE_PREDICATE)
-      .expect(get404ResponsePredicate(skip404Error))
+    //   .expect(SUCCESS_RESPONSE_PREDICATE)
+    //  .expect(get404ResponsePredicate(skip404Error))
       .send()
       .map(HttpResponse::bodyAsJsonObject);
   }

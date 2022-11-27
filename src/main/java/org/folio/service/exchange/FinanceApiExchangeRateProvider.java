@@ -1,5 +1,7 @@
 package org.folio.service.exchange;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.money.convert.ConversionContext;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
@@ -14,8 +16,6 @@ import org.folio.spring.SpringContextUtil;
 import org.javamoney.moneta.convert.ExchangeRateBuilder;
 import org.javamoney.moneta.spi.DefaultNumberValue;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import io.vertx.core.Future;
 
 public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
   private static final ProviderContext CONTEXT;
@@ -41,20 +41,19 @@ public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
   @Override
   public ExchangeRate getExchangeRate(ConversionQuery conversionQuery) {
     return getExchangeRateFromService(conversionQuery)
-      .map(exchangeRate -> {
+      .thenApply(exchangeRate -> {
         ExchangeRateBuilder builder = new ExchangeRateBuilder(ConversionContext.of());
         builder.setBase(conversionQuery.getBaseCurrency());
         builder.setTerm(conversionQuery.getCurrency());
         builder.setFactor(DefaultNumberValue.of(exchangeRate.getExchangeRate()));
         return builder.build();
-      }).result();
+      }).join();
   }
 
-  private Future<org.folio.rest.acq.model.finance.ExchangeRate> getExchangeRateFromService(ConversionQuery conversionQuery) {
-    var baseCurrencyCode = conversionQuery.getBaseCurrency().getCurrencyCode();
-    var conversionCurrencyCode = conversionQuery.getCurrency().getCurrencyCode();
-    return Future.succeededFuture()
-      .compose(v -> financeExchangeRateService.getExchangeRate(baseCurrencyCode,conversionCurrencyCode, requestContext));
+  private CompletableFuture<org.folio.rest.acq.model.finance.ExchangeRate> getExchangeRateFromService(ConversionQuery conversionQuery) {
+    return CompletableFuture.supplyAsync(() -> financeExchangeRateService
+      .getExchangeRate(conversionQuery.getBaseCurrency().getCurrencyCode(), conversionQuery.getCurrency().getCurrencyCode(),
+        requestContext).join());
   }
   @Override
   public CurrencyConversion getCurrencyConversion(ConversionQuery conversionQuery) {

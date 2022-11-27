@@ -176,7 +176,7 @@ public class PurchaseOrderLineService {
       future = restClient.getAsJsonObject(url, true, requestContext);
     }
     else if (operation.equals(HttpMethod.POST)) {
-      future = restClient.post(url, jsonObject, JsonObject.class, requestContext);
+      future = restClient.postJsonObject(new RequestEntry(url), jsonObject, requestContext);
     }
     else if (operation.equals(HttpMethod.PUT)) {
       future = restClient.put(url, jsonObject, requestContext)

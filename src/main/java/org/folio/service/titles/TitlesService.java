@@ -104,7 +104,7 @@ public class TitlesService {
   private Future<Void> populateTitle(Title title, String poLineId, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
     purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-      .onSuccess(poLine -> {
+      .map(poLine -> {
         if(Boolean.TRUE.equals(poLine.getIsPackage())) {
           populateTitleByPoLine(title, poLine);
           promise.complete();
@@ -120,6 +120,7 @@ public class TitlesService {
               }
             });
         }
+        return null;
       })
        .onFailure(promise::fail);
     return promise.future();

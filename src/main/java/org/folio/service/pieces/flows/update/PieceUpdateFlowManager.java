@@ -53,11 +53,14 @@ public class PieceUpdateFlowManager {
     pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
       .onSuccess(holder::withPieceFromStorage)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
-      .onSuccess(v -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPoLine(), createItem))
+      .map(v -> {
+        defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPoLine(), createItem);
+        return null;
+      })
       .compose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), UPDATE, requestContext))
       .compose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
       .compose(vVoid -> updatePoLine(holder, requestContext))
-      .onSuccess(afterUpdate -> {
+      .map(afterUpdate -> {
         JsonObject messageToEventBus = new JsonObject();
         messageToEventBus.put("poLineIdUpdate", holder.getPieceToUpdate().getPoLineId());
         Piece.ReceivingStatus receivingStatusStorage = holder.getPieceFromStorage().getReceivingStatus();
@@ -67,6 +70,7 @@ public class PieceUpdateFlowManager {
         if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
           pieceService.receiptConsistencyPiecePoLine(messageToEventBus, requestContext);
         }
+        return null;
       })
       .compose(aVoid -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext))
       .onSuccess(promise::complete)

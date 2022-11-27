@@ -11,18 +11,22 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import io.vertx.junit5.VertxExtension;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import io.vertx.core.Future;
 
+
+@ExtendWith(VertxExtension.class)
 public class PurchaseOrderStorageServiceTest {
   @InjectMocks
   private PurchaseOrderStorageService purchaseOrderStorageService;

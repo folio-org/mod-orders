@@ -64,8 +64,10 @@ public class OpenCompositeOrderFlowValidator {
     List<String> lineIds = linesWithIdWithoutManualPieceReceived.stream().map(CompositePoLine::getId).collect(toList());
     return pieceStorageService.getPiecesByLineIdsByChunks(lineIds, requestContext)
       .map(pieces -> new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size()))
-      .onSuccess(pieces -> verifyLocationsAndPiecesConsistency(linesWithIdWithoutManualPieceReceived, pieces))
-      .mapEmpty();
+      .map(pieces -> {
+        verifyLocationsAndPiecesConsistency(linesWithIdWithoutManualPieceReceived, pieces);
+        return null;
+      });
   }
 
   private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){

@@ -2,6 +2,7 @@ package org.folio.service.finance.transaction;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 import org.folio.ApiTestSuite;
 import org.folio.config.ApplicationConfig;
 import org.folio.models.EncumbranceRelationsHolder;
@@ -13,6 +14,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -46,6 +48,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
+@ExtendWith(VertxExtension.class)
 public class OpenToPendingEncumbranceStrategyTest {
 
     @InjectMocks

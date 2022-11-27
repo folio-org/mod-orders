@@ -41,7 +41,10 @@ public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
     return prepareEncumbranceRelationsHolder(encumbranceRelationsHolders, poAndLinesFromStorage, requestContext)
       .map(fundsDistributionService::distributeFunds)
-      .onSuccess(budgetRestrictionService::checkEncumbranceRestrictions)
+      .map(dataHolders -> {
+        budgetRestrictionService.checkEncumbranceRestrictions(dataHolders);
+        return null;
+      })
       .map(aVoid -> encumbrancesProcessingHolderBuilder.distributeHoldersByOperation(encumbranceRelationsHolders))
       .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext))
       .onSuccess(holders -> LOG.debug("End processing encumbrances for piece add/delete"));

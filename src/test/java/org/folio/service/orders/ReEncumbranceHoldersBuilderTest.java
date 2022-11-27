@@ -38,6 +38,7 @@ import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRate;
 
 import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -67,6 +68,7 @@ import org.javamoney.moneta.Money;
 import org.javamoney.moneta.spi.DefaultNumberValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -74,6 +76,8 @@ import org.mockito.MockitoAnnotations;
 import io.vertx.core.Vertx;
 import org.mockito.Spy;
 
+
+@ExtendWith(VertxExtension.class)
 public class ReEncumbranceHoldersBuilderTest {
 
   @InjectMocks

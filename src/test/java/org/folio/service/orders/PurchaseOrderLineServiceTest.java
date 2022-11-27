@@ -95,7 +95,7 @@ public class PurchaseOrderLineServiceTest {
   }
 
   @Test
-  void successRetrievePurchaseOrderLinesByQuery(VertxTestContext) {
+  void successRetrievePurchaseOrderLinesByQuery(VertxTestContext vertxTestContext) {
     String orderLineId = UUID.randomUUID().toString();
     List<PoLine> purchaseOrderLines = Collections.singletonList(new PoLine()
       .withId(orderLineId));

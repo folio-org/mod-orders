@@ -55,7 +55,9 @@ public class PieceDeleteFlowManager {
   public Future<Void> deletePiece(String pieceId, boolean deleteHolding, RequestContext requestContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(deleteHolding);
     return pieceStorageService.getPieceById(pieceId, requestContext)
-      .onSuccess(holder::withPieceToDelete)
+      .map(pieceToDelete -> {
+        holder.withPieceToDelete(pieceToDelete); return null;
+      })
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
       .compose(aVoid -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .compose(aVoid -> isDeletePieceRequestValid(holder, requestContext))

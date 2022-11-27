@@ -67,7 +67,7 @@ public class OrderLinePatchOperationService {
     Promise<Void> promise = Promise.promise();
 
     purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .onSuccess(poLine -> {
+      .map(poLine -> {
         OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
           .withPathOrderLineRequest(request)
           .withStoragePoLine(poLine);
@@ -76,8 +76,10 @@ public class OrderLinePatchOperationService {
         patchOperationHandler.handle(orderLineUpdateInstanceHolder, requestContext)
           .compose(v -> sendPatchOrderLineRequest(orderLineUpdateInstanceHolder, lineId, requestContext))
           .onSuccess(v -> promise.complete())
-           .onFailure(promise::fail);
-      }) .onFailure(t -> {
+          .onFailure(promise::fail);
+        return null;
+      })
+      .onFailure(t -> {
         logger.error("Error when sending patch request to order lines endpoint for lineId {}", lineId);
         promise.fail(t);
       });

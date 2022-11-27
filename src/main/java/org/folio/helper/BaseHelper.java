@@ -69,7 +69,7 @@ public abstract class BaseHelper {
 
   protected <T> void completeAllFutures(List<Future<T>> futures, Message<JsonObject> message) {
     // Now wait for all operations to be completed and send reply
-    GenericCompositeFuture.all(futures)
+    GenericCompositeFuture.join(futures)
       .onSuccess(v -> message.reply(Response.Status.OK.getReasonPhrase()))
       .onFailure(e -> message.fail(handleProcessingError(e), getErrors().get(0).getMessage()));
   }

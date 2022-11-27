@@ -376,14 +376,6 @@ public class HelperUtils {
     return StreamEx.of(values).joining(" or ", prefix, ")");
   }
 
-  public static void verifyResponse(Response response) {
-    if (!Response.isSuccess(response.getCode())) {
-      String msg =  Optional.ofNullable(response.getError()).map(errors -> errors.getString(ERROR_MESSAGE))
-                            .orElse(GENERIC_ERROR_CODE.getDescription());
-      throw new CompletionException(new HttpException(response.getCode(), msg));
-    }
-  }
-
   public static int getPoLineLimit(JsonObject config) {
     try {
       return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));

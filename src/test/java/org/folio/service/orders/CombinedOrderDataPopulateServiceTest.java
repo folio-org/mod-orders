@@ -9,16 +9,20 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+
+@ExtendWith(VertxExtension.class)
 public class CombinedOrderDataPopulateServiceTest {
 
   @InjectMocks

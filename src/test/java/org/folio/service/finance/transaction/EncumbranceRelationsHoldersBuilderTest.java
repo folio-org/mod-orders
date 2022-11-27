@@ -34,6 +34,7 @@ import java.util.UUID;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ExchangeRateProvider;
 
+import io.vertx.junit5.VertxExtension;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -56,6 +57,7 @@ import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -63,6 +65,7 @@ import org.mockito.MockitoAnnotations;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
+@ExtendWith(VertxExtension.class)
 public class EncumbranceRelationsHoldersBuilderTest {
 
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";

@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.Future;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.acq.model.tag.Tag;
 import org.folio.rest.acq.model.tag.TagCollection;
 import org.folio.rest.core.RestClient;
@@ -60,7 +61,7 @@ class TagServiceTest {
   }
 
   @Test
-  void createTagsIfMissing() {
+  void createTagsIfMissing(VertxTestContext vertxTestContext) {
     String sampleTag = "CAseSenSeTivE";
     Tag postTagResponse = new Tag().withLabel(sampleTag);
     TagCollection emptyTagCollection = new TagCollection()
@@ -70,11 +71,12 @@ class TagServiceTest {
     doReturn(succeededFuture(emptyTagCollection)).when(restClient).get(anyString(), any(),  any());
     doReturn(succeededFuture(postTagResponse)).when(restClient).post(anyString(), any(),  any(), any());
 
-    Future<Void> response = tagService.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
-    response.result();
-
-    Assertions.assertTrue(response.succeeded());
-
+    Future<Void> future = tagService.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        Assertions.assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
   }
 
 }

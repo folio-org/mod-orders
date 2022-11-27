@@ -21,19 +21,24 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Suffix;
 import org.folio.rest.jaxrs.model.SuffixCollection;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+@ExtendWith(VertxExtension.class)
 public class SuffixServiceTest {
 
   @InjectMocks
@@ -58,132 +63,157 @@ public class SuffixServiceTest {
   }
 
   @Test
-  void testDeleteSuffixFailedIfSuffixUsedByOrder() {
+  void testDeleteSuffixFailedIfSuffixUsedByOrder(VertxTestContext vertxTestContext) {
     //given
-    when(restClient.get(anyString(), any(), any()))
+    when(restClient.get(any(RequestEntry.class), any(), any()))
       .thenReturn(Future.succeededFuture(new Suffix().withName("test")));
-    when(restClient.delete(anyString(), any())).thenReturn(Future.succeededFuture(null));
+    when(restClient.delete(any(RequestEntry.class), any())).thenReturn(Future.succeededFuture(null));
     when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
       .thenReturn(Future.succeededFuture(new PurchaseOrderCollection().withTotalRecords(1)));
 
     String id = UUID.randomUUID().toString();
-    Future<Void> result = suffixService.deleteSuffix(id, requestContext);
-    CompletionException expectedException = assertThrows(CompletionException.class, result::result);
+    Future<Void> future  = suffixService.deleteSuffix(id, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(expectedException -> {
+        HttpException httpException = (HttpException) expectedException.cause();
+        assertEquals(400, httpException.getCode());
+        assertEquals(SUFFIX_IS_USED.toError(), httpException.getError());
 
-    HttpException httpException = (HttpException) expectedException.getCause();
-    assertEquals(400, httpException.getCode());
-    assertEquals(SUFFIX_IS_USED.toError(), httpException.getError());
+        verify(restClient).get(any(RequestEntry.class), any(), any());
+        verify(restClient, never()).delete(any(RequestEntry.class), any());
+        verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
+        vertxTestContext.completeNow();
+      });
 
-    verify(restClient).get(anyString(), any(), any());
-    verify(restClient, never()).delete(anyString(), any());
-    verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
   }
 
   @Test
-  void testDeleteSuffixSuccessIfNotUsed() {
+  void testDeleteSuffixSuccessIfNotUsed(VertxTestContext vertxTestContext) {
     //given
-    when(restClient.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(new Suffix().withName("test")));
-    when(restClient.delete(anyString(), any())).thenReturn(Future.succeededFuture(null));
+    when(restClient.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(new Suffix().withName("test")));
+    when(restClient.delete(any(RequestEntry.class), any())).thenReturn(Future.succeededFuture(null));
     when(purchaseOrderStorageService.getPurchaseOrders(anyString(), anyInt(), anyInt(), any()))
       .thenReturn(Future.succeededFuture(new PurchaseOrderCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
-    Future<Void> result = suffixService.deleteSuffix(id, requestContext);
-    assertFalse(result.failed());
-    result.result();
-
-    verify(restClient).get(anyString(), any(), any());
-    verify(restClient).delete(anyString(), any());
-    verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
+    Future<Void> future = suffixService.deleteSuffix(id, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        verify(restClient).get(any(RequestEntry.class), any(), any());
+        verify(restClient).delete(any(RequestEntry.class), any());
+        verify(purchaseOrderStorageService).getPurchaseOrders(eq("poNumberSuffix==test"), eq(0), eq(0), any());
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
-  void testGetSuffixById() {
+  void testGetSuffixById(VertxTestContext vertxTestContext) {
     Suffix suffix = new Suffix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test suffix");
-    when(restClient.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(suffix));
+    when(restClient.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(suffix));
 
-    Future<Suffix> result = suffixService.getSuffixById(suffix.getId(), requestContext);
-    // TODO check async completed in time
-    assertFalse(result.failed());
+    Future<Suffix> future = suffixService.getSuffixById(suffix.getId(), requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        Suffix resultSuffix = result.result();
+        assertEquals(suffix, resultSuffix);
 
-    Suffix resultSuffix = result.result();
-    assertEquals(suffix, resultSuffix);
+        verify(restClient).get(any(RequestEntry.class), any(), any());
+        vertxTestContext.completeNow();
+      });
 
-    verify(restClient).get(anyString(), any(), any());
   }
 
   @Test
-  void testGetSuffixesByQuery() {
+  void testGetSuffixesByQuery(VertxTestContext vertxTestContext) {
     String query = "name==suf";
     Suffix suffix = new Suffix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test suffix");
     SuffixCollection suffixCollection = new SuffixCollection().withTotalRecords(1).withSuffixes(Collections.singletonList(suffix));
-    when(restClient.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(suffixCollection));
+    when(restClient.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(suffixCollection));
 
-    Future<SuffixCollection> result = suffixService.getSuffixes(query, 1, 0, requestContext);
-    assertFalse(result.failed());
+    Future<SuffixCollection> future = suffixService.getSuffixes(query, 1, 0, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        SuffixCollection resultSuffixCollection = result.result();
 
-    SuffixCollection resultSuffixCollection = result.result();
+        assertEquals(suffixCollection, resultSuffixCollection);
+        verify(restClient).get(any(RequestEntry.class), any(), any());
+        vertxTestContext.completeNow();
+      });
 
-    assertEquals(suffixCollection, resultSuffixCollection);
-    verify(restClient).get(anyString(), any(), any());
   }
 
   @Test
-  void testUpdateSuffix() {
+  void testUpdateSuffix(VertxTestContext vertxTestContext) {
     Suffix suffix = new Suffix().withId(UUID.randomUUID().toString())
       .withName("suff");
 
-    when(restClient.put(anyString(), eq(suffix), any())).thenReturn(Future.succeededFuture(null));
+    when(restClient.put(any(RequestEntry.class), eq(suffix), any())).thenReturn(Future.succeededFuture(null));
 
-    Future<Void> result = suffixService.updateSuffix(suffix.getId(), suffix, requestContext);
-    result.result();
-    assertFalse(result.failed());
-
-    verify(restClient).put(anyString(), eq(suffix), any());
+    Future<Void> future = suffixService.updateSuffix(suffix.getId(), suffix, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        verify(restClient).put(any(RequestEntry.class), eq(suffix), any());
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
-  void testUpdateSuffixWithoutIdInBody() {
+  void testUpdateSuffixWithoutIdInBody(VertxTestContext vertxTestContext) {
     Suffix suffix = new Suffix()
       .withName("suff");
 
     String id = UUID.randomUUID().toString();
-    when(restClient.put(anyString(), eq(suffix), any())).thenReturn(Future.succeededFuture(null));
+    when(restClient.put(any(RequestEntry.class), eq(suffix), any())).thenReturn(Future.succeededFuture(null));
 
-    Future<Void> result = suffixService.updateSuffix(id, suffix, requestContext);
-    assertFalse(result.failed());
-    result.result();
+    Future<Void> future = suffixService.updateSuffix(id, suffix, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        assertEquals(id, suffix.getId());
+        verify(restClient).put(any(RequestEntry.class), eq(suffix), any());
+        vertxTestContext.completeNow();
+      });
 
-    assertEquals(id, suffix.getId());
-    verify(restClient).put(anyString(), eq(suffix), any());
   }
 
   @Test
-  void testUpdateSuffixWithIdMismatchFails() {
+  void testUpdateSuffixWithIdMismatchFails(VertxTestContext vertxTestContext) {
     Suffix suffix = new Suffix().withId(UUID.randomUUID().toString());
+    Future<Void> future = suffixService.updateSuffix(UUID.randomUUID().toString(), suffix, requestContext);
 
-    CompletionException expectedException = assertThrows(CompletionException.class, () -> {
-      Future<Void> result = suffixService.updateSuffix(UUID.randomUUID().toString(), suffix, requestContext);
-      result.result();
-      assertTrue(result.failed());
-    });
-    HttpException httpException = (HttpException) expectedException.getCause();
-    assertEquals(422, httpException.getCode());
-    assertEquals(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError(), httpException.getError());
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException -> {
+        assertTrue(completionException.failed());
+
+        HttpException httpException = (HttpException) completionException.cause();
+        assertEquals(422, httpException.getCode());
+        assertEquals(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError(), httpException.getError());
+        vertxTestContext.completeNow();
+      });
+
   }
 
   @Test
-  void testCreateSuffix() {
+  void testCreateSuffix(VertxTestContext vertxTestContext) {
     Suffix suffix = new Suffix().withName("suf").withId(UUID.randomUUID().toString()).withDescription("Test suffix");
 
-    when(restClient.post(anyString(), eq(suffix), any(), any())).thenReturn(Future.succeededFuture(suffix));
+    when(restClient.post(any(RequestEntry.class), eq(suffix), any(), any())).thenReturn(Future.succeededFuture(suffix));
 
-    Future<Suffix> result = suffixService.createSuffix(suffix, requestContext);
-    assertFalse(result.failed());
-    Suffix resultSuffix = result.result();
-    assertEquals(suffix, resultSuffix);
+    Future<Suffix> future = suffixService.createSuffix(suffix, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        Suffix resultSuffix = result.result();
+        assertEquals(suffix, resultSuffix);
 
-    verify(restClient).post(anyString(), eq(suffix), any(), any());
+        verify(restClient).post(any(RequestEntry.class), eq(suffix), any(), any());
+        vertxTestContext.completeNow();
+      });
+
 
   }
 

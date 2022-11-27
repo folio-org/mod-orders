@@ -2,6 +2,7 @@ package org.folio.service.finance.transaction;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -30,6 +31,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -59,7 +61,7 @@ public class ClosedToOpenEncumbranceStrategyTest {
   }
 
   @Test
-  void testShouldCreateMissingEncumbrances() {
+  void testShouldCreateMissingEncumbrances(VertxTestContext vertxTestContext) {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
@@ -86,17 +88,19 @@ public class ClosedToOpenEncumbranceStrategyTest {
     doReturn(succeededFuture(null)).when(encumbranceService).createOrUpdateEncumbrances(any(), any());
 
     // When
-    Future<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
-    assertFalse(result.failed());
-    result.result();
-
-    // Then
-    verify(encumbranceService, times(1)).createOrUpdateEncumbrances(
-      argThat(h -> h.getEncumbrancesForCreate().size() == 1), eq(requestContext));
+    Future<Void> future = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        // Then
+        verify(encumbranceService, times(1)).createOrUpdateEncumbrances(
+          argThat(h -> h.getEncumbrancesForCreate().size() == 1), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
-  void stopIfNothingNeedsToBeDone() {
+  void stopIfNothingNeedsToBeDone(VertxTestContext vertxTestContext) {
     // Given
     String orderId = UUID.randomUUID().toString();
     String poLineId = UUID.randomUUID().toString();
@@ -121,13 +125,16 @@ public class ClosedToOpenEncumbranceStrategyTest {
     doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
 
     // When
-    Future<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
-    assertFalse(result.failed());
-    result.result();
+    Future<Void> future = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        // Then
+        verify(encumbranceRelationsHoldersBuilder, never()).buildBaseHolders(any());
+        verify(encumbranceService, never()).createOrUpdateEncumbrances(any(), any());
+        vertxTestContext.completeNow();
+      });
 
-    // Then
-    verify(encumbranceRelationsHoldersBuilder, never()).buildBaseHolders(any());
-    verify(encumbranceService, never()).createOrUpdateEncumbrances(any(), any());
   }
 
 }

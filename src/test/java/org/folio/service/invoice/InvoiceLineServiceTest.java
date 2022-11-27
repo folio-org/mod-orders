@@ -31,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -94,7 +95,7 @@ public class InvoiceLineServiceTest {
 
     //When
     Future<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContextMock);
-    assertFalse(result.failed());
+    assertTrue(result.succeeded());
     result.result();
 
     //Then

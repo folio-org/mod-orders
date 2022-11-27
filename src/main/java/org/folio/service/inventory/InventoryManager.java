@@ -773,6 +773,7 @@ public class InventoryManager {
           promise.fail(e);
         }
       } else {
+        logger.error("Error acquiring lock");
         promise.fail(
             new io.vertx.ext.web.handler.HttpException(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), lockResult.cause().getMessage()));
       }
@@ -920,7 +921,7 @@ public class InventoryManager {
       } else {
         createMissingPhysicalItems(compPOL, pieceWithHoldingId, ITEM_QUANTITY, requestContext)
           .onSuccess(idS -> itemFuture.complete(idS.get(0)))
-           .onFailure(itemFuture::fail);
+          .onFailure(itemFuture::fail);
       }
     } catch (Exception e) {
       itemFuture.fail(e);
@@ -1056,12 +1057,9 @@ public class InventoryManager {
     String itemId = piece.getItemId();
     String poLineId = piece.getPoLineId();
     return getItemRecordById(itemId, true, requestContext)
-      .map(item -> {
-        updateItemWithPieceFields(piece, item);
-        return item;
-      })
       .compose(item -> {
         if (poLineId != null && item != null && !item.isEmpty()) {
+          updateItemWithPieceFields(piece, item);
           return updateItem(item, requestContext);
         }
         return Future.succeededFuture();

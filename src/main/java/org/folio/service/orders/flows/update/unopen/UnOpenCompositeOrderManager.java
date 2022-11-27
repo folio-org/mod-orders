@@ -78,7 +78,10 @@ public class UnOpenCompositeOrderManager {
     return updateAndGetOrderWithLines(compPO, requestContext)
       .map(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
       .compose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
-      .onSuccess(ok -> PoLineCommonUtil.makePoLinesPending(compPO.getCompositePoLines()))
+      .map(ok -> {
+        PoLineCommonUtil.makePoLinesPending(compPO.getCompositePoLines());
+        return null;
+      })
       .compose(ok -> updatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
       .compose(ok -> processInventory(compPO.getCompositePoLines(), requestContext));
 
@@ -128,7 +131,10 @@ public class UnOpenCompositeOrderManager {
                   return inventoryManager.getHoldingsByIds(holdingIds, requestContext);
                 })
                 .compose(holdings -> deleteHoldings(holdings, requestContext))
-                .onSuccess(deletedHoldingVsLocationIds -> updateLocations(compPOL, deletedHoldingVsLocationIds))
+                .map(deletedHoldingVsLocationIds -> {
+                  updateLocations(compPOL, deletedHoldingVsLocationIds);
+                  return null;
+                })
                 .onSuccess(v -> logger.debug("Pieces, Holdings deleted after UnOpen order"))
       .mapEmpty();
   }
@@ -155,8 +161,11 @@ public class UnOpenCompositeOrderManager {
                               if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
                                 return inventoryManager.deleteItems(itemIds,  false, requestContext)
                                               .compose(deletedItemIds -> deleteHoldingsByItems(onOrderItems, requestContext))
-                                              .onSuccess(deletedHoldingVsLocationIds -> updateLocations(compPOL, deletedHoldingVsLocationIds))
-                                              .onSuccess(v -> logger.debug("Items and holdings deleted after UnOpen order"))
+                                  .map(deletedHoldingVsLocationIds -> {
+                                    updateLocations(compPOL, deletedHoldingVsLocationIds);
+                                    return null;
+                                  })
+                                  .onSuccess(v -> logger.debug("Items and holdings deleted after UnOpen order"))
                                   .mapEmpty();
                               }
                               return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
@@ -166,7 +175,10 @@ public class UnOpenCompositeOrderManager {
                                       .map(items -> getItemsByStatus(items, ItemStatus.ON_ORDER.value()))
                                       .compose(onOrderItemsP -> deletePiecesAndItems(onOrderItemsP, pieceCollection.getPieces(), requestContext))
                                       .compose(deletedItems -> deleteHoldingsByItems(deletedItems, requestContext))
-                                      .onSuccess(deletedHoldingVsLocationIds -> updateLocations(compPOL, deletedHoldingVsLocationIds))
+                                      .map(deletedHoldingVsLocationIds -> {
+                                        updateLocations(compPOL, deletedHoldingVsLocationIds);
+                                        return null;
+                                      })
                                       .onSuccess(v -> logger.debug("Pieces, Items, Holdings deleted after UnOpen order"))
                                       .mapEmpty();
                                   }
@@ -309,8 +321,10 @@ public class UnOpenCompositeOrderManager {
       .onSuccess(holder::setPieceToDelete)
       .compose(aVoid -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext)
         .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-          .onSuccess(purchaseOrder -> holder.withOrderInformation(purchaseOrder, poLine))
-        ))
+          .map(purchaseOrder -> {
+            holder.withOrderInformation(purchaseOrder, poLine);
+            return null;
+          })))
       .compose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .compose(vVoid -> canDeletePieceWithItem(holder.getPieceToDelete(), requestContext))
       .compose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
@@ -321,12 +335,13 @@ public class UnOpenCompositeOrderManager {
     if (StringUtils.isNotEmpty(piece.getItemId())) {
       // Attempt to delete item
       return inventoryManager.deleteItem(piece.getItemId(), true, requestContext)
-         .onFailure(t -> {
+         .recover(t -> {
           // Skip error processing if item has already deleted
           if (t instanceof HttpException || ((HttpException) t).getCode() == 404) {
           } else {
             throw new CompletionException(t);
           }
+          return null;
         });
     } else {
       return Future.succeededFuture();

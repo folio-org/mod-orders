@@ -55,7 +55,8 @@ public class AcquisitionMethodsService {
 
   public Future<Void> deleteAcquisitionMethod(String acquisitionMethodId, RequestContext requestContext) {
 
-    return validateDeleteOperation(acquisitionMethodId, requestContext).compose(aVoid -> {
+    return validateDeleteOperation(acquisitionMethodId, requestContext)
+      .compose(v -> {
       RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(acquisitionMethodId);
       return restClient.delete(requestEntry, requestContext);
     });
@@ -67,12 +68,12 @@ public class AcquisitionMethodsService {
       if (!isSystem) {
         String query = String.format(PO_LINE_BY_ACQUISITION_METHOD_QUERY, acquisitionMethod.getId());
         return purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
-           .map(poLines -> {
-             if (!poLines.isEmpty()) {
-               throw new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), FORBIDDEN_DELETE_USED_VALUE);
-             }
-             return null;
-           });
+          .map(poLines -> {
+            if (!poLines.isEmpty()) {
+              throw new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), FORBIDDEN_DELETE_USED_VALUE);
+            }
+            return null;
+          });
       } else {
         throw new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), FORBIDDEN_DELETE_SYSTEM_VALUE);
       }

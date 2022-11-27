@@ -6,6 +6,7 @@ import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -83,7 +84,7 @@ public class OpenToClosedEncumbranceStrategyTest {
 
     // When
     Future<Void> result = openToClosedEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
-    assertFalse(result.failed());
+    assertTrue(result.succeeded());
     result.result();
 
     // Then

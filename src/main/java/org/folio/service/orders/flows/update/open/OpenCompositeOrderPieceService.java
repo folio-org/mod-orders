@@ -123,9 +123,8 @@ public class OpenCompositeOrderPieceService {
         pieceStorageService.getPieceById(piece.getId(), requestContext).onSuccess(pieceStorage -> {
             Piece.ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
             pieceStorageService.updatePiece(piece, requestContext)
-              .onSuccess(promise::complete)
-              .onSuccess(afterUpdate -> {
-
+              .onSuccess(ok -> {
+                promise.complete();
                 JsonObject messageToEventBus = new JsonObject();
                 messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
 

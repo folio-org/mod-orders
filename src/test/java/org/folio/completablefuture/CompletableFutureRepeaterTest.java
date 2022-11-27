@@ -2,7 +2,7 @@ package org.folio.completablefuture;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.completablefuture.CompletableFutureRepeater.repeat;
+import static org.folio.completablefuture.VertxFutureRepeater.repeat;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import io.vertx.core.Future;
@@ -31,7 +30,7 @@ class CompletableFutureRepeaterTest {
   @SafeVarargs
   private Supplier<Future<String>> task(Future<String> ...completableFutures) {
     Iterator<Future<String>> iterator = List.of(completableFutures).iterator();
-    return () -> iterator.next();
+    return iterator::next;
   }
 
   private void assertThrowsCause(Class<?> clazz, Executable executable) {

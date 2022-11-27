@@ -71,7 +71,10 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
             // use given transactions (withKnownTransactions) instead of retrieving them (withExistingTransactions)
             .map(holders -> encumbranceRelationsHoldersBuilder.withKnownTransactions(holders, transactions))
             .map(fundsDistributionService::distributeFunds)
-            .onSuccess(budgetRestrictionService::checkEncumbranceRestrictions)
+            .map(dataHolders -> {
+              budgetRestrictionService.checkEncumbranceRestrictions(dataHolders);
+              return null;
+            })
             .compose(aVoid -> {
               // create missing encumbrances and unrelease existing ones
               EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();

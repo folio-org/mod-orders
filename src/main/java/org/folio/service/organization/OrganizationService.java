@@ -127,7 +127,8 @@ public class OrganizationService {
             .filter(id -> !vendorsIds.contains(id))
             .forEach(id -> errors.add(createErrorWithId(POL_ACCESS_PROVIDER_NOT_FOUND, id, poLinesMap.get(id))));
           return handleAndReturnErrors(errors);
-        }).onSuccess(promise::complete)
+        })
+        .onSuccess(promise::complete)
         .onFailure(t -> {
           Throwable cause = t.getCause();
           log.error("Failed to validate access provider's status", cause);

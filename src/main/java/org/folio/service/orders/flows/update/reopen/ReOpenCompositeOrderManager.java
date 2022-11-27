@@ -87,12 +87,13 @@ public class ReOpenCompositeOrderManager {
   }
 
   private Future<Void> oneTimeUpdatePoLineStatuses(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
-    return buildHolder(orderId, poLines, requestContext)
-            .onSuccess(holder -> poLines.forEach(poLine -> {
-              updatePoLineReceiptStatus(poLine, holder);
-              updatePoLinePaymentStatus(poLine, holder);
-             }))
-      .mapEmpty();
+    return buildHolder(orderId, poLines, requestContext).map(holder -> {
+      poLines.forEach(poLine -> {
+        updatePoLineReceiptStatus(poLine, holder);
+        updatePoLinePaymentStatus(poLine, holder);
+      });
+      return null;
+    });
   }
 
   private void updatePoLinePaymentStatus(CompositePoLine poLine, ReOpenCompositeOrderHolder holder) {

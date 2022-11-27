@@ -19,8 +19,9 @@ public class BasePieceFlowHolderBuilder {
   public Future<Void> updateHolderWithOrderInformation(BasePieceFlowHolder holder, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(holder.getOrderLineId(), requestContext)
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-        .onSuccess(purchaseOrder -> holder.withOrderInformation(purchaseOrder, poLine)))
-        .mapEmpty();
-
+        .map(purchaseOrder -> {
+          holder.withOrderInformation(purchaseOrder, poLine);
+          return null;
+        }));
   }
 }

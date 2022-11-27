@@ -55,12 +55,10 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         case FIND_OR_CREATE:
           return findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
             // TODO: onSuccess or compose ???
-              .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(),
-                  holder.getStoragePoLine(), requestContext));
+              .compose(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
         case CREATE:
           return createHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
-              .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(),
-                  holder.getStoragePoLine(), requestContext));
+              .compose(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
       case NONE:
         default:
           return Future.succeededFuture();
@@ -116,7 +114,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> retrieveUniqueLocationsAndConsume(OrderLineUpdateInstanceHolder holder, RequestContext requestContext,
                                                                     Consumer<Location> consumer) {
     return pieceStorageService.getPiecesByPoLineId(PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine()), requestContext)
-      .onSuccess(pieces -> {
+      .map(pieces -> {
         List<Location> pieceHoldingIds = pieces
           .stream()
           .map(piece -> new Location().withHoldingId(piece.getHoldingId()).withLocationId(piece.getLocationId()))
@@ -127,6 +125,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           .distinct(location -> String.format("%s %s", location.getLocationId(), location.getHoldingId()))
           .filter(location -> Objects.nonNull(location.getHoldingId()))
           .forEach(consumer);
+        return null;
       })
       .map(pieces -> null);
   }
@@ -145,22 +144,25 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
     List<Parameter> parameters = new ArrayList<>();
     return GenericCompositeFuture.join(items.stream()
-        .map(item -> inventoryManager.updateItem(item, requestContext)
-             .onFailure(ex -> {
-              Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));
-              if (ex.getCause() instanceof HttpException){
-                HttpException httpException = (HttpException) ex.getCause();
-                parameter.withAdditionalProperty("originalError", httpException.getError().getMessage());
-              }
-              parameters.add(parameter);
-            }))
-        .collect(toList())).mapEmpty()
-        .onSuccess(v -> {
-      if (CollectionUtils.isNotEmpty(parameters)) {
-        Error error = ErrorCodes.ITEM_UPDATE_FAILED.toError().withParameters(parameters);
-        throw new HttpException(500, error);
-      }
-    }).mapEmpty();
+      .map(item -> inventoryManager.updateItem(item, requestContext)
+        .otherwise(ex -> {
+          Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));
+          if (ex.getCause() instanceof HttpException) {
+            HttpException httpException = (HttpException) ex.getCause();
+            parameter.withAdditionalProperty("originalError", httpException.getError().getMessage());
+          }
+          parameters.add(parameter);
+          return null;
+        }))
+      .collect(toList()))
+      .mapEmpty()
+      .map(v -> {
+        if (CollectionUtils.isNotEmpty(parameters)) {
+          Error error = ErrorCodes.ITEM_UPDATE_FAILED.toError().withParameters(parameters);
+          throw new HttpException(500, error);
+        }
+        return null;
+      });
   }
 
   private List<String> extractUniqueHoldingIds(List<Piece> pieces, List<Location> locations) {

@@ -56,7 +56,7 @@ public final class TestConfig {
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     Promise<String> deploymentComplete = Promise.promise();
-
+// TODO: uncomment
     //    String[] hostAndPort = kafkaCluster.getBrokerList().split(":");
   //  System.setProperty(KAFKA_HOST, hostAndPort[0]);
   //  System.setProperty(KAFKA_PORT, hostAndPort[1]);

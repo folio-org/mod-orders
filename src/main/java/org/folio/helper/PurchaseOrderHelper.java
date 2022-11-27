@@ -65,7 +65,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
-import org.folio.completablefuture.CompletableFutureRepeater;
+import org.folio.completablefuture.VertxFutureRepeater;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.AcqDesiredPermissions;
@@ -883,7 +883,7 @@ public class PurchaseOrderHelper {
     List<String> poLineIds = poLines.stream().map(PoLine::getId).collect(toList());
     return GenericCompositeFuture.all(
       StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
-        .map(chunk -> CompletableFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemsStatus(chunk, currentStatus, newStatus, requestContext)))
+        .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemsStatus(chunk, currentStatus, newStatus, requestContext)))
         .collect(toList()))
       .mapEmpty();
   }
