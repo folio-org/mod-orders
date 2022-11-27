@@ -14,6 +14,7 @@ import java.util.UUID;
 import io.vertx.junit5.VertxExtension;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,13 +53,13 @@ public class PurchaseOrderStorageServiceTest {
       .withPurchaseOrders(purchaseOrders)
       .withTotalRecords(1);
 
-    when(restClientMock.get(anyString(), any(), any()))
+    when(restClientMock.get(any(RequestEntry.class), any(), any()))
       .thenReturn(Future.succeededFuture(purchaseOrderCollection));
 
     String expectedQuery =  String.format("id==%s", orderId);
     PurchaseOrderCollection actOrders = purchaseOrderStorageService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).result();
 
-    verify(restClientMock).get(anyString(), eq(PurchaseOrderCollection.class), eq(requestContext));
+    verify(restClientMock).get(any(RequestEntry.class), eq(PurchaseOrderCollection.class), eq(requestContext));
     assertEquals(purchaseOrderCollection, actOrders);
   }
 
@@ -72,7 +73,7 @@ public class PurchaseOrderStorageServiceTest {
       .withPurchaseOrders(purchaseOrders)
       .withTotalRecords(1);
 
-    when(restClientMock.get(anyString(), any(), any()))
+    when(restClientMock.get(any(RequestEntry.class), any(), any()))
       .thenReturn(Future.succeededFuture(purchaseOrderCollection));
 
     List<PurchaseOrder> actOrders = purchaseOrderStorageService.getPurchaseOrdersByIds(List.of(orderId), requestContext).result();

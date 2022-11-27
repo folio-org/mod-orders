@@ -2,6 +2,8 @@ package org.folio.service.orders;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -13,6 +15,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.FiscalYearService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -30,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(VertxExtension.class)
 public class CompositeOrderRetrieveHolderBuilderTest {
 
   @InjectMocks
@@ -64,7 +68,7 @@ public class CompositeOrderRetrieveHolderBuilderTest {
   }
 
   @Test
-  void shouldFailWhenWhenRetrieveFiscalYearReturnsDifferentFrom404Status() {
+  void shouldFailWhenWhenRetrieveFiscalYearReturnsDifferentFrom404Status(VertxTestContext vertxTestContext) {
     FundDistribution fundDistribution = new FundDistribution().withFundId(UUID.randomUUID()
       .toString());
     CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution));
@@ -76,11 +80,13 @@ public class CompositeOrderRetrieveHolderBuilderTest {
     HttpException thrownException = new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE);
     failedFuture.fail(thrownException);
     when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture.future());
-    CompletionException exception = assertThrows(CompletionException.class,
-        () -> holderBuilder.withCurrentFiscalYear(holder, requestContext)
-          .result());
 
-    assertEquals(thrownException, exception.getCause());
+    var future = holderBuilder.withCurrentFiscalYear(holder, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(exception -> {
+        assertEquals(thrownException, exception.cause().getCause());
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test

@@ -4,6 +4,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -21,6 +22,7 @@ import java.util.concurrent.CompletionException;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.exceptions.HttpException;
@@ -29,6 +31,7 @@ import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.invoice.InvoiceLineService;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,13 +67,13 @@ public class OrderInvoiceRelationServiceTest {
   }
 
   @Test
-  void testShouldThrowExceptionWhenOrderLineLinkedToInvoice() {
+  void testShouldThrowExceptionWhenOrderLineLinkedToInvoice(VertxTestContext vertxTestContext) {
     // GIVEN
     OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection()
       .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
       .withTotalRecords(1);
 
-    doReturn(succeededFuture(oirCollection)).when(restClient).get(anyString(), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(RequestEntry.class), any(), any());
 
     PoLine poLineLinkedToInvoice = new PoLine().withId(poLineIdConnectedToInvoice);
     InvoiceLine invoiceLine1 = new InvoiceLine().withInvoiceId(invoiceId).withPoLineId(poLineIdConnectedToInvoice);
@@ -84,23 +87,31 @@ public class OrderInvoiceRelationServiceTest {
     Future<Void> future = orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(poLineLinkedToInvoice, requestContext);
 
     // THEN
-    CompletionException exception = assertThrows(CompletionException.class, future::result);
-    HttpException httpException = (HttpException) exception.getCause();
-    assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), httpException.getMessage());
+    vertxTestContext.assertFailure(future)
+      .onComplete(exception -> {
+        HttpException httpException = (HttpException) exception.cause();
+        assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), httpException.getMessage());
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
-  void testShouldDeletePoLIneWhenOrderLineIsNotLinkedToInvoice() {
+  void testShouldDeletePoLIneWhenOrderLineIsNotLinkedToInvoice(VertxTestContext vertxTestContext) {
     OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection()
       .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
       .withTotalRecords(0);
 
-    doReturn(succeededFuture(oirCollection)).when(restClient).get(anyString(), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(RequestEntry.class), any(), any());
 
     PoLine poLineNotLinkedToInvoice = new PoLine().withId(poLineIdNotConnectedToInvoice);
     // WHEN
     when(invoiceLineService.getInvoiceLinesByOrderLineId(eq(poLineIdNotConnectedToInvoice), any())).thenReturn(succeededFuture(
       Collections.emptyList()));
-    orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(poLineNotLinkedToInvoice, requestContext).result();
+    var future = orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(poLineNotLinkedToInvoice, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
   }
 }

@@ -104,7 +104,7 @@ public class PurchaseOrderLineServiceTest {
       .withPoLines(purchaseOrderLines)
       .withTotalRecords(1);
 
-    when(restClientMock.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(expLines));
+    when(restClientMock.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(expLines));
 
     String expectedQuery =  String.format("id==%s", orderLineId);
     List<PoLine> actLines = purchaseOrderLineService.getOrderLines(expectedQuery,  0, Integer.MAX_VALUE, requestContext).result();

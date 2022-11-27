@@ -29,9 +29,11 @@ import java.util.concurrent.TimeoutException;
 
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.junit.jupiter.api.AfterAll;
@@ -96,7 +98,7 @@ public class PieceStorageServiceTest {
   }
 
   @Test
-  void testPiecesShouldBeReturnedByQuery() {
+  void testPiecesShouldBeReturnedByQuery(VertxTestContext vertxTestContext) {
     String pieceId = UUID.randomUUID()
       .toString();
     List<Piece> pieces = Collections.singletonList(new Piece().withId(pieceId));
@@ -104,14 +106,17 @@ public class PieceStorageServiceTest {
     PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
       .withTotalRecords(1);
 
-    when(restClientMock.get(anyString(), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
+    when(restClientMock.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
 
     String expectedQuery = String.format("id==%s", pieceId);
-    PieceCollection retrievedPieces = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, expectedQuery, requestContext)
-      .result();
+    var future = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, expectedQuery, requestContext);
 
-    verify(restClientMock).get(anyString(), eq(PieceCollection.class), eq(requestContext));
-    assertEquals(pieceCollection, retrievedPieces);
+    verify(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertEquals(pieceCollection, result.result());
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test

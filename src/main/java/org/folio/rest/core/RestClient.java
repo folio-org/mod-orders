@@ -120,7 +120,7 @@ public class RestClient {
       .putHeaders(caseInsensitiveHeader)
       .putHeader("Accept", APPLICATION_JSON + ", " + TEXT_PLAIN)
       .expect(SUCCESS_RESPONSE_PREDICATE)
-      .expect(get404ResponsePredicate(skip404Error))
+
       .send()
       .mapEmpty()
 ;
@@ -167,7 +167,7 @@ public class RestClient {
     return webClient.getAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
       .putHeaders(caseInsensitiveHeader)
     //   .expect(SUCCESS_RESPONSE_PREDICATE)
-    //  .expect(get404ResponsePredicate(skip404Error))
+    //
       .send()
       .map(HttpResponse::bodyAsJsonObject);
   }
@@ -182,7 +182,7 @@ public class RestClient {
     return getVertxWebClient(requestContext.getContext())
       .getAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
       .putHeaders(caseInsensitiveHeader)
-      .expect(get404ResponsePredicate(skip404Error))
+      .expect(SUCCESS_RESPONSE_PREDICATE)
       .send()
       .map(HttpResponse::bodyAsJsonObject)
       .onFailure(t -> logger.error("error ocured invoking getAsJsonObject GET {}", requestEntry.buildEndpoint()));
