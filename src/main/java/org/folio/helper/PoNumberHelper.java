@@ -88,7 +88,7 @@ public class PoNumberHelper {
     if(StringUtils.isNotEmpty(updatedPo.getPoNumberPrefix())) {
       String prefix = updatedPo.getPoNumberPrefix();
       if(!updatedPo.getPoNumber().startsWith(prefix)) {
-        logger.error("Exception validating PO Number ");
+        logger.warn("Po Number {} is not starting with prefix {}", updatedPo.getPoNumber(), prefix);
         throw new HttpException(400, ErrorCodes.PO_NUMBER_PREFIX_REQUIRED);
       }
     }
@@ -96,7 +96,7 @@ public class PoNumberHelper {
     if(StringUtils.isNotEmpty(updatedPo.getPoNumberSuffix())) {
       String suffix = updatedPo.getPoNumberSuffix();
       if(!updatedPo.getPoNumber().endsWith(suffix)) {
-        logger.error("Exception validating PO Number ");
+        logger.warn("Po Number {} is not ending with suffix {}", updatedPo.getPoNumber(), suffix);
         throw new HttpException(400, ErrorCodes.PO_NUMBER_SUFFIX_REQUIRED);
       }
     }
