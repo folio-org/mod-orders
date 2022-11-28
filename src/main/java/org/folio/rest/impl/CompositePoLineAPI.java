@@ -101,7 +101,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     helper.deleteLine(lineId, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -134,7 +134,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
         }
         helper.updateOrderLine(poLine, requestContext)
           .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-           .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+          .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
       })
        .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }

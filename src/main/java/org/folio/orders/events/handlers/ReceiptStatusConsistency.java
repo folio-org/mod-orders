@@ -58,30 +58,35 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
     var requestContext = new RequestContext(ctx, okapiHeaders);
     List<Future<Void>> futures = new ArrayList<>();
     Promise<Void> promise = Promise.promise();
+    futures.add(promise.future());
 
     String poLineIdUpdate = messageFromEventBus.getString("poLineIdUpdate");
     String query = String.format(PIECES_ENDPOINT, poLineIdUpdate, LIMIT);
 
-    // TODO : check futures completion
     // 1. Get all pieces for poLineId
-    getPieces(query, requestContext).onSuccess(piecesCollection -> {
-      List<org.folio.rest.acq.model.Piece> listOfPieces = piecesCollection.getPieces();
-
+    getPieces(query, requestContext).onSuccess(listOfPieces -> {
       // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
       purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
-        .onSuccess(poLine -> {
-          if (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.ONGOING)) {
+        .map(poLine -> {
+          if (poLine.getReceiptStatus()
+            .equals(PoLine.ReceiptStatus.ONGOING)) {
             promise.complete();
           }
           calculatePoLineReceiptStatus(poLine, listOfPieces)
             .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
-            .onSuccess(updatedPoLineId -> {
+            .map(updatedPoLineId -> {
               if (updatedPoLineId != null) {
                 // send event to update order status
                 updateOrderStatus(poLine, okapiHeaders, requestContext);
               }
               promise.complete();
+              return null;
+            })
+            .onFailure(e -> {
+              logger.error("The error updating poLine by id {}", poLineIdUpdate, e);
+              promise.fail(e);
             });
+          return null;
         })
         .onFailure(e -> {
           logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
@@ -147,7 +152,8 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
       .count());
   }
 
-  Future<PieceCollection> getPieces(String endpoint, RequestContext requestContext) {
-    return new RestClient().get(endpoint, PieceCollection.class, requestContext);
+  Future<List<Piece>> getPieces(String endpoint, RequestContext requestContext) {
+    return new RestClient().get(endpoint, PieceCollection.class, requestContext)
+      .map(PieceCollection::getPieces);
   }
 }

@@ -34,7 +34,6 @@ import java.util.UUID;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ExchangeRateProvider;
 
-import io.vertx.junit5.VertxExtension;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -64,6 +63,8 @@ import org.mockito.MockitoAnnotations;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 public class EncumbranceRelationsHoldersBuilderTest {
@@ -431,7 +432,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
   }
 
   @Test
-  void testShouldPopulatePoLineToFiscalYearCurrencyConversion() {
+  void testShouldPopulatePoLineToFiscalYearCurrencyConversion(VertxTestContext vertxTestContext) {
     //given
     String currency = "RUB";
 
@@ -447,12 +448,18 @@ public class EncumbranceRelationsHoldersBuilderTest {
     });
     when(requestContextMock.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
     //When
-    encumbranceRelationsHoldersBuilder.withConversion(holders, requestContextMock).result();
-    //Then
-    assertEquals("USD", holder1.getPoLineToFyConversion().toString());
-    assertEquals("USD", holder2.getPoLineToFyConversion().toString());
-    assertSame(holder1.getPoLineToFyConversion(), holder2.getPoLineToFyConversion());
-    assertEquals("EUR", holder3.getPoLineToFyConversion().toString());
+    var future = encumbranceRelationsHoldersBuilder.withConversion(holders, requestContextMock);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        //Then
+        assertEquals("USD", holder1.getPoLineToFyConversion().toString());
+        assertEquals("USD", holder2.getPoLineToFyConversion().toString());
+        assertSame(holder1.getPoLineToFyConversion(), holder2.getPoLineToFyConversion());
+        assertEquals("EUR", holder3.getPoLineToFyConversion().toString());
+        vertxTestContext.completeNow();
+      });
+
   }
 
 }

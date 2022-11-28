@@ -107,35 +107,46 @@ public class PurchaseOrderLineServiceTest {
     when(restClientMock.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(expLines));
 
     String expectedQuery =  String.format("id==%s", orderLineId);
-    List<PoLine> actLines = purchaseOrderLineService.getOrderLines(expectedQuery,  0, Integer.MAX_VALUE, requestContext).result();
+    var future = purchaseOrderLineService.getOrderLines(expectedQuery,  0, Integer.MAX_VALUE, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        verify(restClientMock).get(any(RequestEntry.class), eq(PoLineCollection.class), eq(requestContext));
+        assertEquals(purchaseOrderLines, result.result());
+        vertxTestContext.completeNow();
+      });
 
-    verify(restClientMock).get(anyString(), eq(PoLineCollection.class), eq(requestContext));
-    assertEquals(purchaseOrderLines, actLines);
   }
 
 
   @Test
-  void successUpdateSinglePurchaseOrderLine() {
+  void successUpdateSinglePurchaseOrderLine(VertxTestContext vertxTestContext) {
     String orderLineId = UUID.randomUUID().toString();
     PoLine purchaseOrderLine = new PoLine().withId(orderLineId);
 
     when(restClientMock.put(any(RequestEntry.class), any(PoLine.class), eq(requestContext))).thenReturn(Future.succeededFuture(null));
 
-    purchaseOrderLineService.saveOrderLine(purchaseOrderLine, requestContext).result();
-
-    verify(restClientMock).put(anyString(), eq(purchaseOrderLine), eq(requestContext));
+    var future = purchaseOrderLineService.saveOrderLine(purchaseOrderLine, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        verify(restClientMock).put(any(RequestEntry.class), eq(purchaseOrderLine), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
-  void successUpdatePurchaseOrderLines() {
+  void successUpdatePurchaseOrderLines(VertxTestContext vertxTestContext) {
     String orderLineId1 = UUID.randomUUID().toString();
     String orderLineId2 = UUID.randomUUID().toString();
     List<PoLine> purchaseOrderLines = List.of(new PoLine().withId(orderLineId1), new PoLine().withId(orderLineId2));
     when(restClientMock.put(any(RequestEntry.class), any(PoLine.class), eq(requestContext))).thenReturn(Future.succeededFuture(null));
 
-    purchaseOrderLineService.saveOrderLines(purchaseOrderLines, requestContext).result();
+    var future = purchaseOrderLineService.saveOrderLines(purchaseOrderLines, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        verify(restClientMock).put(any(RequestEntry.class), eq(purchaseOrderLines.get(0)), eq(requestContext));
+        verify(restClientMock).put(any(RequestEntry.class), eq(purchaseOrderLines.get(1)), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
 
-    verify(restClientMock).put(anyString(), eq(purchaseOrderLines.get(0)), eq(requestContext));
-    verify(restClientMock).put(anyString(), eq(purchaseOrderLines.get(1)), eq(requestContext));
   }
 }

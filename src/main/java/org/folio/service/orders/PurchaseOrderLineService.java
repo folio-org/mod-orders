@@ -1,7 +1,9 @@
 package org.folio.service.orders;
 
+import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
+import static org.folio.helper.BaseHelper.ID;
 import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -9,6 +11,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.CompletionException;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -32,6 +36,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
@@ -191,7 +196,7 @@ public class PurchaseOrderLineService {
     future
       .onSuccess(jsonResponse -> {
         logger.info("The {} {} operation completed with following response body: {}", operation, url, jsonResponse.encodePrettily());
-        promise.complete();
+        promise.complete(jsonResponse);
       })
       .onFailure(t -> {
         Throwable cause = t instanceof CompletionException ? t.getCause() : t;
@@ -208,6 +213,97 @@ public class PurchaseOrderLineService {
     logger.debug("Updating PO line...");
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES_STORAGE, poLineId), EN);
     return operateOnObject(HttpMethod.PUT, endpoint, poLine, requestContext);
+  }
+  public Future<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
+    JsonObject updatedLineJson = mapFrom(compOrderLine);
+    logger.debug("Updating PO line sub-objects...");
+
+    List<Future<Void>> futures = new ArrayList<>();
+
+    futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage, requestContext));
+    futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage, requestContext));
+
+    // Once all operations completed, return updated PO Line with new sub-object id's as json object
+    return GenericCompositeFuture.join(new ArrayList<>(futures))
+      .map(cf -> updatedLineJson);
+  }
+
+  private Future<String> handleSubObjOperation(String prop, JsonObject subObjContent, String storageId, RequestContext requestContext) {
+    final String url;
+    final HttpMethod operation;
+    // In case the id is available in the PO line from storage, depending on the request content the sub-object is going to be updated or removed
+    if (StringUtils.isNotEmpty(storageId)) {
+      url = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(prop, storageId), EN);
+      operation = (subObjContent != null) ? HttpMethod.PUT : HttpMethod.DELETE;
+    } else if (subObjContent != null) {
+      operation = HttpMethod.POST;
+      url = String.format(URL_WITH_LANG_PARAM, resourcesPath(prop), EN);
+    } else {
+      // There is no object in storage nor in request - skipping operation
+      return Future.succeededFuture();
+    }
+
+    return operateOnObject(operation, url, subObjContent, requestContext)
+      .map(json -> {
+        if (operation == HttpMethod.PUT) {
+          return storageId;
+        } else if (operation == HttpMethod.POST && json.getString(ID) != null) {
+          return json.getString(ID);
+        }
+        return null;
+      });
+  }
+
+  private Future<Void> handleSubObjsOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage, RequestContext requestContext) {
+    List<Future<String>> futures = new ArrayList<>();
+    JsonArray idsInStorage = lineFromStorage.getJsonArray(prop);
+    JsonArray jsonObjects = updatedLine.getJsonArray(prop);
+
+    // Handle updated sub-objects content
+    if (jsonObjects != null && !jsonObjects.isEmpty()) {
+      // Clear array of object which will be replaced with array of id's
+      updatedLine.remove(prop);
+      for (int i = 0; i < jsonObjects.size(); i++) {
+        JsonObject subObj = jsonObjects.getJsonObject(i);
+        if (subObj != null  && subObj.getString(ID) != null) {
+          String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
+
+          futures.add(handleSubObjOperation(prop, subObj, id, requestContext)
+            .recover(throwable -> {
+              Error error = handleProcessingError(throwable, prop, id);
+              throw new HttpException(500, error);
+            })
+          );
+        }
+      }
+    }
+
+    // The remaining unprocessed objects should be removed
+    for (int i = 0; i < idsInStorage.size(); i++) {
+      String id = idsInStorage.getString(i);
+      if (id != null) {
+        futures.add(handleSubObjOperation(prop, null, id, requestContext)
+          .otherwise(throwable -> {
+            handleProcessingError(throwable, prop, id);
+            // In case the object is not deleted, still keep reference to old id
+            return id;
+          })
+        );
+      }
+    }
+
+    return GenericCompositeFuture.join(new ArrayList<>(futures))
+      .map(newIds -> updatedLine.put(prop, newIds.list()))
+      .mapEmpty();
+  }
+
+  private Error handleProcessingError(Throwable exc, String propName, String propId) {
+    Error error = new Error().withMessage(exc.getMessage());
+    error.getParameters()
+      .add(new Parameter().withKey(propName)
+        .withValue(propId));
+
+    return error;
   }
 
 

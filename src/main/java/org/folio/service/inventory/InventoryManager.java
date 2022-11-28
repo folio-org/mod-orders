@@ -304,7 +304,7 @@ public class InventoryManager {
 
       return holdingIdFuture
          .recover(throwable -> {
-          if (throwable.getCause() instanceof HttpException && ((HttpException) throwable.getCause()).getCode() == 404) {
+          if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
             String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
             Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
             throw new CompletionException(new HttpException(NOT_FOUND, error));
@@ -324,7 +324,7 @@ public class InventoryManager {
         .withId(holdingId);
       return restClient.getAsJsonObject(requestEntry, requestContext)
          .recover(throwable -> {
-          if (throwable.getCause() instanceof HttpException && ((HttpException) throwable.getCause()).getCode() == 404) {
+          if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
             String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
             Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
             throw new CompletionException(new HttpException(NOT_FOUND, error));

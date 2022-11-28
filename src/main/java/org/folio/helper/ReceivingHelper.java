@@ -56,7 +56,7 @@ import one.util.streamex.StreamEx;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private static final Logger logger = LogManager.getLogger(ReceivingHelper.class);
-  private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY) + SEARCH_PARAMS;
+  private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY);
   /**
    * Map with PO line id as a key and value is map with piece id as a key and {@link ReceivedItem} as a value
    */
@@ -185,28 +185,20 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
               ))));
   }
 
-  public Future<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query, RequestContext requestContext) {
-    Promise<ReceivingHistoryCollection> promise = Promise.promise();
-
-    try {
-      acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
-        .compose(acqUnitsCqlExpr -> {
-          String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
-          RequestEntry rq = new RequestEntry(GET_RECEIVING_HISTORY_BY_QUERY)
-            .withLimit(limit)
-            .withOffset(offset)
-            .withQuery(buildQuery(cql));
-          return new RestClient().get(rq, ReceivingHistoryCollection.class, requestContext);
-        })
-         .onFailure(t -> {
-          logger.error("Error happened retrieving receiving history", t);
-           promise.fail(t.getCause());
-        });
-    } catch (Exception e) {
-      promise.fail(e);
-    }
-
-    return promise.future();
+  public Future<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query,
+      RequestContext requestContext) {
+    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
+      .compose(acqUnitsCqlExpr -> {
+        String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
+        RequestEntry rq = new RequestEntry(GET_RECEIVING_HISTORY_BY_QUERY)
+          .withLimit(limit)
+          .withOffset(offset)
+          .withQuery(cql);
+        return new RestClient().get(rq, ReceivingHistoryCollection.class, requestContext);
+      })
+      .onFailure(t -> {
+        logger.error("Error happened retrieving receiving history", t);
+      });
   }
 
   private ReceivingResults prepareResponseBody(ReceivingCollection receivingCollection, Map<String, List<Piece>> piecesGroupedByPoLine) {

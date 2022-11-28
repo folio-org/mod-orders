@@ -412,12 +412,12 @@ public class PurchaseOrderHelper {
    */
   public Future<List<Error>> validateOrder(CompositePurchaseOrder compPO, JsonObject tenantConfig, RequestContext requestContext) {
     List<Error> errors = new ArrayList<>();
-    return setCreateInventoryDefaultValues(compPO, tenantConfig)
-      .compose(v -> validateOrderPoLines(compPO, requestContext))
+    return setCreateInventoryDefaultValues(compPO, tenantConfig).compose(v -> validateOrderPoLines(compPO, requestContext))
       .map(errors::addAll)
       .map(v -> errors.addAll(validatePoLineLimit(compPO, tenantConfig)))
       .compose(v -> validateIsbnValues(compPO, requestContext))
-      .compose(v -> validateVendor(compPO, requestContext).onSuccess(errors::addAll))
+      .compose(v -> validateVendor(compPO, requestContext))
+      .onSuccess(errors::addAll)
       .map(v -> {
         errors.addAll(validateRenewalInfo(compPO));
         return errors;
@@ -813,7 +813,7 @@ public class PurchaseOrderHelper {
         }
         return null;
       })
-      .compose(v -> GenericCompositeFuture.all(futures).mapEmpty());
+      .compose(v -> GenericCompositeFuture.join(futures).mapEmpty());
   }
 
   private Future<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO, JsonObject tenantConfiguration) {
@@ -822,7 +822,7 @@ public class PurchaseOrderHelper {
       .map(compPOL -> purchaseOrderLineHelper.setTenantDefaultCreateInventoryValues(compPOL, tenantConfiguration))
       .collect(toList());
 
-    return GenericCompositeFuture.all(futures)
+    return GenericCompositeFuture.join(futures)
       .mapEmpty();
   }
 
@@ -833,7 +833,7 @@ public class PurchaseOrderHelper {
 
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
-    return GenericCompositeFuture.all(items.stream()
+    return GenericCompositeFuture.join(items.stream()
       .map(item -> inventoryManager.updateItem(item, requestContext))
       .collect(toList()))
       .mapEmpty();
@@ -881,7 +881,7 @@ public class PurchaseOrderHelper {
       return Future.succeededFuture();
     }
     List<String> poLineIds = poLines.stream().map(PoLine::getId).collect(toList());
-    return GenericCompositeFuture.all(
+    return GenericCompositeFuture.join(
       StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
         .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemsStatus(chunk, currentStatus, newStatus, requestContext)))
         .collect(toList()))

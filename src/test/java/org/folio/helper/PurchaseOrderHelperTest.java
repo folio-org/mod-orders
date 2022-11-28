@@ -41,6 +41,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
 import org.folio.service.TagService;
@@ -154,7 +155,7 @@ public class PurchaseOrderHelperTest {
             .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
             .withTotalRecords(1);
 
-    doReturn(succeededFuture(oirCollection)).when(restClient).get(anyString(), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(RequestEntry.class), any(), any());
 
     Future<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, new RequestContext(ctxMock, okapiHeadersMock));
     vertxTestContext.assertFailure(future)

@@ -8,7 +8,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isOneOf;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.oneOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +28,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
@@ -37,8 +35,6 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRate;
 
-import io.vertx.core.Future;
-import io.vertx.junit5.VertxExtension;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -58,10 +54,10 @@ import org.folio.service.FundsDistributionService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.ManualCurrencyConversion;
 import org.folio.service.exchange.ManualExchangeRateProvider;
-import org.folio.service.finance.budget.BudgetService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
+import org.folio.service.finance.budget.BudgetService;
 import org.folio.service.finance.rollover.RolloverRetrieveService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
@@ -72,9 +68,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import io.vertx.core.Vertx;
 import org.mockito.Spy;
+
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 @ExtendWith(VertxExtension.class)
@@ -421,7 +420,7 @@ public class ReEncumbranceHoldersBuilderTest {
   }
 
   @Test
-  void shouldPopulateReEncumbranceHoldersWithConversionWhenHoldersContainsCurrency() {
+  void shouldPopulateReEncumbranceHoldersWithConversionWhenHoldersContainsCurrency(VertxTestContext vertxTestContext) {
 
     FiscalYear fiscalYear = new FiscalYear().withCurrency("USD");
     CompositePoLine line1 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
@@ -447,12 +446,16 @@ public class ReEncumbranceHoldersBuilderTest {
     when(poFyToPoLineConversion.getCurrency()).thenReturn(Monetary.getCurrency("USD"));
     when(requestContext.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).result();
+    var future = reEncumbranceHoldersBuilder.withConversions(holders, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertEquals(result.result().get(0).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+        assertEquals(result.result().get(1).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+        assertEquals(result.result().get(0).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
+        assertEquals(result.result().get(1).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
+        vertxTestContext.completeNow();
+      });
 
-    assertEquals(resultHolders.get(0).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
-    assertEquals(resultHolders.get(1).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
-    assertEquals(resultHolders.get(0).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
-    assertEquals(resultHolders.get(1).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
   }
 
   @Test

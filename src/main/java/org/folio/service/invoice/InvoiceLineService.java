@@ -53,7 +53,7 @@ public class InvoiceLineService {
     return getInvoiceLines(requestEntry, requestContext)
        .recover(t -> {
         logger.error(GET_INVOICE_LINES_ERROR + ". Query: " + query, t);
-        throw new HttpException(t.getCause() instanceof HttpException ? ((HttpException)t.getCause()).getCode() :
+        throw new HttpException(t instanceof HttpException ? ((HttpException) t).getCode() :
           HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), GET_INVOICE_LINES_ERROR);
       });
   }

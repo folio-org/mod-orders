@@ -7,6 +7,7 @@ import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.folio.completablefuture.AsyncUtil;
 import org.folio.helper.BaseHelper;
@@ -57,6 +58,8 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
       String orderId = ordersPayload.getString(ORDER_ID);
       // Add future which would hold result of operation
       Promise<Void> promise = Promise.promise();
+      futures.add(promise.future());
+
       var requestContext = new RequestContext(ctx, okapiHeaders);
       // Get purchase order to check if order status needs to be changed.
       purchaseOrderStorageService.getPurchaseOrderById(orderId, requestContext)
@@ -67,10 +70,17 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
             // Get purchase order lines to check if order status needs to be changed.
             purchaseOrderLineService.getPoLinesByOrderId(orderId, requestContext)
               .compose(poLines -> updateOrderStatus(purchaseOrder, poLines, new RequestContext(ctx, okapiHeaders)))
-              .onFailure(e -> logger.error("The error happened processing workflow status update logic for order {}", orderId));
+              .onSuccess(ok -> promise.complete())
+              .onFailure(e -> {
+                logger.error("The error happened processing workflow status update logic for order {}", orderId);
+                promise.fail(e);
+              });
           }
         })
-         .onFailure(e -> logger.error("The error happened getting order {}", orderId, e));
+        .onFailure(e -> {
+          logger.error("The error happened getting order {}", orderId, e);
+          promise.fail(e);
+        });
     }
 
     // Now wait for all operations to be completed and send reply

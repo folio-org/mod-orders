@@ -12,8 +12,6 @@ import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.EN;
-import static org.folio.rest.RestConstants.ERROR_MESSAGE;
-import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
@@ -43,13 +41,11 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 import javax.ws.rs.Path;
 
-import io.vertx.core.CompositeFuture;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.Logger;
 import org.folio.helper.BaseHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
@@ -69,17 +65,16 @@ import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.tools.client.Response;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
@@ -569,16 +564,6 @@ public class HelperUtils {
 
   public static String extractId(JsonObject json) {
     return json.getString(ID);
-  }
-
-  private static void handleEndpointException(HttpMethod operation, String endpoint, Throwable t,
-      Future<?> future, Logger logger) {
-
-    Throwable cause = t instanceof CompletionException ? t.getCause() : t;
-    int code = cause instanceof HttpException ? ((HttpException)cause).getCode() : 500;
-    String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, endpoint, cause.getMessage());
-    logger.error(message, t);
-   // future.completeExceptionally(new HttpException(code, message));
   }
 
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLineList) {

@@ -38,7 +38,7 @@ public class PoNumberHelper {
         logger.info("The PO Number '{}' is not in use yet", poNumber.getPoNumber());
         promise.complete();
       })
-       .onFailure(t -> promise.fail(t.getCause()));
+       .onFailure(promise::fail);
     return promise.future();
   }
 

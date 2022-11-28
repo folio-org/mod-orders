@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -64,7 +65,7 @@ public class PurchaseOrderStorageServiceTest {
   }
 
   @Test
-  void successRetrievePurchaseOrdersByIds() {
+  void successRetrievePurchaseOrdersByIds(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
     List<PurchaseOrder> purchaseOrders = Collections.singletonList(new PurchaseOrder()
       .withId(orderId));
@@ -76,10 +77,14 @@ public class PurchaseOrderStorageServiceTest {
     when(restClientMock.get(any(RequestEntry.class), any(), any()))
       .thenReturn(Future.succeededFuture(purchaseOrderCollection));
 
-    List<PurchaseOrder> actOrders = purchaseOrderStorageService.getPurchaseOrdersByIds(List.of(orderId), requestContext).result();
+    var future = purchaseOrderStorageService.getPurchaseOrdersByIds(List.of(orderId), requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        verify(restClientMock).get(any(RequestEntry.class), eq(PurchaseOrderCollection.class), eq(requestContext));
+        assertEquals(purchaseOrderCollection.getPurchaseOrders(), result.result());
+        vertxTestContext.completeNow();
+      });
 
-    verify(restClientMock).get(anyString(), eq(PurchaseOrderCollection.class), eq(requestContext));
-    assertEquals(purchaseOrderCollection.getPurchaseOrders(), actOrders);
   }
 
 }

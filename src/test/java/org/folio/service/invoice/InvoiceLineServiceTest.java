@@ -1,22 +1,23 @@
 package org.folio.service.invoice;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+import java.util.UUID;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.acq.model.invoice.Adjustment;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.core.RestClient;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,21 +25,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
-import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 public class InvoiceLineServiceTest {
@@ -59,7 +50,7 @@ public class InvoiceLineServiceTest {
   }
 
   @Test
-  void shouldRemoveEncumbranceLinks() {
+  void shouldRemoveEncumbranceLinks(VertxTestContext vertxTestContext) {
     //Given
     String poLineId1 = UUID.randomUUID().toString();
     String poLineId2 = UUID.randomUUID().toString();
@@ -94,19 +85,22 @@ public class InvoiceLineServiceTest {
     when(requestContextMock.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
 
     //When
-    Future<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContextMock);
-    assertTrue(result.succeeded());
-    result.result();
+    Future<Void> future = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContextMock);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        //Then
+        verify(restClient, times(1)).put(
+          any(RequestEntry.class),
+          eq(expectedInvoiceLine1),
+          eq(requestContextMock));
+        verify(restClient, times(1)).put(
+          any(RequestEntry.class),
+          eq(expectedInvoiceLine2),
+          eq(requestContextMock));
+        vertxTestContext.completeNow();
+      });
 
-    //Then
-    verify(restClient, times(1)).put(
-      any(RequestEntry.class),
-      eq(expectedInvoiceLine1),
-      eq(requestContextMock));
-    verify(restClient, times(1)).put(
-      any(RequestEntry.class),
-      eq(expectedInvoiceLine2),
-      eq(requestContextMock));
   }
 
   @Test

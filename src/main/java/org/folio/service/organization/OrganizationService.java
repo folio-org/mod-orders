@@ -78,8 +78,7 @@ public class OrganizationService {
           return handleAndReturnErrors(errors);
         })
         .onSuccess(promise::complete)
-        .onFailure(t -> {
-          Throwable cause = t.getCause();
+        .onFailure(cause -> {
           if (cause instanceof HttpException && HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) cause).getCode())) {
             errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
           } else {

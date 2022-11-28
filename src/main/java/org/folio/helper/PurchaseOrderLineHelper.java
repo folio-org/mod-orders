@@ -195,7 +195,8 @@ public class PurchaseOrderLineHelper {
             // The PO Line can be created only for order in Pending state
             .map(this::validateOrderState)
             .compose(po -> protectionService.isOperationRestricted(po.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
-            .compose(v -> createPoLine(compPOL, po, requestContext)));
+            .compose(v -> createPoLine(compPOL, po, requestContext)))
+            .onFailure(f -> logger.error("asd"));
         } else {
             Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
             logger.error("Create POL validation error : {}", JsonObject.mapFrom(errors).encodePrettily());
@@ -225,7 +226,7 @@ public class PurchaseOrderLineHelper {
     subObjFuts.add(createAlerts(compPoLine, line, requestContext));
     subObjFuts.add(createReportingCodes(compPoLine, line, requestContext));
 
-    return GenericCompositeFuture.all(new ArrayList<>(subObjFuts))
+    return GenericCompositeFuture.join(new ArrayList<>(subObjFuts))
       .compose(v -> generateLineNumber(compOrder, requestContext))
       .map(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
       .compose(v -> createPoLineSummary(compPoLine, line, requestContext));
@@ -360,13 +361,13 @@ public class PurchaseOrderLineHelper {
   public Future<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
 
-    updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext)
+    purchaseOrderLineService.updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext)
       .compose(poLine -> purchaseOrderLineService.updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
       .onSuccess(json -> promise.complete())
       .onFailure(throwable -> {
         String message = String.format("PO Line with '%s' id partially updated but there are issues processing some PO Line sub-objects", compOrderLine.getId());
         logger.error(message);
-         promise.fail(throwable);
+        promise.fail(throwable);
       });
     return promise.future();
   }
@@ -391,97 +392,9 @@ public class PurchaseOrderLineHelper {
     cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
   }
 
-  private Future<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
-    JsonObject updatedLineJson = mapFrom(compOrderLine);
-    logger.debug("Updating PO line sub-objects...");
 
-    List<Future<Void>> futures = new ArrayList<>();
 
-    futures.add(handleSubObjsOperation(ALERTS, updatedLineJson, lineFromStorage, requestContext));
-    futures.add(handleSubObjsOperation(REPORTING_CODES, updatedLineJson, lineFromStorage, requestContext));
 
-    // Once all operations completed, return updated PO Line with new sub-object id's as json object
-    return GenericCompositeFuture.all(new ArrayList<>(futures))
-                .map(v -> updatedLineJson);
-  }
-
-  private Future<String> handleSubObjOperation(String prop, JsonObject subObjContent, String storageId, RequestContext requestContext) {
-    final String url;
-    final HttpMethod operation;
-    // In case the id is available in the PO line from storage, depending on the request content the sub-object is going to be updated or removed
-    if (StringUtils.isNotEmpty(storageId)) {
-      url = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(prop, storageId), EN);
-      operation = (subObjContent != null) ? HttpMethod.PUT : HttpMethod.DELETE;
-    } else if (subObjContent != null) {
-      operation = HttpMethod.POST;
-      url = String.format(URL_WITH_LANG_PARAM, resourcesPath(prop), EN);
-    } else {
-      // There is no object in storage nor in request - skipping operation
-      return Future.succeededFuture();
-    }
-
-    return purchaseOrderLineService.operateOnObject(operation, url, subObjContent, requestContext)
-      .map(json -> {
-        if (operation == HttpMethod.PUT) {
-          return storageId;
-        } else if (operation == HttpMethod.POST && json.getString(ID) != null) {
-          return json.getString(ID);
-        }
-        return null;
-      });
-  }
-
-  private Future<Void> handleSubObjsOperation(String prop, JsonObject updatedLine, JsonObject lineFromStorage, RequestContext requestContext) {
-    List<Future<String>> futures = new ArrayList<>();
-    JsonArray idsInStorage = lineFromStorage.getJsonArray(prop);
-    JsonArray jsonObjects = updatedLine.getJsonArray(prop);
-
-    // Handle updated sub-objects content
-    if (jsonObjects != null && !jsonObjects.isEmpty()) {
-      // Clear array of object which will be replaced with array of id's
-      updatedLine.remove(prop);
-      for (int i = 0; i < jsonObjects.size(); i++) {
-        JsonObject subObj = jsonObjects.getJsonObject(i);
-        if (subObj != null  && subObj.getString(ID) != null) {
-          String id = idsInStorage.remove(subObj.getString(ID)) ? subObj.getString(ID) : null;
-
-          futures.add(handleSubObjOperation(prop, subObj, id, requestContext)
-             .recover(throwable -> {
-              Error error = handleProcessingError(throwable, prop, id);
-              throw new HttpException(500, error);
-            })
-          );
-        }
-      }
-    }
-
-    // The remaining unprocessed objects should be removed
-    for (int i = 0; i < idsInStorage.size(); i++) {
-      String id = idsInStorage.getString(i);
-      if (id != null) {
-        futures.add(handleSubObjOperation(prop, null, id, requestContext)
-           .otherwise(throwable -> {
-            handleProcessingError(throwable, prop, id);
-            // In case the object is not deleted, still keep reference to old id
-            return id;
-          })
-        );
-      }
-    }
-
-    return GenericCompositeFuture.all(new ArrayList<>(futures))
-      .map(newIds -> updatedLine.put(prop, newIds))
-      .mapEmpty();
-  }
-
-  private Error handleProcessingError(Throwable exc, String propName, String propId) {
-    Error error = new Error().withMessage(exc.getMessage());
-    error.getParameters()
-      .add(new Parameter().withKey(propName)
-        .withValue(propId));
-
-    return error;
-  }
 
   /**
    * Retrieves PO line from storage by PO line id as JsonObject and validates order id match.
@@ -542,7 +455,7 @@ public class PurchaseOrderLineHelper {
       alerts.forEach(alertObject -> futures.add(restClient.post(rqEntry, alertObject, Alert.class, requestContext).map(Alert::getId)));
     }
 
-    return GenericCompositeFuture.all(new ArrayList<>(futures))
+    return GenericCompositeFuture.join(new ArrayList<>(futures))
       .map(ids -> line.put(ALERTS, ids.list()))
       .recover(t -> {
         logger.error("failed to create Alerts", t);
@@ -818,16 +731,19 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
-    return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(purchaseOrderId, requestContext)
-      .map(HelperUtils::convertToCompositePurchaseOrder)
-       .recover(t -> {
-        Throwable cause = t.getCause();
+    Promise<CompositePurchaseOrder> promise = Promise.promise();
+    purchaseOrderStorageService.getCompositeOrderById(purchaseOrderId, requestContext)
+      .onSuccess(promise::complete)
+      .onFailure(cause -> {
         // The case when specified order does not exist
         if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
-          throw new HttpException(422, ErrorCodes.ORDER_NOT_FOUND);
+          promise.fail(new HttpException(422, ErrorCodes.ORDER_NOT_FOUND));
+        } else {
+          promise.fail(cause);
         }
-        throw t instanceof CompletionException ? (CompletionException) t : new CompletionException(cause);
       });
+
+    return promise.future();
   }
 
   private Future<String> generateLineNumber(CompositePurchaseOrder compOrder, RequestContext requestContext) {

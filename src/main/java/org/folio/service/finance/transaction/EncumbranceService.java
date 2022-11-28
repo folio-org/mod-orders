@@ -91,7 +91,7 @@ public class EncumbranceService {
     List<Future<Void>> futureList = new ArrayList<>();
     Future<Void> future = Future.succeededFuture();
     for (EncumbranceRelationsHolder holder : relationsHolders) {
-// TODO: fix sequantial processing with parallel using semaphores
+      // TODO: fix sequantial processing with parallel using semaphores
       future = future.compose(v -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
         .map(transaction -> {
           holder.getFundDistribution().setEncumbrance(transaction.getId());
@@ -359,16 +359,16 @@ public class EncumbranceService {
   }
 
   protected void checkCustomTransactionError(Throwable fail) {
-    if (fail.getCause().getMessage().contains(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
+    if (fail.getMessage().contains(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
       throw new CompletionException(new HttpException(422, BUDGET_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
+    } else if (fail.getMessage().contains(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
       throw new CompletionException(new HttpException(422, LEDGER_NOT_FOUND_FOR_TRANSACTION));
-    } else if (fail.getCause().getMessage().contains(BUDGET_IS_INACTIVE.getDescription())) {
+    } else if (fail.getMessage().contains(BUDGET_IS_INACTIVE.getDescription())) {
       throw new CompletionException(new HttpException(422, BUDGET_IS_INACTIVE));
-    } else if (fail.getCause().getMessage().contains(FUND_CANNOT_BE_PAID.getDescription())) {
+    } else if (fail.getMessage().contains(FUND_CANNOT_BE_PAID.getDescription())) {
       throw new CompletionException(new HttpException(422, FUND_CANNOT_BE_PAID));
     } else {
-      throw new CompletionException(fail.getCause());
+      throw new CompletionException(fail);
     }
   }
 }

@@ -37,7 +37,7 @@ public class TransactionSummariesService {
 
     public Future<OrderTransactionSummary> getOrderTransactionSummary(String orderId, RequestContext requestContext) {
         RequestEntry requestEntry = new RequestEntry(GET_BY_ID_STORAGE_ENDPOINT).withId(orderId);
-        return restClient.get(requestEntry, true, OrderTransactionSummary.class, requestContext);
+        return restClient.get(requestEntry.buildEndpoint(), true, OrderTransactionSummary.class, requestContext);
     }
 
     public Future<Void> updateOrderTransactionSummary(String orderId, int number, RequestContext requestContext) {
@@ -87,7 +87,7 @@ public class TransactionSummariesService {
       } else {
         updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
           .onSuccess(a -> promise.complete())
-           .onFailure(promise::fail);
+          .onFailure(promise::fail);
       }
       return promise.future();
     }
