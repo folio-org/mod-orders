@@ -1938,9 +1938,6 @@ public class PurchaseOrdersApiTest {
     logger.info(String.format("using mock datafile: %s%s.json", COMP_ORDER_MOCK_DATA_PATH, id));
     JsonObject storeData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, id);
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
-    reqData.put(PO_NUMBER,"TestP268758TestS");
-    reqData.put(PREFIX,"TestP1");
-    reqData.put(SUFFIX,"TestS1");
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);
 
@@ -1961,8 +1958,6 @@ public class PurchaseOrdersApiTest {
     JsonObject reqData = new JsonObject(getMockData(ORDER_WITHOUT_PO_LINES));
     String newPoNumber = reqData.getString(PO_NUMBER) + "A";
     reqData.put(PO_NUMBER, newPoNumber);
-    reqData.put(PREFIX,"TestP");
-    reqData.put(PREFIX,"TestS");
     Pattern poLinePattern = Pattern.compile(String.format("(%s)(-[0-9]{1,3})", newPoNumber));
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), reqData, "", 204);

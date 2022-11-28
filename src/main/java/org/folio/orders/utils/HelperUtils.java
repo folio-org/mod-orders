@@ -761,26 +761,6 @@ public class HelperUtils {
     return null;
   }
 
-  public static void setPoNumberPrefix(CompositePurchaseOrder compPO) {
-    if(Objects.nonNull(compPO.getPoNumberPrefix())) {
-      compPO.setPoNumber(compPO.getPoNumberPrefix() + compPO.getPoNumber());
-    }
-  }
-
-  public static void setPoNumberSuffix(CompositePurchaseOrder compPO) {
-    if(Objects.nonNull(compPO.getPoNumberSuffix())) {
-      compPO.setPoNumber(compPO.getPoNumber() + compPO.getPoNumberSuffix());
-    }
-  }
-
-  public static boolean isPrefixChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
-    return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumberPrefix(), updatedPo.getPoNumberPrefix());
-  }
-
-  public static boolean isSuffixChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
-    return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumberSuffix(), updatedPo.getPoNumberSuffix());
-  }
-
   public static String getEndpoint(Class<?> clazz) {
     return clazz.getAnnotation(Path.class).value();
   }
