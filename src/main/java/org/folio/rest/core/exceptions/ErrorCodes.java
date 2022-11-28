@@ -6,6 +6,8 @@ public enum ErrorCodes {
   GENERIC_ERROR_CODE("genericError", "Generic error"),
   PO_NUMBER_ALREADY_EXISTS("poNumberNotUnique", "PO Number already exists"),
   PO_NUMBER_REQUIRED("poNumberRequired", "PO Number is missing"),
+  PO_NUMBER_PREFIX_REQUIRED("poNumberPrefixRequired", "PO Number must start with Prefix"),
+  PO_NUMBER_SUFFIX_REQUIRED("poNumberSuffixRequired", "PO Number must ends with Suffix"),
   MISSING_ORDER_ID_IN_POL("orderIdRequired", "Purchase order id is missing in PoLine object"),
   ORDER_NOT_FOUND("orderNotFound", "The order cannot be found by provided order id"),
   MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY("idMismatch", "Mismatch between id in path and request body"),

@@ -84,6 +84,25 @@ public class PoNumberHelper {
     return completedFuture(null);
   }
 
+  public CompletionStage<Void> validatePoNumberPrefixAndSuffix(CompositePurchaseOrder updatedPo) {
+    if(StringUtils.isNotEmpty(updatedPo.getPoNumberPrefix())) {
+      String prefix = updatedPo.getPoNumberPrefix();
+      if(!updatedPo.getPoNumber().startsWith(prefix)) {
+        logger.error("Exception validating PO Number ");
+        throw new HttpException(400, ErrorCodes.PO_NUMBER_PREFIX_REQUIRED);
+      }
+    }
+
+    if(StringUtils.isNotEmpty(updatedPo.getPoNumberSuffix())) {
+      String suffix = updatedPo.getPoNumberSuffix();
+      if(!updatedPo.getPoNumber().endsWith(suffix)) {
+        logger.error("Exception validating PO Number ");
+        throw new HttpException(400, ErrorCodes.PO_NUMBER_SUFFIX_REQUIRED);
+      }
+    }
+    return completedFuture(null);
+  }
+
   public static boolean isPoNumberChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
     return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
   }
