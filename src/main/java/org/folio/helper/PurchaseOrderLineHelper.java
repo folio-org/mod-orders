@@ -912,7 +912,7 @@ public class PurchaseOrderLineHelper {
       return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
         .thenCompose(poLines -> {
           List<PoLine> notCanceledPoLines = poLines.stream().filter(this::isPoLineNotCanceled).collect(toList());
-          if (notCanceledPoLines.size() != 0) {
+          if (notCanceledPoLines.isEmpty()) {
             return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
               .thenCompose(items -> {
                 //Each poLine can have only one linked item
