@@ -911,18 +911,16 @@ public class PurchaseOrderLineHelper {
     if (isStatusChanged(compOrderLine, poLineFromStorage) && isCurrentStatusCanceled(compOrderLine)) {
       return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
         .thenCompose(poLines -> {
-          if (poLines.size() > 1) {
-            List<String> poLineIds = poLines.stream().map(PoLine::getId).collect(toList());
-            return inventoryManager.getItemsByPoLineIdsAndStatus(poLineIds, ItemStatus.ON_ORDER.value(), requestContext)
+          List<PoLine> notCanceledPoLines = poLines.stream().filter(this::isPoLineNotCanceled).collect(toList());
+          if (notCanceledPoLines.size() != 0) {
+            return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
               .thenCompose(items -> {
-                if (items.size() > 1) {
-                  //Each poLine can have only one linked item
-                  Optional<JsonObject> poLineItem = items.stream()
-                    .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
-                  if (poLineItem.isPresent()) {
-                    JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
-                    inventoryManager.updateItem(updatedItem, requestContext);
-                  }
+                //Each poLine can have only one linked item
+                Optional<JsonObject> poLineItem = items.stream()
+                  .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
+                if (poLineItem.isPresent()) {
+                  JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
+                  inventoryManager.updateItem(updatedItem, requestContext);
                 }
                 return CompletableFuture.completedFuture(null);
               });
@@ -936,6 +934,11 @@ public class PurchaseOrderLineHelper {
   private boolean isStatusChanged(CompositePoLine compOrderLine, PoLine lineFromStorage) {
     return !StringUtils.equals(lineFromStorage.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value()) ||
       !StringUtils.equals(lineFromStorage.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value());
+  }
+
+  private boolean isPoLineNotCanceled(PoLine poLine) {
+    return !PoLine.PaymentStatus.CANCELLED.equals(poLine.getPaymentStatus()) &&
+      !PoLine.ReceiptStatus.CANCELLED.equals(poLine.getReceiptStatus());
   }
 
   private boolean isCurrentStatusCanceled(CompositePoLine compOrderLine) {
