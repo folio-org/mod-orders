@@ -211,9 +211,8 @@ public class PurchaseOrderHelper {
         .thenAccept(ok -> checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext))
         .thenCompose(ok -> setPoNumberIfMissing(compPO, requestContext)
         .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
-        .thenAccept(p -> HelperUtils.setPoNumberPrefix(compPO))
-        .thenCompose(s -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
-        .thenAccept(s -> HelperUtils.setPoNumberSuffix(compPO))
+        .thenCompose(p -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
+        .thenCompose(s -> poNumberHelper.validatePoNumberPrefixAndSuffix(compPO))
         .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext))
         .thenCompose(v -> processPoLineTags(compPO, requestContext))
         .thenCompose(v -> createPOandPOLines(compPO, cachedTenantConfiguration, requestContext))
@@ -238,10 +237,10 @@ public class PurchaseOrderHelper {
       .thenCompose(poFromStorage -> {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return validateAcqUnitsOnUpdate(compPO, poFromStorage, requestContext)
-          .thenCompose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
           .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
-          .thenCompose(s -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
-          .thenAccept(ps -> updatePrefixAndSuffix(poFromStorage,compPO))
+          .thenCompose(p -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
+          .thenCompose(v->poNumberHelper.validatePoNumberPrefixAndSuffix(compPO))
+          .thenCompose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
           .thenAccept(ok -> {
             if (isTransitionToApproved(poFromStorage, compPO)) {
               checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext);
@@ -507,42 +506,6 @@ public class PurchaseOrderHelper {
                            .thenAccept(compPO::setPoNumber);
     }
     return completedFuture(null);
-  }
-
-  public void updatePrefixAndSuffix(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
-    String poNumber = "";
-    if(HelperUtils.isPrefixChanged(poFromStorage, updatedPo)) {
-      if(StringUtils.isNotEmpty(updatedPo.getPoNumberPrefix())) {
-        if(Objects.nonNull(poFromStorage.getPoNumberPrefix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberPrefix())) {
-          poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
-          updatedPo.setPoNumber(updatedPo.getPoNumberPrefix() + poNumber);
-        }
-        else {
-          HelperUtils.setPoNumberPrefix(updatedPo);
-        }
-      }
-      else {
-        poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberPrefix(), "");
-        updatedPo.setPoNumber(poNumber);
-      }
-    }
-
-    if(HelperUtils.isSuffixChanged(poFromStorage, updatedPo)) {
-      if(StringUtils.isNotEmpty(updatedPo.getPoNumberSuffix())) {
-        if(Objects.nonNull(poFromStorage.getPoNumberSuffix()) && updatedPo.getPoNumber().contains(poFromStorage.getPoNumberSuffix())) {
-          poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
-          updatedPo.setPoNumber(poNumber + updatedPo.getPoNumberSuffix());
-        }
-        else {
-          HelperUtils.setPoNumberSuffix(updatedPo);
-        }
-      }
-      else {
-        poNumber = updatedPo.getPoNumber().replaceAll(poFromStorage.getPoNumberSuffix(), "");
-        updatedPo.setPoNumber(poNumber);
-      }
-    }
-
   }
 
   private CompletableFuture<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
