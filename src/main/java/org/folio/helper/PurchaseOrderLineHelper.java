@@ -937,7 +937,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private boolean isPoLineNotCanceled(PoLine poLine) {
-    return !PoLine.PaymentStatus.CANCELLED.equals(poLine.getPaymentStatus()) &&
+    return !PoLine.PaymentStatus.CANCELLED.equals(poLine.getPaymentStatus()) ||
       !PoLine.ReceiptStatus.CANCELLED.equals(poLine.getReceiptStatus());
   }
 
