@@ -911,8 +911,8 @@ public class PurchaseOrderLineHelper {
     if (isStatusChanged(compOrderLine, poLineFromStorage) && isCurrentStatusCanceled(compOrderLine)) {
       return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
         .thenCompose(poLines -> {
-          List<PoLine> notCanceledPoLines = poLines.stream().filter(this::isPoLineNotCanceled).collect(toList());
-          if (notCanceledPoLines.isEmpty()) {
+          List<PoLine> notCanceledPoLines = poLines.stream().filter(poLine -> !isDbPoLineStatusCancelled(poLine)).collect(toList());
+          if (!notCanceledPoLines.isEmpty()) {
             return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
               .thenCompose(items -> {
                 //Each poLine can have only one linked item
@@ -936,9 +936,9 @@ public class PurchaseOrderLineHelper {
       !StringUtils.equals(lineFromStorage.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value());
   }
 
-  private boolean isPoLineNotCanceled(PoLine poLine) {
-    return !PoLine.PaymentStatus.CANCELLED.equals(poLine.getPaymentStatus()) ||
-      !PoLine.ReceiptStatus.CANCELLED.equals(poLine.getReceiptStatus());
+  private boolean isDbPoLineStatusCancelled(PoLine poLine) {
+    return PoLine.PaymentStatus.CANCELLED.equals(poLine.getPaymentStatus()) ||
+      PoLine.ReceiptStatus.CANCELLED.equals(poLine.getReceiptStatus());
   }
 
   private boolean isCurrentStatusCanceled(CompositePoLine compOrderLine) {
