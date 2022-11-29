@@ -1384,6 +1384,8 @@ public class PurchaseOrderLinesApiTest {
     logger.info("=== Test change item status to 'Order closed' after cancelled PoLine  ===");
 
     CompositePoLine firstLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    firstLineFromStorage.setReceiptStatus(ReceiptStatus.CANCELLED);
+    firstLineFromStorage.setPaymentStatus(PaymentStatus.CANCELLED);
     CompositePoLine secondLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(CompositePoLine.class);
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(CompositePoLine.class);
     reqData.setReceiptStatus(ReceiptStatus.CANCELLED);
