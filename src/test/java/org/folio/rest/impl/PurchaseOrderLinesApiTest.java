@@ -134,6 +134,7 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -1108,6 +1109,7 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
+  @Ignore
   void testUpdatePoLineForOpenedOrderShouldFailedWhenRelatedInvoiceLineApprovedForCurrentFY() {
     logger.info("=== Test update poline for opened order should failed when related invoice line is approved  ===");
 
