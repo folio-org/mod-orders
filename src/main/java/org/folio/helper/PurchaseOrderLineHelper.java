@@ -967,6 +967,12 @@ public class PurchaseOrderLineHelper {
       || (requestFundDistros.size() != storageFundDistros.size())) {
       return true;
     }
+    //Added condition similar to above to avoid encumberance update for while changing fundDistribution for paid invoice connected to order.
+    if (compositePoLine.getCost().getPoLineEstimatedPrice().equals(storagePoLine.getCost().getPoLineEstimatedPrice())
+      || compositePoLine.getCost().getCurrency().equals(storagePoLine.getCost().getCurrency())
+      || (requestFundDistros.size() == storageFundDistros.size())) {
+      return false;
+    }
 
     return !CollectionUtils.isEqualCollection(requestFundDistros, storageFundDistros);
   }
