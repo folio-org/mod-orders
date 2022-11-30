@@ -1,5 +1,12 @@
 ## 12.6.0 - Unreleased
 
+## 12.5.3 Nolana R3 2022 - Released
+The focus of this release was to fix inconsistent behavior with PO v. POL cancellation on multi-line orders
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.5.2...v12.5.3)
+### Bug Fixes
+* [MODORDERS-792](https://issues.folio.org/browse/MODORDERS-792) Inconsistent behavior with PO v. POL cancellation on multi-line orders
+
 ## 12.5.2 Nolana R3 2022 - Released
 The focus of this release was to fix inconsistent behavior with PO v. POL cancellation on multi-line orders
 
