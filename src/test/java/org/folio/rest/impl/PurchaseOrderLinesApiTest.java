@@ -104,6 +104,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.Lists;
+import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.orders.utils.FundDistributionUtils;
@@ -1241,6 +1242,34 @@ public class PurchaseOrderLinesApiTest {
     reqData.getFundDistribution().get(0).setDistributionType(FundDistribution.DistributionType.AMOUNT);
     reqData.getFundDistribution().get(0).setValue(reqData.getCost().getPoLineEstimatedPrice());
 
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+  }
+
+  @Test
+  void testUpdatePolineForOpenedOrderWithChangingDFundistributionAndCost() {
+    logger.info("=== Test update poline for opened order with changed DistributionType ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+
+    addMockEntry(PIECES_STORAGE, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES_STORAGE, reqData);
+    Cost cost = reqData.getCost();
+    cost.setCurrency("EUR");
+    cost.setQuantityElectronic(1);
+    cost.setPoLineEstimatedPrice(50d);
+    reqData.setCost(cost);
+    reqData.setFundDistribution(Collections.singletonList(new FundDistribution()
+      .withCode("EUROHIST")
+      .withFundId("e9285a1c-1dfc-4380-868c-e74073003f43")
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(100D)));
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
   }
