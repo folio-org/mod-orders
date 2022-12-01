@@ -962,13 +962,23 @@ public class PurchaseOrderLineHelper {
       return false;
     }
 
-    if (!compositePoLine.getCost().getPoLineEstimatedPrice().equals(storagePoLine.getCost().getPoLineEstimatedPrice())
-      || !compositePoLine.getCost().getCurrency().equals(storagePoLine.getCost().getCurrency())
-      || (requestFundDistros.size() != storageFundDistros.size())) {
+    if (isEstimatedPriceTheSame(compositePoLine, storagePoLine) && isCurrencyTheSame(compositePoLine, storagePoLine)) {
+      return false;
+    }
+
+    if (!isEstimatedPriceTheSame(compositePoLine, storagePoLine) || !isCurrencyTheSame(compositePoLine, storagePoLine)) {
       return true;
     }
 
     return !CollectionUtils.isEqualCollection(requestFundDistros, storageFundDistros);
+  }
+
+  private boolean isEstimatedPriceTheSame(CompositePoLine compositePoLine, PoLine storagePoLine) {
+    return compositePoLine.getCost().getPoLineEstimatedPrice().equals(storagePoLine.getCost().getPoLineEstimatedPrice());
+  }
+
+  private boolean isCurrencyTheSame(CompositePoLine compositePoLine, PoLine storagePoLine) {
+    return compositePoLine.getCost().getCurrency().equals(storagePoLine.getCost().getCurrency());
   }
 
   private CompletableFuture<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {
