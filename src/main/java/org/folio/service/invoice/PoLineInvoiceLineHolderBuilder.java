@@ -53,7 +53,7 @@ public class PoLineInvoiceLineHolderBuilder {
       String poLineFundId = optionalFundDistribution.get().getFundId();
       return getCurrentFiscalYearInvoiceLines(poLineFundId, invoiceLines, requestContext)
         .thenApply(currentYearInvoiceLines -> {
-          validateInvoiceLinesStatus(currentYearInvoiceLines);
+//          validateInvoiceLinesStatus(currentYearInvoiceLines);
           return getPaidOrCancelledInvoiceLines(currentYearInvoiceLines);
         });
     } else {
