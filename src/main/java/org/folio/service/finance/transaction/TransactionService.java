@@ -11,6 +11,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import one.util.streamex.StreamEx;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
@@ -21,8 +24,10 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Parameter;
 
 import io.vertx.core.Future;
+import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
 
 public class TransactionService {
+  private static final Logger log = LogManager.getLogger(TransactionService.class);
 
   private static final String ENDPOINT = "/finance/transactions";
   private static final String ENCUMBRANCE_ENDPOINT = "/finance/encumbrances";
@@ -52,8 +57,9 @@ public class TransactionService {
   }
 
   public Future<List<Transaction>> getTransactionsByIds(List<String> trIds, RequestContext requestContext) {
-    return collectResultsOnSuccess(ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ)
-        .map(ids -> getTransactionsChunksByIds(ids, requestContext)).toList())
+    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ)
+        .map(ids -> getTransactionsChunksByIds(ids, requestContext))
+      .toList())
       .map(lists -> lists.stream().flatMap(Collection::stream).collect(Collectors.toList()))
       .map(trList -> {
         if (trList.size() != trIds.size()) {
@@ -87,7 +93,7 @@ public class TransactionService {
   }
 
   public Future<Void> updateTransactions(List<Transaction> transactions, RequestContext requestContext) {
-    return GenericCompositeFuture.all(transactions.stream()
+    return GenericCompositeFuture.join(transactions.stream()
       .map(transaction -> updateTransaction(transaction, requestContext))
       .collect(Collectors.toList()))
       .mapEmpty();

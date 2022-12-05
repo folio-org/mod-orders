@@ -60,7 +60,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
     purchaseOrderHelper.deleteOrder(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override

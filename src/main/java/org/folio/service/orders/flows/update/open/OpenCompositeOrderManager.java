@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
+import io.vertx.core.Promise;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -155,16 +156,16 @@ public class OpenCompositeOrderManager {
   private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                             RequestContext requestContext) {
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
-    return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
-      // TODO: check how it works
-      .recover(throwable ->{
+    Promise<Void> promise = Promise.promise();
+    strategy.processEncumbrances(compPO, poFromStorage, requestContext)
+      .onSuccess(result -> promise.complete())
+      .onFailure(t -> {
         // There was an error when processing the encumbrances despite the previous validations.
         // Order lines should be saved to avoid leaving an open order with locationId instead of holdingId.
-         return openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext)
-          .recover(v -> {
-            throw new CompletionException(throwable.getCause());
-          });
+        openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext)
+          .onComplete(asyncResult -> promise.fail(t));
       });
+    return promise.future();
   }
 
   private void updateIncomingOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {

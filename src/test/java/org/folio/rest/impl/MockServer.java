@@ -2001,7 +2001,7 @@ public class MockServer {
 
   private void handleGetPurchaseOrderByQuery(RoutingContext ctx, String orderType) {
 
-    String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    String query = StringUtils.substringAfter(ctx.request().absoluteURI(), "query=");
     addServerRqQuery(orderType, query);
 
     JsonObject po = new JsonObject();

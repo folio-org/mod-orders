@@ -62,8 +62,7 @@ public class InitEventBus implements PostDeployVerticle {
       receiptStatusConsumer.handler(receiptStatusHandler)
         .completionHandler(receiptStatusConsistencyHandler);
 
-      CompositeFuture.all(orderStatusRegistrationHandler.future(), receiptStatusConsistencyHandler.future()
-            , checkInOrderStatusRegistrationHandler.future())
+      CompositeFuture.join(orderStatusRegistrationHandler.future(), receiptStatusConsistencyHandler.future(), checkInOrderStatusRegistrationHandler.future())
         .onComplete(result -> {
           if (result.succeeded()) {
             blockingCodeFuture.complete();

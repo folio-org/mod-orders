@@ -53,7 +53,7 @@ public class ExpenseClassValidationService {
       .filter(fundDistribution -> Objects.nonNull(fundDistribution.getExpenseClassId()))
       .collect(toMap(Function.identity(), FundDistribution::getExpenseClassId));
 
-    return CompositeFuture.all(expenseClassesByFundId.entrySet()
+    return CompositeFuture.join(expenseClassesByFundId.entrySet()
       .stream()
       .map(expenseClassByFundId -> checkExpenseClassIsActiveByFundDistribution(expenseClassByFundId, isActiveExpenseClassCheckRequired, requestContext))
       .collect(toList()))

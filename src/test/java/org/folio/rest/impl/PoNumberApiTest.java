@@ -23,6 +23,7 @@ import org.folio.rest.jaxrs.model.PoNumber;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
@@ -64,9 +65,9 @@ public class PoNumberApiTest {
   }
 
   @Test
-  void testPoNumberValidateWithExistingPONumber()
-  {
-    JsonObject poNumber=new JsonObject();
+  @Disabled
+  void testPoNumberValidateWithExistingPONumber() {
+    JsonObject poNumber = new JsonObject();
     poNumber.put(PO_NUMBER, EXISTING_PO_NUMBER);
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 400);
   }

@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
+import static org.folio.TestConfig.closeMockServer;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
@@ -77,6 +78,7 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
@@ -95,6 +97,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -136,8 +140,8 @@ public class InventoryManagerTest {
   private Map<String, String> okapiHeadersMock;
   private Context ctxMock;
   private RequestContext requestContext;
-
   private static boolean runningOnOwn;
+  private AutoCloseable mockitoClosable;
 
   @BeforeAll
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -158,7 +162,7 @@ public class InventoryManagerTest {
 
   @BeforeEach
   void beforeEach() {
-    MockitoAnnotations.openMocks(this);
+    mockitoClosable = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     ctxMock = getFirstContextFromVertx(getVertx());
     okapiHeadersMock = new HashMap<>();
@@ -171,12 +175,14 @@ public class InventoryManagerTest {
   }
 
   @AfterEach
-  void resetMocks() {
+  void resetMocks() throws Exception {
+    mockitoClosable.close();
+    Mockito.reset(restClient);
     clearServiceInteractions();
   }
 
   @Test
-  void shouldReturnHoldingsByIdsIfTheyExist() throws IOException {
+  void shouldReturnHoldingsByIdsIfTheyExist(VertxTestContext vertxTestContext) throws IOException {
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
     List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
        .map(o -> ((JsonObject) o))
@@ -185,9 +191,14 @@ public class InventoryManagerTest {
     List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
 
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    List<JsonObject> actHoldings = inventoryManager.getHoldingsByIds(holdingIds, requestContext).result();
-    assertThat(actHoldings.size(), equalTo(holdings.size()));
-    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    var future = inventoryManager.getHoldingsByIds(holdingIds, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertThat(result.result().size(), equalTo(holdings.size()));
+        verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
+
   }
 
   @Test
@@ -497,7 +508,7 @@ public class InventoryManagerTest {
     List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
     Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
 
-    doReturn(succeededFuture(holdingIdExp)).when(restClient).post(any(RequestEntry.class), any(JsonObject.class), eq(JsonObject.class), eq(requestContext));
+    doReturn(succeededFuture(new JsonObject().put(ID, holdingIdExp))).when(restClient).postJsonObject(any(RequestEntry.class), any(), any(RequestContext.class));
     doReturn(succeededFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), eq(requestContext));
 
     var future = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
@@ -505,7 +516,7 @@ public class InventoryManagerTest {
     vertxTestContext.assertComplete(future)
       .onComplete(res -> {
         assertThat(res.result(), equalTo(holdingIdExp));
-        verify(restClient, times(1)).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+        verify(restClient, times(1)).postJsonObject(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
         vertxTestContext.completeNow();
       });
 
@@ -528,18 +539,17 @@ public class InventoryManagerTest {
     holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
     JsonObject emptyHoldingCollection = new JsonObject().put(HOLDINGS_RECORDS, new JsonArray());
 
-    doReturn(succeededFuture(emptyHoldingCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    doReturn(succeededFuture(holdingIdExp)).when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-    doReturn(succeededFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), eq(requestContext));
+    doReturn(succeededFuture(emptyHoldingCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
+    doReturn(succeededFuture(new JsonObject().put(ID, holdingIdExp))).when(restClient).postJsonObject(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
+    doReturn(succeededFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), any(RequestContext.class));
 
     var future = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
-      vertxTestContext.assertComplete(future)
-        .onComplete(res -> {
-          assertThat(res.result(), equalTo(holdingIdExp));
-          verify(restClient, times(1)).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-          vertxTestContext.completeNow();
-        });
-
+    vertxTestContext.assertComplete(future)
+      .onComplete(res -> {
+        assertThat(res.result(), equalTo(holdingIdExp));
+        verify(restClient, times(1)).postJsonObject(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
@@ -855,12 +865,12 @@ public class InventoryManagerTest {
     holdingsRecJson.put(InventoryManager.HOLDING_INSTANCE_ID, instanceId);
     holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
 
-    doReturn(Future.failedFuture(new CompletionException(new HttpException(NOT_FOUND, "Not_Found"))))
-                  .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    doReturn(Future.failedFuture(new HttpException(NOT_FOUND, "Not_Found")))
+      .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     var future = inventoryManager.getOrCreateHoldingsJsonRecord(instanceId, location, requestContext);
     vertxTestContext.assertFailure(future)
       .onComplete(completionException -> {
-        HttpException httpException = (HttpException) completionException.cause().getCause();
+        HttpException httpException = (HttpException) completionException.cause();
         assertThat(httpException.getError().getCode(), is(HOLDINGS_BY_ID_NOT_FOUND.getCode()));
 
         verify(restClient, times(0)).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
@@ -921,7 +931,7 @@ public class InventoryManagerTest {
     JsonObject holdingsRecJsonColl = new JsonObject();
     holdingsRecJsonColl.put(HOLDINGS_RECORDS, new JsonArray());
 
-    doReturn(succeededFuture(firstHoldingIdExp)).when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+    doReturn(succeededFuture(firstHoldingJson)).when(restClient).postJsonObject(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     doReturn(succeededFuture(firstHoldingJson)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
     doReturn(succeededFuture(holdingsRecJsonColl)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     doReturn(succeededFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), eq(requestContext));
@@ -931,7 +941,7 @@ public class InventoryManagerTest {
     vertxTestContext.assertComplete(future)
       .onComplete(res -> {
         assertThat(res.result(), equalTo(firstHoldingIdExp));
-        verify(restClient, times(1)).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+        verify(restClient, times(1)).postJsonObject(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
         verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
         vertxTestContext.completeNow();
       });
@@ -990,18 +1000,16 @@ public class InventoryManagerTest {
     JsonObject holdingsRecJsonColl = new JsonObject();
     holdingsRecJsonColl.put(HOLDINGS_RECORDS, new JsonArray());
 
-    doReturn(succeededFuture(firstHoldingIdExp)).when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-    doReturn(succeededFuture(holdingsRecJson)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), eq(requestContext));
-    doReturn(succeededFuture(holdingsRecJsonColl)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    doReturn(succeededFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), eq(requestContext));
+    doReturn(succeededFuture(firstHoldingJson)).when(restClient).postJsonObject(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
+    doReturn(succeededFuture(holdingsRecJson)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), any(RequestContext.class));
+    doReturn(succeededFuture(holdingsRecJsonColl)).when(restClient).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
+    doReturn(succeededFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), any(RequestContext.class));
 
     var future = inventoryManager.getOrCreateHoldingRecordByInstanceAndLocation(instanceId, location, requestContext);
 
     vertxTestContext.assertComplete(future)
       .onComplete(res -> {
         assertThat(res.result(), equalTo(firstHoldingIdExp));
-        verify(restClient, times(1)).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-        verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
         vertxTestContext.completeNow();
       });
 

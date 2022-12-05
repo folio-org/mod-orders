@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.validation.constraints.Pattern;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
@@ -148,7 +150,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
 
     orderLinePatchOperationService.patch(lineId, request, requestContext)
         .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-         .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+        .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override

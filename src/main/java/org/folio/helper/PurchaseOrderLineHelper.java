@@ -293,18 +293,18 @@ public class PurchaseOrderLineHelper {
         .compose(v -> getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId(), requestContext))
         .compose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId(), requestContext)
           .map(compOrder -> addLineToCompOrder(compOrder, lineFromStorage))
-          .compose(compOrder -> {
+          .map(compOrder -> {
             validatePOLineProtectedFieldsChanged(compOrderLine, lineFromStorage, compOrder);
             PoLineCommonUtil.updateLocationsQuantity(compOrderLine.getLocations());
             updateEstimatedPrice(compOrderLine);
             checkLocationCanBeModified(compOrderLine, lineFromStorage.mapTo(PoLine.class), compOrder);
-
-            return protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
-                .compose(v -> validateAccessProviders(compOrderLine, requestContext))
-                .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
-                .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, lineFromStorage, requestContext))
-                .map(v -> lineFromStorage);
-          }))
+            return compOrder;
+          })
+        .compose(compOrder -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
+          .compose(v -> validateAccessProviders(compOrderLine, requestContext))
+          .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
+          .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, lineFromStorage, requestContext))
+          .map(v -> lineFromStorage)))
         .compose(lineFromStorage -> {
           // override PO line number in the request with one from the storage, because it's not allowed to change it during PO line
           // update
@@ -437,7 +437,7 @@ public class PurchaseOrderLineHelper {
         .forEach(reportingObject -> futures.add(restClient.post(rqEntry, reportingObject, ReportingCode.class, requestContext)
           .map(ReportingCode::getId)));
     }
-    return GenericCompositeFuture.all(new ArrayList<>(futures))
+    return GenericCompositeFuture.join(new ArrayList<>(futures))
       .map(reportingIds -> line.put(REPORTING_CODES, reportingIds.list()))
       .recover(t -> {
         logger.error("failed to create Reporting Codes", t);
@@ -535,7 +535,7 @@ public class PurchaseOrderLineHelper {
       })
       .collect(toList());
 
-    return GenericCompositeFuture.all(new ArrayList<>(futures))
+    return GenericCompositeFuture.join(new ArrayList<>(futures))
       .mapEmpty();
   }
 
@@ -551,7 +551,7 @@ public class PurchaseOrderLineHelper {
             .compose(ok -> purchaseOrderLineService.deletePoLine(poLine, requestContext)))));
 
     }
-    return GenericCompositeFuture.all(futures)
+    return GenericCompositeFuture.join(futures)
       .mapEmpty();
   }
 
@@ -732,7 +732,8 @@ public class PurchaseOrderLineHelper {
 
   private Future<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
     Promise<CompositePurchaseOrder> promise = Promise.promise();
-    purchaseOrderStorageService.getCompositeOrderById(purchaseOrderId, requestContext)
+    purchaseOrderStorageService.getPurchaseOrderByIdAsJson(purchaseOrderId, requestContext)
+      .map(HelperUtils::convertToCompositePurchaseOrder)
       .onSuccess(promise::complete)
       .onFailure(cause -> {
         // The case when specified order does not exist
@@ -803,8 +804,7 @@ public class PurchaseOrderLineHelper {
         OrderWorkflowType.PENDING_TO_PENDING : OrderWorkflowType.PENDING_TO_OPEN;
       EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(workflowType);
       CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compOrder).mapTo(CompositePurchaseOrder.class);
-      return strategy.processEncumbrances(compOrder.withCompositePoLines(Collections.singletonList(compositePoLine)),
-        poFromStorage, requestContext);
+      return strategy.processEncumbrances(compOrder.withCompositePoLines(Collections.singletonList(compositePoLine)), poFromStorage, requestContext);
     }
     return Future.succeededFuture();
   }

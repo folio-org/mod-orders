@@ -94,17 +94,20 @@ public class EncumbranceRelationsHoldersBuilder {
     return holder.withNewEncumbrance(transaction);
   }
 
-  public Future<List<EncumbranceRelationsHolder>> withExistingTransactions(
-      List<EncumbranceRelationsHolder> encumbranceHolders, CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
-
-    if (poAndLinesFromStorage == null)
+  public Future<List<EncumbranceRelationsHolder>> withExistingTransactions(List<EncumbranceRelationsHolder> encumbranceHolders,
+      CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
+    if (poAndLinesFromStorage == null) {
       return Future.succeededFuture(encumbranceHolders);
+    }
+
     List<String> transactionIds = poAndLinesFromStorage.getCompositePoLines().stream()
       .flatMap(poLine -> poLine.getFundDistribution().stream().map(FundDistribution::getEncumbrance))
       .filter(Objects::nonNull)
       .collect(Collectors.toList());
-    if (transactionIds.isEmpty())
+    if (transactionIds.isEmpty()) {
       return Future.succeededFuture(encumbranceHolders);
+    }
+
     return encumbranceService.getEncumbrancesByIds(transactionIds, requestContext)
       .map(transactions -> {
         mapHoldersToTransactions(encumbranceHolders, transactions);

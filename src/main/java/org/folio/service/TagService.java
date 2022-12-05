@@ -48,7 +48,7 @@ public class TagService {
         List<Future<Tag>> futures = new ArrayList<>();
         tagsForCreate.forEach(tag -> futures.add(createTag(tag, requestContext)));
 
-        return GenericCompositeFuture.all(futures)
+        return GenericCompositeFuture.join(futures)
           .mapEmpty();
       });
   }

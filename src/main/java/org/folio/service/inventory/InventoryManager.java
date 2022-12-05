@@ -149,7 +149,7 @@ public class InventoryManager {
   public static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
-  private RestClient restClient;
+  private final RestClient restClient;
   private ConfigurationEntriesService configurationEntriesService;
   private PieceStorageService pieceStorageService;
 
@@ -302,16 +302,10 @@ public class InventoryManager {
           });
       }
 
-      return holdingIdFuture
-         .recover(throwable -> {
-          if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
-            String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
-            Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
-            throw new CompletionException(new HttpException(NOT_FOUND, error));
-          } else {
-            throw new CompletionException(throwable.getCause());
-          }
-        });
+      return holdingIdFuture.recover(throwable -> {
+        handleHoldingsError(holdingId, throwable);
+        return null;
+      });
     } else {
       return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
     }
@@ -324,19 +318,23 @@ public class InventoryManager {
         .withId(holdingId);
       return restClient.getAsJsonObject(requestEntry, requestContext)
          .recover(throwable -> {
-          if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
-            String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
-            Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
-            throw new CompletionException(new HttpException(NOT_FOUND, error));
-          } else {
-            throw new CompletionException(throwable.getCause());
-          }
-        });
+           handleHoldingsError(holdingId, throwable);
+           return null;
+         });
     } else {
       return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
     }
   }
 
+  private static void handleHoldingsError(String holdingId, Throwable throwable) {
+    if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
+      String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
+      Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
+      throw new HttpException(NOT_FOUND, error);
+    } else {
+      throw new CompletionException(throwable.getCause());
+    }
+  }
 
   public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext) {
     return collectResultsOnSuccess(
@@ -418,7 +416,7 @@ public class InventoryManager {
   }
 
   private Future<Void> updateHoldingRecords(List<JsonObject> holdingRecords, RequestContext requestContext) {
-    return GenericCompositeFuture.all(holdingRecords.stream()
+    return GenericCompositeFuture.join(holdingRecords.stream()
         .map(holdingRecord -> updateHolding(holdingRecord, requestContext))
         .collect(toList()))
         .mapEmpty();
@@ -697,7 +695,7 @@ public class InventoryManager {
 
     Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(compPOL.getContributors(), requestContext);
 
-    return CompositeFuture.all(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
+    return CompositeFuture.join(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .map(v -> buildInstanceRecordJsonObject(compPOL, lookupObj))
       .compose(instanceRecJson -> {
         logger.debug("Instance record to save : {}", instanceRecJson);
@@ -1088,7 +1086,7 @@ public class InventoryManager {
 
     Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(title.getContributors(), requestContext);
 
-    return CompositeFuture.all(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
+    return CompositeFuture.join(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .map(cf -> buildInstanceRecordJsonObject(title, lookupObj))
       .compose(instanceJson -> createInstance(instanceJson, requestContext));
   }

@@ -449,12 +449,8 @@ public class ApplicationConfig {
     return new PieceStorageService(restClient);
   }
 
-  @Bean PieceService piecesService(PieceStorageService pieceStorageService, ProtectionService protectionService,
-                              PurchaseOrderLineService purchaseOrderLineService,
-                              InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-                              PurchaseOrderStorageService purchaseOrderStorageService, PieceUpdateInventoryService pieceUpdateInventoryService) {
-    return new PieceService(pieceStorageService, protectionService, purchaseOrderLineService, inventoryManager,
-                              receiptStatusPublisher, pieceUpdateInventoryService);
+  @Bean PieceService piecesService(PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+    return new PieceService(receiptStatusPublisher);
   }
 
   @Bean DefaultPieceFlowsValidator pieceCreateFlowValidator() {

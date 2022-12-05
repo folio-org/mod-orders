@@ -67,8 +67,7 @@ public class FundService {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(fundId);
     return restClient.get(requestEntry, CompositeFund.class, requestContext)
       .map(CompositeFund::getFund)
-       .recover(t -> {
-        Throwable cause = t.getCause() == null ? t : t.getCause();
+      .recover(cause -> {
         if (HelperUtils.isNotFound(cause)) {
           List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(fundId).withKey("funds"));
           throw new HttpException(404, FUNDS_NOT_FOUND.toError().withParameters(parameters));

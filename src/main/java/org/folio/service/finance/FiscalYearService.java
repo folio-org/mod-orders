@@ -45,10 +45,10 @@ public class FiscalYearService {
       });
   }
 
-    public Future<FiscalYear> getCurrentFiscalYearByFundId(String fundId, RequestContext requestContext) {
-        return fundService.retrieveFundById(fundId, requestContext)
-                .compose(fund -> getCurrentFiscalYear(fund.getLedgerId(), requestContext));
-    }
+  public Future<FiscalYear> getCurrentFiscalYearByFundId(String fundId, RequestContext requestContext) {
+    return fundService.retrieveFundById(fundId, requestContext)
+      .compose(fund -> getCurrentFiscalYear(fund.getLedgerId(), requestContext));
+  }
 
   private boolean isFiscalYearNotFound(Throwable t) {
     return t instanceof HttpException && ((HttpException) t).getCode() == 404;

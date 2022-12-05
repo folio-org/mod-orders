@@ -38,7 +38,7 @@ public class RolloverErrorService {
     }
 
     public Future<Void> deleteRolloverErrors(List<LedgerFiscalYearRolloverError> errors, RequestContext requestContext) {
-      return GenericCompositeFuture.all(errors.stream()
+      return GenericCompositeFuture.join(errors.stream()
         .map(error -> deleteRolloverError(error.getId(), requestContext))
         .collect(Collectors.toList()))
         .mapEmpty();

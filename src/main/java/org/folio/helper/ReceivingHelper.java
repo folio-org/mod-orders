@@ -84,7 +84,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     receivingItems = null;
   }
 
-  public Future<ReceivingResults> receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
+  public Future<ReceivingResults>   receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     return getPoLines(new ArrayList<>(receivingItems.keySet()), requestContext)
       .compose(poLines -> removeForbiddenEntities(poLines, receivingItems, requestContext))
       .compose(vVoid -> processReceiveItems(receivingCollection, requestContext));
@@ -269,9 +269,10 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
         return true;
       })
       // Add processing error if item failed to be updated
-       .onFailure(e -> {
+       .otherwise(e -> {
         logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
         addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+        return false;
       });
   }
 

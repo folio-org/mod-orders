@@ -125,7 +125,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .collect(Collectors.toList());
 
     // Wait for all pieces to be retrieved and complete resulting future
-    return GenericCompositeFuture.all(futures)
+    return GenericCompositeFuture.join(futures)
       .map(v -> {
         if (logger.isDebugEnabled()) {
           int poLinesQty = piecesByPoLine.size();
@@ -159,9 +159,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         checkIfAllPiecesFound(ids, pieces.getPieces());
         return null;
       })
-       .onFailure(e -> {
+       .otherwise(e -> {
         logger.error("Error fetching piece records", e);
         ids.forEach(pieceId -> addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_NOT_RETRIEVED.toError()));
+        return null;
       })
       .mapEmpty();
   }
@@ -404,7 +405,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .map((Piece piece) -> storeUpdatedPieceRecord(piece, requestContext))
       .collect(Collectors.toList());
 
-    return GenericCompositeFuture.all(futures)
+    return GenericCompositeFuture.join(futures)
       .map(v -> piecesGroupedByPoLine);
   }
 
@@ -419,7 +420,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<Void> storeUpdatedPieceRecord(Piece piece, RequestContext requestContext) {
     String pieceId = piece.getId();
     return restClient.put(resourceByIdPath(PIECES_STORAGE, pieceId), JsonObject.mapFrom(piece), requestContext)
-           .onFailure(e -> addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_UPDATE_FAILED.toError()));
+      .otherwise(e -> {
+        addError(getPoLineIdByPieceId(pieceId), pieceId, PIECE_UPDATE_FAILED.toError());
+        return null;
+      });
   }
 
 
