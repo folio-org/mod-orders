@@ -12,7 +12,6 @@ import static org.mockito.Mockito.mock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.Future;
 import org.folio.rest.core.models.RequestContext;

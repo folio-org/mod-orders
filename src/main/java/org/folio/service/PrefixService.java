@@ -3,6 +3,7 @@ package org.folio.service;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.rest.core.exceptions.ErrorCodes.*;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.RestClient;
@@ -74,18 +75,19 @@ public class PrefixService {
       });
   }
 
-  public CompletableFuture<Void> validatePrefixAvailability(String prefixName, RequestContext requestContext) {
+  public Future<Void> validatePrefixAvailability(String prefixName, RequestContext requestContext) {
     if(StringUtils.isNotEmpty(prefixName)) {
       String query = "name==" + prefixName;
       RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);
-      return restClient.get(requestEntry, requestContext, PrefixCollection.class)
-        .thenAccept(totalRecords -> {
+      return restClient.get(requestEntry, PrefixCollection.class, requestContext)
+        .map(totalRecords -> {
           if(totalRecords.getTotalRecords() == 0) {
             logger.error("Prefix {} may not be available", prefixName);
             throw new HttpException(404, PREFIX_NOT_FOUND);
           }
+          return null;
         });
     }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture();
   }
 }

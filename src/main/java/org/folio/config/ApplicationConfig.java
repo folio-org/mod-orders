@@ -595,12 +595,11 @@ public class ApplicationConfig {
         TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
         PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
         ConfigurationEntriesService configurationEntriesService, RestClient restClient,
-        CompositePoLineValidationService compositePoLineValidationService, POLInvoiceLineRelationService polInvoiceLineRelationService) {
-        CompositePoLineValidationService compositePoLineValidationService, OrganizationService organizationService) {
+        CompositePoLineValidationService compositePoLineValidationService, POLInvoiceLineRelationService polInvoiceLineRelationService,
+        OrganizationService organizationService) {
     return new PurchaseOrderLineHelper(inventoryManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, acquisitionsUnitsService, protectionService,
-      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient, compositePoLineValidationService, polInvoiceLineRelationService);
-      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient, compositePoLineValidationService,
+      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient, compositePoLineValidationService, polInvoiceLineRelationService,
       organizationService);
   }
 

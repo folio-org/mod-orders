@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.Future;
 import org.folio.models.CompositeOrderRetrieveHolder;

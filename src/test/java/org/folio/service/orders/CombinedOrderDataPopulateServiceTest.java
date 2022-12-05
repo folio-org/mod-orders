@@ -6,7 +6,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxExtension;

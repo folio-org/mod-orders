@@ -7,11 +7,9 @@ import static org.apache.commons.collections4.CollectionUtils.isEqualCollection;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
-import static org.folio.helper.BaseHelper.ID;
 import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.helper.PoNumberHelper.buildPoLineNumber;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
@@ -22,9 +20,7 @@ import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
@@ -40,7 +36,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -54,9 +49,9 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.models.ItemStatus;
 import org.folio.models.PoLineInvoiceLineHolder;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFieldsUtil;
@@ -78,7 +73,6 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
@@ -142,8 +136,8 @@ public class PurchaseOrderLineHelper {
     TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
     PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesService configurationEntriesService, RestClient restClient,
-    CompositePoLineValidationService compositePoLineValidationService, POLInvoiceLineRelationService polInvoiceLineRelationService) {
-    CompositePoLineValidationService compositePoLineValidationService, OrganizationService organizationService) {
+    CompositePoLineValidationService compositePoLineValidationService, POLInvoiceLineRelationService polInvoiceLineRelationService,
+    OrganizationService organizationService) {
     this.inventoryManager = inventoryManager;
     this.encumbranceService = encumbranceService;
     this.expenseClassValidationService = expenseClassValidationService;
@@ -319,10 +313,13 @@ public class PurchaseOrderLineHelper {
           compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
 
           return polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
-            .thenCompose(v -> updateOrderLine(compOrderLine, lineFromStorage, requestContext))
-            .thenCompose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
-            .thenCompose(v -> updateInventoryItemStatus(compOrderLine, lineFromStorage, requestContext))
-            .thenAccept(ok -> updateOrderStatus(compOrderLine, lineFromStorage, requestContext));
+            .compose(v -> updateOrderLine(compOrderLine, lineFromStorage, requestContext))
+            .compose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
+            .compose(v -> updateInventoryItemStatus(compOrderLine, lineFromStorage, requestContext))
+            .map(ok -> {
+              updateOrderStatus(compOrderLine, lineFromStorage, requestContext);
+              return null;
+            });
         });
 
   }
@@ -357,7 +354,7 @@ public class PurchaseOrderLineHelper {
   }
 
   /**
-   * Handles update of the order line depending on the content in the storage. Returns {@link CompletableFuture} as a result.
+   * Handles update of the order line depending on the content in the storage. Returns {@link Future} as a result.
    * In case the exception happened in future lifecycle, the caller should handle it. The logic is like following:<br/>
    * 1. Handle sub-objects operations's. All the exception happened for any sub-object are handled generating an error.
    * 2. Store PO line summary. On success, the logic checks if there are no errors happened on sub-objects operations and
@@ -817,15 +814,15 @@ public class PurchaseOrderLineHelper {
     return Future.succeededFuture();
   }
 
-  private CompletableFuture<Void> updateInventoryItemStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
+  private Future<Void> updateInventoryItemStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     PoLine poLineFromStorage =  lineFromStorage.mapTo(PoLine.class);
     if (isStatusChanged(compOrderLine, poLineFromStorage) && isCurrentStatusCanceled(compOrderLine)) {
       return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
-        .thenCompose(poLines -> {
+        .compose(poLines -> {
           List<PoLine> notCanceledPoLines = poLines.stream().filter(poLine -> !isDbPoLineStatusCancelled(poLine)).collect(toList());
           if (CollectionUtils.isNotEmpty(notCanceledPoLines)) {
             return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
-              .thenCompose(items -> {
+              .compose(items -> {
                 //Each poLine can have only one linked item
                 Optional<JsonObject> poLineItem = items.stream()
                   .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
@@ -833,13 +830,13 @@ public class PurchaseOrderLineHelper {
                   JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
                   inventoryManager.updateItem(updatedItem, requestContext);
                 }
-                return CompletableFuture.completedFuture(null);
+                return Future.succeededFuture();
               });
           }
-          return CompletableFuture.completedFuture(null);
+          return Future.succeededFuture();
         });
     }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture();
   }
 
   private boolean isStatusChanged(CompositePoLine compOrderLine, PoLine lineFromStorage) {

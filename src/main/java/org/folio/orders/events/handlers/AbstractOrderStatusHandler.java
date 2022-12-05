@@ -1,13 +1,11 @@
 package org.folio.orders.events.handlers;
 
-import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.completablefuture.AsyncUtil;
 import org.folio.helper.BaseHelper;

@@ -33,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.mockPort;

@@ -3,6 +3,7 @@ package org.folio.service;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.rest.core.exceptions.ErrorCodes.*;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.RestClient;
@@ -75,19 +76,20 @@ public class SuffixService {
       .mapEmpty();
   }
 
-  public CompletableFuture<Void> validateSuffixAvailability(String suffixName, RequestContext requestContext) {
+  public Future<Void> validateSuffixAvailability(String suffixName, RequestContext requestContext) {
     if(StringUtils.isNotEmpty(suffixName)){
       String query = "name==" + suffixName;
       RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);
-      return restClient.get(requestEntry, requestContext, SuffixCollection.class)
-        .thenAccept(suffix -> {
+      return restClient.get(requestEntry, SuffixCollection.class, requestContext)
+        .map(suffix -> {
           if(suffix.getTotalRecords() == 0) {
             logger.error("Suffix {} may not be available", suffixName);
             throw new HttpException(404, SUFFIX_NOT_FOUND);
           }
+          return null;
         });
     }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture();
   }
 
 }

@@ -559,7 +559,6 @@ public class InventoryManager {
    * @param holder  pair of new location provided from POl and location from storage
    * @return future with list of piece objects
    */
-  // TODO: TO DELETE OR NOT
   public Future<List<Piece>> handleItemRecords(CompositePoLine compPOL, PoLineUpdateHolder holder, RequestContext requestContext) {
     List<Location> polLocations = compPOL.getLocations().stream()
       .filter(location -> location.getLocationId().equals(holder.getNewLocationId()))

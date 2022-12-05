@@ -81,19 +81,21 @@ public class PrefixServiceTest {
   }
 
   @Test
-  void testSetPrefixFailedIfSuffixIsNotAvailable() {
+  void testSetPrefixFailedIfSuffixIsNotAvailable(VertxTestContext vertxTestContext) {
     //given
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(new PrefixCollection().withTotalRecords(0)));
+    when(restClient.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(new PrefixCollection().withTotalRecords(0)));
 
     String id = UUID.randomUUID().toString();
-    CompletableFuture<Void> result = prefixService.validatePrefixAvailability("Test", requestContext);
-    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
+    Future<Void> future  = prefixService.validatePrefixAvailability("Test", requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(expectedException ->{
+        HttpException httpException = (HttpException) expectedException.cause();
+        assertEquals(404, httpException.getCode());
+        assertEquals(PREFIX_NOT_FOUND.toError(), httpException.getError());
 
-    HttpException httpException = (HttpException) expectedException.getCause();
-    assertEquals(404, httpException.getCode());
-    assertEquals(PREFIX_NOT_FOUND.toError(), httpException.getError());
-
-    verify(restClient).get(any(), any(), any());
+        verify(restClient).get(any(RequestEntry.class), any(), any());
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test

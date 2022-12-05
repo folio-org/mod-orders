@@ -1,32 +1,32 @@
 package org.folio;
 
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
+
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import org.folio.rest.RestVerticle;
+import org.folio.rest.impl.MockServer;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.spring.SpringContextUtil;
+
 import com.github.tomakehurst.wiremock.admin.NotFoundException;
+
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxImpl;
 import io.vertx.core.json.JsonObject;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.impl.MockServer;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.folio.spring.SpringContextUtil;
-
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
-import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
 
 public final class TestConfig {
 

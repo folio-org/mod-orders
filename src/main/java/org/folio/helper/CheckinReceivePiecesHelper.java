@@ -34,13 +34,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -110,7 +107,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   /**
    * Retrieves piece records from storage based on request data
    *
-   * @return {@link CompletableFuture} which holds map with PO line id as key
+   * @return {@link Future} which holds map with PO line id as key
    *         and list of corresponding pieces as value
    */
  protected Future<Map<String, List<Piece>>> retrievePieceRecords(Map<String, Map<String, T>> piecesByLineId,
@@ -592,7 +589,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   /**
    * Filter by locationId presence for items/pieces related to POLine.
    *
-   * @return {@link CompletableFuture} which holds map with PO line id as key
+   * @return {@link Future} which holds map with PO line id as key
    *         and list of corresponding pieces as value
    */
   Future<Map<String, List<Piece>>> filterMissingLocations(Map<String, List<Piece>> piecesRecords, RequestContext requestContext) {
@@ -636,7 +633,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * Updates items in the inventory storage with check-in/receiving details if any. On
    * success updates corresponding records as received
    *
-   * @return {@link CompletableFuture} which holds map with PO line id as key
+   * @return {@link Future} which holds map with PO line id as key
    *         and list of corresponding pieces as value
    */
   protected Future<Map<String, List<Piece>>> updateInventoryItemsAndHoldings(Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine,

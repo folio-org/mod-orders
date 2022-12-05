@@ -189,19 +189,22 @@ public class PurchaseOrderHelper {
   public Future<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
     JsonObject cachedTenantConfiguration = new JsonObject();
     return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-        .thenApply(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
-        .thenCompose(tenantConfiguration -> validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), requestContext))
-        .thenAccept(ok -> checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext))
-        .thenCompose(ok -> setPoNumberIfMissing(compPO, requestContext)
-        .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
-        .thenCompose(p -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
-        .thenCompose(s -> poNumberHelper.validatePoNumberPrefixAndSuffix(compPO))
-        .thenCompose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext))
-        .thenCompose(v -> processPoLineTags(compPO, requestContext))
-        .thenCompose(v -> createPOandPOLines(compPO, cachedTenantConfiguration, requestContext))
-        .thenCompose(aCompPO -> populateOrderSummary(aCompPO, requestContext)))
-        .thenCompose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
-                .thenApply(v -> compOrder));
+      .map(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
+      .compose(tenantConfiguration -> validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), requestContext))
+      .map(ok -> {
+        checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext);
+        return null;
+      })
+      .compose(ok -> setPoNumberIfMissing(compPO, requestContext)
+        .compose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(), requestContext))
+        .compose(p -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(), requestContext))
+        .compose(s -> poNumberHelper.validatePoNumberPrefixAndSuffix(compPO))
+        .compose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext))
+        .compose(v -> processPoLineTags(compPO, requestContext))
+        .compose(v -> createPOandPOLines(compPO, cachedTenantConfiguration, requestContext))
+        .compose(aCompPO -> populateOrderSummary(aCompPO, requestContext)))
+      .compose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
+        .map(v -> compOrder));
   }
 
   /**
@@ -220,11 +223,11 @@ public class PurchaseOrderHelper {
       .compose(poFromStorage -> {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return validateAcqUnitsOnUpdate(compPO, poFromStorage, requestContext)
-          .thenCompose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
-          .thenCompose(p -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
-          .thenCompose(v->poNumberHelper.validatePoNumberPrefixAndSuffix(compPO))
-          .thenCompose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
-          .thenAccept(ok -> {
+          .compose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(),requestContext))
+          .compose(p -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(),requestContext))
+          .compose(v->poNumberHelper.validatePoNumberPrefixAndSuffix(compPO))
+          .compose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
+          .map(ok -> {
             if (isTransitionToApproved(poFromStorage, compPO)) {
               checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext);
             }
