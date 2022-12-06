@@ -9,9 +9,7 @@ ENV VERTICLE_HOME /usr/verticles
 COPY target/${VERTICLE_FILE} ${VERTICLE_HOME}/${VERTICLE_FILE}
 
 RUN mkdir -p jmx_exporter &&\
-    cd jmx_exporter &&\
-    wget https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.17.2/jmx_prometheus_javaagent-0.17.2.jar
-ADD prometheus-jmx-config.yaml jmx_exporter/prometheus-jmx-config.yaml
+    wget -P jmx_exporter https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.17.2/jmx_prometheus_javaagent-0.17.2.jar
 
 # Expose this port locally in the container.
 EXPOSE 8081 9991
