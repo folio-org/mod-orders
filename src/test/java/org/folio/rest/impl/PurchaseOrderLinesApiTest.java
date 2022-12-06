@@ -104,7 +104,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.Lists;
-import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.orders.utils.FundDistributionUtils;
@@ -136,7 +135,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.Tags;
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
 import org.junit.jupiter.api.*;
 
 import io.restassured.response.Response;
@@ -1108,8 +1106,6 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
-  @Ignore
-  @Disabled
   void testUpdatePoLineForOpenedOrderShouldFailedWhenRelatedInvoiceLineApprovedForCurrentFY() {
     logger.info("=== Test update poline for opened order should failed when related invoice line is approved  ===");
 

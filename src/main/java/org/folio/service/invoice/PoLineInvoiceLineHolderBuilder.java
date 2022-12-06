@@ -6,9 +6,11 @@ import org.apache.http.HttpStatus;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -53,7 +55,7 @@ public class PoLineInvoiceLineHolderBuilder {
       String poLineFundId = optionalFundDistribution.get().getFundId();
       return getCurrentFiscalYearInvoiceLines(poLineFundId, invoiceLines, requestContext)
         .thenApply(currentYearInvoiceLines -> {
-//          validateInvoiceLinesStatus(currentYearInvoiceLines);
+          validateInvoiceLinesStatus(currentYearInvoiceLines);
           return getPaidOrCancelledInvoiceLines(currentYearInvoiceLines);
         });
     } else {
@@ -89,7 +91,8 @@ public class PoLineInvoiceLineHolderBuilder {
     List<InvoiceLine> approvedInvoices = filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.APPROVED));
     if (CollectionUtils.isNotEmpty(approvedInvoices)) {
       String invoiceLineIds = approvedInvoices.stream().map(InvoiceLine::getId).collect(Collectors.joining(", "));
-      throw new HttpException(HttpStatus.SC_FORBIDDEN, String.format("Composite POL related invoice lines contains lines which has status APPROVED for the current fiscal year, invoice line ids: %s", invoiceLineIds));
+      String message = String.format(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getDescription(), invoiceLineIds);
+      throw new HttpException(HttpStatus.SC_FORBIDDEN, new Error().withCode(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getCode()).withMessage(message));
     }
   }
 
