@@ -91,8 +91,8 @@ public class PoLineInvoiceLineHolderBuilder {
     List<InvoiceLine> approvedInvoices = filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.APPROVED));
     if (CollectionUtils.isNotEmpty(approvedInvoices)) {
       String invoiceLineIds = approvedInvoices.stream().map(InvoiceLine::getId).collect(Collectors.joining(", "));
-      String message = String.format(ErrorCodes.ERROR_UPDATING_PO_LINE.getDescription(), invoiceLineIds);
-      throw new HttpException(HttpStatus.SC_FORBIDDEN, new Error().withCode(ErrorCodes.ERROR_UPDATING_PO_LINE.getCode()).withMessage(message));
+      String message = String.format(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getDescription(), invoiceLineIds);
+      throw new HttpException(HttpStatus.SC_FORBIDDEN, new Error().withCode(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getCode()).withMessage(message));
     }
   }
 
