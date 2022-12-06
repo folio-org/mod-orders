@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
 
-import static java.lang.String.format;
 import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 
 @Repository
@@ -20,7 +19,7 @@ public class OrderIdStorageDaoImpl implements IdStorageDao {
     "WITH input_row(record_id, order_id) AS " +
     "(VALUES ($1, $2)), " +
     "insert_res AS ( " +
-    "  INSERT INTO %s (record_id, order_id) " +
+    "  INSERT INTO %1$s (record_id, order_id) " +
     "  SELECT * FROM input_row " +
     "  ON CONFLICT (record_id) DO NOTHING " +
     "  RETURNING record_id, order_id " +
@@ -29,7 +28,7 @@ public class OrderIdStorageDaoImpl implements IdStorageDao {
     "FROM insert_res " +
     "UNION ALL " +
     "SELECT t.record_id, t.order_id " +
-    "FROM %s t, input_row " +
+    "FROM %1$s t, input_row " +
     "WHERE t.record_id = input_row.record_id";
 //      "FROM input_row " +
 //    "JOIN %s t USING (record_id)";
@@ -44,7 +43,7 @@ public class OrderIdStorageDaoImpl implements IdStorageDao {
   @Override
   public Future<String> store(String recordId, String orderId, String tenantId) {
     String table = prepareFullTableName(tenantId, TABLE_NAME);
-    String sql = String.format(SQL, table, table);
+    String sql = String.format(SQL, table);
     Tuple params = Tuple.of(UUID.fromString(recordId), UUID.fromString(orderId));
 
     return pgClientFactory.createInstance(tenantId).execute(sql, params)
@@ -52,7 +51,7 @@ public class OrderIdStorageDaoImpl implements IdStorageDao {
   }
 
   private String prepareFullTableName(String tenantId, String table) {
-    return format("%s.%s", convertToPsqlStandard(tenantId), table);
+    return String.format("%s.%s", convertToPsqlStandard(tenantId), table);
   }
 
 }
