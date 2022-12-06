@@ -8,5 +8,8 @@ ENV VERTICLE_HOME /usr/verticles
 # Copy your fat jar to the container
 COPY target/${VERTICLE_FILE} ${VERTICLE_HOME}/${VERTICLE_FILE}
 
+RUN wget https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.13.0/jmx_prometheus_javaagent-0.13.0.jar
+ADD prometheus-jmx-config.yaml /prometheus-jmx-config.yaml
+
 # Expose this port locally in the container.
 EXPOSE 8081 9991
