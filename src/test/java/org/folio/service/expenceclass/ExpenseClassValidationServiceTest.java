@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import io.vertx.core.Future;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
@@ -21,6 +20,8 @@ import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import io.vertx.core.Future;
 
 @DisplayName("ExpenseClassValidationService class ")
 public class ExpenseClassValidationServiceTest {

@@ -1,11 +1,12 @@
 package org.folio.models;
 
-import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 
-import java.util.List;
-import java.util.ArrayList;
+import io.vertx.core.json.JsonObject;
 
 
 public class PoLineInvoiceLineHolder {

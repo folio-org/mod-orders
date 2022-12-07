@@ -37,7 +37,6 @@ import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 
 public class EncumbranceRelationsHoldersBuilder {
 

@@ -4,9 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryManager;
-import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.json.JsonObject;
 

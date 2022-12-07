@@ -24,7 +24,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import io.vertx.junit5.VertxExtension;
 import org.folio.ApiTestSuite;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.rest.core.models.RequestContext;
@@ -57,6 +56,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
+import io.vertx.junit5.VertxExtension;
 
 @ExtendWith(VertxExtension.class)
 public class PieceUpdateFlowPoLineServiceTest {

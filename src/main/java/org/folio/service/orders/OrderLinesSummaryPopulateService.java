@@ -7,11 +7,9 @@ import java.util.stream.Collectors;
 
 import javax.money.convert.ConversionQuery;
 
-import io.vertx.core.CompositeFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.CompositeOrderRetrieveHolder;
-import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
@@ -21,6 +19,7 @@ import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
 public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDataPopulateService {

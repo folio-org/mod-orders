@@ -1,6 +1,10 @@
 package org.folio.rest;
 
-import io.restassured.RestAssured;
+import static io.restassured.RestAssured.when;
+import static org.hamcrest.Matchers.is;
+
+import java.nio.file.Path;
+
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -14,10 +18,7 @@ import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.utility.DockerImageName;
 
-import java.nio.file.Path;
-
-import static io.restassured.RestAssured.when;
-import static org.hamcrest.Matchers.is;
+import io.restassured.RestAssured;
 
 /**
  * Check the shaded fat uber jar and Dockerfile:

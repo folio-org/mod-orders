@@ -1,10 +1,13 @@
 package org.folio.di;
 
-import io.vertx.core.json.Json;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import net.mguenther.kafka.junit.SendKeyValues;
+import static org.folio.DataImportEventTypes.DI_COMPLETED;
+import static org.folio.DataImportEventTypes.DI_ERROR;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
+
 import org.folio.DataImportEventPayload;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.verticle.consumers.DataImportKafkaHandler;
@@ -14,13 +17,11 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
-
-import static org.folio.DataImportEventTypes.DI_COMPLETED;
-import static org.folio.DataImportEventTypes.DI_ERROR;
-import static org.junit.Assert.assertTrue;
+import io.vertx.core.json.Json;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import net.mguenther.kafka.junit.SendKeyValues;
 
 // TODO: tests will be enabled in scope of the https://issues.folio.org/browse/MODORDERS-773
 @Ignore()

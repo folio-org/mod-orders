@@ -1,12 +1,13 @@
 package org.folio.service.invoice;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.PoLine;
+
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 public class POLInvoiceLineRelationService {
   private final PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder;

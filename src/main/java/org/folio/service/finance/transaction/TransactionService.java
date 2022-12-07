@@ -11,7 +11,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import one.util.streamex.StreamEx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -24,7 +23,7 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Parameter;
 
 import io.vertx.core.Future;
-import org.folio.service.orders.TransactionsTotalFieldsPopulateService;
+import one.util.streamex.StreamEx;
 
 public class TransactionService {
   private static final Logger log = LogManager.getLogger(TransactionService.class);

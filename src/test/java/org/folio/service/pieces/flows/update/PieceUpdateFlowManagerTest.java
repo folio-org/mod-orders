@@ -31,7 +31,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import io.vertx.junit5.VertxExtension;
 import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceUpdateHolder;
@@ -66,6 +65,7 @@ import org.springframework.context.annotation.Bean;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 
 @ExtendWith(VertxExtension.class)
 public class PieceUpdateFlowManagerTest {

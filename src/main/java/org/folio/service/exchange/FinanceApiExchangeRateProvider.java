@@ -1,11 +1,11 @@
 package org.folio.service.exchange;
 
-import java.util.concurrent.CompletableFuture;
+import static org.javamoney.moneta.convert.ExchangeRateType.ECB;
+import static org.javamoney.moneta.convert.ExchangeRateType.IDENTITY;
 
 import javax.money.convert.ConversionContext;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
-import javax.money.convert.CurrencyConversionException;
 import javax.money.convert.ExchangeRate;
 import javax.money.convert.ExchangeRateProvider;
 import javax.money.convert.MonetaryConversions;
@@ -13,15 +13,11 @@ import javax.money.convert.ProviderContext;
 import javax.money.convert.ProviderContextBuilder;
 import javax.money.convert.RateType;
 
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.spring.SpringContextUtil;
 import org.javamoney.moneta.convert.ExchangeRateBuilder;
 import org.javamoney.moneta.spi.DefaultNumberValue;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import static org.javamoney.moneta.convert.ExchangeRateType.ECB;
-import static org.javamoney.moneta.convert.ExchangeRateType.IDENTITY;
 
 public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
   private static final ProviderContext CONTEXT;

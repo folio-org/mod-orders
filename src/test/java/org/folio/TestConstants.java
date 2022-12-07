@@ -6,9 +6,9 @@ import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.service.orders.AcquisitionsUnitsServiceTest.USER_ID_ASSIGNED_TO_ACQ_UNITS;
 
-import io.restassured.http.Header;
-
 import java.util.UUID;
+
+import io.restassured.http.Header;
 
 public final class TestConstants {
 

@@ -16,8 +16,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.vertx.core.Future;
-import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.acq.model.tag.Tag;
 import org.folio.rest.acq.model.tag.TagCollection;
 import org.folio.rest.core.RestClient;
@@ -31,7 +29,9 @@ import org.mockito.MockitoAnnotations;
 
 import io.restassured.http.Header;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxTestContext;
 
 class TagServiceTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";

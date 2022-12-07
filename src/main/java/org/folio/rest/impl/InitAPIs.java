@@ -1,5 +1,7 @@
 package org.folio.rest.impl;
 
+import javax.money.convert.MonetaryConversions;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -23,8 +25,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.core.spi.VerticleFactory;
-
-import javax.money.convert.MonetaryConversions;
 
 /**
  * The class initializes vertx context adding spring context

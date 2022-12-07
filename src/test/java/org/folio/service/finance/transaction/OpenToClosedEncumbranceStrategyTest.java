@@ -5,7 +5,6 @@ import static java.util.Collections.singletonList;
 import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
 import static org.folio.TestUtils.getMockAsJson;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;

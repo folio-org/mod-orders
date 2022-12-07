@@ -7,8 +7,6 @@ import static org.mockito.Mockito.when;
 import java.util.Set;
 import java.util.UUID;
 
-import io.vertx.core.Future;
-import io.vertx.junit5.VertxExtension;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -19,6 +17,9 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
 
 
 @ExtendWith(VertxExtension.class)

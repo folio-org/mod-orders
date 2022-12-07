@@ -12,7 +12,6 @@ import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.model.OrderTemplateCollection;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 
 public class OrderTemplatesService {
   private final RestClient restClient;
