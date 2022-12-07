@@ -831,61 +831,13 @@ public class PurchaseOrderLineHelper {
                   JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
                   inventoryManager.updateItem(updatedItem, requestContext);
                 }
-                return Future.succeededFuture();
+                return Future.succeededFuture(null);
               });
           }
-          return Future.succeededFuture();
+          return Future.succeededFuture(null);
         });
     }
-    return Future.succeededFuture();
-  }
-
-  private boolean isStatusChanged(CompositePoLine compOrderLine, PoLine lineFromStorage) {
-    return !StringUtils.equals(lineFromStorage.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value()) ||
-      !StringUtils.equals(lineFromStorage.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value());
-  }
-
-  private boolean isDbPoLineStatusCancelled(PoLine poLine) {
-    return PoLine.PaymentStatus.CANCELLED.equals(poLine.getPaymentStatus()) ||
-      PoLine.ReceiptStatus.CANCELLED.equals(poLine.getReceiptStatus());
-  }
-
-  private boolean isCurrentStatusCanceled(CompositePoLine compOrderLine) {
-    return CompositePoLine.ReceiptStatus.CANCELLED.equals(compOrderLine.getReceiptStatus()) ||
-      CompositePoLine.PaymentStatus.CANCELLED.equals(compOrderLine.getPaymentStatus());
-  }
-
-  private JsonObject updateItemStatus(JsonObject poLineItem, ItemStatus itemStatus) {
-    JsonObject status = new JsonObject();
-    status.put("name", itemStatus);
-    status.put("date", Instant.now());
-    poLineItem.put("status", status);
-    return poLineItem;
-  }
-
-  private CompletableFuture<Void> updateInventoryItemStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
-    PoLine poLineFromStorage =  lineFromStorage.mapTo(PoLine.class);
-    if (isStatusChanged(compOrderLine, poLineFromStorage) && isCurrentStatusCanceled(compOrderLine)) {
-      return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
-        .thenCompose(poLines -> {
-          List<PoLine> notCanceledPoLines = poLines.stream().filter(poLine -> !isDbPoLineStatusCancelled(poLine)).collect(toList());
-          if (CollectionUtils.isNotEmpty(notCanceledPoLines)) {
-            return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
-              .thenCompose(items -> {
-                //Each poLine can have only one linked item
-                Optional<JsonObject> poLineItem = items.stream()
-                  .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
-                if (poLineItem.isPresent()) {
-                  JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
-                  inventoryManager.updateItem(updatedItem, requestContext);
-                }
-                return CompletableFuture.completedFuture(null);
-              });
-          }
-          return CompletableFuture.completedFuture(null);
-        });
-    }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture(null);
   }
 
   private boolean isStatusChanged(CompositePoLine compOrderLine, PoLine lineFromStorage) {
@@ -928,14 +880,6 @@ public class PurchaseOrderLineHelper {
     }
 
     return !CollectionUtils.isEqualCollection(requestFundDistros, storageFundDistros);
-  }
-
-  private boolean isEstimatedPriceTheSame(CompositePoLine compositePoLine, PoLine storagePoLine) {
-    return compositePoLine.getCost().getPoLineEstimatedPrice().equals(storagePoLine.getCost().getPoLineEstimatedPrice());
-  }
-
-  private boolean isCurrencyTheSame(CompositePoLine compositePoLine, PoLine storagePoLine) {
-    return compositePoLine.getCost().getCurrency().equals(storagePoLine.getCost().getCurrency());
   }
 
   private boolean isEstimatedPriceTheSame(CompositePoLine compositePoLine, PoLine storagePoLine) {

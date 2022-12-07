@@ -100,22 +100,6 @@ public class PrefixServiceTest {
   }
 
   @Test
-  void testSetPrefixFailedIfSuffixIsNotAvailable() {
-    //given
-    when(restClient.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(new PrefixCollection().withTotalRecords(0)));
-
-    String id = UUID.randomUUID().toString();
-    CompletableFuture<Void> result = prefixService.validatePrefixAvailability("Test", requestContext);
-    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
-
-    HttpException httpException = (HttpException) expectedException.getCause();
-    assertEquals(404, httpException.getCode());
-    assertEquals(PREFIX_NOT_FOUND.toError(), httpException.getError());
-
-    verify(restClient).get(any(), any(), any());
-  }
-
-  @Test
   void testDeletePrefixSuccessIfNotUsed(VertxTestContext vertxTestContext) {
     //given
     when(restClient.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(new Prefix().withName("test")));

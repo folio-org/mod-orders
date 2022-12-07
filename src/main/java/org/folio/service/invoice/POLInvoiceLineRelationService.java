@@ -16,16 +16,17 @@ public class POLInvoiceLineRelationService {
     this.poLineInvoiceLineHolderBuilder = poLineInvoiceLineHolderBuilder;
   }
 
-  public CompletableFuture<Void> prepareRelatedInvoiceLines(PoLineInvoiceLineHolder holder, RequestContext requestContext) {
+  public Future<Void> prepareRelatedInvoiceLines(PoLineInvoiceLineHolder holder, RequestContext requestContext) {
     CompositePoLine compositePoLine = holder.getPoLine();
     JsonObject poLineFromStorage = holder.getPoLineFromStorage();
     if (CollectionUtils.isEqualCollection(compositePoLine.getFundDistribution(), poLineFromStorage.mapTo(PoLine.class).getFundDistribution())) {
-      return CompletableFuture.completedFuture(null);
+      return Future.succeededFuture();
     } else {
       return poLineInvoiceLineHolderBuilder.buildHolder(compositePoLine, poLineFromStorage, requestContext)
-        .thenAccept(poLineInvoiceLineHolder -> {
+        .map(poLineInvoiceLineHolder -> {
           holder.withOpenOrReviewedInvoiceLines(poLineInvoiceLineHolder.getOpenOrReviewedInvoiceLines());
           holder.withCurrentYearPaidInvoiceLines(poLineInvoiceLineHolder.getCurrentYearPaidInvoiceLines());
+          return null;
         });
     }
   }
