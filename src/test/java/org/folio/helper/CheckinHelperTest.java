@@ -43,15 +43,12 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-import io.vertx.core.Context;
-
 public class CheckinHelperTest {
 
   @Autowired
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
 
   private Map<String, String> okapiHeadersMock;
-  private Context ctxMock;
   private RequestContext requestContext;
 
   private static boolean runningOnOwn;
@@ -77,13 +74,12 @@ public class CheckinHelperTest {
   void beforeEach() {
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    ctxMock = getFirstContextFromVertx(getVertx());
+    var ctxMock = getFirstContextFromVertx(getVertx());
     okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
   }
 
@@ -110,12 +106,12 @@ public class CheckinHelperTest {
 
     ToBeCheckedIn toBeCheckedIn3 = new ToBeCheckedIn().withPoLineId(poLine2);
     CheckInPiece checkInPiece4 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("4")
-                        .withEnumeration("Enum2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);;
+                        .withEnumeration("Enum2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);
     toBeCheckedIn3.withCheckInPieces(List.of(checkInPiece4));
 
     checkinCollection.withToBeCheckedIn(List.of(toBeCheckedIn1, toBeCheckedIn2, toBeCheckedIn3));
     checkinCollection.setTotalRecords(3);
-    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext(), ""));
+    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
     //When
     Map<String, List<CheckInPiece>> map = checkinHelper.getItemCreateNeededCheckinPieces(checkinCollection);
 

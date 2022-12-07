@@ -161,6 +161,7 @@ public class OpenCompositeOrderManager {
     strategy.processEncumbrances(compPO, poFromStorage, requestContext)
       .onSuccess(result -> promise.complete())
       .onFailure(t -> {
+        logger.error(t);
         // There was an error when processing the encumbrances despite the previous validations.
         // Order lines should be saved to avoid leaving an open order with locationId instead of holdingId.
         openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext)

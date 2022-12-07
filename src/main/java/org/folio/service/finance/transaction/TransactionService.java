@@ -11,8 +11,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
@@ -26,8 +24,6 @@ import io.vertx.core.Future;
 import one.util.streamex.StreamEx;
 
 public class TransactionService {
-  private static final Logger log = LogManager.getLogger(TransactionService.class);
-
   private static final String ENDPOINT = "/finance/transactions";
   private static final String ENCUMBRANCE_ENDPOINT = "/finance/encumbrances";
   private static final String ENCUMBRANCE_BY_ID_ENDPOINT = "/finance/encumbrances/{id}";

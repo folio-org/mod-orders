@@ -17,14 +17,9 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.spring.SpringContextUtil;
 import org.javamoney.moneta.convert.ExchangeRateBuilder;
 import org.javamoney.moneta.spi.DefaultNumberValue;
-import org.springframework.beans.factory.annotation.Autowired;
 
 public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
   private static final ProviderContext CONTEXT;
-  private final RequestContext requestContext;
-
-  @Autowired
-  private FinanceExchangeRateService financeExchangeRateService;
 
   static {
     CONTEXT = ProviderContextBuilder.of("FRE", RateType.DEFERRED, RateType.ANY).set("providerDescription", "ThunderJet Finance API Exchange Rate Service").build();
@@ -32,7 +27,6 @@ public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
 
   public FinanceApiExchangeRateProvider(RequestContext requestContext) {
     SpringContextUtil.autowireDependencies(this, requestContext.getContext());
-    this.requestContext = requestContext;
   }
 
   @Override

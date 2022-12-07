@@ -5,7 +5,6 @@ import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.rest.RestConstants.ERROR_CAUSE;
 import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 
@@ -24,9 +23,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
-import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.spring.SpringContextUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -40,8 +37,7 @@ public abstract class BaseHelper {
   public static final String OKAPI_HEADERS = "okapiHeaders";
   public static final String OKAPI_URL = "x-okapi-url";
   public static final int MAX_REPEAT_ON_FAILURE = 5;
-  public static final String EXCEPTION_CALLING_ENDPOINT_WITH_BODY_MSG = "{} {} {} request failed. Request body: {}";
-  public static final String CALLING_ENDPOINT_WITH_BODY_MSG = "Sending {} {} with body: {}";
+
 
   protected final Logger logger = LogManager.getLogger();
 
@@ -49,10 +45,6 @@ public abstract class BaseHelper {
 
   protected Map<String, String> okapiHeaders;
   protected final Context ctx;
-  protected Future<JsonObject> cachedTenantConfigurationFuture;
-
-  @Autowired
-  private ConfigurationEntriesService configurationEntriesService;
 
   protected BaseHelper(Map<String, String> okapiHeaders, Context ctx) {
     this.okapiHeaders = okapiHeaders;
@@ -81,10 +73,6 @@ public abstract class BaseHelper {
 
   public void addProcessingError(Error error) {
     processingErrors.getErrors().add(error);
-  }
-
-  protected void addProcessingErrors(List<Error> errors) {
-    processingErrors.getErrors().addAll(errors);
   }
 
 
@@ -142,10 +130,6 @@ public abstract class BaseHelper {
     return Response.noContent().build();
   }
 
-  public Response buildCreatedResponse(Object body) {
-    return Response.status(CREATED).header(CONTENT_TYPE, APPLICATION_JSON).entity(body).build();
-  }
-
   public Response buildResponseWithLocation(String endpoint, Object body) {
     try {
       return Response.created(new URI(okapiHeaders.get(OKAPI_URL) + endpoint))
@@ -156,14 +140,5 @@ public abstract class BaseHelper {
         .header(LOCATION, endpoint).entity(body).build();
     }
   }
-
-  public Future<JsonObject> getTenantConfiguration(RequestContext requestContext) {
-    if (this.cachedTenantConfigurationFuture == null) {
-      this.cachedTenantConfigurationFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
-    }
-    return this.cachedTenantConfigurationFuture;
-  }
-
-
 
 }

@@ -394,9 +394,7 @@ public class PurchaseOrderLineService {
     // Update PO Line in storage
     return restClient.put(resourceByIdPath(PO_LINES_STORAGE, poLine.getId()), JsonObject.mapFrom(poLine), requestContext)
       .map(v -> poLine.getId())
-      .onFailure(e -> {
-        logger.error("The PO Line '{}' cannot be updated with new receipt status", poLine.getId(), e);
-      });
+      .onFailure(e -> logger.error("The PO Line '{}' cannot be updated with new receipt status", poLine.getId(), e));
   }
 }
 

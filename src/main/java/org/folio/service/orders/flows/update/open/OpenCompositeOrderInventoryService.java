@@ -53,7 +53,9 @@ public class OpenCompositeOrderInventoryService {
   public Future<Void> processInventory(CompositePoLine compPOL, String titleId, boolean isInstanceMatchingDisabled,
       RequestContext requestContext) {
 
-    logger.debug("Executing a strategy for: {}", compPOL.getOrderFormat().value());
+    if (logger.isDebugEnabled()) {
+      logger.debug("Executing a strategy for: {}", compPOL.getOrderFormat().value());
+    }
     return processInventoryStrategyResolver.getHoldingAndItemStrategy(compPOL.getOrderFormat()
       .value())
       .processInventory(compPOL, titleId, isInstanceMatchingDisabled, inventoryManager, openCompositeOrderPieceService, requestContext);

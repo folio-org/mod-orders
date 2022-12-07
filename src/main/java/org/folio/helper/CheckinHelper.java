@@ -58,7 +58,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   private final Map<String, Map<String, CheckInPiece>> checkinPieces;
 
   public CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders,
-                Context ctx, String lang) {
+                Context ctx) {
     super(okapiHeaders, ctx);
     // Convert request to map representation
     CheckinCollection checkinCollectionClone = JsonObject.mapFrom(checkinCollection).mapTo(CheckinCollection.class);

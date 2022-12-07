@@ -6,6 +6,10 @@ import java.util.function.Supplier;
 import io.vertx.core.Future;
 
 public final class VertxFutureRepeater {
+
+  private VertxFutureRepeater(){
+  }
+
   /**
    * Run <code>task</code> repeatedly until it succeeds or it has run <code>max</code> times.
    * Return the result of the succeeding task, or the last run's failure if all runs fail.

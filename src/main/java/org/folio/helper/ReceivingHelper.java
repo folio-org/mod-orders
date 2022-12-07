@@ -60,7 +60,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   @Autowired
   private AcquisitionsUnitsService acquisitionsUnitsService;
 
-  public ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
     // Convert request to map representation
     receivingItems = groupReceivedItemsByPoLineId(receivingCollection);
@@ -75,7 +75,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     }
   }
 
-  public ReceivingHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
+  public ReceivingHelper(Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
     receivingItems = null;
   }
@@ -192,9 +192,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
           .withQuery(cql);
         return new RestClient().get(rq, ReceivingHistoryCollection.class, requestContext);
       })
-      .onFailure(t -> {
-        logger.error("Error happened retrieving receiving history", t);
-      });
+      .onFailure(t -> logger.error("Error happened retrieving receiving history", t));
   }
 
   private ReceivingResults prepareResponseBody(ReceivingCollection receivingCollection, Map<String, List<Piece>> piecesGroupedByPoLine) {

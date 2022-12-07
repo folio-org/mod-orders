@@ -39,7 +39,7 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
   private static final int LIMIT = Integer.MAX_VALUE;
   private static final String PIECES_ENDPOINT = resourcesPath(PIECES_STORAGE) + "?query=poLineId==%s&limit=%s";
 
-  private PurchaseOrderLineService purchaseOrderLineService;
+  private final PurchaseOrderLineService purchaseOrderLineService;
 
 
   @Autowired
@@ -64,35 +64,33 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
     String query = String.format(PIECES_ENDPOINT, poLineIdUpdate, LIMIT);
 
     // 1. Get all pieces for poLineId
-    getPieces(query, requestContext).onSuccess(listOfPieces -> {
-      // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
-      purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
-        .map(poLine -> {
-          if (poLine.getReceiptStatus()
-            .equals(PoLine.ReceiptStatus.ONGOING)) {
+    getPieces(query, requestContext).onSuccess(listOfPieces ->
+    // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
+    purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
+      .map(poLine -> {
+        if (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.ONGOING)) {
+          promise.complete();
+        }
+        calculatePoLineReceiptStatus(poLine, listOfPieces)
+          .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
+          .map(updatedPoLineId -> {
+            if (updatedPoLineId != null) {
+              // send event to update order status
+              updateOrderStatus(poLine, okapiHeaders, requestContext);
+            }
             promise.complete();
-          }
-          calculatePoLineReceiptStatus(poLine, listOfPieces)
-            .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
-            .map(updatedPoLineId -> {
-              if (updatedPoLineId != null) {
-                // send event to update order status
-                updateOrderStatus(poLine, okapiHeaders, requestContext);
-              }
-              promise.complete();
-              return null;
-            })
-            .onFailure(e -> {
-              logger.error("The error updating poLine by id {}", poLineIdUpdate, e);
-              promise.fail(e);
-            });
-          return null;
-        })
-        .onFailure(e -> {
-          logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
-          promise.fail(e);
-        });
-    })
+            return null;
+          })
+          .onFailure(e -> {
+            logger.error("The error updating poLine by id {}", poLineIdUpdate, e);
+            promise.fail(e);
+          });
+        return null;
+      })
+      .onFailure(e -> {
+        logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
+        promise.fail(e);
+      }))
       .onFailure(e -> {
         logger.error("The error happened getting all pieces by poLine {}", poLineIdUpdate, e);
         promise.fail(e);

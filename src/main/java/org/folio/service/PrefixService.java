@@ -1,7 +1,8 @@
 package org.folio.service;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.rest.core.exceptions.ErrorCodes.*;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.core.exceptions.ErrorCodes.PREFIX_IS_USED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PREFIX_NOT_FOUND;
 
 import org.apache.commons.lang3.StringUtils;

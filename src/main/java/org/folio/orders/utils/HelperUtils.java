@@ -6,11 +6,7 @@ import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
@@ -39,7 +35,6 @@ import javax.money.Monetary;
 import javax.money.MonetaryAmount;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
-import javax.ws.rs.Path;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
@@ -98,12 +93,6 @@ public class HelperUtils {
   private static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String LANG = "lang";
   public static final String URL_WITH_LANG_PARAM = "%s?" + LANG + "=%s";
-  private static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES_STORAGE) + "?limit=%s&query=purchaseOrderId==%s&" + LANG + "=%s";
-  private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER_STORAGE) + URL_WITH_LANG_PARAM;
-
-  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
-  private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
-  private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
   public static final String WORKFLOW_STATUS = "workflowStatus";
 
   private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE);
@@ -119,15 +108,6 @@ public class HelperUtils {
       .forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
     return okapiHeaders;
   }
-
-
-  /**
-   *  Retrieves PO lines from storage by PO id as List<JsonObjects> of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
-   */
-
-
-
-
 
   /**
    * @param query string representing CQL query
@@ -454,15 +434,6 @@ public class HelperUtils {
   }
 
 
-
-
-
-  public static List<PoLine> convertJsonToPoLines(List<JsonObject> linesArray) {
-    return linesArray.stream()
-                     .map(json -> json.mapTo(PoLine.class))
-                     .collect(toList());
-  }
-
   public static List<PoLine> convertToPoLines(List<CompositePoLine> compositePoLines) {
     return compositePoLines
       .stream()
@@ -480,10 +451,6 @@ public class HelperUtils {
     return null;
   }
 
-  public static String getEndpoint(Class<?> clazz) {
-    return clazz.getAnnotation(Path.class).value();
-  }
-
   /**
    * Check the number of titles per po line.
    * @param lineIdTitles Map po line id -> list of titles
@@ -492,10 +459,6 @@ public class HelperUtils {
   public static void verifyTitles(Map<String, List<Title>> lineIdTitles, Map<String, CompositePoLine> poLineById) {
     verifyAllTitlesExist(lineIdTitles, poLineById);
     verifyNonPackageLinesHaveSingleTitle(lineIdTitles, poLineById);
-  }
-
-  public static JsonObject convertToJson(Object data) {
-    return data instanceof JsonObject ? (JsonObject) data : JsonObject.mapFrom(data);
   }
 
   private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> titles,

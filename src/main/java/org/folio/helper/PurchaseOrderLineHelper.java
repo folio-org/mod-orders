@@ -52,8 +52,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.models.ItemStatus;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.models.ItemStatus;
-import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFieldsUtil;
