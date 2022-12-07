@@ -103,11 +103,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.common.collect.Lists;
-import org.folio.rest.acq.model.finance.Budget;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.orders.utils.FundDistributionUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -127,24 +122,51 @@ import org.folio.HttpStatus;
 import org.folio.TestUtils;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
+import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.orders.utils.POLineFieldNames;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.rest.jaxrs.model.Tags;
+import org.folio.rest.jaxrs.model.ValidateFundDistributionsRequest;
 import org.hamcrest.Matchers;
 import org.junit.Ignore;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+import com.google.common.collect.Lists;
 
 import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import io.vertx.junit5.VertxExtension;
 
+@ExtendWith(VertxExtension.class)
 public class PurchaseOrderLinesApiTest {
 
   private static final Logger logger = LogManager.getLogger();

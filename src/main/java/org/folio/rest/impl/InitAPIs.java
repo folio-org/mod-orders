@@ -24,12 +24,14 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.core.spi.VerticleFactory;
 
+import javax.money.convert.MonetaryConversions;
+
 /**
  * The class initializes vertx context adding spring context
  */
 public class InitAPIs implements InitAPI {
 
-  private final Logger LOGGER = LogManager.getLogger();
+  private final Logger log = LogManager.getLogger();
 
   private static final String SPRING_CONTEXT_KEY = "springContext";
 
@@ -48,6 +50,7 @@ public class InitAPIs implements InitAPI {
         DatabindCodec.mapper().setConfig(deserializationConfig);
         DatabindCodec.prettyMapper().setConfig(deserializationConfig);
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+        initJavaMoney();
         handler.complete();
 
 //        TODO: will be uncommented in scope of the https://issues.folio.org/browse/MODORDERS-773
@@ -60,12 +63,12 @@ public class InitAPIs implements InitAPI {
 //            handler.handle(Future.failedFuture(th));
 //            LOGGER.error("Consumer Verticles were not started", th);
 //          });
-      },
-      result -> {
+      })
+      .onComplete(result -> {
         if (result.succeeded()) {
           resultHandler.handle(Future.succeededFuture(true));
         } else {
-          LOGGER.error("Failure to init API", result.cause());
+          log.error("Failure to init API", result.cause());
           resultHandler.handle(Future.failedFuture(result.cause()));
         }
       });
@@ -88,5 +91,13 @@ public class InitAPIs implements InitAPI {
 
   private <T> String getVerticleName(VerticleFactory verticleFactory, Class<T> clazz) {
     return verticleFactory.prefix() + ":" + clazz.getName();
+  }
+
+  private void initJavaMoney() {
+    try {
+      log.info("Available currency rates providers {}", MonetaryConversions.getDefaultConversionProviderChain());
+    } catch (Exception e){
+      log.error("Java Money API preload failed", e);
+    }
   }
 }

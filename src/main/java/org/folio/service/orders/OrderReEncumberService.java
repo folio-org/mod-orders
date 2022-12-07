@@ -104,7 +104,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
               return Future.succeededFuture(orderRetrieveHolder.withNeedReEncumber(true));
             }
             return rolloverErrorService.getLedgerFyRolloverErrors(orderRetrieveHolder.getOrderId(), requestContext)
-              .map(ledgerFiscalYearRolloverErrorCollection -> ledgerFiscalYearRolloverErrorCollection.getLedgerFiscalYearRolloverErrors())
+              .map(LedgerFiscalYearRolloverErrorCollection::getLedgerFiscalYearRolloverErrors)
               .map(ledgerFyRolloverErrors -> orderRetrieveHolder.withNeedReEncumber(!ledgerFyRolloverErrors.isEmpty()));
           }));
       });

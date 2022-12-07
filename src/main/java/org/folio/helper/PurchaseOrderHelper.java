@@ -381,10 +381,15 @@ public class PurchaseOrderHelper {
    * @return completable future with {@link CompositePurchaseOrder} on success or an exception if processing fails
    */
   public Future<CompositePurchaseOrder> getCompositeOrder(String orderId, RequestContext requestContext) {
-    return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(orderId, requestContext)
+    Promise<CompositePurchaseOrder> promise = Promise.promise();
+    purchaseOrderStorageService.getPurchaseOrderByIdAsJson(orderId, requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
       .compose(compPO -> protectionService.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ, requestContext)
-            .onFailure(t -> logger.error("User with id={} is forbidden to view order with id={}", getCurrentUserId(requestContext.getHeaders()), orderId, t.getCause()))
+            .onFailure(t -> {
+              logger.error("User with id={} is forbidden to view order with id={}", getCurrentUserId(requestContext.getHeaders()), orderId, t.getCause());
+              promise.fail(t);
+              }
+            )
             .compose(ok -> purchaseOrderLineService.populateOrderLines(compPO, requestContext)
               .compose(compPOWithLines -> titlesService.fetchNonPackageTitles(compPOWithLines, requestContext))
               .map(linesIdTitles -> {
@@ -393,7 +398,12 @@ public class PurchaseOrderHelper {
               })
               .compose(po -> combinedPopulateService.populate(new CompositeOrderRetrieveHolder(compPO), requestContext)))
             .map(CompositeOrderRetrieveHolder::getOrder))
-      .onFailure(t -> logger.error("Failed to build composite purchase order with id={}", orderId, t.getCause()));
+      .onSuccess(promise::complete)
+      .onFailure(t -> {
+        logger.error("Failed to build composite purchase order with id={}", orderId, t.getCause());
+        promise.fail(t);
+      });
+    return promise.future();
   }
 
   /**

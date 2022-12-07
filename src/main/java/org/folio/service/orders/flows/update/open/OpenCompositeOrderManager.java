@@ -63,15 +63,18 @@ public class OpenCompositeOrderManager {
    * @return CompletableFuture that indicates when transition is completed
    */
   public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, JsonObject config, RequestContext requestContext) {
-      return AsyncUtil.executeBlocking(requestContext.getContext(), false, () -> updateIncomingOrder(compPO, poFromStorage))
-        .compose(aVoid -> openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext))
+      updateIncomingOrder(compPO, poFromStorage);
+      return openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext)
         .compose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
         .compose(linesIdTitles -> {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
           return openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext);
         })
         .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
-        .onSuccess(ok -> changePoLineStatuses(compPO))
+        .map(ok -> {
+          changePoLineStatuses(compPO);
+          return null;
+        })
         .compose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext));
   }
 

@@ -196,8 +196,7 @@ public class PurchaseOrderLineHelper {
             // The PO Line can be created only for order in Pending state
             .map(this::validateOrderState)
             .compose(po -> protectionService.isOperationRestricted(po.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
-            .compose(v -> createPoLine(compPOL, po, requestContext)))
-            .onFailure(f -> logger.error("asd"));
+            .compose(v -> createPoLine(compPOL, po, requestContext)));
         } else {
             Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
             logger.error("Create POL validation error : {}", JsonObject.mapFrom(errors).encodePrettily());

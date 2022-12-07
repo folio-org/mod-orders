@@ -155,8 +155,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  FinanceExchangeRateService rateOfExchangeService() {
-    return new FinanceExchangeRateService();
+  FinanceExchangeRateService financeExchangeRateService(RestClient restClient) {
+    return new FinanceExchangeRateService(restClient);
   }
 
   @Bean PurchaseOrderStorageService purchaseOrderService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService) {

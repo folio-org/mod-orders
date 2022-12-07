@@ -33,8 +33,7 @@ public class RolloverErrorService {
     public Future<LedgerFiscalYearRolloverErrorCollection> getLedgerFyRolloverErrors(String orderId, RequestContext requestContext) {
         String query = "details.purchaseOrderId==" + orderId;
         RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
-        return restClient.get(requestEntry, LedgerFiscalYearRolloverErrorCollection.class, requestContext)
-          .map(v-> v);
+        return restClient.get(requestEntry, LedgerFiscalYearRolloverErrorCollection.class, requestContext);
     }
 
     public Future<Void> deleteRolloverErrors(List<LedgerFiscalYearRolloverError> errors, RequestContext requestContext) {

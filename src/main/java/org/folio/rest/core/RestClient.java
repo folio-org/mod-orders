@@ -59,7 +59,10 @@ public class RestClient {
   }
 
   private MultiMap convertToCaseInsensitiveMap(Map<String, String> okapiHeaders) {
-    return MultiMap.caseInsensitiveMultiMap().addAll(okapiHeaders);
+    return MultiMap.caseInsensitiveMultiMap()
+      .addAll(okapiHeaders)
+      // set default Accept header
+      .add("Accept", APPLICATION_JSON + ", " + TEXT_PLAIN);
   }
 
   public <T> Future<Void> put(RequestEntry requestEntry, T dataObject, RequestContext requestContext) {
@@ -96,10 +99,10 @@ public class RestClient {
     Promise<Void> promise = Promise.promise();
 
     return getVertxWebClient(requestContext.getContext())
-      .request(HttpMethod.PATCH, buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .patchAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
       .putHeaders(caseInsensitiveHeader)
       .expect(SUCCESS_RESPONSE_PREDICATE)
-      .send()
+      .sendJson(dataObject)
       .onSuccess(json -> promise.complete())
       .onFailure(log::error)
       .mapEmpty();
@@ -171,6 +174,7 @@ public class RestClient {
     getVertxWebClient(requestContext.getContext())
       .getAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
       .putHeaders(caseInsensitiveHeader)
+      .putHeader("Accept", APPLICATION_JSON + ", " + TEXT_PLAIN)
       .expect(SUCCESS_RESPONSE_PREDICATE)
       .send()
       .map(HttpResponse::bodyAsJsonObject)
@@ -254,7 +258,7 @@ public class RestClient {
       .expect(SUCCESS_RESPONSE_PREDICATE)
       .sendJsonObject(entity)
       .map(this::extractRecordId)
-      .onFailure(t -> log.error("error ocured invoking POST {}", requestEntry.buildEndpoint()));
+      .onFailure(t -> log.error("error occurred invoking POST {}", requestEntry.buildEndpoint()));
   }
 
   public Future<JsonObject> postJsonObject(RequestEntry requestEntry, JsonObject jsonObject, RequestContext requestContext) {
@@ -273,6 +277,6 @@ public class RestClient {
           .bodyAsJsonObject()
           .put(ID, id);
       })
-      .onFailure(t -> log.error("error occured invoking POST {}", endpoint));
+      .onFailure(t -> log.error("error occurred invoking POST {}", endpoint));
   }
 }

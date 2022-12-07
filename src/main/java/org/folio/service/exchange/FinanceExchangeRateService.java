@@ -16,8 +16,8 @@ public class FinanceExchangeRateService {
   private static final String ENDPOINT = ResourcePathResolver.resourcesPath(FINANCE_EXCHANGE_RATE);
   private final RestClient restClient;
 
-  public FinanceExchangeRateService() {
-    this.restClient = new RestClient();
+  public FinanceExchangeRateService(RestClient restClient) {
+    this.restClient = restClient;
   }
 
   public CompletableFuture<ExchangeRate> getExchangeRate(String from, String to, RequestContext requestContext) {

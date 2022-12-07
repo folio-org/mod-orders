@@ -69,14 +69,14 @@ public class TransactionSummariesService {
       // update or create summary if not exists
       if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
         getOrderTransactionSummary(orderId, requestContext).onComplete(result -> {
-          if (result.succeeded()) {
+          if (result.succeeded() && result.result() != null) {
             updateOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
               .onSuccess(a -> promise.complete())
               .onFailure(promise::fail);
           } else if (result.result() == null) {
             createOrderTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
               .onSuccess(a -> promise.complete())
-               .onFailure(promise::fail);
+              .onFailure(promise::fail);
           } else {
             promise.fail(result.cause());
           }

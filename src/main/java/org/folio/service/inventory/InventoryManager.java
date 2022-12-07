@@ -747,7 +747,8 @@ public class InventoryManager {
 
   public Future<JsonObject> getEntryId(String entryType, ErrorCodes errorCode, RequestContext requestContext) {
     Promise<JsonObject> promise = Promise.promise();
-    SharedData sharedData = Vertx.vertx().sharedData();
+    var vertx = requestContext.getContext().owner();
+    SharedData sharedData = vertx.sharedData();
     String lockName = TenantTool.tenantId(requestContext.getHeaders()) + "." + entryType;
 
     sharedData.getLock(lockName, lockResult -> {
@@ -755,7 +756,7 @@ public class InventoryManager {
         logger.debug("Got lock {}", lockName);
         Lock lock = lockResult.result();
         try {
-          Vertx.vertx().setTimer(30000, timerId -> releaseLock(lock, lockName));
+          vertx.setTimer(30000, timerId -> releaseLock(lock, lockName));
           getAndCache(entryType, requestContext).onComplete(result -> {
             releaseLock(lock, lockName);
             if (result.succeeded()) {

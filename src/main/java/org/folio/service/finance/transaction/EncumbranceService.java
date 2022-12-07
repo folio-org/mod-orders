@@ -232,14 +232,17 @@ public class EncumbranceService {
     // before deleting encumbrances, set the fund distribution encumbrance to null if a new encumbrance has not been created
     // (as with pending->pending)
     holders.stream()
-      .filter(erh -> erh.getFundDistribution() != null &&
-        erh.getOldEncumbrance().getId().equals(erh.getFundDistribution().getEncumbrance()))
+      .filter(erh -> erh.getFundDistribution() != null && erh.getOldEncumbrance().getId().equals(erh.getFundDistribution().getEncumbrance()))
       .forEach(erh -> erh.getFundDistribution().setEncumbrance(null));
-    List<Transaction> transactions = holders.stream().map(EncumbranceRelationsHolder::getOldEncumbrance).collect(toList());
-    if (transactions.size() == 0)
+    List<Transaction> transactions = holders.stream()
+      .map(EncumbranceRelationsHolder::getOldEncumbrance)
+      .collect(toList());
+    if (transactions.isEmpty()) {
       return Future.succeededFuture();
-    return transactionService.deleteTransactions(transactions, requestContext)
-      .compose(v -> deleteEncumbranceLinksInInvoiceLines(transactions, requestContext));
+    } else {
+      return transactionService.deleteTransactions(transactions, requestContext)
+        .compose(v -> deleteEncumbranceLinksInInvoiceLines(transactions, requestContext));
+    }
   }
 
   public Future<Void> deletePoLineEncumbrances(PoLine poline, RequestContext requestContext) {

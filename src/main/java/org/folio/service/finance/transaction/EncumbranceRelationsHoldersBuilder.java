@@ -175,18 +175,25 @@ public class EncumbranceRelationsHoldersBuilder {
   }
 
   public Future<List<EncumbranceRelationsHolder>> withConversion(List<EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
-    return encumbranceHolders.stream().map(EncumbranceRelationsHolder::getCurrency)
-        .filter(Objects::nonNull).findFirst().map(transactionCurrency ->
-        requestContext.getContext().<List<EncumbranceRelationsHolder>>executeBlocking(execBlockingFuture ->  {
-          Map<String, List<EncumbranceRelationsHolder>> currencyHolderMap = encumbranceHolders.stream().filter(holder -> Objects.nonNull(holder.getPoLine())).collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
+    return encumbranceHolders.stream()
+      .map(EncumbranceRelationsHolder::getCurrency)
+      .filter(Objects::nonNull)
+      .findFirst()
+      .map(transactionCurrency -> requestContext.getContext()
+        .<List<EncumbranceRelationsHolder>>executeBlocking(execBlockingFuture -> {
+          Map<String, List<EncumbranceRelationsHolder>> currencyHolderMap = encumbranceHolders.stream()
+            .filter(holder -> Objects.nonNull(holder.getPoLine()))
+            .collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
+
           currencyHolderMap.forEach((poLineCurrency, encumbranceRelationsHolders) -> {
             Double exchangeRate = encumbranceRelationsHolders.stream()
-                .map(EncumbranceRelationsHolder::getPoLine)
-                .map(CompositePoLine::getCost)
-                .map(Cost::getExchangeRate)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+              .map(EncumbranceRelationsHolder::getPoLine)
+              .map(CompositePoLine::getCost)
+              .map(Cost::getExchangeRate)
+              .filter(Objects::nonNull)
+              .findFirst()
+              .orElse(null);
+
             ConversionQuery conversionQuery = getConversionQuery(exchangeRate, poLineCurrency, transactionCurrency);
             ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
             CurrencyConversion conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
@@ -194,7 +201,7 @@ public class EncumbranceRelationsHoldersBuilder {
           });
           execBlockingFuture.complete(encumbranceHolders);
         }))
-        .orElseGet(() ->  Future.succeededFuture(encumbranceHolders));
+      .orElseGet(() -> Future.succeededFuture(encumbranceHolders));
   }
 
   private List<EncumbranceRelationsHolder> populateLedgerIds(List<Fund> funds,
