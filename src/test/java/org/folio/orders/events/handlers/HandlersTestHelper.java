@@ -47,7 +47,7 @@ public class HandlersTestHelper {
     // Wait until event bus registers message
 
     await().atLeast(100, MILLISECONDS)
-      .atMost(10, SECONDS)
+      .atMost(20, SECONDS)
       .until(() -> eventMessages, hasSize(msgQty));
     for (int i = 0; i < msgQty; i++) {
       Message<JsonObject> message = eventMessages.get(i);
