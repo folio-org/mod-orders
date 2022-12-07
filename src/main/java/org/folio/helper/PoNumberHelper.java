@@ -98,6 +98,25 @@ public class PoNumberHelper {
     return Future.succeededFuture();
   }
 
+  public CompletionStage<Void> validatePoNumberPrefixAndSuffix(CompositePurchaseOrder updatedPo) {
+    if(StringUtils.isNotEmpty(updatedPo.getPoNumberPrefix())) {
+      String prefix = updatedPo.getPoNumberPrefix();
+      if(!updatedPo.getPoNumber().startsWith(prefix)) {
+        logger.warn("Po Number {} is not starting with prefix {}", updatedPo.getPoNumber(), prefix);
+        throw new HttpException(400, ErrorCodes.PO_NUMBER_PREFIX_REQUIRED);
+      }
+    }
+
+    if(StringUtils.isNotEmpty(updatedPo.getPoNumberSuffix())) {
+      String suffix = updatedPo.getPoNumberSuffix();
+      if(!updatedPo.getPoNumber().endsWith(suffix)) {
+        logger.warn("Po Number {} is not ending with suffix {}", updatedPo.getPoNumber(), suffix);
+        throw new HttpException(400, ErrorCodes.PO_NUMBER_SUFFIX_REQUIRED);
+      }
+    }
+    return completedFuture(null);
+  }
+
   public static boolean isPoNumberChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
     return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
   }

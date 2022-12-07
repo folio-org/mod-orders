@@ -1130,8 +1130,6 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
-  @Ignore
-  @Disabled
   void testUpdatePoLineForOpenedOrderShouldFailedWhenRelatedInvoiceLineApprovedForCurrentFY() {
     logger.info("=== Test update poline for opened order should failed when related invoice line is approved  ===");
 

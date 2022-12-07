@@ -36,61 +36,62 @@ public class PoLineInvoiceLineHolderBuilder {
     this.encumbranceService = encumbranceService;
   }
 
-  public Future<PoLineInvoiceLineHolder> buildHolder(CompositePoLine compOrderLine, JsonObject poLineFromStorage, RequestContext requestContext) {
+  public CompletableFuture<PoLineInvoiceLineHolder> buildHolder(CompositePoLine compOrderLine, JsonObject poLineFromStorage, RequestContext requestContext) {
     PoLineInvoiceLineHolder holder = new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage);
     return invoiceLineService.getInvoiceLinesByOrderLineId(compOrderLine.getId(), requestContext)
-      .onSuccess(holder::withInvoiceLines)
-      .compose(aResult -> CollectionUtils.isEmpty(holder.getInvoiceLines()) ? Future.succeededFuture(holder) :
-        Future.succeededFuture(getOpenOrReviewedInvoiceLines(holder.getInvoiceLines()))
-          .onSuccess(holder::withOpenOrReviewedInvoiceLines)
-          .compose(aVoid -> validateAndRetrievePaidInvoiceLines(compOrderLine, holder.getInvoiceLines(), requestContext))
-          .onSuccess(holder::withCurrentYearPaidInvoiceLines)
-          .map(aVoid -> holder));
+      .thenAccept(holder::withInvoiceLines)
+      .thenCompose(aResult -> CollectionUtils.isEmpty(holder.getInvoiceLines()) ? CompletableFuture.completedFuture(holder) :
+        CompletableFuture.completedFuture(getOpenOrReviewedInvoiceLines(holder.getInvoiceLines()))
+          .thenAccept(holder::withOpenOrReviewedInvoiceLines)
+          .thenCompose(aVoid -> validateAndRetrievePaidInvoiceLines(compOrderLine, holder.getInvoiceLines(), requestContext))
+          .thenAccept(holder::withCurrentYearPaidInvoiceLines)
+          .thenApply(aVoid -> holder));
   }
 
-  private Future<List<InvoiceLine>> validateAndRetrievePaidInvoiceLines(CompositePoLine compOrderLine, List<InvoiceLine> invoiceLines, RequestContext requestContext) {
+  private CompletableFuture<List<InvoiceLine>> validateAndRetrievePaidInvoiceLines(CompositePoLine compOrderLine, List<InvoiceLine> invoiceLines, RequestContext requestContext) {
     Optional<FundDistribution> optionalFundDistribution = compOrderLine.getFundDistribution().stream().findFirst();
     if (optionalFundDistribution.isPresent()) {
       String poLineFundId = optionalFundDistribution.get().getFundId();
       return getCurrentFiscalYearInvoiceLines(poLineFundId, invoiceLines, requestContext)
-        .map(currentYearInvoiceLines -> {
-//          validateInvoiceLinesStatus(currentYearInvoiceLines);
+        .thenApply(currentYearInvoiceLines -> {
+          validateInvoiceLinesStatus(currentYearInvoiceLines);
           return getPaidOrCancelledInvoiceLines(currentYearInvoiceLines);
         });
     } else {
-      return Future.succeededFuture(); //Should ask Dennis what we should do in case of POL doesn't have fund distribution (Delete the comment after receiving a response)
+      return CompletableFuture.completedFuture(null); //Should ask Dennis what we should do in case of POL doesn't have fund distribution (Delete the comment after receiving a response)
     }
   }
 
-  private Future<List<InvoiceLine>> getCurrentFiscalYearInvoiceLines(String poLineFundId, List<InvoiceLine> invoiceLines, RequestContext requestContext) {
+  private CompletableFuture<List<InvoiceLine>> getCurrentFiscalYearInvoiceLines(String poLineFundId, List<InvoiceLine> invoiceLines, RequestContext requestContext) {
     Map<String, String> encumbranceIdsByInvoiceLineId = getEncumbranceIdsByInvoiceLines(invoiceLines);
     List<String> encumbranceIds = encumbranceIdsByInvoiceLineId.values().stream().filter(Objects::nonNull).collect(Collectors.toList());
 
     // One low-cost way to determine the fiscal year of an invoice line is to extract the fiscalYearId field from the encumbrance body.
     return encumbranceService.getEncumbrancesByIds(encumbranceIds, requestContext)
       // We need to determine the current fiscal year of CompositePOL to cut off invoices that belong to other fiscal years.
-      .compose(encumbrances -> fiscalYearService.getCurrentFiscalYearByFundId(poLineFundId, requestContext)
-        .map(fiscalYear -> {
-          List<String> currentFYEncumbranceIds = encumbrances.stream()
-            .filter(encumbrance -> Objects.equals(encumbrance.getFiscalYearId(), fiscalYear.getId()))
-            .map(Transaction::getId)
-            .collect(Collectors.toList());
-          return invoiceLines.stream()
-            .filter(invoiceLine -> {
-              String encumbranceId = encumbranceIdsByInvoiceLineId.get(invoiceLine.getId());
-              // When encumbranceId is null encumbrance for the invoice line has not yet been created.
-              // We can assign it to the current fiscal year.
-              return currentFYEncumbranceIds.contains(encumbranceId) || Objects.isNull(encumbranceId);
-            })
-            .collect(Collectors.toList());
-        }));
+      .thenCombine(fiscalYearService.getCurrentFiscalYearByFundId(poLineFundId, requestContext), (encumbrances, fiscalYear) -> {
+        // The list contains all encumbranceIds belonging to the current fiscal year.
+        List<String> currentFYEncumbranceIds = encumbrances
+          .stream()
+          .filter(encumbrance -> Objects.equals(encumbrance.getFiscalYearId(), fiscalYear.getId()))
+          .map(Transaction::getId)
+          .collect(Collectors.toList());
+
+        return invoiceLines.stream().filter(invoiceLine -> {
+            String encumbranceId = encumbranceIdsByInvoiceLineId.get(invoiceLine.getId());
+            // When encumbranceId is null encumbrance for the invoice line has not yet been created.
+            // We can assign it to the current fiscal year.
+            return currentFYEncumbranceIds.contains(encumbranceId) || Objects.isNull(encumbranceId);
+          }).collect(Collectors.toList());
+      });
   }
 
   private void validateInvoiceLinesStatus(List<InvoiceLine> invoiceLines) {
     List<InvoiceLine> approvedInvoices = filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.APPROVED));
     if (CollectionUtils.isNotEmpty(approvedInvoices)) {
       String invoiceLineIds = approvedInvoices.stream().map(InvoiceLine::getId).collect(Collectors.joining(", "));
-      throw new HttpException(HttpStatus.SC_FORBIDDEN, String.format("Composite POL related invoice lines contains lines which has status APPROVED for the current fiscal year, invoice line ids: %s", invoiceLineIds));
+      String message = String.format(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getDescription(), invoiceLineIds);
+      throw new HttpException(HttpStatus.SC_FORBIDDEN, new Error().withCode(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getCode()).withMessage(message));
     }
   }
 
