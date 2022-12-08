@@ -70,21 +70,21 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
       .map(poLine -> {
         if (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.ONGOING)) {
           promise.complete();
-        }
-        calculatePoLineReceiptStatus(poLine, listOfPieces)
-          .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
-          .map(updatedPoLineId -> {
+        } else {
+          calculatePoLineReceiptStatus(poLine, listOfPieces)
+            .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
+            .map(updatedPoLineId -> {
             if (updatedPoLineId != null) {
               // send event to update order status
               updateOrderStatus(poLine, okapiHeaders, requestContext);
             }
             promise.complete();
             return null;
-          })
-          .onFailure(e -> {
+          }).onFailure(e -> {
             logger.error("The error updating poLine by id {}", poLineIdUpdate, e);
             promise.fail(e);
           });
+        }
         return null;
       })
       .onFailure(e -> {
