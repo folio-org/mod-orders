@@ -1,14 +1,15 @@
 package org.folio.verticle.consumers;
 
-import io.vertx.core.Promise;
-import io.vertx.core.Verticle;
-import io.vertx.core.spi.VerticleFactory;
+import java.util.concurrent.Callable;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.Callable;
+import io.vertx.core.Promise;
+import io.vertx.core.Verticle;
+import io.vertx.core.spi.VerticleFactory;
 
 /**
  * Factory, that allows to implement verticles as Spring beans.

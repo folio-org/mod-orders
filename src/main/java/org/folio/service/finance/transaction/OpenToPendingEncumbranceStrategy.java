@@ -1,13 +1,14 @@
 package org.folio.service.finance.transaction;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.orders.OrderWorkflowType;
+
+import io.vertx.core.Future;
 
 public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
@@ -24,14 +25,14 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
   }
 
     @Override
-    public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+    public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
         RequestContext requestContext) {
 
       return getOrderEncumbrances(compPO, poAndLinesFromStorage, requestContext)
-                .thenApply(this::makeEncumbrancesPending)
-                .thenCompose(transactions -> transactionSummariesService.updateOrderTransactionSummary(compPO.getId(), transactions.size(), requestContext)
-                    .thenApply(vVoid -> transactions))
-                .thenCompose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
+                .map(this::makeEncumbrancesPending)
+                .compose(transactions -> transactionSummariesService.updateOrderTransactionSummary(compPO.getId(), transactions.size(), requestContext)
+                    .map(vVoid -> transactions))
+                .compose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
     }
 
     private List<Transaction> makeEncumbrancesPending(List<Transaction> encumbrances) {
@@ -49,10 +50,10 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
     return OrderWorkflowType.OPEN_TO_PENDING;
   }
 
-  public CompletableFuture<List<Transaction>> getOrderEncumbrances(CompositePurchaseOrder compPo,
+  public Future<List<Transaction>> getOrderEncumbrances(CompositePurchaseOrder compPo,
       CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
 
     return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPo, poFromStorage, requestContext)
-      .thenCompose(poLinesByCurrentFy -> encumbranceService.getEncumbrancesByPoLinesFromCurrentFy(poLinesByCurrentFy, requestContext));
+      .compose(poLinesByCurrentFy -> encumbranceService.getEncumbrancesByPoLinesFromCurrentFy(poLinesByCurrentFy, requestContext));
   }
 }

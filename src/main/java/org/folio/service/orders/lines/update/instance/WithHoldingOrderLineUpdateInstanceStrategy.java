@@ -7,29 +7,30 @@ import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.inventory.InventoryManager;
-
-import io.vertx.core.json.JsonObject;
 import org.folio.service.pieces.PieceStorageService;
+
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.StreamEx;
 
 
 public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
@@ -41,7 +42,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     this.pieceStorageService = pieceStorageService;
   }
 
-  protected CompletableFuture<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+  protected Future<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
     if (Objects.nonNull(holder.getPatchOrderLineRequest().getReplaceInstanceRef())) {
       ReplaceInstanceRef replaceInstanceRef = holder.getPatchOrderLineRequest().getReplaceInstanceRef();
       String newInstanceId = replaceInstanceRef.getNewInstanceId();
@@ -53,65 +54,67 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           return moveHoldings(holder, newInstanceId, requestContext);
         case FIND_OR_CREATE:
           return findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
-              .thenAccept(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(),
-                  holder.getStoragePoLine(), requestContext));
+            // TODO: onSuccess or compose ???
+              .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
         case CREATE:
           return createHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
-              .thenAccept(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(),
-                  holder.getStoragePoLine(), requestContext));
+              .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
       case NONE:
         default:
-          return CompletableFuture.completedFuture(null);
+          return Future.succeededFuture();
       }
     } else {
-      return CompletableFuture.completedFuture(null);
+      return Future.succeededFuture();
     }
   }
 
 
-  private CompletableFuture<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
+  private Future<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
     return pieceStorageService.getPiecesByPoLineId(PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine()), requestContext)
-      .thenApply(pieces -> extractUniqueHoldingIds(pieces, holder.getStoragePoLine().getLocations()))
-      .thenCompose(holdingIds -> {
+      .map(pieces -> extractUniqueHoldingIds(pieces, holder.getStoragePoLine().getLocations()))
+      .compose(holdingIds -> {
         holdingIds.forEach(holdingId -> holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, holdingId));
         return inventoryManager.getHoldingsByIds(holdingIds, requestContext);
-      }).thenCompose(holdings -> inventoryManager.updateInstanceForHoldingRecords(holdings, newInstanceId, requestContext));
+      }).compose(holdings -> inventoryManager.updateInstanceForHoldingRecords(holdings, newInstanceId, requestContext));
   }
 
-  private CompletableFuture<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
+  private Future<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
       String newInstanceId, RequestContext requestContext) {
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    List<Future<Void>> futures = new ArrayList<>();
     return retrieveUniqueLocationsAndConsume(holder, requestContext, location -> {
       String holdingId = location.getHoldingId();
       futures.add(inventoryManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, requestContext)
-        .thenCompose(newHoldingId -> {
+        .compose(newHoldingId -> {
           holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
           if (ObjectUtils.notEqual(holdingId, newHoldingId)) {
             return updateItemsHolding(holdingId, newHoldingId, holder.getStoragePoLine().getId(), requestContext);
           } else {
-            return CompletableFuture.completedFuture(null);
+            return Future.succeededFuture();
           }
         }));
-    }).thenCompose(v -> CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])));
+    })
+      .compose(v -> GenericCompositeFuture.join(new ArrayList<>(futures))
+        .map(ok -> null));
   }
 
-  private CompletableFuture<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
+  private Future<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
       String newInstanceId, RequestContext requestContext) {
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    List<Future<Void>> futures = new ArrayList<>();
     return retrieveUniqueLocationsAndConsume(holder, requestContext, location -> {
       String holdingId = location.getHoldingId();
       futures.add(inventoryManager.createHolding(newInstanceId, location, requestContext)
-        .thenCompose(newHoldingId -> {
+        .compose(newHoldingId -> {
           holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
           return updateItemsHolding(holdingId, newHoldingId, holder.getStoragePoLine().getId(), requestContext);
         }));
-    }).thenCompose(v -> CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])));
+    }).compose(v -> GenericCompositeFuture.join(new ArrayList<>(futures)))
+      .mapEmpty();
   }
 
-  private CompletableFuture<Void> retrieveUniqueLocationsAndConsume(OrderLineUpdateInstanceHolder holder, RequestContext requestContext,
+  private Future<Void> retrieveUniqueLocationsAndConsume(OrderLineUpdateInstanceHolder holder, RequestContext requestContext,
                                                                     Consumer<Location> consumer) {
     return pieceStorageService.getPiecesByPoLineId(PoLineCommonUtil.convertToCompositePoLine(holder.getStoragePoLine()), requestContext)
-      .thenAccept(pieces -> {
+      .map(pieces -> {
         List<Location> pieceHoldingIds = pieces
           .stream()
           .map(piece -> new Location().withHoldingId(piece.getHoldingId()).withLocationId(piece.getLocationId()))
@@ -122,13 +125,15 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           .distinct(location -> String.format("%s %s", location.getLocationId(), location.getHoldingId()))
           .filter(location -> Objects.nonNull(location.getHoldingId()))
           .forEach(consumer);
-      });
+        return null;
+      })
+      .map(pieces -> null);
   }
 
-  private CompletableFuture<Void> updateItemsHolding(String holdingId, String newHoldingId, String poLineId, RequestContext requestContext) {
+  private Future<Void> updateItemsHolding(String holdingId, String newHoldingId, String poLineId, RequestContext requestContext) {
     return inventoryManager.getItemsByHoldingIdAndOrderLineId(holdingId, poLineId, requestContext)
-        .thenApply(items -> updateItemHoldingId(items, newHoldingId))
-        .thenCompose(items -> updateItemsInInventory(items, requestContext));
+        .map(items -> updateItemHoldingId(items, newHoldingId))
+        .compose(items -> updateItemsInInventory(items, requestContext));
   }
 
   private List<JsonObject> updateItemHoldingId(List<JsonObject> items, String holdingId) {
@@ -136,26 +141,28 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     return items;
   }
 
-  private CompletableFuture<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
+  private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
     List<Parameter> parameters = new ArrayList<>();
-    return CompletableFuture.allOf(items.stream()
-        .map(item -> inventoryManager.updateItem(item, requestContext)
-            .exceptionally(ex -> {
-              Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));
-              if (ex.getCause() instanceof HttpException){
-                HttpException httpException = (HttpException) ex.getCause();
-                parameter.withAdditionalProperty("originalError", httpException.getError().getMessage());
-              }
-              parameters.add(parameter);
-              return null;
-            }))
-        .toArray(CompletableFuture[]::new))
-        .thenAccept(v -> {
-      if (CollectionUtils.isNotEmpty(parameters)) {
-        Error error = ErrorCodes.ITEM_UPDATE_FAILED.toError().withParameters(parameters);
-        throw new HttpException(500, error);
-      }
-    });
+    return GenericCompositeFuture.join(items.stream()
+      .map(item -> inventoryManager.updateItem(item, requestContext)
+        .otherwise(ex -> {
+          Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));
+          if (ex.getCause() instanceof HttpException) {
+            HttpException httpException = (HttpException) ex.getCause();
+            parameter.withAdditionalProperty("originalError", httpException.getError().getMessage());
+          }
+          parameters.add(parameter);
+          return null;
+        }))
+      .collect(toList()))
+      .mapEmpty()
+      .map(v -> {
+        if (CollectionUtils.isNotEmpty(parameters)) {
+          Error error = ErrorCodes.ITEM_UPDATE_FAILED.toError().withParameters(parameters);
+          throw new HttpException(500, error);
+        }
+        return null;
+      });
   }
 
   private List<String> extractUniqueHoldingIds(List<Piece> pieces, List<Location> locations) {

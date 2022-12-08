@@ -1,6 +1,5 @@
 package org.folio.service.pieces.flows.delete;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
@@ -8,7 +7,6 @@ import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -30,6 +28,7 @@ import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class PieceDeleteFlowManager {
@@ -53,64 +52,68 @@ public class PieceDeleteFlowManager {
     this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
   }
 
-  public CompletableFuture<Void> deletePiece(String pieceId, boolean deleteHolding, RequestContext requestContext) {
+  public Future<Void> deletePiece(String pieceId, boolean deleteHolding, RequestContext requestContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(deleteHolding);
     return pieceStorageService.getPieceById(pieceId, requestContext)
-      .thenAccept(holder::withPieceToDelete)
-      .thenCompose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
-      .thenCompose(aVoid -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
-      .thenCompose(aVoid -> isDeletePieceRequestValid(holder, requestContext))
-      .thenCompose(aVoid -> processInventory(holder, requestContext))
-      .thenCompose(pair -> updatePoLine(holder, requestContext))
-      .thenCompose(aVoid -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext));
+      .map(pieceToDelete -> {
+        holder.withPieceToDelete(pieceToDelete); return null;
+      })
+      .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
+      .compose(aVoid -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
+      .compose(aVoid -> isDeletePieceRequestValid(holder, requestContext))
+      .compose(aVoid -> processInventory(holder, requestContext))
+      .compose(pair -> updatePoLine(holder, requestContext))
+      .compose(aVoid -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext));
   }
 
-  private CompletableFuture<Void> isDeletePieceRequestValid(PieceDeletionHolder holder, RequestContext requestContext) {
+  private Future<Void> isDeletePieceRequestValid(PieceDeletionHolder holder, RequestContext requestContext) {
     List<Error> combinedErrors = new ArrayList<>();
     if (holder.getPieceToDelete().getItemId() != null) {
-      return inventoryManager.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext).thenAccept(numOfRequests -> {
+      return inventoryManager.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext).onSuccess(numOfRequests -> {
         if (numOfRequests != null && numOfRequests > 0) {
           combinedErrors.add(ErrorCodes.REQUEST_FOUND.toError());
         }
-      }).thenAccept(numOfRequests -> {
+      }).map(numOfRequests -> {
         if (CollectionUtils.isNotEmpty(combinedErrors)) {
           Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
           logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
           throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
-      });
+        return null;
+      })
+        .mapEmpty();
     }
-    return completedFuture(null);
+    return Future.succeededFuture();
   }
 
-  private CompletableFuture<Pair<String, String>> processInventory(PieceDeletionHolder holder, RequestContext rqContext) {
-    return deleteItem(holder, rqContext)
-               .thenCompose(aVoid -> {
+  private Future<Pair<String, String>> processInventory(PieceDeletionHolder holder, RequestContext requestContext) {
+    return deleteItem(holder, requestContext)
+               .compose(aVoid -> {
                  if (holder.isDeleteHolding()) {
-                   return pieceUpdateInventoryService.deleteHoldingConnectedToPiece(holder.getPieceToDelete(), rqContext);
+                   return pieceUpdateInventoryService.deleteHoldingConnectedToPiece(holder.getPieceToDelete(), requestContext);
                  }
-                 return completedFuture(null);
+                 return Future.succeededFuture();
                });
   }
 
-  protected CompletableFuture<Void> updatePoLine(PieceDeletionHolder holder, RequestContext requestContext) {
+  protected Future<Void> updatePoLine(PieceDeletionHolder holder, RequestContext requestContext) {
     if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems())) {
       return  pieceDeleteFlowPoLineService.updatePoLine(holder, requestContext);
     }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture();
   }
 
-  private CompletableFuture<Void> deleteItem(PieceDeletionHolder holder, RequestContext rqContext) {
+  private Future<Void> deleteItem(PieceDeletionHolder holder, RequestContext requestContext) {
     Piece piece = holder.getPieceToDelete();
     if (piece.getItemId() != null) {
-      return getOnOrderItemForPiece(piece, rqContext).thenCompose(item -> {
+      return getOnOrderItemForPiece(piece, requestContext).compose(item -> {
         if (item != null) {
-          return inventoryManager.deleteItem(piece.getItemId(), true, rqContext);
+          return inventoryManager.deleteItem(piece.getItemId(), true, requestContext);
         }
-        return completedFuture(null);
+        return Future.succeededFuture();
       });
     }
-    return completedFuture(null);
+    return Future.succeededFuture();
   }
 
   private boolean isItemWithStatus(JsonObject item, String status) {
@@ -119,10 +122,10 @@ public class PieceDeleteFlowManager {
       .isPresent();
   }
 
-  private CompletableFuture<JsonObject> getOnOrderItemForPiece(Piece piece, RequestContext requestContext) {
+  private Future<JsonObject> getOnOrderItemForPiece(Piece piece, RequestContext requestContext) {
     if (StringUtils.isNotEmpty(piece.getItemId())) {
       return inventoryManager.getItemRecordById(piece.getItemId(), true, requestContext)
-        .thenApply(item -> {
+        .map(item -> {
           boolean isOnOrderItem = isItemWithStatus(item, ItemStatus.ON_ORDER.value());
           if (isOnOrderItem) {
             return item;
@@ -130,7 +133,7 @@ public class PieceDeleteFlowManager {
           return null;
         });
     } else {
-      return completedFuture(null);
+      return Future.succeededFuture();
     }
   }
 }

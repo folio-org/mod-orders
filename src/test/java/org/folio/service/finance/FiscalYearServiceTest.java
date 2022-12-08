@@ -13,13 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +25,7 @@ import org.mockito.MockitoAnnotations;
 
 import io.restassured.http.Header;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
 public class FiscalYearServiceTest {
@@ -43,8 +42,7 @@ public class FiscalYearServiceTest {
 
   @BeforeEach
   public void initMocks() {
-    ctxMock = Vertx.vertx()
-      .getOrCreateContext();
+    ctxMock = Vertx.vertx().getOrCreateContext();
     okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
@@ -52,7 +50,6 @@ public class FiscalYearServiceTest {
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     requestContextMock = new RequestContext(ctxMock, okapiHeadersMock);
-    httpClient = HttpClientFactory.getHttpClient(okapiURL, TENANT_ID);
     MockitoAnnotations.openMocks(this);
   }
 
@@ -62,15 +59,15 @@ public class FiscalYearServiceTest {
     String ledgerId = UUID.randomUUID()
       .toString();
     FiscalYear fy = fiscalYearService.getCurrentFiscalYear(ledgerId, requestContextMock)
-      .join();
+      .result();
     assertNotNull(fy);
   }
 
   @Test
   void testShouldThrowHttpException() {
 
-    CompletableFuture<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
-    CompletionException expectedException = assertThrows(CompletionException.class, result::join);
+    Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
+    CompletionException expectedException = assertThrows(CompletionException.class, result::result);
 
     HttpException httpException = (HttpException) expectedException.getCause();
     assertEquals(404, httpException.getCode());

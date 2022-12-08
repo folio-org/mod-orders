@@ -150,13 +150,8 @@ public class PieceServiceTest {
       return mock(PieceUpdateInventoryService.class);
     }
 
-    @Bean PieceService piecesService(PieceStorageService pieceStorageService, ProtectionService protectionService,
-                                PurchaseOrderLineService purchaseOrderLineService,
-                                InventoryManager inventoryManager, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-                                PurchaseOrderStorageService purchaseOrderStorageService,
-                                PieceUpdateInventoryService pieceUpdateInventoryService) {
-      return spy(new PieceService(pieceStorageService, protectionService, purchaseOrderLineService,
-                                    inventoryManager, receiptStatusPublisher, pieceUpdateInventoryService));
+    @Bean PieceService piecesService(PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+      return spy(new PieceService(receiptStatusPublisher));
     }
   }
 }

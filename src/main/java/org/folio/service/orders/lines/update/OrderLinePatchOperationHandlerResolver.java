@@ -1,8 +1,8 @@
 package org.folio.service.orders.lines.update;
 
-import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
-
 import java.util.Map;
+
+import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 
 public class OrderLinePatchOperationHandlerResolver {
   private final Map<PatchOrderLineRequest.Operation, PatchOperationHandler> handlers;

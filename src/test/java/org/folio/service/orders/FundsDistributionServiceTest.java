@@ -1,5 +1,14 @@
 package org.folio.service.orders;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+
+import javax.money.MonetaryAmount;
+import javax.money.convert.CurrencyConversion;
+
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -10,14 +19,6 @@ import org.folio.service.FundsDistributionService;
 import org.folio.service.exchange.ManualCurrencyConversion;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-
-import javax.money.MonetaryAmount;
-import javax.money.convert.CurrencyConversion;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 public class FundsDistributionServiceTest {
 

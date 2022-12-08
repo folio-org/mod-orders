@@ -3,11 +3,8 @@ package org.folio.helper;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
-import static org.folio.orders.utils.HelperUtils.handleGetRequest;
-import static org.folio.orders.utils.HelperUtils.updatePoLineReceiptStatus;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
@@ -25,14 +22,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -47,14 +45,14 @@ import org.folio.service.AcquisitionsUnitsService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private static final Logger logger = LogManager.getLogger(ReceivingHelper.class);
-  private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY) + SEARCH_PARAMS;
-
+  private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY);
   /**
    * Map with PO line id as a key and value is map with piece id as a key and {@link ReceivedItem} as a value
    */
@@ -62,8 +60,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   @Autowired
   private AcquisitionsUnitsService acquisitionsUnitsService;
 
-  public ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+  public ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx) {
+    super(okapiHeaders, ctx);
     // Convert request to map representation
     receivingItems = groupReceivedItemsByPoLineId(receivingCollection);
 
@@ -77,33 +75,33 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     }
   }
 
-  public ReceivingHelper(Map<String, String> okapiHeaders, Context ctx, String lang) {
-    super(getHttpClient(okapiHeaders), okapiHeaders, ctx, lang);
+  public ReceivingHelper(Map<String, String> okapiHeaders, Context ctx) {
+    super(okapiHeaders, ctx);
     receivingItems = null;
   }
 
-  public CompletableFuture<ReceivingResults> receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
+  public Future<ReceivingResults>   receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     return getPoLines(new ArrayList<>(receivingItems.keySet()), requestContext)
-      .thenCompose(poLines -> removeForbiddenEntities(poLines, receivingItems, requestContext))
-      .thenCompose(vVoid -> processReceiveItems(receivingCollection, requestContext));
+      .compose(poLines -> removeForbiddenEntities(poLines, receivingItems, requestContext))
+      .compose(vVoid -> processReceiveItems(receivingCollection, requestContext));
   }
 
-  private CompletableFuture<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
+  private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnReceiving(receivingCollection);
     // 1. Get piece records from storage
     return this.retrievePieceRecords(receivingItems, requestContext)
       // 2. Filter locationId
-      .thenCompose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
+      .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
-      .thenCompose(pieces -> updateInventoryItemsAndHoldings(pieceLocationsGroupedByPoLine, pieces, requestContext))
+      .compose(pieces -> updateInventoryItemsAndHoldings(pieceLocationsGroupedByPoLine, pieces, requestContext))
       // 4. Update piece records with receiving details which do not have associated item
-      .thenApply(this::updatePieceRecordsWithoutItems)
+      .map(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
-      .thenCompose(this::storeUpdatedPieceRecords)
+      .compose(piecesByPoLineIds -> storeUpdatedPieceRecords(piecesByPoLineIds, requestContext))
       // 6. Update PO Line status
-      .thenCompose(piecesByPoLineIds -> updatePoLinesStatus(piecesByPoLineIds, requestContext))
+      .compose(piecesByPoLineIds -> updatePoLinesStatus(piecesByPoLineIds, requestContext))
       // 7. Return results to the client
-      .thenApply(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
+      .map(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
 
   /**
@@ -114,26 +112,26 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
    *          value
    * @return map passed as a parameter
    */
-  protected CompletableFuture<Map<String, List<Piece>>> updatePoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
+  protected Future<Map<String, List<Piece>>> updatePoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
     if (piecesGroupedByPoLine.isEmpty()) {
-      return CompletableFuture.completedFuture(piecesGroupedByPoLine);
+      return Future.succeededFuture(piecesGroupedByPoLine);
     } else {
       List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
       // Once all PO Lines are retrieved from storage check if receipt status
       // requires update and persist in storage
-      return getPoLines(poLineIdsForUpdatedPieces, requestContext).thenCompose(poLines -> {
+      return getPoLines(poLineIdsForUpdatedPieces, requestContext).compose(poLines -> {
         // Calculate expected status for each PO Line and update with new one if required
         // Skip status update if PO line status is Ongoing
-        List<CompletableFuture<String>> futures = new ArrayList<>();
+        List<Future<String>> futures = new ArrayList<>();
         for (PoLine poLine : poLines) {
           if (!poLine.getPaymentStatus().equals(PoLine.PaymentStatus.ONGOING)) {
             List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
-            futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces)
-              .thenCompose(status -> updatePoLineReceiptStatus(poLine, status, httpClient, okapiHeaders, logger)));
+            futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces, requestContext)
+              .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext)));
           }
         }
 
-        return collectResultsOnSuccess(futures).thenAccept(updatedPoLines -> {
+        return collectResultsOnSuccess(futures).map(updatedPoLines -> {
           logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
 
           // Send event to check order status for successfully processed PO Lines
@@ -141,9 +139,10 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
             // Leave only successfully updated PO Lines
             .filter(line -> updatedPoLines.contains(line.getId()))
             .toList(), requestContext);
+          return null;
         });
       })
-        .thenApply(ok -> piecesGroupedByPoLine);
+        .map(ok -> piecesGroupedByPoLine);
     }
   }
 
@@ -182,27 +181,18 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
               ))));
   }
 
-  public CompletableFuture<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query, RequestContext requestContext) {
-    CompletableFuture<ReceivingHistoryCollection> future = new CompletableFuture<>();
-
-    try {
-      acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
-        .thenCompose(acqUnitsCqlExpr -> {
-          String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
-          String endpoint = String.format(GET_RECEIVING_HISTORY_BY_QUERY, limit, offset, buildQuery(cql), lang);
-          return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
-            .thenAccept(jsonReceivingHistory -> future.complete(jsonReceivingHistory.mapTo(ReceivingHistoryCollection.class)));
-        })
-        .exceptionally(t -> {
-          logger.error("Error happened retrieving receiving history", t);
-          future.completeExceptionally(t.getCause());
-          return null;
-        });
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
-
-    return future;
+  public Future<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query,
+      RequestContext requestContext) {
+    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
+      .compose(acqUnitsCqlExpr -> {
+        String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
+        RequestEntry rq = new RequestEntry(GET_RECEIVING_HISTORY_BY_QUERY)
+          .withLimit(limit)
+          .withOffset(offset)
+          .withQuery(cql);
+        return new RestClient().get(rq, ReceivingHistoryCollection.class, requestContext);
+      })
+      .onFailure(t -> logger.error("Error happened retrieving receiving history", t));
   }
 
   private ReceivingResults prepareResponseBody(ReceivingCollection receivingCollection, Map<String, List<Piece>> piecesGroupedByPoLine) {
@@ -262,18 +252,18 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
 
   @Override
-  protected CompletableFuture<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
     ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
     return receiveItem(item, receivedItem, requestContext)
       // Update Piece record object with receiving details if item updated
       // successfully
-      .thenApply(v -> {
+      .map(v -> {
         updatePieceWithReceivingInfo(piece);
         return true;
       })
       // Add processing error if item failed to be updated
-      .exceptionally(e -> {
+       .otherwise(e -> {
         logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
         addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
         return false;
@@ -329,7 +319,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
    * @param receivedItem item details specified by user upon receiving flow
    * @return future with list of item records
    */
-  private CompletableFuture<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem, RequestContext requestContext) {
+  private Future<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem, RequestContext requestContext) {
     // Update item record with receiving details
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
     if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {

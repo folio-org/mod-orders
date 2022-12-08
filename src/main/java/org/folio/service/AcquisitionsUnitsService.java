@@ -4,10 +4,9 @@ import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
+import static org.folio.service.UserService.getCurrentUserId;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -22,6 +21,8 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import one.util.streamex.StreamEx;
 
 public class AcquisitionsUnitsService {
@@ -43,8 +44,8 @@ public class AcquisitionsUnitsService {
     this.restClient = restClient;
   }
 
-  public CompletableFuture<AcquisitionsUnitCollection> getAcquisitionsUnits(String query, int offset, int limit, RequestContext requestContext) {
-    CompletableFuture<AcquisitionsUnitCollection> future = new CompletableFuture<>();
+  public Future<AcquisitionsUnitCollection> getAcquisitionsUnits(String query, int offset, int limit, RequestContext requestContext) {
+    Promise<AcquisitionsUnitCollection> promise = Promise.promise();
 
     try {
       // In case if client did not specify filter by "deleted" units, return only "active" units
@@ -54,41 +55,39 @@ public class AcquisitionsUnitsService {
         query = combineCqlExpressions("and", ACTIVE_UNITS_CQL, query);
       }
       RequestEntry requestEntry = new RequestEntry(ENDTOPINT_ACQ_UNITS).withQuery(query).withLimit(limit).withOffset(offset);
-      restClient.get(requestEntry, requestContext, AcquisitionsUnitCollection.class)
-                .thenAccept(future::complete)
-                .exceptionally(t -> {
-                  future.completeExceptionally(t.getCause());
-                  return null;
-                });
+      restClient.get(requestEntry, AcquisitionsUnitCollection.class, requestContext)
+                .onSuccess(promise::complete)
+                .onFailure(promise::fail);
     } catch (Exception e) {
-      future.completeExceptionally(e);
+      logger.error(e);
+      promise.fail(e);
     }
 
-    return future;
+    return promise.future();
   }
 
-  public CompletableFuture<AcquisitionsUnit> createAcquisitionsUnit(AcquisitionsUnit unit, RequestContext requestContext) {
+  public Future<AcquisitionsUnit> createAcquisitionsUnit(AcquisitionsUnit unit, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDTOPINT_ACQ_UNITS);
-    return restClient.post(requestEntry, unit, requestContext, AcquisitionsUnit.class);
+    return restClient.post(requestEntry, unit, AcquisitionsUnit.class, requestContext);
   }
 
-  public CompletableFuture<Void> updateAcquisitionsUnit(AcquisitionsUnit unit, RequestContext requestContext) {
+  public Future<Void> updateAcquisitionsUnit(AcquisitionsUnit unit, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDTOPINT_ACQ_UNITS_BY_ID).withId(unit.getId());
     return restClient.put(requestEntry, unit, requestContext);
   }
 
-  public CompletableFuture<AcquisitionsUnit> getAcquisitionsUnit(String id, RequestContext requestContext) {
+  public Future<AcquisitionsUnit> getAcquisitionsUnit(String id, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDTOPINT_ACQ_UNITS_BY_ID).withId(id);
-    return restClient.get(requestEntry, requestContext, AcquisitionsUnit.class);
+    return restClient.get(requestEntry, AcquisitionsUnit.class, requestContext);
   }
 
-  public CompletableFuture<Void> deleteAcquisitionsUnit(String id, RequestContext requestContext) {
-    return getAcquisitionsUnit(id, requestContext).thenApply(unit -> unit.withIsDeleted(true))
-      .thenCompose(unit -> updateAcquisitionsUnit(unit, requestContext));
+  public Future<Void> deleteAcquisitionsUnit(String id, RequestContext requestContext) {
+    return getAcquisitionsUnit(id, requestContext).map(unit -> unit.withIsDeleted(true))
+      .compose(unit -> updateAcquisitionsUnit(unit, requestContext));
   }
 
-  public CompletableFuture<String> buildAcqUnitsCqlExprToSearchRecords(String tableAlias, RequestContext requestContext) {
-    return getAcqUnitIdsForSearch(requestContext).thenApply(ids -> {
+  public Future<String> buildAcqUnitsCqlExprToSearchRecords(String tableAlias, RequestContext requestContext) {
+    return getAcqUnitIdsForSearch(requestContext).map(ids -> {
       String noAcqUnitAssignedQuery = String.format(NO_ACQ_UNIT_ASSIGNED_CQL, tableAlias);
       if (ids.isEmpty()) {
         return noAcqUnitAssignedQuery;
@@ -99,17 +98,18 @@ public class AcquisitionsUnitsService {
     });
   }
 
-  private CompletableFuture<List<String>> getAcqUnitIdsForSearch(RequestContext requestContext) {
-    return getAcqUnitIdsForUser(getCurrentUserId(requestContext), requestContext)
-      .thenCombine(getOpenForReadAcqUnitIds(requestContext), (unitsForUser, unitsAllowRead) -> StreamEx.of(unitsForUser, unitsAllowRead)
+  private Future<List<String>> getAcqUnitIdsForSearch(RequestContext requestContext) {
+    return getAcqUnitIdsForUser(getCurrentUserId(requestContext.getHeaders()), requestContext)
+      .compose(unitsForUser -> getOpenForReadAcqUnitIds(requestContext)
+        .map(unitsAllowRead -> StreamEx.of(unitsForUser, unitsAllowRead)
         .flatCollection(strings -> strings)
         .distinct()
-        .toList());
+        .toList()));
   }
 
-  private CompletableFuture<List<String>> getAcqUnitIdsForUser(String userId, RequestContext requestContext) {
+  private Future<List<String>> getAcqUnitIdsForUser(String userId, RequestContext requestContext) {
     return getAcquisitionsUnitsMemberships("userId==" + userId, 0, Integer.MAX_VALUE, requestContext)
-      .thenApply(memberships -> {
+      .map(memberships -> {
         List<String> ids = memberships.getAcquisitionsUnitMemberships()
           .stream()
           .map(AcquisitionsUnitMembership::getAcquisitionsUnitId)
@@ -123,60 +123,47 @@ public class AcquisitionsUnitsService {
       });
   }
 
-  public CompletableFuture<AcquisitionsUnitMembershipCollection> getAcquisitionsUnitsMemberships(String query, int offset, int limit,
-                                                                                                 RequestContext requestContext) {
-    CompletableFuture<AcquisitionsUnitMembershipCollection> future = new CompletableFuture<>();
-    try {
-      RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_MEMBERSHIPS).withQuery(query).withLimit(limit).withOffset(offset);
-      restClient.get(requestEntry, requestContext, AcquisitionsUnitMembershipCollection.class)
-        .thenAccept(future::complete)
-        .exceptionally(t -> {
-          future.completeExceptionally(t.getCause());
-          return null;
-        });
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
-    return future;
+  public Future<AcquisitionsUnitMembershipCollection> getAcquisitionsUnitsMemberships(String query, int offset, int limit, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_MEMBERSHIPS).withQuery(query)
+      .withLimit(limit)
+      .withOffset(offset);
+    return restClient.get(requestEntry, AcquisitionsUnitMembershipCollection.class, requestContext);
   }
 
-  public CompletableFuture<AcquisitionsUnitMembership> createAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership,
+  public Future<AcquisitionsUnitMembership> createAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership,
                                                                                          RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_MEMBERSHIPS);
-    return restClient.post(requestEntry, membership, requestContext, AcquisitionsUnitMembership.class);
+    return restClient.post(requestEntry, membership, AcquisitionsUnitMembership.class, requestContext);
   }
 
-  public CompletableFuture<Void> updateAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership, RequestContext requestContext) {
+  public Future<Void> updateAcquisitionsUnitsMembership(AcquisitionsUnitMembership membership, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_MEMBERSHIPS_BY_ID).withId(membership.getId());
     return restClient.put(requestEntry, membership, requestContext);
   }
 
-  public CompletableFuture<AcquisitionsUnitMembership> getAcquisitionsUnitsMembership(String id, RequestContext requestContext) {
+  public Future<AcquisitionsUnitMembership> getAcquisitionsUnitsMembership(String id, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_MEMBERSHIPS_BY_ID).withId(id);
-    return restClient.get(requestEntry, requestContext, AcquisitionsUnitMembership.class);
+    return restClient.get(requestEntry, AcquisitionsUnitMembership.class, requestContext);
   }
 
-  public CompletableFuture<Void> deleteAcquisitionsUnitsMembership(String id, RequestContext requestContext) {
+  public Future<Void> deleteAcquisitionsUnitsMembership(String id, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_MEMBERSHIPS_BY_ID).withId(id);
     return restClient.delete(requestEntry, requestContext);
   }
 
-  private CompletableFuture<List<String>> getOpenForReadAcqUnitIds(RequestContext requestContext) {
-    return getAcquisitionsUnits("protectRead==false", 0, Integer.MAX_VALUE, requestContext).thenApply(units -> {
-      List<String> ids = units.getAcquisitionsUnits()
-        .stream()
-        .map(AcquisitionsUnit::getId)
-        .collect(Collectors.toList());
+  private Future<List<String>> getOpenForReadAcqUnitIds(RequestContext requestContext) {
+    return getAcquisitionsUnits("protectRead==false", 0, Integer.MAX_VALUE, requestContext)
+      .map(units -> {
+        List<String> ids = units.getAcquisitionsUnits()
+          .stream()
+          .map(AcquisitionsUnit::getId)
+          .collect(Collectors.toList());
 
-      if (logger.isDebugEnabled()) {
-        logger.debug("{} acq units with 'protectRead==false' are found: {}", ids.size(), StreamEx.of(ids).joining(", "));
-      }
+        if (logger.isDebugEnabled()) {
+          logger.debug("{} acq units with 'protectRead==false' are found: {}", ids.size(), StreamEx.of(ids).joining(", "));
+        }
 
-      return ids;
-    });
-  }
-
-  private String getCurrentUserId(RequestContext requestContext) {
-    return requestContext.getHeaders().get(OKAPI_USERID_HEADER);
+        return ids;
+      });
   }
 }

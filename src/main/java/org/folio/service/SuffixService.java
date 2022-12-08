@@ -1,20 +1,22 @@
 package org.folio.service;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.rest.core.exceptions.ErrorCodes.*;
-
-import java.util.concurrent.CompletableFuture;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.core.exceptions.ErrorCodes.SUFFIX_IS_USED;
+import static org.folio.rest.core.exceptions.ErrorCodes.SUFFIX_NOT_FOUND;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Suffix;
 import org.folio.rest.jaxrs.model.SuffixCollection;
 import org.folio.service.orders.PurchaseOrderStorageService;
+
+import io.vertx.core.Future;
 
 public class SuffixService {
 
@@ -30,65 +32,66 @@ public class SuffixService {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
   }
 
-  public CompletableFuture<SuffixCollection> getSuffixes(String query, int offset, int limit, RequestContext requestContext) {
+  public Future<SuffixCollection> getSuffixes(String query, int offset, int limit, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
       .withOffset(offset)
       .withLimit(limit);
-    return restClient.get(requestEntry, requestContext, SuffixCollection.class);
+    return restClient.get(requestEntry, SuffixCollection.class, requestContext);
   }
 
-  public CompletableFuture<Suffix> getSuffixById(String id, RequestContext requestContext) {
+  public Future<Suffix> getSuffixById(String id, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
-    return restClient.get(requestEntry, requestContext, Suffix.class);
+    return restClient.get(requestEntry, Suffix.class, requestContext);
   }
 
-  public CompletableFuture<Suffix> createSuffix(Suffix suffix, RequestContext requestContext) {
+  public Future<Suffix> createSuffix(Suffix suffix, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT);
-    return restClient.post(requestEntry, suffix, requestContext, Suffix.class);
+    return restClient.post(requestEntry, suffix, Suffix.class, requestContext);
   }
 
-  public CompletableFuture<Void> updateSuffix(String id, Suffix suffix, RequestContext requestContext) {
+  public Future<Void> updateSuffix(String id, Suffix suffix, RequestContext requestContext) {
     if (isEmpty(suffix.getId())) {
       suffix.setId(id);
     } else if (!id.equals(suffix.getId())) {
-      CompletableFuture<Void> future = new CompletableFuture<>();
-      future.completeExceptionally(new HttpException(422, MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY));
-      return future;
+      return Future.failedFuture(new HttpException(422, MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY));
     }
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
     return restClient.put(requestEntry, suffix, requestContext);
   }
 
-  public CompletableFuture<Void> deleteSuffix(String id, RequestContext requestContext) {
+  public Future<Void> deleteSuffix(String id, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
-    return getSuffixById(id, requestContext).thenCompose(suffix -> checkSuffixNotUsed(suffix, requestContext))
-      .thenCompose(aVoid -> restClient.delete(requestEntry, requestContext));
+    return getSuffixById(id, requestContext).compose(suffix -> checkSuffixNotUsed(suffix, requestContext))
+      .compose(aVoid -> restClient.delete(requestEntry, requestContext));
   }
 
-  private CompletableFuture<Void> checkSuffixNotUsed(Suffix suffix, RequestContext requestContext) {
+  private Future<Void> checkSuffixNotUsed(Suffix suffix, RequestContext requestContext) {
     String query = "poNumberSuffix==" + suffix.getName();
     return purchaseOrderStorageService.getPurchaseOrders(query, 0, 0, requestContext)
-      .thenAccept(purchaseOrders -> {
+      .map(purchaseOrders -> {
         if (purchaseOrders.getTotalRecords() > 0) {
           logger.error("Suffix is used by {} orders", purchaseOrders.getTotalRecords());
           throw new HttpException(400, SUFFIX_IS_USED);
         }
-      });
+        return null;
+      })
+      .mapEmpty();
   }
 
-  public CompletableFuture<Void> validateSuffixAvailability(String suffixName, RequestContext requestContext) {
+  public Future<Void> validateSuffixAvailability(String suffixName, RequestContext requestContext) {
     if(StringUtils.isNotEmpty(suffixName)){
       String query = "name==" + suffixName;
       RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query);
-      return restClient.get(requestEntry, requestContext, SuffixCollection.class)
-        .thenAccept(suffix -> {
+      return restClient.get(requestEntry, SuffixCollection.class, requestContext)
+        .map(suffix -> {
           if(suffix.getTotalRecords() == 0) {
             logger.error("Suffix {} may not be available", suffixName);
             throw new HttpException(404, SUFFIX_NOT_FOUND);
           }
+          return null;
         });
     }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture();
   }
 
 }

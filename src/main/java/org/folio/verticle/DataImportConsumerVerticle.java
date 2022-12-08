@@ -1,8 +1,11 @@
 package org.folio.verticle;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import static org.folio.DataImportEventTypes.DI_COMPLETED;
+import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.kafka.AsyncRecordHandler;
@@ -21,11 +24,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.folio.DataImportEventTypes.DI_COMPLETED;
-import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 @Component
 @Scope(SCOPE_PROTOTYPE)

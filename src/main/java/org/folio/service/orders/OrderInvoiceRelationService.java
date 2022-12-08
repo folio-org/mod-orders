@@ -1,18 +1,18 @@
 package org.folio.service.orders;
 
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_RELATES_TO_INVOICE;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.invoice.InvoiceLineService;
 
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_RELATES_TO_INVOICE;
+import io.vertx.core.Future;
 
 public class OrderInvoiceRelationService {
 
@@ -28,22 +28,22 @@ public class OrderInvoiceRelationService {
     this.invoiceLineService = invoiceLineService;
   }
 
-  public CompletableFuture<OrderInvoiceRelationshipCollection> getOrderInvoiceRelationshipCollection(String query, int offset, int limit, RequestContext requestContext) {
+  public Future<OrderInvoiceRelationshipCollection> getOrderInvoiceRelationshipCollection(String query, int offset, int limit, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
-    return restClient.get(requestEntry, requestContext, OrderInvoiceRelationshipCollection.class);
+    return restClient.get(requestEntry, OrderInvoiceRelationshipCollection.class, requestContext);
   }
 
-  public CompletableFuture<Boolean> isOrderLinkedToAnInvoice(String orderId, RequestContext requestContext) {
+  public Future<Boolean> isOrderLinkedToAnInvoice(String orderId, RequestContext requestContext) {
     String query = "purchaseOrderId==" + orderId;
     return getOrderInvoiceRelationshipCollection(query, 0, 0, requestContext)
-      .thenApply(oirs -> oirs.getTotalRecords() > 0);
+      .map(oirs -> oirs.getTotalRecords() > 0);
   }
 
-  public CompletableFuture<Void> checkOrderInvoiceRelationship(String id, RequestContext requestContext) {
+  public Future<Void> checkOrderInvoiceRelationship(String id, RequestContext requestContext) {
     String query = "purchaseOrderId==" + id;
 
     return getOrderInvoiceRelationshipCollection(query, 0, 0, requestContext)
-      .thenApply(oirs -> {
+      .map(oirs -> {
         if (oirs.getTotalRecords() > 0) {
           logger.error("Order or order line {} is linked to the invoice and can not be deleted", id);
           throw new HttpException(400, ORDER_RELATES_TO_INVOICE);
@@ -52,14 +52,14 @@ public class OrderInvoiceRelationService {
       });
   }
 
-  public CompletableFuture<Void> checkOrderPOLineLinkedToInvoiceLine(PoLine line, RequestContext requestContext) {
+  public Future<Void> checkOrderPOLineLinkedToInvoiceLine(PoLine line, RequestContext requestContext) {
     String query = "purchaseOrderId==" + line.getPurchaseOrderId();
 
     return getOrderInvoiceRelationshipCollection(query, 0, 0, requestContext)
-      .thenCompose(oirs -> {
+      .compose(oirs -> {
         if (oirs.getTotalRecords() > 0) {
           return invoiceLineService.getInvoiceLinesByOrderLineId(line.getId(), requestContext)
-            .thenAccept(invoiceLines -> {
+            .map(invoiceLines -> {
                 boolean notAllowedDeletePOLine = invoiceLines.stream()
                   .filter(invoiceLine -> invoiceLine.getPoLineId() != null)
                   .anyMatch(invoiceLine -> invoiceLine.getPoLineId().equals(line.getId()));
@@ -67,10 +67,11 @@ public class OrderInvoiceRelationService {
                   logger.error("Order or order line {} is linked to the invoice and can not be deleted", line.getId());
                   throw new HttpException(400, ORDER_RELATES_TO_INVOICE);
                 }
+                return null;
               }
             );
         }
-        return CompletableFuture.completedFuture(null);
+        return Future.succeededFuture();
       });
   }
 }

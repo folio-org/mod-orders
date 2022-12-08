@@ -1,6 +1,6 @@
 package org.folio.service.pieces.flows.update;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -28,7 +28,6 @@ import static org.mockito.Mockito.verify;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -53,6 +52,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -63,8 +63,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 
+@ExtendWith(VertxExtension.class)
 public class PieceUpdateFlowManagerTest {
   @Autowired PieceUpdateFlowManager pieceUpdateFlowManager;
   @Autowired PieceStorageService pieceStorageService;
@@ -140,20 +143,20 @@ public class PieceUpdateFlowManagerTest {
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
-    doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
-    doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
+    doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
+    doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
-    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+    doAnswer((Answer<Future<Void>>) invocation -> {
       PieceUpdateHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
-      return completedFuture(null);
+      return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     //When
-    pieceUpdateFlowManager.updatePiece(pieceToUpdate, true, true, requestContext).get();
+    pieceUpdateFlowManager.updatePiece(pieceToUpdate, true, true, requestContext).result();
     //Then
     PieceUpdateHolder holder = pieceUpdateHolderCapture.getValue();
     assertNull(poLine.getLocations().get(0).getLocationId());
@@ -165,7 +168,7 @@ public class PieceUpdateFlowManagerTest {
   }
 
   @Test
-  void shouldNotUpdateLineQuantityIfManualPieceCreateTrueAndShouldRunProcessInventory() throws ExecutionException, InterruptedException {
+  void shouldNotUpdateLineQuantityIfManualPieceCreateTrueAndShouldRunProcessInventory() {
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String holdingIdTpUpdate = UUID.randomUUID().toString();
@@ -191,20 +194,20 @@ public class PieceUpdateFlowManagerTest {
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
-    doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
-    doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
+    doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
+    doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
-    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+    doAnswer((Answer<Future<Void>>) invocation -> {
       PieceUpdateHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
-      return completedFuture(null);
+      return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     //When
-    pieceUpdateFlowManager.updatePiece(pieceToUpdate, true, true, requestContext).get();
+    pieceUpdateFlowManager.updatePiece(pieceToUpdate, true, true, requestContext).result();
     //Then
     PieceUpdateHolder holder = pieceUpdateHolderCapture.getValue();
     assertNull(poLine.getLocations().get(0).getLocationId());
@@ -241,23 +244,23 @@ public class PieceUpdateFlowManagerTest {
                                 .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
 
-    doReturn(completedFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(incomingPieceToUpdate.getId(), requestContext);
+    doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(incomingPieceToUpdate.getId(), requestContext);
     final ArgumentCaptor<Piece> pieceToUpdateCapture = ArgumentCaptor.forClass(Piece.class);
-    doReturn(completedFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdateCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdateCapture.capture(), eq(requestContext));
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
-    doAnswer((Answer<CompletableFuture<Void>>) invocation -> {
+    doAnswer((Answer<Future<Void>>) invocation -> {
       PieceUpdateHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
-      return completedFuture(null);
+      return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
 
-    doReturn(completedFuture(null)).when(protectionService).isOperationRestricted(any(List.class), any(ProtectedOperationType.class), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(pieceUpdateHolderCapture.capture(), eq(requestContext));
-    doReturn(completedFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
 
     //When
-    pieceUpdateFlowManager.updatePiece(incomingPieceToUpdate, true, true, requestContext).get();
+    pieceUpdateFlowManager.updatePiece(incomingPieceToUpdate, true, true, requestContext).result();
     //Then
     Piece pieceToUpdate = pieceToUpdateCapture.getValue();
     PieceUpdateHolder pieceUpdateHolder = pieceUpdateHolderCapture.getValue();

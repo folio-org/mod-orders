@@ -1,6 +1,6 @@
 package org.folio.service.pieces;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -22,13 +22,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.junit.jupiter.api.AfterAll;
@@ -36,6 +36,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
@@ -43,7 +44,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
+
+@ExtendWith(VertxExtension.class)
 public class PieceStorageServiceTest {
 
   @Autowired
@@ -90,7 +96,7 @@ public class PieceStorageServiceTest {
   }
 
   @Test
-  void testPiecesShouldBeReturnedByQuery() {
+  void testPiecesShouldBeReturnedByQuery(VertxTestContext vertxTestContext) {
     String pieceId = UUID.randomUUID()
       .toString();
     List<Piece> pieces = Collections.singletonList(new Piece().withId(pieceId));
@@ -98,22 +104,25 @@ public class PieceStorageServiceTest {
     PieceCollection pieceCollection = new PieceCollection().withPieces(pieces)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(pieceCollection));
+    when(restClientMock.get(any(RequestEntry.class), any(), any())).thenReturn(Future.succeededFuture(pieceCollection));
 
     String expectedQuery = String.format("id==%s", pieceId);
-    PieceCollection retrievedPieces = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, expectedQuery, requestContext)
-      .join();
+    var future = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, expectedQuery, requestContext);
 
-    verify(restClientMock).get(any(), eq(requestContext), eq(PieceCollection.class));
-    assertEquals(pieceCollection, retrievedPieces);
+    verify(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertEquals(pieceCollection, result.result());
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
   void testShouldDeleteItems() {
     //given
-    doReturn(completedFuture(null)).when(pieceStorageService).deletePiece(any(String.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(any(String.class), eq(requestContext));
     //When
-    pieceStorageService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).join();
+    pieceStorageService.deletePiecesByIds(List.of(UUID.randomUUID().toString()), requestContext).result();
     //Then
     verify(pieceStorageService, times(1)).deletePiece(any(String.class), eq(requestContext));
   }

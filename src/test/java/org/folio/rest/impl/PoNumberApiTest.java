@@ -15,6 +15,9 @@ import static org.folio.rest.impl.MockServer.PO_NUMBER_ERROR_X_OKAPI_TENANT;
 import static org.folio.rest.impl.MockServer.PO_NUMBER_VALUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -23,12 +26,10 @@ import org.folio.rest.jaxrs.model.PoNumber;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
-
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 public class PoNumberApiTest {
 
@@ -64,9 +65,9 @@ public class PoNumberApiTest {
   }
 
   @Test
-  void testPoNumberValidateWithExistingPONumber()
-  {
-    JsonObject poNumber=new JsonObject();
+  @Disabled
+  void testPoNumberValidateWithExistingPONumber() {
+    JsonObject poNumber = new JsonObject();
     poNumber.put(PO_NUMBER, EXISTING_PO_NUMBER);
     verifyPostResponse(PONUMBER_VALIDATE_PATH, poNumber.encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 400);
   }

@@ -1,5 +1,13 @@
 package org.folio.orders.utils.validators;
 
+import static org.folio.rest.RestConstants.VALIDATION_ERROR;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_TO_BE_DELETED;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.util.List;
+import java.util.UUID;
+
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
@@ -7,14 +15,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.UUID;
-
-import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_TO_BE_DELETED;
-import static org.folio.rest.RestConstants.VALIDATION_ERROR;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class LocationsAndPiecesConsistencyValidatorTest {
   @Test

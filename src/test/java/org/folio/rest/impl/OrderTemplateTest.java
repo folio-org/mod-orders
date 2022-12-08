@@ -64,7 +64,6 @@ public class OrderTemplateTest {
 
   private static final String ORDER_TEMPLATES_ENDPOINT = "/orders/order-templates";
   private static final String ORDER_TEMPLATE_ID = "0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
-
   private static boolean runningOnOwn;
 
   @BeforeAll

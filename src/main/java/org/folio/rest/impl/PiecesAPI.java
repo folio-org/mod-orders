@@ -13,10 +13,9 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
-import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,9 +29,6 @@ import io.vertx.core.json.JsonObject;
 public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   private static final Logger logger = LogManager.getLogger();
-
-  @Autowired
-  private PieceService pieceService;
   @Autowired
   private PieceStorageService pieceStorageService;
   @Autowired
@@ -51,22 +47,23 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   public void getOrdersPieces(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceStorageService.getPieces(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(pieces -> asyncResultHandler.handle(succeededFuture(buildOkResponse(pieces))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(pieces -> asyncResultHandler.handle(succeededFuture(buildOkResponse(pieces))))
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void postOrdersPieces(boolean createItem, String lang, Piece entity, Map<String, String> okapiHeaders,
-    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceCreateFlowManager.createPiece(entity, createItem, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(piece -> {
+      .onSuccess(piece -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created piece: {}", JsonObject.mapFrom(piece).encodePrettily());
+          logger.info("Successfully created piece: {}", JsonObject.mapFrom(piece)
+            .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -74,29 +71,29 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   public void getOrdersPiecesById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceStorageService.getPieceById(id, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(piece -> asyncResultHandler.handle(succeededFuture(buildOkResponse(piece))))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(piece -> asyncResultHandler.handle(succeededFuture(buildOkResponse(piece))))
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
   @Validate
   public void putOrdersPiecesById(String pieceId, boolean createItem, boolean deleteHolding, String lang, Piece piece,
-    Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     if (StringUtils.isEmpty(piece.getId())) {
       piece.setId(pieceId);
     }
 
     pieceUpdateFlowManager.updatePiece(piece, createItem, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
   @Validate
-   public void deleteOrdersPiecesById(String pieceId, boolean deleteHolding, String lang, Map<String, String> okapiHeaders,
-    Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void deleteOrdersPiecesById(String pieceId, boolean deleteHolding, String lang, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceDeleteFlowManager.deletePiece(pieceId, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onSuccess(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 }

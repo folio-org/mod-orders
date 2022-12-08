@@ -1,13 +1,13 @@
 package org.folio.service.finance.transaction;
 
-import org.folio.models.EncumbranceRelationsHolder;
-import org.folio.models.EncumbrancesProcessingHolder;
-import org.folio.rest.acq.model.finance.Transaction;
+import static java.util.stream.Collectors.toList;
 
 import java.util.List;
 import java.util.Objects;
 
-import static java.util.stream.Collectors.toList;
+import org.folio.models.EncumbranceRelationsHolder;
+import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.rest.acq.model.finance.Transaction;
 
 public class EncumbrancesProcessingHolderBuilder {
 

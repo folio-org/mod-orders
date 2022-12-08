@@ -1,24 +1,14 @@
 package org.folio.orders.utils;
 
 import static io.vertx.core.Future.succeededFuture;
-import static java.util.Objects.nonNull;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
-import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.EN;
-import static org.folio.rest.RestConstants.ERROR_MESSAGE;
-import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
-import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
@@ -31,15 +21,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -49,15 +35,14 @@ import javax.money.Monetary;
 import javax.money.MonetaryAmount;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
-import javax.ws.rs.Path;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.Logger;
-import org.folio.helper.AbstractHelper;
+import org.folio.helper.BaseHelper;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.InventoryException;
@@ -67,7 +52,6 @@ import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -76,19 +60,16 @@ import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.tools.client.Response;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.parser.JsonPathParser;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
@@ -108,17 +89,10 @@ public class HelperUtils {
   public static final String DEFAULT_POLINE_LIMIT = "1";
   public static final String REASON_COMPLETE = "Complete";
   public static final String REASON_CANCELLED = "Cancelled";
-  private static final String MAX_POLINE_LIMIT = "999";
   public static final String OKAPI_URL = "x-okapi-url";
   private static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String LANG = "lang";
   public static final String URL_WITH_LANG_PARAM = "%s?" + LANG + "=%s";
-  private static final String GET_ALL_POLINES_QUERY_WITH_LIMIT = resourcesPath(PO_LINES_STORAGE) + "?limit=%s&query=purchaseOrderId==%s&" + LANG + "=%s";
-  private static final String GET_PURCHASE_ORDER_BYID = resourceByIdPath(PURCHASE_ORDER_STORAGE) + URL_WITH_LANG_PARAM;
-
-  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
-  private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
-  private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
   public static final String WORKFLOW_STATUS = "workflowStatus";
 
   private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE);
@@ -133,137 +107,6 @@ public class HelperUtils {
       .entries()
       .forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
     return okapiHeaders;
-  }
-
-  public static JsonObject verifyAndExtractBody(Response response) {
-    if (!Response.isSuccess(response.getCode())) {
-      throw new CompletionException(
-          new HttpException(response.getCode(), response.getError().getString(ERROR_MESSAGE)));
-    }
-
-    return response.getBody();
-  }
-
-  /**
-   *  Retrieves PO lines from storage by PO id as List<JsonObjects> of poLines (/acq-models/mod-orders-storage/schemas/po_line.json objects)
-   */
-  public static CompletableFuture<List<JsonObject>> getPoLines(String id, String lang, HttpClientInterface httpClient,
-                                                          Map<String, String> okapiHeaders, Logger logger) {
-    String endpoint = String.format(GET_ALL_POLINES_QUERY_WITH_LIMIT, MAX_POLINE_LIMIT, id, lang);
-    return handleGetRequest(endpoint, httpClient, okapiHeaders, logger)
-      .thenApply(body -> body.getJsonArray(PO_LINES_STORAGE)
-        .stream()
-        .map(JsonObject::mapFrom)
-        .collect(toList()));
-  }
-
-  public static CompletableFuture<Void> deletePoLine(PoLine line, Map<String, String> okapiHeaders, Logger logger) {
-    return operateOnPoLine(HttpMethod.DELETE, JsonObject.mapFrom(line), okapiHeaders, logger)
-      .thenCompose(poline -> {
-        String polineId = poline.getId();
-        return operateOnObject(HttpMethod.DELETE, resourceByIdPath(PO_LINES_STORAGE, polineId), okapiHeaders, logger)
-          .thenApply(entries -> null);
-      });
-  }
-
-  public static CompletableFuture<CompositePoLine> operateOnPoLine(HttpMethod operation, JsonObject line,
-                                Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<CompositePoLine> future = new CompletableFuture<>();
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("The PO line prior to {} operation: {}", operation, line.encodePrettily());
-    }
-
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders, true);
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, ALERTS, httpClient, okapiHeaders, logger));
-    futures.addAll(operateOnSubObjsIfPresent(operation, line, REPORTING_CODES, httpClient, okapiHeaders, logger));
-
-    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenAccept(v -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("The PO line after {} operation on sub-objects: {}", operation, line.encodePrettily());
-        }
-        httpClient.closeClient();
-        future.complete(line.mapTo(CompositePoLine.class));
-      })
-      .exceptionally(t -> {
-        httpClient.closeClient();
-        logger.error("Exception resolving one or more poLine sub-object(s) on {} operation", operation,t);
-        future.completeExceptionally(t);
-        return null;
-      });
-    return future;
-  }
-
-
-  private static List<CompletableFuture<Void>> operateOnSubObjsIfPresent(HttpMethod operation, JsonObject pol, String field,
-                                                                HttpClientInterface httpClient, Map<String, String> okapiHeaders, Logger logger) {
-    JsonArray array = new JsonArray();
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    ((Iterable<?>) pol.remove(field))
-      .forEach(fieldId -> futures.add(operateOnObject(operation, resourceByIdPath(field) + fieldId, okapiHeaders, logger)
-                .thenAccept(value -> {
-                  if (value != null && !value.isEmpty()) {
-                    array.add(value);
-                  }
-                })));
-    pol.put(field, array);
-    return futures;
-  }
-
-  public static CompletableFuture<JsonObject> operateOnObject(HttpMethod operation, String url,
-                                                              Map<String, String> okapiHeaders, Logger logger) {
-    return operateOnObject(operation, url, null, okapiHeaders, logger);
-  }
-
-  public static CompletableFuture<JsonObject> operateOnObject(HttpMethod operation, String url, JsonObject body,
-                                               Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<JsonObject> future = new CompletableFuture<>();
-
-    logger.info("Calling {} {}", operation, url);
-    HttpClientInterface httpClient = AbstractHelper.getHttpClient(okapiHeaders, true);
-    try {
-      httpClient.request(operation, (body != null ? body.toBuffer() : null), url, okapiHeaders)
-        .thenApply(response -> {
-          /*
-           * In case there was failed attempt to delete order or particular PO line, the sub-objects might be already partially deleted.
-           * This check allows user to retrieve order/line again and retry DELETE operation if required
-           */
-          int code = response.getCode();
-          if (code == 404 && operation == HttpMethod.GET) {
-            String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
-            logger.error("The {} {} operation completed with {} error: {}", operation, url, code, errorMessage);
-
-            return new JsonObject();
-          }
-
-          return verifyAndExtractBody(response);
-        })
-        .thenAccept(json -> {
-          httpClient.closeClient();
-          if (json != null) {
-            if (!json.isEmpty() && logger.isInfoEnabled()) {
-              logger.info("The {} {} operation completed with following response body: {}", operation, url, json.encodePrettily());
-            }
-            future.complete(json);
-          } else {
-            //Handling the delete API where it sends no response body
-            logger.info("The {} {} operation completed with no response body", operation, url);
-            future.complete(new JsonObject());
-          }
-        })
-        .exceptionally(t -> {
-          httpClient.closeClient();
-          handleEndpointException(operation, url, t, future, logger);
-          return null;
-        });
-    } catch (Exception e) {
-      httpClient.closeClient();
-      handleEndpointException(operation, url, e, future, logger);
-    }
-
-    return future;
   }
 
   /**
@@ -478,15 +321,9 @@ public class HelperUtils {
    * @param <T> resulting type
    * @return resulting objects
    */
-  public static <T> CompletableFuture<List<T>> collectResultsOnSuccess(List<CompletableFuture<T>> futures) {
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-       .thenApply(v -> futures
-         .stream()
-         // The CompletableFuture::join can be safely used because the `allOf` guaranties success at this step
-         .map(CompletableFuture::join)
-         .filter(Objects::nonNull)
-         .collect(toList())
-       );
+  public static <T> Future<List<T>> collectResultsOnSuccess(List<Future<T>> futures) {
+    return GenericCompositeFuture.join(new ArrayList<>(futures))
+      .map(CompositeFuture::list);
   }
 
   /**
@@ -512,99 +349,6 @@ public class HelperUtils {
   public static String convertFieldListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
     String prefix = fieldName + (strictMatch ? "==(" : "=(");
     return StreamEx.of(values).joining(" or ", prefix, ")");
-  }
-
-  public static CompletableFuture<JsonObject> handleGetRequest(String endpoint, HttpClientInterface
-                                           httpClient, Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<JsonObject> future = new CompletableFuture<>();
-    try {
-      logger.info("Calling GET {}", endpoint);
-
-      httpClient
-        .request(HttpMethod.GET, endpoint, okapiHeaders)
-        .thenApply(response -> {
-          logger.debug("Validating response for GET {}", endpoint);
-          return verifyAndExtractBody(response);
-        })
-        .thenAccept(body -> {
-          if (logger.isInfoEnabled()) {
-            logger.info("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
-          }
-          future.complete(body);
-        })
-        .exceptionally(t -> {
-          handleEndpointException(HttpMethod.GET, endpoint, t, future, logger);
-          return null;
-        });
-    } catch (Exception e) {
-      handleEndpointException(HttpMethod.GET, endpoint, e, future, logger);
-    }
-    return future;
-  }
-
-  /**
-   * A common method to update an entry in the storage
-   *
-   * @param recordData json to use for update operation
-   * @param endpoint endpoint
-   */
-  public static CompletableFuture<Void> handlePutRequest(String endpoint, JsonObject recordData, HttpClientInterface httpClient,
-      Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-    try {
-      if (logger.isDebugEnabled()) {
-        logger.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
-      }
-      httpClient
-        .request(HttpMethod.PUT, recordData.toBuffer(), endpoint, okapiHeaders)
-        .thenApply(HelperUtils::verifyAndExtractBody)
-        .thenAccept(response -> {
-          logger.debug("'PUT {}' request successfully processed", endpoint);
-          future.complete(null);
-        })
-        .exceptionally(e -> {
-          future.completeExceptionally(e);
-          logger.error("'PUT {}' request failed wit error {}. Request body: {}", e, endpoint, recordData.encodePrettily());
-          return null;
-        });
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
-
-    return future;
-  }
-
-  public static void verifyResponse(Response response) {
-    if (!Response.isSuccess(response.getCode())) {
-      String msg =  Optional.ofNullable(response.getError()).map(errors -> errors.getString(ERROR_MESSAGE))
-                            .orElse(GENERIC_ERROR_CODE.getDescription());
-      throw new CompletionException(new HttpException(response.getCode(), msg));
-    }
-  }
-
-  /**
-   * A common method to delete an entry in the storage
-   * @param endpoint endpoint
-   */
-  public static CompletableFuture<Void> handleDeleteRequest(String endpoint, HttpClientInterface httpClient,
-      Map<String, String> okapiHeaders, Logger logger) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-
-    logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint);
-
-    try {
-      httpClient.request(HttpMethod.DELETE, endpoint, okapiHeaders)
-        .thenAccept(HelperUtils::verifyResponse)
-        .thenApply(future::complete)
-        .exceptionally(t -> {
-          handleEndpointException(HttpMethod.DELETE, endpoint, t, future, logger);
-          return null;
-        });
-    } catch (Exception e) {
-      handleEndpointException(HttpMethod.DELETE, endpoint, e, future, logger);
-    }
-
-    return future;
   }
 
   public static int getPoLineLimit(JsonObject config) {
@@ -689,60 +433,6 @@ public class HelperUtils {
     return poLine;
   }
 
-  public static CompletableFuture<String> updatePoLineReceiptStatus(PoLine poLine, ReceiptStatus status, HttpClientInterface httpClient,
-      Map<String, String> okapiHeaders, Logger logger) {
-
-    if (status == null || poLine.getReceiptStatus() == status) {
-      return completedFuture(null);
-    }
-
-    // Update receipt date and receipt status
-    if (status == FULLY_RECEIVED) {
-      poLine.setReceiptDate(new Date());
-    } else if (Boolean.TRUE.equals(poLine.getCheckinItems())
-            && poLine.getReceiptStatus() == ReceiptStatus.AWAITING_RECEIPT
-            && status == ReceiptStatus.PARTIALLY_RECEIVED) {
-      // if checking in, set the receipt date only for the first piece
-      poLine.setReceiptDate(new Date());
-    } else {
-      poLine.setReceiptDate(null);
-    }
-
-    poLine.setReceiptStatus(status);
-    // Update PO Line in storage
-    return handlePutRequest(resourceByIdPath(PO_LINES_STORAGE, poLine.getId()), JsonObject.mapFrom(poLine), httpClient, okapiHeaders,
-        logger).thenApply(v -> poLine.getId())
-          .exceptionally(e -> {
-            logger.error("The PO Line '{}' cannot be updated with new receipt status", poLine.getId(), e);
-            return null;
-          });
-  }
-
-  public static JsonObject verifyProtectedFieldsChanged(List<String> protectedFields, JsonObject objectFromStorage,
-                                                        JsonObject requestObject) {
-    Set<String> fields = new HashSet<>();
-    JsonPathParser oldObject = new JsonPathParser(objectFromStorage);
-    JsonPathParser newObject = new JsonPathParser(requestObject);
-    for (String field : protectedFields) {
-      if (!Objects.equals(oldObject.getValueAt(field), newObject.getValueAt(field))) {
-        fields.add(field);
-      }
-    }
-
-    if (CollectionUtils.isNotEmpty(fields)) {
-      Error error = PROHIBITED_FIELD_CHANGING.toError()
-        .withAdditionalProperty(PROTECTED_AND_MODIFIED_FIELDS, fields);
-      throw new HttpException(400, error);
-    }
-
-    return objectFromStorage;
-  }
-
-  public static List<PoLine> convertJsonToPoLines(List<JsonObject> linesArray) {
-    return linesArray.stream()
-                     .map(json -> json.mapTo(PoLine.class))
-                     .collect(toList());
-  }
 
   public static List<PoLine> convertToPoLines(List<CompositePoLine> compositePoLines) {
     return compositePoLines
@@ -755,14 +445,10 @@ public class HelperUtils {
     return compPOL.getDetails() != null && CollectionUtils.isNotEmpty(compPOL.getDetails().getProductIds());
   }
 
-  public static Void handleErrorResponse(Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, AbstractHelper helper,
+  public static Void handleErrorResponse(Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, BaseHelper helper,
                                    Throwable t) {
     asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
     return null;
-  }
-
-  public static String getEndpoint(Class<?> clazz) {
-    return clazz.getAnnotation(Path.class).value();
   }
 
   /**
@@ -773,10 +459,6 @@ public class HelperUtils {
   public static void verifyTitles(Map<String, List<Title>> lineIdTitles, Map<String, CompositePoLine> poLineById) {
     verifyAllTitlesExist(lineIdTitles, poLineById);
     verifyNonPackageLinesHaveSingleTitle(lineIdTitles, poLineById);
-  }
-
-  public static JsonObject convertToJson(Object data) {
-    return data instanceof JsonObject ? (JsonObject) data : JsonObject.mapFrom(data);
   }
 
   private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> titles,
@@ -808,20 +490,6 @@ public class HelperUtils {
         .setTermCurrency(toCurrency).build();
     }
     return conversionQuery;
-  }
-
-
-  public static String verifyAndExtractRecordId(org.folio.rest.tools.client.Response response) {
-    JsonObject body = verifyAndExtractBody(response);
-
-    String id;
-    if (body != null && !body.isEmpty() && body.containsKey(ID)) {
-      id = body.getString(ID);
-    } else {
-      String location = response.getHeaders().get(LOCATION);
-      id = location.substring(location.lastIndexOf('/') + 1);
-    }
-    return id;
   }
 
   public static void makePoLinePending(CompositePoLine poLine) {
@@ -859,16 +527,6 @@ public class HelperUtils {
 
   public static String extractId(JsonObject json) {
     return json.getString(ID);
-  }
-
-  private static void handleEndpointException(HttpMethod operation, String endpoint, Throwable t,
-      CompletableFuture<?> future, Logger logger) {
-
-    Throwable cause = t instanceof CompletionException ? t.getCause() : t;
-    int code = cause instanceof HttpException ? ((HttpException)cause).getCode() : 500;
-    String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, endpoint, cause.getMessage());
-    logger.error(message, t);
-    future.completeExceptionally(new HttpException(code, message));
   }
 
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLineList) {

@@ -1,6 +1,26 @@
 package org.folio.service.finance.transaction;
 
-import io.vertx.core.json.JsonObject;
+import static io.vertx.core.Future.succeededFuture;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -15,27 +35,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxTestContext;
 
 public class ClosedToOpenEncumbranceStrategyTest {
   @InjectMocks
@@ -58,7 +60,7 @@ public class ClosedToOpenEncumbranceStrategyTest {
   }
 
   @Test
-  void testShouldCreateMissingEncumbrances() {
+  void testShouldCreateMissingEncumbrances(VertxTestContext vertxTestContext) {
     // Given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
@@ -67,35 +69,37 @@ public class ClosedToOpenEncumbranceStrategyTest {
     mapFiscalYearsWithCompPOLines.put(fiscalYearId, singletonList(new CompositePoLine().withId(UUID.randomUUID().toString())));
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
     orderFromStorage.setWorkflowStatus(WorkflowStatus.CLOSED);
-    doReturn(completedFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+    doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
 
-    doReturn(completedFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
+    doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
 
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = new ArrayList<>();
     encumbranceRelationsHolders.add(new EncumbranceRelationsHolder()
       .withFundDistribution(new FundDistribution()));
     doReturn(encumbranceRelationsHolders).when(encumbranceRelationsHoldersBuilder).buildBaseHolders(any());
-    doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withBudgets(any(), any());
-    doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withLedgersData(any(),any());
-    doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withFiscalYearData(any(), any());
-    doReturn(completedFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withConversion(any(), any());
+    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withBudgets(any(), any());
+    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withLedgersData(any(),any());
+    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withFiscalYearData(any(), any());
+    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withConversion(any(), any());
 
     doReturn(encumbranceRelationsHolders).when(encumbranceRelationsHoldersBuilder).withKnownTransactions(any(), any());
     doReturn(encumbranceRelationsHolders).when(fundsDistributionService).distributeFunds(any());
-    doReturn(completedFuture(null)).when(encumbranceService).createOrUpdateEncumbrances(any(), any());
+    doReturn(succeededFuture(null)).when(encumbranceService).createOrUpdateEncumbrances(any(), any());
 
     // When
-    CompletableFuture<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
-    assertFalse(result.isCompletedExceptionally());
-    result.join();
-
-    // Then
-    verify(encumbranceService, times(1)).createOrUpdateEncumbrances(
-      argThat(h -> h.getEncumbrancesForCreate().size() == 1), eq(requestContext));
+    Future<Void> future = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        // Then
+        verify(encumbranceService, times(1)).createOrUpdateEncumbrances(
+          argThat(h -> h.getEncumbrancesForCreate().size() == 1), eq(requestContext));
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
-  void stopIfNothingNeedsToBeDone() {
+  void stopIfNothingNeedsToBeDone(VertxTestContext vertxTestContext) {
     // Given
     String orderId = UUID.randomUUID().toString();
     String poLineId = UUID.randomUUID().toString();
@@ -115,18 +119,21 @@ public class ClosedToOpenEncumbranceStrategyTest {
     mapFiscalYearsWithCompPOLines.put(fiscalYearId, singletonList(new CompositePoLine().withId(UUID.randomUUID().toString())));
     CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
     orderFromStorage.setWorkflowStatus(WorkflowStatus.CLOSED);
-    doReturn(completedFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
+    doReturn(succeededFuture(mapFiscalYearsWithCompPOLines)).when(encumbranceRelationsHoldersBuilder).retrieveMapFiscalYearsWithCompPOLines(eq(order), eq(orderFromStorage), eq(requestContext));
 
-    doReturn(completedFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
+    doReturn(succeededFuture(emptyList())).when(encumbranceService).getOrderEncumbrancesToUnrelease(any(), any(), any());
 
     // When
-    CompletableFuture<Void> result = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
-    assertFalse(result.isCompletedExceptionally());
-    result.join();
+    Future<Void> future = closedToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        // Then
+        verify(encumbranceRelationsHoldersBuilder, never()).buildBaseHolders(any());
+        verify(encumbranceService, never()).createOrUpdateEncumbrances(any(), any());
+        vertxTestContext.completeNow();
+      });
 
-    // Then
-    verify(encumbranceRelationsHoldersBuilder, never()).buildBaseHolders(any());
-    verify(encumbranceService, never()).createOrUpdateEncumbrances(any(), any());
   }
 
 }

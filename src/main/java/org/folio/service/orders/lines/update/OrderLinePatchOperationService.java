@@ -1,7 +1,23 @@
 package org.folio.service.orders.lines.update;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME;
+import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME_TYPE_ID;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_CONTRIBUTORS;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_DATE_OF_PUBLICATION;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIERS;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_ID;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLICATION;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLISHER;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_RECORDS_BY_ID_ENDPOINT;
+import static org.folio.service.inventory.InventoryManager.INSTANCE_TITLE;
+import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDPOINTS;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -17,24 +33,10 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.service.orders.PurchaseOrderLineService;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static org.folio.service.inventory.InventoryManager.INSTANCE_TITLE;
-import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLISHER;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLICATION;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIERS;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_CONTRIBUTORS;
-import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDPOINTS;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_DATE_OF_PUBLICATION;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_RECORDS_BY_ID_ENDPOINT;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 
 public class OrderLinePatchOperationService {
@@ -56,71 +58,64 @@ public class OrderLinePatchOperationService {
     this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
-  public CompletableFuture<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
+  public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
     return patchOrderLine(request, lineId, requestContext)
-      .thenCompose(v -> updateInventoryInstanceInformation(request, lineId, requestContext));
+      .compose(v -> updateInventoryInstanceInformation(request, lineId, requestContext));
   }
 
-  private CompletableFuture<Void> patchOrderLine(PatchOrderLineRequest request,
-                                                 String lineId, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
+  private Future<Void> patchOrderLine(PatchOrderLineRequest request, String lineId, RequestContext requestContext) {
+    Promise<Void> promise = Promise.promise();
 
     purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .thenAccept(poLine -> {
+      .map(poLine -> {
         OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
           .withPathOrderLineRequest(request)
           .withStoragePoLine(poLine);
 
         PatchOperationHandler patchOperationHandler = orderLinePatchOperationHandlerResolver.resolve(request.getOperation());
         patchOperationHandler.handle(orderLineUpdateInstanceHolder, requestContext)
-          .thenCompose(v -> sendPatchOrderLineRequest(orderLineUpdateInstanceHolder, lineId, requestContext))
-          .thenAccept(v -> future.complete(null))
-          .exceptionally(t -> {
-            future.completeExceptionally(t);
-            return null;
-          });
-      }).exceptionally(t -> {
-        logger.error("Error when sending patch request to order lines endpoint for lineId {}", lineId);
-        future.completeExceptionally(t);
+          .compose(v -> sendPatchOrderLineRequest(orderLineUpdateInstanceHolder, lineId, requestContext))
+          .onSuccess(v -> promise.complete())
+          .onFailure(promise::fail);
         return null;
+      })
+      .onFailure(t -> {
+        logger.error("Error when sending patch request to order lines endpoint for lineId {}", lineId);
+        promise.fail(t);
       });
 
-    return future;
+    return promise.future();
   }
 
-  private CompletableFuture<Void> updateInventoryInstanceInformation(PatchOrderLineRequest request,
-                                                                     String lineId, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
+  private Future<Void> updateInventoryInstanceInformation(PatchOrderLineRequest request, String lineId, RequestContext requestContext) {
+    Promise<Void> promise = Promise.promise();
 
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
     purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .thenApply(poLine -> {
+      .map(poLine -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
         return restClient.getAsJsonObject(requestEntry, requestContext)
-          .thenApply(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine))
-          .thenCompose(updatedPoLine -> purchaseOrderLineService.saveOrderLine(updatedPoLine, requestContext))
-          .thenAccept(v -> future.complete(null))
-          .exceptionally(t -> {
-            future.completeExceptionally(t);
-            return null;
-          });
-      }).exceptionally(t -> {
+          .map(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine))
+          .compose(updatedPoLine -> purchaseOrderLineService.saveOrderLine(updatedPoLine, requestContext))
+          .onSuccess(v -> promise.complete())
+          .onFailure(promise::fail);
+      })
+      .onFailure(t -> {
         logger.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, lineId);
-        future.completeExceptionally(t);
-        return null;
+        promise.fail(t);
       });
 
-    return future;
+    return promise.future();
   }
 
-  private CompletableFuture<Void> sendPatchOrderLineRequest(OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder,
-                                                            String lineId, RequestContext requestContext) {
+  private Future<Void> sendPatchOrderLineRequest(OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder, String lineId,
+      RequestContext requestContext) {
     StoragePatchOrderLineRequest storagePatchOrderLineRequest = orderLineUpdateInstanceHolder.getStoragePatchOrderLineRequest();
     if (Objects.nonNull(storagePatchOrderLineRequest)) {
       RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
       return restClient.patch(requestEntry, storagePatchOrderLineRequest, requestContext);
     }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture();
   }
 
   private PoLine updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine) {

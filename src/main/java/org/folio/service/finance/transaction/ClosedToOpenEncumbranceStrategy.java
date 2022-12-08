@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.FundDistributionUtils.isFundDistributionsPresent;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -18,6 +17,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.orders.OrderWorkflowType;
+
+import io.vertx.core.Future;
 
 public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
@@ -39,19 +40,19 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
   }
 
   @Override
-  public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+  public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
       RequestContext requestContext) {
 
     if (isFundDistributionsPresent(compPO.getCompositePoLines())) {
       // get the encumbrances to unrelease
       return encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(compPO, poAndLinesFromStorage, requestContext)
-        .thenCompose(mapFiscalYearIdsWithCompPOLines -> encumbranceService.getOrderEncumbrancesToUnrelease(compPO, mapFiscalYearIdsWithCompPOLines, requestContext))
-        .thenCompose(transactions -> {
+        .compose(mapFiscalYearIdsWithCompPOLines -> encumbranceService.getOrderEncumbrancesToUnrelease(compPO, mapFiscalYearIdsWithCompPOLines, requestContext))
+        .compose(transactions -> {
           // stop if nothing needs to be done
 
           if (transactions.isEmpty() && compPO.getCompositePoLines().stream().noneMatch(
               pol -> pol.getFundDistribution().stream().anyMatch(f -> f.getEncumbrance() == null))) {
-            return CompletableFuture.completedFuture(null);
+            return Future.succeededFuture();
           }
 
           // check encumbrance restrictions as in PendingToOpenEncumbranceStrategy
@@ -64,14 +65,17 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
               .anyMatch(t -> t.getEncumbrance().getSourcePoLineId().equals(h.getPoLineId())))
             .collect(Collectors.toList());
           return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
-            .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
-            .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
-            .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
+            .compose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
+            .compose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
+            .compose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
             // use given transactions (withKnownTransactions) instead of retrieving them (withExistingTransactions)
-            .thenApply(holders -> encumbranceRelationsHoldersBuilder.withKnownTransactions(holders, transactions))
-            .thenApply(fundsDistributionService::distributeFunds)
-            .thenAccept(budgetRestrictionService::checkEncumbranceRestrictions)
-            .thenCompose(aVoid -> {
+            .map(holders -> encumbranceRelationsHoldersBuilder.withKnownTransactions(holders, transactions))
+            .map(fundsDistributionService::distributeFunds)
+            .map(dataHolders -> {
+              budgetRestrictionService.checkEncumbranceRestrictions(dataHolders);
+              return null;
+            })
+            .compose(aVoid -> {
               // create missing encumbrances and unrelease existing ones
               EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
               List<EncumbranceRelationsHolder> toBeCreatedHolders = encumbranceRelationsHolders.stream()
@@ -83,13 +87,13 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
               return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);
             });
         })
-        .exceptionally(t -> {
+         .recover(t -> {
           logger.error(PROCESS_ENCUMBRANCES_ERROR, t);
           throw new HttpException(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), PROCESS_ENCUMBRANCES_ERROR +
             (t.getMessage() != null ? ": " + t.getMessage() : ""));
         });
     }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture();
   }
 
   @Override

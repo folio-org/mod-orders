@@ -7,22 +7,22 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
-import static org.folio.service.AcquisitionsUnitsService.ACQUISITIONS_UNIT_IDS;
-import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
-import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.TestUtils.encodePrettily;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ALL_DESIRED_PERMISSIONS_HEADER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.COMPOSITE_ORDERS_PATH;
 import static org.folio.rest.impl.protection.ProtectedOperations.CREATE;
 import static org.folio.rest.impl.protection.ProtectedOperations.UPDATE;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.service.AcquisitionsUnitsService.ACQUISITIONS_UNIT_IDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -38,8 +38,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import io.restassured.response.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -61,8 +62,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
 import io.vertx.core.json.JsonObject;
-import scala.collection.JavaConverters;
-import scala.collection.immutable.Seq;
 
 
 public class OrdersProtectionTest extends ProtectedEntityTestBase {

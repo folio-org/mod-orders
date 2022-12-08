@@ -9,27 +9,27 @@ import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestUtils.getModifiedProtectedFields;
-import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 
+import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.HandlersTestHelper;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.tools.parser.JsonPathParser;
+import org.hamcrest.Matchers;
 
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
 import io.restassured.response.Response;
 import io.vertx.core.json.JsonObject;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.tools.parser.JsonPathParser;
-import org.hamcrest.Matchers;
-
-import java.util.Map;
 
 public class RestTestUtils {
 

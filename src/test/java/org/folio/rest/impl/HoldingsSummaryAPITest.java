@@ -1,6 +1,6 @@
 package org.folio.rest.impl;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
 import static org.folio.RestTestUtils.verifyGet;
@@ -99,7 +99,7 @@ public class HoldingsSummaryAPITest {
     String holdingId = UUID.randomUUID().toString();
     String endpoint = String.format(HOLDING_SUMMARY_ENDPOINT, holdingId);
     HoldingSummaryCollection summaryCollection = new HoldingSummaryCollection().withTotalRecords(0);
-    doReturn(completedFuture(summaryCollection)).when(holdingsSummaryService).getHoldingsSummary(eq(holdingId), any(RequestContext.class));
+    doReturn(succeededFuture(summaryCollection)).when(holdingsSummaryService).getHoldingsSummary(eq(holdingId), any(RequestContext.class));
 
     verifyGet(endpoint, prepareHeaders(X_OKAPI_URL, EMPTY_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 200);
 

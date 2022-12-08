@@ -1,9 +1,19 @@
 package org.folio.service.orders;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
 import org.folio.models.CompositeOrderRetrieveHolder;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -11,23 +21,16 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.FiscalYearService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import io.vertx.core.Promise;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-
+@ExtendWith(VertxExtension.class)
 public class CompositeOrderRetrieveHolderBuilderTest {
 
   @InjectMocks
@@ -51,18 +54,18 @@ public class CompositeOrderRetrieveHolderBuilderTest {
       .toString())
       .withCompositePoLines(Collections.singletonList(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-    CompletableFuture<FiscalYear> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(new HttpException(404, ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND));
-    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
+    Promise<FiscalYear> failedFuture = Promise.promise();
+    failedFuture.fail(new HttpException(404, ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND));
+    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture.future());
 
     CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext)
-      .join();
+      .result();
 
     assertNull(resultHolder.getFiscalYear());
   }
 
   @Test
-  void shouldFailWhenWhenRetrieveFiscalYearReturnsDifferentFrom404Status() {
+  void shouldFailWhenWhenRetrieveFiscalYearReturnsDifferentFrom404Status(VertxTestContext vertxTestContext) {
     FundDistribution fundDistribution = new FundDistribution().withFundId(UUID.randomUUID()
       .toString());
     CompositePoLine poLine = new CompositePoLine().withFundDistribution(List.of(fundDistribution));
@@ -70,15 +73,17 @@ public class CompositeOrderRetrieveHolderBuilderTest {
       .toString())
       .withCompositePoLines(Collections.singletonList(poLine));
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-    CompletableFuture<FiscalYear> failedFuture = new CompletableFuture<>();
+    Promise<FiscalYear> failedFuture = Promise.promise();
     HttpException thrownException = new HttpException(500, ErrorCodes.GENERIC_ERROR_CODE);
-    failedFuture.completeExceptionally(thrownException);
-    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture);
-    CompletionException exception = assertThrows(CompletionException.class,
-        () -> holderBuilder.withCurrentFiscalYear(holder, requestContext)
-          .join());
+    failedFuture.fail(thrownException);
+    when(fiscalYearService.getCurrentFiscalYearByFundId(anyString(), any())).thenReturn(failedFuture.future());
 
-    assertEquals(thrownException, exception.getCause());
+    var future = holderBuilder.withCurrentFiscalYear(holder, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(exception -> {
+        assertEquals(thrownException, exception.cause().getCause());
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
@@ -88,7 +93,7 @@ public class CompositeOrderRetrieveHolderBuilderTest {
       .toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
     CompositeOrderRetrieveHolder resultHolder = holderBuilder.withCurrentFiscalYear(holder, requestContext)
-      .join();
+      .result();
 
     assertNull(resultHolder.getFiscalYear());
   }

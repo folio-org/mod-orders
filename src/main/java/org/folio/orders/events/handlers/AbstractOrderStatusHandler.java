@@ -2,103 +2,100 @@ package org.folio.orders.events.handlers;
 
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
-import static org.folio.orders.utils.HelperUtils.getPoLines;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.completablefuture.AsyncUtil;
-import org.folio.helper.AbstractHelper;
+import org.folio.helper.BaseHelper;
 import org.folio.helper.PurchaseOrderHelper;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public abstract class AbstractOrderStatusHandler extends AbstractHelper implements Handler<Message<JsonObject>> {
+public abstract class AbstractOrderStatusHandler extends BaseHelper implements Handler<Message<JsonObject>> {
   private final EncumbranceService encumbranceService;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderHelper purchaseOrderHelper;
+  private final PurchaseOrderLineService purchaseOrderLineService;
 
   protected AbstractOrderStatusHandler(Context ctx, EncumbranceService encumbranceService,
-                              PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderHelper purchaseOrderHelper) {
+                              PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderHelper purchaseOrderHelper,
+    PurchaseOrderLineService purchaseOrderLineService) {
     super(ctx);
     this.encumbranceService = encumbranceService;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.purchaseOrderHelper = purchaseOrderHelper;
+    this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
   @Override
   public void handle(Message<JsonObject> message) {
     JsonObject body = message.body();
     logger.debug("Received message body: {}", body);
-    String lang = body.getString(HelperUtils.LANG);
 
     Map<String, String> okapiHeaders = getOkapiHeaders(message);
-    HttpClientInterface httpClient = getHttpClient(okapiHeaders, true);
 
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    List<Future<Void>> futures = new ArrayList<>();
     JsonArray orderItemStatusArray = messageAsJsonArray(EVENT_PAYLOAD, message);
     for (Object orderItemStatus : orderItemStatusArray.getList()) {
       JsonObject ordersPayload = (JsonObject) orderItemStatus;
       String orderId = ordersPayload.getString(ORDER_ID);
       // Add future which would hold result of operation
-      CompletableFuture<Void> future = new CompletableFuture<>();
-      futures.add(future);
+      Promise<Void> promise = Promise.promise();
+      futures.add(promise.future());
 
+      var requestContext = new RequestContext(ctx, okapiHeaders);
       // Get purchase order to check if order status needs to be changed.
-      purchaseOrderStorageService.getPurchaseOrderById(orderId, new RequestContext(ctx, okapiHeaders))
-        .thenAccept(purchaseOrder -> {
+      purchaseOrderStorageService.getPurchaseOrderById(orderId, requestContext)
+        .onSuccess(purchaseOrder -> {
           if (isOrdersStatusChangeSkip(purchaseOrder, ordersPayload)) {
-            future.complete(null);
+            promise.complete();
           } else {
             // Get purchase order lines to check if order status needs to be changed.
-            getPoLines(orderId, lang, httpClient, okapiHeaders, logger)
-              .thenCompose(linesArray -> AsyncUtil.executeBlocking(ctx, false, () -> HelperUtils.convertJsonToPoLines(linesArray)))
-              .thenCompose(poLines -> updateOrderStatus(okapiHeaders, lang, httpClient, purchaseOrder, poLines, new RequestContext(ctx, okapiHeaders)))
-              .thenAccept(future::complete)
-              .exceptionally(e -> {
-                logger.error("The error happened processing workflow status update logic for order {}", orderId, e);
-                future.completeExceptionally(e);
-                return null;
+            purchaseOrderLineService.getPoLinesByOrderId(orderId, requestContext)
+              .compose(poLines -> updateOrderStatus(purchaseOrder, poLines, new RequestContext(ctx, okapiHeaders)))
+              .onSuccess(ok -> promise.complete())
+              .onFailure(e -> {
+                logger.error("The error happened processing workflow status update logic for order {}", orderId);
+                promise.fail(e);
               });
           }
         })
-        .exceptionally(e -> {
+        .onFailure(e -> {
           logger.error("The error happened getting order {}", orderId, e);
-          future.completeExceptionally(e);
-          return null;
+          promise.fail(e);
         });
     }
 
     // Now wait for all operations to be completed and send reply
-    completeAllFutures(httpClient, futures, message);
+    completeAllFutures(futures, message);
   }
 
-  protected CompletableFuture<Void> updateOrderStatus(Map<String, String> okapiHeaders, String lang, HttpClientInterface httpClient,
-      PurchaseOrder purchaseOrder, List<PoLine> poLines, RequestContext requestContext) {
+  protected Future<Void> updateOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, RequestContext requestContext) {
 
     PurchaseOrder.WorkflowStatus initialStatus = purchaseOrder.getWorkflowStatus();
     return AsyncUtil.executeBlocking(ctx, false, () -> changeOrderStatus(purchaseOrder, poLines))
-      .thenCompose(isStatusChanged -> {
+      .compose(isStatusChanged -> {
         if (Boolean.TRUE.equals(isStatusChanged)) {
           return purchaseOrderHelper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value(), requestContext)
-            .thenCompose(aVoid -> purchaseOrderStorageService.saveOrder(purchaseOrder, requestContext))
-            .thenCompose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatus(convert(purchaseOrder), new RequestContext(ctx, okapiHeaders)));
+            .compose(aVoid -> purchaseOrderStorageService.saveOrder(purchaseOrder, requestContext))
+            .compose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatus(convert(purchaseOrder), requestContext));
         }
-        return CompletableFuture.completedFuture(null);
+        return Future.succeededFuture();
       });
   }
 

@@ -3,7 +3,7 @@ package org.folio.orders.events.handlers;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
-import static org.folio.helper.AbstractHelper.EVENT_PAYLOAD;
+import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -11,7 +11,6 @@ import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.iterableWithSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -40,8 +39,6 @@ public class HandlersTestHelper {
       assertThat(message.body(), notNullValue());
       assertThat(message.body()
         .getJsonArray(EVENT_PAYLOAD), iterableWithSize(1));
-      assertThat(message.body()
-        .getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
 
@@ -50,7 +47,7 @@ public class HandlersTestHelper {
     // Wait until event bus registers message
 
     await().atLeast(100, MILLISECONDS)
-      .atMost(10, SECONDS)
+      .atMost(20, SECONDS)
       .until(() -> eventMessages, hasSize(msgQty));
     for (int i = 0; i < msgQty; i++) {
       Message<JsonObject> message = eventMessages.get(i);
@@ -59,8 +56,6 @@ public class HandlersTestHelper {
       assertThat(message.body(), notNullValue());
       assertThat(message.body()
         .getJsonArray(EVENT_PAYLOAD), iterableWithSize(1));
-      assertThat(message.body()
-        .getString(HelperUtils.LANG), not(isEmptyOrNullString()));
     }
   }
 

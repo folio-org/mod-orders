@@ -8,8 +8,8 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isOneOf;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.oneOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
@@ -55,23 +54,29 @@ import org.folio.service.FundsDistributionService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.ManualCurrencyConversion;
 import org.folio.service.exchange.ManualExchangeRateProvider;
-import org.folio.service.finance.budget.BudgetService;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
+import org.folio.service.finance.budget.BudgetService;
 import org.folio.service.finance.rollover.RolloverRetrieveService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.spi.DefaultNumberValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import io.vertx.core.Vertx;
 import org.mockito.Spy;
 
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+
+
+@ExtendWith(VertxExtension.class)
 public class ReEncumbranceHoldersBuilderTest {
 
   @InjectMocks
@@ -121,7 +126,7 @@ public class ReEncumbranceHoldersBuilderTest {
     assertThat(resultHolders, everyItem(allOf(
       hasProperty("purchaseOrder", is(compPO)),
       hasProperty("poLine", is(compositePoLine1)),
-      hasProperty("fundDistribution", isOneOf(fundDistribution1, fundDistribution2))
+      hasProperty("fundDistribution", is(oneOf(fundDistribution1, fundDistribution2)))
     )));
   }
 
@@ -136,10 +141,10 @@ public class ReEncumbranceHoldersBuilderTest {
     Fund fund1 = new Fund().withId(fundDistribution1.getFundId()).withLedgerId(UUID.randomUUID().toString());
     Fund fund2 = new Fund().withId(fundDistribution2.getFundId()).withLedgerId(UUID.randomUUID().toString());
 
-    when(fundService.getFunds(anyCollection(), any())).thenReturn(CompletableFuture.completedFuture(Arrays.asList(fund2, fund1)));
+    when(fundService.getFunds(anyCollection(), any())).thenReturn(Future.succeededFuture(Arrays.asList(fund2, fund1)));
 
 
-    reEncumbranceHoldersBuilder.withFundsData(holders, requestContext).join();
+    reEncumbranceHoldersBuilder.withFundsData(holders, requestContext).result();
 
     assertEquals(fund1.getLedgerId(), holder1.getLedgerId());
     assertEquals(fund2.getLedgerId(), holder2.getLedgerId());
@@ -157,10 +162,10 @@ public class ReEncumbranceHoldersBuilderTest {
 
     Fund fund1 = new Fund().withId(fundDistribution1.getFundId()).withLedgerId(UUID.randomUUID().toString());
 
-    when(fundService.getFunds(anyCollection(), any())).thenReturn(CompletableFuture.completedFuture(Collections.singletonList(fund1)));
+    when(fundService.getFunds(anyCollection(), any())).thenReturn(Future.succeededFuture(Collections.singletonList(fund1)));
 
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withFundsData(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withFundsData(holders, requestContext).result();
 
     assertThat(resultHolders, hasItem(allOf(hasProperty("ledgerId", is(fund1.getLedgerId())), hasProperty("fundDistribution", is(fundDistribution1)))));
     assertThat(resultHolders, hasItem(allOf(hasProperty("ledgerId", nullValue()), hasProperty("fundDistribution", is(fundDistribution2)))));
@@ -173,7 +178,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Collections.emptyList();
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withFundsData(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withFundsData(holders, requestContext).result();
     assertThat(resultHolders, is(empty()));
     verify(fundService, never()).getFunds(anyCollection(), any());
 
@@ -193,10 +198,10 @@ public class ReEncumbranceHoldersBuilderTest {
     Ledger ledger2 = new Ledger().withId(ledgerId2).withRestrictEncumbrance(false);
 
 
-    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(CompletableFuture.completedFuture(Arrays.asList(ledger1, ledger2)));
+    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(Future.succeededFuture(Arrays.asList(ledger1, ledger2)));
 
 
-   reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext).join();
+   reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext).result();
 
     assertTrue(holder1.getRestrictEncumbrance());
     assertFalse(holder2.getRestrictEncumbrance());
@@ -208,7 +213,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Collections.emptyList();
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext).result();
     assertThat(resultHolders, is(empty()));
     verify(ledgerService, never()).getLedgersByIds(anyCollection(), any());
 
@@ -224,9 +229,9 @@ public class ReEncumbranceHoldersBuilderTest {
 
     Ledger ledger1 = new Ledger().withId(fund1.getLedgerId()).withRestrictEncumbrance(true);
 
-    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(CompletableFuture.completedFuture(Collections.singletonList(ledger1)));
+    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(Future.succeededFuture(Collections.singletonList(ledger1)));
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext).result();
 
     assertThat(resultHolders, hasItem(hasProperty("restrictEncumbrance", is(false))));
     assertThat(resultHolders, hasItem(hasProperty("restrictEncumbrance", is(true))));
@@ -244,9 +249,9 @@ public class ReEncumbranceHoldersBuilderTest {
 
     FiscalYear fiscalYear = new FiscalYear().withId(UUID.randomUUID().toString());
 
-    when(fiscalYearService.getCurrentFiscalYear(anyString(), any())).thenReturn(CompletableFuture.completedFuture(fiscalYear));
+    when(fiscalYearService.getCurrentFiscalYear(anyString(), any())).thenReturn(Future.succeededFuture(fiscalYear));
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).result();
 
     assertThat(resultHolders, everyItem(hasProperty("currentFiscalYearId", is(fiscalYear.getId()))));
     assertThat(resultHolders, everyItem(hasProperty("currency", is(fiscalYear.getCurrency()))));
@@ -258,7 +263,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Collections.emptyList();
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).result();
     assertThat(resultHolders, is(empty()));
     verify(fiscalYearService, never()).getCurrentFiscalYear(anyString(), any());
 
@@ -276,9 +281,9 @@ public class ReEncumbranceHoldersBuilderTest {
 
     FiscalYear fiscalYear = new FiscalYear().withId(UUID.randomUUID().toString());
 
-    when(fiscalYearService.getCurrentFiscalYear(anyString(), any())).thenReturn(CompletableFuture.completedFuture(fiscalYear));
+    when(fiscalYearService.getCurrentFiscalYear(anyString(), any())).thenReturn(Future.succeededFuture(fiscalYear));
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).result();
 
     assertThat(resultHolders, everyItem(hasProperty("currentFiscalYearId", is(fiscalYear.getId()))));
     assertThat(resultHolders, everyItem(hasProperty("currency", is(fiscalYear.getCurrency()))));
@@ -292,7 +297,7 @@ public class ReEncumbranceHoldersBuilderTest {
     ReEncumbranceHolder holder3 = new ReEncumbranceHolder();
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2, holder3);
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext).result();
 
     assertThat(resultHolders, everyItem(hasProperty("currentFiscalYearId", nullValue())));
     assertThat(resultHolders, everyItem(hasProperty("currency", nullValue())));
@@ -316,9 +321,9 @@ public class ReEncumbranceHoldersBuilderTest {
     Budget budget1 = new Budget().withId(UUID.randomUUID().toString()).withFundId(fund1.getId());
     Budget budget2 = new Budget().withId(UUID.randomUUID().toString()).withFundId(fund2.getId());
 
-    when(budgetService.fetchBudgetsByFundIds(anyList(), any())).thenReturn(CompletableFuture.completedFuture(Arrays.asList(budget1, budget2)));
+    when(budgetService.fetchBudgetsByFundIds(anyList(), any())).thenReturn(Future.succeededFuture(Arrays.asList(budget1, budget2)));
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withBudgets(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withBudgets(holders, requestContext).result();
 
     assertThat(resultHolders, hasItem(allOf(hasProperty("budget", is(budget1)), hasProperty("ledgerId", is(fund1.getLedgerId())))));
     assertThat(resultHolders, hasItem(allOf(hasProperty("budget", is(budget2)), hasProperty("ledgerId", is(fund2.getLedgerId())))));
@@ -330,7 +335,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Collections.emptyList();
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withBudgets(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withBudgets(holders, requestContext).result();
     assertThat(resultHolders, is(empty()));
     verify(budgetService, never()).fetchBudgetsByFundIds(anyList(), any());
 
@@ -359,9 +364,9 @@ public class ReEncumbranceHoldersBuilderTest {
     LedgerFiscalYearRollover rollover2 = new LedgerFiscalYearRollover().withLedgerId(ledgerId2);
 
 
-    when(rolloverRetrieveService.getLedgerFyRollovers(anyString(), anyList(), any())).thenReturn(CompletableFuture.completedFuture(Arrays.asList(rollover1, rollover2)));
+    when(rolloverRetrieveService.getLedgerFyRollovers(anyString(), anyList(), any())).thenReturn(Future.succeededFuture(Arrays.asList(rollover1, rollover2)));
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withRollovers(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withRollovers(holders, requestContext).result();
 
     assertThat(resultHolders, hasItem(allOf(hasProperty("rollover", is(rollover1)), hasProperty("ledgerId", is(fund1.getLedgerId())))));
     assertThat(resultHolders, hasItem(allOf(hasProperty("rollover", is(rollover2)), hasProperty("ledgerId", is(fund2.getLedgerId())))));
@@ -387,7 +392,7 @@ public class ReEncumbranceHoldersBuilderTest {
     ReEncumbranceHolder holder4 = new ReEncumbranceHolder().withLedgerId(fund4.getLedgerId());
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2, holder3, holder4);
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withRollovers(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withRollovers(holders, requestContext).result();
 
     assertThat(resultHolders, hasItem(allOf(hasProperty("rollover", nullValue()), hasProperty("ledgerId", is(fund1.getLedgerId())))));
     assertThat(resultHolders, hasItem(allOf(hasProperty("rollover", nullValue()), hasProperty("ledgerId", is(fund2.getLedgerId())))));
@@ -405,7 +410,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Collections.singletonList(holder1);
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withRollovers(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withRollovers(holders, requestContext).result();
 
     assertThat(resultHolders, hasItem(allOf(hasProperty("rollover", nullValue()), hasProperty("ledgerId"))));
     assertThat(resultHolders, hasItem(allOf(hasProperty("rollover", nullValue()), hasProperty("ledgerId"))));
@@ -415,7 +420,7 @@ public class ReEncumbranceHoldersBuilderTest {
   }
 
   @Test
-  void shouldPopulateReEncumbranceHoldersWithConversionWhenHoldersContainsCurrency() {
+  void shouldPopulateReEncumbranceHoldersWithConversionWhenHoldersContainsCurrency(VertxTestContext vertxTestContext) {
 
     FiscalYear fiscalYear = new FiscalYear().withCurrency("USD");
     CompositePoLine line1 = new CompositePoLine().withCost(new Cost().withCurrency("EUR"));
@@ -441,12 +446,16 @@ public class ReEncumbranceHoldersBuilderTest {
     when(poFyToPoLineConversion.getCurrency()).thenReturn(Monetary.getCurrency("USD"));
     when(requestContext.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).join();
+    var future = reEncumbranceHoldersBuilder.withConversions(holders, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertEquals(result.result().get(0).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+        assertEquals(result.result().get(1).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
+        assertEquals(result.result().get(0).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
+        assertEquals(result.result().get(1).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
+        vertxTestContext.completeNow();
+      });
 
-    assertEquals(resultHolders.get(0).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
-    assertEquals(resultHolders.get(1).getPoLineToFyConversion().getCurrency(), poLineToFyConversion.getCurrency());
-    assertEquals(resultHolders.get(0).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
-    assertEquals(resultHolders.get(1).getFyToPoLineConversion().getCurrency(), poFyToPoLineConversion.getCurrency());
   }
 
   @Test
@@ -454,7 +463,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Collections.emptyList();
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).result();
 
     assertThat(resultHolders, is(empty()));
     verify(exchangeRateProviderResolver, never()).resolve(any(), any());
@@ -466,7 +475,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Arrays.asList(new ReEncumbranceHolder(), new ReEncumbranceHolder());
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withConversions(holders, requestContext).result();
 
     assertEquals(resultHolders, holders);
     verify(exchangeRateProviderResolver, never()).resolve(any(), any());
@@ -681,10 +690,10 @@ public class ReEncumbranceHoldersBuilderTest {
     List<Transaction> fromTransactionList = Arrays.asList(fromEncumbrance1, fromEncumbrance2);
     List<Transaction> toTransactionList = Collections.singletonList(toEncumbrance1);
 
-    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(CompletableFuture.completedFuture(fromTransactionList));
-    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(CompletableFuture.completedFuture(toTransactionList));
+    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(Future.succeededFuture(fromTransactionList));
+    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(Future.succeededFuture(toTransactionList));
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext).result();
 
     assertThat(resultHolders, hasItem(hasProperty("previousFyEncumbrance", is(fromEncumbrance1))));
     assertThat(resultHolders, hasItem(hasProperty("previousFyEncumbrance", is(fromEncumbrance2))));
@@ -762,10 +771,10 @@ public class ReEncumbranceHoldersBuilderTest {
     List<Transaction> fromTransactionList = Arrays.asList(fromEncumbrance1, fromEncumbrance2);
     List<Transaction> toTransactionList = Collections.emptyList();
 
-    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(CompletableFuture.completedFuture(fromTransactionList));
-    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(CompletableFuture.completedFuture(toTransactionList));
+    when(transactionService.getTransactions(contains(fromFyId), any())).thenReturn(Future.succeededFuture(fromTransactionList));
+    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(Future.succeededFuture(toTransactionList));
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext).result();
 
     assertThat(resultHolders, hasItem(hasProperty("previousFyEncumbrance", is(fromEncumbrance1))));
 
@@ -860,7 +869,7 @@ public class ReEncumbranceHoldersBuilderTest {
 
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
 
-    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(CompletableFuture.completedFuture(toTransactionList));
+    when(transactionService.getTransactions(contains(toFyId), any())).thenReturn(Future.succeededFuture(toTransactionList));
 
     when(poLineToFyConversion.with(any())).thenReturn(poLineToFyConversion);
     when(poLineToFyConversion.apply(any(MonetaryAmount.class))).thenAnswer(invocation -> {
@@ -870,7 +879,7 @@ public class ReEncumbranceHoldersBuilderTest {
     when(poFyToPoLineConversion.getCurrency()).thenReturn(Monetary.getCurrency("USD"));
     when(exchangeRateProviderResolver.resolve(any(), any())).thenReturn(exchangeRateProvider);
 
-    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withToEncumbrances(holders, requestContext).join();
+    List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withToEncumbrances(holders, requestContext).result();
 
     assertThat(resultHolders, hasItem(hasProperty("newEncumbrance", allOf(
         hasProperty("id", nullValue()),

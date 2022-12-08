@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ExchangeRateProvider;
@@ -57,12 +56,17 @@ import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
+@ExtendWith(VertxExtension.class)
 public class EncumbranceRelationsHoldersBuilderTest {
 
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
@@ -270,10 +274,10 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder2);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(CompletableFuture.completedFuture(singletonList(encumbranceFromStorage)));
+      .thenReturn(Future.succeededFuture(singletonList(encumbranceFromStorage)));
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
-        .withExistingTransactions(holders, order, requestContextMock).join();
+        .withExistingTransactions(holders, order, requestContextMock).result();
     //Then
     assertThat(resultHolders, hasSize(2));
     assertEquals(encumbranceFromStorage, holder1.getOldEncumbrance());
@@ -334,11 +338,11 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder3);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(CompletableFuture.completedFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
+      .thenReturn(Future.succeededFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
 
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
-      .withExistingTransactions(holders, order, requestContextMock).join();
+      .withExistingTransactions(holders, order, requestContextMock).result();
     //Then
     assertThat(resultHolders, hasSize(5));
     assertNull(holder1.getOldEncumbrance());
@@ -362,10 +366,10 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder3);
 
     when(budgetService.getBudgets(anyCollection(), any()))
-        .thenReturn(CompletableFuture.completedFuture(List.of(budget1, budget2, budget3)));
+        .thenReturn(Future.succeededFuture(List.of(budget1, budget2, budget3)));
 
     //When
-    encumbranceRelationsHoldersBuilder.withBudgets(holders, requestContextMock).join();
+    encumbranceRelationsHoldersBuilder.withBudgets(holders, requestContextMock).result();
     //Then
     assertEquals(budget1, holder1.getBudget());
     assertEquals(budget2, holder2.getBudget());
@@ -389,11 +393,11 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder2);
     holders.add(holder3);
 
-    when(fundService.getAllFunds(anyCollection(), any())).thenReturn(CompletableFuture.completedFuture(List.of(fund1, fund2, fund3)));
-    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(CompletableFuture.completedFuture(List.of(ledger2, ledger1, ledger3)));
+    when(fundService.getAllFunds(anyCollection(), any())).thenReturn(Future.succeededFuture(List.of(fund1, fund2, fund3)));
+    when(ledgerService.getLedgersByIds(anyCollection(), any())).thenReturn(Future.succeededFuture(List.of(ledger2, ledger1, ledger3)));
 
     //When
-    encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContextMock).join();
+    encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContextMock).result();
     //Then
     assertEquals(ledger1.getId(), holder1.getLedgerId());
     assertEquals(ledger1.getRestrictEncumbrance(), holder1.getRestrictEncumbrance());
@@ -417,9 +421,9 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder1.withBudget(budget1));
     holders.add(holder2.withBudget(budget2));
     holders.add(holder3.withBudget(budget3));
-   when(fiscalYearService.getFiscalYearById(anyString(), any())).thenReturn(CompletableFuture.completedFuture(fiscalYear));
+   when(fiscalYearService.getFiscalYearById(anyString(), any())).thenReturn(Future.succeededFuture(fiscalYear));
     //When
-    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContextMock).join();
+    List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContextMock).result();
     //Then
     assertThat(resultHolders, everyItem(hasProperty("newEncumbrance", allOf(
         hasProperty("fiscalYearId", is(fiscalYear.getId())),
@@ -428,7 +432,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
   }
 
   @Test
-  void testShouldPopulatePoLineToFiscalYearCurrencyConversion() {
+  void testShouldPopulatePoLineToFiscalYearCurrencyConversion(VertxTestContext vertxTestContext) {
     //given
     String currency = "RUB";
 
@@ -444,12 +448,18 @@ public class EncumbranceRelationsHoldersBuilderTest {
     });
     when(requestContextMock.getContext()).thenReturn(Vertx.vertx().getOrCreateContext());
     //When
-    encumbranceRelationsHoldersBuilder.withConversion(holders, requestContextMock).join();
-    //Then
-    assertEquals("USD", holder1.getPoLineToFyConversion().toString());
-    assertEquals("USD", holder2.getPoLineToFyConversion().toString());
-    assertSame(holder1.getPoLineToFyConversion(), holder2.getPoLineToFyConversion());
-    assertEquals("EUR", holder3.getPoLineToFyConversion().toString());
+    var future = encumbranceRelationsHoldersBuilder.withConversion(holders, requestContextMock);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        //Then
+        assertEquals("USD", holder1.getPoLineToFyConversion().toString());
+        assertEquals("USD", holder2.getPoLineToFyConversion().toString());
+        assertSame(holder1.getPoLineToFyConversion(), holder2.getPoLineToFyConversion());
+        assertEquals("EUR", holder3.getPoLineToFyConversion().toString());
+        vertxTestContext.completeNow();
+      });
+
   }
 
 }

@@ -40,13 +40,13 @@ public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldingSummary 
     var requestContext = new RequestContext(vertxContext, okapiHeaders);
 
     holdingsSummaryService.getHoldingsSummary(holdingId, requestContext)
-      .thenAccept(holdingSummary -> {
+      .onSuccess(holdingSummary -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved : {}", JsonObject.mapFrom(holdingSummary).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(this.buildOkResponse(holdingSummary)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
 }

@@ -38,8 +38,8 @@ public class PoNumberAPI extends BaseApi implements OrdersPoNumber {
     logger.info("Receiving generated poNumber ...");
 
     poNumberHelper.getPoNumber(new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(buildOkResponse(result))))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+      .onSuccess(result -> asyncResultHandler.handle(succeededFuture(buildOkResponse(result))))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -50,7 +50,7 @@ public class PoNumberAPI extends BaseApi implements OrdersPoNumber {
     // @Validate asserts the pattern of a PO Number, the below method is used to
     // check for uniqueness
     poNumberHelper.checkPONumberUnique(poNumber, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, t));
+      .onSuccess(result -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 }

@@ -1,9 +1,10 @@
 package org.folio.service.caches;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.Json;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
@@ -12,14 +13,14 @@ import org.folio.rest.util.RestUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.apache.http.HttpStatus;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.Json;
 
 @Component
 public class JobProfileSnapshotCache {

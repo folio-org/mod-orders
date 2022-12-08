@@ -13,9 +13,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
-import io.vertx.core.json.JsonObject;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -29,6 +27,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 public class HoldingsSummaryServiceTest {
 
@@ -63,16 +64,16 @@ public class HoldingsSummaryServiceTest {
     polines.add(line);
 
     when(purchaseOrderStorageService.getPurchaseOrdersByIds(any(), any()))
-      .thenReturn(CompletableFuture.completedFuture(purchaseOrders));
+      .thenReturn(Future.succeededFuture(purchaseOrders));
 
     when(purchaseOrderLineService.getOrderLines(anyString(), anyInt(), anyInt(), any()))
-      .thenReturn(CompletableFuture.completedFuture(polines));
+      .thenReturn(Future.succeededFuture(polines));
 
     when(pieceStorageService.getPieces(anyInt(), anyInt(), anyString(), any()))
-      .thenReturn(CompletableFuture.completedFuture(pieces));
+      .thenReturn(Future.succeededFuture(pieces));
 
     var hs = holdingsSummaryService.getHoldingsSummary(UUID.randomUUID().toString(), requestContext)
-      .join();
+      .result();
 
     assertThat(hs.getHoldingSummaries().size(), greaterThan(0));
 
