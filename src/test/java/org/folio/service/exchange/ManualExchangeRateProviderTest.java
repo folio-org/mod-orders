@@ -7,6 +7,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 import javax.money.convert.CurrencyConversion;
+import javax.money.convert.ExchangeRate;
 import javax.money.convert.ProviderContext;
 
 import org.junit.jupiter.api.Test;
@@ -32,13 +33,12 @@ public class ManualExchangeRateProviderTest {
       .set("factor", 1.0d)
       .build();
 
-    // TODO: UNCOMMENT
-    // ExchangeRate exchangeRate = manualExchangeRateProvider.getExchangeRate(conversionQuery);
+    ExchangeRate exchangeRate = manualExchangeRateProvider.getExchangeRate(conversionQuery);
 
-/*    assertThat(exchangeRate, is(notNullValue()));
+    assertThat(exchangeRate, is(notNullValue()));
     assertThat(baseCurrency, is(exchangeRate.getBaseCurrency().toString()));
     assertThat(termCurrency, is(exchangeRate.getCurrency().toString()));
-    assertThat(exchangeRate.getFactor().doubleValue(), is(1.0d));*/
+    assertThat(exchangeRate.getFactor().doubleValue(), is(1.0d));
   }
 
   @Test
