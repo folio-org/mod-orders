@@ -76,7 +76,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
             String url = resourceByIdPath(PO_LINES_BUSINESS, poLine.getId());
             asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiUrl, url, poLine)));
           })
-           .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+          .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -92,7 +92,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(poLine)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -136,7 +136,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
           .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
           .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override

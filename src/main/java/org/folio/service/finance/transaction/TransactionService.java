@@ -95,7 +95,7 @@ public class TransactionService {
   }
 
   public Future<Void> deleteTransactions(List<Transaction> transactions, RequestContext requestContext) {
-    return GenericCompositeFuture.all(transactions.stream()
+    return GenericCompositeFuture.join(transactions.stream()
       .map(transaction -> deleteTransactionById(transaction.getId(), requestContext))
         .collect(Collectors.toList()))
       .mapEmpty();

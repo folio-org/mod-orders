@@ -122,7 +122,7 @@ public class TitlesService {
         }
         return null;
       })
-       .onFailure(promise::fail);
+      .onFailure(promise::fail);
     return promise.future();
   }
 

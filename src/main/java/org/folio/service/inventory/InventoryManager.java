@@ -1237,7 +1237,7 @@ public class InventoryManager {
     restClient.postJsonObjectAndGetId(requestEntry, itemData, requestContext)
       .onSuccess(promise::complete)
       // In case item creation failed, return null instead of id
-       .onFailure(throwable -> {
+      .onFailure(throwable -> {
         logger.error(ITEM_CREATION_FAILED.getDescription());
         promise.complete();
       });

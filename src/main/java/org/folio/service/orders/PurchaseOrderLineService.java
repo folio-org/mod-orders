@@ -97,9 +97,10 @@ public class PurchaseOrderLineService {
 
   public Future<Void> saveOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
     return GenericCompositeFuture.join(orderLines.stream()
-      .map(poLine -> saveOrderLine(poLine, requestContext).onFailure(t -> {
-        throw new HttpException(400, ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
-      }))
+      .map(poLine -> saveOrderLine(poLine, requestContext)
+        .onFailure(t -> {
+          throw new HttpException(400, ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
+        }))
       .collect(toList()))
       .mapEmpty();
   }

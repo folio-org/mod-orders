@@ -96,7 +96,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
           throw new HttpException(422, new Errors().withErrors(errors).withTotalRecords(errors.size()));
         }
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -123,7 +123,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
           throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   private void populateOrderId(String orderId, CompositePurchaseOrder compPO) {
@@ -152,7 +152,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(orders)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override

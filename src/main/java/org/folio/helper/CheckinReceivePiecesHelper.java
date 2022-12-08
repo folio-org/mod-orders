@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -245,10 +246,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           piece.setHoldingId(holdingId);
           return Future.succeededFuture(true);
         })
-         .onFailure(t -> {
+        .onFailure(t -> {
           String msg = Optional.ofNullable(piece.getLocationId())
-                              .map(pieceLocation -> "location : " + pieceLocation)
-                              .orElse("holding : " + piece.getHoldingId());
+            .map(pieceLocation -> "location : " + pieceLocation)
+            .orElse("holding : " + piece.getHoldingId());
           logger.error("Cannot create holding for specified piece {}", msg);
           addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
         });
@@ -497,8 +498,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       ? Future.succeededFuture(poLine.getReceiptStatus())
       : getPiecesQuantityByPoLineAndStatus(poLine.getId(), Piece.ReceivingStatus.EXPECTED, requestContext)
         // Calculate receipt status
-        .compose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces, requestContext))
-         .onFailure(e -> logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e));
+          .compose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces, requestContext))
+          .onFailure(e -> logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e));
   }
 
   /**
@@ -718,14 +719,16 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         }
       });
 
-    return collectResultsOnSuccess(futuresForHoldingsUpdates).onSuccess(results -> {
-      if (logger.isDebugEnabled()) {
-        long successQty = results.stream()
-          .filter(result -> result)
-          .count();
-        logger.debug("{} out of {} holdings successfully processed", successQty, results.size());
-      }
-    }).mapEmpty();
+    return GenericCompositeFuture.join(futuresForHoldingsUpdates)
+      .onComplete(results -> {
+        if (logger.isDebugEnabled()) {
+          long successQty = results.result().list().stream()
+            .filter(Objects::isNull)
+            .count();
+          logger.debug("{} out of {} holdings successfully processed", successQty, results.result().size());
+        }
+      })
+      .mapEmpty();
   }
 
   private List<Future<?>> getListOfRestrictionCheckingFutures(List<PurchaseOrder> orders,

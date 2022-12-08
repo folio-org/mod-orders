@@ -64,33 +64,35 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
     String query = String.format(PIECES_ENDPOINT, poLineIdUpdate, LIMIT);
 
     // 1. Get all pieces for poLineId
-    getPieces(query, requestContext).onSuccess(listOfPieces ->
-    // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
-    purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
-      .map(poLine -> {
-        if (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.ONGOING)) {
-          promise.complete();
-        } else {
-          calculatePoLineReceiptStatus(poLine, listOfPieces)
-            .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
-            .map(updatedPoLineId -> {
-            if (updatedPoLineId != null) {
-              // send event to update order status
-              updateOrderStatus(poLine, okapiHeaders, requestContext);
-            }
+    getPieces(query, requestContext)
+      .onSuccess(listOfPieces ->
+      // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
+      purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
+        .map(poLine -> {
+          if (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.ONGOING)) {
             promise.complete();
-            return null;
-          }).onFailure(e -> {
-            logger.error("The error updating poLine by id {}", poLineIdUpdate, e);
-            promise.fail(e);
-          });
-        }
-        return null;
-      })
-      .onFailure(e -> {
-        logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
-        promise.fail(e);
-      }))
+          } else {
+            calculatePoLineReceiptStatus(poLine, listOfPieces)
+              .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
+              .map(updatedPoLineId -> {
+                if (updatedPoLineId != null) {
+                  // send event to update order status
+                  updateOrderStatus(poLine, okapiHeaders, requestContext);
+                }
+                promise.complete();
+                return null;
+              })
+              .onFailure(e -> {
+                logger.error("The error updating poLine by id {}", poLineIdUpdate, e);
+                promise.fail(e);
+              });
+          }
+          return null;
+        })
+        .onFailure(e -> {
+          logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
+          promise.fail(e);
+        }))
       .onFailure(e -> {
         logger.error("The error happened getting all pieces by poLine {}", poLineIdUpdate, e);
         promise.fail(e);
@@ -122,7 +124,7 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
     } else {
       return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.EXPECTED, pieces)
         .compose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, pieces))
-         .onFailure(e -> logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e));
+        .onFailure(e -> logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e));
     }
   }
 

@@ -46,7 +46,7 @@ public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldingSummary 
         }
         asyncResultHandler.handle(succeededFuture(this.buildOkResponse(holdingSummary)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
 }

@@ -366,26 +366,26 @@ public class PurchaseOrderHelper {
                   logger.info("Successfully deleted order with id={}", orderId);
                   promise.complete();
                 })
-                 .onFailure(t -> {
+                .onFailure(t -> {
                   logger.error("Failed to delete the order with id={}", orderId, t.getCause());
-                   promise.fail(t);
+                  promise.fail(t);
                 });
             })
-             .onFailure(t -> {
+            .onFailure(t -> {
               logger.error("Failed to delete PO Lines of the order with id={}", orderId, t.getCause());
-               promise.fail(t);
+              promise.fail(t);
             })
           )
-           .onFailure(t -> {
+          .onFailure(t -> {
             logger.error("User with id={} is forbidden to view delete with id={}", getCurrentUserId(requestContext.getHeaders()), orderId, t.getCause());
-             promise.fail(t);
+            promise.fail(t);
           });
         return null;
       })
-     .onFailure(t -> {
-      logger.error("Failed to delete PO Lines", t);
-       promise.fail(t);
-    });
+      .onFailure(t -> {
+        logger.error("Failed to delete PO Lines", t);
+        promise.fail(t);
+      });
 
     return promise.future();
   }
@@ -401,19 +401,19 @@ public class PurchaseOrderHelper {
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(orderId, requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
       .compose(compPO -> protectionService.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ, requestContext)
-            .onFailure(t -> {
-              logger.error("User with id={} is forbidden to view order with id={}", getCurrentUserId(requestContext.getHeaders()), orderId, t.getCause());
-              promise.fail(t);
-              }
-            )
-            .compose(ok -> purchaseOrderLineService.populateOrderLines(compPO, requestContext)
-              .compose(compPOWithLines -> titlesService.fetchNonPackageTitles(compPOWithLines, requestContext))
-              .map(linesIdTitles -> {
-                populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
-                return null;
-              })
-              .compose(po -> combinedPopulateService.populate(new CompositeOrderRetrieveHolder(compPO), requestContext)))
-            .map(CompositeOrderRetrieveHolder::getOrder))
+        .onFailure(t -> {
+          logger.error("User with id={} is forbidden to view order with id={}", getCurrentUserId(requestContext.getHeaders()),
+              orderId, t.getCause());
+          promise.fail(t);
+        })
+        .compose(ok -> purchaseOrderLineService.populateOrderLines(compPO, requestContext)
+          .compose(compPOWithLines -> titlesService.fetchNonPackageTitles(compPOWithLines, requestContext))
+          .map(linesIdTitles -> {
+            populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
+            return null;
+          })
+          .compose(po -> combinedPopulateService.populate(new CompositeOrderRetrieveHolder(compPO), requestContext)))
+        .map(CompositeOrderRetrieveHolder::getOrder))
       .onSuccess(promise::complete)
       .onFailure(t -> {
         logger.error("Failed to build composite purchase order with id={}", orderId, t.getCause());

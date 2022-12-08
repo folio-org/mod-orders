@@ -626,7 +626,7 @@ public class PurchaseOrderLineHelper {
         }
       }).collect(toList());
 
-    return GenericCompositeFuture.all(futures)
+    return GenericCompositeFuture.join(futures)
       .mapEmpty();
   }
 

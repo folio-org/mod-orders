@@ -36,7 +36,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
     ReceivingHelper helper = new ReceivingHelper(entity, okapiHeaders, vertxContext);
     helper.receiveItems(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -47,7 +47,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext);
     helper.checkinPieces(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -64,6 +64,6 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(receivingHistory)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 }

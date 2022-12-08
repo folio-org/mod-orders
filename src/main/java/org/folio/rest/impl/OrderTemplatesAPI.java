@@ -40,7 +40,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
         asyncResultHandler.handle(succeededFuture(
           orderTemplatesHelper.buildResponseWithLocation(String.format(ORDER_TEMPLATE_LOCATION_PREFIX, template.getId()), template)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, orderTemplatesHelper, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, orderTemplatesHelper, t));
   }
 
   @Override
@@ -55,7 +55,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(templates)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -79,7 +79,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
           logger.info("Successfully updated order template with id={}", id);
           asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
         })
-         .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
+        .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
     }
   }
 
@@ -96,7 +96,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(template)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -111,6 +111,6 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
         }
         asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 }

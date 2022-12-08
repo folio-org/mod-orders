@@ -53,7 +53,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
         asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(
           okapiHeaders.get(OKAPI_URL), resourceByIdPath(ACQUISITIONS_UNITS, unit.getId()), unit)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -68,7 +68,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(units)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -85,7 +85,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
           logger.info("Successfully updated acquisitions unit with id={}", id);
           asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
         })
-         .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+        .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
     }
   }
 
@@ -101,7 +101,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(unit)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -116,7 +116,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
         }
         asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -132,7 +132,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
         asyncResultHandler.handle(
           succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, membership.getId()), membership)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -146,7 +146,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(memberships)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -161,7 +161,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
           logger.info("Successfully updated acquisitions units membership with id={}", id);
           asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
         })
-         .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+        .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
     }
   }
 
@@ -175,7 +175,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(membership)));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
@@ -189,7 +189,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
         }
         asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
       })
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
 }

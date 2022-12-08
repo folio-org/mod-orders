@@ -59,6 +59,7 @@ public class AcquisitionsUnitsService {
                 .onSuccess(promise::complete)
                 .onFailure(promise::fail);
     } catch (Exception e) {
+      logger.error(e);
       promise.fail(e);
     }
 

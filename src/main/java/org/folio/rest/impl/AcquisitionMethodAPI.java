@@ -36,7 +36,7 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionMethodsService.getAcquisitionMethods(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(acquisitionMethods -> asyncResultHandler.handle(succeededFuture(buildOkResponse(acquisitionMethods))))
-       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
@@ -45,7 +45,7 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
     acquisitionMethodsService.createAcquisitionMethod(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(acquisitionMethod -> asyncResultHandler.handle(
         succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(ACQUISITION_METHODS, acquisitionMethod.getId()), acquisitionMethod))))
-       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
@@ -53,7 +53,7 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionMethodsService.getAcquisitionMethodById(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(acquisitionMethod -> asyncResultHandler.handle(succeededFuture(buildOkResponse(acquisitionMethod))))
-       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
@@ -61,7 +61,7 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionMethodsService.deleteAcquisitionMethod(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
@@ -79,6 +79,6 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
 
     acquisitionMethodsService.saveAcquisitionMethod(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
-       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 }

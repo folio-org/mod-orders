@@ -141,12 +141,12 @@ public class OpenCompositeOrderPieceService {
                 promise.fail(e);
               });
           })
-           .onFailure(e -> {
+          .onFailure(e -> {
             logger.error("Error getting piece by id from storage {}", piece.getId(), e);
             promise.fail(e);
           })
       )
-       .onFailure(t -> {
+      .onFailure(t -> {
         logger.error("User to update piece with id={}", piece.getId(), t.getCause());
          promise.fail(t);
       });

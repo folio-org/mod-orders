@@ -97,7 +97,7 @@ public class InvoiceLineService {
   }
 
   private Future<Void> saveInvoiceLines(List<InvoiceLine> invoiceLines, RequestContext requestContext) {
-    return GenericCompositeFuture.all(invoiceLines.stream()
+    return GenericCompositeFuture.join(invoiceLines.stream()
         .map(invLine -> saveInvoiceLine(invLine, requestContext))
         .collect(toList()))
       .mapEmpty();

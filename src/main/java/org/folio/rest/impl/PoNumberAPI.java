@@ -39,7 +39,7 @@ public class PoNumberAPI extends BaseApi implements OrdersPoNumber {
 
     poNumberHelper.getPoNumber(new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(buildOkResponse(result))))
-       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override

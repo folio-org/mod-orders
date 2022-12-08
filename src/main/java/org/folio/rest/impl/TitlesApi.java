@@ -40,7 +40,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
 
     titlesService.getTitles(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(titles -> asyncResultHandler.handle(succeededFuture(buildOkResponse(titles))))
-       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
@@ -50,7 +50,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
     titlesService.createTitle(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(title -> asyncResultHandler.handle(
         succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(TITLES, title.getId()), title))))
-       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override
@@ -59,7 +59,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     titlesService.getTitleById(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(title -> asyncResultHandler.handle(succeededFuture(buildOkResponse(title))))
-       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+      .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
   @Override

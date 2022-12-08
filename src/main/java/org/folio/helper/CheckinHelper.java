@@ -222,10 +222,10 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         return true;
       })
       // Add processing error if item failed to be updated
-       .onFailure(e -> {
+      .onFailure(e -> {
         logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
         addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
-         promise.complete(false);
+        promise.complete(false);
       });
     return promise.future();
   }

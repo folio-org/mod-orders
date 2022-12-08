@@ -98,8 +98,9 @@ public class OrderLinePatchOperationService {
           .map(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine))
           .compose(updatedPoLine -> purchaseOrderLineService.saveOrderLine(updatedPoLine, requestContext))
           .onSuccess(v -> promise.complete())
-           .onFailure(promise::fail);
-      }) .onFailure(t -> {
+          .onFailure(promise::fail);
+      })
+      .onFailure(t -> {
         logger.error("Error when updating retrieving instance record from inventory-storage request to by instanceId {}, poLineId {}", newInstanceId, lineId);
         promise.fail(t);
       });
