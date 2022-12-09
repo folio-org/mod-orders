@@ -1,6 +1,6 @@
 package org.folio.service.orders.lines.update.instance;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static java.util.stream.Collectors.toList;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestUtils.getMockData;
@@ -30,13 +30,17 @@ import org.folio.service.inventory.InventoryManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 
+
+@ExtendWith(VertxExtension.class)
 public class WithoutHoldingOrderLineUpdateInstanceStrategyTest {
 
   @InjectMocks
@@ -97,7 +101,7 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategyTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
       .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join());
+    assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result());
 
   }
 
@@ -136,13 +140,13 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategyTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
       .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    doReturn(completedFuture(new ArrayList<>()))
+    doReturn(succeededFuture(new ArrayList<>()))
       .when(inventoryManager).getItemsByHoldingId(anyString(), eq(requestContext));
 
-    doReturn(completedFuture(null))
+    doReturn(succeededFuture(null))
       .when(inventoryManager).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
 
-    assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join());
+    assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result());
     verify(inventoryManager, times(1)).getItemsByHoldingId(anyString(), eq(requestContext));
     verify(inventoryManager, times(1)).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
 
@@ -187,13 +191,13 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategyTest {
     List<JsonObject> itemsList = new ArrayList<>();
     itemsList.add(new JsonObject());
 
-    doReturn(completedFuture(itemsList))
+    doReturn(succeededFuture(itemsList))
       .when(inventoryManager).getItemsByHoldingId(anyString(), eq(requestContext));
 
-    doReturn(completedFuture(null))
+    doReturn(succeededFuture(null))
       .when(inventoryManager).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
 
-    assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).join());
+    assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result());
     verify(inventoryManager, times(1)).getItemsByHoldingId(anyString(), eq(requestContext));
     verify(inventoryManager, times(0)).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
 

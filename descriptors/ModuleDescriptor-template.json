@@ -902,8 +902,21 @@
           ],
           "modulePermissions": [
             "orders-storage.purchase-orders.collection.get",
-            "orders-storage.po-lines.collection.get"
+            "orders-storage.po-lines.collection.get",
+            "orders-storage.pieces.collection.get"
           ]
+        }
+      ]
+    },
+    {
+      "id": "orders.export-history",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/export-history",
+          "permissionsRequired": ["orders.export-history.collection.get"],
+          "modulePermissions": ["orders-storage.export-history.collection.get"]
         }
       ]
     },
@@ -1071,6 +1084,10 @@
     },
     {
       "id": "tags",
+      "version": "1.0"
+    },
+    {
+      "id": "orders-storage.export-history",
       "version": "1.0"
     }
   ],
@@ -1524,6 +1541,19 @@
       ]
     },
     {
+      "permissionName" : "orders.export-history.collection.get",
+      "displayName" : "orders-export-history-collection get",
+      "description" : "Fetch export history collection"
+    },
+    {
+      "permissionName" : "orders.export-history.all",
+      "displayName" : "All orders suffixes perms",
+      "description" : "All permissions for the export history",
+      "subPermissions" : [
+        "orders.export-history.collection.get"
+      ]
+    },
+    {
       "permissionName": "orders.rollover.item.post",
       "displayName" : "orders-rollover post",
       "description" : "Rollover orders"
@@ -1565,7 +1595,8 @@
         "orders.re-encumber.item.post",
         "orders.rollover.item.post",
         "orders.holding-summary.collection.get",
-        "orders.acquisition-methods.all"
+        "orders.acquisition-methods.all",
+        "orders.export-history.all"
       ]
     },
     {
@@ -1703,6 +1734,7 @@
         "inventory-storage.holdings.collection.get",
         "inventory-storage.items.collection.get",
         "inventory-storage.items.item.post",
+        "inventory.items.item.get",
         "inventory.items.item.put",
         "inventory-storage.loan-types.collection.get",
         "inventory-storage.contributor-name-types.collection.get",

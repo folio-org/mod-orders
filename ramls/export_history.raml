@@ -1,0 +1,41 @@
+#%RAML 1.0
+title: Export history
+baseUri: https://github.com/folio-org/mod-orders
+version: v1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Export history Logic API
+    content: <b>API for managing export history</b>
+
+types:
+  export-history: !include acq-models/mod-orders-storage/schemas/export_history.json
+  export-history-collection: !include acq-models/mod-orders-storage/schemas/export_history_collection.json
+  errors: !include raml-util/schemas/errors.schema
+  UUID:
+    type: string
+    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+  pageable: !include raml-util/traits/pageable.raml
+  searchable: !include raml-util/traits/searchable.raml
+  validate: !include raml-util/traits/validation.raml
+  language: !include raml-util/traits/language.raml
+
+resourceTypes:
+  collection: !include raml-util/rtypes/collection-with-json-response.raml
+  collection-item: !include raml-util/rtypes/item-collection-with-json-response.raml
+  collection-get: !include raml-util/rtypes/collection-get.raml
+
+
+/orders/export-history:
+  displayName: Pieces
+  description: Create export-history record
+  type:
+    collection-get:
+      exampleCollection: !include acq-models/mod-orders-storage/examples/export_history_collection.sample
+      schemaCollection: export-history-collection
+  is: [ validate ]
+  get:
+    is: [ pageable, searchable: { description: "using CQL (indexes for export-history records)", example: "exportType==\"EDIFACT_ORDERS_EXPORT\"" } ]
+

@@ -3,12 +3,13 @@ package org.folio.rest.core.exceptions;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
+
+import com.google.common.collect.Lists;
 
 public class HttpException extends RuntimeException {
   private final int code;

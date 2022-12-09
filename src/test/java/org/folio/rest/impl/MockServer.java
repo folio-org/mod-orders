@@ -1,76 +1,5 @@
 package org.folio.rest.impl;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Table;
-import io.restassured.http.Header;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-import one.util.streamex.StreamEx;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.HttpStatus;
-import org.folio.helper.AbstractHelper;
-import org.folio.isbn.IsbnUtil;
-import org.folio.rest.acq.model.SequenceNumber;
-import org.folio.rest.acq.model.SequenceNumbers;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.acq.model.Title;
-import org.folio.rest.acq.model.TitleCollection;
-import org.folio.rest.acq.model.finance.Budget;
-import org.folio.rest.acq.model.finance.BudgetCollection;
-import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
-import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.acq.model.finance.ExchangeRate;
-import org.folio.rest.acq.model.finance.ExpenseClassCollection;
-import org.folio.rest.acq.model.finance.FiscalYear;
-import org.folio.rest.acq.model.finance.Fund;
-import org.folio.rest.acq.model.finance.FundCollection;
-import org.folio.rest.acq.model.finance.Ledger;
-import org.folio.rest.acq.model.finance.LedgerCollection;
-import org.folio.rest.acq.model.finance.OrderTransactionSummary;
-import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.TransactionCollection;
-import org.folio.rest.acq.model.invoice.InvoiceLine;
-import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
-import org.folio.rest.acq.model.tag.Tag;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Error;
-
-import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.nio.file.NoSuchFileException;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import static java.time.temporal.ChronoUnit.DAYS;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -79,24 +8,85 @@ import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.assertj.core.api.Assertions.fail;
-import static org.folio.TestConstants.*;
+import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.TestConstants.BAD_QUERY;
+import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
+import static org.folio.TestConstants.EMPTY_CONFIG_TENANT;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ID;
+import static org.folio.TestConstants.ID_BAD_FORMAT;
+import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
+import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.ID_FOR_PIECES_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_B;
+import static org.folio.TestConstants.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
+import static org.folio.TestConstants.MIN_PO_ID;
+import static org.folio.TestConstants.MIN_PO_LINE_ID;
+import static org.folio.TestConstants.NON_EXIST_ACCESS_PROVIDER_A;
+import static org.folio.TestConstants.NON_EXIST_CONTRIBUTOR_NAME_TYPE_TENANT;
+import static org.folio.TestConstants.NON_EXIST_HOLDINGS_SOURCE_TENANT;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_STATUS_TENANT;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_STATUS_TENANT_HEADER;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT;
+import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT_HEADER;
+import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT;
+import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
+import static org.folio.TestConstants.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
+import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
+import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestUtils.encodePrettily;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.getTitle;
-import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
-import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
-import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
-import static org.folio.rest.core.exceptions.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.FUND_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
+import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
+import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
+import static org.folio.orders.utils.ResourcePathResolver.EXPORT_HISTORY;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
+import static org.folio.orders.utils.ResourcePathResolver.PREFIXES;
+import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.REASONS_FOR_CLOSURE;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.orders.utils.ResourcePathResolver.SUFFIXES;
+import static org.folio.orders.utils.ResourcePathResolver.TAGS;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.orders.utils.ResourcePathResolver.TRANSACTIONS_ENDPOINT;
+import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
+import static org.folio.rest.core.exceptions.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
@@ -125,6 +115,101 @@ import static org.folio.service.inventory.InventoryManagerTest.NON_EXISTED_NEW_H
 import static org.folio.service.inventory.InventoryManagerTest.OLD_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManagerTest.ONLY_NEW_HOLDING_EXIST_ID;
 
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.HttpStatus;
+import org.folio.helper.BaseHelper;
+import org.folio.isbn.IsbnUtil;
+import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
+import org.folio.rest.acq.model.Piece;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.acq.model.SequenceNumber;
+import org.folio.rest.acq.model.SequenceNumbers;
+import org.folio.rest.acq.model.Title;
+import org.folio.rest.acq.model.TitleCollection;
+import org.folio.rest.acq.model.finance.Budget;
+import org.folio.rest.acq.model.finance.BudgetCollection;
+import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
+import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.ExchangeRate;
+import org.folio.rest.acq.model.finance.ExpenseClassCollection;
+import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.acq.model.finance.Fund;
+import org.folio.rest.acq.model.finance.FundCollection;
+import org.folio.rest.acq.model.finance.Ledger;
+import org.folio.rest.acq.model.finance.LedgerCollection;
+import org.folio.rest.acq.model.finance.OrderTransactionSummary;
+import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.finance.TransactionCollection;
+import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
+import org.folio.rest.acq.model.tag.Tag;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.AcquisitionMethod;
+import org.folio.rest.jaxrs.model.AcquisitionMethodCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnit;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.OrderTemplate;
+import org.folio.rest.jaxrs.model.OrderTemplateCollection;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.Prefix;
+import org.folio.rest.jaxrs.model.PrefixCollection;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
+import org.folio.rest.jaxrs.model.ReasonForClosure;
+import org.folio.rest.jaxrs.model.ReasonForClosureCollection;
+import org.folio.rest.jaxrs.model.Suffix;
+import org.folio.rest.jaxrs.model.SuffixCollection;
+
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Table;
+
+import io.restassured.http.Header;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import one.util.streamex.StreamEx;
+
 public class MockServer {
 
   private static final Logger logger = LogManager.getLogger();
@@ -137,6 +222,7 @@ public class MockServer {
   public static final String LEDGER_FY_ROLLOVERS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRollovers/";
   public static final String LEDGER_FY_ROLLOVERS_ERRORS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverErrors/";
   public static final String LEDGER_FY_ROLLOVERS_PROGRESS_PATH = BASE_MOCK_DATA_PATH + "ledgerFyRolloverProgress/";
+  public static final String EXPORT_HISTORY_PATH_TO_SAMPLES = BASE_MOCK_DATA_PATH + "exportHistory/";
   public static final String ITEMS_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/";
   public static final String INSTANCE_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instanceTypes/";
   public static final String BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "budgetExpenseClasses/budget_expense_classes.json";
@@ -232,16 +318,16 @@ public class MockServer {
   public void start() throws InterruptedException, ExecutionException, TimeoutException {
     // Setup Mock Server...
     HttpServer server = vertx.createHttpServer();
-    CompletableFuture<HttpServer> deploymentComplete = new CompletableFuture<>();
+    Promise<HttpServer> deploymentComplete = Promise.promise();
     server.requestHandler(defineRoutes()).listen(port, result -> {
       if(result.succeeded()) {
         deploymentComplete.complete(result.result());
       }
       else {
-        deploymentComplete.completeExceptionally(result.cause());
+        deploymentComplete.fail(result.cause());
       }
     });
-    deploymentComplete.get(60, TimeUnit.SECONDS);
+    deploymentComplete.future().toCompletionStage().toCompletableFuture().get(60, TimeUnit.SECONDS);
   }
 
   public void close() {
@@ -409,7 +495,7 @@ public class MockServer {
 
   private Optional<JsonObject> getMockEntry(String objName, String id) {
     return getRqRsEntries(HttpMethod.SEARCH, objName).stream()
-      .filter(obj -> id.equals(obj.getString(AbstractHelper.ID)))
+      .filter(obj -> id.equals(obj.getString(BaseHelper.ID)))
       .findAny();
   }
 
@@ -516,6 +602,7 @@ public class MockServer {
     router.get("/invoice/invoice-lines").handler(this::handleGetInvoiceLines);
     router.get(resourcesPath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethods);
     router.get(resourcePath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethod);
+    router.get(resourcesPath(EXPORT_HISTORY)).handler(this::handleGetExportHistoryMethod);
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -556,6 +643,21 @@ public class MockServer {
 
     router.patch(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePatchOrderLines(ctx, PATCH_ORDER_LINES_REQUEST_PATCH));
     return router;
+  }
+
+  private void handleGetExportHistoryMethod(RoutingContext ctx) {
+    logger.info("handleGetExportHistoryMethod got: " + ctx.request().path());
+    try {
+      JsonObject entries = new JsonObject(getMockData(EXPORT_HISTORY_PATH_TO_SAMPLES + "export_history_collection.json"));
+
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, "exportHistory", entries);
+
+    } catch (IOException e) {
+      ctx.response()
+        .setStatusCode(404)
+        .end();
+    }
   }
 
   private void handleGetFyRolloverProgress(RoutingContext ctx) {
@@ -827,8 +929,8 @@ public class MockServer {
   }
 
   private void handlePostInstanceRecord(RoutingContext ctx) {
-    logger.info("handlePostInstanceRecord got: " + ctx.getBodyAsString());
-    JsonObject body = ctx.getBodyAsJson();
+    logger.info("handlePostInstanceRecord got: " + ctx.body().asString());
+    JsonObject body = ctx.body().asJsonObject();
     addServerRqRsData(HttpMethod.POST, INSTANCE_RECORD, body);
 
     ctx.response()
@@ -839,8 +941,8 @@ public class MockServer {
   }
 
   private void handlePostHoldingRecord(RoutingContext ctx) {
-    logger.info("handlePostHoldingsRecord got: " + ctx.getBodyAsString());
-    JsonObject body = ctx.getBodyAsJson();
+    logger.info("handlePostHoldingsRecord got: " + ctx.body().asJsonObject());
+    JsonObject body = ctx.body().asJsonObject();
 
     // the case when item creation is expected to fail for particular holding
     String id = body.getString(HOLDING_PERMANENT_LOCATION_ID).equals(ID_FOR_INTERNAL_SERVER_ERROR)
@@ -857,13 +959,13 @@ public class MockServer {
   }
 
   private void handlePostItemStorRecord(RoutingContext ctx) {
-    String bodyAsString = ctx.getBodyAsString();
+    String bodyAsString = ctx.body().toString();
     logger.info("handlePostItemRecord got: " + bodyAsString);
 
     if (bodyAsString.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
-      JsonObject bodyAsJson = ctx.getBodyAsJson();
+      JsonObject bodyAsJson = ctx.body().asJsonObject();
       bodyAsJson.put(ID, UUID.randomUUID().toString());
       addServerRqRsData(HttpMethod.POST, ITEM_RECORDS, bodyAsJson);
       ctx.response()
@@ -915,13 +1017,13 @@ public class MockServer {
       if ((queryParam.contains(OLD_HOLDING_ID) && queryParam.contains(NEW_HOLDING_ID))) {
         holdings = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
       } else if (queryParam.contains(OLD_LOCATION_ID) && queryParam.contains(NON_EXISTED_NEW_HOLDING_ID)) {
-        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+        List<JsonObject> holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
           .map(o -> ((JsonObject) o))
           .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID))
           .collect(toList());
         holdings = new JsonObject().put("holdingsRecords", new JsonArray(holdingsList));
       }  else if (queryParam.contains(OLD_LOCATION_ID) && !queryParam.contains(NON_EXISTED_NEW_HOLDING_ID)) {
-        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+        List<JsonObject> holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
           .map(o -> ((JsonObject) o))
           .filter(holding -> holding.getString("permanentLocationId").equals(OLD_LOCATION_ID)
             || !holding.getString("permanentLocationId").equals(NON_EXISTED_NEW_HOLDING_ID))
@@ -931,7 +1033,7 @@ public class MockServer {
         holdings = new JsonObject().put("holdingsRecords", new JsonArray());
       }
       if (queryParam.contains(NEW_LOCATION_ID) && queryParam.contains(ONLY_NEW_HOLDING_EXIST_ID)) {
-        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
+        List<JsonObject> holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
           .map(o -> ((JsonObject) o))
           .filter(holding -> holding.getString("permanentLocationId").equals(NEW_LOCATION_ID))
           .collect(toList());
@@ -939,9 +1041,11 @@ public class MockServer {
       }
 
       if (queryParam.contains(OLD_LOCATION_ID) && queryParam.contains(HOLDING_INSTANCE_ID_2_HOLDING)) {
-        List holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords").stream()
-                                                                              .collect(toList());
-        List doubleList = new ArrayList(holdingsList);
+        List<JsonObject> holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords")
+          .stream()
+          .map(JsonObject::mapFrom)
+          .collect(toList());
+        List<JsonObject> doubleList = new ArrayList<>(holdingsList);
         doubleList.addAll(holdingsList);
         holdings = new JsonObject().put("holdingsRecords", new JsonArray(doubleList));
       }
@@ -1816,13 +1920,13 @@ public class MockServer {
     logger.info("handlePutGenericSubObj got: PUT " + ctx.request().path());
     String id = ctx.request().getParam(ID);
 
-    addServerRqRsData(HttpMethod.PUT, subObj, ctx.getBodyAsJson());
+    addServerRqRsData(HttpMethod.PUT, subObj, ctx.body().asJsonObject());
 
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
     } if (ID_BAD_FORMAT.equals(id)) {
       serverResponse(ctx, 400, APPLICATION_JSON, id);
-    } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ctx.getBodyAsString().contains("500500500500")) {
+    } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ctx.body().asString().contains("500500500500")) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       ctx.response()
@@ -1897,7 +2001,7 @@ public class MockServer {
 
   private void handleGetPurchaseOrderByQuery(RoutingContext ctx, String orderType) {
 
-    String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
+    String query = StringUtils.substringAfter(ctx.request().absoluteURI(), "query=");
     addServerRqQuery(orderType, query);
 
     JsonObject po = new JsonObject();
@@ -1949,9 +2053,9 @@ public class MockServer {
   }
 
   private void handlePostPurchaseOrder(RoutingContext ctx) {
-    logger.info("got: " + ctx.getBodyAsString());
+    logger.info("got: " + ctx.body().asString());
     String id = UUID.randomUUID().toString();
-    JsonObject body = ctx.getBodyAsJson();
+    JsonObject body = ctx.body().asJsonObject();
     body.put(ID, id);
     org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
     addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER_STORAGE, body);
@@ -1963,13 +2067,13 @@ public class MockServer {
   }
 
   private void handlePostGeneric(RoutingContext ctx, String objectType) {
-    logger.info("handlePostGeneric {} got: {}", objectType, ctx.getBodyAsString());
+    logger.info("handlePostGeneric {} got: {}", objectType, ctx.body().asString());
 
     if (objectType.equals(ctx.request().getHeader(HEADER_SERVER_ERROR))) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       String id = UUID.randomUUID().toString();
-      JsonObject body = ctx.getBodyAsJson();
+      JsonObject body = ctx.body().asJsonObject();
       body.put(ID, id);
       addServerRqRsData(HttpMethod.POST, objectType, body);
 
@@ -1978,7 +2082,7 @@ public class MockServer {
   }
 
   private void handlePostGenericSubObj(RoutingContext ctx, String subObj) {
-    logger.info("got: " + ctx.getBodyAsString());
+    logger.info("got: " + ctx.body().asString());
 
     String echoStatus = ctx.request().getHeader(X_ECHO_STATUS);
 
@@ -1999,8 +2103,8 @@ public class MockServer {
     switch (status) {
       case 201:
         contentType = APPLICATION_JSON;
-        if (ctx.getBodyAsJson() != null) {
-          body = JsonObject.mapFrom(ctx.getBodyAsJson().mapTo(getSubObjClass(subObj)));
+        if (ctx.body().asJsonObject() != null) {
+          body = JsonObject.mapFrom(ctx.body().asJsonObject().mapTo(getSubObjClass(subObj)));
           if (StringUtils.isEmpty(body.getString(ID))) {
             body.put(ID, UUID.randomUUID().toString());
           }
@@ -2026,7 +2130,7 @@ public class MockServer {
   }
 
   private void handleTransactionPostEntry(RoutingContext ctx) {
-    logger.info("got: " + ctx.getBodyAsString());
+    logger.info("got: " + ctx.body().asString());
 
     String echoStatus = ctx.request().getHeader(X_ECHO_STATUS);
 
@@ -2067,7 +2171,7 @@ public class MockServer {
 
       serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
 
-    } else if (BUDGET_IS_INACTIVE_TENANT.equals(tenant) || ctx.getBodyAsJson().getString("fromFundId").equals(FUND_ENCUMBRANCE_ERROR)){
+    } else if (BUDGET_IS_INACTIVE_TENANT.equals(tenant) || ctx.body().asJsonObject().getString("fromFundId").equals(FUND_ENCUMBRANCE_ERROR)){
       Errors errors = new Errors();
       List<Error> errorList = new ArrayList<>();
       errorList.add(new Error().withCode(BUDGET_IS_INACTIVE.getCode()).withMessage(BUDGET_IS_INACTIVE.getDescription()));
@@ -2092,7 +2196,7 @@ public class MockServer {
       serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
 
     } else {
-      JsonObject body = ctx.getBodyAsJson();
+      JsonObject body = ctx.body().asJsonObject();
       if (body.getString(ID) == null) {
         body.put(ID, UUID.randomUUID().toString());
       }
@@ -2111,6 +2215,24 @@ public class MockServer {
         body = getMockData(ENCUMBRANCE_FOR_TAGS_PATH);
       } else if (query.equals("id==(eb506834-6c70-4239-8d1a-6414a5b08015 or eb506834-6c70-4239-8d1a-6414a5b08ac3 or 0466cb77-0344-43c6-85eb-0a64aa2934e5)")) {
         body = getMockData(LISTED_PRINT_MONOGRAPH_ENCUMBRANCES_PATH);
+      } else if (query.equals("id==(9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1 or 109ecaa0-207d-5ebd-89f2-1fda1ae9108c)")) {
+        Transaction transaction1 = new Transaction()
+          .withId(UUID.randomUUID().toString())
+          .withFromFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
+          .withEncumbrance(new Encumbrance()
+            .withSourcePurchaseOrderId("477f9ca8-b295-11eb-8529-0242ac130003")
+            .withSourcePoLineId("50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")
+            .withStatus(Encumbrance.Status.UNRELEASED));
+        Transaction transaction2 = new Transaction()
+          .withId(UUID.randomUUID().toString())
+          .withFromFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
+          .withEncumbrance(new Encumbrance()
+            .withSourcePurchaseOrderId("477f9ca8-b295-11eb-8529-0242ac130003")
+            .withSourcePoLineId("50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")
+            .withStatus(Encumbrance.Status.UNRELEASED));
+        List<Transaction> transactions = List.of(transaction1);
+        TransactionCollection transactionCollection = new TransactionCollection().withTransactions(List.of(transaction1, transaction2)).withTotalRecords(2);
+        body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else if (query.contains("encumbrance.sourcePoLineId == 50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")) {
         // for testReopenOrderUnreleasesEncumbrancesUnlessInvoiceLineHasReleaseEncumbrance
         Transaction transaction1 = new Transaction()
@@ -2170,8 +2292,8 @@ public class MockServer {
   }
 
   private void handlePostPOLine(RoutingContext ctx) {
-    logger.info("got poLine: " + ctx.getBodyAsString());
-    JsonObject body = ctx.getBodyAsJson();
+    logger.info("got poLine: " + ctx.body().asString());
+    JsonObject body = ctx.body().asJsonObject();
     org.folio.rest.acq.model.PoLine pol = body.mapTo(org.folio.rest.acq.model.PoLine.class);
 
     if (pol.getId() == null) {
@@ -2598,6 +2720,8 @@ public class MockServer {
 
     String poLineId1 = "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1";
     String poLineId2 = "4d3d5eb0-b32a-11eb-8529-0242ac130003";
+    String poLineId3 = "c0d08448-347b-418a-8c2f-5fb50248d67e";
+    String poLineId4 = "a6edc906-2f9f-5fb2-a373-efac406f0ef2";
     InvoiceLineCollection invoiceLineCollection;
     if (query.equals("poLineId == " + poLineId1 + " and releaseEncumbrance == true")) {
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(Collections.emptyList()).withTotalRecords(0);
@@ -2607,6 +2731,24 @@ public class MockServer {
         .withPoLineId(poLineId2)
         .withReleaseEncumbrance(true);
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
+    } else if (query.contains("poLineId==")) {
+      if (query.contains(poLineId3)) {
+        InvoiceLine invoiceLine = new InvoiceLine()
+          .withId(UUID.randomUUID().toString())
+          .withPoLineId(poLineId2)
+          .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.PAID)
+          .withReleaseEncumbrance(true);
+        invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
+      } else if(query.contains(poLineId4)) {
+        InvoiceLine invoiceLine = new InvoiceLine()
+          .withId(UUID.randomUUID().toString())
+          .withPoLineId(poLineId2)
+          .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.APPROVED)
+          .withReleaseEncumbrance(true);
+        invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
+      } else {
+        invoiceLineCollection = new InvoiceLineCollection();
+      }
     } else if (query.matches("poLineId(.*)")) {
       InvoiceLine invoiceLine = new InvoiceLine()
         .withId(UUID.randomUUID().toString())
@@ -2628,13 +2770,13 @@ public class MockServer {
     logger.info("handlePatchOrderLines got: PATCH " + ctx.request().path());
     String id = ctx.request().getParam(ID);
 
-    addServerRqRsData(HttpMethod.PATCH, subObj, ctx.getBodyAsJson());
+    addServerRqRsData(HttpMethod.PATCH, subObj, ctx.body().asJsonObject());
 
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
     } if (ID_BAD_FORMAT.equals(id)) {
       serverResponse(ctx, 400, APPLICATION_JSON, id);
-    } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ctx.getBodyAsString().contains("500500500500")) {
+    } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id) || ctx.body().asString().contains("500500500500")) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       ctx.response()

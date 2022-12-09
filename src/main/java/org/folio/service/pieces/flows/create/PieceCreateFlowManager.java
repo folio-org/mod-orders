@@ -1,7 +1,5 @@
 package org.folio.service.pieces.flows.create;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceCreationHolder;
@@ -12,6 +10,8 @@ import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
+
+import io.vertx.core.Future;
 
 public class PieceCreateFlowManager {
   private static final Logger logger = LogManager.getLogger(PieceCreateFlowManager.class);
@@ -34,23 +34,23 @@ public class PieceCreateFlowManager {
     this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
   }
 
-  public CompletableFuture<Piece> createPiece(Piece pieceToCreate, boolean createItem, RequestContext requestContext) {
+  public Future<Piece> createPiece(Piece pieceToCreate, boolean createItem, RequestContext requestContext) {
     logger.info("manual createPiece start");
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(createItem);
     return basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
-      .thenAccept(v -> defaultPieceFlowsValidator.isPieceRequestValid(pieceToCreate, holder.getOriginPoLine(), createItem))
-      .thenCompose(order -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(),
+      .map(v -> {defaultPieceFlowsValidator.isPieceRequestValid(pieceToCreate, holder.getOriginPoLine(), createItem); return null;})
+      .compose(order -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(),
                                                                       ProtectedOperationType.CREATE, requestContext))
-      .thenCompose(v -> pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
+      .compose(v -> pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
                                                                 holder.isCreateItem(), requestContext))
-      .thenCompose(compPoLine -> updatePoLine(holder, requestContext))
-      .thenCompose(v -> pieceStorageService.insertPiece(pieceToCreate, requestContext));
+      .compose(compPoLine -> updatePoLine(holder, requestContext))
+      .compose(v -> pieceStorageService.insertPiece(pieceToCreate, requestContext));
   }
 
-  protected CompletableFuture<Void> updatePoLine(PieceCreationHolder holder, RequestContext requestContext) {
+  protected Future<Void> updatePoLine(PieceCreationHolder holder, RequestContext requestContext) {
     if (!Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage()) && !Boolean.TRUE.equals(holder.getOriginPoLine().getCheckinItems())) {
       return pieceCreateFlowPoLineService.updatePoLine(holder, requestContext);
     }
-    return CompletableFuture.completedFuture(null);
+    return Future.succeededFuture();
   }
 }

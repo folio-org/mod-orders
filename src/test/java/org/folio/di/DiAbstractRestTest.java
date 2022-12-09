@@ -1,5 +1,43 @@
 package org.folio.di;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.dataimport.util.RestUtil.OKAPI_TENANT_HEADER;
+import static org.folio.dataimport.util.RestUtil.OKAPI_URL_HEADER;
+import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.folio.DataImportEventPayload;
+import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.postgres.testing.PostgresTesterContainer;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.client.TenantClient;
+import org.folio.rest.jaxrs.model.Event;
+import org.folio.rest.jaxrs.model.TenantAttributes;
+import org.folio.rest.jaxrs.model.TenantJob;
+import org.folio.rest.persist.Criteria.Criterion;
+import org.folio.rest.persist.PostgresClient;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.rest.util.OkapiConnectionParams;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
 import com.github.tomakehurst.wiremock.admin.NotFoundException;
 import com.github.tomakehurst.wiremock.common.ConsoleNotifier;
 import com.github.tomakehurst.wiremock.common.FileSource;
@@ -26,44 +64,6 @@ import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ObserveKeyValues;
 import net.mguenther.kafka.junit.ReadKeyValues;
 import net.mguenther.kafka.junit.SendKeyValues;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.header.internals.RecordHeader;
-import org.folio.DataImportEventPayload;
-import org.folio.kafka.KafkaTopicNameHelper;
-import org.folio.postgres.testing.PostgresTesterContainer;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.client.TenantClient;
-import org.folio.rest.jaxrs.model.Event;
-import org.folio.rest.jaxrs.model.TenantAttributes;
-import org.folio.rest.jaxrs.model.TenantJob;
-import org.folio.rest.persist.Criteria.Criterion;
-import org.folio.rest.persist.PostgresClient;
-import org.folio.rest.tools.utils.Envs;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.folio.rest.util.OkapiConnectionParams;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.singletonList;
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
-import static org.folio.dataimport.util.RestUtil.OKAPI_TENANT_HEADER;
-import static org.folio.dataimport.util.RestUtil.OKAPI_URL_HEADER;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 
 public abstract class DiAbstractRestTest {
 
@@ -80,9 +80,9 @@ public abstract class DiAbstractRestTest {
   private static int port;
   protected static final String TENANT_ID = "diku";
   protected static final String TOKEN = "token";
+  protected static RequestSpecification spec;
   private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
   private static final String RECORDS_ORDERS_TABLE = "records_orders";
-  protected static RequestSpecification spec;
 
   public static EmbeddedKafkaCluster kafkaCluster;
 
@@ -105,7 +105,6 @@ public abstract class DiAbstractRestTest {
     System.setProperty(KAFKA_PORT, hostAndPort[1]);
     System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
     System.setProperty(OKAPI_URL_ENV, OKAPI_URL);
-
     runDatabase();
     deployVerticle(context);
   }
@@ -119,9 +118,7 @@ public abstract class DiAbstractRestTest {
   @AfterClass
   public static void tearDownClass(final TestContext context) {
     Async async = context.async();
-    PostgresClient.closeAllClients();
     vertx.close(context.asyncAssertSuccess(res -> {
-      PostgresClient.stopPostgresTester();
       kafkaCluster.stop();
       async.complete();
     }));
@@ -188,7 +185,7 @@ public abstract class DiAbstractRestTest {
   }
 
   protected ConsumerRecord<String, String> buildConsumerRecord(String topic, Event event) {
-    ConsumerRecord<java.lang.String, java.lang.String> consumerRecord = new ConsumerRecord("folio", 0, 0, topic, Json.encode(event));
+    ConsumerRecord<java.lang.String, java.lang.String> consumerRecord = new ConsumerRecord<>("folio", 0, 0, topic, Json.encode(event));
     consumerRecord.headers().add(new RecordHeader(OkapiConnectionParams.OKAPI_TENANT_HEADER, TENANT_ID.getBytes(StandardCharsets.UTF_8)));
     consumerRecord.headers().add(new RecordHeader(OKAPI_URL_HEADER, ("http://localhost:" + mockServer.port()).getBytes(StandardCharsets.UTF_8)));
     consumerRecord.headers().add(new RecordHeader(OKAPI_TOKEN_HEADER, (TOKEN).getBytes(StandardCharsets.UTF_8)));

@@ -10,8 +10,13 @@
     "poNumber" : "268879",
     "compositePoLines" : [ ]
   }, {
+    "id" : "2ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
+    "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "poNumber" : "123456",
+    "compositePoLines" : [ ]
+  }, {
     "id" : "07f65192-44a4-483d-97aa-b137bbd96390",
-    "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1", 
+    "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
     "poNumber" : "S60402",
     "compositePoLines" : [ ]
   } ],

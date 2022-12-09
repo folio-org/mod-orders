@@ -5,7 +5,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 
-import java.util.concurrent.CompletableFuture;
+import io.vertx.core.Future;
 
 public class BudgetExpenseClassService {
 
@@ -17,11 +17,11 @@ public class BudgetExpenseClassService {
         this.restClient = restClient;
     }
 
-    public CompletableFuture<BudgetExpenseClassCollection> getBudgetExpenseClasses(String query, int offset, int limit, RequestContext requestContext) {
+    public Future<BudgetExpenseClassCollection> getBudgetExpenseClasses(String query, int offset, int limit, RequestContext requestContext) {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT)
                 .withQuery(query)
                 .withLimit(limit)
                 .withOffset(offset);
-        return restClient.get(requestEntry, requestContext, BudgetExpenseClassCollection.class);
+        return restClient.get(requestEntry, BudgetExpenseClassCollection.class, requestContext);
     }
 }

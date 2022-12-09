@@ -1,4 +1,21 @@
-## 12.5.0 - Unreleased
+## 12.6.0 - Unreleased
+
+## 12.5.0 Nolana R3 2022 - Released
+This release focused on upgrade RMB and module interface dependencies
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.4.0...v12.5.0)
+
+### Stories
+* [MODORDERS-778](https://issues.folio.org/browse/MODORDERS-778) - Temporary disable data-import verticle deployment
+* [MODORDERS-776](https://issues.folio.org/browse/MODORDERS-776) - Upgrade RAML Module Builder
+* [MODORDERS-761](https://issues.folio.org/browse/MODORDERS-761) - Support inventory 12.0 in ModuleDescriptor "requires"
+* [MODORDERS-757](https://issues.folio.org/browse/MODORDERS-757) - Support holdings-storage 6.0, item-storage 10.0
+* [MODORDERS-753](https://issues.folio.org/browse/MODORDERS-753) - Implement processing of DI Kafka events by mod-orders
+
+### Bug Fixes
+* [FOLIO-3604](https://issues.folio.org/browse/FOLIO-3604) - FolioVertxCompletableFuture copyright violation
+* [MODORDERS-779](https://issues.folio.org/browse/MODORDERS-779) - Closed Order w/multiple lines & different/no funds will not re-open
+
 
 ## 12.4.0 Morning Glory R2 2022 - Released
 This release focused on implementing edit instance connection logic of POL, updating POL when an order is closed with the "Cancelled" reason, defining new Business API for updating Instance Reference for Non-package order line, removing Renewal date and renewal interval requirement for opening order

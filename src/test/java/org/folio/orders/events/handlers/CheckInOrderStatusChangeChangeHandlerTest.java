@@ -15,7 +15,7 @@ import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.checkVertxContextCompletion;
-import static org.folio.helper.AbstractHelper.ORDER_ID;
+import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
@@ -55,6 +55,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
 import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -89,6 +90,8 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
   private PurchaseOrderStorageService purchaseOrderStorageService;
   @Autowired
   private PurchaseOrderHelper purchaseOrderHelper;
+  @Autowired
+  private PurchaseOrderLineService purchaseOrderLineService;
 
   HashMap<String, String> okapiHeadersMock;
 
@@ -112,7 +115,7 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
     vertx.eventBus().consumer(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE.address, new CheckInOrderStatusChangeChangeHandler(vertx, encumbranceService,
-                          purchaseOrderStorageService, purchaseOrderHelper));
+                          purchaseOrderStorageService, purchaseOrderHelper, purchaseOrderLineService));
   }
 
   @AfterEach

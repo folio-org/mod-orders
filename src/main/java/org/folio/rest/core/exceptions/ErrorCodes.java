@@ -6,6 +6,8 @@ public enum ErrorCodes {
   GENERIC_ERROR_CODE("genericError", "Generic error"),
   PO_NUMBER_ALREADY_EXISTS("poNumberNotUnique", "PO Number already exists"),
   PO_NUMBER_REQUIRED("poNumberRequired", "PO Number is missing"),
+  PO_NUMBER_PREFIX_REQUIRED("poNumberPrefixRequired", "PO Number must start with Prefix"),
+  PO_NUMBER_SUFFIX_REQUIRED("poNumberSuffixRequired", "PO Number must ends with Suffix"),
   MISSING_ORDER_ID_IN_POL("orderIdRequired", "Purchase order id is missing in PoLine object"),
   ORDER_NOT_FOUND("orderNotFound", "The order cannot be found by provided order id"),
   MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY("idMismatch", "Mismatch between id in path and request body"),
@@ -71,7 +73,9 @@ public enum ErrorCodes {
   INCORRECT_FUND_DISTRIBUTION_TOTAL("incorrectFundDistributionTotal","Fund distribution total must add to 100% or totalPrice"),
   INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE("InstanceIdNotAllowedForPackagePoLine", "Instance id not allowed for package poline"),
   PREFIX_IS_USED("prefixIsUsed", "The prefix cannot be deleted as it is used by one or more orders"),
+  PREFIX_NOT_FOUND("prefixNotFound", "The prefix is not available"),
   SUFFIX_IS_USED("suffixIsUsed", "The suffix cannot be deleted as it is used by one or more orders"),
+  SUFFIX_NOT_FOUND("suffixNotFound", "The suffix is not available"),
   PIECES_TO_BE_DELETED("piecesNeedToBeDeleted", "Pieces need to be deleted"),
   PIECES_TO_BE_CREATED("piecesNeedToBeCreated", "Pieces need to be created"),
   LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN("locationCannotBeModifiedAfterOpen", "Please use the receiving App to update pieces and locations"),
@@ -100,7 +104,8 @@ public enum ErrorCodes {
   NOT_FOUND("notFound", "Not Found"),
   FORBIDDEN_DELETE_SYSTEM_VALUE("forbiddenDeleteSystemValues", "It is forbidden to delete system values"),
   FORBIDDEN_DELETE_USED_VALUE("forbiddenDeleteUsedValue", "Deleting the value used is prohibited"),
-  ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES("errorRemovingInvoiceLineEncumbrances", "Error removing invoice line encumbrance links after deleting the encumbrances: %s");
+  ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES("errorRemovingInvoiceLineEncumbrances", "Error removing invoice line encumbrance links after deleting the encumbrances: %s"),
+  PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR("poLineHasRelatedApprovedInvoice", "Composite POL related invoice lines contains lines which has status APPROVED for the current fiscal year, invoice line ids: %s");
 
 
   private final String code;

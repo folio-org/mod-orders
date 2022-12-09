@@ -1,12 +1,13 @@
 package org.folio.service.finance.transaction;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -20,8 +21,6 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.tools.client.Response;
-import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -52,7 +51,7 @@ public class TransactionSummariesServiceTest {
     transactionSummariesService.updateOrderTransactionSummary(UUID.randomUUID()
       .toString(), 0, requestContext);
     // Then
-    verify(restClient, never()).put(any(), any(), any());
+    verify(restClient, never()).put(anyString(), any(), any());
   }
 
   @Test
@@ -80,18 +79,14 @@ public class TransactionSummariesServiceTest {
   void testShouldCreateTransactionSummaryInStorageTransactions() {
     // given
 
-    String uuid = UUID.randomUUID()
-      .toString();
-    Response response = new Response();
-    response.setBody(new JsonObject("{\"id\": \"" + uuid + "\"}"));
-    response.setCode(201);
-    doReturn(completedFuture(response)).when(restClient)
-      .post(any(), any(), any(), any());
+    String uuid = UUID.randomUUID().toString();
+    var response = new JsonObject("{\"id\": \"" + uuid + "\"}");
+    doReturn(succeededFuture(response)).when(restClient).post(anyString(), any(), any(), any());
     // When
     OrderTransactionSummary summary = transactionSummariesService.createOrderTransactionSummary(uuid, 2, requestContext)
-      .join();
+      .result();
     // Then
     assertEquals(uuid, summary.getId());
-    verify(restClient).post(any(), any(), any(), any());
+    verify(restClient).post(anyString(), any(), any(), any());
   }
 }

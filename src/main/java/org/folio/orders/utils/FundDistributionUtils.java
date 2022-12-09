@@ -6,16 +6,17 @@ import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUT
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.AMOUNT;
 import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.PERCENTAGE;
 
-import com.google.common.collect.Lists;
-import org.apache.commons.collections4.CollectionUtils;
-import org.folio.rest.jaxrs.model.Cost;
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
+
+import com.google.common.collect.Lists;
 
 public final class FundDistributionUtils {
 

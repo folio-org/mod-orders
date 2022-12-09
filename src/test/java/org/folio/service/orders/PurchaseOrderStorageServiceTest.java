@@ -9,18 +9,25 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+
+
+@ExtendWith(VertxExtension.class)
 public class PurchaseOrderStorageServiceTest {
   @InjectMocks
   private PurchaseOrderStorageService purchaseOrderStorageService;
@@ -46,18 +53,18 @@ public class PurchaseOrderStorageServiceTest {
       .withPurchaseOrders(purchaseOrders)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(), any(), any()))
-      .thenReturn(CompletableFuture.completedFuture(purchaseOrderCollection));
+    when(restClientMock.get(any(RequestEntry.class), any(), any()))
+      .thenReturn(Future.succeededFuture(purchaseOrderCollection));
 
     String expectedQuery =  String.format("id==%s", orderId);
-    PurchaseOrderCollection actOrders = purchaseOrderStorageService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).join();
+    PurchaseOrderCollection actOrders = purchaseOrderStorageService.getPurchaseOrders(expectedQuery, Integer.MAX_VALUE, 0, requestContext).result();
 
-    verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
+    verify(restClientMock).get(any(RequestEntry.class), eq(PurchaseOrderCollection.class), eq(requestContext));
     assertEquals(purchaseOrderCollection, actOrders);
   }
 
   @Test
-  void successRetrievePurchaseOrdersByIds() {
+  void successRetrievePurchaseOrdersByIds(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
     List<PurchaseOrder> purchaseOrders = Collections.singletonList(new PurchaseOrder()
       .withId(orderId));
@@ -66,13 +73,17 @@ public class PurchaseOrderStorageServiceTest {
       .withPurchaseOrders(purchaseOrders)
       .withTotalRecords(1);
 
-    when(restClientMock.get(any(), any(), any()))
-      .thenReturn(CompletableFuture.completedFuture(purchaseOrderCollection));
+    when(restClientMock.get(any(RequestEntry.class), any(), any()))
+      .thenReturn(Future.succeededFuture(purchaseOrderCollection));
 
-    List<PurchaseOrder> actOrders = purchaseOrderStorageService.getPurchaseOrdersByIds(List.of(orderId), requestContext).join();
+    var future = purchaseOrderStorageService.getPurchaseOrdersByIds(List.of(orderId), requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        verify(restClientMock).get(any(RequestEntry.class), eq(PurchaseOrderCollection.class), eq(requestContext));
+        assertEquals(purchaseOrderCollection.getPurchaseOrders(), result.result());
+        vertxTestContext.completeNow();
+      });
 
-    verify(restClientMock).get(any(), eq(requestContext), eq(PurchaseOrderCollection.class));
-    assertEquals(purchaseOrderCollection.getPurchaseOrders(), actOrders);
   }
 
 }

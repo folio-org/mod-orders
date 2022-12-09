@@ -1,6 +1,6 @@
 package org.folio.service.pieces;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -99,9 +99,9 @@ public class PieceUpdateInventoryServiceTest {
   void shouldNotDeleteHoldingIfHoldingIdIsNotNullButNotFoundInTheDB() throws ExecutionException, InterruptedException {
     String holdingId = UUID.randomUUID().toString();
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
-    doReturn(completedFuture(null)).when(inventoryManager).getHoldingById(piece.getHoldingId() , true, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).getHoldingById(piece.getHoldingId() , true, requestContext);
 
-    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).get();
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
     verify(inventoryManager, times(0)).deleteHoldingById(piece.getHoldingId() , true, requestContext);
   }
@@ -113,9 +113,9 @@ public class PieceUpdateInventoryServiceTest {
     JsonObject holding = new JsonObject();
     holding.put(ID, holding);
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
-    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
-    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(completedFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
 
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext);
 
@@ -131,11 +131,11 @@ public class PieceUpdateInventoryServiceTest {
     holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
     Piece piece2 = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
-    doReturn(completedFuture(List.of(piece, piece2))).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
-    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(completedFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(List.of(piece, piece2))).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
 
-    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).get();
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
     verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
   }
@@ -148,11 +148,11 @@ public class PieceUpdateInventoryServiceTest {
     holding.put(ID, holding);
     JsonObject item = new JsonObject().put(ID, UUID.randomUUID().toString());
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
-    doReturn(completedFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
-    doReturn(completedFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(completedFuture(List.of(item))).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(List.of(item))).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
 
-    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).get();
+    pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
     verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
   }

@@ -1,8 +1,7 @@
 package org.folio.models;
 
-
-
 import org.folio.rest.jaxrs.model.Piece;
+
 import io.vertx.core.json.JsonObject;
 
 public class PieceItemPair {

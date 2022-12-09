@@ -1,10 +1,10 @@
 package org.folio.service.finance.transaction;
 
-import org.folio.service.orders.OrderWorkflowType;
-
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
+
+import org.folio.service.orders.OrderWorkflowType;
 
 public class EncumbranceWorkflowStrategyFactory {
 

@@ -103,10 +103,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.common.collect.Lists;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.orders.utils.FundDistributionUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -126,25 +122,51 @@ import org.folio.HttpStatus;
 import org.folio.TestUtils;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
+import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.orders.utils.POLineFieldNames;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
+import org.folio.rest.jaxrs.model.Tags;
+import org.folio.rest.jaxrs.model.ValidateFundDistributionsRequest;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+import com.google.common.collect.Lists;
 
 import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import io.vertx.junit5.VertxExtension;
 
+@ExtendWith(VertxExtension.class)
 public class PurchaseOrderLinesApiTest {
 
   private static final Logger logger = LogManager.getLogger();
@@ -501,7 +523,7 @@ public class PurchaseOrderLinesApiTest {
 
     //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(4, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
 
@@ -660,7 +682,7 @@ public class PurchaseOrderLinesApiTest {
     // + 1 call to get the line encumbrances
     // + 1 call to check invoice relationships
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(6, column.size());
+    assertEquals(8, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
@@ -1107,6 +1129,28 @@ public class PurchaseOrderLinesApiTest {
 
   }
 
+  @Test
+  void testUpdatePoLineForOpenedOrderShouldFailedWhenRelatedInvoiceLineApprovedForCurrentFY() {
+    logger.info("=== Test update poline for opened order should failed when related invoice line is approved  ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
+    reqData.setId("a6edc906-2f9f-5fb2-a373-efac406f0ef2");
+    reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
+    reqData.getFundDistribution().get(0).setEncumbrance("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
+    reqData.getFundDistribution().get(1).setEncumbrance("109ecaa0-207d-5ebd-89f2-1fda1ae9108c");
+
+
+    CompositePoLine compositePoLine = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
+
+    compositePoLine.getFundDistribution().get(0).setValue(70.0);
+    compositePoLine.getFundDistribution().get(1).setValue(30.0);
+
+
+    verifyPut(String.format(LINE_BY_ID_PATH, compositePoLine.getId()), JsonObject.mapFrom(compositePoLine).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 403);
+  }
+
   private ProductId createIsbnProductId(String isbn) {
     return new ProductId().withProductIdType(ISBN_PRODUCT_TYPE_ID)
       .withProductId(isbn);
@@ -1219,10 +1263,36 @@ public class PurchaseOrderLinesApiTest {
     reqData.getFundDistribution().get(0).setDistributionType(FundDistribution.DistributionType.AMOUNT);
     reqData.getFundDistribution().get(0).setValue(reqData.getCost().getPoLineEstimatedPrice());
 
+
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+  }
 
-    assertThat("One or more transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, ENCUMBRANCES).size() > 0);
+  @Test
+  void testUpdatePolineForOpenedOrderWithChangingDFundistributionAndCost() {
+    logger.info("=== Test update poline for opened order with changed DistributionType ===");
+
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
+    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
+    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
+
+    addMockEntry(PIECES_STORAGE, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES_STORAGE, reqData);
+    Cost cost = reqData.getCost();
+    cost.setCurrency("EUR");
+    cost.setQuantityElectronic(1);
+    cost.setPoLineEstimatedPrice(50d);
+    reqData.setCost(cost);
+    reqData.setFundDistribution(Collections.singletonList(new FundDistribution()
+      .withCode("EUROHIST")
+      .withFundId("e9285a1c-1dfc-4380-868c-e74073003f43")
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
+      .withValue(100D)));
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
   }
 
   @Test
@@ -1321,6 +1391,8 @@ public class PurchaseOrderLinesApiTest {
       .collect(Collectors.toList());
 
     assertThat(errorCodes, containsInAnyOrder(LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN.getCode()));
+
+    cleanMockEntry();
   }
 
   @Test
@@ -1373,6 +1445,40 @@ public class PurchaseOrderLinesApiTest {
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+
+    cleanMockEntry();
+  }
+
+  @Test
+  void testShouldChangeItemStatusAfterCancelledPoLine() {
+    logger.info("=== Test change item status to 'Order closed' after cancelled PoLine  ===");
+
+    CompositePoLine firstLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "740809a1-84ca-45d7-a7a8-accc21efd5bd").mapTo(CompositePoLine.class);
+    firstLineFromStorage.setReceiptStatus(ReceiptStatus.CANCELLED);
+    firstLineFromStorage.setPaymentStatus(PaymentStatus.CANCELLED);
+    CompositePoLine secondLineFromStorage = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(CompositePoLine.class);
+    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "cc189777-fd26-4ae8-b0e5-08abebb50b51").mapTo(CompositePoLine.class);
+    reqData.setReceiptStatus(ReceiptStatus.CANCELLED);
+    reqData.setPaymentStatus(PaymentStatus.CANCELLED);
+
+    Fund fund = new Fund()
+      .withId("7fbd5d84-62d1-44c6-9c45-6cb173998bbd")
+      .withName("Fund")
+      .withExternalAccountNo("externalNo")
+      .withLedgerId("133a7916-f05e-4df4-8f7f-09eb2a7076d1");
+
+    addMockEntry(PIECES_STORAGE, new Piece()
+      .withPoLineId(reqData.getId())
+      .withLocationId(reqData.getLocations().get(0).getLocationId()));
+
+    addMockEntry(PO_LINES_STORAGE, firstLineFromStorage);
+    addMockEntry(PO_LINES_STORAGE, secondLineFromStorage);
+    addMockEntry(FUNDS, fund);
+
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+
+    cleanMockEntry();
   }
 
   @Test
@@ -1685,6 +1791,15 @@ public class PurchaseOrderLinesApiTest {
     poLine.setId(lineId);
     poLine.setPurchaseOrderId(orderId);
     return JsonObject.mapFrom(poLine).encode();
+  }
+
+  private void cleanMockEntry() {
+    try {
+      clearServiceInteractions();
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }

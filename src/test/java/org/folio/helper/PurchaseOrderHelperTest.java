@@ -1,17 +1,45 @@
 package org.folio.helper;
 
-import io.vertx.core.Context;
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestConfig.autowireDependencies;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.clearVertxContext;
+import static org.folio.TestConfig.getFirstContextFromVertx;
+import static org.folio.TestConfig.getVertx;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import org.folio.ApiTestSuite;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.okapi.common.WebClientFactory;
 import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.PrefixService;
 import org.folio.service.ProtectionService;
+import org.folio.service.SuffixService;
 import org.folio.service.TagService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
@@ -32,6 +60,7 @@ import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidato
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
+import org.folio.service.organization.OrganizationService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
@@ -40,42 +69,20 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.TestConfig.autowireDependencies;
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.clearVertxContext;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestConfig.mockPort;
-import static org.folio.TestConstants.X_OKAPI_TOKEN;
-import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.rest.RestConstants.OKAPI_URL;
-import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.spy;
-
+@ExtendWith(VertxExtension.class)
 public class PurchaseOrderHelperTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
@@ -93,7 +100,7 @@ public class PurchaseOrderHelperTest {
   private Context ctxMock;
   private RequestContext requestContext;
 
-  private HttpClientInterface httpClient;
+  private WebClient httpClient;
   private static boolean runningOnOwn;
 
   @BeforeAll
@@ -124,7 +131,7 @@ public class PurchaseOrderHelperTest {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
-    httpClient = HttpClientFactory.getHttpClient(okapiURL, X_OKAPI_TENANT.getValue());
+    httpClient = WebClientFactory.getWebClient(Vertx.vertx());
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
   }
 
@@ -135,7 +142,7 @@ public class PurchaseOrderHelperTest {
   }
 
   @Test
-  void testDeleteOrderLinkedToInvoiceWithError() {
+  void testDeleteOrderLinkedToInvoiceWithError(VertxTestContext vertxTestContext) {
     // given
     InvoiceLineService invoiceLineService = new InvoiceLineService(restClient);
     RestClient restClient = mock(RestClient.class, CALLS_REAL_METHODS);
@@ -146,13 +153,14 @@ public class PurchaseOrderHelperTest {
             .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
             .withTotalRecords(1);
 
-    doReturn(completedFuture(oirCollection)).when(restClient).get(any(), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(RequestEntry.class), any(), any());
 
-    CompletableFuture<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, new RequestContext(ctxMock, okapiHeadersMock));
-    CompletionException exception = assertThrows(CompletionException.class, future::join);
-    HttpException httpException = (HttpException) exception.getCause();
-    assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), httpException.getMessage());
-
+    Future<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, new RequestContext(ctxMock, okapiHeadersMock));
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), result.cause().getMessage());
+        vertxTestContext.completeNow();
+      });
   }
 
   /**
@@ -276,6 +284,20 @@ public class PurchaseOrderHelperTest {
     }
 
     @Bean
+    public PrefixService prefixService() {
+      return mock(PrefixService.class);
+    }
+    @Bean
+    public SuffixService suffixService() {
+      return mock(SuffixService.class);
+    }
+
+    @Bean
+    public OrganizationService organizationService () {
+      return mock(OrganizationService.class);
+    }
+
+    @Bean
     public ReOpenCompositeOrderManager reOpenCompositeOrderManager() {
       return mock(ReOpenCompositeOrderManager.class);
     }
@@ -290,18 +312,18 @@ public class PurchaseOrderHelperTest {
               CompositeOrderDynamicDataPopulateService combinedPopulateService,
               EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
               TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-              AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager,
+              AcquisitionsUnitsService acquisitionsUnitsService, PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
               UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
               PurchaseOrderStorageService purchaseOrderStorageService,
               ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
               OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
               CompositePoLineValidationService compositePoLineValidationService,
-              ReOpenCompositeOrderManager reOpenCompositeOrderManager) {
+              ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-        purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, inventoryManager,
+        purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
         unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
-        poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager);
+        poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager, organizationService);
     }
   }
 

@@ -1,6 +1,5 @@
 package org.folio.service.orders.flows.update.open;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -8,7 +7,6 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -30,6 +28,8 @@ import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 public class OpenCompositeOrderPieceService {
@@ -62,11 +62,11 @@ public class OpenCompositeOrderPieceService {
    * @param expectedPiecesWithItem expected Pieces to create with created associated Items records
    * @return void future
    */
-  public CompletableFuture<List<Piece>> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
+  public Future<List<Piece>> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
                                                      boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("Get pieces by poLine ID");
     return openCompositeOrderHolderBuilder.buildHolder(compPOL, titleId, expectedPiecesWithItem, requestContext)
-      .thenCompose(holder -> {
+      .compose(holder -> {
         if (CollectionUtils.isNotEmpty(holder.getPiecesWithLocationToProcess()) &&
                        (holder.getPiecesWithChangedLocation().size() == holder.getPiecesWithLocationToProcess().size())) {
           return updatePieces(holder, requestContext);
@@ -74,58 +74,57 @@ public class OpenCompositeOrderPieceService {
           return createPieces(holder, isInstanceMatchingDisabled, requestContext);
         }
       })
-      .thenApply(pieces -> {
+      .map(pieces -> {
         int createdItemsQuantity = expectedPiecesWithItem.size();
         validateItemsCreation(compPOL, createdItemsQuantity);
         return pieces;
       });
   }
 
-  private CompletableFuture<List<Piece>> updatePieces(OpenOrderPieceHolder holder, RequestContext requestContext) {
-    List<CompletableFuture<Piece>> updateFutures = holder.getPiecesWithChangedLocation().stream()
-      .map(piece -> updatePieceRecord(piece, requestContext).thenApply(v -> piece))
+  private Future<List<Piece>> updatePieces(OpenOrderPieceHolder holder, RequestContext requestContext) {
+    List<Future<Piece>> updateFutures = holder.getPiecesWithChangedLocation().stream()
+      .map(piece -> updatePieceRecord(piece, requestContext).map(v -> piece))
       .collect(toList());
     return collectResultsOnSuccess(updateFutures);
   }
 
-  private CompletableFuture<List<Piece>> createPieces(OpenOrderPieceHolder holder, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  private Future<List<Piece>> createPieces(OpenOrderPieceHolder holder, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     List<Piece> piecesToCreate = new ArrayList<>(holder.getPiecesWithLocationToProcess());
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
     piecesToCreate.forEach(piece -> piece.setTitleId(holder.getTitleId()));
     logger.debug("Trying to create pieces");
-    List<CompletableFuture<Piece>> piecesToCreateFutures = new ArrayList<>();
+    List<Future<Piece>> piecesToCreateFutures = new ArrayList<>();
     piecesToCreate.forEach(piece ->
       piecesToCreateFutures.add(createPiece(piece, isInstanceMatchingDisabled, requestContext))
     );
     return collectResultsOnSuccess(piecesToCreateFutures)
-      .exceptionally(th -> {
+       .recover(th -> {
         logger.error("Piece creation error");
         throw new CompletionException("Piece creation error", th);
       });
   }
 
-  public CompletableFuture<Piece> createPiece(Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  public Future<Piece> createPiece(Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPiece start");
     return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
-        .thenApply(v -> order))
-      .thenCompose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
-      .thenCompose(v -> pieceStorageService.insertPiece(piece, requestContext));
+      .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
+        .map(v -> order))
+      .compose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
+      .compose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
 
-  public CompletableFuture<Void> updatePieceRecord(Piece piece, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
+  public Future<Void> updatePieceRecord(Piece piece, RequestContext requestContext) {
+    Promise<Void> promise = Promise.promise();
     purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .thenCompose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
-      .thenCompose(v -> inventoryManager.updateItemWithPieceFields(piece, requestContext))
-      .thenAccept(vVoid ->
-        pieceStorageService.getPieceById(piece.getId(), requestContext).thenAccept(pieceStorage -> {
+      .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
+      .compose(v -> inventoryManager.updateItemWithPieceFields(piece, requestContext))
+      .onSuccess(vVoid ->
+        pieceStorageService.getPieceById(piece.getId(), requestContext).onSuccess(pieceStorage -> {
             Piece.ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
             pieceStorageService.updatePiece(piece, requestContext)
-              .thenAccept(future::complete)
-              .thenAccept(afterUpdate -> {
-
+              .onSuccess(ok -> {
+                promise.complete();
                 JsonObject messageToEventBus = new JsonObject();
                 messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
 
@@ -137,24 +136,21 @@ public class OpenCompositeOrderPieceService {
                   receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, messageToEventBus, requestContext);
                 }
               })
-              .exceptionally(e -> {
+              .onFailure(e -> {
                 logger.error("Error updating piece by id to storage {}", piece.getId(), e);
-                future.completeExceptionally(e);
-                return null;
+                promise.fail(e);
               });
           })
-          .exceptionally(e -> {
+          .onFailure(e -> {
             logger.error("Error getting piece by id from storage {}", piece.getId(), e);
-            future.completeExceptionally(e);
-            return null;
+            promise.fail(e);
           })
       )
-      .exceptionally(t -> {
+      .onFailure(t -> {
         logger.error("User to update piece with id={}", piece.getId(), t.getCause());
-        future.completeExceptionally(t);
-        return null;
+         promise.fail(t);
       });
-    return future;
+    return promise.future();
   }
 
   /**
@@ -163,30 +159,31 @@ public class OpenCompositeOrderPieceService {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public CompletableFuture<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .thenCompose(title -> inventoryManager.openOrderHandlePackageLineInstance(title, isInstanceMatchingDisabled, requestContext))
-        .thenCompose(title -> titlesService.saveTitle(title, requestContext).thenApply(json -> title))
-        .thenCompose(title ->
+        .compose(title -> inventoryManager.openOrderHandlePackageLineInstance(title, isInstanceMatchingDisabled, requestContext))
+        .compose(title -> titlesService.saveTitle(title, requestContext).map(json -> title))
+        .compose(title ->
         {
           if (piece.getHoldingId() != null) {
-            return completedFuture(piece.getHoldingId());
+            return Future.succeededFuture(piece.getHoldingId());
           }
           return inventoryManager.handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId()), title.getInstanceId(), requestContext)
-            .thenApply(holdingId -> {
+            .map(holdingId -> {
               piece.setLocationId(null);
               piece.setHoldingId(holdingId);
               return holdingId;
             });
         })
-        .thenCompose(holdingId -> {
+        .compose(holdingId -> {
           if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
             return inventoryManager.openOrderCreateItemRecord(compPOL, holdingId, requestContext);
           }
-          return completedFuture(null);
+          return Future.succeededFuture();
         })
-        .thenAccept(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId));
+        .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId))
+        .mapEmpty();
     }
     else
     {

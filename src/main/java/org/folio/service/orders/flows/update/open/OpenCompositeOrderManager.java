@@ -9,13 +9,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.completablefuture.AsyncUtil;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
@@ -30,6 +28,8 @@ import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.titles.TitlesService;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 public class OpenCompositeOrderManager {
@@ -60,17 +60,20 @@ public class OpenCompositeOrderManager {
    * @param compPO Purchase Order to open
    * @return CompletableFuture that indicates when transition is completed
    */
-  public CompletableFuture<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, JsonObject config, RequestContext requestContext) {
-      return AsyncUtil.executeBlocking(requestContext.getContext(), false, () -> updateIncomingOrder(compPO, poFromStorage))
-        .thenCompose(aVoid -> openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext))
-        .thenCompose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
-        .thenCompose(linesIdTitles -> {
+  public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, JsonObject config, RequestContext requestContext) {
+      updateIncomingOrder(compPO, poFromStorage);
+      return openCompositeOrderFlowValidator.validate(compPO, poFromStorage, requestContext)
+        .compose(aCompPO -> titlesService.fetchNonPackageTitles(compPO, requestContext))
+        .compose(linesIdTitles -> {
           populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
           return openCompositeOrderInventoryService.processInventory(linesIdTitles, compPO, isInstanceMatchingDisabled(config), requestContext);
         })
-        .thenCompose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
-        .thenAccept(ok -> changePoLineStatuses(compPO))
-        .thenCompose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext));
+        .compose(v -> finishProcessingEncumbrancesForOpenOrder(compPO, poFromStorage, requestContext))
+        .map(ok -> {
+          changePoLineStatuses(compPO);
+          return null;
+        })
+        .compose(ok -> openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext));
   }
 
   private boolean isInstanceMatchingDisabled(JsonObject config) {
@@ -79,12 +82,13 @@ public class OpenCompositeOrderManager {
       .orElse(false);
   }
 
-  public CompletableFuture<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return CompletableFuture.allOf( compositePoLines.stream()
+  public Future<Void> openOrderUpdatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
+    return GenericCompositeFuture.join(compositePoLines.stream()
       .map(this::removeLocationId)
       .map(this::convertToPoLine)
       .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
-      .toArray(CompletableFuture[]::new));
+      .collect(toList()))
+      .mapEmpty();
   }
 
   public PoLine convertToPoLine(CompositePoLine compPoLine) {
@@ -150,22 +154,20 @@ public class OpenCompositeOrderManager {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
   }
 
-  private CompletableFuture<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
+  private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                             RequestContext requestContext) {
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
-    return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
-      .handle((v, t) -> {
-        if (t == null)
-          return CompletableFuture.completedFuture(v);
+    Promise<Void> promise = Promise.promise();
+    strategy.processEncumbrances(compPO, poFromStorage, requestContext)
+      .onSuccess(result -> promise.complete())
+      .onFailure(t -> {
+        logger.error(t);
         // There was an error when processing the encumbrances despite the previous validations.
         // Order lines should be saved to avoid leaving an open order with locationId instead of holdingId.
-        return openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext)
-          .handle((vv, tt) -> {
-            throw new CompletionException(t.getCause());
-          });
-      })
-      .thenCompose(v -> v) // wait for future returned by handle
-      .thenApply(v -> null);
+        openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext)
+          .onComplete(asyncResult -> promise.fail(t));
+      });
+    return promise.future();
   }
 
   private void updateIncomingOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {

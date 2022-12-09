@@ -12,9 +12,8 @@ import static org.folio.TestConstants.PO_ID_OPEN_TO_BE_CLOSED;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITHOUT_PO_LINES;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
 import static org.folio.TestUtils.checkVertxContextCompletion;
-import static org.folio.helper.AbstractHelper.ORDER_ID;
+import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.helper.CheckinHelper.IS_ITEM_ORDER_CLOSED_PRESENT;
-import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
@@ -22,6 +21,7 @@ import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -43,12 +43,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.config.ApplicationConfig;
-import org.folio.helper.AbstractHelper;
+import org.folio.helper.BaseHelper;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus;
 import org.folio.service.finance.transaction.EncumbranceService;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -85,6 +86,9 @@ public class ReceiveOrderStatusChangeHandlerTest {
   @Autowired
   private PurchaseOrderHelper purchaseOrderHelper;
 
+  @Autowired
+  private PurchaseOrderLineService purchaseOrderLineService;
+
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
     if (isVerticleNotDeployed()) {
@@ -99,7 +103,7 @@ public class ReceiveOrderStatusChangeHandlerTest {
   void initMocks(){
     SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
     vertx.eventBus().consumer(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE.address, new ReceiveOrderStatusChangeHandler(vertx, encumbranceService,
-        purchaseOrderStorageService, purchaseOrderHelper));
+        purchaseOrderStorageService, purchaseOrderHelper, purchaseOrderLineService));
   }
 
   @AfterEach
@@ -281,7 +285,7 @@ public class ReceiveOrderStatusChangeHandlerTest {
       Stream.of(ids)
         .map(id -> new JsonObject().put(ORDER_ID, id).put(IS_ITEM_ORDER_CLOSED_PRESENT, false))
         .collect(Collectors.toList());
-    return new JsonObject().put(AbstractHelper.EVENT_PAYLOAD, new JsonArray(orderObjects));
+    return new JsonObject().put(BaseHelper.EVENT_PAYLOAD, new JsonArray(orderObjects));
   }
 
   private void sendEvent(JsonObject data, Handler<AsyncResult<Message<String>>> replyHandler) {

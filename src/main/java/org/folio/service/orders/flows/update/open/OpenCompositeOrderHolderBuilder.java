@@ -16,7 +16,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -29,6 +28,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUtil;
 
+import io.vertx.core.Future;
 import one.util.streamex.StreamEx;
 
 public class OpenCompositeOrderHolderBuilder {
@@ -39,22 +39,22 @@ public class OpenCompositeOrderHolderBuilder {
     this.pieceStorageService = pieceStorageService;
   }
 
-  public CompletableFuture<OpenOrderPieceHolder> buildHolder(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
+  public Future<OpenOrderPieceHolder> buildHolder(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
                 RequestContext requestContext) {
     OpenOrderPieceHolder holder = new OpenOrderPieceHolder(titleId);
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
-      .thenAccept(holder::withExistingPieces)
-      .thenAccept(aVoid -> {
+      .onSuccess(holder::withExistingPieces)
+      .onSuccess(aVoid -> {
         holder.withPiecesWithLocationToProcess(buildPiecesByLocationId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
         holder.withPiecesWithHoldingToProcess(buildPiecesByHoldingId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
       })
-      .thenAccept(aVoid -> holder.withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces())))
-      .thenAccept(aVoid -> {
+      .onSuccess(aVoid -> holder.withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces())))
+      .onSuccess(aVoid -> {
         if (CollectionUtils.isEmpty(compPOL.getLocations())) {
           holder.withPiecesWithoutLocationId(createPiecesWithoutLocationId(compPOL, holder.getExistingPieces()));
         }
       })
-      .thenApply(aVoid -> holder);
+      .map(aVoid -> holder);
   }
 
   private List<Piece> buildPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {

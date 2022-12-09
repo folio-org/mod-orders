@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -18,7 +17,6 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
 
-import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -37,6 +35,8 @@ import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
+
+import io.vertx.core.Future;
 
 public class EncumbranceRelationsHoldersBuilder {
 
@@ -93,20 +93,22 @@ public class EncumbranceRelationsHoldersBuilder {
     return holder.withNewEncumbrance(transaction);
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> withExistingTransactions(
-      List<EncumbranceRelationsHolder> encumbranceHolders, CompositePurchaseOrder poAndLinesFromStorage,
-      RequestContext requestContext) {
+  public Future<List<EncumbranceRelationsHolder>> withExistingTransactions(List<EncumbranceRelationsHolder> encumbranceHolders,
+      CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
+    if (poAndLinesFromStorage == null) {
+      return Future.succeededFuture(encumbranceHolders);
+    }
 
-    if (poAndLinesFromStorage == null)
-      return CompletableFuture.completedFuture(encumbranceHolders);
     List<String> transactionIds = poAndLinesFromStorage.getCompositePoLines().stream()
       .flatMap(poLine -> poLine.getFundDistribution().stream().map(FundDistribution::getEncumbrance))
       .filter(Objects::nonNull)
       .collect(Collectors.toList());
-    if (transactionIds.isEmpty())
-      return CompletableFuture.completedFuture(encumbranceHolders);
+    if (transactionIds.isEmpty()) {
+      return Future.succeededFuture(encumbranceHolders);
+    }
+
     return encumbranceService.getEncumbrancesByIds(transactionIds, requestContext)
-      .thenApply(transactions -> {
+      .map(transactions -> {
         mapHoldersToTransactions(encumbranceHolders, transactions);
         return withToBeReleasedHolders(encumbranceHolders, transactions);
       });
@@ -119,22 +121,20 @@ public class EncumbranceRelationsHoldersBuilder {
     return withToBeReleasedHolders(encumbranceHolders, transactions);
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> withBudgets(List<EncumbranceRelationsHolder> encumbranceHolders,
-      RequestContext requestContext) {
+  public Future<List<EncumbranceRelationsHolder>> withBudgets(List<EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
     List<String> fundIds = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getFundId)
       .filter(Objects::nonNull)
       .distinct()
       .collect(toList());
     if (fundIds.isEmpty()) {
-      return CompletableFuture.completedFuture(encumbranceHolders);
+      return Future.succeededFuture(encumbranceHolders);
     }
     return budgetService.getBudgets(fundIds, requestContext)
-      .thenApply(budgets -> mapHoldersToBudgets(budgets, encumbranceHolders));
+      .map(budgets -> mapHoldersToBudgets(budgets, encumbranceHolders));
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> withLedgersData(List<EncumbranceRelationsHolder> encumbranceHolders,
-      RequestContext requestContext) {
+  public Future<List<EncumbranceRelationsHolder>> withLedgersData(List<EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
     List<String> fundIds = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getFundId)
       .filter(Objects::nonNull)
@@ -142,60 +142,65 @@ public class EncumbranceRelationsHoldersBuilder {
       .collect(toList());
 
     if (fundIds.isEmpty()) {
-      return CompletableFuture.completedFuture(encumbranceHolders);
+      return Future.succeededFuture(encumbranceHolders);
     }
 
     return fundService.getAllFunds(fundIds, requestContext)
-      .thenApply(funds -> populateLedgerIds(funds, encumbranceHolders))
-      .thenCompose(holders -> {
+      .map(funds -> populateLedgerIds(funds, encumbranceHolders))
+      .compose(holders -> {
         List<String> ledgerIds = encumbranceHolders.stream()
           .map(EncumbranceRelationsHolder::getLedgerId)
           .distinct()
           .collect(toList());
         return ledgerService.getLedgersByIds(ledgerIds, requestContext);
       })
-      .thenApply(ledgers -> mapRestrictEncumbranceToHolders(ledgers, encumbranceHolders));
+      .map(ledgers -> mapRestrictEncumbranceToHolders(ledgers, encumbranceHolders));
 
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> withFiscalYearData(List<EncumbranceRelationsHolder> encumbranceHolders,
-      RequestContext requestContext) {
+  public Future<List<EncumbranceRelationsHolder>> withFiscalYearData(List<EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
     return encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getBudget)
       .map(Budget::getFiscalYearId)
       .findFirst()
       .map(fiscalYearId -> fiscalYearService.getFiscalYearById(fiscalYearId, requestContext)
-        .thenApply(fiscalYear -> {
+        .map(fiscalYear -> {
           encumbranceHolders.forEach(holder -> holder.withCurrentFiscalYearId(fiscalYear.getId())
             .withCurrency(fiscalYear.getCurrency()));
           return encumbranceHolders;
         }))
-      .orElseGet(() -> CompletableFuture.completedFuture(encumbranceHolders));
+      .orElseGet(() ->  Future.succeededFuture(encumbranceHolders));
 
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> withConversion(List<EncumbranceRelationsHolder> encumbranceHolders,
-                                                                            RequestContext requestContext) {
-    return encumbranceHolders.stream().map(EncumbranceRelationsHolder::getCurrency)
-        .filter(Objects::nonNull).findFirst().map(transactionCurrency -> FolioVertxCompletableFuture.supplyBlockingAsync(requestContext.getContext(), () ->  {
+  public Future<List<EncumbranceRelationsHolder>> withConversion(List<EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
+    return encumbranceHolders.stream()
+      .map(EncumbranceRelationsHolder::getCurrency)
+      .filter(Objects::nonNull)
+      .findFirst()
+      .map(transactionCurrency -> requestContext.getContext()
+        .<List<EncumbranceRelationsHolder>>executeBlocking(execBlockingFuture -> {
+          Map<String, List<EncumbranceRelationsHolder>> currencyHolderMap = encumbranceHolders.stream()
+            .filter(holder -> Objects.nonNull(holder.getPoLine()))
+            .collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
 
-          Map<String, List<EncumbranceRelationsHolder>> currencyHolderMap = encumbranceHolders.stream().filter(holder -> Objects.nonNull(holder.getPoLine())).collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
           currencyHolderMap.forEach((poLineCurrency, encumbranceRelationsHolders) -> {
             Double exchangeRate = encumbranceRelationsHolders.stream()
-                .map(EncumbranceRelationsHolder::getPoLine)
-                .map(CompositePoLine::getCost)
-                .map(Cost::getExchangeRate)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+              .map(EncumbranceRelationsHolder::getPoLine)
+              .map(CompositePoLine::getCost)
+              .map(Cost::getExchangeRate)
+              .filter(Objects::nonNull)
+              .findFirst()
+              .orElse(null);
+
             ConversionQuery conversionQuery = getConversionQuery(exchangeRate, poLineCurrency, transactionCurrency);
             ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
             CurrencyConversion conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
             encumbranceRelationsHolders.forEach(holder -> holder.withPoLineToFyConversion(conversion));
           });
-          return encumbranceHolders;
+          execBlockingFuture.complete(encumbranceHolders);
         }))
-        .orElseGet(() -> CompletableFuture.completedFuture(encumbranceHolders));
+      .orElseGet(() -> Future.succeededFuture(encumbranceHolders));
   }
 
   private List<EncumbranceRelationsHolder> populateLedgerIds(List<Fund> funds,
@@ -280,20 +285,20 @@ public class EncumbranceRelationsHoldersBuilder {
       }));
   }
 
-  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
-                                                                                                CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+  public Future<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
+      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = buildBaseHolders(compPO);
     return withBudgets(encumbranceRelationsHolders, requestContext)
-      .thenCompose(holders -> withLedgersData(holders, requestContext))
-      .thenCompose(holders -> withFiscalYearData(holders, requestContext))
-      .thenCompose(holders -> withConversion(holders, requestContext))
-      .thenCompose(holders -> withExistingTransactions(holders, poFromStorage, requestContext));
+      .compose(holders -> withLedgersData(holders, requestContext))
+      .compose(holders -> withFiscalYearData(holders, requestContext))
+      .compose(holders -> withConversion(holders, requestContext))
+      .compose(holders -> withExistingTransactions(holders, poFromStorage, requestContext));
   }
 
-  public CompletableFuture<Map<String, List<CompositePoLine>>> retrieveMapFiscalYearsWithCompPOLines(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+  public Future<Map<String, List<CompositePoLine>>> retrieveMapFiscalYearsWithCompPOLines(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
                                                                                RequestContext requestContext) {
     return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)
-      .thenApply(erhList -> erhList.stream().filter(erh-> Objects.nonNull(erh.getCurrentFiscalYearId())).collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
+      .map(erhList -> erhList.stream().filter(erh-> Objects.nonNull(erh.getCurrentFiscalYearId())).collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
         mapping(EncumbranceRelationsHolder::getPoLine, toList()))));
   }
 

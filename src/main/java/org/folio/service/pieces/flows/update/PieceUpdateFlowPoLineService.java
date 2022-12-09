@@ -1,10 +1,8 @@
 package org.folio.service.pieces.flows.update;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.folio.completablefuture.FolioVertxCompletableFuture;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.models.pieces.PieceUpdateHolder;
@@ -20,6 +18,8 @@ import org.folio.service.pieces.flows.BasePieceFlowUpdatePoLineService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
 
+import io.vertx.core.Future;
+
 public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineService<PieceUpdateHolder> {
   private PieceCreateFlowPoLineService pieceCreateFlowPoLineService;
   private PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
@@ -33,25 +33,14 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
-  public CompletableFuture<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
-    FolioVertxCompletableFuture<Void> future = new FolioVertxCompletableFuture<>(requestContext.getContext());
-    try {
-      Boolean isLineUpdated = poLineUpdateQuantity(holder);
-      if (Boolean.TRUE.equals(isLineUpdated)) {
-        updateEstimatedPrice(holder.getPoLineToSave());
-        purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext)
-                                .thenAccept(aVoid -> future.complete(null))
-                                .exceptionally(ex -> {
-                                  future.completeExceptionally(ex);
-                                  return null;
-                                });
-        return future;
-      }
-      return CompletableFuture.completedFuture(null);
-    } catch (Exception e) {
-      future.completeExceptionally(e);
+  public Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
+    Boolean isLineUpdated = poLineUpdateQuantity(holder);
+    if (Boolean.TRUE.equals(isLineUpdated)) {
+      updateEstimatedPrice(holder.getPoLineToSave());
+      return purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext);
+    } else {
+      return Future.succeededFuture();
     }
-    return future;
   }
 
   @Override

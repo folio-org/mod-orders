@@ -3,7 +3,6 @@ package org.folio.service.finance.transaction;
 import static org.folio.orders.utils.FundDistributionUtils.validateFundDistributionTotal;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.core.models.RequestContext;
@@ -11,6 +10,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.orders.OrderWorkflowType;
+
+import io.vertx.core.Future;
 
 public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
@@ -31,26 +32,29 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
   }
 
   @Override
-  public CompletableFuture<List<EncumbranceRelationsHolder>> prepareProcessEncumbrancesAndValidate(
-      CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
+  public Future<List<EncumbranceRelationsHolder>> prepareProcessEncumbrancesAndValidate(CompositePurchaseOrder compPO,
+    CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     validateFundDistributionTotal(compPO.getCompositePoLines());
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
     return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
-      .thenCompose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage, requestContext))
-      .thenApply(fundsDistributionService::distributeFunds)
-      .thenAccept(budgetRestrictionService::checkEncumbranceRestrictions)
-      .thenApply(v -> encumbranceRelationsHolders);
+      .compose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
+      .compose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
+      .compose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
+      .compose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage, requestContext))
+      .map(fundsDistributionService::distributeFunds)
+      .map(dataHolders -> {
+        budgetRestrictionService.checkEncumbranceRestrictions(dataHolders);
+        return null;
+      })
+      .map(v -> encumbranceRelationsHolders);
   }
 
   @Override
-  public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO,
+  public Future<Void> processEncumbrances(CompositePurchaseOrder compPO,
       CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     return prepareProcessEncumbrancesAndValidate(compPO, poAndLinesFromStorage, requestContext)
-      .thenApply(encumbrancesProcessingHolderBuilder::distributeHoldersByOperation)
-      .thenCompose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
+      .map(encumbrancesProcessingHolderBuilder::distributeHoldersByOperation)
+      .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
   }
 
   @Override

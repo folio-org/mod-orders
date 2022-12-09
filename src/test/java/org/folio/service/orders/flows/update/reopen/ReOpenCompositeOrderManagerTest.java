@@ -1,6 +1,6 @@
 package org.folio.service.orders.flows.update.reopen;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -40,6 +40,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
@@ -50,7 +51,10 @@ import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 
+
+@ExtendWith(VertxExtension.class)
 public class ReOpenCompositeOrderManagerTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
@@ -157,13 +161,13 @@ public class ReOpenCompositeOrderManagerTest {
       .withHoldingId(UUID.randomUUID().toString());
 
     doReturn(closedToOpenEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OrderWorkflowType.CLOSED_TO_OPEN));
-    doReturn(completedFuture(null)).when(closedToOpenEncumbranceStrategy).processEncumbrances(eq(newOrder), eq(oldOrder), eq(requestContext));
-    doReturn(completedFuture(invoiceLines)).when(invoiceLineService).getInvoiceLinesByOrderLineIds(List.of(poLineId1, poLineId2), requestContext);
-    doReturn(completedFuture(invoices)).when(invoiceService).getInvoicesByOrderId(oldOrder.getId(), requestContext);
-    doReturn(completedFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
+    doReturn(succeededFuture(null)).when(closedToOpenEncumbranceStrategy).processEncumbrances(eq(newOrder), eq(oldOrder), eq(requestContext));
+    doReturn(succeededFuture(invoiceLines)).when(invoiceLineService).getInvoiceLinesByOrderLineIds(List.of(poLineId1, poLineId2), requestContext);
+    doReturn(succeededFuture(invoices)).when(invoiceService).getInvoicesByOrderId(oldOrder.getId(), requestContext);
+    doReturn(succeededFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
 
 
-    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).get();
+    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).result();
 
     assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus), newOrder.getCompositePoLines().get(0).getReceiptStatus());
     assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus), newOrder.getCompositePoLines().get(0).getPaymentStatus());
@@ -228,13 +232,13 @@ public class ReOpenCompositeOrderManagerTest {
       .withHoldingId(UUID.randomUUID().toString());
 
     doReturn(closedToOpenEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OrderWorkflowType.CLOSED_TO_OPEN));
-    doReturn(completedFuture(null)).when(closedToOpenEncumbranceStrategy).processEncumbrances(eq(newOrder), eq(oldOrder), eq(requestContext));
-    doReturn(completedFuture(invoiceLines)).when(invoiceLineService).getInvoiceLinesByOrderLineIds(List.of(poLineId1, poLineId2), requestContext);
-    doReturn(completedFuture(invoices)).when(invoiceService).getInvoicesByOrderId(oldOrder.getId(), requestContext);
-    doReturn(completedFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
+    doReturn(succeededFuture(null)).when(closedToOpenEncumbranceStrategy).processEncumbrances(eq(newOrder), eq(oldOrder), eq(requestContext));
+    doReturn(succeededFuture(invoiceLines)).when(invoiceLineService).getInvoiceLinesByOrderLineIds(List.of(poLineId1, poLineId2), requestContext);
+    doReturn(succeededFuture(invoices)).when(invoiceService).getInvoicesByOrderId(oldOrder.getId(), requestContext);
+    doReturn(succeededFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
 
 
-    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).get();
+    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).result();
 
     assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus1), newOrder.getCompositePoLines().get(0).getReceiptStatus());
     assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus1), newOrder.getCompositePoLines().get(0).getPaymentStatus());
@@ -303,13 +307,13 @@ public class ReOpenCompositeOrderManagerTest {
       .withHoldingId(UUID.randomUUID().toString());
 
     doReturn(closedToOpenEncumbranceStrategy).when(encumbranceWorkflowStrategyFactory).getStrategy(eq(OrderWorkflowType.CLOSED_TO_OPEN));
-    doReturn(completedFuture(null)).when(closedToOpenEncumbranceStrategy).processEncumbrances(eq(newOrder), eq(oldOrder), eq(requestContext));
-    doReturn(completedFuture(invoiceLines)).when(invoiceLineService).getInvoiceLinesByOrderLineIds(List.of(poLineId1, poLineId2), requestContext);
-    doReturn(completedFuture(invoices)).when(invoiceService).getInvoicesByOrderId(oldOrder.getId(), requestContext);
-    doReturn(completedFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
+    doReturn(succeededFuture(null)).when(closedToOpenEncumbranceStrategy).processEncumbrances(eq(newOrder), eq(oldOrder), eq(requestContext));
+    doReturn(succeededFuture(invoiceLines)).when(invoiceLineService).getInvoiceLinesByOrderLineIds(List.of(poLineId1, poLineId2), requestContext);
+    doReturn(succeededFuture(invoices)).when(invoiceService).getInvoicesByOrderId(oldOrder.getId(), requestContext);
+    doReturn(succeededFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByLineIdsByChunks(List.of(poLineId1, poLineId2), requestContext);
 
 
-    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).get();
+    reOpenCompositeOrderManager.process(newOrder, oldOrder, requestContext).result();
 
     assertEquals(CompositePoLine.ReceiptStatus.fromValue(expReceiptStatus1), newOrder.getCompositePoLines().get(0).getReceiptStatus());
     assertEquals(CompositePoLine.PaymentStatus.fromValue(expPaymentStatus1), newOrder.getCompositePoLines().get(0).getPaymentStatus());

@@ -33,10 +33,10 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
   public void postOrdersReceive(String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Receiving {} items", entity.getTotalRecords());
-    ReceivingHelper helper = new ReceivingHelper(entity, okapiHeaders, vertxContext, lang);
+    ReceivingHelper helper = new ReceivingHelper(entity, okapiHeaders, vertxContext);
     helper.receiveItems(entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -44,10 +44,10 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
   public void postOrdersCheckIn(String lang, CheckinCollection entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Checkin {} items", entity.getTotalRecords());
-    CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext, lang);
+    CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext);
     helper.checkinPieces(entity, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
   @Override
@@ -55,15 +55,15 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
   public void getOrdersReceivingHistory(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    ReceivingHelper helper = new ReceivingHelper(okapiHeaders, vertxContext, lang);
+    ReceivingHelper helper = new ReceivingHelper(okapiHeaders, vertxContext);
 
     helper.getReceivingHistory(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
-      .thenAccept(receivingHistory -> {
+      .onSuccess(receivingHistory -> {
         if (logger.isInfoEnabled()) {
           logger.info("Successfully retrieved receiving history: {} ", JsonObject.mapFrom(receivingHistory).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(receivingHistory)));
       })
-      .exceptionally(t -> handleErrorResponse(asyncResultHandler, helper, t));
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 }

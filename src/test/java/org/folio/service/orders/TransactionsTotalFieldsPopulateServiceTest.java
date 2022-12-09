@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -22,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import io.vertx.core.Future;
 
 public class TransactionsTotalFieldsPopulateServiceTest {
 
@@ -61,10 +62,10 @@ public class TransactionsTotalFieldsPopulateServiceTest {
 
     List<Transaction> transactions = List.of(paidEncumbrance, notPaidEncumbrance);
 
-    when(transactionService.getTransactions(anyString(), any())).thenReturn(CompletableFuture.completedFuture(transactions));
+    when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(transactions));
 
     CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext)
-      .join();
+      .result();
 
     assertEquals(27.54, resultHolder.getOrder().getTotalEncumbered());
     assertEquals(13.45, resultHolder.getOrder().getTotalExpended());
@@ -76,7 +77,7 @@ public class TransactionsTotalFieldsPopulateServiceTest {
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
 
-    CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).join();
+    CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).result();
 
     assertEquals(0d, resultHolder.getOrder()
             .getTotalExpended());
@@ -90,9 +91,9 @@ public class TransactionsTotalFieldsPopulateServiceTest {
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order)
             .withFiscalYear(new FiscalYear().withId(UUID.randomUUID().toString()));
 
-    when(transactionService.getTransactions(anyString(), any())).thenReturn(CompletableFuture.completedFuture(Collections.emptyList()));
+    when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(Collections.emptyList()));
 
-    CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).join();
+    CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).result();
 
     assertEquals(0d, resultHolder.getOrder().getTotalExpended());
   }

@@ -1,14 +1,14 @@
 package org.folio.service.orders;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.ROLLOVER_NOT_COMPLETED;
-import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverLog.RolloverStatus.ERROR;
-import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverLog.RolloverStatus.IN_PROGRESS;
-import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverLog.RolloverStatus.NOT_STARTED;
-import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverLog.RolloverStatus.SUCCESS;
+import static org.folio.rest.jaxrs.model.RolloverStatus.ERROR;
+import static org.folio.rest.jaxrs.model.RolloverStatus.IN_PROGRESS;
+import static org.folio.rest.jaxrs.model.RolloverStatus.NOT_STARTED;
+import static org.folio.rest.jaxrs.model.RolloverStatus.SUCCESS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -16,7 +16,6 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -28,19 +27,17 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ReEncumbranceHolder;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
@@ -49,6 +46,7 @@ import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -67,13 +65,20 @@ import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.AdditionalMatchers;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
+import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+
+@ExtendWith(VertxExtension.class)
 public class OrderReEncumberServiceTest {
 
   @InjectMocks
@@ -102,6 +107,9 @@ public class OrderReEncumberServiceTest {
 
   @Mock
   private RequestContext requestContext;
+
+  @Captor
+  ArgumentCaptor<ArrayList<ReEncumbranceHolder>> argumentCaptorForList;
 
   private LedgerFiscalYearRolloverProgress notStarted;
   private LedgerFiscalYearRolloverProgress inProgress;
@@ -168,30 +176,30 @@ public class OrderReEncumberServiceTest {
 
     // LedgerFiscalYearRolloverErrorCollection is not empty. Expected "needReEncumber" = true
     doReturn(holders).when(spyReEncumbranceHoldersBuilder).buildReEncumbranceHoldersWithOrdersData(any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withFundsData(any(), any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withCurrentFiscalYearData(any(), any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withRollovers(any(), any());
-    doReturn(completedFuture(progresses)).when(rolloverRetrieveService).getRolloversProgress(anyString(), any());
-    doReturn(completedFuture(ledgerFiscalYearRolloverErrors)).when(rolloverErrorService).getLedgerFyRolloverErrors(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withFundsData(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withCurrentFiscalYearData(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withRollovers(any(), any());
+    doReturn(succeededFuture(progresses)).when(rolloverRetrieveService).getRolloversProgress(anyString(), any());
+    doReturn(succeededFuture(ledgerFiscalYearRolloverErrors)).when(rolloverErrorService).getLedgerFyRolloverErrors(any(), any());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
-    CompositePurchaseOrder compOrder = orderReEncumberService.populate(holder, requestContext).join().getOrder();
+    CompositePurchaseOrder compOrder = orderReEncumberService.populate(holder, requestContext).result().getOrder();
     assertTrue(compOrder.getNeedReEncumber());
 
     // LedgerFiscalYearRolloverErrorCollection is empty. Expected "needReEncumber" = false
-    doReturn(completedFuture(new LedgerFiscalYearRolloverErrorCollection()))
+    doReturn(succeededFuture(new LedgerFiscalYearRolloverErrorCollection()))
         .when(rolloverErrorService).getLedgerFyRolloverErrors(any(), any());
-    compOrder = orderReEncumberService.populate(holder, requestContext).join().getOrder();
+    compOrder = orderReEncumberService.populate(holder, requestContext).result().getOrder();
     assertFalse(compOrder.getNeedReEncumber());
 
     // LedgerFyRollover not exists. Expected "needReEncumber" = false
-    doReturn(completedFuture(new LedgerFiscalYearRolloverCollection())).when(rolloverRetrieveService).getLedgerFyRollovers(anyString(), anyString(), any());
-    compOrder = orderReEncumberService.populate(holder, requestContext).join().getOrder();
+    doReturn(succeededFuture(new LedgerFiscalYearRolloverCollection())).when(rolloverRetrieveService).getLedgerFyRollovers(anyString(), anyString(), any());
+    compOrder = orderReEncumberService.populate(holder, requestContext).result().getOrder();
     assertFalse(compOrder.getNeedReEncumber());
 
   }
 
   @Test
-  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverHasProgressNotStartedOrInProgress() {
+  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverHasProgressNotStartedOrInProgress(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
 
     String fundId1 = UUID.randomUUID().toString();
@@ -222,35 +230,38 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2, holder3);
 
-    when(purchaseOrderStorageService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
+    when(purchaseOrderStorageService.getCompositeOrderById(anyString(), any())).thenReturn(succeededFuture(new CompositePurchaseOrder()));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
-    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(completedFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(succeededFuture(holders));
     when(spyReEncumbranceHoldersBuilder.withEncumbranceRollover(any())).thenReturn(holders);
     when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId1), any()))
-        .thenReturn(completedFuture(Collections.singletonList(notStarted)));
+        .thenReturn(succeededFuture(Collections.singletonList(notStarted)));
     when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId2), any()))
-        .thenReturn(completedFuture(Collections.singletonList(inProgress)));
+        .thenReturn(succeededFuture(Collections.singletonList(inProgress)));
     when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId3), any()))
-        .thenReturn(completedFuture(Collections.singletonList(success)));
+        .thenReturn(succeededFuture(Collections.singletonList(success)));
 
-    CompletionException completionException = assertThrows(CompletionException.class, () -> orderReEncumberService.reEncumber(orderId, requestContext).join());
-
-    assertNotNull(completionException.getCause());
-    assertThat(completionException.getCause(), instanceOf(HttpException.class));
-    HttpException e = (HttpException) completionException.getCause();
-    assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
-    assertThat(e.getError().getParameters(), hasSize(1));
-    Parameter parameter = e.getError().getParameters().get(0);
-    assertThat(parameter.getValue(), containsString(ledgerId1));
-    assertThat(parameter.getValue(), containsString(ledgerId2));
+    var future = orderReEncumberService.reEncumber(orderId, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException ->{
+      assertNotNull(completionException.cause());
+      assertThat(completionException.cause(), instanceOf(HttpException.class));
+      HttpException e = (HttpException) completionException.cause();
+      assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
+      assertThat(e.getError().getParameters(), hasSize(1));
+      Parameter parameter = e.getError().getParameters().get(0);
+      assertThat(parameter.getValue(), containsString(ledgerId1));
+      assertThat(parameter.getValue(), containsString(ledgerId2));
+      vertxTestContext.completeNow();
+    });
 
   }
 
   @Test
-  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverIsMissing() {
+  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverIsMissing(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
 
     String fundId1 = UUID.randomUUID().toString();
@@ -278,28 +289,31 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2, holder3);
 
-    when(purchaseOrderStorageService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
+    when(purchaseOrderStorageService.getCompositeOrderById(anyString(), any())).thenReturn(succeededFuture(new CompositePurchaseOrder()));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
-    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(completedFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(succeededFuture(holders));
     when(spyReEncumbranceHoldersBuilder.withEncumbranceRollover(any())).thenReturn(holders);
-    when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId1), any())).thenReturn(completedFuture(Collections.singletonList(success)));
-    when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId2), any())).thenReturn(completedFuture(Collections.singletonList(error)));
+    when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId1), any())).thenReturn(succeededFuture(Collections.singletonList(success)));
+    when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId2), any())).thenReturn(succeededFuture(Collections.singletonList(error)));
 
-    CompletionException completionException = assertThrows(CompletionException.class, () -> orderReEncumberService.reEncumber(orderId, requestContext).join());
-
-    assertNotNull(completionException.getCause());
-    assertThat(completionException.getCause(), instanceOf(HttpException.class));
-    HttpException e = (HttpException) completionException.getCause();
-    assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
-    assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("ledgerIds").withValue(ledgerId3)));
+    var future = orderReEncumberService.reEncumber(orderId, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException ->{
+        assertNotNull(completionException.cause());
+        assertThat(completionException.cause(), instanceOf(HttpException.class));
+        HttpException e = (HttpException) completionException.cause();
+        assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
+        assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("ledgerIds").withValue(ledgerId3)));
+        vertxTestContext.completeNow();
+      });
 
   }
 
   @Test
-  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverHasNoProgress() {
+  void shouldThrowHttpExceptionWithRolloverNotCompletedCodeWhenAtLeastOneRolloverHasNoProgress(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
 
     String fundId1 = UUID.randomUUID().toString();
@@ -331,29 +345,31 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2, holder3);
 
-    when(purchaseOrderStorageService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
+    when(purchaseOrderStorageService.getCompositeOrderById(anyString(), any())).thenReturn(succeededFuture(new CompositePurchaseOrder()));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
-    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(completedFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(succeededFuture(holders));
     when(spyReEncumbranceHoldersBuilder.withEncumbranceRollover(any())).thenReturn(holders);
     when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId3), any()))
-        .thenReturn(completedFuture(Collections.singletonList(error)));
-    when(rolloverRetrieveService.getRolloversProgress(AdditionalMatchers.not(eq(rolloverId3)), any())).thenReturn(completedFuture(Collections.emptyList()));
+        .thenReturn(succeededFuture(Collections.singletonList(error)));
+    when(rolloverRetrieveService.getRolloversProgress(AdditionalMatchers.not(eq(rolloverId3)), any())).thenReturn(succeededFuture(Collections.emptyList()));
 
-    CompletionException completionException = assertThrows(CompletionException.class, () -> orderReEncumberService.reEncumber(orderId, requestContext).join());
-
-    assertNotNull(completionException.getCause());
-    assertThat(completionException.getCause(), instanceOf(HttpException.class));
-    HttpException e = (HttpException) completionException.getCause();
-    assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
-    assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("ledgerIds").withValue(ledgerId1 + ", " + ledgerId2)));
-
+    var future = orderReEncumberService.reEncumber(orderId, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException -> {
+        assertNotNull(completionException.cause());
+        assertThat(completionException.cause(), instanceOf(HttpException.class));
+        HttpException e = (HttpException) completionException.cause();
+        assertEquals(ROLLOVER_NOT_COMPLETED.getCode(), e.getError().getCode());
+        assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("ledgerIds").withValue(ledgerId1 + ", " + ledgerId2)));
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
-  void shouldThrowHttpExceptionWithFundsNotFoundCodeWhenAtLeastOneFundIsMissing() {
+  void shouldThrowHttpExceptionWithFundsNotFoundCodeWhenAtLeastOneFundIsMissing(VertxTestContext vertxTestContext) {
     String orderId = UUID.randomUUID().toString();
 
     String fundId1 = UUID.randomUUID().toString();
@@ -367,17 +383,19 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2);
 
-    when(purchaseOrderStorageService.getCompositeOrderById(anyString(), any())).thenReturn(completedFuture(new CompositePurchaseOrder()));
+    when(purchaseOrderStorageService.getCompositeOrderById(anyString(), any())).thenReturn(succeededFuture(new CompositePurchaseOrder()));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
-    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
-
-    CompletionException completionException = assertThrows(CompletionException.class, () -> orderReEncumberService.reEncumber(orderId, requestContext).join());
-
-    assertNotNull(completionException.getCause());
-    assertThat(completionException.getCause(), instanceOf(HttpException.class));
-    HttpException e = (HttpException) completionException.getCause();
-    assertEquals(FUNDS_NOT_FOUND.getCode(), e.getError().getCode());
-    assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("fund").withValue(fundId2)));
+    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(succeededFuture(holders));
+    var future = orderReEncumberService.reEncumber(orderId, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException ->{
+        assertNotNull(completionException.cause());
+        assertThat(completionException.cause(), instanceOf(HttpException.class));
+        HttpException e = (HttpException) completionException.cause();
+        assertEquals(FUNDS_NOT_FOUND.getCode(), e.getError().getCode());
+        assertEquals(e.getError().getParameters(), Collections.singletonList(new Parameter().withKey("fund").withValue(fundId2)));
+        vertxTestContext.completeNow();
+      });
 
   }
 
@@ -387,28 +405,28 @@ public class OrderReEncumberServiceTest {
     String orderId = UUID.randomUUID().toString();
 
     when(purchaseOrderStorageService.getCompositeOrderById(eq(orderId), eq(requestContext)))
-        .thenReturn(completedFuture(new CompositePurchaseOrder().withId(orderId)));
+        .thenReturn(succeededFuture(new CompositePurchaseOrder().withId(orderId)));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(Collections.emptyList());
-    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(Collections.emptyList()));
-    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(completedFuture(Collections.emptyList()));
-    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(completedFuture(Collections.emptyList()));
-    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(completedFuture(Collections.emptyList()));
+    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(succeededFuture(Collections.emptyList()));
+    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(succeededFuture(Collections.emptyList()));
+    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(succeededFuture(Collections.emptyList()));
+    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(succeededFuture(Collections.emptyList()));
     when(spyReEncumbranceHoldersBuilder.withEncumbranceRollover(any())).thenReturn(Collections.emptyList());
-    when(spyReEncumbranceHoldersBuilder.withBudgets(any(), any())).thenReturn(completedFuture(Collections.emptyList()));
-    when(spyReEncumbranceHoldersBuilder.withConversions(any(), any())).thenReturn(completedFuture(Collections.emptyList()));
-    when(spyReEncumbranceHoldersBuilder.withPreviousFyEncumbrances(any(), any())).thenReturn(completedFuture(Collections.emptyList()));
-    when(spyReEncumbranceHoldersBuilder.withToEncumbrances(any(), any())).thenReturn(completedFuture(Collections.emptyList()));
+    when(spyReEncumbranceHoldersBuilder.withBudgets(any(), any())).thenReturn(succeededFuture(Collections.emptyList()));
+    when(spyReEncumbranceHoldersBuilder.withConversions(any(), any())).thenReturn(succeededFuture(Collections.emptyList()));
+    when(spyReEncumbranceHoldersBuilder.withPreviousFyEncumbrances(any(), any())).thenReturn(succeededFuture(Collections.emptyList()));
+    when(spyReEncumbranceHoldersBuilder.withToEncumbrances(any(), any())).thenReturn(succeededFuture(Collections.emptyList()));
     doNothing().when(budgetRestrictionService).checkEncumbranceRestrictions(anyList());
     when(rolloverErrorService.getLedgerFyRolloverErrors(anyString(), any()))
-        .thenReturn(completedFuture(new LedgerFiscalYearRolloverErrorCollection()));
-    when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(completedFuture(null));
-    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(completedFuture(null));
+        .thenReturn(succeededFuture(new LedgerFiscalYearRolloverErrorCollection()));
+    when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(succeededFuture(null));
+    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(succeededFuture(null));
     ConversionQuery conversionQuery = ConversionQueryBuilder.of().setBaseCurrency("USD").setTermCurrency("USD").build();
     when(exchangeRateProviderResolver.resolve(conversionQuery, requestContext)).thenReturn(exchangeRateProvider);
-    CompletableFuture<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
+    Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
 
-    future.join();
-    assertFalse(future.isCompletedExceptionally());
+    future.result();
+    assertFalse(future.failed());
   }
 
   @Test
@@ -426,37 +444,36 @@ public class OrderReEncumberServiceTest {
     List<ReEncumbranceHolder> holders = List.of(holder1, holder2);
 
     when(purchaseOrderStorageService.getCompositeOrderById(eq(orderId), eq(requestContext)))
-        .thenReturn(completedFuture(new CompositePurchaseOrder().withId(orderId)));
+        .thenReturn(succeededFuture(new CompositePurchaseOrder().withId(orderId)));
     when(spyReEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(any())).thenReturn(holders);
-    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(completedFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withFundsData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withLedgersData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withCurrentFiscalYearData(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withRollovers(any(), any())).thenReturn(succeededFuture(holders));
     when(spyReEncumbranceHoldersBuilder.withEncumbranceRollover(any())).thenReturn(holders);
-    when(spyReEncumbranceHoldersBuilder.withBudgets(any(), any())).thenReturn(completedFuture(holders));
-    when(spyReEncumbranceHoldersBuilder.withConversions(any(), any())).thenReturn(completedFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withBudgets(any(), any())).thenReturn(succeededFuture(holders));
+    when(spyReEncumbranceHoldersBuilder.withConversions(any(), any())).thenReturn(succeededFuture(holders));
     when(spyReEncumbranceHoldersBuilder.withPreviousFyEncumbrances(any(), any()))
-        .thenAnswer(invocation -> completedFuture(invocation.getArgument(0)));
+        .thenAnswer(invocation -> succeededFuture(invocation.getArgument(0)));
     when(spyReEncumbranceHoldersBuilder.withToEncumbrances(any(), any()))
-        .thenAnswer(invocation -> completedFuture(invocation.getArgument(0)));
+        .thenAnswer(invocation -> succeededFuture(invocation.getArgument(0)));
     doNothing().when(budgetRestrictionService).checkEncumbranceRestrictions(anyList());
     when(rolloverErrorService.getLedgerFyRolloverErrors(anyString(), any()))
-        .thenReturn(completedFuture(new LedgerFiscalYearRolloverErrorCollection()));
-    when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(completedFuture(null));
-    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(completedFuture(null));
+        .thenReturn(succeededFuture(new LedgerFiscalYearRolloverErrorCollection()));
+    when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(succeededFuture(null));
+    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(succeededFuture(null));
 
-    CompletableFuture<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
+    Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
     List<Transaction> toTransactionList = Collections.emptyList();
     when(transactionService.getTransactions(anyString(), eq(requestContext)))
-        .thenReturn(completedFuture(toTransactionList));
-    when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(completedFuture(null));
-    when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(completedFuture(new Transaction()));
-    future.join();
-    assertFalse(future.isCompletedExceptionally());
+        .thenReturn(succeededFuture(toTransactionList));
+    when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
+    when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(succeededFuture(new Transaction()));
+    future.result();
+    assertFalse(future.failed());
 
-    ArgumentCaptor<List<ReEncumbranceHolder>> argumentCaptor = ArgumentCaptor.forClass(List.class);
-    verify(spyReEncumbranceHoldersBuilder).withPreviousFyEncumbrances(argumentCaptor.capture(), any());
-    List<ReEncumbranceHolder> argumentHolders = argumentCaptor.getValue();
+    verify(spyReEncumbranceHoldersBuilder).withPreviousFyEncumbrances(argumentCaptorForList.capture(), any());
+    List<ReEncumbranceHolder> argumentHolders = argumentCaptorForList.getValue();
     assertThat(argumentHolders, hasSize(0));
   }
 
@@ -592,38 +609,38 @@ public class OrderReEncumberServiceTest {
 
     List<ReEncumbranceHolder> holders = Arrays.asList(holder1, holder2);
     when(purchaseOrderStorageService.getCompositeOrderById(anyString(), eq(requestContext)))
-        .thenAnswer(invocation -> completedFuture(new CompositePurchaseOrder().withId(invocation.getArgument(0))));
+        .thenAnswer(invocation -> succeededFuture(new CompositePurchaseOrder().withId(invocation.getArgument(0))));
     doReturn(holders).when(spyReEncumbranceHoldersBuilder).buildReEncumbranceHoldersWithOrdersData(any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withFundsData(any(), any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withLedgersData(any(), any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withCurrentFiscalYearData(any(), any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withRollovers(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withFundsData(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withLedgersData(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withCurrentFiscalYearData(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withRollovers(any(), any());
     doReturn(holders).when(spyReEncumbranceHoldersBuilder).withEncumbranceRollover(any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withBudgets(any(), any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withConversions(any(), any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withPreviousFyEncumbrances(any(), any());
-    doReturn(completedFuture(holders)).when(spyReEncumbranceHoldersBuilder).withToEncumbrances(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withBudgets(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withConversions(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withPreviousFyEncumbrances(any(), any());
+    doReturn(succeededFuture(holders)).when(spyReEncumbranceHoldersBuilder).withToEncumbrances(any(), any());
     doNothing().when(budgetRestrictionService).checkEncumbranceRestrictions(anyList());
     when(rolloverErrorService.getLedgerFyRolloverErrors(anyString(), any()))
-        .thenReturn(completedFuture(new LedgerFiscalYearRolloverErrorCollection()));
-    when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(completedFuture(null));
-    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(completedFuture(null));
+        .thenReturn(succeededFuture(new LedgerFiscalYearRolloverErrorCollection()));
+    when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(succeededFuture(null));
+    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(succeededFuture(null));
 
     when(rolloverRetrieveService.getRolloversProgress(eq(rolloverId), any()))
-        .thenReturn(completedFuture(Collections.singletonList(success)));
+        .thenReturn(succeededFuture(Collections.singletonList(success)));
 
     when(exchangeRateProviderResolver.resolve(conversionPoLineToFyQuery, requestContext)).thenReturn(exchangeRateProvider);
     when(exchangeRateProviderResolver.resolve(conversionFyToPoLineQuery, requestContext)).thenReturn(exchangeRateProvider);
     when(transactionService.getTransactions(anyString(), eq(requestContext)))
-        .thenReturn(completedFuture(toTransactionList));
-    when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(completedFuture(null));
-    when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(completedFuture(new Transaction()));
+        .thenReturn(succeededFuture(toTransactionList));
+    when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
+    when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(succeededFuture(new Transaction()));
 
     //When
-    CompletableFuture<Void> future = orderReEncumberService.reEncumber(UUID.randomUUID().toString(), requestContext);
-    future.join();
+    Future<Void> future = orderReEncumberService.reEncumber(UUID.randomUUID().toString(), requestContext);
+    future.result();
      //Then
-    assertFalse(future.isCompletedExceptionally());
+    assertFalse(future.failed());
 
     assertEquals(-35.3d, line1.getCost().getFyroAdjustmentAmount());
     assertEquals(50d, line1.getFundDistribution().get(0).getValue());

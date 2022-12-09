@@ -1,30 +1,32 @@
 package org.folio;
 
-import com.github.tomakehurst.wiremock.admin.NotFoundException;
-import io.restassured.RestAssured;
-import io.restassured.http.Header;
-import io.vertx.core.Context;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Verticle;
-import io.vertx.core.Vertx;
-import io.vertx.core.impl.VertxImpl;
-import io.vertx.core.json.JsonObject;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
+
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import org.folio.rest.RestVerticle;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import com.github.tomakehurst.wiremock.admin.NotFoundException;
 
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
-import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
+import io.restassured.RestAssured;
+import io.restassured.http.Header;
+import io.vertx.core.Context;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Promise;
+import io.vertx.core.Verticle;
+import io.vertx.core.Vertx;
+import io.vertx.core.impl.VertxImpl;
+import io.vertx.core.json.JsonObject;
+import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 
 public final class TestConfig {
 
@@ -53,11 +55,11 @@ public final class TestConfig {
     conf.put("http.port", okapiPort);
 
     final DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
-    CompletableFuture<String> deploymentComplete = new CompletableFuture<>();
-
-    String[] hostAndPort = kafkaCluster.getBrokerList().split(":");
-    System.setProperty(KAFKA_HOST, hostAndPort[0]);
-    System.setProperty(KAFKA_PORT, hostAndPort[1]);
+    Promise<String> deploymentComplete = Promise.promise();
+// TODO: uncomment
+    //    String[] hostAndPort = kafkaCluster.getBrokerList().split(":");
+  //  System.setProperty(KAFKA_HOST, hostAndPort[0]);
+  //  System.setProperty(KAFKA_PORT, hostAndPort[1]);
     System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
 
     vertx.deployVerticle(RestVerticle.class.getName(), opt, res -> {
@@ -65,10 +67,10 @@ public final class TestConfig {
         deploymentComplete.complete(res.result());
       }
       else {
-        deploymentComplete.completeExceptionally(res.cause());
+        deploymentComplete.fail(res.cause());
       }
     });
-    deploymentComplete.get(60, TimeUnit.SECONDS);
+    deploymentComplete.future().toCompletionStage().toCompletableFuture().get(60, TimeUnit.SECONDS);
   }
 
   public static void initSpringContext(Class<?> defaultConfiguration) {
@@ -109,7 +111,7 @@ public final class TestConfig {
   }
 
   public static void closeKafkaMockServer() {
-    kafkaCluster.stop();
+    //kafkaCluster.stop();
   }
 
   public static void closeVertx() {

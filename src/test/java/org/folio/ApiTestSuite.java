@@ -4,7 +4,6 @@ import static org.folio.TestConfig.closeKafkaMockServer;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.TestConfig.closeVertx;
 import static org.folio.TestConfig.deployVerticle;
-import static org.folio.TestConfig.startKafkaMockServer;
 import static org.folio.TestConfig.startMockServer;
 
 import java.util.concurrent.ExecutionException;
@@ -25,6 +24,7 @@ import org.folio.rest.core.RestClientTest;
 import org.folio.rest.core.exceptions.ExceptionUtilTest;
 import org.folio.rest.impl.AcquisitionMethodAPITest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
+import org.folio.rest.impl.ExportHistoryImplTest;
 import org.folio.rest.impl.HoldingsSummaryAPITest;
 import org.folio.rest.impl.OrderTemplateTest;
 import org.folio.rest.impl.PieceApiTest;
@@ -88,16 +88,13 @@ import org.folio.service.pieces.validators.PieceValidatorUtilTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
-@RunWith(JUnitPlatform.class)
 public class ApiTestSuite {
 
   @BeforeAll
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
     startMockServer();
-    startKafkaMockServer();
+ //   startKafkaMockServer();
     deployVerticle();
   }
 
@@ -435,5 +432,9 @@ public class ApiTestSuite {
 
   @Nested
   class WithoutHoldingOrderLineUpdateInstanceStrategy extends WithoutHoldingOrderLineUpdateInstanceStrategyTest {
+  }
+
+  @Nested
+  class ExportHistoryImplTestNested extends ExportHistoryImplTest {
   }
 }

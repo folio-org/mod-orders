@@ -5,7 +5,7 @@ public class BudgetServiceTest {
 //    @Test
 //    public void testShouldReturnActiveBudgetForFund() {
 //        EncumbranceService encumbranceService = new EncumbranceService(transactionService, transactionSummariesService, exchangeRateProviderResolver, fundService, ledgerService, budgetService, fiscalYearService, configurationEntriesService);
-//        Budget budget = encumbranceService.getActiveBudgetByFundId(ACTIVE_BUDGET).join();
+//        Budget budget = encumbranceService.getActiveBudgetByFundId(ACTIVE_BUDGET).result();
 //        assertNotNull(budget);
 //    }
 //
@@ -14,7 +14,7 @@ public class BudgetServiceTest {
 //        assertThrows(CompletionException.class, () -> {
 //            EncumbranceService encumbranceService = new EncumbranceService(transactionService, transactionSummariesService, exchangeRateProviderResolver, fundService, ledgerService, budgetService, fiscalYearService, configurationEntriesService);
 //            Budget budget = encumbranceService.getActiveBudgetByFundId(UUID.randomUUID().toString())
-//                    .join();
+//                    .result();
 //            assertNotNull(budget);
 //        });
 //    }

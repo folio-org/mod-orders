@@ -1,354 +1,280 @@
 package org.folio.rest.core;
 
-import static java.util.Objects.nonNull;
+import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.orders.utils.HelperUtils.verifyAndExtractBody;
-import static org.folio.orders.utils.HelperUtils.verifyResponse;
-import static org.folio.rest.RestConstants.ERROR_MESSAGE;
-import static org.folio.rest.RestConstants.NOT_FOUND;
-import static org.folio.rest.RestConstants.OKAPI_TENANT_LOWCASE;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.RestConstants.ID;
+import static org.folio.rest.RestConstants.OKAPI_URL;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.RestConstants;
+import org.folio.okapi.common.WebClientFactory;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.ext.web.client.predicate.ErrorConverter;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
 
 public class RestClient {
 
-  private static final Logger logger = LogManager.getLogger();
-  private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
-  private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
+  private static final Logger log = LogManager.getLogger(RestClient.class);
+    private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
+  private static final ErrorConverter ERROR_CONVERTER = ErrorConverter.createFullBody(
+    result -> new HttpException(result.response().statusCode(), result.response().bodyAsString()));
+  private static final ResponsePredicate SUCCESS_RESPONSE_PREDICATE =
+    ResponsePredicate.create(ResponsePredicate.SC_SUCCESS, ERROR_CONVERTER);
 
-  public <T> CompletableFuture<T> getById(String baseEndpoint, String id, boolean skipThrowNorFoundException,
-                                           RequestContext requestContext, Class<T> responseType) {
-    RequestEntry requestEntry = new RequestEntry(baseEndpoint).withPathParameter("id", id);
-    return get(requestEntry, skipThrowNorFoundException, requestContext, responseType);
+  public <T> Future<T> post(RequestEntry requestEntry, T entity, Class<T> responseType, RequestContext requestContext) {
+    return post(requestEntry.buildEndpoint(), entity, responseType, requestContext);
   }
 
-  public <T> CompletableFuture<T> getById(String baseEndpoint, String id, RequestContext requestContext, Class<T> responseType) {
-    return getById(baseEndpoint, id, false, requestContext, responseType);
+  public <T> Future<T> post(String endpoint, T entity, Class<T> responseType, RequestContext requestContext) {
+    if (log.isDebugEnabled()) {
+      log.debug("Sending 'POST {}' with body: {}", endpoint, JsonObject.mapFrom(entity).encodePrettily());
+    }
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
+    return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJson(entity)
+      .map(bufferHttpResponse -> {
+        var id = extractRecordId(bufferHttpResponse);
+        return bufferHttpResponse.bodyAsJsonObject()
+          .put(ID, id)
+          .mapTo(responseType);
+      });
   }
 
-  public <T> CompletableFuture<T> post(RequestEntry requestEntry, T entity, RequestContext requestContext, Class<T> responseType) {
-    CompletableFuture<T> future = new CompletableFuture<>();
+  private MultiMap convertToCaseInsensitiveMap(Map<String, String> okapiHeaders) {
+    return MultiMap.caseInsensitiveMultiMap()
+      .addAll(okapiHeaders)
+      // set default Accept header
+      .add("Accept", APPLICATION_JSON + ", " + TEXT_PLAIN);
+  }
+
+  public <T> Future<Void> put(RequestEntry requestEntry, T dataObject, RequestContext requestContext) {
+    return put(requestEntry.buildEndpoint(), dataObject, requestContext);
+  }
+  public <T> Future<Void> put(String endpoint, T dataObject,  RequestContext requestContext) {
+    var recordData = JsonObject.mapFrom(dataObject);
+    if (log.isDebugEnabled()) {
+      log.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
+    }
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
+
+    return getVertxWebClient(requestContext.getContext())
+      .putAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJson(recordData)
+      .onFailure(log::error)
+      .mapEmpty();
+  }
+
+  public <T>Future<Void> patch(RequestEntry requestEntry, T dataObject, RequestContext requestContext ) {
     String endpoint = requestEntry.buildEndpoint();
-    JsonObject recordData = JsonObject.mapFrom(entity);
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sending 'POST {}' with body: {}", endpoint, recordData.encodePrettily());
-    }
-
-    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-    try {
-      client.request(HttpMethod.POST, recordData.toBuffer(), endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
-        .thenApply(HelperUtils::verifyAndExtractBody)
-        .thenAccept(body -> {
-          client.closeClient();
-          T responseEntity = body.mapTo(responseType);
-          if (logger.isDebugEnabled()) {
-            logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);
-          }
-          future.complete(responseEntity);
-        })
-        .exceptionally(t -> {
-          client.closeClient();
-          logger.error("'POST {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), t.getCause());
-          future.completeExceptionally(t.getCause());
-          return null;
-        });
-    } catch (Exception e) {
-      logger.error("'POST {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), e);
-      client.closeClient();
-      future.completeExceptionally(e);
-    }
-
-    return future;
+    return patch(endpoint, dataObject, requestContext);
   }
 
-  public <T> CompletableFuture<T> post(RequestEntry requestEntry, JsonObject recordData, PostResponseType postResponseType,
-                                       Class<T> responseType, RequestContext requestContext) {
-    CompletableFuture<T> future = new CompletableFuture<>();
-    String endpoint = requestEntry.buildEndpoint();
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sending 'POST {}' with body: {}", endpoint, recordData.encodePrettily());
+  public <T>Future<Void> patch(String endpoint, T dataObject, RequestContext requestContext) {
+    var recordData = JsonObject.mapFrom(dataObject);
+    if (log.isDebugEnabled()) {
+      log.debug("Sending 'PATCH {}' with body: {}", endpoint, recordData.encodePrettily());
     }
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
-    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-    try {
-      client
-        .request(HttpMethod.POST, recordData.toBuffer(), endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
-        .thenApply(response -> {
-          client.closeClient();
-          if (postResponseType == PostResponseType.BODY) {
-            JsonObject body =  HelperUtils.verifyAndExtractBody(response);
-            if (responseType == JsonObject.class) {
-              return body;
-            }
-            T responseEntity = body.mapTo(responseType);
-            if (logger.isDebugEnabled()) {
-              logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);
-            }
-            return responseEntity;
-          } else if (postResponseType == PostResponseType.UUID) {
-            return HelperUtils.verifyAndExtractRecordId(response);
-          }
-          return HelperUtils.verifyAndExtractBody(response);
-        })
-        .thenAccept(body -> {
-          client.closeClient();
-          if (logger.isDebugEnabled()) {
-            logger.debug("'POST {}' request successfully processed. Record with '{}' id has been created", endpoint, body);
-          }
-          future.complete(responseType.cast(body));
-        })
-        .exceptionally(t -> {
-          client.closeClient();
-          logger.error("'POST {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), t.getCause());
-          future.completeExceptionally(t.getCause());
-          return null;
-        });
-    } catch (Exception e) {
-      logger.error("'POST {}' request failed. Request body: {}", endpoint, recordData.encodePrettily(), e);
-      client.closeClient();
-      future.completeExceptionally(e);
-    }
+    Promise<Void> promise = Promise.promise();
 
-    return future;
+    return getVertxWebClient(requestContext.getContext())
+      .patchAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJson(dataObject)
+      .onSuccess(json -> promise.complete())
+      .onFailure(log::error)
+      .mapEmpty();
   }
 
-    public <T> CompletableFuture<Void> put(RequestEntry requestEntry, T entity, RequestContext requestContext) {
-        String endpoint = requestEntry.buildEndpoint();
-        JsonObject recordData = JsonObject.mapFrom(entity);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
+  public Future<Void> delete(RequestEntry requestEntry, boolean skipError404, RequestContext requestContext) {
+    return delete(requestEntry.buildEndpoint(), skipError404, requestContext);
+  }
+
+  public Future<Void> delete(String endpointById, boolean skipError404, RequestContext requestContext) {
+    log.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpointById);
+
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
+    Promise<Void> promise = Promise.promise();
+
+    getVertxWebClient(requestContext.getContext())
+      .deleteAbs(buildAbsEndpoint(caseInsensitiveHeader, endpointById))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .send()
+      .onSuccess(f -> promise.complete())
+      .onFailure(t -> handleErrorResponse(promise, t, skipError404));
+
+      return promise.future();
+  }
+
+  private <T>void handleGetMethodErrorResponse(Promise<T> promise, Throwable t, boolean skipError404) {
+    if (skipError404 && t instanceof HttpException && ((HttpException) t).getCode() == 404) {
+      log.warn(t);
+      promise.complete();
+    } else {
+      log.error(t);
+      promise.fail(t);
+    }
+  }
+  private void handleErrorResponse(Promise<Void> promise, Throwable t, boolean skipError404) {
+    if (skipError404 && t instanceof HttpException && ((HttpException) t).getCode() == 404){
+      log.warn(t);
+      promise.complete();
+    } else {
+      log.error(t);
+      promise.fail(t);
+    }
+  }
+
+  public Future<Void> delete(String endpoint, RequestContext requestContext) {
+    return delete(endpoint, false, requestContext);
+  }
+
+  public Future<Void> delete(RequestEntry requestEntry, RequestContext requestContext) {
+    return delete(requestEntry.buildEndpoint(), false, requestContext);
+  }
+
+  public <T> Future<T> get(String endpoint, Class<T> responseType, RequestContext requestContext) {
+    return get(endpoint, false, responseType, requestContext);
+  }
+
+  public <T> Future<T> get(RequestEntry requestEntry, Class<T> responseType, RequestContext requestContext) {
+    return get(requestEntry.buildEndpoint(), false, responseType, requestContext);
+  }
+
+  public <T> Future<T> get(String endpoint, boolean skipError404, Class<T> responseType,  RequestContext requestContext) {
+    log.debug("Calling GET {}", endpoint);
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
+
+    Promise<T> promise = Promise.promise();
+    getVertxWebClient(requestContext.getContext())
+      .getAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .send()
+      .map(HttpResponse::bodyAsJsonObject)
+      .map(jsonObject -> {
+        if (log.isDebugEnabled()) {
+          log.debug("Successfully retrieved: {}", jsonObject.encodePrettily());
         }
+        return jsonObject.mapTo(responseType);
+      })
+      .onSuccess(promise::complete)
+      .onFailure(t -> handleGetMethodErrorResponse(promise, t, skipError404));
 
-      return requestForPutOrPatchMethod(HttpMethod.PUT, endpoint, recordData, requestContext);
+    return promise.future();
+  }
+
+
+  public Future<JsonObject> getAsJsonObject(String endpoint, boolean skipError404, RequestContext requestContext) {
+    log.debug("Calling GET {}", endpoint);
+    Promise<JsonObject> promise = Promise.promise();
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
+    var webClient = getVertxWebClient(requestContext.getContext());
+
+    webClient.getAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .send()
+      .map(HttpResponse::bodyAsJsonObject)
+      .onSuccess(jsonObject -> {
+        if (log.isDebugEnabled()) {
+          log.debug("Successfully retrieved: {}", jsonObject.encodePrettily());
+        }
+        promise.complete(jsonObject);
+      })
+      .onFailure(t -> handleGetMethodErrorResponse(promise, t, skipError404));
+    return promise.future();
+  }
+
+  public Future<JsonObject> getAsJsonObject(RequestEntry requestEntry, boolean skipError404, RequestContext requestContext) {
+    return getAsJsonObject(requestEntry.buildEndpoint(), skipError404, requestContext);
+  }
+
+  public Future<JsonObject> getAsJsonObject(RequestEntry requestEntry, RequestContext requestContext) {
+   return getAsJsonObject(requestEntry.buildEndpoint(), false, requestContext);
+  }
+
+  public String extractRecordId(HttpResponse<Buffer> response) {
+    JsonObject body = response.bodyAsJsonObject();
+    String id;
+    if (body != null && !body.isEmpty() && body.containsKey(ID)) {
+      id = body.getString(ID);
+    } else {
+      String location = response.getHeader(LOCATION);
+      id = location.substring(location.lastIndexOf('/') + 1);
     }
+    return id;
+  }
 
-  public CompletableFuture<Void> put(RequestEntry requestEntry, JsonObject recordData, RequestContext requestContext) {
-    String endpoint = requestEntry.buildEndpoint();
+  private WebClient getVertxWebClient(Context context) {
+     WebClientOptions options = new WebClientOptions();
+     options.setLogActivity(true);
+     options.setKeepAlive(true);
+     options.setConnectTimeout(2000);
+     options.setIdleTimeout(5000);
 
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
+    return WebClientFactory.getWebClient(context.owner(), options);
+  }
+  private String buildAbsEndpoint(MultiMap okapiHeaders, String endpoint) {
+    var okapiURL = okapiHeaders.get(OKAPI_URL);
+    return okapiURL + endpoint;
+  }
+
+  public Future<String> postJsonObjectAndGetId(RequestEntry requestEntry, JsonObject entity, RequestContext requestContext) {
+    if (log.isDebugEnabled()) {
+      log.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), JsonObject.mapFrom(entity).encodePrettily());
     }
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
-    return requestForPutOrPatchMethod(HttpMethod.PUT, endpoint, recordData, requestContext);
+    return getVertxWebClient(requestContext.getContext())
+      .postAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJsonObject(entity)
+      .map(this::extractRecordId)
+      .onFailure(t -> log.error("error occurred invoking POST {}", requestEntry.buildEndpoint()));
   }
 
-  public <T> CompletableFuture<Void> patch(RequestEntry requestEntry, T entity, RequestContext requestContext) {
-    String endpoint = requestEntry.buildEndpoint();
-    JsonObject recordData = JsonObject.mapFrom(entity);
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sending 'PATCH {}' with body: {}", endpoint, recordData.encodePrettily());
+  public Future<JsonObject> postJsonObject(RequestEntry requestEntry, JsonObject jsonObject, RequestContext requestContext) {
+    if (log.isDebugEnabled()) {
+      log.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), jsonObject.encodePrettily());
     }
-
-    return requestForPutOrPatchMethod(HttpMethod.PATCH, endpoint, recordData, requestContext);
-  }
-
-  private CompletableFuture<Void> requestForPutOrPatchMethod(HttpMethod httpMethod, String endpoint,
-      JsonObject recordData, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-
-    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-    setDefaultHeaders(client);
-    try {
-      client
-          .request(httpMethod, recordData.toBuffer(), endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
-          .thenAccept(HelperUtils::verifyResponse)
-          .thenAccept(avoid -> {
-            client.closeClient();
-            future.complete(null);
-          })
-          .exceptionally(t -> {
-            client.closeClient();
-            future.completeExceptionally(t.getCause());
-            logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, httpMethod, endpoint, recordData.encodePrettily()), t.getCause());
-            return null;
-          });
-    } catch (Exception e) {
-      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, httpMethod, endpoint, recordData.encodePrettily()), e);
-      client.closeClient();
-      future.completeExceptionally(e);
-    }
-
-    return future;
-  }
-
-  public CompletableFuture<Void> delete(RequestEntry requestEntry, boolean skipThrowNorFoundException, RequestContext requestContext) {
-    CompletableFuture<Void> future = new CompletableFuture<>();
-    String endpoint = requestEntry.buildEndpoint();
-    if (logger.isDebugEnabled()) {
-      logger.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint);
-    }
-    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-    setDefaultHeaders(client);
-
-    try {
-      client.request(HttpMethod.DELETE, endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
-        .thenAccept(response -> {
-          client.closeClient();
-          int code = response.getCode();
-          if (code == NOT_FOUND && skipThrowNorFoundException) {
-            String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
-            logger.error("The GET {} operation completed with {} error: {}", endpoint, code, errorMessage);
-            future.complete(null);
-          } else {
-            verifyResponse(response);
-            future.complete(null);
-          }
-        })
-        .exceptionally(t -> {
-          client.closeClient();
-          logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint, requestContext), t);
-          future.completeExceptionally(t.getCause());
-          return null;
-        });
-    } catch (Exception e) {
-      client.closeClient();
-      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpoint, requestContext), e);
-      future.completeExceptionally(e);
-    }
-
-    return future;
-  }
-
-  public CompletableFuture<Void> delete(RequestEntry requestEntry, RequestContext requestContext) {
-    return delete(requestEntry, false, requestContext);
-  }
-
-  public <S> CompletableFuture<S> get(RequestEntry requestEntry, boolean skipThrowNorFoundException,
-                                      RequestContext requestContext, Class<S> responseType) {
-    CompletableFuture<S> future = new CompletableFuture<>();
-    String endpoint = requestEntry.buildEndpoint();
-    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-    logger.debug("Calling GET {}", endpoint);
-
-    try {
-      client
-        .request(HttpMethod.GET, endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
-        .thenApply(response -> {
-          int code = response.getCode();
-          if (code == NOT_FOUND && skipThrowNorFoundException) {
-            String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
-            logger.error("The GET {} operation completed with {} error: {}", endpoint, code, errorMessage);
-            return new JsonObject();
-          }
-          return verifyAndExtractBody(response);
-        })
-        .thenAccept(body -> {
-          client.closeClient();
-          if (logger.isDebugEnabled()) {
-            logger.debug("The response body for GET {}: {}", endpoint, nonNull(body) ? body.encodePrettily() : null);
-          }
-          if (body != null && !body.isEmpty()) {
-            S responseEntity = body.mapTo(responseType);
-            future.complete(responseEntity);
-          }
-          future.complete(null);
-        })
-        .exceptionally(t -> {
-          client.closeClient();
-          logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, endpoint, requestContext), t);
-          future.completeExceptionally(t.getCause());
-          return null;
-        });
-    } catch (Exception e) {
-      client.closeClient();
-      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, requestEntry.getBaseEndpoint(), requestContext), e);
-      future.completeExceptionally(e);
-    }
-    return future;
-  }
-
-  public <S> CompletableFuture<S> get(RequestEntry requestEntry, RequestContext requestContext, Class<S> responseType) {
-    return get(requestEntry, false, requestContext, responseType);
-  }
-
-  public CompletableFuture<JsonObject> getAsJsonObject(RequestEntry requestEntry, boolean skipThrowNorFoundException,
-                                                        RequestContext requestContext) {
-    CompletableFuture<JsonObject> future = new CompletableFuture<>();
-    String endpoint = requestEntry.buildEndpoint();
-    HttpClientInterface client = getHttpClient(requestContext.getHeaders());
-    logger.debug("Calling GET {}", endpoint);
-    try {
-      client
-        .request(HttpMethod.GET, endpoint, fixHeadersForRMB34(requestContext.getHeaders()))
-        .thenApply(response -> {
-          int code = response.getCode();
-          if (code == NOT_FOUND && skipThrowNorFoundException) {
-            String errorMessage = (response.getError() != null) ? response.getError().getString(ERROR_MESSAGE) : StringUtils.EMPTY;
-            logger.error("The GET {} operation completed with {} error: {}", endpoint, code, errorMessage);
-            return new JsonObject();
-          }
-          return verifyAndExtractBody(response);
-        })
-        .thenAccept(json -> {
-          client.closeClient();
-          if (json != null) {
-            if (!json.isEmpty() && logger.isDebugEnabled()) {
-              logger.debug("The GET {} operation completed with following response body: {}", endpoint, json.encodePrettily());
-            }
-            future.complete(json);
-          } else {
-            logger.debug("The GET {} operation completed with no response body", endpoint);
-            future.complete(new JsonObject());
-          }
-        })
-        .exceptionally(t -> {
-          client.closeClient();
-          logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, endpoint, requestContext), t);
-          future.completeExceptionally(t.getCause());
-          return null;
-        });
-    } catch (Exception e) {
-      client.closeClient();
-      logger.error(String.format(EXCEPTION_CALLING_ENDPOINT_MSG, HttpMethod.GET, requestEntry.getBaseEndpoint(), requestContext), e);
-      future.completeExceptionally(e);
-    }
-    return future;
-  }
-  public CompletableFuture<JsonObject> getAsJsonObject(RequestEntry requestEntry, RequestContext requestContext) {
-   return getAsJsonObject(requestEntry, false, requestContext);
-  }
-
-  public HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
-    final String okapiURL = okapiHeaders.getOrDefault(RestConstants.OKAPI_URL, "");
-    final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(OKAPI_HEADER_TENANT));
-
-     return HttpClientFactory.getHttpClient(okapiURL, tenantId);
-  }
-
-  private void setDefaultHeaders(HttpClientInterface httpClient) {
-    // The RMB's HttpModuleClient2.ACCEPT is in sentence case. Using the same format to avoid duplicates
-    httpClient.setDefaultHeaders(Collections.singletonMap("Accept", APPLICATION_JSON + ", " + TEXT_PLAIN));
-  }
-
-  private Map<String, String> fixHeadersForRMB34(Map<String, String> requestHeaders) {
-    Map<String, String> headers = new HashMap<>(requestHeaders);
-    if (headers.get(OKAPI_TENANT_LOWCASE) != null) {
-      String tenantId = headers.get(OKAPI_TENANT_LOWCASE);
-      headers.remove(OKAPI_TENANT_LOWCASE);
-      headers.put(OKAPI_HEADER_TENANT, tenantId);
-    }
-    return headers;
+    var endpoint = requestEntry.buildEndpoint();
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
+    return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, requestEntry.buildEndpoint()))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJsonObject(jsonObject)
+      .map(bufferHttpResponse -> {
+        var id = extractRecordId(bufferHttpResponse);
+        return bufferHttpResponse
+          .bodyAsJsonObject()
+          .put(ID, id);
+      })
+      .onFailure(t -> log.error("error occurred invoking POST {}", endpoint));
   }
 }

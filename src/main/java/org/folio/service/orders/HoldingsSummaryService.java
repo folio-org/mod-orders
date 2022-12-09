@@ -1,6 +1,12 @@
 package org.folio.service.orders;
 
-import io.vertx.core.json.JsonObject;
+import static java.util.stream.Collectors.toMap;
+
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.HoldingSummary;
@@ -11,19 +17,14 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.pieces.PieceStorageService;
 
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.toMap;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 public class HoldingsSummaryService {
 
-  private PurchaseOrderStorageService purchaseOrderStorageService;
-  private PurchaseOrderLineService purchaseOrderLineService;
-  private PieceStorageService pieceStorageService;
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
+  private final PurchaseOrderLineService purchaseOrderLineService;
+  private final PieceStorageService pieceStorageService;
 
   public HoldingsSummaryService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
     PieceStorageService pieceStorageService) {
@@ -32,12 +33,12 @@ public class HoldingsSummaryService {
     this.pieceStorageService = pieceStorageService;
   }
 
-  public CompletableFuture<HoldingSummaryCollection> getHoldingsSummary(String holdingId, RequestContext requestContext) {
+  public Future<HoldingSummaryCollection> getHoldingsSummary(String holdingId, RequestContext requestContext) {
     var queryForPiece = String.format("?query=holdingId==%s", holdingId);
     var queryForLines = String.format("?query=locations=\"holdingId\" : \"%s\"", holdingId);
 
     return pieceStorageService.getPieces(Integer.MAX_VALUE, 0, queryForPiece, requestContext)
-      .thenApply(piecesCollection -> {
+      .map(piecesCollection -> {
         Set<String> lineIds = piecesCollection.getPieces().stream()
           .map(Piece::getPoLineId)
           .collect(Collectors.toSet());
@@ -45,22 +46,22 @@ public class HoldingsSummaryService {
           return String.format("%s or %s", queryForLines, HelperUtils.convertIdsToCqlQuery(lineIds));
         }
         return queryForLines;})
-      .thenCompose(query -> purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
-        .thenCompose(lines -> {
+      .compose(query -> purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
+        .compose(lines -> {
           var purchaseOrderIds = lines.stream()
             .map(PoLine::getPurchaseOrderId)
             .collect(Collectors.toList());
           if (lines.isEmpty()) {
-            return CompletableFuture.completedFuture((new HoldingSummaryCollection().withTotalRecords(0)));
+            return Future.succeededFuture((new HoldingSummaryCollection().withTotalRecords(0)));
           } else {
             return purchaseOrderStorageService.getPurchaseOrdersByIds(purchaseOrderIds, requestContext)
-              .thenCompose(orders -> buildHoldingSummaries(orders, lines))
-              .thenApply(hs -> new HoldingSummaryCollection().withHoldingSummaries(hs).withTotalRecords(hs.size()));
+              .compose(orders -> buildHoldingSummaries(orders, lines))
+              .map(hs -> new HoldingSummaryCollection().withHoldingSummaries(hs).withTotalRecords(hs.size()));
           }
         }));
   }
 
-  private CompletableFuture<List<HoldingSummary>> buildHoldingSummaries(List<PurchaseOrder> orders, List<PoLine> lines) {
+  private Future<List<HoldingSummary>> buildHoldingSummaries(List<PurchaseOrder> orders, List<PoLine> lines) {
     var ordersById = orders.stream()
       .collect(toMap(PurchaseOrder::getId, Function.identity()));
 
@@ -68,7 +69,7 @@ public class HoldingsSummaryService {
       .map(poLine -> buildHoldingSummaryElement(poLine, ordersById.get(poLine.getPurchaseOrderId())))
       .collect(Collectors.toList());
 
-    return CompletableFuture.completedFuture(holdingSummaryElement);
+    return Future.succeededFuture(holdingSummaryElement);
   }
 
   private HoldingSummary buildHoldingSummaryElement(PoLine poLine, PurchaseOrder purchaseOrder) {

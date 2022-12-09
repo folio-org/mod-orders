@@ -1,5 +1,11 @@
 package org.folio.service.finance.transaction;
 
+import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.FundDistributionUtils.validateFundDistributionTotal;
+
+import java.util.List;
+import java.util.Objects;
+
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -7,12 +13,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.orders.OrderWorkflowType;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.FundDistributionUtils.validateFundDistributionTotal;
+import io.vertx.core.Future;
 
 public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
@@ -26,14 +27,14 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
   }
 
   @Override
-  public CompletableFuture<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+  public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
       RequestContext requestContext) {
 
     validateFundDistributionTotal(compPO.getCompositePoLines());
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
     return encumbranceRelationsHoldersBuilder.withExistingTransactions(encumbranceRelationsHolders, poAndLinesFromStorage, requestContext)
-      .thenApply(aVoid -> distributeHoldersByOperation(encumbranceRelationsHolders))
-      .thenCompose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
+      .map(aVoid -> distributeHoldersByOperation(encumbranceRelationsHolders))
+      .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
   }
 
   @Override
