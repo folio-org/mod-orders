@@ -106,13 +106,6 @@ public abstract class DiAbstractRestTest {
     System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
     System.setProperty(OKAPI_URL_ENV, OKAPI_URL);
 
-//    Envs.setEnv(
-//      "127.0.0.1",
-//      5432,
-//      "folio_admin",
-//      "folio_admin",
-//      "okapi_modules"
-//    );
     runDatabase();
     deployVerticle(context);
   }
@@ -150,10 +143,10 @@ public abstract class DiAbstractRestTest {
             context.assertTrue(res3.bodyAsJson(TenantJob.class).getComplete());
             async.complete();
           }));
-        } else if (res2.result().statusCode() != 204) {
+        } else {
           context.assertEquals("Failed to make post tenant. Received status code 400", res2.result().bodyAsString());
+          async.complete();
         }
-        async.complete();
       });
     });
   }

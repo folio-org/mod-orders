@@ -30,8 +30,6 @@ public class OrderIdStorageDaoImpl implements IdStorageDao {
     "SELECT t.record_id, t.order_id " +
     "FROM %1$s t, input_row " +
     "WHERE t.record_id = input_row.record_id";
-//      "FROM input_row " +
-//    "JOIN %s t USING (record_id)";
 
   private final PostgresClientFactory pgClientFactory;
 

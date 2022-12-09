@@ -23,7 +23,6 @@ public class OrderIdStorageServiceImplTest extends DiAbstractRestTest {
 
   @Test
   public void shouldSaveAndReturnNewOrderIdWhenHasNoOrderIdByRecordId(TestContext context) {
-    System.out.println("MY TEST!!!");
     Async async = context.async();
     String recordId = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
