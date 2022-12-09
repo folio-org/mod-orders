@@ -41,13 +41,10 @@ public class CacheTest {
 
   @Rule
   public WireMockRule snapshotMockServer =
-    new WireMockRule(
-      WireMockConfiguration.wireMockConfig().dynamicPort().notifier(new ConsoleNotifier(false))
-      //      .extensions(new AbstractRestTest.RequestToResponseTransformer())
-    );
+    new WireMockRule(WireMockConfiguration.wireMockConfig().dynamicPort().notifier(new ConsoleNotifier(false)));
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     Vertx vertx = rule.vertx();
     jobProfileSnapshotCache = new JobProfileSnapshotCache(vertx);
 
@@ -74,6 +71,7 @@ public class CacheTest {
       .get(jobProfileSnapshotId, okapiConnectionParams)
       .onComplete(
         ar -> {
+          context.assertTrue(ar.succeeded());
           Optional<ProfileSnapshotWrapper> result = ar.result();
           context.assertNotNull(result.orElse(null));
           context.assertEquals(result.orElse(new ProfileSnapshotWrapper()).getContentType(), ProfileSnapshotWrapper.ContentType.JOB_PROFILE);
