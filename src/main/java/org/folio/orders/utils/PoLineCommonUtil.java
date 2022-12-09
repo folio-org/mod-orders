@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.vertx.core.json.JsonArray;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.core.exceptions.HttpException;
@@ -209,7 +210,13 @@ public final class PoLineCommonUtil {
     JsonPathParser oldObject = new JsonPathParser(objectFromStorage);
     JsonPathParser newObject = new JsonPathParser(requestObject);
     for (String field : protectedFields) {
-      if (!Objects.equals(oldObject.getValueAt(field), newObject.getValueAt(field))) {
+      if (oldObject.getValueAt(field) instanceof JsonArray) {
+        var oldList = ((JsonArray) oldObject.getValueAt(field)).getList();
+        var newList = ((JsonArray) newObject.getValueAt(field)).getList();
+        if (oldList.size() != newList.size() || !oldList.containsAll(newList)) {
+          fields.add(field);
+        }
+      } else if (!Objects.equals(oldObject.getValueAt(field), newObject.getValueAt(field))) {
         fields.add(field);
       }
     }
