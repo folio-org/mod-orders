@@ -4,6 +4,7 @@ import static java.util.Objects.requireNonNullElse;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.rest.core.exceptions.ErrorCodes.ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES;
@@ -45,6 +46,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Future;
+import io.vertxconcurrent.Semaphore;
 
 public class EncumbranceService {
 
@@ -88,26 +90,33 @@ public class EncumbranceService {
   }
 
   public Future<Void> createEncumbrances(List<EncumbranceRelationsHolder> relationsHolders, RequestContext requestContext) {
-    List<Future<Void>> futureList = new ArrayList<>();
-    Future<Void> future = Future.succeededFuture();
-    for (EncumbranceRelationsHolder holder : relationsHolders) {
-      // TODO: fix sequential processing with parallel using semaphores
-      future = future.compose(v -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
-        .map(transaction -> {
-          holder.getFundDistribution().setEncumbrance(transaction.getId());
-          return null;
-        })
-        .recover(fail -> {
-          checkCustomTransactionError(fail);
-          throw new CompletionException(fail);
-        })
-        .mapEmpty()
-      );
-      futureList.add(future);
-    }
-    return GenericCompositeFuture.join(futureList)
-      .mapEmpty();
+    Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
+
+    return requestContext.getContext().owner()
+      .<List<Future<Transaction>>>executeBlocking(event -> {
+
+        List<Future<Transaction>> futures = new ArrayList<>();
+
+        for (EncumbranceRelationsHolder holder : relationsHolders) {
+          Future<Transaction> future = transactionService.createTransaction(holder.getNewEncumbrance(), requestContext);
+          futures.add(future);
+          semaphore.acquire(() -> future.map(transaction -> {
+            semaphore.release();
+            holder.getFundDistribution().setEncumbrance(transaction.getId());
+            return null;
+          })
+            .otherwise(fail -> {
+              semaphore.release();
+              checkCustomTransactionError(fail);
+              throw new CompletionException(fail);
+            }));
+        }
+        event.complete(futures);
+      })
+      .compose(futures -> GenericCompositeFuture.all(new ArrayList<>(futures))
+        .mapEmpty());
   }
+
 
   public Future<Void> updateEncumbrancesOrderStatus(CompositePurchaseOrder compPo, RequestContext requestContext) {
     return getOrderUnreleasedEncumbrances(compPo.getId(), requestContext).compose(encumbrs -> {
@@ -160,7 +169,8 @@ public class EncumbranceService {
     // Check invoice line's releaseEncumbrance value for each order line
     List<Future<List<Transaction>>> futures =
       compPO.getCompositePoLines()
-        .stream().filter(poLines->poLines.getFundDistribution().size() > 0)
+          .stream()
+          .filter(poLines -> !poLines.getFundDistribution().isEmpty())
         .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithCompPOLines, requestContext))
         .collect(toList());
     return collectResultsOnSuccess(futures)

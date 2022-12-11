@@ -22,6 +22,9 @@ public final class RestConstants {
   public static final String EN = "en";
   public static final String ID = "id";
 
+  public static final int SEMAPHORE_MAX_ACTIVE_THREADS = 5;
+
+
   private RestConstants() {
 
   }
