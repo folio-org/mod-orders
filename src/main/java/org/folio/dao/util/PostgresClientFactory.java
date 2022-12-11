@@ -17,6 +17,7 @@ public class PostgresClientFactory {
 
   /**
    * Creates instance of Postgres Client
+   *
    * @param tenantId - tenant id
    * @return Postgres Client
    */
