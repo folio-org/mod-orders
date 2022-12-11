@@ -15,6 +15,11 @@ public class PostgresClientFactory {
     this.vertx = vertx;
   }
 
+  /**
+   * Creates instance of Postgres Client
+   * @param tenantId - tenant id
+   * @return Postgres Client
+   */
   public PostgresClient createInstance(String tenantId) {
     return PostgresClient.getInstance(vertx, tenantId);
   }
