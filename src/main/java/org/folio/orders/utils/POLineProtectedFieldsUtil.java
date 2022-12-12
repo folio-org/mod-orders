@@ -4,7 +4,6 @@ import static org.folio.orders.utils.POLineFieldNames.ACQUISITION_METHOD;
 import static org.folio.orders.utils.POLineFieldNames.CHECKIN_ITEMS;
 import static org.folio.orders.utils.POLineFieldNames.COLLECTION;
 import static org.folio.orders.utils.POLineFieldNames.CONTRIBUTORS;
-import static org.folio.orders.utils.POLineFieldNames.DETAILS_PRODUCT_IDS;
 import static org.folio.orders.utils.POLineFieldNames.DETAILS_SUBSCRIPTION_INTERVAL;
 import static org.folio.orders.utils.POLineFieldNames.DONOR;
 import static org.folio.orders.utils.POLineFieldNames.ERESOURCE_CREATE_INVENTORY;
@@ -36,7 +35,7 @@ import org.apache.commons.collections4.ListUtils;
 
 public class POLineProtectedFieldsUtil {
   private static final List<String> commonProtectedFieldNames = Stream.of(ACQUISITION_METHOD, CHECKIN_ITEMS,
-      COLLECTION, CONTRIBUTORS, DONOR, DETAILS_PRODUCT_IDS, DETAILS_SUBSCRIPTION_INTERVAL,
+      COLLECTION, CONTRIBUTORS, DONOR, DETAILS_SUBSCRIPTION_INTERVAL,
       ORDER_FORMAT, RUSH, SELECTOR, VENDORDETAIL_INSTRUCTION_TO_VENDOR)
     .map(POLineFieldNames::getFieldName).collect(Collectors.toList());
 
