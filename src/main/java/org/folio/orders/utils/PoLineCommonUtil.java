@@ -216,7 +216,7 @@ public final class PoLineCommonUtil {
         if (oldList.size() != newList.size() || !oldList.containsAll(newList)) {
           fields.add(field);
         }
-      } else if (!Objects.equals(oldObject.getValueAt(field), newObject.getValueAt(field))) {
+      } else if (ObjectUtils.notEqual(oldObject.getValueAt(field), newObject.getValueAt(field))) {
         fields.add(field);
       }
     }
