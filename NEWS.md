@@ -1,5 +1,12 @@
 ## 12.6.0 - Unreleased
 
+## 12.5.4 Nolana R3 2022 - Released
+The focus of this release was to fix protected productId field
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.5.3...v12.5.4)
+### Bug Fixes
+* [MODORDERS-810](https://issues.folio.org/browse/MODORDERS-810) Invoice is unable to approve due to protected fields on productIds
+
 ## 12.5.3 Nolana R3 2022 - Released
 The focus of this release was to fix inconsistent behavior with PO v. POL cancellation on multi-line orders
 
