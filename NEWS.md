@@ -1,5 +1,14 @@
 ## 12.5.0 - Unreleased
 
+## 12.4.5 - Released Morning Glory 2022 R2 Hot Fix 2
+The focus of this release was to fix protected productId field
+
+[Full Changelog](https://github.com/folio-org/mod-invoice/compare/v12.4.4...v12.4.5)
+
+### Bug Fixes
+* [MODORDERS-810](https://issues.folio.org/browse/MODORDERS-810) Invoice is unable to approve due to protected fields on productIds
+
+
 ## 12.4.4 - Released Morning Glory 2022 R2 Hot Fix 1
 The focus of this release was to add copyright notice for FolioVertxCompletableFuture
 
