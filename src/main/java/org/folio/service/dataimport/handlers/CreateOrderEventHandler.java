@@ -11,20 +11,24 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.RestConstants;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.service.dataimport.IdStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -42,19 +46,24 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String ORDER_FIELD = "po";
   private static final String PO_LINES_FIELD = "poLine";
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
+  private static final String RECORD_ID_HEADER = "recordId";
+  public static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
   private PurchaseOrderHelper purchaseOrderHelper;
   private PurchaseOrderLineHelper poLineHelper;
+  private IdStorageService idStorageService;
 
   @Autowired
-  public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper) {
+  public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
+                                 IdStorageService idStorageService) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
+    this.idStorageService = idStorageService;
   }
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
-    dataImportEventPayload.setEventType("DI_ORDER_CREATED");
+    dataImportEventPayload.setEventType("DI_ORDER_CREATED"); //todo:
 
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
     if (payloadContext == null || isBlank(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))) {
@@ -63,12 +72,15 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     Map<String, String> okapiHeaders = extractOkapiHeaders(dataImportEventPayload);
+    String sourceRecordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
     MappingManager.map(dataImportEventPayload, new MappingContext());
     prepareMappingResult(dataImportEventPayload);
-    saveOrder(dataImportEventPayload, okapiHeaders)
+
+    idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant())
+      .compose(orderId -> saveOrder(dataImportEventPayload, orderId, okapiHeaders))
       .compose(v -> saveOrderLines(dataImportEventPayload, okapiHeaders))
       .onComplete(ar -> {
-        if (ar.failed()) {
+        if (ar.failed() && !(ar.cause() instanceof DuplicateEventException)) {
           LOGGER.error("Error during order creation", ar.cause());
           future.completeExceptionally(ar.cause());
           return;
@@ -85,9 +97,10 @@ public class CreateOrderEventHandler implements EventHandler {
       RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl());
   }
 
-  private Future<Void> saveOrder(DataImportEventPayload dataImportEventPayload, Map<String, String> okapiHeaders) {
+  private Future<Void> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId, Map<String, String> okapiHeaders) {
     RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    orderToSave.setId(orderId);
 
     return purchaseOrderHelper.validateOrder(orderToSave, null, requestContext).compose(errors -> {
       if (CollectionUtils.isNotEmpty(errors)) {
@@ -95,7 +108,17 @@ public class CreateOrderEventHandler implements EventHandler {
       }
 
       return purchaseOrderHelper.createPurchaseOrder(orderToSave, requestContext)
-        .onFailure(e -> LOGGER.warn("Error during creation order in the storage", e))
+        .recover(e -> {
+          if (e instanceof HttpException) {
+            String message = ((HttpException) e).getError().getMessage();
+            if (message.contains(ID_UNIQUENESS_ERROR_MSG)) {
+              LOGGER.debug("Failed to create order with existing id: '{}' due to duplicated event. Ignoring event processing", orderId);
+              return Future.failedFuture(new DuplicateEventException(message));
+            }
+          }
+          LOGGER.warn("Error during creation order in the storage", e);
+          return Future.failedFuture(e);
+        })
         .mapEmpty();
     });
   }
