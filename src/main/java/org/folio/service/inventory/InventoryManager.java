@@ -278,7 +278,7 @@ public class InventoryManager {
   }
 
   public Future<String> getOrCreateHoldingsRecord(String instanceId, Location location, RequestContext requestContext) {
-    return findingHoldingId(instanceId, location, requestContext)
+    return findHoldingsId(instanceId, location, requestContext)
       .compose(v -> {
         if (location.getHoldingId() != null) {
           Context ctx = requestContext.getContext();
@@ -314,7 +314,7 @@ public class InventoryManager {
       .onFailure(InventoryManager::handleHoldingsError);
   }
 
-  private Future<Void> findingHoldingId(String instanceId, Location location, RequestContext requestContext) {
+  private Future<Void> findHoldingsId(String instanceId, Location location, RequestContext requestContext) {
     if (location.getLocationId() != null && location.getHoldingId() == null) {
       String query = String.format(HOLDINGS_LOOKUP_QUERY, instanceId, location.getLocationId());
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
@@ -356,12 +356,7 @@ public class InventoryManager {
   }
 
   private static void handleHoldingsError(Throwable throwable) {
-    if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
-      Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(throwable.getMessage());
-      throw new HttpException(NOT_FOUND, error);
-    } else {
-      throw new CompletionException(throwable.getCause());
-    }
+    throw new CompletionException(throwable.getCause());
   }
 
   public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext) {
