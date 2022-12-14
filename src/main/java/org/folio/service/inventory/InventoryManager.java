@@ -149,8 +149,8 @@ public class InventoryManager {
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
   private final RestClient restClient;
-  private ConfigurationEntriesService configurationEntriesService;
-  private PieceStorageService pieceStorageService;
+  private final ConfigurationEntriesService configurationEntriesService;
+  private final PieceStorageService pieceStorageService;
 
   public InventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
                           PieceStorageService pieceStorageService) {
@@ -310,7 +310,8 @@ public class InventoryManager {
         } else {
           return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
         }
-      });
+      })
+      .onFailure(InventoryManager::handleHoldingsError);
   }
 
   private Future<Void> findingHoldingId(String instanceId, Location location, RequestContext requestContext) {
@@ -348,6 +349,15 @@ public class InventoryManager {
     if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
       String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
       Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
+      throw new HttpException(NOT_FOUND, error);
+    } else {
+      throw new CompletionException(throwable.getCause());
+    }
+  }
+
+  private static void handleHoldingsError(Throwable throwable) {
+    if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
+      Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(throwable.getMessage());
       throw new HttpException(NOT_FOUND, error);
     } else {
       throw new CompletionException(throwable.getCause());
