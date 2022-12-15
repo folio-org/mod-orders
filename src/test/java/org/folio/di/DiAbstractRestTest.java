@@ -15,17 +15,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.folio.DataImportEventPayload;
 import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.client.TenantClient;
 import org.folio.rest.jaxrs.model.Event;
+import org.folio.rest.jaxrs.model.TenantAttributes;
+import org.folio.rest.jaxrs.model.TenantJob;
+import org.folio.rest.persist.Criteria.Criterion;
+import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.junit.AfterClass;
@@ -43,12 +47,10 @@ import com.github.tomakehurst.wiremock.extension.ResponseTransformer;
 import com.github.tomakehurst.wiremock.http.Request;
 import com.github.tomakehurst.wiremock.http.Response;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
-
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxImpl;
 import io.vertx.core.json.Json;
@@ -78,13 +80,14 @@ public abstract class DiAbstractRestTest {
   private static int port;
   protected static final String TENANT_ID = "diku";
   protected static final String TOKEN = "token";
-  private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
   protected static RequestSpecification spec;
+  private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
+  private static final String RECORDS_ORDERS_TABLE = "records_orders";
 
   public static EmbeddedKafkaCluster kafkaCluster;
 
   @Rule
-  public WireMockRule snapshotMockServer = new WireMockRule(
+  public WireMockRule mockServer = new WireMockRule(
     WireMockConfiguration.wireMockConfig()
       .dynamicPort()
       .notifier(new ConsoleNotifier(true))
@@ -92,7 +95,7 @@ public abstract class DiAbstractRestTest {
   );
 
   @BeforeClass
-  public static void setUpClass(final TestContext context) throws Exception {
+  public static void setUpClass(final TestContext context) {
     vertx = Vertx.vertx();
     kafkaCluster = provisionWith(defaultClusterConfig());
     kafkaCluster.start();
@@ -102,7 +105,14 @@ public abstract class DiAbstractRestTest {
     System.setProperty(KAFKA_PORT, hostAndPort[1]);
     System.setProperty(KAFKA_ENV, KAFKA_ENV_VALUE);
     System.setProperty(OKAPI_URL_ENV, OKAPI_URL);
-    deployVerticle();
+    runDatabase();
+    deployVerticle(context);
+  }
+
+  private static void runDatabase() {
+    PostgresClient.stopPostgresTester();
+    PostgresClient.closeAllClients();
+    PostgresClient.setPostgresTester(new PostgresTesterContainer());
   }
 
   @AfterClass
@@ -113,30 +123,37 @@ public abstract class DiAbstractRestTest {
       async.complete();
     }));
   }
-  private static void deployVerticle() throws ExecutionException, InterruptedException, TimeoutException {
+  private static void deployVerticle(TestContext context) {
+    Async async = context.async();
     port = NetworkUtils.nextFreePort();
     String okapiUrl = "http://localhost:" + port;
     final DeploymentOptions options = new DeploymentOptions()
       .setConfig(new JsonObject()
         .put(HTTP_PORT, port));
-    Promise<String> deploymentComplete = Promise.promise();
 
+    TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_ID, TOKEN);
     vertx.deployVerticle(RestVerticle.class.getName(), options, res -> {
-      if(res.succeeded()) {
-        deploymentComplete.complete(res.result());
-      }
-      else {
-        deploymentComplete.fail(res.cause());
-      }
+      TenantAttributes tenantAttributes = new TenantAttributes();
+      tenantClient.postTenant(tenantAttributes).onComplete(res2 -> {
+        if (res2.result().statusCode() == 201) {
+          tenantClient.getTenantByOperationId(res2.result().bodyAsJson(TenantJob.class).getId(), 60000, context.asyncAssertSuccess(res3 -> {
+            context.assertTrue(res3.bodyAsJson(TenantJob.class).getComplete());
+            async.complete();
+          }));
+        } else {
+          context.assertEquals("Failed to make post tenant. Received status code 400", res2.result().bodyAsString());
+          async.complete();
+        }
+      });
     });
-    deploymentComplete.future().toCompletionStage().toCompletableFuture().get(60, TimeUnit.SECONDS);
   }
 
   @Before
   public void setUp(TestContext context) throws IOException {
+    clearTables(context);
     spec = new RequestSpecBuilder()
       .setContentType(ContentType.JSON)
-      .addHeader(OKAPI_URL_HEADER, "http://localhost:" + snapshotMockServer.port())
+      .addHeader(OKAPI_URL_HEADER, "http://localhost:" + mockServer.port())
       .addHeader(OKAPI_TENANT_HEADER, TENANT_ID)
       .addHeader(RestVerticle.OKAPI_USERID_HEADER, okapiUserIdHeader)
       .addHeader("Accept", "text/plain, application/json")
@@ -153,7 +170,7 @@ public abstract class DiAbstractRestTest {
     Event event = new Event().withId(UUID.randomUUID().toString()).withEventPayload(eventPayload);
     KeyValue<String, String> kafkaRecord = new KeyValue<>("key", Json.encode(event));
     kafkaRecord.addHeader(OkapiConnectionParams.OKAPI_TENANT_HEADER, TENANT_ID, UTF_8);
-    kafkaRecord.addHeader(OKAPI_URL_HEADER, snapshotMockServer.baseUrl(), UTF_8);
+    kafkaRecord.addHeader(OKAPI_URL_HEADER, mockServer.baseUrl(), UTF_8);
     kafkaRecord.addHeader(JOB_EXECUTION_ID_HEADER, UUID.randomUUID().toString(), UTF_8);
 
     String topic = formatToKafkaTopicName(eventType);
@@ -170,7 +187,7 @@ public abstract class DiAbstractRestTest {
   protected ConsumerRecord<String, String> buildConsumerRecord(String topic, Event event) {
     ConsumerRecord<java.lang.String, java.lang.String> consumerRecord = new ConsumerRecord<>("folio", 0, 0, topic, Json.encode(event));
     consumerRecord.headers().add(new RecordHeader(OkapiConnectionParams.OKAPI_TENANT_HEADER, TENANT_ID.getBytes(StandardCharsets.UTF_8)));
-    consumerRecord.headers().add(new RecordHeader(OKAPI_URL_HEADER, ("http://localhost:" + snapshotMockServer.port()).getBytes(StandardCharsets.UTF_8)));
+    consumerRecord.headers().add(new RecordHeader(OKAPI_URL_HEADER, ("http://localhost:" + mockServer.port()).getBytes(StandardCharsets.UTF_8)));
     consumerRecord.headers().add(new RecordHeader(OKAPI_TOKEN_HEADER, (TOKEN).getBytes(StandardCharsets.UTF_8)));
     return consumerRecord;
   }
@@ -207,6 +224,11 @@ public abstract class DiAbstractRestTest {
       }
     }
     return result;
+  }
+
+  private void clearTables(TestContext context) {
+    PostgresClient pgClient = PostgresClient.getInstance(vertx, TENANT_ID);
+    pgClient.delete(RECORDS_ORDERS_TABLE, new Criterion(), context.asyncAssertSuccess());
   }
 
   public static class RequestToResponseTransformer extends ResponseTransformer {
