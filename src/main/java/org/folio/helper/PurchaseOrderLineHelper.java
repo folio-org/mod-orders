@@ -808,16 +808,9 @@ public class PurchaseOrderLineHelper {
         OrderWorkflowType.PENDING_TO_PENDING : OrderWorkflowType.PENDING_TO_OPEN;
       EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(workflowType);
       CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compOrder).mapTo(CompositePurchaseOrder.class);
-      return strategy.processEncumbrances(compOrder.withCompositePoLines(Collections.singletonList(compositePoLine)), poFromStorage, requestContext)
-        .recover(throwable -> isInvoiceRelatedError(workflowType, throwable) ? Future.succeededFuture() : Future.failedFuture(throwable));
+      return strategy.processEncumbrances(compOrder.withCompositePoLines(Collections.singletonList(compositePoLine)), poFromStorage, requestContext);
     }
     return Future.succeededFuture();
-  }
-
-  private boolean isInvoiceRelatedError(OrderWorkflowType workflowType, Throwable throwable) {
-    return workflowType == OrderWorkflowType.PENDING_TO_OPEN && throwable instanceof HttpException
-      && ((HttpException) throwable).getErrors().getErrors()
-      .stream().filter(error -> StringUtils.containsAny(error.getMessage(), "deleteConnectedToInvoice", "deleteWithExpendedAmount")).count() == 1;
   }
 
   private Future<Void> updateInventoryItemStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {

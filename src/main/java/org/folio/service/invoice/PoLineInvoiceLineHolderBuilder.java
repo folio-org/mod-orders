@@ -28,6 +28,7 @@ import io.vertx.core.json.JsonObject;
 public class PoLineInvoiceLineHolderBuilder {
   private static final List<InvoiceLine.InvoiceLineStatus> EDITABLE_STATUSES = List.of(InvoiceLine.InvoiceLineStatus.OPEN, InvoiceLine.InvoiceLineStatus.REVIEWED);
   private static final List<InvoiceLine.InvoiceLineStatus> MOVABLE_STATUSES = List.of(InvoiceLine.InvoiceLineStatus.PAID, InvoiceLine.InvoiceLineStatus.CANCELLED);
+  private static final List<InvoiceLine.InvoiceLineStatus> TRANSACTION_INDICATOR_STATUSES = List.of(InvoiceLine.InvoiceLineStatus.PAID, InvoiceLine.InvoiceLineStatus.CANCELLED, InvoiceLine.InvoiceLineStatus.APPROVED);
   private final FiscalYearService fiscalYearService;
   private final InvoiceLineService invoiceLineService;
   private final EncumbranceService encumbranceService;
@@ -104,15 +105,19 @@ public class PoLineInvoiceLineHolderBuilder {
       .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
-  private List<InvoiceLine> getOpenOrReviewedInvoiceLines(List<InvoiceLine> invoiceLines) {
+  public static List<InvoiceLine> getInvoiceLinesWithTransactions(List<InvoiceLine> invoiceLines) {
+    return filterInvoiceLinesByStatuses(invoiceLines, TRANSACTION_INDICATOR_STATUSES);
+  }
+
+  private static List<InvoiceLine> getOpenOrReviewedInvoiceLines(List<InvoiceLine> invoiceLines) {
     return filterInvoiceLinesByStatuses(invoiceLines, EDITABLE_STATUSES);
   }
 
-  private List<InvoiceLine> getPaidOrCancelledInvoiceLines(List<InvoiceLine> invoiceLines) {
+  private static List<InvoiceLine> getPaidOrCancelledInvoiceLines(List<InvoiceLine> invoiceLines) {
     return filterInvoiceLinesByStatuses(invoiceLines, MOVABLE_STATUSES);
   }
 
-  private List<InvoiceLine> filterInvoiceLinesByStatuses(List<InvoiceLine> invoiceLines, List<InvoiceLine.InvoiceLineStatus> invoiceLineStatuses) {
+  private static List<InvoiceLine> filterInvoiceLinesByStatuses(List<InvoiceLine> invoiceLines, List<InvoiceLine.InvoiceLineStatus> invoiceLineStatuses) {
     return invoiceLines.stream()
       .filter(invoiceLine -> invoiceLineStatuses.contains(invoiceLine.getInvoiceLineStatus()))
       .collect(Collectors.toList());
