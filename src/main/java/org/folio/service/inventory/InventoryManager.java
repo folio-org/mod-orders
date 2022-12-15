@@ -310,7 +310,6 @@ public class InventoryManager {
         }
       })
       .otherwise(throwable -> {
-        logger.error(throwable.getMessage());
         throw new CompletionException(throwable.getCause());
       });
   }
