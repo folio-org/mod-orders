@@ -35,9 +35,7 @@
             "orders.item.approve"
           ],
           "modulePermissions": [
-            "modperms.orders.item.post",
-            "orders-storage.configuration.prefixes.collection.get",
-            "orders-storage.configuration.suffixes.collection.get"
+            "modperms.orders.item.post"
           ]
         },
         {
@@ -82,9 +80,7 @@
             "orders.item.reopen"
           ],
           "modulePermissions": [
-            "modperms.orders.item.put",
-            "orders-storage.configuration.prefixes.collection.get",
-            "orders-storage.configuration.suffixes.collection.get"
+            "modperms.orders.item.put"
           ]
         },
         {
