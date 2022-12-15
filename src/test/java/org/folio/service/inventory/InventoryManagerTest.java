@@ -542,8 +542,7 @@ public class InventoryManagerTest {
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
       .thenThrow(new CompletionException(new HttpException(NOT_FOUND, error)));
 
-    CompletionException exception = assertThrows(CompletionException.class,
-      () -> inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).result());
+    Throwable exception = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).cause();
 
     assertThat(exception.getCause(), IsInstanceOf.instanceOf(HttpException.class));
     HttpException cause = (HttpException) exception.getCause();

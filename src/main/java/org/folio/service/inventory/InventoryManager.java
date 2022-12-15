@@ -287,31 +287,32 @@ public class InventoryManager {
           String holdingId = location.getHoldingId();
           RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId);
 
-          Future<String> holdingIdFuture;
           var holdingIdKey = String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, "getOrCreateHoldingsRecord", holdingId);
           String holdingIdCached = ctx.get(holdingIdKey);
 
           if (holdingIdCached != null) {
-            holdingIdFuture =  Future.succeededFuture(holdingIdCached);
+            return Future.succeededFuture(holdingIdCached);
           } else {
-            holdingIdFuture = restClient.getAsJsonObject(requestEntry, requestContext)
+            return restClient.getAsJsonObject(requestEntry, requestContext)
               .onSuccess(id -> ctx.put(holdingIdKey, id))
               .map(holdingJson -> {
                 var id = HelperUtils.extractId(holdingJson);
                 ctx.put(holdingIdKey, id);
                 return id;
+              })
+              .recover(throwable -> {
+                handleHoldingsError(holdingId, throwable);
+                return null;
               });
           }
-
-          return holdingIdFuture.recover(throwable -> {
-            handleHoldingsError(holdingId, throwable);
-            return null;
-          });
         } else {
           return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
         }
       })
-      .onFailure(throwable -> handleHoldingsError(null, throwable));
+      .otherwise(throwable -> {
+        logger.error(throwable.getMessage());
+        throw new CompletionException(throwable.getCause());
+      });
   }
 
   private Future<Void> findHoldingsId(String instanceId, Location location, RequestContext requestContext) {
@@ -346,7 +347,7 @@ public class InventoryManager {
   }
 
   private static void handleHoldingsError(String holdingId, Throwable throwable) {
-    if (StringUtils.isNotBlank(holdingId) && throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
+    if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
       String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
       Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
       throw new HttpException(NOT_FOUND, error);
