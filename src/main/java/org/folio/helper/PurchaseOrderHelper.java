@@ -50,7 +50,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -437,7 +436,7 @@ public class PurchaseOrderHelper {
     return setCreateInventoryDefaultValues(compPO, tenantConfig).compose(v -> validateOrderPoLines(compPO, requestContext))
       .map(errors::addAll)
       .map(v -> errors.addAll(validatePoLineLimit(compPO, tenantConfig)))
-      .compose(v -> validateIsbnValues(compPO, requestContext))
+      .compose(v -> purchaseOrderLineService.validateAndNormalizeISBN(compPO.getCompositePoLines(), requestContext))
       .compose(v -> validateVendor(compPO, requestContext))
       .onSuccess(errors::addAll)
       .map(v -> {
@@ -808,34 +807,6 @@ public class PurchaseOrderHelper {
         line.setReceiptStatus(ReceiptStatus.CANCELLED);
       }
     });
-  }
-
-  private Future<Void> validateIsbnValues(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    if (compPO.getCompositePoLines().isEmpty()){
-      return Future.succeededFuture();
-    }
-
-    var filteredCompLines = compPO.getCompositePoLines()
-      .stream()
-      .filter(HelperUtils::isProductIdsExist)
-      .collect(toList());
-    List<Future<Void>> futures = new ArrayList<>();
-
-    return inventoryManager.getProductTypeUuidByIsbn(requestContext)
-      .map(isbnId -> {
-        Future<Void> future = Future.succeededFuture();
-        Map<String, String> normalizedIsbnCache = new HashMap<>();
-
-        for (CompositePoLine compLine : filteredCompLines) {
-          if (HelperUtils.isProductIdsExist(compLine)) {
-            // TODO: fix future processing
-            future = future.compose(v -> purchaseOrderLineHelper.validateAndNormalizeISBN(compLine, isbnId, normalizedIsbnCache, requestContext));
-            futures.add(future);
-          }
-        }
-        return null;
-      })
-      .compose(v -> GenericCompositeFuture.join(futures).mapEmpty());
   }
 
   private Future<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO, JsonObject tenantConfiguration) {

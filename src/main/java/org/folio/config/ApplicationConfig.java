@@ -52,6 +52,7 @@ import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.TransactionSummariesService;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.invoice.InvoiceService;
 import org.folio.service.invoice.POLInvoiceLineRelationService;
@@ -164,13 +165,18 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PurchaseOrderLineService purchaseOrderLineService(RestClient restClient) {
-    return new PurchaseOrderLineService(restClient);
+  PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryService inventoryService) {
+    return new PurchaseOrderLineService(inventoryService, restClient);
   }
 
   @Bean
   FundService fundService(RestClient restClient) {
     return new FundService(restClient);
+  }
+
+  @Bean
+  InventoryService inventoryService(RestClient restClient) {
+    return new InventoryService(restClient);
   }
 
   @Bean
