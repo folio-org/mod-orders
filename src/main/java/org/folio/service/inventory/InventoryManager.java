@@ -280,7 +280,7 @@ public class InventoryManager {
   public Future<String> getOrCreateHoldingsRecord(String instanceId, Location location, RequestContext requestContext) {
     return findHoldingsId(instanceId, location, requestContext)
       .compose(v -> {
-        if (location.getHoldingId() != null) {
+        if (Objects.nonNull(location.getHoldingId())) {
           Context ctx = requestContext.getContext();
           String tenantId = TenantTool.tenantId(requestContext.getHeaders());
 
@@ -290,7 +290,7 @@ public class InventoryManager {
           var holdingIdKey = String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, "getOrCreateHoldingsRecord", holdingId);
           String holdingIdCached = ctx.get(holdingIdKey);
 
-          if (holdingIdCached != null) {
+          if (Objects.nonNull(holdingIdCached)) {
             return Future.succeededFuture(holdingIdCached);
           } else {
             return restClient.getAsJsonObject(requestEntry, requestContext)
@@ -310,7 +310,7 @@ public class InventoryManager {
         }
       })
       .otherwise(throwable -> {
-        logger.warn("Getting or creating a Holding record went wrong", throwable.getCause());
+        logger.warn("Getting or creating a Holding record went wrong for instanceId: {}", instanceId, throwable.getCause());
         throw new CompletionException(throwable.getCause());
       });
   }
