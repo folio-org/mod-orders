@@ -77,6 +77,8 @@ If there are breaking changes, please **STOP** and consider the following:
   - [ ] If not, contact the project's PO and make sure they're aware of the urgency.
 - Do PRs exist for these changes?
   - [ ] If so, have they been approved?
+- Did you modify code to call some additional endpoints?
+  - [ ] If so, do you check that necessary module permission added in ModuleDescriptor-template.yaml file?
 
 Ideally, all the PRs involved in breaking changes would be merged on the same day
 to avoid breaking the folio-testing environment.
