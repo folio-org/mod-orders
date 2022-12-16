@@ -2357,7 +2357,6 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNull(getHoldingsSearches());
     assertNotNull(getCreatedHoldings());
     assertNull(getItemsSearches());
     assertNull(getCreatedPieces());
