@@ -59,10 +59,10 @@ Before merging this PR, please go through the following list and take appropriat
   - [ ] Duplications on new code are 3% or less
   - [ ] There are no major code smells or security issues
 - Does this introduce breaking changes?
-  - [ ] Were any API paths or methods changed, added, or removed?
+  - [ ] Were any API paths or methods changed, added or removed?
   - [ ] Were there any schema changes?
   - [ ] Did any of the interface versions change?
-  - [ ] Were permissions changed, added, or removed?
+  - [ ] Were permissions changed, added or removed?
   - [ ] Are there new interface dependencies?
   - [ ] There are no breaking changes in this PR.
 
