@@ -310,6 +310,7 @@ public class InventoryManager {
         }
       })
       .otherwise(throwable -> {
+        logger.warn("Getting or creating a Holding record went wrong", throwable.getCause());
         throw new CompletionException(throwable.getCause());
       });
   }
