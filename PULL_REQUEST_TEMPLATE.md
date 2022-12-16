@@ -47,7 +47,7 @@
   Sometimes there are key pieces of information that you used to come up
   with your solution. Don't let all that hard work go to waste! A
   pull request is a *perfect opportunity to share the learning that
-  you did. Add links to blog posts, patterns, libraries, or add-ons used
+  you did. Add links to blog posts, patterns, libraries or add-ons used
   to solve this problem.
 -->
 
