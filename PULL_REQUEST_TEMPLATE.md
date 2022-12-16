@@ -56,7 +56,7 @@ Before merging this PR, please go through the following list and take appropriat
 
 - Does this PR meet or exceed the expected quality standards?
   - [ ] Code coverage on new code is 80% or greater
-  - [ ] Duplications on new code are 3% or less
+  - [ ] Duplications on new code is 3% or less
   - [ ] There are no major code smells or security issues
 - Does this introduce breaking changes?
   - [ ] Were any API paths or methods changed, added or removed?
