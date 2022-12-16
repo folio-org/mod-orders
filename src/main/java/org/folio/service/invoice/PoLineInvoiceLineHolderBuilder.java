@@ -1,10 +1,10 @@
 package org.folio.service.invoice;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -18,6 +18,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.transaction.EncumbranceService;
 
@@ -27,6 +28,7 @@ import io.vertx.core.json.JsonObject;
 public class PoLineInvoiceLineHolderBuilder {
   private static final List<InvoiceLine.InvoiceLineStatus> EDITABLE_STATUSES = List.of(InvoiceLine.InvoiceLineStatus.OPEN, InvoiceLine.InvoiceLineStatus.REVIEWED);
   private static final List<InvoiceLine.InvoiceLineStatus> MOVABLE_STATUSES = List.of(InvoiceLine.InvoiceLineStatus.PAID, InvoiceLine.InvoiceLineStatus.CANCELLED);
+  private static final List<InvoiceLine.InvoiceLineStatus> TRANSACTION_INDICATOR_STATUSES = List.of(InvoiceLine.InvoiceLineStatus.PAID, InvoiceLine.InvoiceLineStatus.CANCELLED, InvoiceLine.InvoiceLineStatus.APPROVED);
   private final FiscalYearService fiscalYearService;
   private final InvoiceLineService invoiceLineService;
   private final EncumbranceService encumbranceService;
@@ -38,19 +40,19 @@ public class PoLineInvoiceLineHolderBuilder {
     this.encumbranceService = encumbranceService;
   }
 
-  public Future<PoLineInvoiceLineHolder> buildHolder(CompositePoLine compOrderLine, JsonObject poLineFromStorage, RequestContext requestContext) {
-    PoLineInvoiceLineHolder holder = new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage);
+  public Future<PoLineInvoiceLineHolder> buildHolder(CompositePoLine compOrderLine, PoLine poLineFromStorage, RequestContext requestContext) {
+    PoLineInvoiceLineHolder holder = new PoLineInvoiceLineHolder(compOrderLine, JsonObject.mapFrom(poLineFromStorage));
     return invoiceLineService.getInvoiceLinesByOrderLineId(compOrderLine.getId(), requestContext)
       .onSuccess(holder::withInvoiceLines)
       .compose(aResult -> CollectionUtils.isEmpty(holder.getInvoiceLines()) ? Future.succeededFuture(holder) :
         Future.succeededFuture(getOpenOrReviewedInvoiceLines(holder.getInvoiceLines()))
           .onSuccess(holder::withOpenOrReviewedInvoiceLines)
-          .compose(aVoid -> validateAndRetrievePaidInvoiceLines(compOrderLine, holder.getInvoiceLines(), requestContext))
-          .onSuccess(holder::withCurrentYearPaidInvoiceLines)
+          .compose(aVoid -> validateAndRetrievePaidOrCancelledInvoiceLines(compOrderLine, holder.getInvoiceLines(), requestContext))
+          .onSuccess(holder::withPaidOrCancelledInvoiceLines)
           .map(aVoid -> holder));
   }
 
-  private Future<List<InvoiceLine>> validateAndRetrievePaidInvoiceLines(CompositePoLine compOrderLine, List<InvoiceLine> invoiceLines, RequestContext requestContext) {
+  private Future<List<InvoiceLine>> validateAndRetrievePaidOrCancelledInvoiceLines(CompositePoLine compOrderLine, List<InvoiceLine> invoiceLines, RequestContext requestContext) {
     Optional<FundDistribution> optionalFundDistribution = compOrderLine.getFundDistribution().stream().findFirst();
     if (optionalFundDistribution.isPresent()) {
       String poLineFundId = optionalFundDistribution.get().getFundId();
@@ -60,7 +62,7 @@ public class PoLineInvoiceLineHolderBuilder {
           return getPaidOrCancelledInvoiceLines(currentYearInvoiceLines);
         });
     } else {
-      return Future.succeededFuture(); //Should ask Dennis what we should do in case of POL doesn't have fund distribution (Delete the comment after receiving a response)
+      return Future.succeededFuture(Collections.emptyList());
     }
   }
 
@@ -81,12 +83,7 @@ public class PoLineInvoiceLineHolderBuilder {
           .collect(Collectors.toList());
 
           return invoiceLines.stream()
-            .filter(invoiceLine -> {
-              String encumbranceId = encumbranceIdsByInvoiceLineId.get(invoiceLine.getId());
-              // When encumbranceId is null encumbrance for the invoice line has not yet been created.
-              // We can assign it to the current fiscal year.
-              return currentFYEncumbranceIds.contains(encumbranceId) || Objects.isNull(encumbranceId);
-            })
+            .filter(invoiceLine -> currentFYEncumbranceIds.contains(encumbranceIdsByInvoiceLineId.get(invoiceLine.getId())))
             .collect(Collectors.toList());
       }));
   }
@@ -100,22 +97,27 @@ public class PoLineInvoiceLineHolderBuilder {
     }
   }
 
-  private Map<String, String> getEncumbranceIdsByInvoiceLines(List<InvoiceLine> invoiceLines) {
+  public static Map<String, String> getEncumbranceIdsByInvoiceLines(List<InvoiceLine> invoiceLines) {
     return invoiceLines.stream()
-      .map(invoiceLine -> invoiceLine.getFundDistributions().stream().findFirst())
-      .flatMap(Optional::stream)
-      .collect(HashMap::new, (m, v) -> m.put(v.getInvoiceLineId(), v.getEncumbrance()), HashMap::putAll);
+      .map(invoiceLine -> Map.entry(invoiceLine.getId(), invoiceLine.getFundDistributions().stream().findFirst()))
+      .filter(entry -> entry.getValue().isPresent() && Objects.nonNull(entry.getValue().get().getEncumbrance()))
+      .map(entry -> Map.entry(entry.getKey(), entry.getValue().get().getEncumbrance()))
+      .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
-  private List<InvoiceLine> getOpenOrReviewedInvoiceLines(List<InvoiceLine> invoiceLines) {
+  public static List<InvoiceLine> getInvoiceLinesWithTransactions(List<InvoiceLine> invoiceLines) {
+    return filterInvoiceLinesByStatuses(invoiceLines, TRANSACTION_INDICATOR_STATUSES);
+  }
+
+  private static List<InvoiceLine> getOpenOrReviewedInvoiceLines(List<InvoiceLine> invoiceLines) {
     return filterInvoiceLinesByStatuses(invoiceLines, EDITABLE_STATUSES);
   }
 
-  private List<InvoiceLine> getPaidOrCancelledInvoiceLines(List<InvoiceLine> invoiceLines) {
+  private static List<InvoiceLine> getPaidOrCancelledInvoiceLines(List<InvoiceLine> invoiceLines) {
     return filterInvoiceLinesByStatuses(invoiceLines, MOVABLE_STATUSES);
   }
 
-  private List<InvoiceLine> filterInvoiceLinesByStatuses(List<InvoiceLine> invoiceLines, List<InvoiceLine.InvoiceLineStatus> invoiceLineStatuses) {
+  private static List<InvoiceLine> filterInvoiceLinesByStatuses(List<InvoiceLine> invoiceLines, List<InvoiceLine.InvoiceLineStatus> invoiceLineStatuses) {
     return invoiceLines.stream()
       .filter(invoiceLine -> invoiceLineStatuses.contains(invoiceLine.getInvoiceLineStatus()))
       .collect(Collectors.toList());
