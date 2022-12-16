@@ -281,10 +281,10 @@ public class ApplicationConfig {
   EncumbranceWorkflowStrategy pendingToOpenEncumbranceStrategy(EncumbranceService encumbranceService,
           FundsDistributionService fundsDistributionService, BudgetRestrictionService budgetRestrictionService,
           EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
-          EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder) {
+          EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder, POLInvoiceLineRelationService polInvoiceLineRelationService) {
     return new PendingToOpenEncumbranceStrategy(encumbranceService, fundsDistributionService,
                                                 budgetRestrictionService, encumbranceRelationsHoldersBuilder,
-                                                encumbrancesProcessingHolderBuilder);
+                                                encumbrancesProcessingHolderBuilder, polInvoiceLineRelationService);
   }
 
   @Bean
@@ -692,7 +692,7 @@ public class ApplicationConfig {
     return new PoLineInvoiceLineHolderBuilder(fiscalYearService, invoiceLineService, encumbranceService);
   }
 
-  @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
-    return new POLInvoiceLineRelationService(poLineInvoiceLineHolderBuilder);
+  @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(InvoiceLineService invoiceLineService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
+    return new POLInvoiceLineRelationService(invoiceLineService, poLineInvoiceLineHolderBuilder);
   }
 }

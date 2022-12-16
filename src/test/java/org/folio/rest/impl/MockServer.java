@@ -165,6 +165,7 @@ import org.folio.rest.acq.model.finance.LedgerCollection;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
+import org.folio.rest.acq.model.invoice.FundDistribution;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.acq.model.tag.Tag;
@@ -898,6 +899,15 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
+    } else if(id.equals("133a7916-f05e-4df4-8f7f-09eb2a7076d1")) {
+      FiscalYear fiscalYear = new FiscalYear();
+      fiscalYear.setId("ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2");
+      fiscalYear.setCode("test2020");
+      fiscalYear.setName("test");
+      fiscalYear.setCurrency("USD");
+      fiscalYear.setPeriodStart(Date.from(Instant.now().minus(365, DAYS)));
+      fiscalYear.setPeriodEnd(Date.from(Instant.now().plus(365, DAYS)));
+      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(fiscalYear).encodePrettily());
     } else  {
       FiscalYear fiscalYear = new FiscalYear();
       fiscalYear.setId(UUID.randomUUID().toString());
@@ -2245,6 +2255,10 @@ public class MockServer {
         List<Transaction> transactions = List.of(transaction1);
         TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
+      } else if (query.contains("id==(9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1)")) {
+        TransactionCollection transactionCollection = new JsonObject(getMockData(ENCUMBRANCE_PATH)).mapTo(TransactionCollection.class);
+        transactionCollection.getTransactions().get(0).withId("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
+        body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else {
         body = getMockData(ENCUMBRANCE_PATH);
       }
@@ -2743,6 +2757,9 @@ public class MockServer {
         InvoiceLine invoiceLine = new InvoiceLine()
           .withId(UUID.randomUUID().toString())
           .withPoLineId(poLineId2)
+          .withFundDistributions(List.of(new FundDistribution().withCode("HIST")
+            .withFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f").withEncumbrance("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1")
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(80.0)))
           .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.APPROVED)
           .withReleaseEncumbrance(true);
         invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
@@ -2753,6 +2770,7 @@ public class MockServer {
       InvoiceLine invoiceLine = new InvoiceLine()
         .withId(UUID.randomUUID().toString())
         .withPoLineId(poLineId2)
+        .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.OPEN)
         .withInvoiceId(UUID.randomUUID().toString())
         .withReleaseEncumbrance(true);
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
