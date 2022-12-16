@@ -15,14 +15,14 @@ public class PoLineInvoiceLineHolder {
   private PoLine poLineFromStorage;
   private List<InvoiceLine> invoiceLines;
   private List<InvoiceLine> openOrReviewedInvoiceLines;
-  private List<InvoiceLine> currentYearPaidOrCancelledInvoiceLines;
+  private List<InvoiceLine> paidOrCancelledInvoiceLines;
 
   public PoLineInvoiceLineHolder(CompositePoLine poLineFromRequest, JsonObject poLineFromStorage) {
     this.poLineFromRequest = poLineFromRequest;
     this.poLineFromStorage = poLineFromStorage.mapTo(PoLine.class);
     this.invoiceLines = new ArrayList<>();
     this.openOrReviewedInvoiceLines = new ArrayList<>();
-    this.currentYearPaidOrCancelledInvoiceLines = new ArrayList<>();
+    this.paidOrCancelledInvoiceLines = new ArrayList<>();
   }
 
   public PoLineInvoiceLineHolder withInvoiceLines(List<InvoiceLine> invoiceLines) {
@@ -35,8 +35,8 @@ public class PoLineInvoiceLineHolder {
     return this;
   }
 
-  public PoLineInvoiceLineHolder withCurrentYearPaidOrCancelledInvoiceLines(List<InvoiceLine> currentYearPaidOrCancelledInvoiceLines) {
-    this.currentYearPaidOrCancelledInvoiceLines = new ArrayList<>(currentYearPaidOrCancelledInvoiceLines);
+  public PoLineInvoiceLineHolder withPaidOrCancelledInvoiceLines(List<InvoiceLine> paidOrCancelledInvoiceLines) {
+    this.paidOrCancelledInvoiceLines = new ArrayList<>(paidOrCancelledInvoiceLines);
     return this;
   }
 
@@ -56,8 +56,8 @@ public class PoLineInvoiceLineHolder {
     return openOrReviewedInvoiceLines;
   }
 
-  public List<InvoiceLine> getCurrentYearPaidOrCancelledInvoiceLines() {
-    return currentYearPaidOrCancelledInvoiceLines;
+  public List<InvoiceLine> getPaidOrCancelledInvoiceLines() {
+    return paidOrCancelledInvoiceLines;
   }
 
 }

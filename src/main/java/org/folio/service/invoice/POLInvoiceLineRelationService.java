@@ -28,14 +28,14 @@ public class POLInvoiceLineRelationService {
   public Future<Void> prepareRelatedInvoiceLines(PoLineInvoiceLineHolder holder, RequestContext requestContext) {
     CompositePoLine compositePoLine = holder.getPoLineFromRequest();
     PoLine poLineFromStorage = holder.getPoLineFromStorage();
-    if (CollectionUtils.isEqualCollection(getFundIdFromFundDistribution(compositePoLine.getFundDistribution()),
-      getFundIdFromFundDistribution(poLineFromStorage.getFundDistribution()))) {
+    if (CollectionUtils.isEqualCollection(getFundIdsFromFundDistribution(compositePoLine.getFundDistribution()),
+      getFundIdsFromFundDistribution(poLineFromStorage.getFundDistribution()))) {
       return Future.succeededFuture();
     } else {
       return poLineInvoiceLineHolderBuilder.buildHolder(compositePoLine, poLineFromStorage, requestContext)
         .map(poLineInvoiceLineHolder -> {
           holder.withOpenOrReviewedInvoiceLines(poLineInvoiceLineHolder.getOpenOrReviewedInvoiceLines());
-          holder.withCurrentYearPaidOrCancelledInvoiceLines(poLineInvoiceLineHolder.getCurrentYearPaidOrCancelledInvoiceLines());
+          holder.withPaidOrCancelledInvoiceLines(poLineInvoiceLineHolder.getPaidOrCancelledInvoiceLines());
           return null;
         });
     }
@@ -53,7 +53,7 @@ public class POLInvoiceLineRelationService {
       .map(encumbrancesProcessingHolder::withEncumbrancesForDelete);
   }
 
-  private List<String> getFundIdFromFundDistribution(List<FundDistribution> fundDistributions) {
+  private List<String> getFundIdsFromFundDistribution(List<FundDistribution> fundDistributions) {
     return fundDistributions.stream().map(FundDistribution::getFundId).collect(Collectors.toList());
   }
 

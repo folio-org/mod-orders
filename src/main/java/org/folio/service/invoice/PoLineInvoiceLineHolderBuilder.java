@@ -48,7 +48,7 @@ public class PoLineInvoiceLineHolderBuilder {
         Future.succeededFuture(getOpenOrReviewedInvoiceLines(holder.getInvoiceLines()))
           .onSuccess(holder::withOpenOrReviewedInvoiceLines)
           .compose(aVoid -> validateAndRetrievePaidOrCancelledInvoiceLines(compOrderLine, holder.getInvoiceLines(), requestContext))
-          .onSuccess(holder::withCurrentYearPaidOrCancelledInvoiceLines)
+          .onSuccess(holder::withPaidOrCancelledInvoiceLines)
           .map(aVoid -> holder));
   }
 
