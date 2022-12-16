@@ -429,12 +429,12 @@ public class PurchaseOrderLineService {
         Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
 
         return requestContext.getContext().owner()
-          .<List<Future<AbstractMap.SimpleEntry<String, String>>>>executeBlocking(event -> {
-                List<Future<AbstractMap.SimpleEntry<String, String>>> futures = new ArrayList<>();
+          .<List<Future<Map.Entry<String, String>>>>executeBlocking(event -> {
+                List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
                 var setOfProductIds = buildSetOfProductIds(filteredCompLines, isbnTypeId);
                 for (String productID : setOfProductIds) {
                   var future = inventoryService.convertToISBN13(productID, requestContext)
-                    .map(normilizedId -> new AbstractMap.SimpleEntry<>(productID, normilizedId));
+                    .map(normilizedId -> Map.entry(productID, normilizedId));
                   futures.add(future);
                   semaphore.acquire(() -> future.onComplete(asyncResult -> semaphore.release()));
                 }
