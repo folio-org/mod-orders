@@ -22,6 +22,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.IdStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -35,6 +36,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.ActionProfile.FolioRecord.ORDER;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 @Component
@@ -48,15 +50,18 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
   private static final String RECORD_ID_HEADER = "recordId";
   public static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
-  private PurchaseOrderHelper purchaseOrderHelper;
-  private PurchaseOrderLineHelper poLineHelper;
-  private IdStorageService idStorageService;
+
+  private final PurchaseOrderHelper purchaseOrderHelper;
+  private final PurchaseOrderLineHelper poLineHelper;
+  private final ConfigurationEntriesService configurationEntriesService;
+  private final IdStorageService idStorageService;
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
-                                 IdStorageService idStorageService) {
+                                 ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
+    this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
   }
 
@@ -102,25 +107,26 @@ public class CreateOrderEventHandler implements EventHandler {
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     orderToSave.setId(orderId);
 
-    return purchaseOrderHelper.validateOrder(orderToSave, null, requestContext).compose(errors -> {
-      if (CollectionUtils.isNotEmpty(errors)) {
-        return Future.failedFuture(new EventProcessingException(errors.toString())); //todo: prepare error msg
-      }
-
-      return purchaseOrderHelper.createPurchaseOrder(orderToSave, requestContext)
-        .recover(e -> {
-          if (e instanceof HttpException) {
-            String message = ((HttpException) e).getError().getMessage();
-            if (message.contains(ID_UNIQUENESS_ERROR_MSG)) {
-              LOGGER.debug("Failed to create order with existing id: '{}' due to duplicated event. Ignoring event processing", orderId);
-              return Future.failedFuture(new DuplicateEventException(message));
+    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+      .compose(tenantConfig -> purchaseOrderHelper.validateOrder(orderToSave, tenantConfig, requestContext))
+      .compose(errors -> {
+        if (CollectionUtils.isNotEmpty(errors)) {
+          return Future.failedFuture(new EventProcessingException(errors.toString())); //todo: prepare error msg
+        }
+        return purchaseOrderHelper.createPurchaseOrder(orderToSave, requestContext)
+          .recover(e -> {
+            if (e instanceof HttpException) {
+              String message = ((HttpException) e).getError().getMessage();
+              if (message.contains(ID_UNIQUENESS_ERROR_MSG)) {
+                LOGGER.debug("Failed to create order with existing id: '{}' due to duplicated event. Ignoring event processing", orderId);
+                return Future.failedFuture(new DuplicateEventException(message));
+              }
             }
-          }
-          LOGGER.warn("Error during creation order in the storage", e);
-          return Future.failedFuture(e);
-        })
-        .mapEmpty();
-    });
+            LOGGER.warn("Error during creation order in the storage", e);
+            return Future.failedFuture(e);
+          })
+          .mapEmpty();
+      });
   }
 
   private Future<CompositePoLine> saveOrderLines(DataImportEventPayload dataImportEventPayload, Map<String, String> okapiHeaders) {
