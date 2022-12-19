@@ -129,7 +129,7 @@ public class PieceUpdateFlowInventoryManager {
     Optional.ofNullable(piece.getHoldingId())
       .ifPresent(pieceHoldingId -> item.put(ITEM_HOLDINGS_RECORD_ID, piece.getHoldingId()));
     Optional.ofNullable(piece.getCopyNumber())
-      .ifPresentOrElse(enumeration -> item.put(COPY_NUMBER, enumeration), () -> item.remove(COPY_NUMBER));
+      .ifPresentOrElse(copyNumber -> item.put(COPY_NUMBER, copyNumber), () -> item.remove(COPY_NUMBER));
     item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
     return Future.succeededFuture();
   }

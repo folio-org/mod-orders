@@ -332,7 +332,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     Optional.ofNullable(receivedItem.getEnumeration())
       .ifPresentOrElse(enumeration -> itemRecord.put(ITEM_ENUMERATION, enumeration), () -> itemRecord.remove(ITEM_ENUMERATION));
     Optional.ofNullable(receivedItem.getCopyNumber())
-      .ifPresentOrElse(enumeration -> itemRecord.put(COPY_NUMBER, enumeration), () -> itemRecord.remove(COPY_NUMBER));
+      .ifPresentOrElse(copyNumber -> itemRecord.put(COPY_NUMBER, copyNumber), () -> itemRecord.remove(COPY_NUMBER));
     Optional.ofNullable(receivedItem.getChronology())
       .ifPresentOrElse(chronology -> itemRecord.put(ITEM_CHRONOLOGY, chronology), () -> itemRecord.remove(ITEM_CHRONOLOGY));
     return inventoryManager.updateItem(itemRecord, requestContext);

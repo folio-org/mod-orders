@@ -363,7 +363,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     Optional.ofNullable(checkinPiece.getEnumeration())
       .ifPresentOrElse(enumeration -> itemRecord.put(ITEM_ENUMERATION, enumeration), () -> itemRecord.remove(ITEM_ENUMERATION));
     Optional.ofNullable(checkinPiece.getCopyNumber())
-      .ifPresentOrElse(enumeration -> itemRecord.put(COPY_NUMBER, enumeration), () -> itemRecord.remove(COPY_NUMBER));
+      .ifPresentOrElse(copyNumber -> itemRecord.put(COPY_NUMBER, copyNumber), () -> itemRecord.remove(COPY_NUMBER));
     Optional.ofNullable(checkinPiece.getChronology())
       .ifPresentOrElse(chronology -> itemRecord.put(ITEM_CHRONOLOGY, chronology), () -> itemRecord.remove(ITEM_CHRONOLOGY));
     Optional.ofNullable(checkinPiece.getDiscoverySuppress())
