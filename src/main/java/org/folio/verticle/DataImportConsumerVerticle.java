@@ -54,7 +54,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   //TODO: should be changed to the real value
   public List<String> getEvents() {
-    return List.of(DI_COMPLETED.value());
+    return List.of("DI_MARC_BIB_FOR_ORDER_CREATED");
   }
 
   @Override
