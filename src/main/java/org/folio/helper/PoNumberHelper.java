@@ -54,6 +54,9 @@ public class PoNumberHelper {
   }
 
   public Future<Void> checkPONumberUnique(String poNumber, RequestContext requestContext) {
+    if (StringUtils.isEmpty(poNumber)){
+      return Future.succeededFuture();
+    }
     return purchaseOrderStorageService.getPurchaseOrderByPONumber(poNumber, requestContext)
       .map(po -> {
          if (po.getInteger("totalRecords") != 0) {

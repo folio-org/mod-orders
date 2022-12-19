@@ -436,7 +436,8 @@ public class PurchaseOrderLineService {
                   var future = inventoryService.convertToISBN13(productID, requestContext)
                     .map(normilizedId -> Map.entry(productID, normilizedId));
                   futures.add(future);
-                  semaphore.acquire(() -> future.onComplete(asyncResult -> semaphore.release()));
+                  semaphore.acquire(() -> future
+                    .onComplete(asyncResult -> semaphore.release()));
                 }
                 event.complete(futures);
               })

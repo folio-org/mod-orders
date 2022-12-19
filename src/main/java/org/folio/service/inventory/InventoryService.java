@@ -45,7 +45,7 @@ public class InventoryService {
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(json -> json.getString("isbn"))
       .recover(throwable -> {
-        logger.error("Can't convert {} to isbn13", isbn);
+        logger.error("Can't convert {} to isbn13: {}", isbn, throwable.getMessage());
         List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("isbn").withValue(isbn));
         throw new HttpException(400, ISBN_NOT_VALID.toError().withParameters(parameters));
       });

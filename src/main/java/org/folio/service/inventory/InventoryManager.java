@@ -471,7 +471,7 @@ public class InventoryManager {
    */
   public Future<List<Piece>> handleItemRecords(CompositePoLine compPOL, Location location, RequestContext requestContext) {
     Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, List.of(location));
-    int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values())     .sum();
+    int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
     logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId,
@@ -484,7 +484,6 @@ public class InventoryManager {
     return searchStorageExistingItems(compPOL.getId(), location.getHoldingId(), piecesWithItemsQty, requestContext)
       .compose(existingItems -> {
         List<Future<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
-        Future<List<Piece>> future =  Future.succeededFuture();
 
         for (Map.Entry<Piece.Format, Integer> pieceEntry : piecesWithItemsQuantities.entrySet()) {
           Piece.Format pieceFormat = pieceEntry.getKey();
@@ -495,7 +494,7 @@ public class InventoryManager {
             // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
             Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
 
-            future = future.compose(v -> {
+            var future = Future.succeededFuture().compose(v -> {
               List<String> existingItemIds;
               if (pieceFormat == Piece.Format.ELECTRONIC) {
                 existingItemIds = getElectronicItemIds(compPOL, existingItems);
@@ -740,10 +739,16 @@ public class InventoryManager {
   public Future<JsonObject> getEntryId(String entryType, ErrorCodes errorCode, RequestContext requestContext) {
     Promise<JsonObject> promise = Promise.promise();
 
-    getAndCache(entryType, requestContext)
-      .onSuccess(promise::complete)
+    getAndCache(entryType, requestContext).onSuccess(promise::complete)
       .onFailure(t -> getEntryTypeValue(entryType, requestContext)
-        .onSuccess(entryTypeValue -> promise.fail(new HttpException(500, buildErrorWithParameter(entryTypeValue, errorCode)))));
+        .onComplete(result -> {
+          if (result.succeeded()) {
+            promise.fail(new HttpException(500, buildErrorWithParameter(result.result(), errorCode)));
+
+          } else {
+            promise.fail(result.cause());
+          }
+        }));
 
     return promise.future();
   }

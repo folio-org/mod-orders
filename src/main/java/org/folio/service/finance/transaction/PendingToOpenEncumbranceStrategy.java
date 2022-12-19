@@ -36,6 +36,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
     CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     validateFundDistributionTotal(compPO.getCompositePoLines());
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
+
     return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
       .compose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
       .compose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))

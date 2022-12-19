@@ -201,25 +201,28 @@ public class PurchaseOrderHelper {
    * @param compPO {@link CompositePurchaseOrder} object representing Purchase Order and optionally Purchase Order Line details.
    * @return completable future with {@link CompositePurchaseOrder} object with populated uuid on success or an exception if processing fails
    */
-  public Future<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    JsonObject cachedTenantConfiguration = new JsonObject();
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .map(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
-      .compose(tenantConfiguration -> validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), requestContext))
-      .map(ok -> {
-        checkOrderApprovalPermissions(compPO, cachedTenantConfiguration, requestContext);
-        return null;
-      })
-      .compose(ok -> setPoNumberIfMissing(compPO, requestContext)
-        .compose(p -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(), requestContext))
-        .compose(p -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(), requestContext))
-        .compose(s -> poNumberHelper.validatePoNumberPrefixAndSuffix(compPO))
-        .compose(v -> poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext))
-        .compose(v -> processPoLineTags(compPO, requestContext))
-        .compose(v -> createPOandPOLines(compPO, cachedTenantConfiguration, requestContext))
-        .compose(aCompPO -> populateOrderSummary(aCompPO, requestContext)))
+  public Future<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO, JsonObject tenantConfiguration, RequestContext requestContext) {
+    return validateNewPurchaseOrders(compPO, tenantConfiguration, requestContext)
+      .compose(v -> setPoNumberIfMissing(compPO, requestContext))
+      .compose(v -> processPoLineTags(compPO, requestContext))
+      .compose(v -> createPOandPOLines(compPO, tenantConfiguration, requestContext))
+      .compose(aCompPO -> populateOrderSummary(aCompPO, requestContext))
       .compose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
         .map(v -> compOrder));
+  }
+
+  private Future<Void> validateNewPurchaseOrders(CompositePurchaseOrder compPO, JsonObject tenantConfiguration, RequestContext requestContext) {
+    List<Future<Void>> futures = new ArrayList<>();
+
+    futures.add(validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), requestContext));
+    futures.add(checkOrderApprovalPermissions(compPO, tenantConfiguration, requestContext));
+    futures.add(prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(), requestContext));
+    futures.add(suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(), requestContext));
+    futures.add(poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext));
+
+    return GenericCompositeFuture.join(futures)
+      .mapEmpty();
+
   }
 
   /**
@@ -433,7 +436,8 @@ public class PurchaseOrderHelper {
    */
   public Future<List<Error>> validateOrder(CompositePurchaseOrder compPO, JsonObject tenantConfig, RequestContext requestContext) {
     List<Error> errors = new ArrayList<>();
-    return setCreateInventoryDefaultValues(compPO, tenantConfig).compose(v -> validateOrderPoLines(compPO, requestContext))
+    return setCreateInventoryDefaultValues(compPO, tenantConfig)
+      .compose(v -> validateOrderPoLines(compPO, requestContext))
       .map(errors::addAll)
       .map(v -> errors.addAll(validatePoLineLimit(compPO, tenantConfig)))
       .compose(v -> purchaseOrderLineService.validateAndNormalizeISBN(compPO.getCompositePoLines(), requestContext))
@@ -574,7 +578,7 @@ public class PurchaseOrderHelper {
    *
    * @param compPO composite purchase order for checking permissions
    */
-  private void checkOrderApprovalPermissions(CompositePurchaseOrder compPO, JsonObject tenantConfig, RequestContext requestContext) {
+  private Future<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO, JsonObject tenantConfig, RequestContext requestContext) {
       boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
       if (isApprovalRequired && compPO.getApproved().equals(Boolean.TRUE)) {
         if (isUserNotHaveApprovePermission(requestContext)) {
@@ -583,6 +587,7 @@ public class PurchaseOrderHelper {
         compPO.setApprovalDate(new Date());
         compPO.setApprovedById(getCurrentUserId(requestContext.getHeaders()));
       }
+      return Future.succeededFuture();
   }
 
   private void checkOrderUnopenPermissions(RequestContext requestContext) {

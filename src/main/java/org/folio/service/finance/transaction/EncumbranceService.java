@@ -98,18 +98,19 @@ public class EncumbranceService {
         List<Future<Transaction>> futures = new ArrayList<>();
 
         for (EncumbranceRelationsHolder holder : relationsHolders) {
-          Future<Transaction> future = transactionService.createTransaction(holder.getNewEncumbrance(), requestContext);
-          futures.add(future);
-          semaphore.acquire(() -> future.map(transaction -> {
-            semaphore.release();
-            holder.getFundDistribution().setEncumbrance(transaction.getId());
+          Future<Transaction> createTransactionFuture = transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
+            .map(transaction -> {
+              holder.getFundDistribution().setEncumbrance(transaction.getId());
+              return null;
+            });
+          var future = createTransactionFuture.otherwise(fail -> {
+            checkCustomTransactionError(fail);
             return null;
-          })
-            .otherwise(fail -> {
-              semaphore.release();
-              checkCustomTransactionError(fail);
-              throw new CompletionException(fail);
-            }));
+          });
+
+          futures.add(future);
+          semaphore.acquire(() -> future
+            .onComplete(asyncResult -> semaphore.release()));
         }
         event.complete(futures);
       })
@@ -170,7 +171,7 @@ public class EncumbranceService {
     List<Future<List<Transaction>>> futures =
       compPO.getCompositePoLines()
           .stream()
-          .filter(poLines -> !poLines.getFundDistribution().isEmpty())
+          .filter(poLines -> CollectionUtils.isNotEmpty(poLines.getFundDistribution()))
         .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithCompPOLines, requestContext))
         .collect(toList());
     return collectResultsOnSuccess(futures)
@@ -370,7 +371,7 @@ public class EncumbranceService {
       });
   }
 
-  protected void checkCustomTransactionError(Throwable fail) {
+  protected void checkCustomTransactionError(Throwable fail) throws RuntimeException {
     if (fail.getMessage().contains(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
       throw new HttpException(422, BUDGET_NOT_FOUND_FOR_TRANSACTION);
     } else if (fail.getMessage().contains(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription())) {
