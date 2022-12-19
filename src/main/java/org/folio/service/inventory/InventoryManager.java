@@ -117,6 +117,7 @@ public class InventoryManager {
   public static final String CONTRIBUTOR_NAME_TYPE_ID = "contributorNameTypeId";
   public static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
   public static final String INSTANCE_STATUSES = "instanceStatuses";
+  public static final String COPY_NUMBER = "copyNumber";
   public static final String INSTANCE_TYPES = "instanceTypes";
   public static final String ITEMS = "items";
   public static final String LOAN_TYPES = "loantypes";
