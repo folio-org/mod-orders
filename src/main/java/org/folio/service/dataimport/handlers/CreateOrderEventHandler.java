@@ -22,6 +22,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.IdStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +48,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private static final String ORDER_FIELD = "po";
   private static final String PO_LINES_FIELD = "poLine";
+  private static final String INSTANCE_ID_FIELD = "id";
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
   private static final String RECORD_ID_HEADER = "recordId";
   public static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
@@ -132,6 +134,10 @@ public class CreateOrderEventHandler implements EventHandler {
   private Future<CompositePoLine> saveOrderLines(DataImportEventPayload dataImportEventPayload, Map<String, String> okapiHeaders) {
     RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER_LINES_KEY), CompositePoLine.class);
+    if (dataImportEventPayload.getContext().containsKey(EntityType.INSTANCE.value())) {
+      JsonObject instanceJson = new JsonObject(dataImportEventPayload.getContext().get(EntityType.INSTANCE.value()));
+      poLine.setInstanceId(instanceJson.getString(INSTANCE_ID_FIELD));
+    }
 
     return poLineHelper.createPoLine(poLine, requestContext);
   }

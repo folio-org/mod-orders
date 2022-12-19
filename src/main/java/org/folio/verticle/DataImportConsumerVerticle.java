@@ -1,6 +1,7 @@
 package org.folio.verticle;
 
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
 
 import java.util.ArrayList;
@@ -54,7 +55,9 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   //TODO: should be changed to the real value
   public List<String> getEvents() {
-    return List.of("DI_MARC_BIB_FOR_ORDER_CREATED");
+    return List.of(
+      "DI_MARC_BIB_FOR_ORDER_CREATED",
+      DI_INVENTORY_INSTANCE_MATCHED.value());
   }
 
   @Override
