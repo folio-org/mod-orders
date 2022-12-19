@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.DataImportEventTypes;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.kafka.exception.DuplicateEventException;
@@ -48,6 +49,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private static final String ORDER_FIELD = "po";
   private static final String PO_LINES_FIELD = "poLine";
+  public static final String MAPPING_RESULT_FIELD = "order";
   private static final String INSTANCE_ID_FIELD = "id";
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
   private static final String RECORD_ID_HEADER = "recordId";
@@ -80,6 +82,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
     Map<String, String> okapiHeaders = extractOkapiHeaders(dataImportEventPayload);
     String sourceRecordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+    prepareEventPayloadForMapping(dataImportEventPayload);
     MappingManager.map(dataImportEventPayload, new MappingContext());
     prepareMappingResult(dataImportEventPayload);
 
@@ -142,10 +145,16 @@ public class CreateOrderEventHandler implements EventHandler {
     return poLineHelper.createPoLine(poLine, requestContext);
   }
 
+  private void prepareEventPayloadForMapping(DataImportEventPayload dataImportEventPayload) {
+    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.getContext().put(ORDER.value(), new JsonObject().encode());
+  }
+
   private void prepareMappingResult(DataImportEventPayload dataImportEventPayload) {
     JsonObject mappingResult = new JsonObject(dataImportEventPayload.getContext().get(ORDER.value()));
-    JsonObject orderJson = mappingResult.getJsonObject(ORDER_FIELD);
-    JsonObject poLineJson = mappingResult.getJsonObject(PO_LINES_FIELD);
+    JsonObject orderJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(ORDER_FIELD);
+    JsonObject poLineJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(PO_LINES_FIELD);
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
     dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode());
   }
