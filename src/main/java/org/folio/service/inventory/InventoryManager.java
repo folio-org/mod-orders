@@ -117,6 +117,7 @@ public class InventoryManager {
   public static final String CONTRIBUTOR_NAME_TYPE_ID = "contributorNameTypeId";
   public static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
   public static final String INSTANCE_STATUSES = "instanceStatuses";
+  public static final String COPY_NUMBER = "copyNumber";
   public static final String INSTANCE_TYPES = "instanceTypes";
   public static final String ITEMS = "items";
   public static final String LOAN_TYPES = "loantypes";
@@ -1367,6 +1368,8 @@ public class InventoryManager {
   private void updateItemWithPieceFields(Piece piece, JsonObject item) {
     Optional.ofNullable(piece.getEnumeration())
       .ifPresentOrElse(enumeration -> item.put(ITEM_ENUMERATION, enumeration), () -> item.remove(ITEM_ENUMERATION));
+    Optional.ofNullable(piece.getCopyNumber())
+      .ifPresentOrElse(copyNumber -> item.put(COPY_NUMBER, copyNumber), () -> item.remove(COPY_NUMBER));
     Optional.ofNullable(piece.getChronology())
       .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
     Optional.ofNullable(piece.getDiscoverySuppress())
