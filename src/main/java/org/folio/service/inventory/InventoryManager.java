@@ -1368,6 +1368,8 @@ public class InventoryManager {
   private void updateItemWithPieceFields(Piece piece, JsonObject item) {
     Optional.ofNullable(piece.getEnumeration())
       .ifPresentOrElse(enumeration -> item.put(ITEM_ENUMERATION, enumeration), () -> item.remove(ITEM_ENUMERATION));
+    Optional.ofNullable(piece.getCopyNumber())
+      .ifPresentOrElse(copyNumber -> item.put(COPY_NUMBER, copyNumber), () -> item.remove(COPY_NUMBER));
     Optional.ofNullable(piece.getChronology())
       .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
     Optional.ofNullable(piece.getDiscoverySuppress())
