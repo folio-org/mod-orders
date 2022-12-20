@@ -194,7 +194,6 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineFieldNames;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
-import org.folio.rest.acq.model.PaymentStatus;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.Fund;
@@ -3567,13 +3566,13 @@ public class PurchaseOrdersApiTest {
     // check the payment and receipt status of the last 3 updated polines
     JsonObject line1 = polUpdates.stream().filter(pol -> EMPTY_RECEIPT_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().get();
     assertEquals(ReceiptStatus.CANCELLED.value(), line1.getString(RECEIPT_STATUS));
-    assertEquals(PaymentStatus.CANCELLED.value(), line1.getString(PAYMENT_STATUS));
+    assertEquals(CompositePoLine.PaymentStatus.CANCELLED.value(), line1.getString(PAYMENT_STATUS));
     JsonObject line2 = polUpdates.stream().filter(pol -> AWAITING_RECEIPT_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().get();
     assertEquals(ReceiptStatus.CANCELLED.value(), line2.getString(RECEIPT_STATUS));
-    assertEquals(PaymentStatus.PAYMENT_NOT_REQUIRED.value(), line2.getString(PAYMENT_STATUS));
+    assertEquals(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), line2.getString(PAYMENT_STATUS));
     JsonObject line3 = polUpdates.stream().filter(pol -> FULLY_RECEIVED_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().get();
     assertEquals(ReceiptStatus.FULLY_RECEIVED.value(), line3.getString(RECEIPT_STATUS));
-    assertEquals(PaymentStatus.CANCELLED.value(), line3.getString(PAYMENT_STATUS));
+    assertEquals(CompositePoLine.PaymentStatus.CANCELLED.value(), line3.getString(PAYMENT_STATUS));
   }
 
   @Test
