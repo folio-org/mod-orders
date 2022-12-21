@@ -1,6 +1,7 @@
 package org.folio.service.orders;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.helper.BaseHelper.ID;
@@ -14,13 +15,20 @@ import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -40,12 +48,15 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.service.inventory.InventoryService;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertxconcurrent.Semaphore;
 
 public class PurchaseOrderLineService {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderLineService.class);
@@ -53,10 +64,11 @@ public class PurchaseOrderLineService {
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private static final String ORDER_LINES_BY_ORDER_ID_QUERY = "purchaseOrderId == %s";
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
-
+  private final InventoryService inventoryService;
   private final RestClient restClient;
 
-  public PurchaseOrderLineService(RestClient restClient) {
+  public PurchaseOrderLineService(InventoryService inventoryService, RestClient restClient) {
+    this.inventoryService = inventoryService;
     this.restClient = restClient;
   }
 
@@ -118,15 +130,20 @@ public class PurchaseOrderLineService {
 
   public Future<List<CompositePoLine>> getCompositePoLinesByOrderId(String orderId, RequestContext requestContext) {
     return getOrderLines("purchaseOrderId==" + orderId, 0, Integer.MAX_VALUE, requestContext)
-      .map(poLines -> {
-        List<Future<CompositePoLine>> poLineFutures = new ArrayList<>();
-        Future<CompositePoLine> lineFuture = Future.succeededFuture();
-        for (PoLine line : poLines) {
-          lineFuture = lineFuture.compose(v -> operateOnPoLine(HttpMethod.GET, line, requestContext));
-          poLineFutures.add(lineFuture);
-        }
-        return poLineFutures;
-      })
+      .compose(poLines -> {
+        Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
+        return requestContext.getContext().owner()
+          .<List<Future<CompositePoLine>>>executeBlocking(event -> {
+            List<Future<CompositePoLine>> futures = new ArrayList<>();
+            for (PoLine line : poLines) {
+              var future = operateOnPoLine(HttpMethod.GET, line, requestContext);
+              futures.add(future);
+              semaphore.acquire(() -> future
+                .onComplete(asyncResult -> semaphore.release()));
+            }
+            event.complete(futures);
+          });
+       })
       .compose(HelperUtils::collectResultsOnSuccess);
   }
 
@@ -397,5 +414,93 @@ public class PurchaseOrderLineService {
       .map(v -> poLine.getId())
       .onFailure(e -> logger.error("The PO Line '{}' cannot be updated with new receipt status", poLine.getId(), e));
   }
+
+  public Future<Void> validateAndNormalizeISBN(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
+    var filteredCompLines = compositePoLines.stream()
+      .filter(HelperUtils::isProductIdsExist)
+      .collect(toList());
+
+    if (filteredCompLines.isEmpty()) {
+      return Future.succeededFuture();
+    }
+
+    return inventoryService.getProductTypeUuidByIsbn(requestContext)
+      .compose(isbnTypeId -> {
+        Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
+
+        return requestContext.getContext().owner()
+          .<List<Future<Map.Entry<String, String>>>>executeBlocking(event -> {
+                List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
+                var setOfProductIds = buildSetOfProductIds(filteredCompLines, isbnTypeId);
+                for (String productID : setOfProductIds) {
+                  var future = inventoryService.convertToISBN13(productID, requestContext)
+                    .map(normilizedId -> Map.entry(productID, normilizedId));
+                  futures.add(future);
+                  semaphore.acquire(() -> future
+                    .onComplete(asyncResult -> semaphore.release()));
+                }
+                event.complete(futures);
+              })
+          .compose(GenericCompositeFuture::join)
+          .map(result -> result.result()
+            .list()
+            .stream()
+            .map(entry -> (Map.Entry<String, String>) entry)
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
+          .map(productIdsMap -> {
+            // update productids with normalized values
+            filteredCompLines.stream()
+              .flatMap(poline -> poline.getDetails().getProductIds().stream())
+              .filter(productId -> isISBN(isbnTypeId, productId))
+              .forEach(productId -> productId.setProductId(productIdsMap.get(productId.getProductId())));
+            return null;
+          })
+          .onSuccess(v -> filteredCompLines.forEach(poLine -> removeISBNDuplicates(poLine, isbnTypeId)))
+          .mapEmpty();
+      });
+  }
+
+  private Set<String> buildSetOfProductIds(List<CompositePoLine> compositePoLines, String isbnTypeId) {
+    return compositePoLines.stream()
+      .flatMap(pol -> pol.getDetails().getProductIds().stream())
+      .filter(productId -> isISBN(isbnTypeId, productId))
+      .map(ProductId::getProductId)
+      .collect(Collectors.toSet());
+  }
+
+  private void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
+    List<ProductId> notISBNs = getNonISBNProductIds(compPOL, isbnTypeId);
+    List<ProductId> isbns = getDeduplicatedISBNs(compPOL, isbnTypeId);
+    isbns.addAll(notISBNs);
+    compPOL.getDetails().setProductIds(isbns);
+  }
+
+  private List<ProductId> getDeduplicatedISBNs(CompositePoLine compPOL, String isbnTypeId) {
+    Map<String, List<ProductId>> uniqueISBNProductIds = compPOL.getDetails().getProductIds().stream()
+      .filter(productId -> isISBN(isbnTypeId, productId))
+      .distinct()
+      .collect(groupingBy(ProductId::getProductId));
+
+    return uniqueISBNProductIds.values().stream()
+      .flatMap(productIds -> productIds.stream()
+        .filter(isUniqueISBN(productIds)))
+      .collect(toList());
+  }
+
+  private Predicate<ProductId> isUniqueISBN(List<ProductId> productIds) {
+    return productId -> productIds.size() == 1 || StringUtils.isNotEmpty(productId.getQualifier());
+  }
+
+  private List<ProductId> getNonISBNProductIds(CompositePoLine compPOL, String isbnTypeId) {
+    return compPOL.getDetails().getProductIds().stream()
+      .filter(productId -> !isISBN(isbnTypeId, productId))
+      .collect(toList());
+  }
+
+  private boolean isISBN(String isbnTypeId, ProductId productId) {
+    return Objects.equals(productId.getProductIdType(), isbnTypeId);
+  }
+
+
 }
 

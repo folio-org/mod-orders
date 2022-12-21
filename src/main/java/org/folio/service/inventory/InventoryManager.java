@@ -17,7 +17,6 @@ import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
 import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
-import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_HOLDINGS_SOURCE_ID;
@@ -36,8 +35,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
-
-import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
@@ -76,14 +73,13 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.shareddata.Lock;
-import io.vertx.core.shareddata.SharedData;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 
 public class InventoryManager {
   private static final Logger logger = LogManager.getLogger(InventoryManager.class);
 
-  private static final String IDENTIFIER_TYPES = "identifierTypes";
+  public static final String IDENTIFIER_TYPES = "identifierTypes";
   public static final String SOURCE_FOLIO = "FOLIO";
   public static final String INSTANCE_SOURCE = "source";
   public static final String INSTANCE_TITLE = "title";
@@ -495,8 +491,7 @@ public class InventoryManager {
    * @param location list of location holdingId is associated with
    * @return future with list of piece objects
    */
-  public Future<List<Piece>> handleItemRecords(CompositePoLine compPOL, Location location,
-      RequestContext requestContext) {
+  public Future<List<Piece>> handleItemRecords(CompositePoLine compPOL, Location location, RequestContext requestContext) {
     Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, List.of(location));
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
@@ -511,7 +506,6 @@ public class InventoryManager {
     return searchStorageExistingItems(compPOL.getId(), location.getHoldingId(), piecesWithItemsQty, requestContext)
       .compose(existingItems -> {
         List<Future<List<Piece>>> pieces = new ArrayList<>(Piece.Format.values().length);
-        Future<List<Piece>> future =  Future.succeededFuture();
 
         for (Map.Entry<Piece.Format, Integer> pieceEntry : piecesWithItemsQuantities.entrySet()) {
           Piece.Format pieceFormat = pieceEntry.getKey();
@@ -522,7 +516,7 @@ public class InventoryManager {
             // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
             Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
 
-            future = future.compose(v -> {
+            var future = Future.succeededFuture().compose(v -> {
               List<String> existingItemIds;
               if (pieceFormat == Piece.Format.ELECTRONIC) {
                 existingItemIds = getElectronicItemIds(compPOL, existingItems);
@@ -683,8 +677,6 @@ public class InventoryManager {
     String query = compPOL.getDetails().getProductIds().stream()
       .map(this::buildProductIdQuery)
       .collect(joining(" or "));
-
-    // query contains special characters so must be encoded before submitting
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
       .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
     return restClient.getAsJsonObject(requestEntry, requestContext)
@@ -768,35 +760,17 @@ public class InventoryManager {
 
   public Future<JsonObject> getEntryId(String entryType, ErrorCodes errorCode, RequestContext requestContext) {
     Promise<JsonObject> promise = Promise.promise();
-    var vertx = requestContext.getContext().owner();
-    SharedData sharedData = vertx.sharedData();
-    String lockName = TenantTool.tenantId(requestContext.getHeaders()) + "." + entryType;
 
-    sharedData.getLock(lockName, lockResult -> {
-      if (lockResult.succeeded()) {
-        logger.debug("Got lock {}", lockName);
-        Lock lock = lockResult.result();
-        try {
-          vertx.setTimer(30000, timerId -> releaseLock(lock, lockName));
-          getAndCache(entryType, requestContext).onComplete(result -> {
-            releaseLock(lock, lockName);
-            if (result.succeeded()) {
-              promise.complete(result.result());
-            } else {
-              getEntryTypeValue(entryType, requestContext)
-                .onSuccess(entryTypeValue -> promise.fail(new HttpException(500, buildErrorWithParameter(entryTypeValue, errorCode))));
-            }
-          });
-        } catch (Exception e) {
-          releaseLock(lock, lockName);
-          promise.fail(e);
-        }
-      } else {
-        logger.error("Error acquiring lock");
-        promise.fail(
-            new io.vertx.ext.web.handler.HttpException(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), lockResult.cause().getMessage()));
-      }
-    });
+    getAndCache(entryType, requestContext).onSuccess(promise::complete)
+      .onFailure(t -> getEntryTypeValue(entryType, requestContext)
+        .onComplete(result -> {
+          if (result.succeeded()) {
+            promise.fail(new HttpException(500, buildErrorWithParameter(result.result(), errorCode)));
+
+          } else {
+            promise.fail(result.cause());
+          }
+        }));
 
     return promise.future();
   }
@@ -1022,52 +996,26 @@ public class InventoryManager {
   public Future<JsonObject> getAndCache(String entryType, RequestContext requestContext) {
       Context ctx = requestContext.getContext();
       Map<String, String> okapiHeaders = requestContext.getHeaders();
-      Future<String> entryTypeValueFuture = getEntryTypeValue(entryType, requestContext);
 
-    return entryTypeValueFuture.compose(key -> {
-        String tenantSpecificKey = buildTenantSpecificKey(key, entryType, okapiHeaders);
-        JsonObject response = ctx.get(tenantSpecificKey);
-        if (response == null) {
-          String endpoint = buildLookupEndpoint(entryType, encodeQuery(key));
-          RequestEntry requestEntry = new RequestEntry(endpoint);
-          return restClient.getAsJsonObject(requestEntry, requestContext)
-            .map(entries -> {
-              JsonObject result = new JsonObject();
-              result.put(entryType, getFirstObjectFromResponse(entries, entryType).getString(ID));
-              ctx.put(tenantSpecificKey, result);
-              return result;
-            });
-        } else {
-          return Future.succeededFuture(response);
-        }
-      });
-  }
-
-  public Future<String> getProductTypeUuidByIsbn(RequestContext requestContext) {
-    // return id of already retrieved identifier type
-    RequestEntry requestEntry = new RequestEntry("/identifier-types")
-      .withLimit(1)
-      .withQuery("name==ISBN");
-
-    return restClient.getAsJsonObject(requestEntry, requestContext)
-      .compose(identifierTypes -> {
-        String identifierTypeId = extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES));
-        return Future.succeededFuture(identifierTypeId);
-      });
-  }
-
-  public Future<String> convertToISBN13(String isbn, RequestContext requestContext) {
-    String convertEndpoint = String.format("/isbn/convertTo13?isbn=%s", isbn);
-    RequestEntry requestEntry = new RequestEntry(convertEndpoint);
-
-    return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(json -> json.getString("isbn"))
-       .recover(throwable -> {
-        logger.error("Can't convert {} to isbn13", isbn);
-        List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("isbn").withValue(isbn));
-        throw new HttpException(400, ISBN_NOT_VALID.toError().withParameters(parameters));
-      });
-  }
+      return getEntryTypeValue(entryType, requestContext)
+        .compose(key -> {
+          String tenantSpecificKey = buildTenantSpecificKey(key, entryType, okapiHeaders);
+          JsonObject response = ctx.get(tenantSpecificKey);
+          if (response == null) {
+            String endpoint = buildLookupEndpoint(entryType, encodeQuery(key));
+            RequestEntry requestEntry = new RequestEntry(endpoint);
+            return restClient.getAsJsonObject(requestEntry, requestContext)
+              .map(entries -> {
+                JsonObject result = new JsonObject();
+                result.put(entryType, getFirstObjectFromResponse(entries, entryType).getString(ID));
+                ctx.put(tenantSpecificKey, result);
+                return result;
+              });
+          } else {
+            return Future.succeededFuture(response);
+          }
+        });
+    }
 
   public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
     if (piece.getItemId() == null || piece.getPoLineId() == null) {

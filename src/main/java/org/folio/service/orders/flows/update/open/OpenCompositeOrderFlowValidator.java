@@ -4,12 +4,14 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidator.verifyLocationsAndPiecesConsistency;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -44,16 +46,36 @@ public class OpenCompositeOrderFlowValidator {
 
   public Future<Void> validate(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                                           RequestContext requestContext) {
-    return expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), true, requestContext)
-      .compose(v -> checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext))
+    List<Future<Void>> futures = new ArrayList<>();
+
+    Future<Void> validateMaterialTypesFuture = Future.succeededFuture()
       .map(v -> {
-        FundDistributionUtils.validateFundDistributionTotal(compPO.getCompositePoLines());
+        validateMaterialTypes(compPO);
         return null;
-      })
-      .map(v -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN))
-      .compose(strategy -> strategy.prepareProcessEncumbrancesAndValidate(compPO, poFromStorage, requestContext))
-      .map(holders -> validateMaterialTypes(compPO))
+      });
+
+    Future<Void> validateEncumbrancesFuture = Future.succeededFuture()
+      .compose(v ->
+        encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN)
+          .prepareProcessEncumbrancesAndValidate(compPO, poFromStorage, requestContext)
+          .mapEmpty()
+      );
+
+    futures.add(expenseClassValidationService.validateExpenseClasses(compPO.getCompositePoLines(), true, requestContext));
+    futures.add(checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext));
+    futures.add(validateFundDistributionTotal(compPO.getCompositePoLines()));
+    futures.add(validateMaterialTypesFuture);
+    futures.add(validateEncumbrancesFuture);
+
+    return GenericCompositeFuture.join(futures)
       .mapEmpty();
+  }
+
+  private Future<Void> validateFundDistributionTotal(List<CompositePoLine> compositePoLines) {
+    return Future.succeededFuture().map(v -> {
+      FundDistributionUtils.validateFundDistributionTotal(compositePoLines);
+      return null;
+    });
   }
 
   public Future<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines, RequestContext requestContext) {
@@ -70,13 +92,12 @@ public class OpenCompositeOrderFlowValidator {
       });
   }
 
-  private CompositePurchaseOrder validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
+  private void validateMaterialTypes(CompositePurchaseOrder purchaseOrder){
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
       List<Error> errors = compositePoLineValidationService.checkMaterialsAvailability(purchaseOrder.getCompositePoLines());
       if (!errors.isEmpty()) {
         throw new HttpException(422, errors.get(0));
       }
     }
-    return purchaseOrder;
   }
 }
