@@ -113,6 +113,7 @@ public class InventoryManager {
   public static final String CONTRIBUTOR_NAME_TYPE_ID = "contributorNameTypeId";
   public static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
   public static final String INSTANCE_STATUSES = "instanceStatuses";
+  public static final String COPY_NUMBER = "copyNumber";
   public static final String INSTANCE_TYPES = "instanceTypes";
   public static final String ITEMS = "items";
   public static final String LOAN_TYPES = "loantypes";
@@ -145,8 +146,8 @@ public class InventoryManager {
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
   private final RestClient restClient;
-  private ConfigurationEntriesService configurationEntriesService;
-  private PieceStorageService pieceStorageService;
+  private final ConfigurationEntriesService configurationEntriesService;
+  private final PieceStorageService pieceStorageService;
 
   public InventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
                           PieceStorageService pieceStorageService) {
@@ -274,38 +275,59 @@ public class InventoryManager {
   }
 
   public Future<String> getOrCreateHoldingsRecord(String instanceId, Location location, RequestContext requestContext) {
-    if (location.getHoldingId() != null) {
-      Context ctx = requestContext.getContext();
-      String tenantId = TenantTool.tenantId(requestContext.getHeaders());
+    return findHoldingsId(instanceId, location, requestContext)
+      .compose(v -> {
+        if (Objects.nonNull(location.getHoldingId())) {
+          Context ctx = requestContext.getContext();
+          String tenantId = TenantTool.tenantId(requestContext.getHeaders());
 
-      String holdingId = location.getHoldingId();
-      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId);
+          String holdingId = location.getHoldingId();
+          RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId);
 
-      Future<String> holdingIdFuture;
-      var holdingIdKey = String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, "getOrCreateHoldingsRecord", holdingId);
-      String holdingIdCached = ctx.get(holdingIdKey);
+          var holdingIdKey = String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, "getOrCreateHoldingsRecord", holdingId);
+          String holdingIdCached = ctx.get(holdingIdKey);
 
-      if (holdingIdCached != null) {
-        holdingIdFuture =  Future.succeededFuture(holdingIdCached);
-      } else {
-        holdingIdFuture = restClient.getAsJsonObject(requestEntry, requestContext)
-          .onSuccess(id -> ctx.put(holdingIdKey, id))
-          .map(holdingJson -> {
-            var id = HelperUtils.extractId(holdingJson);
-            ctx.put(holdingIdKey, id);
-            return id;
-          });
-      }
-
-      return holdingIdFuture.recover(throwable -> {
-        handleHoldingsError(holdingId, throwable);
-        return null;
+          if (Objects.nonNull(holdingIdCached)) {
+            return Future.succeededFuture(holdingIdCached);
+          } else {
+            return restClient.getAsJsonObject(requestEntry, requestContext)
+              .onSuccess(id -> ctx.put(holdingIdKey, id))
+              .map(holdingJson -> {
+                var id = HelperUtils.extractId(holdingJson);
+                ctx.put(holdingIdKey, id);
+                return id;
+              })
+              .recover(throwable -> {
+                handleHoldingsError(holdingId, throwable);
+                return null;
+              });
+          }
+        } else {
+          return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
+        }
+      })
+      .otherwise(throwable -> {
+        logger.warn("Getting or creating a Holding record went wrong for instanceId: {}", instanceId, throwable.getCause());
+        throw new CompletionException(throwable.getCause());
       });
-    } else {
-      return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
-    }
   }
 
+  private Future<Void> findHoldingsId(String instanceId, Location location, RequestContext requestContext) {
+    if (StringUtils.isNotBlank(location.getLocationId()) && StringUtils.isBlank(location.getHoldingId())) {
+      String query = String.format(HOLDINGS_LOOKUP_QUERY, instanceId, location.getLocationId());
+      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
+        .withQuery(query).withOffset(0).withLimit(1);
+      return restClient.getAsJsonObject(requestEntry, requestContext)
+        .compose(holdings -> {
+          if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
+            String holdingId = holdings.getJsonArray(HOLDINGS_RECORDS).getJsonObject(0).getString(ID);
+            location.setHoldingId(holdingId);
+          }
+          return Future.succeededFuture();
+        });
+    }
+    return Future.succeededFuture();
+  }
   public Future<JsonObject> getOrCreateHoldingsJsonRecord(String instanceId, Location location, RequestContext requestContext) {
     if (location.getHoldingId() != null) {
       String holdingId = location.getHoldingId();
@@ -1294,6 +1316,8 @@ public class InventoryManager {
   private void updateItemWithPieceFields(Piece piece, JsonObject item) {
     Optional.ofNullable(piece.getEnumeration())
       .ifPresentOrElse(enumeration -> item.put(ITEM_ENUMERATION, enumeration), () -> item.remove(ITEM_ENUMERATION));
+    Optional.ofNullable(piece.getCopyNumber())
+      .ifPresentOrElse(copyNumber -> item.put(COPY_NUMBER, copyNumber), () -> item.remove(COPY_NUMBER));
     Optional.ofNullable(piece.getChronology())
       .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
     Optional.ofNullable(piece.getDiscoverySuppress())

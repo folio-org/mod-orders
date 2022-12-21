@@ -9,6 +9,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.invoice.POLInvoiceLineRelationService;
 import org.folio.service.orders.OrderWorkflowType;
 
 import io.vertx.core.Future;
@@ -20,15 +21,17 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
   private final BudgetRestrictionService budgetRestrictionService;
   private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
   private final EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder;
+  private final POLInvoiceLineRelationService polInvoiceLineRelationService;
 
   public PendingToOpenEncumbranceStrategy(EncumbranceService encumbranceService, FundsDistributionService fundsDistributionService,
-      BudgetRestrictionService budgetRestrictionService, EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
-      EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder) {
+                                          BudgetRestrictionService budgetRestrictionService, EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
+                                          EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder, POLInvoiceLineRelationService polInvoiceLineRelationService) {
     this.encumbranceService = encumbranceService;
     this.fundsDistributionService = fundsDistributionService;
     this.budgetRestrictionService = budgetRestrictionService;
     this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
     this.encumbrancesProcessingHolderBuilder = encumbrancesProcessingHolderBuilder;
+    this.polInvoiceLineRelationService = polInvoiceLineRelationService;
   }
 
   @Override
@@ -55,6 +58,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
       CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     return prepareProcessEncumbrancesAndValidate(compPO, poAndLinesFromStorage, requestContext)
       .map(encumbrancesProcessingHolderBuilder::distributeHoldersByOperation)
+      .compose(holder -> polInvoiceLineRelationService.removePaidOrCancelledInvoiceEncumbrancesFromDeletion(holder, requestContext))
       .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
   }
 

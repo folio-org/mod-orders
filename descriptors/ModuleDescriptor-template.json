@@ -35,7 +35,9 @@
             "orders.item.approve"
           ],
           "modulePermissions": [
-            "modperms.orders.item.post"
+            "modperms.orders.item.post",
+            "orders-storage.configuration.prefixes.collection.get",
+            "orders-storage.configuration.suffixes.collection.get"
           ]
         },
         {
@@ -80,7 +82,9 @@
             "orders.item.reopen"
           ],
           "modulePermissions": [
-            "modperms.orders.item.put"
+            "modperms.orders.item.put",
+            "orders-storage.configuration.prefixes.collection.get",
+            "orders-storage.configuration.suffixes.collection.get"
           ]
         },
         {
@@ -395,6 +399,7 @@
             "inventory.items.item.post",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
+            "inventory-storage.holdings.item.get",
             "inventory-storage.items.item.post",
             "finance.encumbrances.item.put",
             "finance.transactions.collection.get",
@@ -454,6 +459,7 @@
             "inventory.instances.item.post",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
+            "inventory-storage.holdings.item.get",
             "inventory-storage.loan-types.collection.get",
             "inventory-storage.items.item.post",
             "inventory-storage.instance-types.collection.get",
