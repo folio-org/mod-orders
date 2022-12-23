@@ -302,6 +302,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     }
     piece.setEnumeration(receivedItem.getEnumeration());
     piece.setChronology(receivedItem.getChronology());
+    piece.setCopyNumber(receivedItem.getCopyNumber());
     piece.setDisplayOnHolding(receivedItem.getDisplayOnHolding());
     // Piece record might be received or rolled-back to Expected
     if (inventoryManager.isOnOrderItemStatus(receivedItem)) {
