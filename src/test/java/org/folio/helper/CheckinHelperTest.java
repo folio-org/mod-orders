@@ -101,12 +101,12 @@ public class CheckinHelperTest {
 
     ToBeCheckedIn toBeCheckedIn2 = new ToBeCheckedIn().withPoLineId(poLine1);
     CheckInPiece checkInPiece3 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("3")
-                        .withEnumeration("Enum1").withChronology("Ch1").withDiscoverySuppress(true).withDisplayOnHolding(true);
+                        .withEnumeration("Enum1").withCopyNumber("CN1").withChronology("Ch1").withDiscoverySuppress(true).withDisplayOnHolding(true);
     toBeCheckedIn2.withCheckInPieces(List.of(checkInPiece3));
 
     ToBeCheckedIn toBeCheckedIn3 = new ToBeCheckedIn().withPoLineId(poLine2);
     CheckInPiece checkInPiece4 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("4")
-                        .withEnumeration("Enum2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);
+                        .withEnumeration("Enum2").withCopyNumber("CN2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);
     toBeCheckedIn3.withCheckInPieces(List.of(checkInPiece4));
 
     checkinCollection.withToBeCheckedIn(List.of(toBeCheckedIn1, toBeCheckedIn2, toBeCheckedIn3));
@@ -124,12 +124,14 @@ public class CheckinHelperTest {
                               .findFirst().get();
     assertEquals("3", actCheckInPiece1.getCaption());
     assertEquals("Enum1", actCheckInPiece1.getEnumeration());
+    assertEquals("CN1", actCheckInPiece1.getCopyNumber());
     assertEquals("Ch1", actCheckInPiece1.getChronology());
     assertEquals(true, actCheckInPiece1.getDiscoverySuppress());
     assertEquals(true, actCheckInPiece1.getDisplayOnHolding());
     CheckInPiece actCheckInPiece2 = map.get(poLine2).get(0);
     assertEquals("4", actCheckInPiece2.getCaption());
     assertEquals("Enum2", actCheckInPiece2.getEnumeration());
+    assertEquals("CN2", actCheckInPiece2.getCopyNumber());
     assertEquals("Ch2", actCheckInPiece2.getChronology());
     assertEquals(false, actCheckInPiece2.getDiscoverySuppress());
     assertEquals(false, actCheckInPiece2.getDisplayOnHolding());
