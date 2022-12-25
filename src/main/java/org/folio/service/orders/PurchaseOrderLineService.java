@@ -14,11 +14,10 @@ import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.EN;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -89,7 +88,7 @@ public class PurchaseOrderLineService {
 
   public Future<List<PoLine>> getOrderLinesByIds(List<String> orderLineIds, RequestContext requestContext) {
 
-    return collectResultsOnSuccess(ofSubLists(orderLineIds, MAX_IDS_FOR_GET_RQ)
+    return collectResultsOnSuccess(ofSubLists(orderLineIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getOrderLinesChunk(ids, requestContext)).toList())
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
@@ -110,7 +109,8 @@ public class PurchaseOrderLineService {
   public Future<Void> saveOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
     return GenericCompositeFuture.join(orderLines.stream()
       .map(poLine -> saveOrderLine(poLine, requestContext)
-        .onFailure(t -> {
+        .recover(t -> {
+          //TODO: always POL_LINES_LIMIT_EXCEEDED message hides other error messages. to fix
           throw new HttpException(400, ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
         }))
       .collect(toList()))
@@ -355,7 +355,7 @@ public class PurchaseOrderLineService {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT)
       .withQuery(query)
       .withOffset(0)
-      .withLimit(MAX_IDS_FOR_GET_RQ);
+      .withLimit(MAX_IDS_FOR_GET_RQ_15);
     return restClient.get(requestEntry, PoLineCollection.class, requestContext)
       .map(PoLineCollection::getPoLines);
   }

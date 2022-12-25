@@ -7,7 +7,8 @@ public final class RestConstants {
   public static final String SEARCH_PARAMS = "?limit=%s&offset=%s%s";
   public static final String ERROR_CAUSE = "cause";
 
-  public static final int MAX_IDS_FOR_GET_RQ = 15;
+  public static final int MAX_IDS_FOR_GET_RQ_15 = 15;
+  public static final int MAX_IDS_FOR_GET_RQ_30 = 30;
   public static final String MAX_POLINE_LIMIT = "999";
 
   public static final String PATH_PARAM_PLACE_HOLDER = ":id";

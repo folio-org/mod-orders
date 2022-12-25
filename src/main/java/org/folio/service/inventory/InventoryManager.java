@@ -14,7 +14,7 @@ import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
@@ -355,7 +355,7 @@ public class InventoryManager {
 
   public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext) {
     return collectResultsOnSuccess(
-      ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ).map(ids -> fetchHoldingsByFundIds(ids, requestContext)).toList())
+      ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> fetchHoldingsByFundIds(ids, requestContext)).toList())
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(Collectors.toList()));
@@ -737,7 +737,7 @@ public class InventoryManager {
 
   private Future<List<JsonObject>> getContributorNameTypes(List<String> ids, RequestContext requestContext) {
     return collectResultsOnSuccess(StreamEx
-      .ofSubLists(ids, MAX_IDS_FOR_GET_RQ)
+      .ofSubLists(ids, MAX_IDS_FOR_GET_RQ_15)
       .map(idChunk -> getContributorNameTypeByIds(idChunk, requestContext))
       .toList())
       .map(lists -> StreamEx.of(lists).toFlatList(contributorNameTypes -> contributorNameTypes));
@@ -1077,7 +1077,7 @@ public class InventoryManager {
   public Future<List<JsonObject>> getItemsByPoLineIdsAndStatus(List<String> poLineIds, String itemStatus, RequestContext requestContext) {
     logger.debug("getItemsByStatus start");
     List<Future<List<JsonObject>>> futures = StreamEx
-      .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
+      .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> {
         String query = String.format("status.name==%s and %s", itemStatus, HelperUtils.convertFieldListToCqlQuery(ids, InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true));
         return getItemRecordsByQuery(query, requestContext);
@@ -1294,7 +1294,7 @@ public class InventoryManager {
   private Future<List<JsonObject>> fetchHoldingsByFundIds(List<String> holdingIds, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(holdingIds);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
-      .withQuery(query).withOffset(0).withLimit(MAX_IDS_FOR_GET_RQ);
+      .withQuery(query).withOffset(0).withLimit(MAX_IDS_FOR_GET_RQ_15);
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(jsonHoldings -> jsonHoldings.getJsonArray(HOLDINGS_RECORDS)
         .stream()

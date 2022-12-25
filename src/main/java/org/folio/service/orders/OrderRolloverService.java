@@ -3,21 +3,16 @@ package org.folio.service.orders;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
-import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_30;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.OPEN;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
@@ -29,12 +24,11 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.PoLineEncumbrancesHolder;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -42,15 +36,18 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 
+import com.google.common.collect.Lists;
+
 import io.vertx.core.Future;
+import io.vertxconcurrent.Semaphore;
 
 public class OrderRolloverService {
   private static final Logger logger = LogManager.getLogger();
@@ -59,25 +56,22 @@ public class OrderRolloverService {
   private static final String ORDER_TYPE_QUERY = "orderType == %s";
   private static final String ORDER_LINE_BY_ORDER_ID_QUERY = "(purchaseOrderId == %s)";
   private static final String ENCUMBR_FY_QUERY = "fiscalYearId == %s";
-  private static final String ENCUMBR_BY_ORDER_ID_QUERY = "encumbrance.sourcePurchaseOrderId == %s";
+  private static final String ENCUMBRANCE_BY_POLINE_ID_QUERY = "encumbrance.sourcePoLineId == %s";
 
-  public static final String WORKFLOW_STATUS_OPEN_OR_CLOSED_QUERY = " (workflowStatus==Open or workflowStatus==Closed) ";
+  public static final String WORKFLOW_STATUS_QUERY = " (workflowStatus==%s) ";
   private static final String OR = " or ";
   private static final String AND = " and ";
-  private static final int ORDERS_CHUNK = 200;
+  private static final int POLINES_CHUNK = 200;
 
   private final FundService fundService;
-  private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TransactionService transactionService;
   private final ConfigurationEntriesService configurationService;
   private final ExchangeRateProviderResolver exchangeRateProviderResolver;
 
-  public OrderRolloverService(FundService fundService, PurchaseOrderStorageService purchaseOrderStorageService,
-                              PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
+  public OrderRolloverService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
                               ConfigurationEntriesService configurationEntriesService, ExchangeRateProviderResolver exchangeRateProviderResolver) {
     this.fundService = fundService;
-    this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.transactionService = transactionService;
     this.configurationService = configurationEntriesService;
@@ -85,114 +79,98 @@ public class OrderRolloverService {
   }
 
   public Future<Void> rollover(LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
-    return fundService.getFundsByLedgerId(ledgerFYRollover.getLedgerId(), requestContext)
-      .map(ledgerFunds -> ledgerFunds.stream().map(Fund::getId).collect(toList()))
-      .compose(ledgerFundIds -> getFundsOrders(ledgerFundIds, ledgerFYRollover, requestContext))
-      .compose(orders -> configurationService.getSystemCurrency(requestContext)
-        .compose(systemCurrency -> rolloverOrderLinesByChunks(systemCurrency, orders, ledgerFYRollover, requestContext)))
-      .compose(lines -> purchaseOrderLineService.saveOrderLines(lines, requestContext))
-      .onSuccess(v -> logger.debug("Order Rollover : All order processed"));
+    var fundIdsFuture = fundService.getFundsByLedgerId(ledgerFYRollover.getLedgerId(), requestContext)
+      .map(ledgerFunds -> ledgerFunds.stream()
+        .map(Fund::getId)
+        .collect(toList()));
+
+    return fundIdsFuture
+      .compose(ledgerFundIds -> configurationService.getSystemCurrency(requestContext)
+        .compose(systemCurrency -> rolloverOrdersByFundIds(ledgerFundIds, ledgerFYRollover, systemCurrency, requestContext))
+      .onSuccess(v -> logger.debug("Order Rollover : All orders processed")));
   }
 
-  private Future<List<PoLine>> rolloverOrderLinesByChunks(String systemCurrency, List<PurchaseOrder> orders,
-                                                                     LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
-    logger.debug("Start : All order processed");
-    List<Future<List<PoLine>>> futures = new ArrayList<>();
-    ofSubLists(orders, MAX_IDS_FOR_GET_RQ).forEach(chunkOrders ->
-      futures.add(rolloverPoLinesChunk(systemCurrency, chunkOrders, ledgerFYRollover, requestContext))
-    );
-    return collectResultsOnSuccess(futures).map(results -> results.stream()
-      .flatMap(List::stream)
-      .collect(Collectors.toList())
-    );
+  private Future<Void> rolloverOrdersByFundIds(List<String> ledgerFundIds, LedgerFiscalYearRollover ledgerFYRollover, String systemCurrency, RequestContext requestContext) {
+    List<Future<Void>> futures = new ArrayList<>();
+    var fundIdChunks = Lists.partition(ledgerFundIds, MAX_IDS_FOR_GET_RQ_30);
+
+    return requestContext.getContext()
+      .executeBlocking(event -> {
+        // process fundId chunks one by one
+        Semaphore semaphore = new Semaphore(1, requestContext.getContext().owner());
+        for (List<String> fundIds : fundIdChunks) {
+          // perform rollover for open orders and then for closed orders
+          var future = rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, OPEN, requestContext)
+            .compose(v -> rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, CLOSED, requestContext));
+          futures.add(future);
+          semaphore.acquire(() ->
+            future.onComplete(asyncResult -> semaphore.release()));
+        }
+        event.complete();
+      })
+      .compose(v -> GenericCompositeFuture.join(futures))
+      .mapEmpty();
   }
 
-  private Future<List<PurchaseOrder>> getFundsOrders(List<String> ledgerFundIds,
-      LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
+  private Future<Void> rolloverOrdersByFundIds(List<String> chunkFundIds, LedgerFiscalYearRollover ledgerFYRollover,
+      String systemCurrency, PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
 
-    List<Future<List<PurchaseOrder>>> futures = new ArrayList<>();
-    ofSubLists(ledgerFundIds, MAX_IDS_FOR_GET_RQ).forEach(chunkFundIds ->
-      futures.add(getFundsOrdersByChunk(chunkFundIds, ledgerFYRollover, requestContext))
-    );
-    return collectResultsOnSuccess(futures).map(results -> results.stream()
-      .flatMap(Collection::stream)
-      .collect(toList())
-    );
+    String query = buildOpenOrClosedOrderQueryByFundIdsAndTypes(chunkFundIds, workflowStatus, ledgerFYRollover);
+    var totalRecordsFuture = purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
+      .map(PoLineCollection::getTotalRecords);
+    List<Future<Void>> futures = new ArrayList<>();
+
+    return totalRecordsFuture
+      .map(totalRecords -> {
+        if (totalRecords == 0) {
+          return null;
+        }
+        int numberOfChunks = totalRecords / POLINES_CHUNK + 1;
+        // only 1 active thread because of chunk size = 200 records
+        Semaphore semaphore = new Semaphore(1, requestContext.getContext().owner());
+        for (int chunkNumber = 0; chunkNumber < numberOfChunks; chunkNumber++) {
+          Future<Void> future = purchaseOrderLineService.getOrderLines(query, POLINES_CHUNK, chunkNumber * POLINES_CHUNK, requestContext)
+            .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, workflowStatus, requestContext))
+            .compose(modifiedPoLines -> purchaseOrderLineService.saveOrderLines(modifiedPoLines, requestContext));
+          futures.add(future);
+          // can produce thread blocked warnings because of large number of data
+          semaphore.acquire(() ->
+            future.onComplete(asyncResult -> semaphore.release()));
+        }
+        return null;
+      })
+      .compose(v -> GenericCompositeFuture.join(futures))
+      .mapEmpty();
   }
 
-  private Future<List<PurchaseOrder>> getFundsOrdersByChunk(List<String> chunkFundIds,
-      LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
+  private Future<List<PoLine>> rolloverOrders(String systemCurrency, List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
+    PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
+    if (poLines.isEmpty())
+      return Future.succeededFuture(emptyList());
 
-    String query = buildOpenOrClosedOrderQueryByFundIdsAndTypes(chunkFundIds, ledgerFYRollover);
-    return purchaseOrderStorageService.getPurchaseOrders(query, 0, 0, requestContext)
-      .map(PurchaseOrderCollection::getTotalRecords)
-      .compose(orderTotalRecords -> getOrdersByChunks(query, orderTotalRecords, requestContext))
-       .recover(t -> {
-        logger.error(ErrorCodes.RETRIEVE_ROLLOVER_ORDER_ERROR.getDescription());
-        throw new HttpException(500, ErrorCodes.RETRIEVE_ROLLOVER_ORDER_ERROR);
+    var poLineIds = poLines.stream()
+      .map(PoLine::getId)
+      .collect(toList());
+
+    return getEncumbrancesForRollover(poLineIds, ledgerFYRollover, requestContext)
+      .compose(encumbrances -> {
+        if (OPEN.equals(workflowStatus)) {
+          var holders = buildPoLineEncumbrancesHolders(systemCurrency, poLines, encumbrances, requestContext);
+          var modifiedPoLines = applyPoLinesRolloverChanges(holders);
+          return Future.succeededFuture(modifiedPoLines);
+
+        } else {
+          return removeEncumbrancesFromClosedPoLines(poLines, encumbrances, requestContext);
+        }
       });
   }
 
-  private Future<List<PurchaseOrder>> getOrdersByChunks(String query, Integer orderTotalRecords, RequestContext requestContext) {
-
-    List<Future<List<PurchaseOrder>>> futures = new ArrayList<>();
-    int numberOfChuncks = orderTotalRecords/ORDERS_CHUNK + 1;
-    for (int chunkNumber = 0; chunkNumber < numberOfChuncks; chunkNumber++)  {
-      futures.add(purchaseOrderStorageService.getPurchaseOrders(query, ORDERS_CHUNK, chunkNumber * ORDERS_CHUNK, requestContext)
-        .map(PurchaseOrderCollection::getPurchaseOrders));
-      logger.debug("Order chunk query : {}", query);
+  private Future<List<PoLine>> removeEncumbrancesFromClosedPoLines(List<PoLine> poLines, List<Transaction> transactions, RequestContext requestContext) {
+    if (transactions.isEmpty()) {
+      return Future.succeededFuture(emptyList());
     }
-    return collectResultsOnSuccess(futures).map(results -> results.stream()
-      .flatMap(Collection::stream)
-      .collect(toList())
-    );
-  }
-
-  private Future<List<PoLine>> rolloverPoLinesChunk(String systemCurrency, List<PurchaseOrder> orders,
-      LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
-
-    List<String> openOrderIds = orders.stream()
-      .filter(po -> po.getWorkflowStatus() == OPEN)
-      .map(PurchaseOrder::getId)
-      .collect(Collectors.toList());
-    List<String> closedOrderIds = orders.stream()
-      .filter(po -> po.getWorkflowStatus() == CLOSED)
-      .map(PurchaseOrder::getId)
-      .collect(Collectors.toList());
-    return rolloverOpenOrders(systemCurrency, openOrderIds, ledgerFYRollover, requestContext)
-      .compose(openPoLines -> rolloverClosedOrders(closedOrderIds, ledgerFYRollover, requestContext)
-        .map(closedPoLines -> Stream.concat(openPoLines.stream(), closedPoLines.stream())
-          .collect(Collectors.toList())))
-       .recover(t -> {
-        logger.error(ErrorCodes.ROLLOVER_PO_LINES_ERROR.getDescription());
-        throw new CompletionException(new HttpException(500, ErrorCodes.ROLLOVER_PO_LINES_ERROR));
-      });
-  }
-
-  private Future<List<PoLine>> rolloverOpenOrders(String systemCurrency, List<String> orderIds,
-      LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
-
-    if (orderIds.isEmpty())
-      return Future.succeededFuture(emptyList());
-    return getPoLinesByOrderIds(orderIds, requestContext)
-      .compose(poLines -> getEncumbrancesForRollover(orderIds, ledgerFYRollover, requestContext)
-        .map(transactions -> buildPoLineEncumbrancesHolders(systemCurrency, poLines, transactions, requestContext))
-        .map(this::applyPoLinesRolloverChanges));
-  }
-
-  private Future<List<PoLine>> rolloverClosedOrders(List<String> orderIds,
-     LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
-
-    if (orderIds.isEmpty())
-      return Future.succeededFuture(emptyList());
-    return getPoLinesByOrderIds(orderIds, requestContext)
-      .compose(poLines -> getEncumbrancesForRollover(orderIds, ledgerFYRollover, requestContext)
-        .compose(transactions -> {
-          if (transactions.isEmpty())
-            return Future.succeededFuture();
-          return transactionService.deleteTransactions(transactions, requestContext);
-        })
-        .map(v -> removeEncumbranceLinks(poLines)));
+    return transactionService.deleteTransactions(transactions, requestContext)
+      .map(v -> removeEncumbranceLinks(poLines));
   }
 
   private List<PoLine> applyPoLinesRolloverChanges(List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders) {
@@ -296,20 +274,15 @@ public class OrderRolloverService {
                 .collect(toList());
   }
 
-  private Future<List<Transaction>> getEncumbrancesForRollover(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
-    String query = buildQueryEncumbrancesForRollover(orderIds, ledgerFYRollover);
+  private Future<List<Transaction>> getEncumbrancesForRollover(List<String> polineIds, LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
+    String query = buildQueryEncumbrancesForRollover(polineIds, ledgerFYRollover);
     return transactionService.getTransactions(query, requestContext);
   }
 
-  private String buildQueryEncumbrancesForRollover(List<String> orderIds, LedgerFiscalYearRollover ledgerFYRollover) {
+  private String buildQueryEncumbrancesForRollover(List<String> polineIds, LedgerFiscalYearRollover ledgerFYRollover) {
     String fiscalYearIdsQuery = buildQuery(List.of(ledgerFYRollover.getToFiscalYearId()), ENCUMBR_FY_QUERY, OR);
-    String orderIdsQuery = buildQuery(orderIds, ENCUMBR_BY_ORDER_ID_QUERY, OR);
+    String orderIdsQuery = buildQuery(polineIds, ENCUMBRANCE_BY_POLINE_ID_QUERY, OR);
     return "(" + fiscalYearIdsQuery + ")" + AND + "(" + orderIdsQuery + ")";
-  }
-
-  private Future<List<PoLine>> getPoLinesByOrderIds(List<String> orderIds, RequestContext requestContext) {
-    String query = buildQuery(orderIds, ORDER_LINE_BY_ORDER_ID_QUERY, OR);
-    return purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext);
   }
 
   private String buildQuery(List<String> orderIds, String queryTemplate, String delimiter) {
@@ -318,10 +291,11 @@ public class OrderRolloverService {
                    .collect(Collectors.joining(delimiter));
   }
 
-  private String buildOpenOrClosedOrderQueryByFundIdsAndTypes(List<String> fundIds, LedgerFiscalYearRollover ledgerFYRollover) {
+  private String buildOpenOrClosedOrderQueryByFundIdsAndTypes(List<String> fundIds, PurchaseOrder.WorkflowStatus workflowStatus,
+    LedgerFiscalYearRollover ledgerFYRollover) {
     String typesQuery = buildOrderTypesQuery(ledgerFYRollover);
     String fundIdsQuery = fundIds.stream().map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId)).collect(Collectors.joining(OR));
-    return "(" + typesQuery + ")" +  AND + WORKFLOW_STATUS_OPEN_OR_CLOSED_QUERY + AND + "(" + fundIdsQuery + ")";
+    return "(" + typesQuery + ")" +  AND + " (workflowStatus==" + workflowStatus.value() + ") " + AND + "(" + fundIdsQuery + ")";
   }
 
   private String buildOrderTypesQuery(LedgerFiscalYearRollover ledgerFYRollover) {

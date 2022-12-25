@@ -5,7 +5,7 @@ import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.Collection;
 import java.util.List;
@@ -62,7 +62,7 @@ public class PurchaseOrderStorageService {
   }
   public Future<List<PurchaseOrder>> getPurchaseOrdersByIds(List<String> orderIds, RequestContext requestContext) {
 
-    return collectResultsOnSuccess(ofSubLists(orderIds, MAX_IDS_FOR_GET_RQ)
+    return collectResultsOnSuccess(ofSubLists(orderIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getOrdersChunk(ids, requestContext)).toList())
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
@@ -88,7 +88,7 @@ public class PurchaseOrderStorageService {
     RequestEntry requestEntry = new RequestEntry(ENDPOINT)
       .withQuery(query)
       .withOffset(0)
-      .withLimit(MAX_IDS_FOR_GET_RQ);
+      .withLimit(MAX_IDS_FOR_GET_RQ_15);
     return restClient.get(requestEntry, PurchaseOrderCollection.class, requestContext)
       .map(PurchaseOrderCollection::getPurchaseOrders);
   }
