@@ -52,16 +52,13 @@ import io.vertxconcurrent.Semaphore;
 public class OrderRolloverService {
   private static final Logger logger = LogManager.getLogger();
 
-  private static final String PO_LINE_FUND_DISTR_QUERY = "poLine.fundDistribution = \"/@fundId == \"%s\"";
-  private static final String ORDER_TYPE_QUERY = "orderType == %s";
-  private static final String ORDER_LINE_BY_ORDER_ID_QUERY = "(purchaseOrderId == %s)";
-  private static final String ENCUMBR_FY_QUERY = "fiscalYearId == %s";
-  private static final String ENCUMBRANCE_BY_POLINE_ID_QUERY = "encumbrance.sourcePoLineId == %s";
-
-  public static final String WORKFLOW_STATUS_QUERY = " (workflowStatus==%s) ";
+  private static final String PO_LINE_FUND_DISTR_QUERY = "fundDistribution = \"/@fundId == \"%s\"";
+  private static final String ORDER_TYPE_QUERY = "purchaseOrder.orderType == %s";
+  private static final String ENCUMBR_FY_QUERY = "fiscalYearId == \"%s\"";
+  private static final String ENCUMBRANCE_BY_POLINE_ID_QUERY = "encumbrance.sourcePoLineId == \"%s\"";
   private static final String OR = " or ";
   private static final String AND = " and ";
-  private static final int POLINES_CHUNK = 200;
+  private static final int POLINES_CHUNK_SIZE_200 = 200;
 
   private final FundService fundService;
   private final PurchaseOrderLineService purchaseOrderLineService;
@@ -123,14 +120,11 @@ public class OrderRolloverService {
 
     return totalRecordsFuture
       .map(totalRecords -> {
-        if (totalRecords == 0) {
-          return null;
-        }
-        int numberOfChunks = totalRecords / POLINES_CHUNK + 1;
+        int numberOfChunks = (int) Math.ceil((double) totalRecords / POLINES_CHUNK_SIZE_200);
         // only 1 active thread because of chunk size = 200 records
         Semaphore semaphore = new Semaphore(1, requestContext.getContext().owner());
         for (int chunkNumber = 0; chunkNumber < numberOfChunks; chunkNumber++) {
-          Future<Void> future = purchaseOrderLineService.getOrderLines(query, POLINES_CHUNK, chunkNumber * POLINES_CHUNK, requestContext)
+          Future<Void> future = purchaseOrderLineService.getOrderLines(query, chunkNumber * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
             .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, workflowStatus, requestContext))
             .compose(modifiedPoLines -> purchaseOrderLineService.saveOrderLines(modifiedPoLines, requestContext));
           futures.add(future);
@@ -166,11 +160,16 @@ public class OrderRolloverService {
       });
   }
 
-  private Future<List<PoLine>> removeEncumbrancesFromClosedPoLines(List<PoLine> poLines, List<Transaction> transactions, RequestContext requestContext) {
-    if (transactions.isEmpty()) {
-      return Future.succeededFuture(emptyList());
-    }
-    return transactionService.deleteTransactions(transactions, requestContext)
+  private Future<List<PoLine>> removeEncumbrancesFromClosedPoLines(List<PoLine> poLines, List<Transaction> transactions,
+      RequestContext requestContext) {
+    return Future.succeededFuture()
+      .compose(v -> {
+        if (transactions.isEmpty()) {
+          return Future.succeededFuture();
+        } else {
+          return transactionService.deleteTransactions(transactions, requestContext);
+        }
+      })
       .map(v -> removeEncumbranceLinks(poLines));
   }
 
@@ -282,8 +281,8 @@ public class OrderRolloverService {
 
   private String buildQueryEncumbrancesForRollover(List<String> polineIds, LedgerFiscalYearRollover ledgerFYRollover) {
     String fiscalYearIdsQuery = buildQuery(List.of(ledgerFYRollover.getToFiscalYearId()), ENCUMBR_FY_QUERY, OR);
-    String orderIdsQuery = buildQuery(polineIds, ENCUMBRANCE_BY_POLINE_ID_QUERY, OR);
-    return "(" + fiscalYearIdsQuery + ")" + AND + "(" + orderIdsQuery + ")";
+    String orderLineIdsQuery = buildQuery(polineIds, ENCUMBRANCE_BY_POLINE_ID_QUERY, OR);
+    return "(" + fiscalYearIdsQuery + ")" + AND + "(" + orderLineIdsQuery + ")";
   }
 
   private String buildQuery(List<String> orderIds, String queryTemplate, String delimiter) {
