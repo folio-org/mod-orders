@@ -400,7 +400,7 @@ public class OrderReEncumberServiceTest {
   }
 
   @Test
-  void reEncumberWithEmptyHoldersShouldCompleteSuccessfully() {
+  void reEncumberWithEmptyHoldersShouldCompleteSuccessfully(VertxTestContext vertxTestContext) {
 
     String orderId = UUID.randomUUID().toString();
 
@@ -425,12 +425,15 @@ public class OrderReEncumberServiceTest {
     when(exchangeRateProviderResolver.resolve(conversionQuery, requestContext)).thenReturn(exchangeRateProvider);
     Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
 
-    future.result();
-    assertFalse(future.failed());
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        vertxTestContext.completeNow();
+      })
+      .onFailure(vertxTestContext::failNow);
   }
 
   @Test
-  void shouldFilterReEncumberHoldersWithEmptyEncumbranceRollover() {
+  void shouldFilterReEncumberHoldersWithEmptyEncumbranceRollover(VertxTestContext vertxTestContext) {
 
     CompositePoLine line= new CompositePoLine().withCost(new Cost().withCurrency("USD").withListUnitPrice(1d));
     String orderId = UUID.randomUUID().toString();
@@ -463,22 +466,26 @@ public class OrderReEncumberServiceTest {
     when(rolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(succeededFuture(null));
     when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(succeededFuture(null));
 
-    Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
     List<Transaction> toTransactionList = Collections.emptyList();
     when(transactionService.getTransactions(anyString(), eq(requestContext)))
         .thenReturn(succeededFuture(toTransactionList));
     when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
     when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(succeededFuture(new Transaction()));
-    future.result();
-    assertFalse(future.failed());
 
-    verify(spyReEncumbranceHoldersBuilder).withPreviousFyEncumbrances(argumentCaptorForList.capture(), any());
-    List<ReEncumbranceHolder> argumentHolders = argumentCaptorForList.getValue();
-    assertThat(argumentHolders, hasSize(0));
+    Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
+
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        verify(spyReEncumbranceHoldersBuilder).withPreviousFyEncumbrances(argumentCaptorForList.capture(), any());
+        List<ReEncumbranceHolder> argumentHolders = argumentCaptorForList.getValue();
+        assertThat(argumentHolders, hasSize(0));
+        vertxTestContext.completeNow();
+      })
+      .onFailure(vertxTestContext::failNow);
   }
 
   @Test
-  void shouldVerifyFYROAdjustmentAndFundDistributionValuesWhenMixedFunds() {
+  void shouldVerifyFYROAdjustmentAndFundDistributionValuesWhenMixedFunds(VertxTestContext vertxTestContext) {
     String ledgerId = UUID.randomUUID().toString();
     String fromFyId = UUID.randomUUID().toString();
     String toFyId = UUID.randomUUID().toString();
@@ -638,12 +645,13 @@ public class OrderReEncumberServiceTest {
 
     //When
     Future<Void> future = orderReEncumberService.reEncumber(UUID.randomUUID().toString(), requestContext);
-    future.result();
-     //Then
-    assertFalse(future.failed());
-
-    assertEquals(-35.3d, line1.getCost().getFyroAdjustmentAmount());
-    assertEquals(50d, line1.getFundDistribution().get(0).getValue());
-    assertEquals(42.35d, line1.getFundDistribution().get(1).getValue());
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        assertEquals(-35.3d, line1.getCost().getFyroAdjustmentAmount());
+        assertEquals(50d, line1.getFundDistribution().get(0).getValue());
+        assertEquals(42.35d, line1.getFundDistribution().get(1).getValue());
+        vertxTestContext.completeNow();
+      })
+      .onFailure(vertxTestContext::failNow);
   }
 }

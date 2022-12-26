@@ -3,7 +3,7 @@ package org.folio.service.finance;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ public class FundService {
 
   public Future<List<Fund>> getAllFunds(Collection<String> fundIds, RequestContext requestContext) {
     return collectResultsOnSuccess(
-        ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ).map(ids-> getAllFundsByIds(ids, requestContext))
+        ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ_15).map(ids-> getAllFundsByIds(ids, requestContext))
           .toList()).map(
               lists -> lists.stream()
                 .flatMap(Collection::stream)
@@ -47,7 +47,7 @@ public class FundService {
 
   public Future<List<Fund>> getFunds(Collection<String> fundIds, RequestContext requestContext) {
     return collectResultsOnSuccess(
-        ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ).map(ids -> getFundsByIds(ids, requestContext))
+        ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> getFundsByIds(ids, requestContext))
           .toList()).map(
               lists -> lists.stream()
                 .flatMap(Collection::stream)
@@ -57,7 +57,7 @@ public class FundService {
   private Future<List<Fund>> getFundsByIds(Collection<String> ids, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids);
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
-      .withLimit(MAX_IDS_FOR_GET_RQ)
+      .withLimit(MAX_IDS_FOR_GET_RQ_15)
       .withOffset(0);
     return restClient.get(requestEntry, FundCollection.class, requestContext)
       .map(FundCollection::getFunds);
@@ -88,7 +88,7 @@ public class FundService {
   private Future<List<Fund>> getAllFundsByIds(Collection<String> ids, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids);
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
-      .withLimit(MAX_IDS_FOR_GET_RQ)
+      .withLimit(MAX_IDS_FOR_GET_RQ_15)
       .withOffset(0);
     return restClient.get(requestEntry, FundCollection.class, requestContext)
       .map(FundCollection::getFunds)

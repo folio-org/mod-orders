@@ -22,7 +22,7 @@ import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredFor
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOC_NOT_PROVIDED;
@@ -169,7 +169,7 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(checkInRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ) + 1;
+    int expectedSearchRqQty = Math.floorDiv(checkInRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
     // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
     assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
@@ -330,7 +330,7 @@ public class CheckinReceivingApiTest {
 
     assertThat(polSearches, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ) + 1;
+    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
     // The piece searches should be made 1 time: 1st time to get all required piece records
     assertThat(pieceSearches, hasSize(expectedSearchRqQty));
@@ -444,7 +444,7 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ) + 1;
+    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
     // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
     assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
@@ -706,7 +706,7 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(receiving.getTotalRecords(), MAX_IDS_FOR_GET_RQ) + 1;
+    int expectedSearchRqQty = Math.floorDiv(receiving.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
     // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
     assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));

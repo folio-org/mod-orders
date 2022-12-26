@@ -3,7 +3,7 @@ package org.folio.service.finance.transaction;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.ERROR_RETRIEVING_TRANSACTION;
 
 import java.util.ArrayList;
@@ -44,7 +44,7 @@ public class TransactionService {
 
   public Future<List<Transaction>> getTransactionsByPoLinesIds(List<String> trIds, String searchCriteria, RequestContext requestContext) {
     return collectResultsOnSuccess(
-        ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ).map(ids -> getTransactionsChunksByPoLineIds(ids, searchCriteria, requestContext))
+        ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> getTransactionsChunksByPoLineIds(ids, searchCriteria, requestContext))
           .toList()).map(
               lists -> lists.stream()
                 .flatMap(Collection::stream)
@@ -52,7 +52,7 @@ public class TransactionService {
   }
 
   public Future<List<Transaction>> getTransactionsByIds(List<String> trIds, RequestContext requestContext) {
-    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ)
+    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15)
         .map(ids -> getTransactionsChunksByIds(ids, requestContext))
       .toList())
       .map(lists -> lists.stream().flatMap(Collection::stream).collect(Collectors.toList()))
@@ -95,6 +95,7 @@ public class TransactionService {
   }
 
   public Future<Void> deleteTransactions(List<Transaction> transactions, RequestContext requestContext) {
+    // TODO: add semaphores
     return GenericCompositeFuture.join(transactions.stream()
       .map(transaction -> deleteTransactionById(transaction.getId(), requestContext))
         .collect(Collectors.toList()))

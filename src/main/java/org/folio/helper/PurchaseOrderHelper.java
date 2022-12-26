@@ -33,7 +33,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.EN;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEARCH_PARAMS;
 import static org.folio.rest.core.exceptions.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
@@ -880,7 +880,7 @@ public class PurchaseOrderHelper {
     }
     List<String> poLineIds = poLines.stream().map(PoLine::getId).collect(toList());
     return GenericCompositeFuture.join(
-      StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
+      StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
         .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemsStatus(chunk, currentStatus, newStatus, requestContext)))
         .collect(toList()))
       .mapEmpty();

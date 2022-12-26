@@ -8,7 +8,7 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.List;
 import java.util.Map;
@@ -91,7 +91,7 @@ public class TitlesService {
 
   public Future<Map<String, List<Title>>> getTitlesByPoLineIds(List<String> poLineIds, RequestContext requestContext) {
     return collectResultsOnSuccess(StreamEx
-      .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
+      .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
       // Transform piece id's to CQL query
       .map(ids -> HelperUtils.convertFieldListToCqlQuery(ids, "poLineId", true))
       // Send get request for each CQL query
@@ -136,7 +136,7 @@ public class TitlesService {
   }
 
   private Future<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
-    return getTitles(MAX_IDS_FOR_GET_RQ, 0, query, requestContext)
+    return getTitles(MAX_IDS_FOR_GET_RQ_15, 0, query, requestContext)
       .map(TitleCollection::getTitles);
   }
 
