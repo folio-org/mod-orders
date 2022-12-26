@@ -295,7 +295,7 @@ public class OrderRolloverService {
     LedgerFiscalYearRollover ledgerFYRollover) {
     String typesQuery = buildOrderTypesQuery(ledgerFYRollover);
     String fundIdsQuery = fundIds.stream().map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId)).collect(Collectors.joining(OR));
-    return "(" + typesQuery + ")" +  AND + " (workflowStatus==" + workflowStatus.value() + ") " + AND + "(" + fundIdsQuery + ")";
+    return "(" + typesQuery + ")" +  AND + " (purchaseOrder.workflowStatus==" + workflowStatus.value() + ") " + AND + "(" + fundIdsQuery + ")";
   }
 
   private String buildOrderTypesQuery(LedgerFiscalYearRollover ledgerFYRollover) {
