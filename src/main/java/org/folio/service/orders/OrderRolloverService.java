@@ -87,7 +87,8 @@ public class OrderRolloverService {
     return fundIdsFuture
       .compose(ledgerFundIds -> configurationService.getSystemCurrency(requestContext)
         .compose(systemCurrency -> rolloverOrdersByFundIds(ledgerFundIds, ledgerFYRollover, systemCurrency, requestContext))
-      .onSuccess(v -> logger.debug("Order Rollover : All orders processed")));
+      .onSuccess(v -> logger.info("Order Rollover success : All orders processed")))
+      .onFailure(t -> logger.error("Order Rollover failed", t));
   }
 
   private Future<Void> rolloverOrdersByFundIds(List<String> ledgerFundIds, LedgerFiscalYearRollover ledgerFYRollover, String systemCurrency, RequestContext requestContext) {
