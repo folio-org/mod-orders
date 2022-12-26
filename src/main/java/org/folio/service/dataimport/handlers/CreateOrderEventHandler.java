@@ -3,6 +3,7 @@ package org.folio.service.dataimport.handlers;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
@@ -30,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -88,7 +90,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
     idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant())
       .compose(orderId -> saveOrder(dataImportEventPayload, orderId, okapiHeaders))
-      .compose(v -> saveOrderLines(dataImportEventPayload, okapiHeaders))
+      .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, okapiHeaders))
       .onComplete(ar -> {
         if (ar.failed() && !(ar.cause() instanceof DuplicateEventException)) {
           LOGGER.error("Error during order creation", ar.cause());
@@ -107,10 +109,11 @@ public class CreateOrderEventHandler implements EventHandler {
       RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl());
   }
 
-  private Future<Void> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId, Map<String, String> okapiHeaders) {
+  private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId, Map<String, String> okapiHeaders) {
     RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     orderToSave.setId(orderId);
+    orderToSave.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME); // todo: workaround for mapping profile
 
     return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> purchaseOrderHelper.validateOrder(orderToSave, tenantConfig, requestContext))
@@ -129,14 +132,16 @@ public class CreateOrderEventHandler implements EventHandler {
             }
             LOGGER.warn("Error during creation order in the storage", e);
             return Future.failedFuture(e);
-          })
-          .mapEmpty();
+          });
       });
   }
 
-  private Future<CompositePoLine> saveOrderLines(DataImportEventPayload dataImportEventPayload, Map<String, String> okapiHeaders) {
+  private Future<CompositePoLine> saveOrderLines(String orderId, DataImportEventPayload dataImportEventPayload, Map<String, String> okapiHeaders) {
     RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER_LINES_KEY), CompositePoLine.class);
+    poLine.setPurchaseOrderId(orderId);
+    poLine.setSource(CompositePoLine.Source.MARC);
+
     if (dataImportEventPayload.getContext().containsKey(EntityType.INSTANCE.value())) {
       JsonObject instanceJson = new JsonObject(dataImportEventPayload.getContext().get(EntityType.INSTANCE.value()));
       poLine.setInstanceId(instanceJson.getString(INSTANCE_ID_FIELD));
@@ -156,6 +161,20 @@ public class CreateOrderEventHandler implements EventHandler {
     JsonObject orderJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(ORDER_FIELD);
     JsonObject poLineJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(PO_LINES_FIELD);
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
+
+    // todo: workaround:
+    orderJson.put("workflowStatus", orderJson.getString("poStatus"));
+    orderJson.put("orderType", "One-Time");
+    orderJson.remove("poStatus");
+    if (orderJson.getString("acqUnitIds") != null) {
+      orderJson.put("acqUnitIds", new JsonArray(List.of(orderJson.getString("acqUnitIds"))));
+    }
+    dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
+    poLineJson.put("titleOrPackage", poLineJson.getString("title"));
+    poLineJson.remove("title");
+    poLineJson.getJsonObject("eresource").put("activated", false);
+    poLineJson.getJsonObject("eresource").remove("activationStatus");
+    poLineJson.remove("useExchangeRate");
     dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode());
   }
 

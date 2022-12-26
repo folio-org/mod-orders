@@ -1,6 +1,5 @@
 package org.folio.verticle;
 
-import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
 
@@ -17,6 +16,7 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.ProcessRecordErrorHandler;
 import org.folio.kafka.SubscriptionDefinition;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.processing.events.EventManager;
 import org.folio.processing.events.utils.PomReaderUtil;
 import org.folio.rest.tools.utils.ModuleName;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +44,9 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   @Value("${orders.kafka.OrderConsumer.loadLimit:5}")
   private int loadLimit;
 
+  @Value("${mod.orders.dataimport.kafka.max.distribution.number:100}")
+  private int maxDistributionNumber;
+
   @Autowired
   @Qualifier("DataImportKafkaHandler")
   private AsyncRecordHandler<String, String> dataImportKafkaHandler;
@@ -62,8 +65,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   @Override
   public void start(Promise<Void> startPromise) {
-
     LOGGER.debug("DataImportConsumerVerticle :: start");
+    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     List<Future<Void>> futures = new ArrayList<>();
 
