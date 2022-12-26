@@ -247,6 +247,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     }
     piece.setEnumeration(checkinPiece.getEnumeration());
     piece.setChronology(checkinPiece.getChronology());
+    piece.setCopyNumber(checkinPiece.getCopyNumber());
     piece.setDisplayOnHolding(checkinPiece.getDisplayOnHolding());
     piece.setDiscoverySuppress(checkinPiece.getDiscoverySuppress());
     piece.setSupplement(checkinPiece.getSupplement());
