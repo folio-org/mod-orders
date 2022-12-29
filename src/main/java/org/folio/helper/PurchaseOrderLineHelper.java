@@ -308,6 +308,7 @@ public class PurchaseOrderLineHelper {
           return polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
             .compose(v -> updateOrderLine(compOrderLine, lineFromStorage, requestContext))
             .compose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
+            .compose(v -> polInvoiceLineRelationService.updateInvoiceLineReference(poLineInvoiceLineHolder, requestContext))
             .compose(v -> updateInventoryItemStatus(compOrderLine, lineFromStorage, requestContext))
             .map(ok -> {
               updateOrderStatus(compOrderLine, lineFromStorage, requestContext);

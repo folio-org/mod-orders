@@ -6,10 +6,9 @@ import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.PoLine;
 
 import io.vertx.core.Future;
 
@@ -26,13 +25,10 @@ public class POLInvoiceLineRelationService {
   }
 
   public Future<Void> prepareRelatedInvoiceLines(PoLineInvoiceLineHolder holder, RequestContext requestContext) {
-    CompositePoLine compositePoLine = holder.getPoLineFromRequest();
-    PoLine poLineFromStorage = holder.getPoLineFromStorage();
-    if (CollectionUtils.isEqualCollection(getFundIdsFromFundDistribution(compositePoLine.getFundDistribution()),
-      getFundIdsFromFundDistribution(poLineFromStorage.getFundDistribution()))) {
+    if (isFundDistributionNotChanged(holder)) {
       return Future.succeededFuture();
     } else {
-      return poLineInvoiceLineHolderBuilder.buildHolder(compositePoLine, poLineFromStorage, requestContext)
+      return poLineInvoiceLineHolderBuilder.buildHolder(holder.getPoLineFromRequest(), holder.getPoLineFromStorage(), requestContext)
         .map(poLineInvoiceLineHolder -> {
           holder.withOpenOrReviewedInvoiceLines(poLineInvoiceLineHolder.getOpenOrReviewedInvoiceLines());
           holder.withPaidOrCancelledInvoiceLines(poLineInvoiceLineHolder.getPaidOrCancelledInvoiceLines());
@@ -51,6 +47,30 @@ public class POLInvoiceLineRelationService {
         .map(org.folio.rest.acq.model.invoice.FundDistribution::getEncumbrance).collect(Collectors.toSet()))
       .map(encumbranceIds -> holders.stream().filter(holder -> !encumbranceIds.contains(holder.getOldEncumbrance().getId())).collect(Collectors.toList()))
       .map(encumbrancesProcessingHolder::withEncumbrancesForDelete);
+  }
+
+
+  public Future<Void> updateInvoiceLineReference(PoLineInvoiceLineHolder holder, RequestContext requestContext) {
+    if (isFundDistributionNotChanged(holder)) {
+      return Future.succeededFuture();
+    }
+
+    List<org.folio.rest.acq.model.invoice.FundDistribution> newFundDistribution = holder.getPoLineFromRequest().getFundDistribution()
+      .stream().map(POLInvoiceLineRelationService::convertToInvoiceFundDistribution).collect(Collectors.toList());
+    List<InvoiceLine> invoiceLines = holder.getOpenOrReviewedInvoiceLines()
+      .stream().map(invoiceLine -> invoiceLine.withFundDistributions(newFundDistribution)).collect(Collectors.toList());
+    return invoiceLineService.saveInvoiceLines(invoiceLines, requestContext);
+  }
+
+  private static org.folio.rest.acq.model.invoice.FundDistribution convertToInvoiceFundDistribution(FundDistribution fundDistribution) {
+    return new org.folio.rest.acq.model.invoice.FundDistribution().withCode(fundDistribution.getCode()).withEncumbrance(fundDistribution.getEncumbrance())
+      .withFundId(fundDistribution.getFundId()).withValue(fundDistribution.getValue()).withExpenseClassId(fundDistribution.getExpenseClassId())
+      .withDistributionType(org.folio.rest.acq.model.invoice.FundDistribution.DistributionType.fromValue(fundDistribution.getDistributionType().value()));
+  }
+
+  private boolean isFundDistributionNotChanged(PoLineInvoiceLineHolder holder) {
+    return CollectionUtils.isEqualCollection(getFundIdsFromFundDistribution(holder.getPoLineFromRequest().getFundDistribution()),
+      getFundIdsFromFundDistribution(holder.getPoLineFromStorage().getFundDistribution()));
   }
 
   private List<String> getFundIdsFromFundDistribution(List<FundDistribution> fundDistributions) {
