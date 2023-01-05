@@ -42,7 +42,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
 
   private final Vertx vertx;
-  private JobProfileSnapshotCache profileSnapshotCache;
+  private final JobProfileSnapshotCache profileSnapshotCache;
   private final EventHandler createOrderEventHandler;
 
   @Autowired
@@ -57,13 +57,13 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   }
 
   @Override
-  public Future<String> handle(KafkaConsumerRecord<String, String> record) {
+  public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
       Promise<String> promise = Promise.promise();
-      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers());
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
       String recordId = headersMap.get(RECORD_ID_HEADER);
-      Event event = DatabindCodec.mapper().readValue(record.value(), Event.class);
+      Event event = DatabindCodec.mapper().readValue(kafkaRecord.value(), Event.class);
       DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.debug("handle:: Data import event payload has been received with event type: {}, jobExecutionId: {}, recordId: {}, chunkId: {}",
@@ -81,12 +81,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
           if (payloadAr.failed() || DI_ERROR.value().equals(payloadAr.result().getEventType())) {
             promise.fail(payloadAr.cause());
           } else {
-            promise.complete(record.key());
+            promise.complete(kafkaRecord.key());
           }
         });
       return Future.succeededFuture();
     } catch (Exception e) {
-      LOGGER.error("Can't process kafka record: ", e);
+      LOGGER.error("handle:: Failed to process kafka record from topic {}", kafkaRecord.topic(), e);
       return Future.failedFuture(e);
     }
   }

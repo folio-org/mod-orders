@@ -138,6 +138,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import io.vertx.core.json.Json;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -186,6 +187,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.PrefixCollection;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.ReasonForClosure;
@@ -603,6 +605,7 @@ public class MockServer {
     router.get(resourcesPath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethods);
     router.get(resourcePath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethod);
     router.get(resourcesPath(EXPORT_HISTORY)).handler(this::handleGetExportHistoryMethod);
+    router.get("/data-import-profiles/jobProfileSnapshots/:id").handler(this::handleGetJobProfileSnapshotById);
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -2783,6 +2786,26 @@ public class MockServer {
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .setStatusCode(204)
           .end();
+    }
+  }
+
+  private void handleGetJobProfileSnapshotById(RoutingContext ctx) {
+    logger.info("handleGetJobProfileSnapshotById got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+    if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else {
+      Optional<JsonObject> jobProfileSnapshotOptional = getMockEntry("jobProfileSnapshots", id);
+      if (jobProfileSnapshotOptional.isPresent()) {
+        // validate content against schema
+        JsonObject jobProfileSnapshot = jobProfileSnapshotOptional.get();
+        ProfileSnapshotWrapper profileSnapshotClassSchema = jobProfileSnapshot.mapTo(ProfileSnapshotWrapper.class);
+        profileSnapshotClassSchema.setId(id);
+        serverResponse(ctx, 200, APPLICATION_JSON, Json.encodePrettily(profileSnapshotClassSchema));
+      } else {
+        serverResponse(ctx, 404, APPLICATION_JSON, id);
+      }
     }
   }
 }

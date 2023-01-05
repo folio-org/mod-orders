@@ -10,7 +10,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.DataImportEventTypes;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.kafka.exception.DuplicateEventException;
@@ -24,6 +23,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.IdStorageService;
@@ -47,7 +47,8 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 public class CreateOrderEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LogManager.getLogger();
-  private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
+  private static final String PAYLOAD_HAS_NO_DATA_MSG =
+    "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
   private static final String ORDER_FIELD = "po";
   private static final String PO_LINES_FIELD = "poLine";
@@ -74,8 +75,7 @@ public class CreateOrderEventHandler implements EventHandler {
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
-    dataImportEventPayload.setEventType("DI_ORDER_CREATED"); //todo:
-
+//    dataImportEventPayload.setEventType("DI_ORDER_CREATED"); //todo:
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
     if (payloadContext == null || isBlank(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))) {
       LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
@@ -92,7 +92,7 @@ public class CreateOrderEventHandler implements EventHandler {
       .compose(orderId -> saveOrder(dataImportEventPayload, orderId, okapiHeaders))
       .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, okapiHeaders))
       .onComplete(ar -> {
-        if (ar.failed() && !(ar.cause() instanceof DuplicateEventException)) {
+        if (ar.failed()) {
           LOGGER.error("Error during order creation", ar.cause());
           future.completeExceptionally(ar.cause());
           return;
@@ -103,7 +103,7 @@ public class CreateOrderEventHandler implements EventHandler {
     return future;
   }
 
-    private Map<String, String> extractOkapiHeaders(DataImportEventPayload dataImportEventPayload) {
+  private Map<String, String> extractOkapiHeaders(DataImportEventPayload dataImportEventPayload) {
     return Map.of(RestVerticle.OKAPI_HEADER_TENANT, dataImportEventPayload.getTenant(),
       RestVerticle.OKAPI_HEADER_TOKEN, dataImportEventPayload.getToken(),
       RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl());
@@ -114,6 +114,8 @@ public class CreateOrderEventHandler implements EventHandler {
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     orderToSave.setId(orderId);
     orderToSave.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME); // todo: workaround for mapping profile
+    // at this stage the purchase order always is created in PENDING status despite the status that is set during mapping
+    orderToSave.setWorkflowStatus(WorkflowStatus.PENDING);
 
     return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> purchaseOrderHelper.validateOrder(orderToSave, tenantConfig, requestContext))
@@ -122,6 +124,7 @@ public class CreateOrderEventHandler implements EventHandler {
           return Future.failedFuture(new EventProcessingException(errors.toString())); //todo: prepare error msg
         }
         return purchaseOrderHelper.createPurchaseOrder(orderToSave, requestContext)
+          .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
             if (e instanceof HttpException) {
               String message = ((HttpException) e).getError().getMessage();
@@ -147,7 +150,8 @@ public class CreateOrderEventHandler implements EventHandler {
       poLine.setInstanceId(instanceJson.getString(INSTANCE_ID_FIELD));
     }
 
-    return poLineHelper.createPoLine(poLine, requestContext);
+    return poLineHelper.createPoLine(poLine, requestContext)
+      .onComplete(ar -> dataImportEventPayload.getContext().put(ORDER_LINES_KEY, Json.encode(poLine)));
   }
 
   private void prepareEventPayloadForMapping(DataImportEventPayload dataImportEventPayload) {
@@ -172,8 +176,8 @@ public class CreateOrderEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
     poLineJson.put("titleOrPackage", poLineJson.getString("title"));
     poLineJson.remove("title");
-    poLineJson.getJsonObject("eresource").put("activated", false);
-    poLineJson.getJsonObject("eresource").remove("activationStatus");
+//    poLineJson.getJsonObject("eresource").put("activated", false);
+//    poLineJson.getJsonObject("eresource").remove("activationStatus");
     poLineJson.remove("useExchangeRate");
     dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode());
   }
