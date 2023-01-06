@@ -31,6 +31,8 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -89,7 +91,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
     .withExistingRecordType(ORDER)
     .withMappingDetails(new MappingDetail()
-      .withMappingFields(List.of(
+      .withMappingFields(new ArrayList<>(List.of(
         new MappingRule().withPath("order.po.poStatus").withValue("\"Pending\"").withEnabled("true"),
         new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
         new MappingRule().withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
@@ -101,7 +103,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         new MappingRule().withPath("order.poLine.acquisitionMethod").withValue("\"Purchase\"").withEnabled("true")
           .withAcceptedValues(new HashMap<>(Map.of(
             "df26d81b-9d63-4ff8-bf41-49bf75cfa70e", "Purchase"
-          ))))));
+          )))))));
 
   private final MappingProfile openOrderMappingProfile = new MappingProfile()
     .withId(UUID.randomUUID().toString())
@@ -316,10 +318,96 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals("DI_ORDER_CREATED", obtainedPayload.getEventsChain().get(obtainedPayload.getEventsChain().size() -1));
   }
 
+  @Test
+  public void shouldCreatePoLineAndCalculateActivationDueFieldWhenActivationDueSpecified() throws InterruptedException {
+    // given
+    int expectedActivationDue = 3;
+    String activationDueValue = LocalDate.now().plusDays(expectedActivationDue).toString();
+    MappingRule activationDueRule = new MappingRule()
+      .withPath("order.poLine.eresource.activationDue")
+      .withValue(String.format("\"%s\"", activationDueValue))
+      .withEnabled("true");
 
+    mappingProfile.getMappingDetails().getMappingFields().add(activationDueRule);
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    assertEquals("DI_ORDER_CREATED", eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() -1));
+
+    assertNotNull(eventPayload.getContext().get(ORDER.value()));
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertNotNull(createdOrder.getId());
+    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
+    assertNotNull(createdOrder.getVendor());
+    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+
+    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    assertEquals(expectedActivationDue, createdPoLine.getEresource().getActivationDue());
+  }
+
+  @Test
+  public void shouldCreatePoLineAndCalculateActivationDueFieldWhenActivationDueSpecifiedAsTodayExpression() throws InterruptedException {
+    // given
+    int expectedActivationDue = 1;
+    MappingRule activationDueRule = new MappingRule()
+      .withPath("order.poLine.eresource.activationDue")
+      .withValue("###TODAY###")
+      .withEnabled("true");
+
+    mappingProfile.getMappingDetails().getMappingFields().add(activationDueRule);
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    assertEquals("DI_ORDER_CREATED", eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() -1));
+
+    assertNotNull(eventPayload.getContext().get(ORDER.value()));
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertNotNull(createdOrder.getId());
+    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
+    assertNotNull(createdOrder.getVendor());
+    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+
+    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    assertEquals(expectedActivationDue, createdPoLine.getEresource().getActivationDue());
+  }
 
   @Test
   public void shouldReturnTrueWhenHandlerIsEligibleForActionProfile() {
+    mappingProfile.getMappingDetails().getMappingFields().add(new MappingRule().withName("test"));
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
@@ -347,7 +435,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     Assertions.assertFalse(createOrderHandler.isEligible(dataImportEventPayload));
   }
 
-  private ProfileSnapshotWrapper buildProfileSnapshotWrapper(JobProfile jobProfile, ActionProfile actionProfile, MappingProfile mappingProfile) {
+  private ProfileSnapshotWrapper buildProfileSnapshotWrapper(JobProfile jobProfile, ActionProfile actionProfile,
+                                                             MappingProfile mappingProfile) {
     return new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())

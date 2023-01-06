@@ -30,6 +30,10 @@ import org.folio.service.dataimport.IdStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +58,8 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String PO_LINES_FIELD = "poLine";
   public static final String MAPPING_RESULT_FIELD = "order";
   private static final String INSTANCE_ID_FIELD = "id";
+  private static final String POL_ACTIVATION_DUE_FIELD = "activationDue";
+  private static final String POL_ERESOURCE_FIELD = "eresource";
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
   private static final String RECORD_ID_HEADER = "recordId";
   public static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
@@ -75,7 +81,7 @@ public class CreateOrderEventHandler implements EventHandler {
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
-//    dataImportEventPayload.setEventType("DI_ORDER_CREATED"); //todo:
+    dataImportEventPayload.setEventType("DI_ORDER_CREATED"); //todo:
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
     if (payloadContext == null || isBlank(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))) {
       LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
@@ -164,6 +170,7 @@ public class CreateOrderEventHandler implements EventHandler {
     JsonObject mappingResult = new JsonObject(dataImportEventPayload.getContext().get(ORDER.value()));
     JsonObject orderJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(ORDER_FIELD);
     JsonObject poLineJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(PO_LINES_FIELD);
+    calculateActivationDue(poLineJson);
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
 
     // todo: workaround:
@@ -180,6 +187,20 @@ public class CreateOrderEventHandler implements EventHandler {
 //    poLineJson.getJsonObject("eresource").remove("activationStatus");
     poLineJson.remove("useExchangeRate");
     dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode());
+  }
+
+  private void calculateActivationDue(JsonObject poLineJson) {
+    JsonObject eresourceJson = poLineJson.getJsonObject(POL_ERESOURCE_FIELD);
+    if (eresourceJson != null && eresourceJson.getString(POL_ACTIVATION_DUE_FIELD) != null) {
+      String activationDueValue = eresourceJson.getString(POL_ACTIVATION_DUE_FIELD);
+      LocalDate activationDate = LocalDate.parse(activationDueValue);
+      LocalDate orderCreationDate = LocalDate.now(ZoneId.of(ZoneOffset.UTC.getId()));
+
+      int activationDue = activationDate.isAfter(orderCreationDate)
+        ? Period.between(orderCreationDate, activationDate).getDays()
+        : 1;
+      poLineJson.getJsonObject(POL_ERESOURCE_FIELD).put(POL_ACTIVATION_DUE_FIELD, activationDue);
+    }
   }
 
   @Override
