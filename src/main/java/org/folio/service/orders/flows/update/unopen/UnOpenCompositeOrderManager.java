@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
+import io.vertx.core.Promise;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -49,6 +50,7 @@ import org.folio.service.pieces.PieceStorageService;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 
 public class UnOpenCompositeOrderManager {
   private static final Logger logger = LogManager.getLogger(UnOpenCompositeOrderManager.class);
@@ -59,22 +61,24 @@ public class UnOpenCompositeOrderManager {
   private final InventoryManager inventoryManager;
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
+  private PieceDeleteFlowManager pieceDeleteFlowManager;
 
   public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-                                      EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                      InventoryManager inventoryManager, PieceStorageService pieceStorageService,
-                                      PurchaseOrderStorageService purchaseOrderStorageService,
-                                      ProtectionService protectionService) {
+                                     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+                                     InventoryManager inventoryManager, PieceStorageService pieceStorageService,
+                                     PurchaseOrderStorageService purchaseOrderStorageService,
+                                     ProtectionService protectionService, PieceDeleteFlowManager pieceDeleteFlowManager) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryManager = inventoryManager;
     this.pieceStorageService = pieceStorageService;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.protectionService = protectionService;
+    this.pieceDeleteFlowManager = pieceDeleteFlowManager;
   }
 
 
-  public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+  public Future<Void> process(CompositePurchaseOrder compPO, boolean deleteHolding, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     return updateAndGetOrderWithLines(compPO, requestContext)
       .map(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
       .compose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
@@ -83,7 +87,7 @@ public class UnOpenCompositeOrderManager {
         return null;
       })
       .compose(ok -> updatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
-      .compose(ok -> processInventory(compPO.getCompositePoLines(), requestContext));
+      .compose(ok -> processInventory(compPO.getCompositePoLines(), deleteHolding, requestContext));
 
   }
 
@@ -95,35 +99,39 @@ public class UnOpenCompositeOrderManager {
       .map(ok -> null);
   }
 
-  private Future<Void> processInventory(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
+  private Future<Void> processInventory(List<CompositePoLine> compositePoLines, boolean deleteHolding, RequestContext requestContext) {
     return GenericCompositeFuture.join(compositePoLines.stream()
-      .map(line -> processInventory(line, requestContext))
+      .map(line -> processInventory(line, deleteHolding, requestContext))
         .collect(toList()))
       .mapEmpty();
   }
 
-  private Future<Void> processInventory(CompositePoLine compPOL, RequestContext requestContext) {
+  private Future<Void> processInventory(CompositePoLine compPOL, boolean deleteHolding, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return Future.succeededFuture();
     }
-    if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL) || isOnlyInstanceUpdateRequired(compPOL)) {
-      return deleteExpectedPieces(compPOL, requestContext).onSuccess(pieces -> {
-        if (logger.isDebugEnabled()) {
+//      1. Check methods is useless or not
+//      2. Deploy vagrant and run karate test
+//      Call deletePiece() Method but how to find pice id
+//      1. maybe change logic of deleteExpectedPieces
+//    }
+//    if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL) || isOnlyInstanceUpdateRequired(compPOL)) {
+      return deleteExpectedPieces(compPOL, deleteHolding, requestContext).onSuccess(pieces -> {
+//        if (logger.isDebugEnabled()) {
           String deletedIds = pieces.stream().map(Piece::getId).collect(Collectors.joining(","));
-          logger.debug(String.format("Pieces were removed : %s", deletedIds));
-        }
-      })
-        .mapEmpty();
-    } else if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-      return processInventoryWithItems(compPOL, requestContext);
-    } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
-      return processInventoryOnlyWithHolding(compPOL, requestContext);
-    }
-    return Future.succeededFuture();
+          logger.info(String.format("Pieces were removed : %s", deletedIds));
+//        }
+      }).mapEmpty();
+//    } else if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
+//      return processInventoryWithItems(compPOL, requestContext);
+//    } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
+//      return processInventoryOnlyWithHolding(compPOL, deleteHolding, requestContext);
+//    }
+//    return Future.succeededFuture();
   }
-
-  private Future<Void> processInventoryOnlyWithHolding(CompositePoLine compPOL, RequestContext requestContext) {
-    return deleteExpectedPieces(compPOL, requestContext)
+/*
+  private Future<Void> processInventoryOnlyWithHolding(CompositePoLine compPOL, boolean deleteHolding, RequestContext requestContext) {
+    return deleteExpectedPieces(compPOL, deleteHolding, requestContext)
                 .compose(deletedPieces -> {
                   List<String> holdingIds = compPOL.getLocations().stream()
                                     .filter(loc -> Objects.nonNull(loc.getHoldingId()))
@@ -139,18 +147,33 @@ public class UnOpenCompositeOrderManager {
       .mapEmpty();
   }
 
-  private Future<List<Piece>> deleteExpectedPieces(CompositePoLine compPOL, RequestContext requestContext) {
+ */
+
+//
+  private Future<List<Piece>> deleteExpectedPieces(CompositePoLine compPOL, boolean deleteHolding, RequestContext requestContext) {
+    Promise<List<Piece>> promise = Promise.promise();
     if (!PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus()) && Boolean.FALSE.equals(compPOL.getCheckinItems())) {
       return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
         .compose(pieceCollection -> {
+
           if (isNotEmpty(pieceCollection.getPieces())) {
-            return pieceStorageService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).collect(toList()), requestContext)
-                                .map(v -> pieceCollection.getPieces());
+            List<Piece> pieces = pieceCollection.getPieces();
+
+            List<Future<Void>> futures = pieces.stream().map(Piece::getId).map(pieceId -> pieceDeleteFlowManager.deletePiece(pieceId, deleteHolding, requestContext)).collect(toList());
+            GenericCompositeFuture.join(futures)
+              .onComplete(asyncResult -> {
+                if (asyncResult.succeeded()) {
+                  promise.complete(pieces);
+                } else {
+                  promise.fail(asyncResult.cause());
+                }
+              });
           }
-          return Future.succeededFuture(Collections.emptyList());
+          promise.complete(Collections.emptyList());
+          return promise.future();
         });
     }
-    return Future.succeededFuture(Collections.emptyList());
+    return promise.future();
   }
 
   private Future<Void> processInventoryWithItems(CompositePoLine compPOL, RequestContext requestContext) {

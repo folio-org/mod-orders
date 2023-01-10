@@ -10,6 +10,7 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import jdk.jfr.Frequency;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -27,6 +28,7 @@ import org.folio.rest.jaxrs.resource.OrdersRollover;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -101,16 +103,17 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void putOrdersCompositeOrdersById(String orderId, String lang, CompositePurchaseOrder compPO,
+  public void putOrdersCompositeOrdersById(String orderId, boolean deleteHolding, String lang, CompositePurchaseOrder compPO,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     // Set order id from path if not specified in body
     populateOrderId(orderId, compPO);
 
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
+
     purchaseOrderHelper.validateExistingOrder(orderId, compPO, requestContext)
       .compose(validationErrors -> {
         if (CollectionUtils.isEmpty(validationErrors)) {
-          return purchaseOrderHelper.updateOrder(compPO, requestContext)
+          return purchaseOrderHelper.updateOrder(compPO, deleteHolding, requestContext)
             .onSuccess(v -> {
               if (logger.isInfoEnabled()) {
                 logger.info("Successfully Updated Order: {}", JsonObject.mapFrom(compPO).encodePrettily());

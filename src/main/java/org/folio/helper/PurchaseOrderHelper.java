@@ -230,7 +230,7 @@ public class PurchaseOrderHelper {
    * @param compPO updated {@link CompositePurchaseOrder} purchase order
    * @return completable future holding response indicating success (204 No Content) or error if failed
    */
-  public Future<Void> updateOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  public Future<Void> updateOrder(CompositePurchaseOrder compPO, boolean deleteHolding, RequestContext requestContext) {
     JsonObject cachedTenantConfiguration = new JsonObject();
     return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .map(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
@@ -254,7 +254,7 @@ public class PurchaseOrderHelper {
           .compose(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
               checkOrderUnopenPermissions(requestContext);
-              return unOpenCompositeOrderManager.process(compPO, poFromStorage, requestContext);
+              return unOpenCompositeOrderManager.process(compPO, deleteHolding, poFromStorage, requestContext);
             }
             return Future.succeededFuture();
           })
