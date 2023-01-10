@@ -10,6 +10,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.MappingProfile;
+import org.folio.dbschema.ObjectMapperTool;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.kafka.exception.DuplicateEventException;
@@ -25,6 +27,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.IdStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,14 +40,17 @@ import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.ActionProfile.FolioRecord.ORDER;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 @Component
@@ -62,7 +68,8 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String POL_ERESOURCE_FIELD = "eresource";
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
   private static final String RECORD_ID_HEADER = "recordId";
-  public static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
+  private static final String POL_LIMIT_RULE_NAME = "overridePoLinesLimit";
+  private static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
@@ -90,13 +97,19 @@ public class CreateOrderEventHandler implements EventHandler {
 
     Map<String, String> okapiHeaders = extractOkapiHeaders(dataImportEventPayload);
     String sourceRecordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
+    Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
     prepareEventPayloadForMapping(dataImportEventPayload);
     MappingManager.map(dataImportEventPayload, new MappingContext());
     prepareMappingResult(dataImportEventPayload);
 
-    idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant())
-      .compose(orderId -> saveOrder(dataImportEventPayload, orderId, okapiHeaders))
-      .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, okapiHeaders))
+    RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
+    Future<JsonObject> tenantConfigFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+
+    tenantConfigFuture
+      .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
+      .compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
+      .compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
+      .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .onComplete(ar -> {
         if (ar.failed()) {
           LOGGER.error("Error during order creation", ar.cause());
@@ -115,16 +128,15 @@ public class CreateOrderEventHandler implements EventHandler {
       RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl());
   }
 
-  private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId, Map<String, String> okapiHeaders) {
-    RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
+  private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId,
+                                                   JsonObject tenantConfig, RequestContext requestContext) {
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     orderToSave.setId(orderId);
     orderToSave.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME); // todo: workaround for mapping profile
     // at this stage the purchase order always is created in PENDING status despite the status that is set during mapping
     orderToSave.setWorkflowStatus(WorkflowStatus.PENDING);
 
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .compose(tenantConfig -> purchaseOrderHelper.validateOrder(orderToSave, tenantConfig, requestContext))
+    return purchaseOrderHelper.validateOrder(orderToSave, tenantConfig, requestContext)
       .compose(errors -> {
         if (CollectionUtils.isNotEmpty(errors)) {
           return Future.failedFuture(new EventProcessingException(errors.toString())); //todo: prepare error msg
@@ -145,8 +157,8 @@ public class CreateOrderEventHandler implements EventHandler {
       });
   }
 
-  private Future<CompositePoLine> saveOrderLines(String orderId, DataImportEventPayload dataImportEventPayload, Map<String, String> okapiHeaders) {
-    RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
+  private Future<CompositePoLine> saveOrderLines(String orderId, DataImportEventPayload dataImportEventPayload,
+                                                 JsonObject tenantConfig, RequestContext requestContext) {
     CompositePoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER_LINES_KEY), CompositePoLine.class);
     poLine.setPurchaseOrderId(orderId);
     poLine.setSource(CompositePoLine.Source.MARC);
@@ -156,8 +168,19 @@ public class CreateOrderEventHandler implements EventHandler {
       poLine.setInstanceId(instanceJson.getString(INSTANCE_ID_FIELD));
     }
 
-    return poLineHelper.createPoLine(poLine, requestContext)
+    return poLineHelper.createPoLine(poLine, tenantConfig, requestContext)
       .onComplete(ar -> dataImportEventPayload.getContext().put(ORDER_LINES_KEY, Json.encode(poLine)));
+  }
+
+  private Optional<Integer> extractPoLinesLimit(DataImportEventPayload dataImportEventPayload) {
+    ProfileSnapshotWrapper mappingProfileWrapper = dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0);
+    MappingProfile mappingProfile = ObjectMapperTool.getMapper().convertValue(mappingProfileWrapper.getContent(), MappingProfile.class);
+
+    return mappingProfile.getMappingDetails().getMappingFields().stream()
+      .filter(mappingRule -> POL_LIMIT_RULE_NAME.equals(mappingRule.getName()) && nonNull(mappingRule.getValue()))
+      .peek(mappingRule -> mappingRule.setEnabled("false"))
+      .map(mappingRule -> Integer.parseInt(mappingRule.getValue()))
+      .findFirst();
   }
 
   private void prepareEventPayloadForMapping(DataImportEventPayload dataImportEventPayload) {
@@ -201,6 +224,10 @@ public class CreateOrderEventHandler implements EventHandler {
         : 1;
       poLineJson.getJsonObject(POL_ERESOURCE_FIELD).put(POL_ACTIVATION_DUE_FIELD, activationDue);
     }
+  }
+
+  private void overridePoLinesLimit(JsonObject tenantConfig, Optional<Integer> poLinesLimitOptional) {
+    poLinesLimitOptional.ifPresent(poLinesLimit -> tenantConfig.put(PO_LINES_LIMIT_PROPERTY, poLinesLimit));
   }
 
   @Override
