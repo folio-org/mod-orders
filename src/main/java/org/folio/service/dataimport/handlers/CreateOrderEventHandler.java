@@ -6,6 +6,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
@@ -176,11 +177,16 @@ public class CreateOrderEventHandler implements EventHandler {
     ProfileSnapshotWrapper mappingProfileWrapper = dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0);
     MappingProfile mappingProfile = ObjectMapperTool.getMapper().convertValue(mappingProfileWrapper.getContent(), MappingProfile.class);
 
-    return mappingProfile.getMappingDetails().getMappingFields().stream()
+    Optional<Integer> limitOptional = mappingProfile.getMappingDetails().getMappingFields().stream()
       .filter(mappingRule -> POL_LIMIT_RULE_NAME.equals(mappingRule.getName()) && isNotBlank(mappingRule.getValue()))
       .peek(mappingRule -> mappingRule.setEnabled("false"))
-      .map(mappingRule -> Integer.parseInt(mappingRule.getValue()))
+      .map(mappingRule -> Integer.parseInt(StringUtils.unwrap(mappingRule.getValue(), '"')))
       .findFirst();
+
+    if (limitOptional.isPresent()) {
+      mappingProfileWrapper.setContent(ObjectMapperTool.getMapper().convertValue(mappingProfile, Map.class));
+    }
+    return limitOptional;
   }
 
   private void prepareEventPayloadForMapping(DataImportEventPayload dataImportEventPayload) {
