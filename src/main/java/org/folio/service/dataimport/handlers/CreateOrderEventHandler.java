@@ -44,8 +44,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.ActionProfile.FolioRecord.ORDER;
@@ -177,7 +177,7 @@ public class CreateOrderEventHandler implements EventHandler {
     MappingProfile mappingProfile = ObjectMapperTool.getMapper().convertValue(mappingProfileWrapper.getContent(), MappingProfile.class);
 
     return mappingProfile.getMappingDetails().getMappingFields().stream()
-      .filter(mappingRule -> POL_LIMIT_RULE_NAME.equals(mappingRule.getName()) && nonNull(mappingRule.getValue()))
+      .filter(mappingRule -> POL_LIMIT_RULE_NAME.equals(mappingRule.getName()) && isNotBlank(mappingRule.getValue()))
       .peek(mappingRule -> mappingRule.setEnabled("false"))
       .map(mappingRule -> Integer.parseInt(mappingRule.getValue()))
       .findFirst();
@@ -206,8 +206,8 @@ public class CreateOrderEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
     poLineJson.put("titleOrPackage", poLineJson.getString("title"));
     poLineJson.remove("title");
-//    poLineJson.getJsonObject("eresource").put("activated", false);
-//    poLineJson.getJsonObject("eresource").remove("activationStatus");
+    poLineJson.getJsonObject("eresource").put("activated", false);
+    poLineJson.getJsonObject("eresource").remove("activationStatus");
     poLineJson.remove("useExchangeRate");
     dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode());
   }
