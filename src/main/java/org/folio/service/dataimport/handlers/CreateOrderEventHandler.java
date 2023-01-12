@@ -210,11 +210,11 @@ public class CreateOrderEventHandler implements EventHandler {
       orderJson.put("acqUnitIds", new JsonArray(List.of(orderJson.getString("acqUnitIds"))));
     }
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
-    poLineJson.put("titleOrPackage", poLineJson.getString("title"));
-    poLineJson.remove("title");
-    poLineJson.getJsonObject("eresource").put("activated", false);
-    poLineJson.getJsonObject("eresource").remove("activationStatus");
-    poLineJson.remove("useExchangeRate");
+//    poLineJson.put("titleOrPackage", poLineJson.getString("title"));
+//    poLineJson.remove("title");
+//    poLineJson.getJsonObject("eresource").put("activated", false);
+//    poLineJson.getJsonObject("eresource").remove("activationStatus");
+//    poLineJson.remove("useExchangeRate");
     dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode());
   }
 
