@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.DataImportEventTypes;
 import org.folio.MappingProfile;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.helper.PurchaseOrderHelper;
@@ -50,6 +51,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.ActionProfile.FolioRecord.ORDER;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -89,7 +91,7 @@ public class CreateOrderEventHandler implements EventHandler {
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
-    dataImportEventPayload.setEventType("DI_ORDER_CREATED"); //todo:
+    dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
     if (payloadContext == null || isBlank(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))) {
       LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);

@@ -1,10 +1,11 @@
 package org.folio.verticle.consumers;
 
-import java.util.Map;
-
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.jackson.DatabindCodec;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -23,9 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import java.util.Map;
 
 import static java.lang.String.format;
 import static org.folio.DataImportEventTypes.DI_ERROR;
@@ -67,7 +66,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.debug("handle:: Data import event payload has been received with event type: {}, jobExecutionId: {}, recordId: {}, chunkId: {}",
-        eventPayload.getEventType(), jobExecutionId, recordId, chunkId); // todo: info or debug?
+        eventPayload.getEventType(), jobExecutionId, recordId, chunkId);
 
       OkapiConnectionParams okapiParams = new OkapiConnectionParams(headersMap, vertx);
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);

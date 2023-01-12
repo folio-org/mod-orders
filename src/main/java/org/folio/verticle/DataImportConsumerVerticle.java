@@ -1,11 +1,8 @@
 package org.folio.verticle;
 
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
-import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.kafka.AsyncRecordHandler;
@@ -25,9 +22,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
+import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
+import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
 
 @Component
 @Scope(SCOPE_PROTOTYPE)
@@ -55,11 +55,9 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   @Qualifier("DataImportErrorHandler")
   private ProcessRecordErrorHandler<String, String> errorHandler;
 
-
-  //TODO: should be changed to the real value
   public List<String> getEvents() {
     return List.of(
-      "DI_MARC_BIB_FOR_ORDER_CREATED",
+      DI_MARC_BIB_FOR_ORDER_CREATED.value(),
       DI_INVENTORY_INSTANCE_MATCHED.value());
   }
 
