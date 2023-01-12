@@ -11,7 +11,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.DataImportEventTypes;
 import org.folio.MappingProfile;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.helper.PurchaseOrderHelper;
@@ -63,6 +62,9 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String PAYLOAD_HAS_NO_DATA_MSG =
     "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
+  public static final String PERMISSIONS_KEY = "OKAPI_PERMISSIONS";
+  public static final String USER_ID_KEY = "USER_ID";
+  public static final String OKAPI_PERMISSIONS_HEADER = "X-Okapi-Permissions";
   private static final String ORDER_FIELD = "po";
   private static final String PO_LINES_FIELD = "poLine";
   public static final String MAPPING_RESULT_FIELD = "order";
@@ -126,9 +128,20 @@ public class CreateOrderEventHandler implements EventHandler {
   }
 
   private Map<String, String> extractOkapiHeaders(DataImportEventPayload dataImportEventPayload) {
-    return Map.of(RestVerticle.OKAPI_HEADER_TENANT, dataImportEventPayload.getTenant(),
-      RestVerticle.OKAPI_HEADER_TOKEN, dataImportEventPayload.getToken(),
-      RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl());
+    Map<String, String> headers = new HashMap<>();
+    headers.put(RestVerticle.OKAPI_HEADER_TENANT, dataImportEventPayload.getTenant());
+    headers.put(RestVerticle.OKAPI_HEADER_TOKEN, dataImportEventPayload.getToken());
+    headers.put(RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl());
+
+    String permissionsHeader = dataImportEventPayload.getContext().get(PERMISSIONS_KEY);
+    if (StringUtils.isNotBlank(permissionsHeader)) {
+      headers.put(OKAPI_PERMISSIONS_HEADER, permissionsHeader);
+    }
+    String userId = dataImportEventPayload.getContext().get(USER_ID_KEY);
+    if (StringUtils.isNotBlank(userId)) {
+      headers.put(RestVerticle.OKAPI_USERID_HEADER, userId);
+    }
+    return headers;
   }
 
   private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId,

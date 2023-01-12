@@ -6,6 +6,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.producer.KafkaHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -16,10 +17,12 @@ import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
+import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.dataimport.OrderWriterFactory;
+import org.folio.service.dataimport.handlers.CreateOrderEventHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -70,6 +73,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
       OkapiConnectionParams okapiParams = new OkapiConnectionParams(headersMap, vertx);
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
+      populatePayloadWithUserIdAndPermissions(kafkaRecord, eventPayload);
       String profileSnapshotId = eventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
 
       profileSnapshotCache.get(profileSnapshotId, okapiParams)
@@ -87,6 +91,19 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     } catch (Exception e) {
       LOGGER.error("handle:: Failed to process kafka record from topic {}", kafkaRecord.topic(), e);
       return Future.failedFuture(e);
+    }
+  }
+
+  private void populatePayloadWithUserIdAndPermissions(KafkaConsumerRecord<String, String> kafkaRecord,
+                                                       DataImportEventPayload eventPayload) {
+    for (KafkaHeader header: kafkaRecord.headers()) {
+      if (CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER.equalsIgnoreCase(header.key())) {
+        String permissions = header.value().toString();
+        eventPayload.getContext().put(CreateOrderEventHandler.PERMISSIONS_KEY, permissions);
+      } else if (RestVerticle.OKAPI_USERID_HEADER.equalsIgnoreCase(header.key())) {
+        String userId = header.value().toString();
+        eventPayload.getContext().put(CreateOrderEventHandler.USER_ID_KEY, userId);
+      }
     }
   }
 }
