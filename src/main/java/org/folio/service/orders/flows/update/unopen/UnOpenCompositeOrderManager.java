@@ -74,7 +74,7 @@ public class UnOpenCompositeOrderManager {
   }
 
 
-  public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+  public Future<Void> process(CompositePurchaseOrder compPO, boolean deleteHolding, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     return updateAndGetOrderWithLines(compPO, requestContext)
       .map(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
       .compose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
@@ -83,7 +83,7 @@ public class UnOpenCompositeOrderManager {
         return null;
       })
       .compose(ok -> updatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
-      .compose(ok -> processInventory(compPO.getCompositePoLines(), requestContext));
+      .compose(ok -> processInventory(compPO.getCompositePoLines(), deleteHolding, requestContext));
 
   }
 
@@ -95,14 +95,14 @@ public class UnOpenCompositeOrderManager {
       .map(ok -> null);
   }
 
-  private Future<Void> processInventory(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
+  private Future<Void> processInventory(List<CompositePoLine> compositePoLines, boolean deleteHolding, RequestContext requestContext) {
     return GenericCompositeFuture.join(compositePoLines.stream()
-      .map(line -> processInventory(line, requestContext))
+      .map(line -> processInventory(line, deleteHolding, requestContext))
         .collect(toList()))
       .mapEmpty();
   }
 
-  private Future<Void> processInventory(CompositePoLine compPOL, RequestContext requestContext) {
+  private Future<Void> processInventory(CompositePoLine compPOL, boolean deleteHolding, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return Future.succeededFuture();
     }
@@ -116,7 +116,7 @@ public class UnOpenCompositeOrderManager {
         .mapEmpty();
     } else if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
       return processInventoryWithItems(compPOL, requestContext);
-    } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
+    } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL) && deleteHolding) {
       return processInventoryOnlyWithHolding(compPOL, requestContext);
     }
     return Future.succeededFuture();
