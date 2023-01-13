@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.PoLineCommonUtil.isOnlyInstanceUpdateRequired;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
@@ -110,26 +109,14 @@ public class UnOpenCompositeOrderManager {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return Future.succeededFuture();
     }
-//      1. Check methods is useless or not
-//      2. Deploy vagrant and run karate test
-//      Call deletePiece() Method but how to find pice id
-//      1. maybe change logic of deleteExpectedPieces
-//    }
-//    if (PoLineCommonUtil.isInventoryUpdateNotRequired(compPOL) || isOnlyInstanceUpdateRequired(compPOL)) {
-      return deleteExpectedPieces(compPOL, deleteHolding, requestContext).onSuccess(pieces -> {
-//        if (logger.isDebugEnabled()) {
-          String deletedIds = pieces.stream().map(Piece::getId).collect(Collectors.joining(","));
-          logger.info(String.format("Pieces were removed : %s", deletedIds));
-//        }
-      }).mapEmpty();
-//    } else if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-//      return processInventoryWithItems(compPOL, requestContext);
-//    } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
-//      return processInventoryOnlyWithHolding(compPOL, deleteHolding, requestContext);
-//    }
-//    return Future.succeededFuture();
+    return deleteExpectedPieces(compPOL, deleteHolding, requestContext).onSuccess(pieces -> {
+      if (logger.isDebugEnabled()) {
+        String deletedIds = pieces.stream().map(Piece::getId).collect(Collectors.joining(","));
+        logger.info(String.format("Pieces were removed : %s", deletedIds));
+      }
+    }).mapEmpty();
   }
-/*
+
   private Future<Void> processInventoryOnlyWithHolding(CompositePoLine compPOL, boolean deleteHolding, RequestContext requestContext) {
     return deleteExpectedPieces(compPOL, deleteHolding, requestContext)
                 .compose(deletedPieces -> {
@@ -147,9 +134,6 @@ public class UnOpenCompositeOrderManager {
       .mapEmpty();
   }
 
- */
-
-//
   private Future<List<Piece>> deleteExpectedPieces(CompositePoLine compPOL, boolean deleteHolding, RequestContext requestContext) {
     Promise<List<Piece>> promise = Promise.promise();
     if (!PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus()) && Boolean.FALSE.equals(compPOL.getCheckinItems())) {
@@ -175,7 +159,6 @@ public class UnOpenCompositeOrderManager {
     }
     return promise.future();
   }
-
   private Future<Void> processInventoryWithItems(CompositePoLine compPOL, RequestContext requestContext) {
     return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compPOL.getId()), ItemStatus.ON_ORDER.value(), requestContext)
                           .compose(onOrderItems -> {
@@ -211,7 +194,6 @@ public class UnOpenCompositeOrderManager {
                             return Future.succeededFuture();
                           });
   }
-
   private void updateLocations(CompositePoLine compPOL, List<Pair<String, String>> deletedHoldingVsLocationIds) {
     if (CollectionUtils.isNotEmpty(deletedHoldingVsLocationIds)) {
       Map<String, List<Location>> holdingIdVsLocations = compPOL.getLocations().stream().collect(groupingBy(Location::getHoldingId));
