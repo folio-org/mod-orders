@@ -17,6 +17,7 @@ import org.folio.TestConfig;
 import org.folio.di.DiAbstractRestTest;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.rest.RestConstants;
+import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Event;
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,15 +45,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.ZoneOffset.UTC;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_CREATED;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.rest.impl.MockServer.CONFIGS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -76,7 +81,6 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String KAFKA_ENV_VALUE = "test-env";
-  private static final String TENANT_ID = "test";
 
 
   private final JobProfile jobProfile = new JobProfile()
@@ -143,6 +147,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
   @Before
   public void setup() {
+    MockServer.release();
     record = new Record().withId(UUID.randomUUID().toString())
       .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
   }
@@ -325,7 +330,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldCreatePoLineAndCalculateActivationDueFieldWhenActivationDueSpecified() throws InterruptedException {
     // given
     int expectedActivationDue = 3;
-    String activationDueValue = LocalDate.now().plusDays(expectedActivationDue).toString();
+    String activationDueValue = LocalDate.now(ZoneId.of(UTC.getId())).plusDays(expectedActivationDue).toString();
     MappingRule activationDueRule = new MappingRule()
       .withPath("order.poLine.eresource.activationDue")
       .withValue(String.format("\"%s\"", activationDueValue))
@@ -409,10 +414,23 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldOverridePoLinesLimitWhenPoLinesLimitSpecifiedAtMappingProfile() throws InterruptedException {
+  public void shouldOverrideConfiguredPoLinesLimitWhenPoLinesLimitSpecifiedAtMappingProfile() throws InterruptedException {
     // given
+    JsonObject polLimitConfig = new JsonObject()
+      .put("configName", PO_LINES_LIMIT_PROPERTY)
+      .put("value", "1");
+
+    MappingRule poLineLimitRule = new MappingRule()
+      .withName(CreateOrderEventHandler.POL_LIMIT_RULE_NAME)
+      .withPath("order.po.overridePoLinesLimit")
+      .withValue("\"2\"")
+      .withEnabled("true");
+
+    mappingProfile.getMappingDetails().getMappingFields().add(poLineLimitRule);
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+    addMockEntry(CONFIGS, polLimitConfig);
+    addMockEntry(PO_LINES_STORAGE, new CompositePoLine().withTitleOrPackage("Mocked poLine for data-import"));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
@@ -439,8 +457,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
     assertNotNull(createdOrder.getVendor());
     assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
-
-    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    verifyPoLine(eventPayload);
   }
 
   @Test
@@ -520,6 +537,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(ORDER_LINES_KEY), CompositePoLine.class);
     assertNotNull(poLine.getId());
     assertNotNull(poLine.getTitleOrPackage());
+    assertNotNull(poLine.getPurchaseOrderId());
     assertEquals(CompositePoLine.Source.MARC, poLine.getSource());
     assertEquals(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE, poLine.getOrderFormat());
     assertTrue(poLine.getCheckinItems());

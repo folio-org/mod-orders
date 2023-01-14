@@ -65,15 +65,15 @@ public class CreateOrderEventHandler implements EventHandler {
   public static final String PERMISSIONS_KEY = "OKAPI_PERMISSIONS";
   public static final String USER_ID_KEY = "USER_ID";
   public static final String OKAPI_PERMISSIONS_HEADER = "X-Okapi-Permissions";
+  static final String POL_LIMIT_RULE_NAME = "overridePoLinesLimit";
   private static final String ORDER_FIELD = "po";
   private static final String PO_LINES_FIELD = "poLine";
-  public static final String MAPPING_RESULT_FIELD = "order";
+  private static final String MAPPING_RESULT_FIELD = "order";
   private static final String INSTANCE_ID_FIELD = "id";
   private static final String POL_ACTIVATION_DUE_FIELD = "activationDue";
   private static final String POL_ERESOURCE_FIELD = "eresource";
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
   private static final String RECORD_ID_HEADER = "recordId";
-  private static final String POL_LIMIT_RULE_NAME = "overridePoLinesLimit";
   private static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
 
   private final PurchaseOrderHelper purchaseOrderHelper;

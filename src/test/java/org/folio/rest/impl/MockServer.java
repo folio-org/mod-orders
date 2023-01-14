@@ -291,6 +291,7 @@ public class MockServer {
   static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
   public static final String OLD_HOLDING_ID = "758258bc-ecc1-41b8-abca-f7b610822ffd";
   public static final String NEW_HOLDING_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
+  public static final String CONFIGS = "configs";
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
 
@@ -1481,6 +1482,13 @@ public class MockServer {
 
   private void handleConfigurationModuleResponse(RoutingContext ctx) {
     try {
+      List<JsonObject> configEntries = serverRqRs.column(HttpMethod.SEARCH).get(CONFIGS);
+      if (configEntries != null && !configEntries.isEmpty()) {
+        JsonObject configs = new JsonObject().put(CONFIGS, configEntries);
+        serverResponse(ctx, 200, APPLICATION_JSON, configs.encodePrettily());
+        return;
+      }
+
       String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT) ;
       if (PO_NUMBER_ERROR_X_OKAPI_TENANT.getValue().equals(tenant)) {
         tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue();
