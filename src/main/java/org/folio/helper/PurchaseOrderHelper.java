@@ -598,7 +598,7 @@ public class PurchaseOrderHelper {
     }
   }
 
-  private boolean isApprovalRequiredConfiguration(JsonObject config) {
+  public static boolean isApprovalRequiredConfiguration(JsonObject config) {
     return Optional.ofNullable(config.getString("approvals"))
       .map(approval -> new JsonObject(approval).getBoolean("isApprovalRequired"))
       .orElse(false);
@@ -873,13 +873,13 @@ public class PurchaseOrderHelper {
     return !CollectionUtils.isEqualCollection(newAcqUnits, acqUnitsFromStorage);
   }
 
-  private List<String> getProvidedPermissions(RequestContext requestContext) {
+  private static List<String> getProvidedPermissions(RequestContext requestContext) {
     return new JsonArray(requestContext.getHeaders().getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_ARRAY)).stream().
       map(Object::toString)
       .collect(Collectors.toList());
   }
 
-  private boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
+  public static boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
     return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_APPROVE);
   }
 

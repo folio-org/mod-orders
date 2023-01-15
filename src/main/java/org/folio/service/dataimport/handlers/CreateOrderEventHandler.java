@@ -1,6 +1,7 @@
 package org.folio.service.dataimport.handlers;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
@@ -29,6 +30,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.util.OkapiConnectionParams;
+import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.IdStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,18 +41,17 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.ActionProfile.FolioRecord.ORDER;
+import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
@@ -75,19 +77,23 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
+  private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
+  private static final String PROFILE_SNAPSHOT_NOT_FOUND_MSG = "JobProfileSnapshot was not found by id '%s'";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
   private final ConfigurationEntriesService configurationEntriesService;
   private final IdStorageService idStorageService;
+  private final JobProfileSnapshotCache jobProfileSnapshotCache;
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
-                                 ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService) {
+                                 ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService, JobProfileSnapshotCache jobProfileSnapshotCache) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
     this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
+    this.jobProfileSnapshotCache = jobProfileSnapshotCache;
   }
 
   @Override
@@ -112,6 +118,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
     tenantConfigFuture
       .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
+      .compose(tenantConfig -> adjustEventType(dataImportEventPayload, tenantConfig, requestContext, okapiHeaders))
       .compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
       .compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
       .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, tenantConfigFuture.result(), requestContext))
@@ -125,6 +132,83 @@ public class CreateOrderEventHandler implements EventHandler {
       });
 
     return future;
+  }
+
+  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, RequestContext requestContext, Map<String, String> okapiHeaders) {
+    CompositePurchaseOrder order = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    WorkflowStatus workflowStatus = order.getWorkflowStatus();
+
+    Promise<Void> promise = Promise.promise();
+
+    if (workflowStatus.equals(WorkflowStatus.PENDING)) {
+      dataImportEventPayload.setEventType(DI_COMPLETED.value());
+      return Future.succeededFuture();
+    }
+
+    Boolean isApproved = order.getApproved();
+    boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
+    boolean isUserNotHaveApprovalPermission = PurchaseOrderHelper.isUserNotHaveApprovePermission(requestContext);
+
+    if (workflowStatus.equals(WorkflowStatus.OPEN)) {
+      if (isApprovalRequired && (!isApproved || isUserNotHaveApprovalPermission)) {
+        dataImportEventPayload.setEventType(DI_COMPLETED.value());
+        return Future.succeededFuture();
+      }
+
+      String profileSnapshotId = dataImportEventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
+
+      Map<String, String> okapiHeadersLowerCaseKeys = okapiHeaders.entrySet().stream().collect(Collectors.toMap(
+        key -> key.getKey().toLowerCase(Locale.ROOT),
+        value -> value.getValue()
+      ));
+      OkapiConnectionParams okapiParams = new OkapiConnectionParams(okapiHeadersLowerCaseKeys, Vertx.vertx());
+
+      jobProfileSnapshotCache.get(profileSnapshotId, okapiParams)
+        .toCompletionStage()
+        .thenCompose(snapshotOptional -> snapshotOptional
+          .map(profileSnapshot -> setEventTypeForOpenOrder(dataImportEventPayload, profileSnapshot))
+          .orElse(CompletableFuture.failedFuture((new EventProcessingException(format(PROFILE_SNAPSHOT_NOT_FOUND_MSG, profileSnapshotId))))))
+        .whenComplete((processed, throwable) -> {
+          if (throwable != null) {
+            promise.fail(throwable);
+            LOGGER.error(throwable.getMessage());
+          } else {
+            promise.complete();
+            LOGGER.debug(format("adjustEventType:: Job profile snapshot with id '%s' was retrieved from cache", profileSnapshotId));
+          }
+        });
+    }
+
+    return promise.future();
+  }
+
+  private CompletableFuture<Void> setEventTypeForOpenOrder(DataImportEventPayload dataImportEventPayload, ProfileSnapshotWrapper jobProfileSnapshotWrapper) {
+    List<ProfileSnapshotWrapper> actionProfiles = jobProfileSnapshotWrapper
+      .getChildSnapshotWrappers()
+      .stream()
+      .filter(e -> e.getContentType() == ProfileSnapshotWrapper.ContentType.ACTION_PROFILE)
+      .collect(Collectors.toList());
+
+    if (!actionProfiles.isEmpty() && checkIfCurrentProfileIsTheLastOne(dataImportEventPayload, actionProfiles)) {
+      dataImportEventPayload.setEventType("DI_ORDER_CREATED_READY_FOR_POST_PROCESSING");
+    } else {
+      dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
+    }
+
+    return CompletableFuture.completedFuture(null);
+  }
+
+  private static boolean checkIfCurrentProfileIsTheLastOne(DataImportEventPayload eventPayload, List<ProfileSnapshotWrapper> actionProfiles) {
+    String currentMappingProfileId = eventPayload.getCurrentNode().getProfileId();
+    ProfileSnapshotWrapper lastActionProfile = actionProfiles.get(actionProfiles.size() - 1);
+    List<ProfileSnapshotWrapper> childSnapshotWrappers = lastActionProfile.getChildSnapshotWrappers();
+    String mappingProfileId = org.apache.commons.lang.StringUtils.EMPTY;
+
+    if (childSnapshotWrappers != null && childSnapshotWrappers.get(0) != null && Objects.equals(childSnapshotWrappers.get(0).getContentType().value(), "MAPPING_PROFILE")) {
+      mappingProfileId = childSnapshotWrappers.get(0).getProfileId();
+    }
+
+    return mappingProfileId.equals(currentMappingProfileId);
   }
 
   private Map<String, String> extractOkapiHeaders(DataImportEventPayload dataImportEventPayload) {
