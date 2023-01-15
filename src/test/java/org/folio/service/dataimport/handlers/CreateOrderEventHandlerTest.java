@@ -596,6 +596,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(ORDER_LINES_KEY), CompositePoLine.class);
     assertNotNull(poLine.getId());
     assertNotNull(poLine.getTitleOrPackage());
+    assertNotNull(poLine.getPurchaseOrderId());
     assertEquals(CompositePoLine.Source.MARC, poLine.getSource());
     assertEquals(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE, poLine.getOrderFormat());
     assertTrue(poLine.getCheckinItems());
