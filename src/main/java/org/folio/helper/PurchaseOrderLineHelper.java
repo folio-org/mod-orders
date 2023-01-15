@@ -178,14 +178,10 @@ public class PurchaseOrderLineHelper {
       });
   }
 
-  public Future<CompositePoLine> createPoLine(CompositePoLine compPOL, RequestContext requestContext) {
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .compose(tenantConfiguration -> createPoLine(compPOL, tenantConfiguration, requestContext));
-  }
-
   /**
    * Creates PO Line if its content is valid and all restriction checks passed
    * @param compPOL {@link CompositePoLine} to be created
+   * @param tenantConfig tenant configuration
    * @return completable future which might hold {@link CompositePoLine} on success, {@code null} if validation fails or an exception if any issue happens
    */
   public Future<CompositePoLine> createPoLine(CompositePoLine compPOL, JsonObject tenantConfig, RequestContext requestContext) {
