@@ -10,7 +10,6 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
   CacheTest.class,
   OrderIdStorageServiceImplTest.class,
-  OrderIdStorageServiceImplTest.class,
   CreateOrderEventHandlerTest.class
 })
 public class DataImportTestSuite {
