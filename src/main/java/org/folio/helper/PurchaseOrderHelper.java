@@ -10,7 +10,6 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
@@ -32,7 +31,6 @@ import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEARCH_PARAMS;
 import static org.folio.rest.core.exceptions.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
@@ -71,9 +69,11 @@ import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
@@ -120,7 +120,6 @@ public class PurchaseOrderHelper {
   private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
   private static final String PERMISSION_ORDER_UNOPEN = "orders.item.unopen";
   private static final String PERMISSION_ORDER_REOPEN = "orders.item.reopen";
-  private static final String SEARCH_ORDERS_BY_LINES_DATA = resourcesPath(PURCHASE_ORDER_STORAGE) + SEARCH_PARAMS;
   public static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER_STORAGE) + SEARCH_PARAMS;
   public static final String EMPTY_ARRAY = "[]";
   public static final String OKAPI_HEADER_PERMISSIONS = "X-Okapi-Permissions";
@@ -149,6 +148,7 @@ public class PurchaseOrderHelper {
   private final CompositePoLineValidationService compositePoLineValidationService;
   private final ReOpenCompositeOrderManager reOpenCompositeOrderManager;
   private final OrganizationService organizationService;
+  private final RestClient restClient;
 
   public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper, CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
     CompositeOrderDynamicDataPopulateService combinedPopulateService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
@@ -156,7 +156,7 @@ public class PurchaseOrderHelper {
     UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
     PurchaseOrderStorageService purchaseOrderStorageService, ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService) {
+    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService, RestClient restClient) {
     this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.orderLinesSummaryPopulateService = orderLinesSummaryPopulateService;
     this.encumbranceService = encumbranceService;
@@ -180,6 +180,7 @@ public class PurchaseOrderHelper {
     this.compositePoLineValidationService = compositePoLineValidationService;
     this.reOpenCompositeOrderManager = reOpenCompositeOrderManager;
     this.organizationService = organizationService;
+    this.restClient = restClient;
   }
 
   /**
@@ -191,8 +192,18 @@ public class PurchaseOrderHelper {
    * @return completable future with {@link PurchaseOrderCollection} object on success or an exception if processing fails
    */
   public Future<PurchaseOrderCollection> getPurchaseOrders(int limit, int offset, String query, RequestContext requestContext) {
-   return buildGetOrdersPath(limit, offset, query, requestContext)
-      .compose(endpoint -> purchaseOrderStorageService.getPurchaseOrders(query, limit, offset, requestContext))
+    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
+      .compose(acqUnitsCqlExpr -> {
+        String finalQuery = acqUnitsCqlExpr;
+        if (StringUtils.isNotEmpty(query)) {
+          finalQuery = combineCqlExpressions("and", acqUnitsCqlExpr, query);
+        }
+        RequestEntry requestEntry = new RequestEntry(resourcesPath(PURCHASE_ORDER_STORAGE))
+          .withQuery(finalQuery)
+          .withLimit(limit)
+          .withOffset(offset);
+        return restClient.get(requestEntry, PurchaseOrderCollection.class, requestContext);
+      })
       .onFailure(t -> logger.error("Error getting orders", t));
   }
 
@@ -761,19 +772,6 @@ public class PurchaseOrderHelper {
       .map(v -> verifyUserHasAssignPermission(acqUnitIds, requestContext))
       .compose(ok -> protectionService.verifyIfUnitsAreActive(acqUnitIds, requestContext))
       .compose(ok -> protectionService.isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE, requestContext));
-  }
-
-  private Future<String> buildGetOrdersPath(int limit, int offset, String query, RequestContext requestContext) {
-    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
-      .map(acqUnitsCqlExpr -> {
-        if (StringUtils.isEmpty(query)) {
-          String queryParam = buildQuery(acqUnitsCqlExpr);
-          return String.format(GET_PURCHASE_ORDERS, limit, offset, queryParam, EN);
-        } else {
-          String queryParam = buildQuery(combineCqlExpressions("and", acqUnitsCqlExpr, query));
-          return String.format(SEARCH_ORDERS_BY_LINES_DATA, limit, offset, queryParam, EN);
-        }
-      });
   }
 
   private Future<Void> closeOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
