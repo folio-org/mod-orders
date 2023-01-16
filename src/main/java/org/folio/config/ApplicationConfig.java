@@ -478,12 +478,10 @@ public class ApplicationConfig {
 
   @Bean
   UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-                                      EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                      InventoryManager inventoryManager, PieceStorageService pieceStorageService,
-                                      PurchaseOrderStorageService purchaseOrderStorageService,
-                                      ProtectionService protectionService, PieceDeleteFlowManager pieceDeleteFlowManager) {
-    return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
-                                          pieceStorageService, purchaseOrderStorageService, protectionService, pieceDeleteFlowManager);
+                                                          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+                                                          PieceStorageService pieceStorageService,
+                                                          PieceDeleteFlowManager pieceDeleteFlowManager) {
+    return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, pieceStorageService, pieceDeleteFlowManager);
   }
 
   @Bean
