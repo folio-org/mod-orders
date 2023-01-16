@@ -2,6 +2,7 @@ package org.folio.service.dataimport.handlers;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ObserveKeyValues;
@@ -17,6 +18,7 @@ import org.folio.TestConfig;
 import org.folio.di.DiAbstractRestTest;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.rest.RestConstants;
+import org.folio.rest.client.TenantClient;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -52,6 +54,7 @@ import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
@@ -73,12 +76,13 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
   private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
+  private static final String PERMISSION_KEY = "OKAPI_PERMISSIONS";
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
   private static final String GROUP_ID = "test-consumers-group";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String INSTANCE_ID_KEY = "id";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
-
+  private static final String TENANT_APPROVAL_REQUIRED = "test_diku_limit_1";
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String KAFKA_ENV_VALUE = "test-env";
 
@@ -121,6 +125,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         new MappingRule().withPath("order.po.poStatus").withValue("\"Open\"").withEnabled("true"),
         new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
         new MappingRule().withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
+        new MappingRule().withPath("order.po.approved").withValue("\"true\"").withEnabled("true"),
 
         new MappingRule().withPath("order.po.poLinesLimit").withValue("7").withEnabled("true").withName("poLinesLimit"),
 
@@ -136,8 +141,11 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   private Record record;
 
   @BeforeClass
-  public static void setupClass() throws ExecutionException, InterruptedException, TimeoutException {
+  public static void setupClass(final TestContext testContext) throws ExecutionException, InterruptedException, TimeoutException {
     TestConfig.startMockServer();
+    String okapiUrl = "http://localhost:" + port;
+    TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_APPROVAL_REQUIRED, TOKEN);
+    postTenant(testContext, testContext.async(), tenantClient);
   }
 
   @AfterClass
@@ -187,7 +195,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenOpenStatusSpecified() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecified() throws InterruptedException {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -223,7 +231,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
-    assertEquals("DI_ORDER_CREATED_READY_FOR_POST_PROCESSING", eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -293,6 +301,93 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenOpenStatusSpecifiedAndUserHaveNotPermission() throws InterruptedException {
+    // given
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_APPROVAL_REQUIRED)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_ERROR.value());
+
+    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
+      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+
+    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
+
+    //DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
+    assertEquals(DI_COMPLETED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+
+    assertNotNull(eventPayload.getContext().get(ORDER.value()));
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertNotNull(createdOrder.getId());
+    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
+    assertNotNull(createdOrder.getVendor());
+    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+  }
+
+  @Test
+  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecifiedAndUserHavePermission() throws InterruptedException {
+    // given
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_APPROVAL_REQUIRED)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(PERMISSION_KEY, Json.encode(Collections.singletonList("orders.item.approve")));
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
+
+    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
+      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+
+    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
+
+    //DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
+    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+
+    assertNotNull(eventPayload.getContext().get(ORDER.value()));
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertNotNull(createdOrder.getId());
+    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
+    assertNotNull(createdOrder.getVendor());
+    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+  }
+
+  @Test
   public void shouldCreateOrderAndPoLineWithPopulatedInstanceIdWhenPayloadContainsInventoryInstance() throws InterruptedException {
     //given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
@@ -332,7 +427,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(record.getId(), new String(observedRecords.get(0).getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
-    assertEquals("DI_ORDER_CREATED_READY_FOR_POST_PROCESSING", eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);

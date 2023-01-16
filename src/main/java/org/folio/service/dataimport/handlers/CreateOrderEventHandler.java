@@ -53,6 +53,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.ActionProfile.FolioRecord.ORDER;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -99,6 +100,7 @@ public class CreateOrderEventHandler implements EventHandler {
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
     if (payloadContext == null || isBlank(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))) {
@@ -141,6 +143,7 @@ public class CreateOrderEventHandler implements EventHandler {
     Promise<Void> promise = Promise.promise();
 
     if (workflowStatus.equals(WorkflowStatus.PENDING)) {
+      LOGGER.debug(format("adjustEventType:: set event type DI_COMPLETED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
       dataImportEventPayload.setEventType(DI_COMPLETED.value());
       return Future.succeededFuture();
     }
@@ -151,6 +154,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
       if (isApprovalRequired && (!isApproved || isUserNotHaveApprovalPermission)) {
+        LOGGER.debug(format("adjustEventType:: set event type DI_COMPLETED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
         dataImportEventPayload.setEventType(DI_COMPLETED.value());
         return Future.succeededFuture();
       }
@@ -190,8 +194,10 @@ public class CreateOrderEventHandler implements EventHandler {
       .collect(Collectors.toList());
 
     if (!actionProfiles.isEmpty() && checkIfCurrentProfileIsTheLastOne(dataImportEventPayload, actionProfiles)) {
-      dataImportEventPayload.setEventType("DI_ORDER_CREATED_READY_FOR_POST_PROCESSING");
+      LOGGER.debug(format("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED_READY_FOR_POST_PROCESSING for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
+      dataImportEventPayload.setEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
     } else {
+      LOGGER.debug(format("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
       dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
     }
 
@@ -289,7 +295,6 @@ public class CreateOrderEventHandler implements EventHandler {
   }
 
   private void prepareEventPayloadForMapping(DataImportEventPayload dataImportEventPayload) {
-    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
     dataImportEventPayload.getContext().put(ORDER.value(), new JsonObject().encode());
   }

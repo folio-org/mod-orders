@@ -77,7 +77,7 @@ public abstract class DiAbstractRestTest {
   private static final int PORT = NetworkUtils.nextFreePort();
   protected static final String OKAPI_URL = "http://localhost:" + PORT;
   private static final String HTTP_PORT = "http.port";
-  private static int port;
+  protected static int port;
   protected static final String TENANT_ID = "diku";
   protected static final String TOKEN = "token";
   protected static RequestSpecification spec;
@@ -133,18 +133,22 @@ public abstract class DiAbstractRestTest {
 
     TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_ID, TOKEN);
     vertx.deployVerticle(RestVerticle.class.getName(), options, res -> {
-      TenantAttributes tenantAttributes = new TenantAttributes();
-      tenantClient.postTenant(tenantAttributes).onComplete(res2 -> {
-        if (res2.result().statusCode() == 201) {
-          tenantClient.getTenantByOperationId(res2.result().bodyAsJson(TenantJob.class).getId(), 60000, context.asyncAssertSuccess(res3 -> {
-            context.assertTrue(res3.bodyAsJson(TenantJob.class).getComplete());
-            async.complete();
-          }));
-        } else {
-          context.assertEquals("Failed to make post tenant. Received status code 400", res2.result().bodyAsString());
+      postTenant(context, async, tenantClient);
+    });
+  }
+
+  protected static void postTenant(TestContext context, Async async, TenantClient tenantClient) {
+    TenantAttributes tenantAttributes = new TenantAttributes();
+    tenantClient.postTenant(tenantAttributes).onComplete(res2 -> {
+      if (res2.result().statusCode() == 201) {
+        tenantClient.getTenantByOperationId(res2.result().bodyAsJson(TenantJob.class).getId(), 60000, context.asyncAssertSuccess(res3 -> {
+          context.assertTrue(res3.bodyAsJson(TenantJob.class).getComplete());
           async.complete();
-        }
-      });
+        }));
+      } else {
+        context.assertEquals("Failed to make post tenant. Received status code 400", res2.result().bodyAsString());
+        async.complete();
+      }
     });
   }
 
