@@ -204,6 +204,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
@@ -3055,19 +3056,16 @@ public class PurchaseOrdersApiTest {
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
 
-    // TODO: new implementation of rest client passes query parameters as url
-    // uncomment after refactoring rest client to use query as parameter
-/*    List<String> queryParams = getQueryParams(PURCHASE_ORDER_STORAGE);
+    List<String> queryParams = getQueryParams(PURCHASE_ORDER_STORAGE);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
-    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_IDS + "="));
-    assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
+    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_IDS + "%3D"));
 
     MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET)
       .get(0)
       .mapTo(AcquisitionsUnitMembershipCollection.class)
       .getAcquisitionsUnitMemberships()
-      .forEach(member -> assertThat(queryToStorage, containsString(member.getAcquisitionsUnitId())));*/
+      .forEach(member -> assertThat(queryToStorage, containsString(member.getAcquisitionsUnitId())));
   }
 
   @Test
