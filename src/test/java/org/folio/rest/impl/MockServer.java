@@ -145,6 +145,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.helper.BaseHelper;
 import org.folio.isbn.IsbnUtil;
+import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -294,6 +295,7 @@ public class MockServer {
   public static final String CONFIGS = "configs";
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
+  public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -2065,6 +2067,14 @@ public class MockServer {
 
   private void handlePostPurchaseOrder(RoutingContext ctx) {
     logger.info("got: " + ctx.body().asString());
+    if (ORDER_ID_DUPLICATION_ERROR_USER_ID.equals(ctx.request().getHeader(RestVerticle.OKAPI_USERID_HEADER))) {
+      JsonObject body = ctx.body().asJsonObject();
+      Error error = new Error()
+        .withMessage(String.format("duplicate key value violates unique constraint \\\"purchase_order_pkey\\\": Key (id)=(%s) already exists.", body.getString(ID)))
+        .withCode("generic error");
+      serverResponse(ctx, 500, APPLICATION_JSON, Json.encodePrettily(error));
+      return;
+    }
     String id = UUID.randomUUID().toString();
     JsonObject body = ctx.body().asJsonObject();
     body.put(ID, id);

@@ -2,6 +2,9 @@ package org.folio.service.dataimport.handlers;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.RunTestOnContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ObserveKeyValues;
@@ -15,7 +18,7 @@ import org.folio.ParsedRecord;
 import org.folio.Record;
 import org.folio.TestConfig;
 import org.folio.di.DiAbstractRestTest;
-import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.rest.RestConstants;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -31,6 +34,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
@@ -43,6 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -58,7 +63,6 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.TestConfig.closeMockServer;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.rest.impl.MockServer.CONFIGS;
@@ -133,6 +137,9 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
             "df26d81b-9d63-4ff8-bf41-49bf75cfa70e", "Purchase"
           )))))));
 
+  @Rule
+  public RunTestOnContext rule = new RunTestOnContext();
+
   private Record record;
 
   @BeforeClass
@@ -159,6 +166,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -176,13 +184,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
-
-    assertNotNull(eventPayload.getContext().get(ORDER.value()));
-    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
-    assertNotNull(createdOrder.getId());
-    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
-    assertNotNull(createdOrder.getVendor());
-    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+    verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
   }
 
@@ -202,35 +204,16 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());
-    Event event = new Event().withEventPayload(Json.encode(dataImportEventPayload));
-    KeyValue<String, String> kafkaRecord = new KeyValue<>("test-key", Json.encode(event));
-    kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
-    kafkaRecord.addHeader(RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl(), UTF_8);
-    SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(kafkaRecord))
-      .useDefaults();
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
     kafkaCluster.send(request);
 
     // then
-    String topicToObserve = formatToKafkaTopicName(DI_COMPLETED.value());
-
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
-    DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
-
-    assertNotNull(eventPayload.getContext().get(ORDER.value()));
-    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
-    assertNotNull(createdOrder.getId());
-    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
-    assertNotNull(createdOrder.getVendor());
-    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+    verifyOrder(eventPayload);
+    verifyPoLine(eventPayload);
   }
 
   @Test
@@ -251,37 +234,14 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
-    String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());
-    Event event = new Event().withEventPayload(Json.encode(dataImportEventPayload));
-    KeyValue<String, String> kafkaRecord = new KeyValue<>("test-key", Json.encode(event));
-    kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
-    kafkaRecord.addHeader(RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl(), UTF_8);
-    SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(kafkaRecord))
-      .useDefaults();
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
     kafkaCluster.send(request);
 
     // then
-    String topicToObserve = formatToKafkaTopicName(DI_COMPLETED.value());
-
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    assertEquals(record.getId(), new String(observedRecords.get(0).getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
-    DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
-
-    assertNotNull(eventPayload.getContext().get(ORDER.value()));
-    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
-    assertNotNull(createdOrder.getId());
-    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
-    assertNotNull(createdOrder.getVendor());
-    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
-
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    verifyOrder(eventPayload);
     CompositePoLine createdPoLine = verifyPoLine(eventPayload);
     assertEquals(instanceJson.getString(INSTANCE_ID_KEY), createdPoLine.getInstanceId());
   }
@@ -302,28 +262,15 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       }});
 
     Assert.assertFalse(dataImportEventPayload.getContext().containsKey(MARC_BIBLIOGRAPHIC.value()));
-    String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());
-    Event event = new Event().withEventPayload(Json.encode(dataImportEventPayload));
-    KeyValue<String, String> kafkaRecord = new KeyValue<>("test-key", Json.encode(event));
-    kafkaRecord.addHeader(RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl(), UTF_8);
-    SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(kafkaRecord))
-      .useDefaults();
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
     kafkaCluster.send(request);
 
     // then
-    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_ID, DI_ERROR.value());
-
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
-    DataImportEventPayload obtainedPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
-    Assert.assertEquals(DI_ERROR.value(), obtainedPayload.getEventType());
-    assertEquals(DI_ORDER_CREATED.value(), obtainedPayload.getEventsChain().get(obtainedPayload.getEventsChain().size() - 1));
+    DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ERROR.value(), eventPayload.getEventType());
   }
 
   @Test
@@ -357,15 +304,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
-
-    assertNotNull(eventPayload.getContext().get(ORDER.value()));
-    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
-    assertNotNull(createdOrder.getId());
-    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
-    assertNotNull(createdOrder.getVendor());
-    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
-
+    verifyOrder(eventPayload);
     CompositePoLine createdPoLine = verifyPoLine(eventPayload);
     assertEquals(expectedActivationDue, createdPoLine.getEresource().getActivationDue());
   }
@@ -401,14 +340,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
-
-    assertNotNull(eventPayload.getContext().get(ORDER.value()));
-    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
-    assertNotNull(createdOrder.getId());
-    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
-    assertNotNull(createdOrder.getVendor());
-    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
-
+    verifyOrder(eventPayload);
+    verifyPoLine(eventPayload);
     CompositePoLine createdPoLine = verifyPoLine(eventPayload);
     assertEquals(expectedActivationDue, createdPoLine.getEresource().getActivationDue());
   }
@@ -450,13 +383,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
-
-    assertNotNull(eventPayload.getContext().get(ORDER.value()));
-    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
-    assertNotNull(createdOrder.getId());
-    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
-    assertNotNull(createdOrder.getVendor());
-    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+    verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
   }
 
@@ -514,13 +441,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
-
-    assertNotNull(eventPayload.getContext().get(ORDER.value()));
-    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
-    assertNotNull(createdOrder.getId());
-    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
-    assertNotNull(createdOrder.getVendor());
-    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+    verifyOrder(eventPayload);
     CompositePoLine poLine = verifyPoLine(eventPayload);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.INSTANCE, poLine.getEresource().getCreateInventory());
@@ -587,16 +508,42 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
-
-    assertNotNull(eventPayload.getContext().get(ORDER.value()));
-    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
-    assertNotNull(createdOrder.getId());
-    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
-    assertNotNull(createdOrder.getVendor());
-    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+    verifyOrder(eventPayload);
     CompositePoLine poLine = verifyPoLine(eventPayload);
     assertNotNull(poLine.getPhysical());
     assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
+  }
+
+  @Test
+  public void shouldReturnFailedFutureWhenOrderIdDuplicationErrorOccurs(TestContext context) {
+    // given
+    Async async = context.async();
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(CreateOrderEventHandler.USER_ID_KEY, MockServer.ORDER_ID_DUPLICATION_ERROR_USER_ID);
+        put(RECORD_ID_HEADER, record.getId());
+      }});
+
+    // when
+    CreateOrderEventHandler createOrderHandler = getBeanFromSpringContext(vertx, CreateOrderEventHandler.class);
+    CompletableFuture<DataImportEventPayload> future = createOrderHandler.handle(dataImportEventPayload);
+
+    // then
+    future.whenComplete((payload, e) -> {
+      context.assertNotNull(e);
+      context.assertTrue(e instanceof DuplicateEventException);
+      async.complete();
+    });
   }
 
   @Test
@@ -669,6 +616,16 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(record.getId(), new String(observedRecords.get(0).getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
+  }
+
+  private CompositePurchaseOrder verifyOrder(DataImportEventPayload eventPayload) {
+    assertNotNull(eventPayload.getContext().get(ORDER.value()));
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertNotNull(createdOrder.getId());
+    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
+    assertNotNull(createdOrder.getVendor());
+    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+    return createdOrder;
   }
 
   private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
