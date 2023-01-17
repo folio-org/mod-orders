@@ -60,6 +60,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
@@ -245,7 +246,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldCreatePendingOrderAndPublishDiOrderCreatedEventWhenOpenStatusSpecifiedAndActionProfileIsNotTheLastOne() throws InterruptedException {
+  public void shouldCreatePendingOrderAndPublishDiPendingOrderCreatedEventWhenOpenStatusSpecifiedAndActionProfileIsNotTheLastOne() throws InterruptedException {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
 
@@ -293,7 +294,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -668,7 +669,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -741,7 +742,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);

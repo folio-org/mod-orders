@@ -57,6 +57,7 @@ import static org.folio.ActionProfile.FolioRecord.ORDER;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -207,7 +208,7 @@ public class CreateOrderEventHandler implements EventHandler {
       dataImportEventPayload.getContext().put(POST_PROCESSING, "true");
     } else {
       LOGGER.debug(format("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
-      dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
+      dataImportEventPayload.setEventType(DI_PENDING_ORDER_CREATED.value());
     }
 
     return CompletableFuture.completedFuture(null);
