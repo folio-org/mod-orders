@@ -225,7 +225,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     kafkaCluster.send(request);
 
     // then
-    String topicToObserve = formatToKafkaTopicName(DI_COMPLETED.value());
+    String topicToObserve = formatToKafkaTopicName(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
 
     List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
       .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
@@ -234,7 +234,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
-    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventType());
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -368,7 +368,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     kafkaCluster.send(request);
 
     // then
-    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
+    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
 
     List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
       .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
@@ -378,7 +378,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
 
-    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventType());
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -418,7 +418,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     kafkaCluster.send(request);
 
     // then
-    String topicToObserve = formatToKafkaTopicName(DI_COMPLETED.value());
+    String topicToObserve = formatToKafkaTopicName(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
 
     List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
       .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
@@ -428,7 +428,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(record.getId(), new String(observedRecords.get(0).getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
-    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventType());
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);

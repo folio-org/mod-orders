@@ -86,6 +86,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
   private static final String PROFILE_SNAPSHOT_NOT_FOUND_MSG = "JobProfileSnapshot was not found by profileSnapshotId '%s'";
+  private static final String POST_PROCESSING = "POST_PROCESSING";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
@@ -203,6 +204,7 @@ public class CreateOrderEventHandler implements EventHandler {
     if (!actionProfiles.isEmpty() && checkIfCurrentProfileIsTheLastOne(dataImportEventPayload, actionProfiles)) {
       LOGGER.debug(format("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED_READY_FOR_POST_PROCESSING for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
       dataImportEventPayload.setEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
+      dataImportEventPayload.getContext().put(POST_PROCESSING, "true");
     } else {
       LOGGER.debug(format("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
       dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
