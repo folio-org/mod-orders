@@ -335,7 +335,6 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
 
-    //DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
     assertEquals(DI_COMPLETED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
@@ -379,7 +378,6 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
 
-    //DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
     assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));

@@ -85,7 +85,6 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
-  private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final String PROFILE_SNAPSHOT_NOT_FOUND_MSG = "JobProfileSnapshot was not found by profileSnapshotId '%s'";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
@@ -127,8 +126,8 @@ public class CreateOrderEventHandler implements EventHandler {
 
     tenantConfigFuture
       .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
+      .compose(tenantConfig -> prepareMappingResult(dataImportEventPayload).map(tenantConfig))
       .compose(tenantConfig -> adjustEventType(dataImportEventPayload, tenantConfig, requestContext, okapiHeaders))
-      .compose(v -> prepareMappingResult(dataImportEventPayload))
       .compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
       .compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
       .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, tenantConfigFuture.result(), requestContext))
@@ -218,7 +217,8 @@ public class CreateOrderEventHandler implements EventHandler {
     List<ProfileSnapshotWrapper> childSnapshotWrappers = lastActionProfile.getChildSnapshotWrappers();
     String mappingProfileId = org.apache.commons.lang.StringUtils.EMPTY;
 
-    if (childSnapshotWrappers != null && childSnapshotWrappers.get(0) != null && Objects.equals(childSnapshotWrappers.get(0).getContentType().value(), "MAPPING_PROFILE")) {
+    if (childSnapshotWrappers != null && childSnapshotWrappers.size() > 0
+      && childSnapshotWrappers.get(0) != null && Objects.equals(childSnapshotWrappers.get(0).getContentType().value(), "MAPPING_PROFILE")) {
       mappingProfileId = childSnapshotWrappers.get(0).getProfileId();
     }
 
