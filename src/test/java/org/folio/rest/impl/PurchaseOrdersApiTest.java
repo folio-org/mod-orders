@@ -3047,7 +3047,7 @@ public class PurchaseOrdersApiTest {
 
   @Test
   void testGetOrdersForUserAssignedToAcqUnits() {
-    logger.info("=== Test Get Orders by query - user assigned to acq units ===");
+    logger.info("=== Test Get Orders by query - user assigned to acqUnits ===");
 
     Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID_WITH_ACQ_UNITS);
     verifyGet(COMPOSITE_ORDERS_PATH, headers, APPLICATION_JSON, 200);
