@@ -318,12 +318,12 @@ public class PurchaseOrderHelperTest {
               ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
               OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
               CompositePoLineValidationService compositePoLineValidationService,
-              ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService) {
+              ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService, RestClient restClient) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
         purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
         unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
-        poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager, organizationService);
+        poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager, organizationService, restClient);
     }
   }
 

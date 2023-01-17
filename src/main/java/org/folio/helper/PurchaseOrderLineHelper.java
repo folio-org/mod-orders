@@ -169,7 +169,8 @@ public class PurchaseOrderLineHelper {
         RequestEntry requestEntry = new RequestEntry(resourcesPath(PO_LINES_STORAGE))
                                               .withQuery(finalQuery).withLimit(limit).withOffset(offset);
         return restClient.get(requestEntry, PoLineCollection.class, requestContext);
-      });
+      })
+      .onFailure(t -> logger.error("Error getting orderLines", t));
   }
 
   /**
