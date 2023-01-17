@@ -8,8 +8,8 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  CacheTest.class,
   CreateOrderEventHandlerTest.class,
+  CacheTest.class,
   OrderIdStorageServiceImplTest.class
 })
 public class DataImportTestSuite {
