@@ -248,32 +248,38 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   @Test
   public void shouldCreatePendingOrderAndPublishDiPendingOrderCreatedEventWhenOpenStatusSpecifiedAndActionProfileIsNotTheLastOne() throws InterruptedException {
     // given
-    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
-
-    profileSnapshotWrapper.withChildSnapshotWrappers(List.of(
+    ProfileSnapshotWrapper profileSnapshotWrapper =
       new ProfileSnapshotWrapper()
         .withId(UUID.randomUUID().toString())
-        .withProfileId(actionProfile.getId())
-        .withContentType(ACTION_PROFILE)
-        .withContent(JsonObject.mapFrom(actionProfile).getMap())
-        .withChildSnapshotWrappers(Collections.singletonList(
+        .withProfileId(jobProfile.getId())
+        .withContentType(JOB_PROFILE)
+        .withContent(JsonObject.mapFrom(jobProfile).getMap())
+        .withChildSnapshotWrappers(List.of(
           new ProfileSnapshotWrapper()
             .withId(UUID.randomUUID().toString())
-            .withProfileId(openOrderMappingProfile.getId())
-            .withContentType(MAPPING_PROFILE)
-            .withContent(JsonObject.mapFrom(openOrderMappingProfile).getMap()))),
-      new ProfileSnapshotWrapper()
-        .withId(UUID.randomUUID().toString())
-        .withProfileId(actionProfile.getId())
-        .withContentType(ACTION_PROFILE)
-        .withContent(JsonObject.mapFrom(actionProfile).getMap())
-        .withChildSnapshotWrappers(Collections.singletonList(
+            .withContentType(ACTION_PROFILE)
+            .withOrder(0)
+            .withProfileId(actionProfile.getId())
+            .withContent(JsonObject.mapFrom(actionProfile).getMap())
+            .withChildSnapshotWrappers(Collections.singletonList(
+              new ProfileSnapshotWrapper()
+                .withId(UUID.randomUUID().toString())
+                .withProfileId(openOrderMappingProfile.getId())
+                .withContentType(MAPPING_PROFILE)
+                .withContent(JsonObject.mapFrom(openOrderMappingProfile).getMap()))),
           new ProfileSnapshotWrapper()
             .withId(UUID.randomUUID().toString())
-            .withProfileId(mappingProfile.getId())
-            .withContentType(MAPPING_PROFILE)
-            .withContent(JsonObject.mapFrom(mappingProfile).getMap())))
-    ));
+            .withContentType(ACTION_PROFILE)
+            .withOrder(1)
+            .withProfileId(UUID.randomUUID().toString())
+            .withContent(JsonObject.mapFrom(new ActionProfile().withFolioRecord(ActionProfile.FolioRecord.INSTANCE)))
+            .withChildSnapshotWrappers(Collections.singletonList(
+              new ProfileSnapshotWrapper()
+                .withId(UUID.randomUUID().toString())
+                .withProfileId(UUID.randomUUID().toString())
+                .withContentType(MAPPING_PROFILE)
+                .withContent(JsonObject.mapFrom(new MappingProfile()
+                  .withIncomingRecordType(MARC_BIBLIOGRAPHIC).withExistingRecordType(EntityType.INSTANCE)))))));
 
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
@@ -293,8 +299,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     kafkaCluster.send(request);
 
     // then
-    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    DataImportEventPayload eventPayload = observeEvent(DI_PENDING_ORDER_CREATED.value());
+    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventType());
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -634,6 +640,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         new ProfileSnapshotWrapper()
           .withId(UUID.randomUUID().toString())
           .withProfileId(actionProfile.getId())
+          .withOrder(0)
           .withContentType(ACTION_PROFILE)
           .withContent(JsonObject.mapFrom(actionProfile).getMap())
           .withChildSnapshotWrappers(Collections.singletonList(
@@ -645,6 +652,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         new ProfileSnapshotWrapper()
           .withId(UUID.randomUUID().toString())
           .withProfileId(actionProfile.getId())
+          .withOrder(1)
           .withContentType(ACTION_PROFILE)
           .withContent(JsonObject.mapFrom(new ActionProfile()
             .withName("Create instance")
@@ -668,8 +676,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     kafkaCluster.send(request);
 
     // then
-    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    DataImportEventPayload eventPayload = observeEvent(DI_PENDING_ORDER_CREATED.value());
+    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventType());
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -701,6 +709,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
           .withId(UUID.randomUUID().toString())
           .withProfileId(actionProfile.getId())
           .withContentType(ACTION_PROFILE)
+          .withOrder(0)
           .withContent(JsonObject.mapFrom(actionProfile).getMap())
           .withChildSnapshotWrappers(Collections.singletonList(
             new ProfileSnapshotWrapper()
@@ -712,6 +721,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
           .withId(UUID.randomUUID().toString())
           .withProfileId(actionProfile.getId())
           .withContentType(ACTION_PROFILE)
+          .withOrder(1)
           .withContent(JsonObject.mapFrom(new ActionProfile()
             .withName("Create instance")
             .withFolioRecord(INSTANCE)).getMap()),
@@ -719,6 +729,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
           .withId(UUID.randomUUID().toString())
           .withProfileId(actionProfile.getId())
           .withContentType(ACTION_PROFILE)
+          .withOrder(2)
           .withContent(JsonObject.mapFrom(new ActionProfile()
             .withName("Create holdings")
             .withFolioRecord(HOLDINGS)).getMap())
@@ -741,8 +752,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     kafkaCluster.send(request);
 
     // then
-    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    DataImportEventPayload eventPayload = observeEvent(DI_PENDING_ORDER_CREATED.value());
+    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventType());
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
