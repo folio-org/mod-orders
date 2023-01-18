@@ -187,7 +187,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_COMPLETED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -332,7 +332,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     kafkaCluster.send(request);
 
     // then
-    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_ERROR.value());
+    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
 
     List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
       .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
@@ -342,7 +342,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
 
-    assertEquals(DI_COMPLETED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -519,7 +519,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_COMPLETED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -562,7 +562,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_COMPLETED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -611,7 +611,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
-    assertEquals(DI_COMPLETED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);

@@ -88,6 +88,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
   private static final String PROFILE_SNAPSHOT_NOT_FOUND_MSG = "JobProfileSnapshot was not found by profileSnapshotId '%s'";
   private static final String POST_PROCESSING = "POST_PROCESSING";
+  private static final String WORKFLOW_STATUS_PATH = "order.po.workflowStatus";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
@@ -128,11 +129,12 @@ public class CreateOrderEventHandler implements EventHandler {
 
     tenantConfigFuture
       .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
-      .compose(tenantConfig -> prepareMappingResult(dataImportEventPayload).map(tenantConfig))
-      .compose(tenantConfig -> adjustEventType(dataImportEventPayload, tenantConfig, requestContext, okapiHeaders))
+      .compose(v -> prepareMappingResult(dataImportEventPayload))
+      .compose(v -> setApprovedFalseIfUserNotHaveApprovalPermission(dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
       .compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
       .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, tenantConfigFuture.result(), requestContext))
+      .compose(v -> adjustEventType(dataImportEventPayload, okapiHeaders))
       .onComplete(ar -> {
         if (ar.failed()) {
           LOGGER.error("handle:: Error during order or order line creation", ar.cause());
@@ -145,26 +147,35 @@ public class CreateOrderEventHandler implements EventHandler {
     return future;
   }
 
-  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, RequestContext requestContext, Map<String, String> okapiHeaders) {
+  private Future<Object> setApprovedFalseIfUserNotHaveApprovalPermission(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, RequestContext requestContext) {
     CompositePurchaseOrder order = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
-    WorkflowStatus workflowStatus = order.getWorkflowStatus();
+    Boolean isApproved = order.getApproved();
+    boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
+    boolean isUserNotHaveApprovalPermission = PurchaseOrderHelper.isUserNotHaveApprovePermission(requestContext);
+
+    if (isApprovalRequired && isApproved && isUserNotHaveApprovalPermission) {
+      order.setApproved(false);
+      dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(order));
+    }
+    return Future.succeededFuture();
+  }
+
+  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, Map<String, String> okapiHeaders) {
+    CompositePurchaseOrder order = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    WorkflowStatus workflowStatus = extractWorkflowStatus(dataImportEventPayload);
 
     Promise<Void> promise = Promise.promise();
 
     if (workflowStatus.equals(WorkflowStatus.PENDING)) {
       LOGGER.debug(format("adjustEventType:: set event type DI_COMPLETED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
-      dataImportEventPayload.setEventType(DI_COMPLETED.value());
       return Future.succeededFuture();
     }
 
     Boolean isApproved = order.getApproved();
-    boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
-    boolean isUserNotHaveApprovalPermission = PurchaseOrderHelper.isUserNotHaveApprovePermission(requestContext);
 
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
-      if (isApprovalRequired && (!isApproved || isUserNotHaveApprovalPermission)) {
+      if (!isApproved) {
         LOGGER.debug(format("adjustEventType:: set event type DI_COMPLETED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
-        dataImportEventPayload.setEventType(DI_COMPLETED.value());
         return Future.succeededFuture();
       }
 
@@ -193,6 +204,16 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     return promise.future();
+  }
+
+  private WorkflowStatus extractWorkflowStatus(DataImportEventPayload dataImportEventPayload) {
+    ProfileSnapshotWrapper mappingProfileWrapper = dataImportEventPayload.getCurrentNode();
+    MappingProfile mappingProfile = ObjectMapperTool.getMapper().convertValue(mappingProfileWrapper.getContent(), MappingProfile.class);
+
+    return mappingProfile.getMappingDetails().getMappingFields().stream()
+      .filter(mappingRule -> WORKFLOW_STATUS_PATH.equals(mappingRule.getPath()))
+      .map(mappingRule -> Json.decodeValue(mappingRule.getValue(), WorkflowStatus.class))
+      .findFirst().orElse(WorkflowStatus.PENDING);
   }
 
   private CompletableFuture<Void> setEventTypeForOpenOrder(DataImportEventPayload dataImportEventPayload, ProfileSnapshotWrapper jobProfileSnapshotWrapper) {
