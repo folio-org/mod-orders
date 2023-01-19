@@ -559,8 +559,9 @@ public class ApplicationConfig {
 
   @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryManager inventoryManager,
                                                                               OpenCompositeOrderPieceService openCompositeOrderPieceService,
-                                                                              ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
-    return new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver) ;
+                                                                              ProcessInventoryStrategyResolver processInventoryStrategyResolver,
+                                                                              RestClient restClient) {
+    return new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver, restClient) ;
   }
 
   @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(ExpenseClassValidationService expenseClassValidationService,

@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.ApiTestSuite;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceStorageService;
@@ -93,6 +94,10 @@ public class OpenCompositeOrderInventoryServiceTest {
       return mock(PieceStorageService.class);
     }
 
+    @Bean RestClient restClient() {
+      return mock(RestClient.class);
+    }
+
     @Bean OpenCompositeOrderPieceService openCompositeOrderPieceCreateService() {
       return mock(OpenCompositeOrderPieceService.class);
     }
@@ -103,8 +108,9 @@ public class OpenCompositeOrderInventoryServiceTest {
 
     @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryManager inventoryManager,
                                                                                 OpenCompositeOrderPieceService openCompositeOrderPieceService,
-                                                                                ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
-      return spy(new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver));
+                                                                                ProcessInventoryStrategyResolver processInventoryStrategyResolver,
+                                                                                RestClient restClient) {
+      return spy(new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver, restClient));
     }
   }
 }

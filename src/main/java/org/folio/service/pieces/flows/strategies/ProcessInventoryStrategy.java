@@ -4,10 +4,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
@@ -15,6 +19,11 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 
 import io.vertx.core.Future;
+
+import static org.folio.service.inventory.InventoryManager.ID;
+import static org.folio.service.inventory.InventoryManager.HOLDINGS_RECORDS;
+import static org.folio.service.inventory.InventoryManager.HOLDINGS_LOOKUP_QUERY;
+import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDPOINTS;
 
 public abstract class ProcessInventoryStrategy {
 
@@ -29,6 +38,7 @@ public abstract class ProcessInventoryStrategy {
    */
   protected abstract Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL,
                                                                                   InventoryManager inventoryManager,
+                                                                                  RestClient restClient,
                                                                                   RequestContext requestContext);
 
   /**
@@ -41,6 +51,7 @@ public abstract class ProcessInventoryStrategy {
                                                   boolean isInstanceMatchingDisabled,
                                                   InventoryManager inventoryManager,
                                                   OpenCompositeOrderPieceService openCompositeOrderPieceService,
+                                                  RestClient restClient,
                                                   RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return Future.succeededFuture();
@@ -52,31 +63,52 @@ public abstract class ProcessInventoryStrategy {
     }
 
     return inventoryManager.openOrderHandleInstance(compPOL, isInstanceMatchingDisabled, requestContext)
-      .compose(compPOLWithInstanceId -> handleHoldingsAndItemsRecords(compPOLWithInstanceId, inventoryManager, requestContext))
+      .compose(compPOLWithInstanceId -> handleHoldingsAndItemsRecords(compPOLWithInstanceId, inventoryManager, restClient, requestContext))
       .compose(piecesWithItemId -> handlePieces(compPOL, titleId, piecesWithItemId, isInstanceMatchingDisabled,
         requestContext, openCompositeOrderPieceService));
   }
 
-  protected List<Future<List<Piece>>> updateHolding(CompositePoLine compPOL, InventoryManager inventoryManager,
-                                                               RequestContext requestContext) {
+  protected List<Future<List<Piece>>> updateHolding(CompositePoLine compPOL, InventoryManager inventoryManager, RestClient restClient,
+                                                    RequestContext requestContext) {
     List<Future<List<Piece>>> itemsPerHolding = new ArrayList<>();
     compPOL.getLocations().forEach(location -> {
       itemsPerHolding.add(
-        // Search for or create a new holdings record and then create items for it if required
-        inventoryManager.getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, requestContext)
-          .compose(holdingId -> {
-              // Items are not going to be created when create inventory is "Instance, Holding"
-
-              exchangeLocationIdWithHoldingId(location, holdingId);
-              if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-                return inventoryManager.handleItemRecords(compPOL, location, requestContext);
-              } else {
-                return Future.succeededFuture(Collections.emptyList());
-              }
-            }
-          ));
+        findHoldingsId(compPOL, location, restClient, requestContext)
+          .compose(aVoid -> {
+            // Search for or create a new holdings record and then create items for it if required
+            return inventoryManager.getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, requestContext)
+              .compose(holdingId -> {
+                // Items are not going to be created when create inventory is "Instance, Holding"
+                exchangeLocationIdWithHoldingId(location, holdingId);
+                if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
+                  return inventoryManager.handleItemRecords(compPOL, location, requestContext);
+                } else {
+                  return Future.succeededFuture(Collections.emptyList());
+                }
+              });
+          })
+      );
     });
     return itemsPerHolding;
+  }
+
+  private Future<Void> findHoldingsId(CompositePoLine compPOL, Location location, RestClient restClient, RequestContext requestContext) {
+    if (ObjectUtils.notEqual(CompositePoLine.Source.USER, compPOL.getSource()) &&
+        StringUtils.isNotBlank(location.getLocationId()) && StringUtils.isBlank(location.getHoldingId())) {
+
+      String query = String.format(HOLDINGS_LOOKUP_QUERY, compPOL.getInstanceId(), location.getLocationId());
+      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
+        .withQuery(query).withOffset(0).withLimit(1);
+      return restClient.getAsJsonObject(requestEntry, requestContext)
+        .compose(holdings -> {
+          if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
+            String holdingId = holdings.getJsonArray(HOLDINGS_RECORDS).getJsonObject(0).getString(ID);
+            location.setHoldingId(holdingId);
+          }
+          return Future.succeededFuture();
+        });
+    }
+    return Future.succeededFuture();
   }
 
   private void exchangeLocationIdWithHoldingId(Location location, String holdingId) {
