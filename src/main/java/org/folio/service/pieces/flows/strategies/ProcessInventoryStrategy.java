@@ -71,24 +71,22 @@ public abstract class ProcessInventoryStrategy {
   protected List<Future<List<Piece>>> updateHolding(CompositePoLine compPOL, InventoryManager inventoryManager, RestClient restClient,
                                                     RequestContext requestContext) {
     List<Future<List<Piece>>> itemsPerHolding = new ArrayList<>();
-    compPOL.getLocations().forEach(location -> {
-      itemsPerHolding.add(
-        findHoldingsId(compPOL, location, restClient, requestContext)
-          .compose(aVoid -> {
-            // Search for or create a new holdings record and then create items for it if required
-            return inventoryManager.getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, requestContext)
-              .compose(holdingId -> {
-                // Items are not going to be created when create inventory is "Instance, Holding"
-                exchangeLocationIdWithHoldingId(location, holdingId);
-                if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-                  return inventoryManager.handleItemRecords(compPOL, location, requestContext);
-                } else {
-                  return Future.succeededFuture(Collections.emptyList());
-                }
-              });
-          })
-      );
-    });
+    compPOL.getLocations().forEach(location -> itemsPerHolding.add(
+      findHoldingsId(compPOL, location, restClient, requestContext)
+        .compose(aVoid -> {
+          // Search for or create a new holdings record and then create items for it if required
+          return inventoryManager.getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, requestContext)
+            .compose(holdingId -> {
+              // Items are not going to be created when create inventory is "Instance, Holding"
+              exchangeLocationIdWithHoldingId(location, holdingId);
+              if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
+                return inventoryManager.handleItemRecords(compPOL, location, requestContext);
+              } else {
+                return Future.succeededFuture(Collections.emptyList());
+              }
+            });
+        })
+    ));
     return itemsPerHolding;
   }
 

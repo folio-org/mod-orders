@@ -1,39 +1,48 @@
 package org.folio.service.orders.flows.update.open;
 
-import static org.folio.TestConfig.autowireDependencies;
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.clearVertxContext;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryElectronicStrategy;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryPhysicalStrategy;
+import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategy;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
 import org.folio.service.titles.TitlesService;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
-import io.vertx.core.Context;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestConfig.*;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(VertxExtension.class)
 public class OpenCompositeOrderInventoryServiceTest {
+
+  public static final String LINE_ID = "2c4c29fd-fb8a-4c70-8561-931690bae8a4";
+  private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
 
   @Autowired
   private OpenCompositeOrderInventoryService openCompositeOrderInventoryService;
@@ -43,6 +52,10 @@ public class OpenCompositeOrderInventoryServiceTest {
   private TitlesService titlesService;
   @Autowired
   private  PieceStorageService pieceStorageService;
+  @Autowired
+  private ProcessInventoryStrategyResolver processInventoryStrategyResolver;
+  @Autowired
+  private RestClient restClient;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -76,6 +89,21 @@ public class OpenCompositeOrderInventoryServiceTest {
     }
   }
 
+  @Test
+  void shouldFoundHoldingIdByLocationId() throws IOException {
+    String titleId = UUID.randomUUID().toString();
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
+
+    doReturn(succeededFuture(line)).when(inventoryManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), eq(requestContext));
+
+    openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
+
+    assertEquals(line.getLocations().get(0).getHoldingId(), "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63");
+    verify(processInventoryStrategyResolver, times(1)).getHoldingAndItemStrategy(any());
+  }
+
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
@@ -102,8 +130,20 @@ public class OpenCompositeOrderInventoryServiceTest {
       return mock(OpenCompositeOrderPieceService.class);
     }
 
-    @Bean ProcessInventoryStrategyResolver resolver() {
-      return mock(ProcessInventoryStrategyResolver.class);
+    @Bean ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy() {
+      return spy(new ProcessInventoryPhysicalStrategy());
+    }
+
+    @Bean ProcessInventoryElectronicStrategy processInventoryElectronicStrategy() {
+      return spy(new ProcessInventoryElectronicStrategy());
+    }
+
+    @Bean ProcessInventoryStrategyResolver processInventoryStrategyResolver(ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy,
+                                                    ProcessInventoryElectronicStrategy processInventoryElectronicStrategy) {
+      Map<String, ProcessInventoryStrategy> strategy = new HashMap<>();
+      strategy.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
+      strategy.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);
+      return spy(new ProcessInventoryStrategyResolver(strategy));
     }
 
     @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryManager inventoryManager,
