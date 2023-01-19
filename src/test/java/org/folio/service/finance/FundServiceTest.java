@@ -5,7 +5,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.RestClientTest.X_OKAPI_TENANT;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
@@ -142,7 +142,7 @@ public class FundServiceTest {
         RequestEntry requestEntry = argumentCaptor.getValue();
         assertEquals(query, requestEntry.getQueryParams().get("query"));
         assertEquals(0, requestEntry.getQueryParams().get("offset"));
-        assertEquals(MAX_IDS_FOR_GET_RQ, requestEntry.getQueryParams().get("limit"));
+        assertEquals(MAX_IDS_FOR_GET_RQ_15, requestEntry.getQueryParams().get("limit"));
         assertThat(result.result(), equalTo(fundCollection.getFunds()));
         vertxTestContext.completeNow();
       });

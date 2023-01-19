@@ -10,7 +10,7 @@ import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOC_NOT_PROVIDED;
@@ -117,7 +117,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     this.piecesByLineId = piecesByLineId;
     // Split all piece id's by maximum number of id's for get query
     List<Future<Void>> futures = StreamEx
-      .ofSubLists(getPieceIds(), MAX_IDS_FOR_GET_RQ)
+      .ofSubLists(getPieceIds(), MAX_IDS_FOR_GET_RQ_15)
       // Send get request for each CQL query
       .map(ids -> getPiecesByIds(ids, piecesByPoLine, requestContext))
       .collect(Collectors.toList());
@@ -287,7 +287,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected Future<List<JsonObject>> getItemRecords(Map<String, Piece> piecesWithItems, RequestContext requestContext) {
     // Split all id's by maximum number of id's for get query
     List<Future<List<JsonObject>>> futures = StreamEx
-      .ofSubLists(new ArrayList<>(piecesWithItems.keySet()), MAX_IDS_FOR_GET_RQ)
+      .ofSubLists(new ArrayList<>(piecesWithItems.keySet()), MAX_IDS_FOR_GET_RQ_15)
       // Get item records from Inventory storage
       .map(ids -> getItemRecordsByIds(ids, piecesWithItems, requestContext))
       .toList();

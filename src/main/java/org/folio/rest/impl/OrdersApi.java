@@ -77,25 +77,25 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   @Validate
   public void postOrdersCompositeOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     // First validate content of the PO and proceed only if all is okay
     configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .compose(tenantConfig -> purchaseOrderHelper.validateOrder(compPO, tenantConfig, requestContext))
-      .compose(errors -> {
-        if (CollectionUtils.isEmpty(errors)) {
-          logger.info("Creating PO and POLines...");
-          return purchaseOrderHelper.createPurchaseOrder(compPO, requestContext)
-            .onSuccess(withIds -> {
-              logger.info("Successfully Placed Order: {}", JsonObject.mapFrom(withIds).encodePrettily());
-              String okapiUrl = okapiHeaders.get(OKAPI_URL);
-              String url = resourceByIdPath(PO_LINES_BUSINESS, compPO.getId());
-              asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiUrl, url, compPO)));
-            });
-        } else {
-          throw new HttpException(422, new Errors().withErrors(errors).withTotalRecords(errors.size()));
-        }
-      })
+      .compose(tenantConfig -> purchaseOrderHelper.validateOrder(compPO, tenantConfig, requestContext)
+        .compose(errors -> {
+          if (CollectionUtils.isEmpty(errors)) {
+            logger.info("Creating PO and POLines...");
+            return purchaseOrderHelper.createPurchaseOrder(compPO, tenantConfig, requestContext)
+              .onSuccess(withIds -> {
+                logger.info("Successfully Placed Order: {}", JsonObject.mapFrom(withIds).encodePrettily());
+                String okapiUrl = okapiHeaders.get(OKAPI_URL);
+                String url = resourceByIdPath(PO_LINES_BUSINESS, compPO.getId());
+                asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiUrl, url, compPO)));
+              });
+          } else {
+            throw new HttpException(422, new Errors().withErrors(errors)
+              .withTotalRecords(errors.size()));
+          }
+        }))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 

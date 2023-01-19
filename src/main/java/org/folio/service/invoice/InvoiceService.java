@@ -3,7 +3,7 @@ package org.folio.service.invoice;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -50,7 +50,7 @@ public class InvoiceService {
 
   public Future<List<Invoice>> getInvoicesByIds(Collection<String> invoiceIds, RequestContext requestContext) {
     return collectResultsOnSuccess(
-      ofSubLists(new ArrayList<>(invoiceIds), MAX_IDS_FOR_GET_RQ)
+      ofSubLists(new ArrayList<>(invoiceIds), MAX_IDS_FOR_GET_RQ_15)
                   .map(ids -> getInvoicesChunkByInvoiceIds(ids, requestContext)).toList())
       .map(invoiceCollections -> invoiceCollections.stream()
                                             .flatMap(invoiceCol -> invoiceCol.getInvoices().stream())

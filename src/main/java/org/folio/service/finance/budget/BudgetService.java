@@ -2,7 +2,7 @@ package org.folio.service.finance.budget;
 
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ public class BudgetService {
   }
 
   private Future<List<List<Budget>>> getBudgetsByChunks(Collection<String> fundIds, RequestContext requestContext) {
-    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ)
+    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ_15)
       .map(fIds -> fetchBudgetsByFundIds(fIds, requestContext))
       .toList());
   }

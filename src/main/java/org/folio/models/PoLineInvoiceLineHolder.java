@@ -5,23 +5,24 @@ import java.util.List;
 
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.PoLine;
 
 import io.vertx.core.json.JsonObject;
 
 
 public class PoLineInvoiceLineHolder {
-  private CompositePoLine poLine;
-  private JsonObject poLineFromStorage;
+  private CompositePoLine poLineFromRequest;
+  private PoLine poLineFromStorage;
   private List<InvoiceLine> invoiceLines;
   private List<InvoiceLine> openOrReviewedInvoiceLines;
-  private List<InvoiceLine> currentYearPaidInvoiceLines;
+  private List<InvoiceLine> paidOrCancelledInvoiceLines;
 
-  public PoLineInvoiceLineHolder(CompositePoLine poLine, JsonObject poLineFromStorage) {
-    this.poLine = poLine;
-    this.poLineFromStorage = poLineFromStorage;
+  public PoLineInvoiceLineHolder(CompositePoLine poLineFromRequest, JsonObject poLineFromStorage) {
+    this.poLineFromRequest = poLineFromRequest;
+    this.poLineFromStorage = poLineFromStorage.mapTo(PoLine.class);
     this.invoiceLines = new ArrayList<>();
     this.openOrReviewedInvoiceLines = new ArrayList<>();
-    this.currentYearPaidInvoiceLines = new ArrayList<>();
+    this.paidOrCancelledInvoiceLines = new ArrayList<>();
   }
 
   public PoLineInvoiceLineHolder withInvoiceLines(List<InvoiceLine> invoiceLines) {
@@ -34,16 +35,16 @@ public class PoLineInvoiceLineHolder {
     return this;
   }
 
-  public PoLineInvoiceLineHolder withCurrentYearPaidInvoiceLines(List<InvoiceLine> currentYearPaidInvoiceLines) {
-    this.currentYearPaidInvoiceLines = new ArrayList<>(currentYearPaidInvoiceLines);
+  public PoLineInvoiceLineHolder withPaidOrCancelledInvoiceLines(List<InvoiceLine> paidOrCancelledInvoiceLines) {
+    this.paidOrCancelledInvoiceLines = new ArrayList<>(paidOrCancelledInvoiceLines);
     return this;
   }
 
-  public CompositePoLine getPoLine() {
-    return poLine;
+  public CompositePoLine getPoLineFromRequest() {
+    return poLineFromRequest;
   }
 
-  public JsonObject getPoLineFromStorage() {
+  public PoLine getPoLineFromStorage() {
     return poLineFromStorage;
   }
 
@@ -55,8 +56,8 @@ public class PoLineInvoiceLineHolder {
     return openOrReviewedInvoiceLines;
   }
 
-  public List<InvoiceLine> getCurrentYearPaidInvoiceLines() {
-    return currentYearPaidInvoiceLines;
+  public List<InvoiceLine> getPaidOrCancelledInvoiceLines() {
+    return paidOrCancelledInvoiceLines;
   }
 
 }

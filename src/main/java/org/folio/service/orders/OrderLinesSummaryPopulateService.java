@@ -74,7 +74,6 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
           Double exchangeRate = cost.getExchangeRate();
           ConversionQuery conversionQuery = getConversionQuery(exchangeRate, cost.getCurrency(), toCurrency);
           var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
-          // TODO: implement cache for currency rates
           var conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
           blockingFuture.complete(money.with(conversion));
         }

@@ -1,5 +1,7 @@
 package org.folio.service.orders.flows.update.open;
 
+import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +18,7 @@ import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
 
 import io.vertx.core.Future;
+import io.vertxconcurrent.Semaphore;
 
 public class OpenCompositeOrderInventoryService {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderInventoryService.class);
@@ -34,20 +37,20 @@ public class OpenCompositeOrderInventoryService {
 
   public Future<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
       boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    List<Future<Void>> futures = new ArrayList<>();
-    Future<Void> future = Future.succeededFuture();
-    for (int idx = 0; idx < compPO.getCompositePoLines().size(); idx++) {
-      var poLine = compPO.getCompositePoLines().get(idx);
-      if (idx % 2 == 0){
-        // TODO: fix future processing
-        future = future.compose(v -> processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext));
-        futures.add(future);
-      } else {
-        futures.add(processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext));
-      }
-    }
-    return GenericCompositeFuture.join(new ArrayList<>(futures))
-      .mapEmpty();
+    Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
+    return requestContext.getContext().owner()
+      .<List<Future<Void>>>executeBlocking(event -> {
+        List<Future<Void>> futures = new ArrayList<>();
+        for (CompositePoLine poLine : compPO.getCompositePoLines()) {
+          Future<Void> future = processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine),isInstanceMatchingDisabled, requestContext);
+          futures.add(future);
+          semaphore.acquire(() -> future
+            .onComplete(asyncResult -> semaphore.release()));
+        }
+        event.complete(futures);
+      })
+      .compose(futures -> GenericCompositeFuture.all(new ArrayList<>(futures))
+        .mapEmpty());
   }
 
   public Future<Void> processInventory(CompositePoLine compPOL, String titleId, boolean isInstanceMatchingDisabled,
@@ -56,8 +59,7 @@ public class OpenCompositeOrderInventoryService {
     if (logger.isDebugEnabled()) {
       logger.debug("Executing a strategy for: {}", compPOL.getOrderFormat().value());
     }
-    return processInventoryStrategyResolver.getHoldingAndItemStrategy(compPOL.getOrderFormat()
-      .value())
+    return processInventoryStrategyResolver.getHoldingAndItemStrategy(compPOL.getOrderFormat().value())
       .processInventory(compPOL, titleId, isInstanceMatchingDisabled, inventoryManager, openCompositeOrderPieceService, requestContext);
   }
 

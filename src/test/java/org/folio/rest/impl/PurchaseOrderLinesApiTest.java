@@ -1143,8 +1143,7 @@ public class PurchaseOrderLinesApiTest {
     CompositePoLine compositePoLine = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
 
-    compositePoLine.getFundDistribution().get(0).setValue(70.0);
-    compositePoLine.getFundDistribution().get(1).setValue(30.0);
+    compositePoLine.getFundDistribution().get(0).setFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f");
 
 
     verifyPut(String.format(LINE_BY_ID_PATH, compositePoLine.getId()), JsonObject.mapFrom(compositePoLine).encode(),

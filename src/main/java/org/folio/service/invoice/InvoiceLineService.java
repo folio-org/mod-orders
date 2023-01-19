@@ -4,7 +4,7 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -65,7 +65,7 @@ public class InvoiceLineService {
 
   public Future<List<InvoiceLine>> getInvoiceLinesByOrderLineIds(List<String> poLineIds, RequestContext requestContext) {
     List<Future<List<InvoiceLine>>> futures = StreamEx
-      .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ)
+      .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getInvoiceLineByOrderLineIdsChunk(ids, requestContext))
       .collect(toList());
     return collectResultsOnSuccess(futures)
@@ -96,7 +96,7 @@ public class InvoiceLineService {
     return saveInvoiceLines(invoiceLinesToUpdate, requestContext);
   }
 
-  private Future<Void> saveInvoiceLines(List<InvoiceLine> invoiceLines, RequestContext requestContext) {
+  public Future<Void> saveInvoiceLines(List<InvoiceLine> invoiceLines, RequestContext requestContext) {
     return GenericCompositeFuture.join(invoiceLines.stream()
         .map(invLine -> saveInvoiceLine(invLine, requestContext))
         .collect(toList()))

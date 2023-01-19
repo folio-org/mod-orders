@@ -145,6 +145,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.helper.BaseHelper;
 import org.folio.isbn.IsbnUtil;
+import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -166,6 +167,7 @@ import org.folio.rest.acq.model.finance.LedgerCollection;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
+import org.folio.rest.acq.model.invoice.FundDistribution;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.acq.model.tag.Tag;
@@ -294,6 +296,7 @@ public class MockServer {
   public static final String CONFIGS = "configs";
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
+  public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -902,6 +905,15 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
+    } else if(id.equals("133a7916-f05e-4df4-8f7f-09eb2a7076d1")) {
+      FiscalYear fiscalYear = new FiscalYear();
+      fiscalYear.setId("ac2164c7-ba3d-1bc2-a12c-e35ceccbfaf2");
+      fiscalYear.setCode("test2020");
+      fiscalYear.setName("test");
+      fiscalYear.setCurrency("USD");
+      fiscalYear.setPeriodStart(Date.from(Instant.now().minus(365, DAYS)));
+      fiscalYear.setPeriodEnd(Date.from(Instant.now().plus(365, DAYS)));
+      serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(fiscalYear).encodePrettily());
     } else  {
       FiscalYear fiscalYear = new FiscalYear();
       fiscalYear.setId(UUID.randomUUID().toString());
@@ -2065,6 +2077,14 @@ public class MockServer {
 
   private void handlePostPurchaseOrder(RoutingContext ctx) {
     logger.info("got: " + ctx.body().asString());
+    if (ORDER_ID_DUPLICATION_ERROR_USER_ID.equals(ctx.request().getHeader(RestVerticle.OKAPI_USERID_HEADER))) {
+      JsonObject body = ctx.body().asJsonObject();
+      Error error = new Error()
+        .withMessage(String.format("duplicate key value violates unique constraint \\\"purchase_order_pkey\\\": Key (id)=(%s) already exists.", body.getString(ID)))
+        .withCode("generic error");
+      serverResponse(ctx, 500, APPLICATION_JSON, Json.encodePrettily(error));
+      return;
+    }
     String id = UUID.randomUUID().toString();
     JsonObject body = ctx.body().asJsonObject();
     body.put(ID, id);
@@ -2255,6 +2275,10 @@ public class MockServer {
             .withStatus(Encumbrance.Status.RELEASED));
         List<Transaction> transactions = List.of(transaction1);
         TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
+        body = JsonObject.mapFrom(transactionCollection).encodePrettily();
+      } else if (query.contains("id==(9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1)")) {
+        TransactionCollection transactionCollection = new JsonObject(getMockData(ENCUMBRANCE_PATH)).mapTo(TransactionCollection.class);
+        transactionCollection.getTransactions().get(0).withId("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else {
         body = getMockData(ENCUMBRANCE_PATH);
@@ -2754,6 +2778,9 @@ public class MockServer {
         InvoiceLine invoiceLine = new InvoiceLine()
           .withId(UUID.randomUUID().toString())
           .withPoLineId(poLineId2)
+          .withFundDistributions(List.of(new FundDistribution().withCode("HIST")
+            .withFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f").withEncumbrance("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1")
+            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(80.0)))
           .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.APPROVED)
           .withReleaseEncumbrance(true);
         invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
@@ -2764,6 +2791,7 @@ public class MockServer {
       InvoiceLine invoiceLine = new InvoiceLine()
         .withId(UUID.randomUUID().toString())
         .withPoLineId(poLineId2)
+        .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.OPEN)
         .withInvoiceId(UUID.randomUUID().toString())
         .withReleaseEncumbrance(true);
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);

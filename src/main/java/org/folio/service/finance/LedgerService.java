@@ -3,7 +3,7 @@ package org.folio.service.finance;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.ID;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRANSACTION;
 
 import java.util.Collection;
@@ -34,7 +34,7 @@ public class LedgerService {
   public Future<List<Ledger>> getLedgersByIds(Collection<String> ledgerIds, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ledgerIds, ID);
     RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query)
-              .withLimit(MAX_IDS_FOR_GET_RQ).withOffset(0);
+              .withLimit(MAX_IDS_FOR_GET_RQ_15).withOffset(0);
     return restClient.get(requestEntry, LedgerCollection.class, requestContext)
       .map(ledgerCollection -> {
         if (ledgerIds.size() == ledgerCollection.getLedgers()

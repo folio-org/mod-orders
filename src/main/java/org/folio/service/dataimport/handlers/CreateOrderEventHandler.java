@@ -279,7 +279,7 @@ public class CreateOrderEventHandler implements EventHandler {
         if (CollectionUtils.isNotEmpty(errors)) {
           return Future.failedFuture(new EventProcessingException(errors.toString()));
         }
-        return purchaseOrderHelper.createPurchaseOrder(orderToSave, requestContext)
+        return purchaseOrderHelper.createPurchaseOrder(orderToSave, tenantConfig, requestContext)
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
             if (e instanceof HttpException) {

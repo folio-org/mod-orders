@@ -13,6 +13,7 @@ import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
+import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -246,6 +247,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     }
     piece.setEnumeration(checkinPiece.getEnumeration());
     piece.setChronology(checkinPiece.getChronology());
+    piece.setCopyNumber(checkinPiece.getCopyNumber());
     piece.setDisplayOnHolding(checkinPiece.getDisplayOnHolding());
     piece.setDiscoverySuppress(checkinPiece.getDiscoverySuppress());
     piece.setSupplement(checkinPiece.getSupplement());
@@ -361,6 +363,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     }
     Optional.ofNullable(checkinPiece.getEnumeration())
       .ifPresentOrElse(enumeration -> itemRecord.put(ITEM_ENUMERATION, enumeration), () -> itemRecord.remove(ITEM_ENUMERATION));
+    Optional.ofNullable(checkinPiece.getCopyNumber())
+      .ifPresentOrElse(copyNumber -> itemRecord.put(COPY_NUMBER, copyNumber), () -> itemRecord.remove(COPY_NUMBER));
     Optional.ofNullable(checkinPiece.getChronology())
       .ifPresentOrElse(chronology -> itemRecord.put(ITEM_CHRONOLOGY, chronology), () -> itemRecord.remove(ITEM_CHRONOLOGY));
     Optional.ofNullable(checkinPiece.getDiscoverySuppress())
