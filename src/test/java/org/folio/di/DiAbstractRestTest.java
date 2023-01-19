@@ -76,7 +76,7 @@ public abstract class DiAbstractRestTest {
   private static final String KAFKA_HOST = "KAFKA_HOST";
   private static final String KAFKA_PORT = "KAFKA_PORT";
   private static final String KAFKA_ENV = "ENV";
-  private static final String KAFKA_ENV_VALUE = "test-env";
+  protected static final String KAFKA_ENV_VALUE = "test-env";
   public static final String OKAPI_URL_ENV = "OKAPI_URL";
   private static final int PORT = NetworkUtils.nextFreePort();
   protected static final String OKAPI_URL = "http://localhost:" + PORT;
