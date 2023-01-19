@@ -134,7 +134,7 @@ public class CreateOrderEventHandler implements EventHandler {
       .compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
       .compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
       .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, tenantConfigFuture.result(), requestContext))
-      .compose(v -> adjustEventType(dataImportEventPayload, okapiHeaders))
+      .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders))
       .onComplete(ar -> {
         if (ar.failed()) {
           LOGGER.error("handle:: Error during order or order line creation", ar.cause());
@@ -160,7 +160,7 @@ public class CreateOrderEventHandler implements EventHandler {
     return Future.succeededFuture();
   }
 
-  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, Map<String, String> okapiHeaders) {
+  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, Map<String, String> okapiHeaders) {
     CompositePurchaseOrder order = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     WorkflowStatus workflowStatus = extractWorkflowStatus(dataImportEventPayload);
 
@@ -172,9 +172,10 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     Boolean isApproved = order.getApproved();
+    boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
 
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
-      if (!isApproved) {
+      if (!isApproved && isApprovalRequired) {
         LOGGER.debug(format("adjustEventType:: set event type DI_COMPLETED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
         return Future.succeededFuture();
       }

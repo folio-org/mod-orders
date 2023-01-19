@@ -149,6 +149,28 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
             "df26d81b-9d63-4ff8-bf41-49bf75cfa70e", "Purchase"
           )))))));
 
+  private final MappingProfile openOrderMappingProfileApprovedFalse = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(ORDER)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(new ArrayList<>(List.of(
+        new MappingRule().withPath("order.po.workflowStatus").withValue("\"Open\"").withEnabled("true"),
+        new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
+        new MappingRule().withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
+        new MappingRule().withPath("order.po.approved").withValue("\"false\"").withEnabled("true"),
+
+        new MappingRule().withPath("order.po.poLinesLimit").withValue("7").withEnabled("true").withName("poLinesLimit"),
+
+        new MappingRule().withPath("order.poLine.titleOrPackage").withValue("245$a").withEnabled("true"),
+        new MappingRule().withPath("order.poLine.cost.currency").withValue("\"USD\"").withEnabled("true"),
+        new MappingRule().withPath("order.poLine.orderFormat").withValue("\"Physical Resource\"").withEnabled("true"),
+        new MappingRule().withPath("order.poLine.checkinItems").withValue("\"true\"").withEnabled("true"),
+        new MappingRule().withPath("order.poLine.acquisitionMethod").withValue("\"Purchase\"").withEnabled("true")
+          .withAcceptedValues(new HashMap<>(Map.of(
+            "df26d81b-9d63-4ff8-bf41-49bf75cfa70e", "Purchase"
+          )))))));
+
   private Record record;
 
   @BeforeClass
@@ -222,15 +244,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     kafkaCluster.send(request);
 
     // then
-    String topicToObserve = formatToKafkaTopicName(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
-
-    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
-      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
-
-    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
-    DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
+    DataImportEventPayload eventPayload = observeEvent(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
     assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventType());
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
@@ -297,6 +311,80 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     // then
     DataImportEventPayload eventPayload = observeEvent(DI_PENDING_ORDER_CREATED.value());
     assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventType());
+
+    assertNotNull(eventPayload.getContext().get(ORDER.value()));
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertNotNull(createdOrder.getId());
+    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
+    assertNotNull(createdOrder.getVendor());
+    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+  }
+
+  @Test
+  public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecifiedAndApprovalIsNotRequiredAndApprovedFalse() throws InterruptedException {
+    // given
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfileApprovedFalse);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
+    assertEquals(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value(), eventPayload.getEventType());
+
+    assertNotNull(eventPayload.getContext().get(ORDER.value()));
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertNotNull(createdOrder.getId());
+    assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
+    assertNotNull(createdOrder.getVendor());
+    assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
+  }
+
+  @Test
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenOpenStatusSpecifiedAndApprovalIsRequiredAndApprovedFalse() throws InterruptedException {
+    // given
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfileApprovedFalse);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_APPROVAL_REQUIRED)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
+
+    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
+      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+
+    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     assertNotNull(eventPayload.getContext().get(ORDER.value()));
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
