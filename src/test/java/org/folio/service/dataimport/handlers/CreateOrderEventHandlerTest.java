@@ -2,10 +2,10 @@ package org.folio.service.dataimport.handlers;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.RunTestOnContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ObserveKeyValues;
@@ -20,6 +20,7 @@ import org.folio.Record;
 import org.folio.TestConfig;
 import org.folio.di.DiAbstractRestTest;
 import org.folio.kafka.exception.DuplicateEventException;
+import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.rest.RestConstants;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -31,11 +32,12 @@ import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
@@ -65,6 +67,7 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.CONFIGS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -72,6 +75,7 @@ import static org.folio.rest.jaxrs.model.EntityType.ORDER;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.service.dataimport.handlers.CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -86,10 +90,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String INSTANCE_ID_KEY = "id";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
-
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
-  private static final String KAFKA_ENV_VALUE = "test-env";
-
+  private static final String USER_ID = "6bece55a-831c-4197-bed1-coff1e00b7d8";
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -512,6 +514,45 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
+  public void shouldCreateOrderWithSpecifiedAcquisitionUnitWhenUserHasUnitsAssignmentsPermission() throws InterruptedException {
+    // given
+    String expectedAcqUnitId = "0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
+    String acqUnitName = "Not protected";
+    MappingRule acqUnitIdsRule = new MappingRule()
+      .withAcceptedValues(new HashMap<>(Map.of(expectedAcqUnitId, acqUnitName)))
+      .withPath("order.po.acqUnitIds[]")
+      .withValue(String.format("\"%s\"", acqUnitName))
+      .withEnabled("true");
+
+    mappingProfile.getMappingDetails().getMappingFields().add(acqUnitIdsRule);
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(OKAPI_PERMISSIONS_HEADER, JsonArray.of(AcqDesiredPermissions.ASSIGN.getPermission()).encode());
+        put(OKAPI_USERID_HEADER, USER_ID);
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    CompositePurchaseOrder order = verifyOrder(eventPayload);
+    MatcherAssert.assertThat(order.getAcqUnitIds(), Matchers.hasItem(expectedAcqUnitId));
+  }
+
+  @Test
   public void shouldReturnFailedByDuplicateEventExceptionFutureWhenOrderIdDuplicationErrorOccurs(TestContext context) {
     Async async = context.async();
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
@@ -594,6 +635,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     KeyValue<String, String> kafkaRecord = new KeyValue<>("test-key", Json.encode(event));
     kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
     kafkaRecord.addHeader(RestConstants.OKAPI_URL, payload.getOkapiUrl(), UTF_8);
+    kafkaRecord.addHeader(OKAPI_PERMISSIONS_HEADER, payload.getContext().getOrDefault(OKAPI_PERMISSIONS_HEADER, ""), UTF_8);
+    kafkaRecord.addHeader(OKAPI_USERID_HEADER, payload.getContext().getOrDefault(OKAPI_USERID_HEADER, ""), UTF_8);
     String topic = formatToKafkaTopicName(payload.getEventType());
     return SendKeyValues.to(topic, Collections.singletonList(kafkaRecord)).useDefaults();
   }
