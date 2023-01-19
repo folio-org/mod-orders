@@ -163,7 +163,6 @@ public class CreateOrderEventHandler implements EventHandler {
                                                    JsonObject tenantConfig, RequestContext requestContext) {
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     orderToSave.setId(orderId);
-    orderToSave.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME); // todo: workaround for mapping profile
     // in this handler a purchase order always is created in PENDING status despite the status that is set during mapping
     orderToSave.setWorkflowStatus(WorkflowStatus.PENDING);
 
@@ -203,13 +202,21 @@ public class CreateOrderEventHandler implements EventHandler {
       .onComplete(ar -> dataImportEventPayload.getContext().put(ORDER_LINES_KEY, Json.encode(poLine)));
   }
 
+  /**
+   * Extracts po lines limit from mapping profile which is contained in the specified {@code dataImportEventPayload}
+   * and marks poLine limit mapping rule as not enabled, if one exists,
+   * to prevent the mapping rule from being used for po line mapping.
+   *
+   * @param dataImportEventPayload containing a mapping profile
+   * @return Optional of po lines limit
+   */
   private Optional<Integer> extractPoLinesLimit(DataImportEventPayload dataImportEventPayload) {
     ProfileSnapshotWrapper mappingProfileWrapper = dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0);
     MappingProfile mappingProfile = ObjectMapperTool.getMapper().convertValue(mappingProfileWrapper.getContent(), MappingProfile.class);
 
     Optional<Integer> limitOptional = mappingProfile.getMappingDetails().getMappingFields().stream()
       .filter(mappingRule -> POL_LIMIT_RULE_NAME.equals(mappingRule.getName()) && isNotBlank(mappingRule.getValue()))
-      .peek(mappingRule -> mappingRule.setEnabled("false"))
+      .map(mappingRule -> mappingRule.withEnabled("false"))
       .map(mappingRule -> Integer.parseInt(StringUtils.unwrap(mappingRule.getValue(), '"')))
       .findFirst();
 
@@ -238,19 +245,6 @@ public class CreateOrderEventHandler implements EventHandler {
         .onComplete(v -> dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode()));
     }
 
-    // todo: workaround:
-//    orderJson.put("workflowStatus", orderJson.getString("poStatus"));
-//    orderJson.put("orderType", "One-Time");
-//    orderJson.remove("poStatus");
-//    if (orderJson.getString("acqUnitIds") != null) {
-//      orderJson.put("acqUnitIds", new JsonArray(List.of(orderJson.getString("acqUnitIds"))));
-//    }
-    dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
-//    poLineJson.put("titleOrPackage", poLineJson.getString("title"));
-//    poLineJson.remove("title");
-//    poLineJson.getJsonObject("eresource").put("activated", false);
-//    poLineJson.getJsonObject("eresource").remove("activationStatus");
-//    poLineJson.remove("useExchangeRate");
     dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode());
     return Future.succeededFuture();
   }
@@ -317,7 +311,8 @@ public class CreateOrderEventHandler implements EventHandler {
   @Override
   public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
     if (dataImportEventPayload.getCurrentNode() != null && ACTION_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
-      ActionProfile actionProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(ActionProfile.class);
+      ActionProfile actionProfile = ObjectMapperTool.getMapper()
+        .convertValue(dataImportEventPayload.getCurrentNode().getContent(), ActionProfile.class);
       return actionProfile.getAction() == CREATE && actionProfile.getFolioRecord() == ORDER;
     }
     return false;
