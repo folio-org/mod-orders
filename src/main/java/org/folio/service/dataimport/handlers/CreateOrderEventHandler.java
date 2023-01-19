@@ -170,7 +170,7 @@ public class CreateOrderEventHandler implements EventHandler {
     return purchaseOrderHelper.validateOrder(orderToSave, tenantConfig, requestContext)
       .compose(errors -> {
         if (CollectionUtils.isNotEmpty(errors)) {
-          return Future.failedFuture(new EventProcessingException(errors.toString()));
+          return Future.failedFuture(new EventProcessingException(Json.encode(errors)));
         }
         return purchaseOrderHelper.createPurchaseOrder(orderToSave, tenantConfig, requestContext)
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
