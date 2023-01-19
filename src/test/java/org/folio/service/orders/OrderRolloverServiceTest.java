@@ -2,6 +2,11 @@ package org.folio.service.orders;
 
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.singletonList;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.OrderType.ONE_TIME;
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -21,7 +26,10 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.money.Monetary;
@@ -41,6 +49,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.service.configuration.ConfigurationEntriesService;
@@ -53,13 +62,18 @@ import org.javamoney.moneta.spi.DefaultNumberValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
+@ExtendWith(VertxExtension.class)
 public class OrderRolloverServiceTest {
 
   @InjectMocks
@@ -77,19 +91,26 @@ public class OrderRolloverServiceTest {
   private ConfigurationEntriesService configurationEntriesService;
   @Mock
   private ExchangeRateProviderResolver exchangeRateProviderResolver;
-  @Mock
   private RequestContext requestContext;
+  private Map<String, String> okapiHeadersMock;
+
   private String systemCurrency = "USD";
 
   @BeforeEach
   public void initMocks() {
     MockitoAnnotations.openMocks(this);
+    okapiHeadersMock = new HashMap<>();
+    okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
+    okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
+    okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
+    okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
+    requestContext = new RequestContext(Vertx.vertx().getOrCreateContext(), okapiHeadersMock);
   }
 
 
   @Test
   @DisplayName("Should update order lines cost And Encumbrance Links where Pol Currency equals systemCurrency")
-  void shouldUpdateOrderLinesCostAndEncumbranceLinksAndPolCurrencyVsSystemCurrencyTheSame() {
+  void shouldUpdateOrderLinesCostAndEncumbranceLinksAndPolCurrencyVsSystemCurrencyTheSame(VertxTestContext vertxTestContext) {
     String fromFiscalYearId = UUID.randomUUID().toString();
     String ledgerId = UUID.randomUUID().toString();
     String toFiscalYearId = UUID.randomUUID().toString();
@@ -155,10 +176,16 @@ public class OrderRolloverServiceTest {
       .withFundDistribution(List.of(fundDistributionOngoing3));
 
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing2, poLineOngoing3);
+    PoLineCollection poLineCollection = new PoLineCollection()
+      .withPoLines(poLines)
+      .withTotalRecords(poLines.size());
+    PoLineCollection emptyPoLineCollection = new PoLineCollection()
+      .withPoLines(new ArrayList<>())
+      .withTotalRecords(0);
 
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(succeededFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
-      .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
+    doReturn(succeededFuture(poLineCollection), succeededFuture(emptyPoLineCollection))
+      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
@@ -195,25 +222,27 @@ public class OrderRolloverServiceTest {
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
 
     Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
-    future.result();
-    assertFalse(future.failed());
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
+        assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
+        assertThat(fundDistributionOngoing3.getEncumbrance(), equalTo(currEncumbrId3));
 
-    assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
-    assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
-    assertThat(fundDistributionOngoing3.getEncumbrance(), equalTo(currEncumbrId3));
+        assertThat(costOneTime.getPoLineEstimatedPrice(), equalTo(60d));
+        assertThat(costOngoing2.getPoLineEstimatedPrice(), equalTo(90d));
+        assertThat(costOngoing3.getPoLineEstimatedPrice(), equalTo(95d));
 
-    assertThat(costOneTime.getPoLineEstimatedPrice(), equalTo(60d));
-    assertThat(costOngoing2.getPoLineEstimatedPrice(), equalTo(90d));
-    assertThat(costOngoing3.getPoLineEstimatedPrice(), equalTo(95d));
-
-    assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(-40d));
-    assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(-10d));
-    assertThat(costOngoing3.getFyroAdjustmentAmount(), equalTo(-5d));
+        assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(-40d));
+        assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(-10d));
+        assertThat(costOngoing3.getFyroAdjustmentAmount(), equalTo(-5d));
+        vertxTestContext.completeNow();
+      })
+      .onFailure(vertxTestContext::failNow);
   }
 
   @Test
   @DisplayName("Should update FundDistributions amounts based on updatedEstimatedPrice")
-  void shouldUpdateFundDistributionsAmountsBasedOnUpdatedEstimatedPrice() {
+  void shouldUpdateFundDistributionsAmountsBasedOnUpdatedEstimatedPrice(VertxTestContext vertxTestContext) {
     String fromFiscalYearId = UUID.randomUUID().toString();
     String ledgerId = UUID.randomUUID().toString();
     String toFiscalYearId = UUID.randomUUID().toString();
@@ -261,13 +290,20 @@ public class OrderRolloverServiceTest {
     Cost costOneTime = new Cost().withListUnitPrice(595d).withQuantityPhysical(1).withCurrency("USD").withPoLineEstimatedPrice(595d);
     PoLine poLineOneTime = new PoLine().withId(poLineId1).withPurchaseOrderId(orderId1).withCost(costOneTime)
       .withFundDistribution(List.of(fundDistributionOneTime, fundDistributionOngoing));
+
     List<PoLine> poLines = List.of(poLineOneTime);
+    PoLineCollection poLineCollection = new PoLineCollection()
+      .withPoLines(poLines)
+      .withTotalRecords(poLines.size());
+    PoLineCollection emptyPoLineCollection = new PoLineCollection()
+      .withPoLines(new ArrayList<>())
+      .withTotalRecords(0);
 
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(succeededFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
-      .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
+    doReturn(succeededFuture(poLineCollection), succeededFuture(emptyPoLineCollection))
+      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(any(), any());
 
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(580d);
@@ -293,18 +329,19 @@ public class OrderRolloverServiceTest {
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
 
     Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
-    future.result();
-    assertFalse(future.failed());
-
-    assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
-
-    assertThat(costOneTime.getPoLineEstimatedPrice(), equalTo(580d));
-    assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(-15d));
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
+        assertThat(costOneTime.getPoLineEstimatedPrice(), equalTo(580d));
+        assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(-15d));
+        vertxTestContext.completeNow();
+      })
+      .onFailure(vertxTestContext::failNow);
   }
 
   @Test
   @DisplayName("Should update order lines cost And Encumbrance Links where Pol Currency and systemCurrency are different")
-  void shouldUpdateOrderLinesCostAndEncumbranceLinksWithExchangeRateAndPolCurrencyVsSystemCurrencyAreDifferent() {
+  void shouldUpdateOrderLinesCostAndEncumbranceLinksWithExchangeRateAndPolCurrencyVsSystemCurrencyAreDifferent(VertxTestContext vertxTestContext) {
     String fromFiscalYearId = UUID.randomUUID().toString();
     String ledgerId = UUID.randomUUID().toString();
     String toFiscalYearId = UUID.randomUUID().toString();
@@ -370,12 +407,18 @@ public class OrderRolloverServiceTest {
     PoLine poLineOngoing3 = new PoLine().withId(poLineId3).withPurchaseOrderId(orderId3).withCost(costOngoing3)
       .withFundDistribution(List.of(fundDistributionOngoing3));
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing2, poLineOngoing3);
+    PoLineCollection poLineCollection = new PoLineCollection()
+      .withPoLines(poLines)
+      .withTotalRecords(poLines.size());
+    PoLineCollection emptyPoLineCollection = new PoLineCollection()
+      .withPoLines(new ArrayList<>())
+      .withTotalRecords(0);
 
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(succeededFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
-      .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
+    doReturn(succeededFuture(poLineCollection), succeededFuture(emptyPoLineCollection))
+      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
+    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLines(any(), any());
 
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(30.16d);
@@ -409,28 +452,33 @@ public class OrderRolloverServiceTest {
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
 
     Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
-    future.result();
-    assertFalse(future.failed());
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
+        assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
+        assertThat(fundDistributionOngoing3.getEncumbrance(), equalTo(currEncumbrId3));
 
-    assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
-    assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
-    assertThat(fundDistributionOngoing3.getEncumbrance(), equalTo(currEncumbrId3));
+        assertThat(BigDecimal.valueOf(costOneTime.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
+          equalTo(new BigDecimal("24.99").setScale(2, RoundingMode.HALF_EVEN)));
+        assertThat(BigDecimal.valueOf(costOngoing2.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
+          equalTo(new BigDecimal("24.99").setScale(2, RoundingMode.HALF_EVEN)));
+        assertThat(BigDecimal.valueOf(costOngoing3.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
+          equalTo(new BigDecimal("24.99").setScale(2, RoundingMode.HALF_EVEN)));
 
-    assertThat(new BigDecimal(costOneTime.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
-                equalTo(new BigDecimal(24.99d).setScale(2, RoundingMode.HALF_EVEN)));
-    assertThat(new BigDecimal(costOngoing2.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
-                equalTo(new BigDecimal(24.99d).setScale(2, RoundingMode.HALF_EVEN)));
-    assertThat(new BigDecimal(costOngoing3.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
-                equalTo(new BigDecimal(24.99d).setScale(2, RoundingMode.HALF_EVEN)));
+        assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(0.0d));
+        assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(0.0d));
+        assertThat(costOngoing3.getFyroAdjustmentAmount(), equalTo(0.0d));
+        vertxTestContext.completeNow();
+      })
+      .onFailure(vertxTestContext::failNow);
 
-    assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(0.0d));
-    assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(0.0d));
-    assertThat(costOngoing3.getFyroAdjustmentAmount(), equalTo(0.0d));
+
+
   }
 
   @Test
   @DisplayName("Should remove encumbrance links and encumbrances if needed for closed orders")
-  void shouldRemoveEncumbranceLinksAndEncumbrancesIfNeededForClosedOrders() {
+  void shouldRemoveEncumbranceLinksAndEncumbrancesIfNeededForClosedOrders(VertxTestContext vertxTestContext) {
     String fromFiscalYearId = UUID.randomUUID().toString();
     String ledgerId = UUID.randomUUID().toString();
     String toFiscalYearId = UUID.randomUUID().toString();
@@ -476,11 +524,18 @@ public class OrderRolloverServiceTest {
       .withPurchaseOrderId(orderId)
       .withCost(cost)
       .withFundDistribution(singletonList(fundDistribution));
+
     List<PoLine> poLines = singletonList(poLine);
+    PoLineCollection poLineCollection = new PoLineCollection()
+      .withPoLines(poLines)
+      .withTotalRecords(poLines.size());
+    PoLineCollection emptyPoLineCollection = new PoLineCollection()
+      .withPoLines(new ArrayList<>())
+      .withTotalRecords(0);
 
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
-    doReturn(succeededFuture(purchaseOrderCollection)).when(purchaseOrderStorageService)
-      .getPurchaseOrders(anyString(), anyInt(), anyInt(), any());
+    doReturn(succeededFuture(emptyPoLineCollection), succeededFuture(poLineCollection))
+      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
@@ -501,13 +556,15 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(null)).when(transactionService).deleteTransactions(anyList(), any());
 
     Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
-    future.result();
-    assertFalse(future.failed());
-
-    assertThat(fundDistribution.getEncumbrance(), equalTo(null));
-    verify(transactionService, times(1)).deleteTransactions(
-      argThat(transactions -> transactions.size() == 1 && currEncumbrId.equals(transactions.get(0).getId())), any());
-    verify(purchaseOrderLineService, times(1)).saveOrderLines(eq(poLines), any());
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        assertThat(fundDistribution.getEncumbrance(), equalTo(null));
+        verify(transactionService, times(1)).deleteTransactions(
+          argThat(transactions -> transactions.size() == 1 && currEncumbrId.equals(transactions.get(0).getId())), any());
+        verify(purchaseOrderLineService, times(1)).saveOrderLines(eq(poLines), any());
+        vertxTestContext.completeNow();
+      })
+      .onFailure(vertxTestContext::failNow);
   }
 
 }

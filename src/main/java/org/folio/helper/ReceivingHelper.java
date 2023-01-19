@@ -14,6 +14,7 @@ import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
+import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -301,6 +302,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     }
     piece.setEnumeration(receivedItem.getEnumeration());
     piece.setChronology(receivedItem.getChronology());
+    piece.setCopyNumber(receivedItem.getCopyNumber());
     piece.setDisplayOnHolding(receivedItem.getDisplayOnHolding());
     // Piece record might be received or rolled-back to Expected
     if (inventoryManager.isOnOrderItemStatus(receivedItem)) {
@@ -330,6 +332,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     }
     Optional.ofNullable(receivedItem.getEnumeration())
       .ifPresentOrElse(enumeration -> itemRecord.put(ITEM_ENUMERATION, enumeration), () -> itemRecord.remove(ITEM_ENUMERATION));
+    Optional.ofNullable(receivedItem.getCopyNumber())
+      .ifPresentOrElse(copyNumber -> itemRecord.put(COPY_NUMBER, copyNumber), () -> itemRecord.remove(COPY_NUMBER));
     Optional.ofNullable(receivedItem.getChronology())
       .ifPresentOrElse(chronology -> itemRecord.put(ITEM_CHRONOLOGY, chronology), () -> itemRecord.remove(ITEM_CHRONOLOGY));
     return inventoryManager.updateItem(itemRecord, requestContext);

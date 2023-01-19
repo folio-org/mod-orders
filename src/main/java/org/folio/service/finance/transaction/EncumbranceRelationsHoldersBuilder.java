@@ -282,6 +282,8 @@ public class EncumbranceRelationsHoldersBuilder {
         newTransaction.getEncumbrance()
           .withAmountExpended(existingTransaction.getEncumbrance().getAmountExpended())
           .withAmountAwaitingPayment(existingTransaction.getEncumbrance().getAmountAwaitingPayment());
+        if (existingTransaction.getEncumbrance().getStatus() == Encumbrance.Status.RELEASED)
+          newTransaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
       }));
   }
 

@@ -34,6 +34,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.pieces.PieceStorageService;
@@ -205,6 +206,9 @@ public class OrderLineUpdateInstanceHandlerTest {
     @Bean PieceStorageService pieceStorageService(RestClient restClient) {
       return new PieceStorageService(restClient);
     }
+    @Bean InventoryService inventoryService (RestClient restClient) {
+      return new InventoryService(restClient);
+    }
 
     @Bean
     ConfigurationEntriesService configurationEntriesService(RestClient restClient) {
@@ -217,8 +221,8 @@ public class OrderLineUpdateInstanceHandlerTest {
       return new InventoryManager(restClient, configurationEntriesService, pieceStorageService);
     }
 
-    @Bean PurchaseOrderLineService purchaseOrderLineService(RestClient restClient) {
-      return new PurchaseOrderLineService(restClient);
+    @Bean PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryService inventoryService) {
+      return new PurchaseOrderLineService(inventoryService, restClient);
     }
 
     @Bean OrderLinePatchOperationService orderLinePatchOperationService(

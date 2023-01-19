@@ -1,7 +1,6 @@
 package org.folio.helper;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEqualCollection;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
@@ -29,15 +28,11 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -76,7 +71,6 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.AcquisitionsUnitsService;
@@ -175,7 +169,8 @@ public class PurchaseOrderLineHelper {
         RequestEntry requestEntry = new RequestEntry(resourcesPath(PO_LINES_STORAGE))
                                               .withQuery(finalQuery).withLimit(limit).withOffset(offset);
         return restClient.get(requestEntry, PoLineCollection.class, requestContext);
-      });
+      })
+      .onFailure(t -> logger.error("Error getting orderLines", t));
   }
 
   /**
@@ -290,7 +285,7 @@ public class PurchaseOrderLineHelper {
    * Handles update of the order line. First retrieve the PO line from storage and depending on its content handle passed PO line.
    */
   public Future<Void> updateOrderLine(CompositePoLine compOrderLine, RequestContext requestContext) {
-    return validateAndNormalizeISBN(compOrderLine, requestContext)
+    return purchaseOrderLineService.validateAndNormalizeISBN(Collections.singletonList(compOrderLine), requestContext)
         .compose(v -> getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId(), requestContext))
         .compose(lineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId(), requestContext)
           .map(compOrder -> addLineToCompOrder(compOrder, lineFromStorage))
@@ -315,6 +310,7 @@ public class PurchaseOrderLineHelper {
           return polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
             .compose(v -> updateOrderLine(compOrderLine, lineFromStorage, requestContext))
             .compose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
+            .compose(v -> polInvoiceLineRelationService.updateInvoiceLineReference(poLineInvoiceLineHolder, requestContext))
             .compose(v -> updateInventoryItemStatus(compOrderLine, lineFromStorage, requestContext))
             .map(ok -> {
               updateOrderStatus(compOrderLine, lineFromStorage, requestContext);
@@ -469,27 +465,6 @@ public class PurchaseOrderLineHelper {
       .mapEmpty();
   }
 
-  public Future<Void> validateAndNormalizeISBN(CompositePoLine compPOL, String isbnId, Map<String, String> normalizedIsbnCache, RequestContext requestContext) {
-    return validateIsbnValues(compPOL, isbnId, normalizedIsbnCache, requestContext)
-      .map(aVoid -> {
-        removeISBNDuplicates(compPOL, isbnId);
-        return null;
-      });
-  }
-
-  public Future<Void> validateAndNormalizeISBN(CompositePoLine compPOL, RequestContext requestContext) {
-    Map<String, String> normalizedIsbnCache = new HashMap<>();
-    if (HelperUtils.isProductIdsExist(compPOL)) {
-      return inventoryManager.getProductTypeUuidByIsbn(requestContext)
-                  .compose(id -> validateIsbnValues(compPOL, id, normalizedIsbnCache, requestContext)
-                  .map(aVoid -> {
-                    removeISBNDuplicates(compPOL, id);
-                    return null;
-                  }));
-    }
-    return Future.succeededFuture();
-  }
-
   public Future<Void> updatePoLines(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO, RequestContext requestContext) {
     logger.debug("updatePoLines start");
     if (isPoLinesUpdateRequired(poFromStorage, compPO)) {
@@ -607,63 +582,6 @@ public class PurchaseOrderLineHelper {
     return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
   }
 
-  private Future<Void> validateIsbnValues(CompositePoLine compPOL, String isbnTypeId,
-      Map<String, String> normalizedIsbnCache, RequestContext requestContext) {
-    List<Future<?>> futures = compPOL.getDetails()
-      .getProductIds()
-      .stream()
-      .filter(productId -> isISBN(isbnTypeId, productId))
-      .map(productID -> {
-        if (normalizedIsbnCache.get(productID.getProductId()) != null) {
-          productID.setProductId(normalizedIsbnCache.get(productID.getProductId()));
-          return Future.succeededFuture();
-        } else {
-          return inventoryManager.convertToISBN13(productID.getProductId(), requestContext)
-            .map(normalizedIsbn -> {
-              normalizedIsbnCache.put(productID.getProductId(), normalizedIsbn);
-              productID.setProductId(normalizedIsbn);
-              return null;
-            });
-        }
-      }).collect(toList());
-
-    return GenericCompositeFuture.join(futures)
-      .mapEmpty();
-  }
-
-  private void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
-    List<ProductId> notISBNs = getNonISBNProductIds(compPOL, isbnTypeId);
-    List<ProductId> isbns = getDeduplicatedISBNs(compPOL, isbnTypeId);
-    isbns.addAll(notISBNs);
-    compPOL.getDetails().setProductIds(isbns);
-  }
-
-  private List<ProductId> getDeduplicatedISBNs(CompositePoLine compPOL, String isbnTypeId) {
-    Map<String, List<ProductId>> uniqueISBNProductIds = compPOL.getDetails().getProductIds().stream()
-      .filter(productId -> isISBN(isbnTypeId, productId))
-      .distinct()
-      .collect(groupingBy(ProductId::getProductId));
-
-    return uniqueISBNProductIds.values().stream()
-      .flatMap(productIds -> productIds.stream()
-        .filter(isUniqueISBN(productIds)))
-      .collect(toList());
-  }
-
-  private Predicate<ProductId> isUniqueISBN(List<ProductId> productIds) {
-    return productId -> productIds.size() == 1 || StringUtils.isNotEmpty(productId.getQualifier());
-  }
-
-  private List<ProductId> getNonISBNProductIds(CompositePoLine compPOL, String isbnTypeId) {
-    return compPOL.getDetails().getProductIds().stream()
-      .filter(productId -> !isISBN(isbnTypeId, productId))
-      .collect(toList());
-  }
-
-  private boolean isISBN(String isbnTypeId, ProductId productId) {
-    return Objects.equals(productId.getProductIdType(), isbnTypeId);
-  }
-
   private void checkLocationCanBeModified(CompositePoLine poLine, PoLine lineFromStorage, CompositePurchaseOrder order) {
     boolean isOrderOpenAndNoNeedToManualAddPiecesForCreationAndLocationModified = order.getWorkflowStatus() == OPEN
       && !poLine.getSource().equals(CompositePoLine.Source.EBSCONET)
@@ -708,7 +626,7 @@ public class PurchaseOrderLineHelper {
         return validatePoLineLimit(compPOL, tenantConfiguration, requestContext)
           .compose(aErrors -> {
             if (CollectionUtils.isEmpty(aErrors)) {
-              return validateAndNormalizeISBN(compPOL, requestContext)
+              return purchaseOrderLineService.validateAndNormalizeISBN(Collections.singletonList(compPOL), requestContext)
                 .map(v -> errors);
             } else {
               errors.addAll(aErrors);
@@ -870,23 +788,13 @@ public class PurchaseOrderLineHelper {
       return false;
     }
 
-    if (isEstimatedPriceTheSame(compositePoLine, storagePoLine) && isCurrencyTheSame(compositePoLine, storagePoLine)) {
-      return false;
-    }
-
-    if (!isEstimatedPriceTheSame(compositePoLine, storagePoLine) || !isCurrencyTheSame(compositePoLine, storagePoLine)) {
+    if (!compositePoLine.getCost().getPoLineEstimatedPrice().equals(storagePoLine.getCost().getPoLineEstimatedPrice())
+      || !compositePoLine.getCost().getCurrency().equals(storagePoLine.getCost().getCurrency())
+      || (requestFundDistros.size() != storageFundDistros.size())) {
       return true;
     }
 
     return !CollectionUtils.isEqualCollection(requestFundDistros, storageFundDistros);
-  }
-
-  private boolean isEstimatedPriceTheSame(CompositePoLine compositePoLine, PoLine storagePoLine) {
-    return compositePoLine.getCost().getPoLineEstimatedPrice().equals(storagePoLine.getCost().getPoLineEstimatedPrice());
-  }
-
-  private boolean isCurrencyTheSame(CompositePoLine compositePoLine, PoLine storagePoLine) {
-    return compositePoLine.getCost().getCurrency().equals(storagePoLine.getCost().getCurrency());
   }
 
   private Future<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {

@@ -29,12 +29,7 @@ import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
-import static org.folio.service.inventory.InventoryManager.HOLDINGS_RECORDS;
-import static org.folio.service.inventory.InventoryManager.HOLDINGS_SOURCES;
-import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.service.inventory.InventoryManager.ID;
-import static org.folio.service.inventory.InventoryManager.ITEMS;
-import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryManager.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -167,7 +162,7 @@ public class InventoryManagerTest {
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
+    okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
   }
 
@@ -494,29 +489,19 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void shouldCheckIfTheHoldingExistsWhenLocationIdAlwaysNewHoldingShouldBeCreated(VertxTestContext vertxTestContext) throws IOException {
-    String instanceId = UUID.randomUUID().toString();
+  void shouldCheckIfTheHoldingExistsWhenLocationIdSpecifiedAndIfExistThenReturnHoldingIdFromLocation() throws IOException {
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
-    String holdingIdExp = extractId(getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS));
-    List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
-      .map(o -> ((JsonObject) o))
-      .collect(toList());
+    JsonObject holdingExp = getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS);
+    String holdingIdExp = extractId(holdingExp);
+    String instanceId = holdingExp.getString("instanceId");
+    String locationId = holdingExp.getString("permanentLocationId");
+    Location location = new Location().withLocationId(locationId).withQuantity(1).withQuantityPhysical(1);
 
-    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
-    Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
+    doReturn(succeededFuture(holdingsCollection), succeededFuture(holdingExp)).when(restClient).getAsJsonObject(any(), eq(requestContext));
+    String holdingIdAct = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).result();
 
-    doReturn(succeededFuture(new JsonObject().put(ID, holdingIdExp))).when(restClient).postJsonObject(any(RequestEntry.class), any(), any(RequestContext.class));
-    doReturn(succeededFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), eq(requestContext));
-
-    var future = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(res -> {
-        assertThat(res.result(), equalTo(holdingIdExp));
-        verify(restClient, times(1)).postJsonObject(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-        vertxTestContext.completeNow();
-      });
-
+    assertThat(holdingIdAct, equalTo(holdingIdExp));
+    verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
   }
 
   @Test
@@ -531,9 +516,6 @@ public class InventoryManagerTest {
     List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
     Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
 
-    JsonObject holdingsRecJson = new JsonObject();
-    holdingsRecJson.put(InventoryManager.HOLDING_INSTANCE_ID, instanceId);
-    holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
     JsonObject emptyHoldingCollection = new JsonObject().put(HOLDINGS_RECORDS, new JsonArray());
 
     doReturn(succeededFuture(emptyHoldingCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
@@ -560,8 +542,7 @@ public class InventoryManagerTest {
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
       .thenThrow(new CompletionException(new HttpException(NOT_FOUND, error)));
 
-    CompletionException exception = assertThrows(CompletionException.class,
-      () -> inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).result());
+    Throwable exception = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).cause();
 
     assertThat(exception.getCause(), IsInstanceOf.instanceOf(HttpException.class));
     HttpException cause = (HttpException) exception.getCause();

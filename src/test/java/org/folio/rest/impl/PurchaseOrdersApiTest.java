@@ -194,7 +194,6 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineFieldNames;
 import org.folio.orders.utils.POProtectedFields;
 import org.folio.rest.acq.model.Ongoing;
-import org.folio.rest.acq.model.PaymentStatus;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.Fund;
@@ -205,6 +204,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat;
@@ -2357,7 +2357,6 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_TOKEN, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNull(getHoldingsSearches());
     assertNotNull(getCreatedHoldings());
     assertNull(getItemsSearches());
     assertNull(getCreatedPieces());
@@ -3048,7 +3047,7 @@ public class PurchaseOrdersApiTest {
 
   @Test
   void testGetOrdersForUserAssignedToAcqUnits() {
-    logger.info("=== Test Get Orders by query - user assigned to acq units ===");
+    logger.info("=== Test Get Orders by query - user assigned to acqUnits ===");
 
     Headers headers = prepareHeaders(X_OKAPI_URL, NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID_WITH_ACQ_UNITS);
     verifyGet(COMPOSITE_ORDERS_PATH, headers, APPLICATION_JSON, 200);
@@ -3057,19 +3056,16 @@ public class PurchaseOrdersApiTest {
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_UNITS, HttpMethod.GET), hasSize(1));
     assertThat(MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET), hasSize(1));
 
-    // TODO: new implementation of rest client passes query parameters as url
-    // uncomment after refactoring rest client to use query as parameter
-/*    List<String> queryParams = getQueryParams(PURCHASE_ORDER_STORAGE);
+    List<String> queryParams = getQueryParams(PURCHASE_ORDER_STORAGE);
     assertThat(queryParams, hasSize(1));
     String queryToStorage = queryParams.get(0);
-    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_IDS + "="));
-    assertThat(queryToStorage, containsString(NO_ACQ_UNIT_ASSIGNED_CQL));
+    assertThat(queryToStorage, containsString(ACQUISITIONS_UNIT_IDS + "%3D"));
 
     MockServer.serverRqRs.get(ACQUISITIONS_MEMBERSHIPS, HttpMethod.GET)
       .get(0)
       .mapTo(AcquisitionsUnitMembershipCollection.class)
       .getAcquisitionsUnitMemberships()
-      .forEach(member -> assertThat(queryToStorage, containsString(member.getAcquisitionsUnitId())));*/
+      .forEach(member -> assertThat(queryToStorage, containsString(member.getAcquisitionsUnitId())));
   }
 
   @Test
@@ -3568,13 +3564,13 @@ public class PurchaseOrdersApiTest {
     // check the payment and receipt status of the last 3 updated polines
     JsonObject line1 = polUpdates.stream().filter(pol -> EMPTY_RECEIPT_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().get();
     assertEquals(ReceiptStatus.CANCELLED.value(), line1.getString(RECEIPT_STATUS));
-    assertEquals(PaymentStatus.CANCELLED.value(), line1.getString(PAYMENT_STATUS));
+    assertEquals(CompositePoLine.PaymentStatus.CANCELLED.value(), line1.getString(PAYMENT_STATUS));
     JsonObject line2 = polUpdates.stream().filter(pol -> AWAITING_RECEIPT_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().get();
     assertEquals(ReceiptStatus.CANCELLED.value(), line2.getString(RECEIPT_STATUS));
-    assertEquals(PaymentStatus.PAYMENT_NOT_REQUIRED.value(), line2.getString(PAYMENT_STATUS));
+    assertEquals(CompositePoLine.PaymentStatus.PAYMENT_NOT_REQUIRED.value(), line2.getString(PAYMENT_STATUS));
     JsonObject line3 = polUpdates.stream().filter(pol -> FULLY_RECEIVED_POL_UUID.equals(pol.getString(HelperUtils.ID))).findFirst().get();
     assertEquals(ReceiptStatus.FULLY_RECEIVED.value(), line3.getString(RECEIPT_STATUS));
-    assertEquals(PaymentStatus.CANCELLED.value(), line3.getString(PAYMENT_STATUS));
+    assertEquals(CompositePoLine.PaymentStatus.CANCELLED.value(), line3.getString(PAYMENT_STATUS));
   }
 
   @Test

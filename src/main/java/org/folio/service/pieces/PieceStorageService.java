@@ -5,7 +5,7 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -113,12 +113,15 @@ public class PieceStorageService {
 
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
     logger.info("getPiecesByLineIdsByChunks start");
-    return collectResultsOnSuccess(
-      ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ).map(ids -> getPieceChunkByLineIds(ids, requestContext))
-        .toList()).map(
-      lists -> lists.stream()
+    var futures = ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ_15)
+      .map(ids -> getPieceChunkByLineIds(ids, requestContext))
+      .toList();
+    return collectResultsOnSuccess(futures)
+      .map(lists -> lists.stream()
         .flatMap(Collection::stream)
-        .collect(Collectors.toList()));
+        .collect(Collectors.toList()))
+      .onSuccess(v -> logger.info("getPiecesByLineIdsByChunks end"));
+
   }
 
   private Future<List<Piece>> getPieceChunkByLineIds(Collection<String> poLineIds, RequestContext requestContext) {
