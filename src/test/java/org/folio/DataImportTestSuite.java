@@ -8,9 +8,9 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-  CreateOrderEventHandlerTest.class,
   CacheTest.class,
-  OrderIdStorageServiceImplTest.class
+  OrderIdStorageServiceImplTest.class,
+  CreateOrderEventHandlerTest.class
 })
 public class DataImportTestSuite {
 }
