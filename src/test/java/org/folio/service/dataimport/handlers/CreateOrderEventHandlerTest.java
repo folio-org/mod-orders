@@ -1,5 +1,6 @@
 package org.folio.service.dataimport.handlers;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -47,7 +48,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -136,9 +136,6 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
           .withAcceptedValues(new HashMap<>(Map.of(
             "df26d81b-9d63-4ff8-bf41-49bf75cfa70e", "Purchase"
           )))))));
-
-  @Rule
-  public RunTestOnContext rule = new RunTestOnContext();
 
   private Record record;
 
@@ -515,8 +512,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenOrderIdDuplicationErrorOccurs(TestContext context) {
-    // given
+  public void shouldReturnFailedByDuplicateEventExceptionFutureWhenOrderIdDuplicationErrorOccurs(TestContext context) {
     Async async = context.async();
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -534,16 +530,12 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         put(RECORD_ID_HEADER, record.getId());
       }});
 
-    // when
     CreateOrderEventHandler createOrderHandler = getBeanFromSpringContext(vertx, CreateOrderEventHandler.class);
-    CompletableFuture<DataImportEventPayload> future = createOrderHandler.handle(dataImportEventPayload);
-
-    // then
-    future.whenComplete((payload, e) -> {
-      context.assertNotNull(e);
-      context.assertTrue(e instanceof DuplicateEventException);
-      async.complete();
-    });
+    vertx.runOnContext(event -> Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload))
+      .onComplete(context.asyncAssertFailure(th -> {
+        context.assertTrue(th instanceof DuplicateEventException);
+        async.complete();
+      })));
   }
 
   @Test
