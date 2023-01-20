@@ -152,7 +152,7 @@ public class CreateOrderEventHandler implements EventHandler {
     boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
     boolean isUserNotHaveApprovalPermission = PurchaseOrderHelper.isUserNotHaveApprovePermission(requestContext);
 
-    if (isApprovalRequired && isApproved && isUserNotHaveApprovalPermission) {
+    if (isApprovalRequired && Boolean.TRUE.equals(isApproved) && isUserNotHaveApprovalPermission) {
       order.setApproved(false);
       dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(order));
     }
@@ -166,7 +166,7 @@ public class CreateOrderEventHandler implements EventHandler {
     Promise<Void> promise = Promise.promise();
 
     if (workflowStatus.equals(WorkflowStatus.PENDING)) {
-      LOGGER.debug(format("adjustEventType:: set event type DI_COMPLETED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
+      LOGGER.debug("adjustEventType:: set event type DI_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
       return Future.succeededFuture();
     }
 
@@ -174,8 +174,8 @@ public class CreateOrderEventHandler implements EventHandler {
     boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
 
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
-      if (!isApproved && isApprovalRequired) {
-        LOGGER.debug(format("adjustEventType:: set event type DI_COMPLETED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
+      if (Boolean.FALSE.equals(isApproved) && isApprovalRequired) {
+        LOGGER.debug("adjustEventType:: set event type DI_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
         return Future.succeededFuture();
       }
 
@@ -183,7 +183,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
       Map<String, String> okapiHeadersLowerCaseKeys = okapiHeaders.entrySet().stream().collect(Collectors.toMap(
         key -> key.getKey().toLowerCase(Locale.ROOT),
-        value -> value.getValue()
+        Map.Entry::getValue
       ));
       OkapiConnectionParams okapiParams = new OkapiConnectionParams(okapiHeadersLowerCaseKeys, Vertx.vertx());
 
@@ -224,11 +224,11 @@ public class CreateOrderEventHandler implements EventHandler {
       .collect(Collectors.toList());
 
     if (!actionProfiles.isEmpty() && checkIfCurrentProfileIsTheLastOne(dataImportEventPayload, actionProfiles)) {
-      LOGGER.debug(format("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED_READY_FOR_POST_PROCESSING for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
+      LOGGER.debug("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED_READY_FOR_POST_PROCESSING for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
       dataImportEventPayload.setEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
       dataImportEventPayload.getContext().put(POST_PROCESSING, "true");
     } else {
-      LOGGER.debug(format("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED for jobExecutionId %s", dataImportEventPayload.getJobExecutionId()));
+      LOGGER.debug("setEventTypeForOpenOrder:: set event type DI_PENDING_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
       dataImportEventPayload.setEventType(DI_PENDING_ORDER_CREATED.value());
     }
 
@@ -241,7 +241,7 @@ public class CreateOrderEventHandler implements EventHandler {
     List<ProfileSnapshotWrapper> childSnapshotWrappers = lastActionProfile.getChildSnapshotWrappers();
     String mappingProfileId = org.apache.commons.lang.StringUtils.EMPTY;
 
-    if (childSnapshotWrappers != null && childSnapshotWrappers.size() > 0
+    if (childSnapshotWrappers != null && !childSnapshotWrappers.isEmpty()
       && childSnapshotWrappers.get(0) != null && Objects.equals(childSnapshotWrappers.get(0).getContentType().value(), "MAPPING_PROFILE")) {
       mappingProfileId = childSnapshotWrappers.get(0).getProfileId();
     }
