@@ -1,5 +1,6 @@
 ## 12.6.0 - Unreleased
 * [MODORDERS-775](https://issues.folio.org/browse/MODORDERS-775) - Add deduplication mechanism for Create Order event
+* [MODORDERS-773 ](https://issues.folio.org/browse/MODORDERS-773) - Implement action profile handler for order creation
 
 ## 12.5.0 Nolana R3 2022 - Released
 This release focused on upgrade RMB and module interface dependencies
