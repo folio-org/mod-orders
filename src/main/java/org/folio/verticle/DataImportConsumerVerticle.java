@@ -1,11 +1,8 @@
 package org.folio.verticle;
 
-import static org.folio.DataImportEventTypes.DI_COMPLETED;
-import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.kafka.AsyncRecordHandler;
@@ -16,6 +13,7 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.ProcessRecordErrorHandler;
 import org.folio.kafka.SubscriptionDefinition;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.processing.events.EventManager;
 import org.folio.processing.events.utils.PomReaderUtil;
 import org.folio.rest.tools.utils.ModuleName;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +22,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
+import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
+import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
 
 @Component
 @Scope(SCOPE_PROTOTYPE)
@@ -43,6 +44,9 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   @Value("${orders.kafka.OrderConsumer.loadLimit:5}")
   private int loadLimit;
 
+  @Value("${mod.orders.dataimport.kafka.max.distribution.number:100}")
+  private int maxDistributionNumber;
+
   @Autowired
   @Qualifier("DataImportKafkaHandler")
   private AsyncRecordHandler<String, String> dataImportKafkaHandler;
@@ -51,16 +55,16 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   @Qualifier("DataImportErrorHandler")
   private ProcessRecordErrorHandler<String, String> errorHandler;
 
-
-  //TODO: should be changed to the real value
   public List<String> getEvents() {
-    return List.of(DI_COMPLETED.value());
+    return List.of(
+      DI_MARC_BIB_FOR_ORDER_CREATED.value(),
+      DI_INVENTORY_INSTANCE_MATCHED.value());
   }
 
   @Override
   public void start(Promise<Void> startPromise) {
-
     LOGGER.debug("DataImportConsumerVerticle :: start");
+    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     List<Future<Void>> futures = new ArrayList<>();
 
