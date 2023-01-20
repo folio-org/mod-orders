@@ -47,8 +47,10 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -56,6 +58,7 @@ import java.util.concurrent.TimeoutException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.ZoneOffset.UTC;
+import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -155,8 +158,12 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   @Before
   public void setup() {
     MockServer.release();
-    record = new Record().withId(UUID.randomUUID().toString())
-      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    record = getRecord(0);
+  }
+
+  private Record getRecord(Integer ordinalNumber) {
+    return new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT)).withOrder(ordinalNumber);
   }
 
   @Test
@@ -166,6 +173,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
@@ -195,6 +203,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -224,6 +233,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     JsonObject instanceJson = new JsonObject().put(INSTANCE_ID_KEY, UUID.randomUUID().toString());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_INVENTORY_INSTANCE_MATCHED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -253,6 +263,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -288,6 +299,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -323,6 +335,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -366,6 +379,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(PO_LINES_STORAGE, new CompositePoLine().withTitleOrPackage("Mocked poLine for data-import"));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -424,6 +438,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -491,6 +506,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -597,6 +613,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
       .withTenant(TENANT_ID)
@@ -616,6 +633,79 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         async.complete();
       })));
   }
+
+
+  @Test
+  public void shouldCreateNumberOfOrdersRelatedToPoLinesLimit() throws InterruptedException {
+    // given
+    Integer poLimit = 2;
+    MappingRule poLineLimitRule = new MappingRule()
+      .withName(CreateOrderEventHandler.POL_LIMIT_RULE_NAME)
+      .withPath("order.po.overridePoLinesLimit")
+      .withValue("\"" + poLimit + "\"")
+      .withEnabled("true");
+
+    mappingProfile.getMappingDetails().getMappingFields().add(poLineLimitRule);
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+    addMockEntry(PO_LINES_STORAGE, new CompositePoLine().withTitleOrPackage("Mocked poLine for data-import"));
+
+    String jobExecutionId = UUID.randomUUID().toString();
+    DataImportEventPayload dataImportEventPayload0 = new DataImportEventPayload()
+      .withJobExecutionId(jobExecutionId)
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    DataImportEventPayload dataImportEventPayload1 = new DataImportEventPayload()
+      .withJobExecutionId(jobExecutionId)
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(getRecord(1)));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    DataImportEventPayload dataImportEventPayload2 = new DataImportEventPayload()
+      .withJobExecutionId(jobExecutionId)
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(getRecord(2)));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request0 = prepareKafkaRequest(dataImportEventPayload0);
+    SendKeyValues<String, String> request1 = prepareKafkaRequest(dataImportEventPayload1);
+    SendKeyValues<String, String> request2 = prepareKafkaRequest(dataImportEventPayload2);
+
+    // when
+    kafkaCluster.send(request0);
+    kafkaCluster.send(request1);
+    kafkaCluster.send(request2);
+
+    // then
+    List<DataImportEventPayload> dataImportEventPayloads = observeEvent3(DI_COMPLETED.value());
+    Set<String> ordersIds = new HashSet<>();
+    Set<String> orderLinesIds = new HashSet<>();
+    for (DataImportEventPayload dataImportEventPayload : dataImportEventPayloads) {
+      ordersIds.add(getCompositePurchaseOrder(dataImportEventPayload).getId());
+      orderLinesIds.add(getCompositePoLine(dataImportEventPayload).getPurchaseOrderId());
+      verifyPoLine(dataImportEventPayload);
+    }
+    Assertions.assertTrue(ordersIds.size() == poLimit);
+    Assertions.assertTrue(orderLinesIds.size() == poLimit);
+  }
+
 
   @Test
   public void shouldReturnTrueWhenHandlerIsEligibleForActionProfile() {
@@ -671,7 +761,13 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   private SendKeyValues<String, String> prepareKafkaRequest(DataImportEventPayload payload) {
     Event event = new Event().withEventPayload(Json.encode(payload));
     KeyValue<String, String> kafkaRecord = new KeyValue<>("test-key", Json.encode(event));
-    kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
+    if (!isEmpty(payload.getContext().get(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC.value()))) {
+      Record record = new JsonObject(payload.getContext()
+        .get(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
+      kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
+    } else {
+      kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
+    }
     kafkaRecord.addHeader(RestConstants.OKAPI_URL, payload.getOkapiUrl(), UTF_8);
     kafkaRecord.addHeader(OKAPI_PERMISSIONS_HEADER, payload.getContext().getOrDefault(OKAPI_PERMISSIONS_HEADER, ""), UTF_8);
     kafkaRecord.addHeader(OKAPI_USERID_HEADER, payload.getContext().getOrDefault(OKAPI_USERID_HEADER, ""), UTF_8);
@@ -689,6 +785,36 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(record.getId(), new String(observedRecords.get(0).getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
+  }
+
+  private List<DataImportEventPayload> observeEvent3(String eventType) throws InterruptedException {
+    String topicToObserve = formatToKafkaTopicName(eventType);
+    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 3)
+      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+
+    assertEquals(3, observedRecords.size());
+
+    List<DataImportEventPayload> dataImportEventPayloads = new ArrayList<>();
+    dataImportEventPayloads.add(getCompositePurchaseOrder(observedRecords.get(0).getValue()));
+    dataImportEventPayloads.add(getCompositePurchaseOrder(observedRecords.get(1).getValue()));
+    dataImportEventPayloads.add(getCompositePurchaseOrder(observedRecords.get(2).getValue()));
+
+    return dataImportEventPayloads;
+  }
+
+  private DataImportEventPayload getCompositePurchaseOrder(String value) {
+    Event obtainedEvent = Json.decodeValue(value, Event.class);
+    return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
+  }
+
+  private CompositePurchaseOrder getCompositePurchaseOrder(DataImportEventPayload eventPayload) {
+    return Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+  }
+
+  private CompositePoLine getCompositePoLine(DataImportEventPayload eventPayload) {
+    return Json.decodeValue(eventPayload.getContext().get(ORDER_LINES_KEY), CompositePoLine.class);
   }
 
   private CompositePurchaseOrder verifyOrder(DataImportEventPayload eventPayload) {

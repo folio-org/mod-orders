@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
+import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.assertj.core.api.Assertions.fail;
@@ -2085,9 +2086,10 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, Json.encodePrettily(error));
       return;
     }
-    String id = UUID.randomUUID().toString();
     JsonObject body = ctx.body().asJsonObject();
-    body.put(ID, id);
+    if (isEmpty(body.getString("id"))) {
+      body.put(ID, UUID.randomUUID().toString());
+    }
     org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
     addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER_STORAGE, body);
     addServerRqRsData(HttpMethod.SEARCH, PURCHASE_ORDER_STORAGE, body);

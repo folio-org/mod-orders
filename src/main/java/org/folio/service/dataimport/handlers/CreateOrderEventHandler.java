@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingProfile;
+import org.folio.Record;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
@@ -32,6 +33,7 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.IdStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -49,6 +51,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.ActionProfile.Action.CREATE;
@@ -93,16 +96,20 @@ public class CreateOrderEventHandler implements EventHandler {
   private final ConfigurationEntriesService configurationEntriesService;
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
+  private final SequentialOrderIdService sequentialOrderIdService;
+
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
                                  ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService,
-                                 JobProfileSnapshotCache jobProfileSnapshotCache) {
+                                 JobProfileSnapshotCache jobProfileSnapshotCache,
+                                 SequentialOrderIdService sequentialOrderIdService) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
     this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
+    this.sequentialOrderIdService = sequentialOrderIdService;
   }
 
   @Override
@@ -126,8 +133,9 @@ public class CreateOrderEventHandler implements EventHandler {
 
     tenantConfigFuture
       .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
-      .compose(v -> prepareMappingResult(dataImportEventPayload))
-      .compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
+      .compose(orderId -> prepareMappingResult(dataImportEventPayload))
+      .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result()))
+      .compose(orderId -> idStorageService.store(sourceRecordId, orderId, dataImportEventPayload.getTenant()))
       .compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
       .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .onComplete(ar -> {
@@ -157,6 +165,24 @@ public class CreateOrderEventHandler implements EventHandler {
       headers.put(RestVerticle.OKAPI_USERID_HEADER, userId);
     }
     return headers;
+  }
+
+  private Future<String> generateSequentialOrderId(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig) {
+    LOGGER.debug("generateSequentialOrderId :: jobExecutionId: {} ", dataImportEventPayload.getJobExecutionId());
+
+    String tenantId = dataImportEventPayload.getTenant();
+    if (isEmpty(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY))) {
+      return Future.failedFuture(new IllegalArgumentException("Parameter poLines-limit is missing."));
+    }
+    Integer poLinesLimit = Integer.valueOf(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY));
+
+    Record parsedMarcBibRecord = new JsonObject(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
+    if (parsedMarcBibRecord.getOrder() == null) {
+      return Future.failedFuture(new IllegalArgumentException("Order parameter is missing."));
+    }
+
+    int exponentOrder = parsedMarcBibRecord.getOrder()/poLinesLimit;
+    return sequentialOrderIdService.store(dataImportEventPayload.getJobExecutionId(), exponentOrder, UUID.randomUUID().toString(), tenantId);
   }
 
   private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId,
