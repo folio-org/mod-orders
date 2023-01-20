@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -45,17 +46,15 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private final Vertx vertx;
   private final JobProfileSnapshotCache profileSnapshotCache;
-  private final EventHandler createOrderEventHandler;
 
   @Autowired
   public DataImportKafkaHandler(Vertx vertx, JobProfileSnapshotCache profileSnapshotCache,
-                                EventHandler createOrderEventHandler) {
+                                List<EventHandler> eventHandlers) {
     this.vertx = vertx;
-    this.createOrderEventHandler = createOrderEventHandler;
     this.profileSnapshotCache = profileSnapshotCache;
     MappingManager.registerReaderFactory(new MarcBibReaderFactory());
     MappingManager.registerWriterFactory(new OrderWriterFactory());
-    EventManager.registerEventHandler(this.createOrderEventHandler);
+    eventHandlers.forEach(EventManager::registerEventHandler);
   }
 
   @Override
