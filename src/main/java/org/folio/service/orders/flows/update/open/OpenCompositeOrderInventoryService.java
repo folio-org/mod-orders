@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -26,13 +27,16 @@ public class OpenCompositeOrderInventoryService {
   private final InventoryManager inventoryManager;
   private final OpenCompositeOrderPieceService openCompositeOrderPieceService;
   private final ProcessInventoryStrategyResolver processInventoryStrategyResolver;
+  private final RestClient restClient;
 
   public OpenCompositeOrderInventoryService(InventoryManager inventoryManager,
                                             OpenCompositeOrderPieceService openCompositeOrderPieceService,
-                                            ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
+                                            ProcessInventoryStrategyResolver processInventoryStrategyResolver,
+                                            RestClient restClient) {
     this.inventoryManager = inventoryManager;
     this.openCompositeOrderPieceService = openCompositeOrderPieceService;
     this.processInventoryStrategyResolver = processInventoryStrategyResolver;
+    this.restClient = restClient;
   }
 
   public Future<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
@@ -60,7 +64,7 @@ public class OpenCompositeOrderInventoryService {
       logger.debug("Executing a strategy for: {}", compPOL.getOrderFormat().value());
     }
     return processInventoryStrategyResolver.getHoldingAndItemStrategy(compPOL.getOrderFormat().value())
-      .processInventory(compPOL, titleId, isInstanceMatchingDisabled, inventoryManager, openCompositeOrderPieceService, requestContext);
+      .processInventory(compPOL, titleId, isInstanceMatchingDisabled, inventoryManager, openCompositeOrderPieceService, restClient, requestContext);
   }
 
   private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, CompositePoLine poLine) {
