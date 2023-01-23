@@ -90,7 +90,7 @@ public class HelperUtils {
   public static final String REASON_COMPLETE = "Complete";
   public static final String REASON_CANCELLED = "Cancelled";
   public static final String OKAPI_URL = "x-okapi-url";
-  private static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
+  public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String LANG = "lang";
   public static final String URL_WITH_LANG_PARAM = "%s?" + LANG + "=%s";
   public static final String WORKFLOW_STATUS = "workflowStatus";

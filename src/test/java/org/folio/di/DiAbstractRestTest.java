@@ -17,12 +17,14 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.folio.DataImportEventPayload;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.postgres.testing.PostgresTesterContainer;
+import org.folio.processing.events.EventManager;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.client.TenantClient;
 import org.folio.rest.jaxrs.model.Event;
@@ -36,6 +38,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.runner.RunWith;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import com.github.tomakehurst.wiremock.admin.NotFoundException;
@@ -65,6 +68,7 @@ import net.mguenther.kafka.junit.ObserveKeyValues;
 import net.mguenther.kafka.junit.ReadKeyValues;
 import net.mguenther.kafka.junit.SendKeyValues;
 
+@RunWith(VertxUnitRunner.class)
 public abstract class DiAbstractRestTest {
 
   protected static Vertx vertx;
@@ -111,18 +115,19 @@ public abstract class DiAbstractRestTest {
 
   private static void runDatabase() {
     PostgresClient.stopPostgresTester();
-    PostgresClient.closeAllClients();
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
   }
 
   @AfterClass
   public static void tearDownClass(final TestContext context) {
     Async async = context.async();
+    EventManager.clearEventHandlers();
     vertx.close(context.asyncAssertSuccess(res -> {
       kafkaCluster.stop();
       async.complete();
     }));
   }
+
   private static void deployVerticle(TestContext context) {
     Async async = context.async();
     port = NetworkUtils.nextFreePort();

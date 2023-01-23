@@ -50,19 +50,17 @@ public class InitAPIs implements InitAPI {
         DatabindCodec.mapper().setConfig(deserializationConfig);
         DatabindCodec.prettyMapper().setConfig(deserializationConfig);
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+        SpringContextUtil.autowireDependencies(this, context);
         initJavaMoney();
-        handler.complete();
 
-//        TODO: will be uncommented in scope of the https://issues.folio.org/browse/MODORDERS-773
-//        SpringContextUtil.autowireDependencies(this, context);
-//        deployConsumersVerticles(vertx).onSuccess(hdr -> {
-//            handler.handle(Future.succeededFuture());
-//            LOGGER.info("Consumer Verticles were successfully started");
-//          })
-//          .onFailure(th -> {
-//            handler.handle(Future.failedFuture(th));
-//            LOGGER.error("Consumer Verticles were not started", th);
-//          });
+        deployConsumersVerticles(vertx).onSuccess(hdr -> {
+            handler.handle(Future.succeededFuture());
+            log.info("Consumer Verticles were successfully started");
+          })
+          .onFailure(th -> {
+            handler.handle(Future.failedFuture(th));
+            log.error("Consumer Verticles were not started", th);
+          });
       })
       .onComplete(result -> {
         if (result.succeeded()) {

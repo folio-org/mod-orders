@@ -70,13 +70,15 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   @Validate
   public void postOrdersOrderLines(String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    helper.createPoLine(poLine, new RequestContext(vertxContext, okapiHeaders))
-          .onSuccess(pol -> {
-            String okapiUrl = okapiHeaders.get(OKAPI_URL);
-            String url = resourceByIdPath(PO_LINES_BUSINESS, poLine.getId());
-            asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiUrl, url, poLine)));
-          })
-          .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+    RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
+    configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+      .compose(tenantConfig -> helper.createPoLine(poLine, tenantConfig, requestContext))
+      .onSuccess(pol -> {
+        String okapiUrl = okapiHeaders.get(OKAPI_URL);
+        String url = resourceByIdPath(PO_LINES_BUSINESS, poLine.getId());
+        asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiUrl, url, poLine)));
+      })
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
   @Override
