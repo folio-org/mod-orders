@@ -130,7 +130,7 @@ public class UnOpenCompositeOrderManager {
                       }
                     })
                 )
-                .onSuccess(v -> logger.debug("Items and pieces deleted after UnOpen order"))
+                .onSuccess(v -> logger.debug("Items and pieces deleted after unopen order"))
                 .mapEmpty();
   }
 
