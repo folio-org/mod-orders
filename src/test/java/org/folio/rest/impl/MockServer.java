@@ -138,12 +138,14 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import io.vertx.core.json.Json;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.helper.BaseHelper;
 import org.folio.isbn.IsbnUtil;
+import org.folio.rest.RestVerticle;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
@@ -187,6 +189,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.Prefix;
 import org.folio.rest.jaxrs.model.PrefixCollection;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.ReasonForClosure;
@@ -290,8 +293,10 @@ public class MockServer {
   static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
   public static final String OLD_HOLDING_ID = "758258bc-ecc1-41b8-abca-f7b610822ffd";
   public static final String NEW_HOLDING_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
+  public static final String CONFIGS = "configs";
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
+  public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -604,6 +609,7 @@ public class MockServer {
     router.get(resourcesPath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethods);
     router.get(resourcePath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethod);
     router.get(resourcesPath(EXPORT_HISTORY)).handler(this::handleGetExportHistoryMethod);
+    router.get("/data-import-profiles/jobProfileSnapshots/:id").handler(this::handleGetJobProfileSnapshotById);
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -1488,6 +1494,13 @@ public class MockServer {
 
   private void handleConfigurationModuleResponse(RoutingContext ctx) {
     try {
+      List<JsonObject> configEntries = serverRqRs.column(HttpMethod.SEARCH).get(CONFIGS);
+      if (configEntries != null && !configEntries.isEmpty()) {
+        JsonObject configs = new JsonObject().put(CONFIGS, configEntries);
+        serverResponse(ctx, 200, APPLICATION_JSON, configs.encodePrettily());
+        return;
+      }
+
       String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT) ;
       if (PO_NUMBER_ERROR_X_OKAPI_TENANT.getValue().equals(tenant)) {
         tenant = EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10.getValue();
@@ -2064,6 +2077,14 @@ public class MockServer {
 
   private void handlePostPurchaseOrder(RoutingContext ctx) {
     logger.info("got: " + ctx.body().asString());
+    if (ORDER_ID_DUPLICATION_ERROR_USER_ID.equals(ctx.request().getHeader(RestVerticle.OKAPI_USERID_HEADER))) {
+      JsonObject body = ctx.body().asJsonObject();
+      Error error = new Error()
+        .withMessage(String.format("duplicate key value violates unique constraint \\\"purchase_order_pkey\\\": Key (id)=(%s) already exists.", body.getString(ID)))
+        .withCode("generic error");
+      serverResponse(ctx, 500, APPLICATION_JSON, Json.encodePrettily(error));
+      return;
+    }
     String id = UUID.randomUUID().toString();
     JsonObject body = ctx.body().asJsonObject();
     body.put(ID, id);
@@ -2801,6 +2822,26 @@ public class MockServer {
           .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
           .setStatusCode(204)
           .end();
+    }
+  }
+
+  private void handleGetJobProfileSnapshotById(RoutingContext ctx) {
+    logger.info("handleGetJobProfileSnapshotById got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+    if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else {
+      Optional<JsonObject> jobProfileSnapshotOptional = getMockEntry("jobProfileSnapshots", id);
+      if (jobProfileSnapshotOptional.isPresent()) {
+        // validate content against schema
+        JsonObject jobProfileSnapshot = jobProfileSnapshotOptional.get();
+        ProfileSnapshotWrapper profileSnapshotClassSchema = jobProfileSnapshot.mapTo(ProfileSnapshotWrapper.class);
+        profileSnapshotClassSchema.setId(id);
+        serverResponse(ctx, 200, APPLICATION_JSON, Json.encodePrettily(profileSnapshotClassSchema));
+      } else {
+        serverResponse(ctx, 404, APPLICATION_JSON, id);
+      }
     }
   }
 }
