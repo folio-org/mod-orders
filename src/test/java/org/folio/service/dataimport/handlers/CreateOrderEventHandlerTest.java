@@ -224,6 +224,66 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenActionProfileIsNotTheLastOne() throws InterruptedException {
+    // given
+    ProfileSnapshotWrapper profileSnapshotWrapper =
+      new ProfileSnapshotWrapper()
+        .withId(UUID.randomUUID().toString())
+        .withProfileId(jobProfile.getId())
+        .withContentType(JOB_PROFILE)
+        .withContent(JsonObject.mapFrom(jobProfile).getMap())
+        .withChildSnapshotWrappers(List.of(
+          new ProfileSnapshotWrapper()
+            .withId(UUID.randomUUID().toString())
+            .withContentType(ACTION_PROFILE)
+            .withOrder(0)
+            .withProfileId(actionProfile.getId())
+            .withContent(JsonObject.mapFrom(actionProfile).getMap())
+            .withChildSnapshotWrappers(Collections.singletonList(
+              new ProfileSnapshotWrapper()
+                .withId(UUID.randomUUID().toString())
+                .withProfileId(mappingProfile.getId())
+                .withContentType(MAPPING_PROFILE)
+                .withContent(JsonObject.mapFrom(mappingProfile).getMap()))),
+          new ProfileSnapshotWrapper()
+            .withId(UUID.randomUUID().toString())
+            .withContentType(ACTION_PROFILE)
+            .withOrder(1)
+            .withProfileId(UUID.randomUUID().toString())
+            .withContent(JsonObject.mapFrom(new ActionProfile().withFolioRecord(ActionProfile.FolioRecord.INSTANCE)))
+            .withChildSnapshotWrappers(Collections.singletonList(
+              new ProfileSnapshotWrapper()
+                .withId(UUID.randomUUID().toString())
+                .withProfileId(UUID.randomUUID().toString())
+                .withContentType(MAPPING_PROFILE)
+                .withContent(JsonObject.mapFrom(new MappingProfile()
+                  .withIncomingRecordType(MARC_BIBLIOGRAPHIC).withExistingRecordType(EntityType.INSTANCE)))))));
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    verifyOrder(eventPayload);
+    verifyPoLine(eventPayload);
+  }
+
+  @Test
   public void shouldCreatePendingOrderAndPublishDiReadyForPostProcessingEventWhenOpenStatusSpecified() throws InterruptedException {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
@@ -399,6 +459,74 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenOpenStatusSpecifiedAndUserHaveNotPermission() throws InterruptedException {
     // given
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, openOrderMappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_APPROVAL_REQUIRED)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    String topicToObserve = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_VALUE, getDefaultNameSpace(), TENANT_APPROVAL_REQUIRED, DI_COMPLETED.value());
+
+    List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
+      .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
+      .observeFor(30, TimeUnit.SECONDS)
+      .build());
+
+    Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
+    DataImportEventPayload eventPayload = Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    verifyOrder(eventPayload);
+    verifyPoLine(eventPayload);
+  }
+
+  @Test
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventWhenOpenStatusSpecifiedAndUserHaveNotPermissionAndActionProfileNotTheLastOne() throws InterruptedException {
+    // given
+    ProfileSnapshotWrapper profileSnapshotWrapper =
+      new ProfileSnapshotWrapper()
+        .withId(UUID.randomUUID().toString())
+        .withProfileId(jobProfile.getId())
+        .withContentType(JOB_PROFILE)
+        .withContent(JsonObject.mapFrom(jobProfile).getMap())
+        .withChildSnapshotWrappers(List.of(
+          new ProfileSnapshotWrapper()
+            .withId(UUID.randomUUID().toString())
+            .withContentType(ACTION_PROFILE)
+            .withOrder(0)
+            .withProfileId(actionProfile.getId())
+            .withContent(JsonObject.mapFrom(actionProfile).getMap())
+            .withChildSnapshotWrappers(Collections.singletonList(
+              new ProfileSnapshotWrapper()
+                .withId(UUID.randomUUID().toString())
+                .withProfileId(openOrderMappingProfile.getId())
+                .withContentType(MAPPING_PROFILE)
+                .withContent(JsonObject.mapFrom(openOrderMappingProfile).getMap()))),
+          new ProfileSnapshotWrapper()
+            .withId(UUID.randomUUID().toString())
+            .withContentType(ACTION_PROFILE)
+            .withOrder(1)
+            .withProfileId(UUID.randomUUID().toString())
+            .withContent(JsonObject.mapFrom(new ActionProfile().withFolioRecord(ActionProfile.FolioRecord.INSTANCE)))
+            .withChildSnapshotWrappers(Collections.singletonList(
+              new ProfileSnapshotWrapper()
+                .withId(UUID.randomUUID().toString())
+                .withProfileId(UUID.randomUUID().toString())
+                .withContentType(MAPPING_PROFILE)
+                .withContent(JsonObject.mapFrom(new MappingProfile()
+                  .withIncomingRecordType(MARC_BIBLIOGRAPHIC).withExistingRecordType(EntityType.INSTANCE)))))));
+
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()

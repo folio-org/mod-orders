@@ -57,6 +57,7 @@ import static org.folio.ActionProfile.FolioRecord.ORDER;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
+import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -167,6 +168,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
     if (workflowStatus.equals(WorkflowStatus.PENDING)) {
       LOGGER.debug("adjustEventType:: set event type DI_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
+      setDiCompletedEvent(dataImportEventPayload);
       return Future.succeededFuture();
     }
 
@@ -176,6 +178,7 @@ public class CreateOrderEventHandler implements EventHandler {
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
       if (Boolean.FALSE.equals(isApproved) && isApprovalRequired) {
         LOGGER.debug("adjustEventType:: set event type DI_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
+        setDiCompletedEvent(dataImportEventPayload);
         return Future.succeededFuture();
       }
 
@@ -214,6 +217,12 @@ public class CreateOrderEventHandler implements EventHandler {
       .filter(mappingRule -> WORKFLOW_STATUS_PATH.equals(mappingRule.getPath()))
       .map(mappingRule -> Json.decodeValue(mappingRule.getValue(), WorkflowStatus.class))
       .findFirst().orElse(WorkflowStatus.PENDING);
+  }
+
+  private void setDiCompletedEvent(DataImportEventPayload dataImportEventPayload) {
+    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
+    dataImportEventPayload.setEventType(DI_COMPLETED.value());
+    dataImportEventPayload.getContext().put(POST_PROCESSING, "true");
   }
 
   private CompletableFuture<Void> setEventTypeForOpenOrder(DataImportEventPayload dataImportEventPayload, ProfileSnapshotWrapper jobProfileSnapshotWrapper) {
