@@ -134,7 +134,7 @@ public class CreateOrderEventHandler implements EventHandler {
       .compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
       .compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
       .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, tenantConfigFuture.result(), requestContext))
-      .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders))
+      .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders, requestContext))
       .onComplete(ar -> {
         if (ar.failed()) {
           LOGGER.error("handle:: Error during order or order line creation", ar.cause());
@@ -147,7 +147,8 @@ public class CreateOrderEventHandler implements EventHandler {
     return future;
   }
 
-  private Future<Object> setApprovedFalseIfUserNotHaveApprovalPermission(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, RequestContext requestContext) {
+  private Future<Object> setApprovedFalseIfUserNotHaveApprovalPermission(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig,
+                                                                         RequestContext requestContext) {
     CompositePurchaseOrder order = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     Boolean isApproved = order.getApproved();
     boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
@@ -160,8 +161,8 @@ public class CreateOrderEventHandler implements EventHandler {
     return Future.succeededFuture();
   }
 
-  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, Map<String, String> okapiHeaders) {
-    CompositePurchaseOrder order = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, Map<String, String> okapiHeaders,
+                                       RequestContext requestContext) {
     WorkflowStatus workflowStatus = extractWorkflowStatus(dataImportEventPayload);
 
     Promise<Void> promise = Promise.promise();
@@ -172,11 +173,11 @@ public class CreateOrderEventHandler implements EventHandler {
       return Future.succeededFuture();
     }
 
-    Boolean isApproved = order.getApproved();
     boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
+    boolean isUserNotHaveApprovalPermission = PurchaseOrderHelper.isUserNotHaveApprovePermission(requestContext);
 
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
-      if (Boolean.FALSE.equals(isApproved) && isApprovalRequired) {
+      if (isApprovalRequired && isUserNotHaveApprovalPermission) {
         LOGGER.debug("adjustEventType:: set event type DI_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
         setDiCompletedEvent(dataImportEventPayload);
         return Future.succeededFuture();
