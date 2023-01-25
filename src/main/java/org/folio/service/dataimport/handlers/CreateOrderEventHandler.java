@@ -168,7 +168,6 @@ public class CreateOrderEventHandler implements EventHandler {
     Promise<Void> promise = Promise.promise();
 
     if (workflowStatus.equals(WorkflowStatus.PENDING)) {
-      LOGGER.debug("adjustEventType:: set event type DI_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
       setDiCompletedEvent(dataImportEventPayload);
       return Future.succeededFuture();
     }
@@ -178,7 +177,6 @@ public class CreateOrderEventHandler implements EventHandler {
 
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
       if (isApprovalRequired && isUserNotHaveApprovalPermission) {
-        LOGGER.debug("adjustEventType:: set event type DI_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
         setDiCompletedEvent(dataImportEventPayload);
         return Future.succeededFuture();
       }
@@ -221,6 +219,7 @@ public class CreateOrderEventHandler implements EventHandler {
   }
 
   private void setDiCompletedEvent(DataImportEventPayload dataImportEventPayload) {
+    LOGGER.debug("setDiCompletedEvent:: set event type DI_COMPLETED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setEventType(DI_COMPLETED.value());
     dataImportEventPayload.getContext().put(POST_PROCESSING, "true");
