@@ -130,14 +130,22 @@ public class CreateOrderEventHandler implements EventHandler {
 
     RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
     Future<JsonObject> tenantConfigFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    String temporaryOrderIdForANewOrder = UUID.randomUUID().toString();
 
     tenantConfigFuture
       .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
       .compose(orderId -> prepareMappingResult(dataImportEventPayload))
-      .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result()))
-      .compose(orderId -> idStorageService.store(sourceRecordId, orderId, dataImportEventPayload.getTenant()))
-      .compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
-      .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, tenantConfigFuture.result(), requestContext))
+      .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
+      .compose(generatedOrderId -> {
+        if (temporaryOrderIdForANewOrder.equals(generatedOrderId)) {
+          //TODO: the deduplication should be changed to poLines in the near future
+          return idStorageService.store(sourceRecordId, generatedOrderId, dataImportEventPayload.getTenant())
+            .compose(savedOrder -> saveOrder(dataImportEventPayload, generatedOrderId, tenantConfigFuture.result(), requestContext))
+            .map(CompositePurchaseOrder::getId);
+        }
+        return Future.succeededFuture(generatedOrderId);
+      })
+      .compose(orderId -> saveOrderLines(orderId, dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .onComplete(ar -> {
         if (ar.failed()) {
           LOGGER.error("handle:: Error during order or order line creation", ar.cause());
@@ -167,22 +175,19 @@ public class CreateOrderEventHandler implements EventHandler {
     return headers;
   }
 
-  private Future<String> generateSequentialOrderId(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig) {
-    LOGGER.debug("generateSequentialOrderId :: jobExecutionId: {} ", dataImportEventPayload.getJobExecutionId());
+  private Future<String> generateSequentialOrderId(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, String orderId) {
+    LOGGER.debug("generateSequentialOrderId :: jobExecutionId: {}, newOrderId: {}, poLinesLimit: {} ",
+      dataImportEventPayload.getJobExecutionId(), orderId, tenantConfig.getString(PO_LINES_LIMIT_PROPERTY));
 
-    String tenantId = dataImportEventPayload.getTenant();
-    if (isEmpty(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY))) {
-      return Future.failedFuture(new IllegalArgumentException("Parameter poLines-limit is missing."));
-    }
-    Integer poLinesLimit = Integer.valueOf(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY));
-
+    Integer poLinesLimit = Integer.valueOf(Optional.ofNullable(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY)).orElse("1"));
     Record parsedMarcBibRecord = new JsonObject(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
     if (parsedMarcBibRecord.getOrder() == null) {
-      return Future.failedFuture(new IllegalArgumentException("Order parameter is missing."));
+      return Future.failedFuture(new IllegalArgumentException(
+        String.format("Order parameter is missing. jobExecutionId: {}", dataImportEventPayload.getJobExecutionId())));
     }
 
     int exponentOrder = parsedMarcBibRecord.getOrder()/poLinesLimit;
-    return sequentialOrderIdService.store(dataImportEventPayload.getJobExecutionId(), exponentOrder, UUID.randomUUID().toString(), tenantId);
+    return sequentialOrderIdService.store(dataImportEventPayload.getJobExecutionId(), exponentOrder, orderId, dataImportEventPayload.getTenant());
   }
 
   private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId,
