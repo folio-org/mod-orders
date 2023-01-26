@@ -559,8 +559,9 @@ public class ApplicationConfig {
 
   @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryManager inventoryManager,
                                                                               OpenCompositeOrderPieceService openCompositeOrderPieceService,
-                                                                              ProcessInventoryStrategyResolver processInventoryStrategyResolver) {
-    return new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver) ;
+                                                                              ProcessInventoryStrategyResolver processInventoryStrategyResolver,
+                                                                              RestClient restClient) {
+    return new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver, restClient) ;
   }
 
   @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(ExpenseClassValidationService expenseClassValidationService,
@@ -585,13 +586,13 @@ public class ApplicationConfig {
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService) {
+    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService, RestClient restClient) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
       unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
       poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager,
-      organizationService);
+      organizationService, restClient);
   }
 
   @Bean PurchaseOrderLineHelper purchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,

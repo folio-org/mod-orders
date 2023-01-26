@@ -17,12 +17,14 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.folio.DataImportEventPayload;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.postgres.testing.PostgresTesterContainer;
+import org.folio.processing.events.EventManager;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.client.TenantClient;
 import org.folio.rest.jaxrs.model.Event;
@@ -36,6 +38,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.runner.RunWith;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import com.github.tomakehurst.wiremock.admin.NotFoundException;
@@ -65,6 +68,7 @@ import net.mguenther.kafka.junit.ObserveKeyValues;
 import net.mguenther.kafka.junit.ReadKeyValues;
 import net.mguenther.kafka.junit.SendKeyValues;
 
+@RunWith(VertxUnitRunner.class)
 public abstract class DiAbstractRestTest {
 
   protected static Vertx vertx;
@@ -72,12 +76,12 @@ public abstract class DiAbstractRestTest {
   private static final String KAFKA_HOST = "KAFKA_HOST";
   private static final String KAFKA_PORT = "KAFKA_PORT";
   private static final String KAFKA_ENV = "ENV";
-  private static final String KAFKA_ENV_VALUE = "test-env";
+  protected static final String KAFKA_ENV_VALUE = "test-env";
   public static final String OKAPI_URL_ENV = "OKAPI_URL";
   private static final int PORT = NetworkUtils.nextFreePort();
   protected static final String OKAPI_URL = "http://localhost:" + PORT;
   private static final String HTTP_PORT = "http.port";
-  private static int port;
+  protected static int port;
   protected static final String TENANT_ID = "diku";
   protected static final String TOKEN = "token";
   protected static RequestSpecification spec;
@@ -111,18 +115,19 @@ public abstract class DiAbstractRestTest {
 
   private static void runDatabase() {
     PostgresClient.stopPostgresTester();
-    PostgresClient.closeAllClients();
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
   }
 
   @AfterClass
   public static void tearDownClass(final TestContext context) {
     Async async = context.async();
+    EventManager.clearEventHandlers();
     vertx.close(context.asyncAssertSuccess(res -> {
       kafkaCluster.stop();
       async.complete();
     }));
   }
+
   private static void deployVerticle(TestContext context) {
     Async async = context.async();
     port = NetworkUtils.nextFreePort();
@@ -133,18 +138,22 @@ public abstract class DiAbstractRestTest {
 
     TenantClient tenantClient = new TenantClient(okapiUrl, TENANT_ID, TOKEN);
     vertx.deployVerticle(RestVerticle.class.getName(), options, res -> {
-      TenantAttributes tenantAttributes = new TenantAttributes();
-      tenantClient.postTenant(tenantAttributes).onComplete(res2 -> {
-        if (res2.result().statusCode() == 201) {
-          tenantClient.getTenantByOperationId(res2.result().bodyAsJson(TenantJob.class).getId(), 60000, context.asyncAssertSuccess(res3 -> {
-            context.assertTrue(res3.bodyAsJson(TenantJob.class).getComplete());
-            async.complete();
-          }));
-        } else {
-          context.assertEquals("Failed to make post tenant. Received status code 400", res2.result().bodyAsString());
+      postTenant(context, async, tenantClient);
+    });
+  }
+
+  protected static void postTenant(TestContext context, Async async, TenantClient tenantClient) {
+    TenantAttributes tenantAttributes = new TenantAttributes();
+    tenantClient.postTenant(tenantAttributes).onComplete(res2 -> {
+      if (res2.result().statusCode() == 201) {
+        tenantClient.getTenantByOperationId(res2.result().bodyAsJson(TenantJob.class).getId(), 60000, context.asyncAssertSuccess(res3 -> {
+          context.assertTrue(res3.bodyAsJson(TenantJob.class).getComplete());
           async.complete();
-        }
-      });
+        }));
+      } else {
+        context.assertEquals("Failed to make post tenant. Received status code 400", res2.result().bodyAsString());
+        async.complete();
+      }
     });
   }
 
