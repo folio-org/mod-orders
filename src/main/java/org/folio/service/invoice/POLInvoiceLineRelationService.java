@@ -51,26 +51,27 @@ public class POLInvoiceLineRelationService {
   public Future<EncumbrancesProcessingHolder> manageInvoiceRelation(EncumbrancesProcessingHolder encumbrancesProcessingHolder, RequestContext requestContext) {
     List<Transaction> forDelete = encumbrancesProcessingHolder.getEncumbrancesForDelete().stream()
       .map(EncumbranceRelationsHolder::getOldEncumbrance).collect(Collectors.toList());
+    List<String> poLineIds = forDelete.stream().map(transaction -> transaction.getEncumbrance().getSourcePoLineId()).distinct().collect(Collectors.toList());
 
-    if (CollectionUtils.isNotEmpty(encumbrancesProcessingHolder.getEncumbrancesForCreate()) && CollectionUtils.isNotEmpty(forDelete)) {
-      List<String> poLineIds = forDelete.stream().map(transaction -> transaction.getEncumbrance().getSourcePoLineId()).distinct().collect(Collectors.toList());
-      List<String> encumbranceForDeleteIds = forDelete.stream().map(Transaction::getId).distinct().collect(Collectors.toList());
+    return invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
+      .compose(invoiceLines -> {
+        validateInvoiceLineStatuses(invoiceLines);
 
-      // Copy expended and awaiting payment to newly created encumbrance
-      double amountExpended = forDelete.stream().mapToDouble(encumbrance -> encumbrance.getEncumbrance().getAmountExpended()).sum();
-      double amountAwaitingPayment = forDelete.stream().mapToDouble(encumbrance -> encumbrance.getEncumbrance().getAmountAwaitingPayment()).sum();
-      encumbrancesProcessingHolder.getEncumbrancesForCreate().stream().findFirst().ifPresent(holder -> holder.getNewEncumbrance().getEncumbrance()
-        .withAmountExpended(amountExpended).withAmountAwaitingPayment(amountAwaitingPayment));
+        if (CollectionUtils.isNotEmpty(encumbrancesProcessingHolder.getEncumbrancesForCreate()) && CollectionUtils.isNotEmpty(forDelete)) {
+          List<String> encumbranceForDeleteIds = forDelete.stream().map(Transaction::getId).distinct().collect(Collectors.toList());
 
-      return invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
-        .map(invoiceLines -> {
-          validateInvoiceLineStatuses(invoiceLines);
-          return null;
-        }).compose(aVoid -> removeEncumbranceReferenceFromTransactions(encumbranceForDeleteIds, requestContext))
-        .map(encumbrancesProcessingHolder);
-    } else {
-      return Future.succeededFuture(encumbrancesProcessingHolder);
-    }
+          // Copy expended and awaiting payment to newly created encumbrance
+          double amountExpended = forDelete.stream().mapToDouble(encumbrance -> encumbrance.getEncumbrance().getAmountExpended()).sum();
+          double amountAwaitingPayment = forDelete.stream().mapToDouble(encumbrance -> encumbrance.getEncumbrance().getAmountAwaitingPayment()).sum();
+          encumbrancesProcessingHolder.getEncumbrancesForCreate().stream().findFirst().ifPresent(holder -> holder.getNewEncumbrance().getEncumbrance()
+            .withAmountExpended(amountExpended).withAmountAwaitingPayment(amountAwaitingPayment));
+
+          return removeEncumbranceReferenceFromTransactions(encumbranceForDeleteIds, requestContext)
+            .map(encumbrancesProcessingHolder);
+        } else {
+          return Future.succeededFuture(encumbrancesProcessingHolder);
+        }
+      });
   }
 
 
