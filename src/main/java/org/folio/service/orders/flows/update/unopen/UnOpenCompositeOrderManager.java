@@ -129,13 +129,17 @@ public class UnOpenCompositeOrderManager {
       })
       .mapEmpty();
     } else if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-        if (compPOL.getCheckinItems()) {
+        if (compPOL.getCheckinItems()) { // independent
           return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) : Future.succeededFuture();
-        } else {
-          return (deleteHoldings) ? processInventoryWithItems(compPOL, requestContext) : processInventoryOnlyWithItems(compPOL, requestContext);
+        } else { // synchronized
+          return (deleteHoldings) ? processInventoryHoldingsWithItems(compPOL, requestContext) : processInventoryOnlyWithItems(compPOL, requestContext);
         }
     } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
-        return processInventoryOnlyWithHolding(compPOL, requestContext);
+        if (compPOL.getCheckinItems()) { // independent
+          return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) : Future.succeededFuture();
+        } else { // synchronized
+          return processInventoryOnlyWithHolding(compPOL, requestContext);
+        }
     }
 
     return Future.succeededFuture();
@@ -187,7 +191,7 @@ public class UnOpenCompositeOrderManager {
     return Future.succeededFuture(Collections.emptyList());
   }
 
-  private Future<Void> processInventoryWithItems(CompositePoLine compPOL, RequestContext requestContext) {
+  private Future<Void> processInventoryHoldingsWithItems(CompositePoLine compPOL, RequestContext requestContext) {
     return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compPOL.getId()), ItemStatus.ON_ORDER.value(), requestContext)
                           .compose(onOrderItems -> {
                             if (isNotEmpty(onOrderItems)) {
