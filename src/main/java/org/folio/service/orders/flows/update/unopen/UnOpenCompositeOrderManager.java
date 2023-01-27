@@ -129,15 +129,15 @@ public class UnOpenCompositeOrderManager {
       })
       .mapEmpty();
     } else if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-        if (compPOL.getCheckinItems()) { // independent
+        if (compPOL.getCheckinItems()) { // independent workflow
           return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) : Future.succeededFuture();
-        } else { // synchronized
+        } else { // synchronized workflow
           return (deleteHoldings) ? processInventoryHoldingsWithItems(compPOL, requestContext) : processInventoryOnlyWithItems(compPOL, requestContext);
         }
     } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
-        if (compPOL.getCheckinItems()) { // independent
+        if (compPOL.getCheckinItems()) { // independent workflow
           return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) : Future.succeededFuture();
-        } else { // synchronized
+        } else { // synchronized workflow
           return processInventoryOnlyWithHolding(compPOL, requestContext);
         }
     }
