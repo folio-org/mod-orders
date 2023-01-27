@@ -1,0 +1,61 @@
+{
+  "id": "2c4c29fd-fb8a-4c70-8561-931690bae8a4",
+  "checkinItems": false,
+  "instanceId": "02ad9ec3-bf32-4470-9b6f-b061038a6467",
+  "acquisitionMethod": "796596c4-62b5-4b64-a2ce-524c747afaa2",
+  "automaticExport": false,
+  "alerts": [],
+  "claims": [],
+  "collection": false,
+  "contributors": [],
+  "cost": {
+    "listUnitPrice": 50,
+    "currency": "USD",
+    "discount": 10,
+    "discountType": "percentage",
+    "quantityPhysical": 1,
+    "poLineEstimatedPrice": 45
+  },
+  "details": {
+    "isAcknowledged": false,
+    "productIds": [],
+    "subscriptionInterval": 0
+  },
+  "fundDistribution": [
+    {
+      "code": "AFRICAHIST",
+      "fundId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
+      "expenseClassId": "1bcc3247-99bf-4dca-9b0f-7bc51a2998c2",
+      "distributionType": "percentage",
+      "value": 100
+    }
+  ],
+  "isPackage": false,
+  "locations": [
+    {
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "quantity": 1,
+      "quantityPhysical": 1
+    }
+  ],
+  "orderFormat": "Physical Resource",
+  "paymentStatus": "Pending",
+  "physical": {
+    "createInventory": "Instance, Holding, Item",
+    "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+    "materialSupplier": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "volumes": []
+  },
+  "poLineNumber": "10020-1",
+  "purchaseOrderId": "3f6307ef-91cc-43ca-a1bc-905924fa8e53",
+  "receiptStatus": "Pending",
+  "reportingCodes": [],
+  "rush": false,
+  "source": "API",
+  "titleOrPackage": "The Bourne Identity",
+  "vendorDetail": {
+    "instructions": "",
+    "vendorAccount": "99999-10",
+    "referenceNumbers": []
+  }
+}

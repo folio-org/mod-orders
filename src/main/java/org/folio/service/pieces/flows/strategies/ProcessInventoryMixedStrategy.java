@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
@@ -26,6 +27,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
 
   public Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL,
                                                                       InventoryManager inventoryManager,
+                                                                      RestClient restClient,
                                                                       RequestContext requestContext) {
     List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
     compPOL.getLocations()
