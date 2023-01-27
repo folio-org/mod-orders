@@ -102,6 +102,17 @@ public class UnOpenCompositeOrderManager {
       .mapEmpty();
   }
 
+  /**
+   * checkinItems (synchronized - false, independent - true)
+   * deleteHoldings == true && workflow synchronized => delete holdings and items
+   * deleteHoldings == false && workflow synchronized => delete items
+   * deleteHoldings == true && workflow independent => delete holdings
+   * deleteHoldings == false && workflow independent => do nothing
+   * @param compPOL
+   * @param deleteHoldings
+   * @param requestContext
+   * @return
+   */
   private Future<Void> processInventory(CompositePoLine compPOL, boolean deleteHoldings, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return Future.succeededFuture();
@@ -146,17 +157,17 @@ public class UnOpenCompositeOrderManager {
 
   private Future<Void> processInventoryOnlyWithItems(CompositePoLine compPOL, RequestContext requestContext) {
     return deleteExpectedPieces(compPOL, requestContext)
-                .compose(deletedPieces ->
-                    inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compPOL.getId()), ItemStatus.ON_ORDER.value(), requestContext)
-                    .onSuccess(onOrderItems -> {
-                      if (isNotEmpty(onOrderItems)) {
-                        List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).collect(toList());
-                        inventoryManager.deleteItems(itemIds,  false, requestContext);
-                      }
-                    })
-                )
-                .onSuccess(v -> logger.debug(" Items and pieces deleted after UnOpen order"))
-                .mapEmpty();
+      .compose(deletedPieces ->
+        inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compPOL.getId()), ItemStatus.ON_ORDER.value(), requestContext)
+          .onSuccess(onOrderItems -> {
+            if (isNotEmpty(onOrderItems)) {
+              List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).collect(toList());
+              inventoryManager.deleteItems(itemIds,  false, requestContext);
+            }
+        })
+      )
+      .onSuccess(v -> logger.debug(" Items and pieces deleted after UnOpen order"))
+      .mapEmpty();
   }
 
   private Future<List<Piece>> deleteExpectedPieces(CompositePoLine compPOL, RequestContext requestContext) {
