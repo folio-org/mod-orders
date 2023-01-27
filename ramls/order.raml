@@ -61,10 +61,9 @@ resourceTypes:
           - if request does not include po_lines or includes "po_lines": [] or "po_lines": null - update just purchase order summary
           - if request includes array of "po_lines" - update PO lines as per request
         queryParameters:
-          deleteHolding:
-            displayName: The associated holding should be removed
+          deleteHoldings:
+            displayName: The associated holding & Items should be removed
             type: boolean
-            description: The associated holding should be removed
             example: true
             required: false
             default: false
