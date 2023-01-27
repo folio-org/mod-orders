@@ -2280,6 +2280,9 @@ public class MockServer {
         TransactionCollection transactionCollection = new JsonObject(getMockData(ENCUMBRANCE_PATH)).mapTo(TransactionCollection.class);
         transactionCollection.getTransactions().get(0).withId("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
+      } else if (query.contains("awaitingPayment.encumbranceId")) {
+        TransactionCollection transactionCollection = new TransactionCollection().withTotalRecords(0);
+        body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else {
         body = getMockData(ENCUMBRANCE_PATH);
       }

@@ -9,6 +9,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.folio.service.orders.OrderWorkflowType;
 
 import io.vertx.core.Future;
@@ -19,19 +20,19 @@ public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy
   private final EncumbranceService encumbranceService;
   private final FundsDistributionService fundsDistributionService;
   private final BudgetRestrictionService budgetRestrictionService;
-  private final TransactionSummariesService transactionSummariesService;
+  private final OrderTransactionSummariesService orderTransactionSummariesService;
   private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
   private final EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder;
 
   public ReceivingEncumbranceStrategy(EncumbranceService encumbranceService, FundsDistributionService fundsDistributionService,
     BudgetRestrictionService budgetRestrictionService, EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
-    TransactionSummariesService transactionSummariesService,
+    OrderTransactionSummariesService orderTransactionSummariesService,
     EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder) {
       this.encumbranceService = encumbranceService;
       this.fundsDistributionService = fundsDistributionService;
       this.budgetRestrictionService = budgetRestrictionService;
       this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
-      this.transactionSummariesService = transactionSummariesService;
+      this.orderTransactionSummariesService = orderTransactionSummariesService;
       this.encumbrancesProcessingHolderBuilder = encumbrancesProcessingHolderBuilder;
   }
 
