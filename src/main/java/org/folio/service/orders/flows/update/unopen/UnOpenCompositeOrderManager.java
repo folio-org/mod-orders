@@ -103,15 +103,18 @@ public class UnOpenCompositeOrderManager {
   }
 
   /**
-   * checkinItems (synchronized - false, independent - true)
+   * Processes inventory.
+   *
+   * PO Line checkinItems has the following values: (synchronized - false, independent - true)
    * deleteHoldings == true && workflow synchronized => delete holdings and items
    * deleteHoldings == false && workflow synchronized => delete items
    * deleteHoldings == true && workflow independent => delete holdings
    * deleteHoldings == false && workflow independent => do nothing
-   * @param compPOL
-   * @param deleteHoldings
-   * @param requestContext
-   * @return
+   *
+   * @param compPOL the purchase order
+   * @param deleteHoldings delete holdings flag
+   * @param requestContext the request context
+   * @return future with void
    */
   private Future<Void> processInventory(CompositePoLine compPOL, boolean deleteHoldings, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
