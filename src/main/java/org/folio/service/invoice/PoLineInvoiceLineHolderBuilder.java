@@ -8,15 +8,11 @@ import java.util.Collections;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.http.HttpStatus;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
-import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.finance.FiscalYearService;
@@ -24,8 +20,6 @@ import org.folio.service.finance.transaction.EncumbranceService;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-
-import static org.folio.service.invoice.POLInvoiceLineRelationService.validateInvoiceLineStatuses;
 
 public class PoLineInvoiceLineHolderBuilder {
   private static final List<InvoiceLine.InvoiceLineStatus> EDITABLE_STATUSES = List.of(InvoiceLine.InvoiceLineStatus.OPEN, InvoiceLine.InvoiceLineStatus.REVIEWED);

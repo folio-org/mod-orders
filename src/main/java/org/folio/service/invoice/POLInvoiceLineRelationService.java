@@ -89,11 +89,13 @@ public class POLInvoiceLineRelationService {
 
   private Future<Void> removeEncumbranceReferenceFromTransactions(List<String> encumbranceIds, RequestContext requestContext) {
     return pendingPaymentService.getTransactionsByEncumbranceIds(encumbranceIds, requestContext)
-      .map(pendingPayments -> pendingPayments.stream().peek(transaction -> transaction.getAwaitingPayment().setEncumbranceId(null))
-        .collect(groupingBy(Transaction::getSourceInvoiceId)))
+      .map(pendingPayments -> pendingPayments.stream().map(transaction -> {
+        transaction.getAwaitingPayment().setEncumbranceId(null);
+        return transaction;
+      }).collect(groupingBy(Transaction::getSourceInvoiceId)))
       .map(pendingPayments -> pendingPayments.entrySet().stream().map(entry ->
         invoiceTransactionSummariesService.updateTransactionSummary(buildInvoiceTransactionsSummary(entry.getKey(), entry.getValue().size()), requestContext)
-        .compose(aVoid -> pendingPaymentService.updateTransactions(entry.getValue(),requestContext))).collect(Collectors.toList()))
+          .compose(aVoid -> pendingPaymentService.updateTransactions(entry.getValue(),requestContext))).collect(Collectors.toList()))
       .compose(GenericCompositeFuture::join)
       .mapEmpty();
   }

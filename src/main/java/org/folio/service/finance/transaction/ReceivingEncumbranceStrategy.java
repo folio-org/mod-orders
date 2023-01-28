@@ -20,19 +20,16 @@ public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy
   private final EncumbranceService encumbranceService;
   private final FundsDistributionService fundsDistributionService;
   private final BudgetRestrictionService budgetRestrictionService;
-  private final OrderTransactionSummariesService orderTransactionSummariesService;
   private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
   private final EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder;
 
   public ReceivingEncumbranceStrategy(EncumbranceService encumbranceService, FundsDistributionService fundsDistributionService,
     BudgetRestrictionService budgetRestrictionService, EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
-    OrderTransactionSummariesService orderTransactionSummariesService,
     EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder) {
       this.encumbranceService = encumbranceService;
       this.fundsDistributionService = fundsDistributionService;
       this.budgetRestrictionService = budgetRestrictionService;
       this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
-      this.orderTransactionSummariesService = orderTransactionSummariesService;
       this.encumbrancesProcessingHolderBuilder = encumbrancesProcessingHolderBuilder;
   }
 

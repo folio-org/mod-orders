@@ -508,11 +508,9 @@ public class ApplicationConfig {
                           FundsDistributionService fundsDistributionService,
                           BudgetRestrictionService budgetRestrictionService,
                           EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
-                          OrderTransactionSummariesService orderTransactionSummariesService,
                           EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder) {
     return new ReceivingEncumbranceStrategy(encumbranceService, fundsDistributionService,
-      budgetRestrictionService, encumbranceRelationsHoldersBuilder, orderTransactionSummariesService,
-      encumbrancesProcessingHolderBuilder);
+      budgetRestrictionService, encumbranceRelationsHoldersBuilder, encumbrancesProcessingHolderBuilder);
   }
 
   @Bean PieceUpdateInventoryService pieceUpdateInventoryService(InventoryManager inventoryManager,
