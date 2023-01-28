@@ -9,7 +9,6 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
-import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.folio.service.orders.OrderWorkflowType;
 
 import io.vertx.core.Future;
