@@ -149,8 +149,9 @@ public class UnOpenCompositeOrderManager {
     return deleteExpectedPieces(compPOL, requestContext)
       .compose(deletedPieces -> {
         List<String> holdingIds = compPOL.getLocations().stream()
-          .filter(loc -> Objects.nonNull(loc.getHoldingId()))
-          .map(Location::getHoldingId).collect(toList());
+          .map(Location::getHoldingId)
+          .filter(Objects::nonNull)
+          .collect(toList());
         return inventoryManager.getHoldingsByIds(holdingIds, requestContext);
       })
       .compose(holdings -> deleteHoldings(holdings, requestContext))
@@ -163,18 +164,23 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<Void> processInventoryOnlyWithItems(CompositePoLine compPOL, RequestContext requestContext) {
+    if (!PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
+      logger.info("Skip deleting items and pieces for Un-Open order with id: {} because receipt can be required", compPOL.getId());
+      return Future.succeededFuture();
+    }
     return deleteExpectedPieces(compPOL, requestContext)
       .compose(deletedPieces ->
         inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compPOL.getId()), ItemStatus.ON_ORDER.value(), requestContext)
-          .onSuccess(onOrderItems -> {
+          .compose(onOrderItems -> {
             if (isNotEmpty(onOrderItems)) {
               List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).collect(toList());
-              inventoryManager.deleteItems(itemIds,  false, requestContext);
+              return inventoryManager.deleteItems(itemIds,  false, requestContext);
             }
-        })
-      )
-      .onSuccess(v -> logger.debug(" Items and pieces deleted after UnOpen order"))
-      .mapEmpty();
+            return Future.succeededFuture();
+          })
+          .onSuccess(v -> logger.info("Items and pieces deleted after Un-Open order with id: {}", compPOL.getId()))
+          .onFailure(e -> logger.error("Items and pieces deletion failed after Un-Open order with id: {}", compPOL.getId(), e))
+      ).mapEmpty();
   }
 
   private Future<List<Piece>> deleteExpectedPieces(CompositePoLine compPOL, RequestContext requestContext) {
