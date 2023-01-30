@@ -82,7 +82,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String POL_ERESOURCE_FIELD = "eresource";
   private static final String POL_PHYSICAL_FIELD = "physical";
   private static final String POL_CREATE_INVENTORY_FIELD = "createInventory";
-  private static final String ORDER_LINES_KEY = "ORDER_LINES";
+  private static final String ORDER_LINES_KEY = "PO_LINE";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
