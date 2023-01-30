@@ -175,6 +175,7 @@ public class PurchaseOrderLinesApiTest {
   static final String ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public final static String LINES_PATH = "/orders/order-lines";
   public static final String LINE_BY_ID_PATH = "/orders/order-lines/%s";
+  public static final String COMP_PO_BY_ID_PATH = "/orders/composite-orders/%s";
   public static final String COMP_PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
   public static final String PO_LINE_VALIDATE_FUND_DISTRIBUTIONS_PATH = LINES_PATH + "/fund-distributions/validate";
   private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
@@ -1133,20 +1134,11 @@ public class PurchaseOrderLinesApiTest {
   void testUpdatePoLineForOpenedOrderShouldFailedWhenRelatedInvoiceLineApprovedForCurrentFY() {
     logger.info("=== Test update poline for opened order should failed when related invoice line is approved  ===");
 
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, ANOTHER_PO_LINE_ID_FOR_SUCCESS_CASE).mapTo(CompositePoLine.class);
-    reqData.setId("a6edc906-2f9f-5fb2-a373-efac406f0ef2");
-    reqData.setPurchaseOrderId("9a952cd0-842b-4e71-bddd-014eb128dc8e");
-    reqData.getFundDistribution().get(0).setEncumbrance("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
-    reqData.getFundDistribution().get(1).setEncumbrance("109ecaa0-207d-5ebd-89f2-1fda1ae9108c");
+    CompositePurchaseOrder compositePurchaseOrder = verifySuccessGet(String.format(COMP_PO_BY_ID_PATH, "d6966317-96c7-492f-8df6-dc6c19554452"), CompositePurchaseOrder.class);
+    CompositePoLine reqData = compositePurchaseOrder.getCompositePoLines().get(0);
+    reqData.getFundDistribution().get(0).setFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f");
 
-
-    CompositePoLine compositePoLine = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePoLine.class);
-
-    compositePoLine.getFundDistribution().get(0).setFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f");
-
-
-    verifyPut(String.format(LINE_BY_ID_PATH, compositePoLine.getId()), JsonObject.mapFrom(compositePoLine).encode(),
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 403);
   }
 
