@@ -62,7 +62,7 @@ import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.finance.rollover.RolloverErrorService;
 import org.folio.service.finance.rollover.RolloverRetrieveService;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.finance.transaction.TransactionSummariesService;
+import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -101,7 +101,7 @@ public class OrderReEncumberServiceTest {
   @Mock
   private TransactionService transactionService;
   @Mock
-  private TransactionSummariesService transactionSummaryService;
+  private OrderTransactionSummariesService orderTransactionSummariesService;
   @Mock
   private ReEncumbranceHoldersBuilder spyReEncumbranceHoldersBuilder;
 
@@ -469,7 +469,7 @@ public class OrderReEncumberServiceTest {
     List<Transaction> toTransactionList = Collections.emptyList();
     when(transactionService.getTransactions(anyString(), eq(requestContext)))
         .thenReturn(succeededFuture(toTransactionList));
-    when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
+    when(orderTransactionSummariesService.updateTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
     when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(succeededFuture(new Transaction()));
 
     Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
@@ -640,7 +640,7 @@ public class OrderReEncumberServiceTest {
     when(exchangeRateProviderResolver.resolve(conversionFyToPoLineQuery, requestContext)).thenReturn(exchangeRateProvider);
     when(transactionService.getTransactions(anyString(), eq(requestContext)))
         .thenReturn(succeededFuture(toTransactionList));
-    when(transactionSummaryService.updateOrderTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
+    when(orderTransactionSummariesService.updateTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
     when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(succeededFuture(new Transaction()));
 
     //When

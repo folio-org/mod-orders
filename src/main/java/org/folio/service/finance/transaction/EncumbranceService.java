@@ -41,6 +41,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.finance.FiscalYearService;
+import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.javamoney.moneta.function.MonetaryOperators;
@@ -58,19 +59,19 @@ public class EncumbranceService {
   private static final Logger logger = LogManager.getLogger();
 
   private final TransactionService transactionService;
-  private final TransactionSummariesService transactionSummariesService;
+  private final OrderTransactionSummariesService orderTransactionSummariesService;
   private final InvoiceLineService invoiceLineService;
   private final OrderInvoiceRelationService orderInvoiceRelationService;
   private final FiscalYearService fiscalYearService;
 
 
   public EncumbranceService(TransactionService transactionService,
-                            TransactionSummariesService transactionSummariesService,
+                            OrderTransactionSummariesService orderTransactionSummariesService,
                             InvoiceLineService invoiceLineService,
                             OrderInvoiceRelationService orderInvoiceRelationService,
                             FiscalYearService fiscalYearService) {
     this.transactionService = transactionService;
-    this.transactionSummariesService = transactionSummariesService;
+    this.orderTransactionSummariesService = orderTransactionSummariesService;
     this.invoiceLineService = invoiceLineService;
     this.orderInvoiceRelationService = orderInvoiceRelationService;
     this.fiscalYearService = fiscalYearService;
@@ -81,7 +82,7 @@ public class EncumbranceService {
 
     if (holder.getAllEncumbrancesQuantity() == 0)
       return Future.succeededFuture();
-    return transactionSummariesService.createOrUpdateOrderTransactionSummary(holder, requestContext)
+    return orderTransactionSummariesService.createOrUpdateOrderTransactionSummary(holder, requestContext)
         .compose(v -> createEncumbrances(holder.getEncumbrancesForCreate(), requestContext))
         .compose(v -> releaseEncumbrances(holder.getEncumbrancesForRelease(), requestContext))
         .compose(v -> unreleaseEncumbrances(holder.getEncumbrancesForUnrelease(), requestContext))
@@ -122,7 +123,7 @@ public class EncumbranceService {
   public Future<Void> updateEncumbrancesOrderStatus(CompositePurchaseOrder compPo, RequestContext requestContext) {
     return getOrderUnreleasedEncumbrances(compPo.getId(), requestContext).compose(encumbrs -> {
       if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
-        return transactionSummariesService.updateOrderTransactionSummary(compPo.getId(), encumbrs.size(), requestContext)
+        return orderTransactionSummariesService.updateTransactionSummary(compPo.getId(), encumbrs.size(), requestContext)
           .map(v -> {
             syncEncumbrancesOrderStatus(compPo.getWorkflowStatus(), encumbrs);
             return encumbrs;
@@ -134,7 +135,7 @@ public class EncumbranceService {
   }
 
   public Future<Void> updateOrderTransactionSummary(CompositePoLine compOrderLine, List<Transaction> encumbrs, RequestContext requestContext) {
-    return transactionSummariesService.updateOrderTransactionSummary(compOrderLine.getPurchaseOrderId(), encumbrs.size(), requestContext);
+    return orderTransactionSummariesService.updateTransactionSummary(compOrderLine.getPurchaseOrderId(), encumbrs.size(), requestContext);
   }
 
   private void syncEncumbrancesOrderStatus(CompositePurchaseOrder.WorkflowStatus workflowStatus,
@@ -258,14 +259,14 @@ public class EncumbranceService {
 
   public Future<Void> deletePoLineEncumbrances(PoLine poline, RequestContext requestContext) {
     return getPoLineEncumbrances(poline.getId(), requestContext)
-      .compose(encumbrances -> transactionSummariesService.updateOrderTransactionSummary(poline.getPurchaseOrderId(), encumbrances.size(), requestContext)
+      .compose(encumbrances -> orderTransactionSummariesService.updateTransactionSummary(poline.getPurchaseOrderId(), encumbrances.size(), requestContext)
         .compose(v -> releaseEncumbrances(encumbrances, requestContext))
         .compose(ok -> transactionService.deleteTransactions(encumbrances, requestContext)));
   }
 
   public Future<Void> deleteOrderEncumbrances(String orderId, RequestContext requestContext) {
     return getOrderEncumbrances(orderId, requestContext)
-      .compose(encumbrances -> transactionSummariesService.updateOrderTransactionSummary(orderId, encumbrances.size(), requestContext)
+      .compose(encumbrances -> orderTransactionSummariesService.updateTransactionSummary(orderId, encumbrances.size(), requestContext)
         .compose(v -> releaseEncumbrances(encumbrances, requestContext))
         .compose(v -> transactionService.deleteTransactions(encumbrances, requestContext)));
   }

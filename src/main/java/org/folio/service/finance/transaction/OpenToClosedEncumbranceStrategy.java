@@ -6,6 +6,7 @@ import static org.folio.rest.acq.model.finance.Encumbrance.OrderStatus.CLOSED;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.folio.service.orders.OrderWorkflowType;
 
 import io.vertx.core.Future;
@@ -14,14 +15,14 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
 
   private final EncumbranceService encumbranceService;
   private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
-  private final TransactionSummariesService transactionSummariesService;
+  private final OrderTransactionSummariesService orderTransactionSummariesService;
 
   public OpenToClosedEncumbranceStrategy(EncumbranceService encumbranceService,
       EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
-      TransactionSummariesService transactionSummariesService) {
+      OrderTransactionSummariesService orderTransactionSummariesService) {
     this.encumbranceService = encumbranceService;
     this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
-    this.transactionSummariesService = transactionSummariesService;
+    this.orderTransactionSummariesService = orderTransactionSummariesService;
   }
 
   @Override
@@ -39,7 +40,7 @@ public class OpenToClosedEncumbranceStrategy implements EncumbranceWorkflowStrat
               tr.getEncumbrance().setOrderStatus(CLOSED);
               tr.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
             });
-            return transactionSummariesService.updateOrderTransactionSummary(compPO.getId(), transactions.size(), requestContext)
+            return orderTransactionSummariesService.updateTransactionSummary(compPO.getId(), transactions.size(), requestContext)
               .compose(v -> encumbranceService.updateEncumbrances(transactions, requestContext));
           }
         });
