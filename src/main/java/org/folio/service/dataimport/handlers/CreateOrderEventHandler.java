@@ -82,7 +82,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String POL_ERESOURCE_FIELD = "eresource";
   private static final String POL_PHYSICAL_FIELD = "physical";
   private static final String POL_CREATE_INVENTORY_FIELD = "createInventory";
-  private static final String ORDER_LINES_KEY = "PO_LINE";
+  private static final String PO_LINE_KEY = "PO_LINE";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final String ID_UNIQUENESS_ERROR_MSG = "duplicate key value violates unique constraint";
@@ -305,7 +305,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<CompositePoLine> saveOrderLines(String orderId, DataImportEventPayload dataImportEventPayload,
                                                  JsonObject tenantConfig, RequestContext requestContext) {
-    CompositePoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER_LINES_KEY), CompositePoLine.class);
+    CompositePoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
     poLine.setPurchaseOrderId(orderId);
     poLine.setSource(CompositePoLine.Source.MARC);
 
@@ -315,7 +315,7 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     return poLineHelper.createPoLine(poLine, tenantConfig, requestContext)
-      .onComplete(ar -> dataImportEventPayload.getContext().put(ORDER_LINES_KEY, Json.encode(poLine)));
+      .onComplete(ar -> dataImportEventPayload.getContext().put(PO_LINE_KEY, Json.encode(poLine)));
   }
 
   /**
@@ -357,10 +357,10 @@ public class CreateOrderEventHandler implements EventHandler {
     if (WorkflowStatus.OPEN.value().equals(orderJson.getString(ORDER_STATUS_FIELD))
       && (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null || poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null)) {
       return overrideCreateInventoryField(poLineJson, dataImportEventPayload)
-        .onComplete(v -> dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode()));
+        .onComplete(v -> dataImportEventPayload.getContext().put(PO_LINE_KEY, poLineJson.encode()));
     }
 
-    dataImportEventPayload.getContext().put(ORDER_LINES_KEY, poLineJson.encode());
+    dataImportEventPayload.getContext().put(PO_LINE_KEY, poLineJson.encode());
     return Future.succeededFuture();
   }
 
