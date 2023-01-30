@@ -101,7 +101,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void putOrdersCompositeOrdersById(String orderId, String lang, CompositePurchaseOrder compPO,
+  public void putOrdersCompositeOrdersById(String orderId, boolean deleteHoldings, String lang, CompositePurchaseOrder compPO,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     // Set order id from path if not specified in body
     populateOrderId(orderId, compPO);
@@ -110,7 +110,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
     purchaseOrderHelper.validateExistingOrder(orderId, compPO, requestContext)
       .compose(validationErrors -> {
         if (CollectionUtils.isEmpty(validationErrors)) {
-          return purchaseOrderHelper.updateOrder(compPO, requestContext)
+          return purchaseOrderHelper.updateOrder(compPO, deleteHoldings, requestContext)
             .onSuccess(v -> {
               if (logger.isInfoEnabled()) {
                 logger.info("Successfully Updated Order: {}", JsonObject.mapFrom(compPO).encodePrettily());
