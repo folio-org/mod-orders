@@ -1,0 +1,115 @@
+{
+  "id": "d6966317-96c7-492f-8df6-dc6c19554452",
+  "orderType": "One-Time",
+  "workflowStatus": "Open",
+  "compositePoLines": [
+    {
+      "id": "a6edc906-2f9f-5fb2-a373-efac406f0ef2",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "claims": [
+        {
+          "claimed": false,
+          "sent": "2018-10-09T00:00:00.000Z",
+          "grace": 30
+        }
+      ],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Ed Mashburn",
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 24.99,
+        "quantityPhysical": 2
+      },
+      "description": "ABCDEFGH",
+      "details": {
+        "receivingNote": "ABCDEFGHIJKL",
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
+          }
+        ],
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
+      "donor": "ABCDEFGHIJKLM",
+      "fundDistribution": [
+        {
+          "code": "HIST",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+          "distributionType": "percentage",
+          "value": 80.0,
+          "encumbrance": "9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1"
+        },
+        {
+          "code": "EUROHIST",
+          "fundId": "e9285a1c-1dfc-4380-868c-e74073003f43",
+          "distributionType": "percentage",
+          "value": 20.0,
+          "encumbrance": "109ecaa0-207d-5ebd-89f2-1fda1ae9108c"
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantity": 2,
+          "quantityPhysical": 2
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Awaiting Payment",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "volumes": [
+          "vol. 1"
+        ],
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8",
+        "receiptDue": "2018-10-10T00:00:00.000Z"
+      },
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "268758-03",
+      "publicationDate": "2017",
+      "publisher": "Schiffer Publishing",
+      "purchaseOrderId": "00000000-1111-2222-8888-999999999999",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
+      "receiptStatus": "Awaiting Receipt",
+      "requester": "Leo Bulero",
+      "rush": true,
+      "selector": "ABCD",
+      "source": "User",
+      "tags": {
+        "tagList": [
+          "important"
+        ]
+      },
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
+      "isPackage": false,
+      "vendorDetail": {
+        "instructions": "ABCDEFG",
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
+        "vendorAccount": "8910-10"
+      },
+      "metadata": {
+        "createdDate": "2018-06-29T00:00:00.000",
+        "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+      }
+    }
+
+  ]
+}

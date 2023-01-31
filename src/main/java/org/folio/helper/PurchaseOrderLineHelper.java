@@ -8,7 +8,6 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.helper.PoNumberHelper.buildPoLineNumber;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
@@ -176,14 +175,15 @@ public class PurchaseOrderLineHelper {
   /**
    * Creates PO Line if its content is valid and all restriction checks passed
    * @param compPOL {@link CompositePoLine} to be created
+   * @param tenantConfig tenant configuration
    * @return completable future which might hold {@link CompositePoLine} on success, {@code null} if validation fails or an exception if any issue happens
    */
-  public Future<CompositePoLine> createPoLine(CompositePoLine compPOL, RequestContext requestContext) {
+  public Future<CompositePoLine> createPoLine(CompositePoLine compPOL, JsonObject tenantConfig, RequestContext requestContext) {
     // Validate PO Line content and retrieve order only if this operation is allowed
     JsonObject cachedTenantConfiguration= new JsonObject();
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .map(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
-      .compose(tenantConfiguration -> setTenantDefaultCreateInventoryValues(compPOL, tenantConfiguration))
+    cachedTenantConfiguration.mergeIn(tenantConfig, true);
+
+      return setTenantDefaultCreateInventoryValues(compPOL, cachedTenantConfiguration)
       .compose(v -> validateNewPoLine(compPOL, cachedTenantConfiguration, requestContext))
       .compose(validationErrors -> {
         if (CollectionUtils.isEmpty(validationErrors)) {

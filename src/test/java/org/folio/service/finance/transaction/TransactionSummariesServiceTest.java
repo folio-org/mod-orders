@@ -21,6 +21,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -32,7 +33,7 @@ import io.vertx.core.json.JsonObject;
 public class TransactionSummariesServiceTest {
 
   @InjectMocks
-  private TransactionSummariesService transactionSummariesService;
+  private OrderTransactionSummariesService orderTransactionSummariesService;
 
   @Mock
   private RestClient restClient;
@@ -48,7 +49,7 @@ public class TransactionSummariesServiceTest {
   @Test
   void testShouldNotUpdateTransactionsSummariesWhenNoEncumbrances() {
     // When
-    transactionSummariesService.updateOrderTransactionSummary(UUID.randomUUID()
+    orderTransactionSummariesService.updateTransactionSummary(UUID.randomUUID()
       .toString(), 0, requestContext);
     // Then
     verify(restClient, never()).put(anyString(), any(), any());
@@ -70,9 +71,9 @@ public class TransactionSummariesServiceTest {
       .get(0);
 
     // When
-    transactionSummariesService.updateOrderTransactionSummary(order.getId(), 1, requestContext);
+    orderTransactionSummariesService.updateTransactionSummary(order.getId(), 1, requestContext);
     // Then
-    assertNull(transactionSummariesService.getOrderTransactionSummary(order.getId(), requestContext));
+    assertNull(orderTransactionSummariesService.getTransactionSummary(order.getId(), requestContext));
   }
 
   @Test
@@ -83,7 +84,7 @@ public class TransactionSummariesServiceTest {
     var response = new JsonObject("{\"id\": \"" + uuid + "\"}");
     doReturn(succeededFuture(response)).when(restClient).post(anyString(), any(), any(), any());
     // When
-    OrderTransactionSummary summary = transactionSummariesService.createOrderTransactionSummary(uuid, 2, requestContext)
+    OrderTransactionSummary summary = orderTransactionSummariesService.createTransactionSummary(new OrderTransactionSummary().withId(uuid).withNumTransactions(2), requestContext)
       .result();
     // Then
     assertEquals(uuid, summary.getId());

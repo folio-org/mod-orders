@@ -4,6 +4,7 @@ import static org.folio.TestConfig.closeKafkaMockServer;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.TestConfig.closeVertx;
 import static org.folio.TestConfig.deployVerticle;
+import static org.folio.TestConfig.startKafkaMockServer;
 import static org.folio.TestConfig.startMockServer;
 
 import java.util.concurrent.ExecutionException;
@@ -94,7 +95,7 @@ public class ApiTestSuite {
   @BeforeAll
   public static void before() throws InterruptedException, ExecutionException, TimeoutException {
     startMockServer();
- //   startKafkaMockServer();
+    startKafkaMockServer();
     deployVerticle();
   }
 
