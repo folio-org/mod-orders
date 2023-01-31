@@ -84,6 +84,7 @@ import static org.folio.service.dataimport.handlers.CreateOrderEventHandler.OKAP
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(VertxUnitRunner.class)
@@ -99,6 +100,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   private static final String TENANT_APPROVAL_REQUIRED = "test_diku_limit_1";
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String USER_ID = "6bece55a-831c-4197-bed1-coff1e00b7d8";
+  private static final String PO_LINE_ORDER_ID_KEY = "purchaseOrderId";
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -1029,6 +1031,41 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertDoesNotThrow(() -> Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class));
     assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
     assertDoesNotThrow(() -> Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class));
+  }
+
+  @Test
+  public void shouldPublishDiErrorEventAndClearOrderIdInPoLineWhenPoLineIsInvalid() throws InterruptedException {
+    // given
+    MappingRule isSubscriptionRule = new MappingRule()
+      .withPath("order.poLine.cost.quantityPhysical")
+      .withValue("\"-25\"")
+      .withEnabled("true");
+
+    mappingProfile.getMappingDetails().getMappingFields().add(isSubscriptionRule);
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    JsonObject poLineJsonObject = new JsonObject(eventPayload.getContext().get(PO_LINE_KEY));
+    assertNull(poLineJsonObject.getString(PO_LINE_ORDER_ID_KEY));
   }
 
   @Test

@@ -89,6 +89,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String PROFILE_SNAPSHOT_NOT_FOUND_MSG = "JobProfileSnapshot was not found by profileSnapshotId '%s'";
   private static final String POST_PROCESSING = "POST_PROCESSING";
   private static final String WORKFLOW_STATUS_PATH = "order.po.workflowStatus";
+  private static final String PO_LINE_ORDER_ID_KEY = "purchaseOrderId";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
@@ -138,6 +139,7 @@ public class CreateOrderEventHandler implements EventHandler {
       .onComplete(ar -> {
         if (ar.failed()) {
           LOGGER.error("handle:: Error during order or order line creation", ar.cause());
+          clearOrderIdInPoLineEntityIfNecessary(dataImportEventPayload);
           future.completeExceptionally(ar.cause());
           return;
         }
@@ -145,6 +147,15 @@ public class CreateOrderEventHandler implements EventHandler {
       });
 
     return future;
+  }
+
+  private void clearOrderIdInPoLineEntityIfNecessary(DataImportEventPayload dataImportEventPayload) {
+    String poLineAsString = dataImportEventPayload.getContext().get(PO_LINE_KEY);
+    if (isNotBlank(poLineAsString)) {
+      JsonObject poLineAsJson = new JsonObject(poLineAsString);
+      poLineAsJson.remove(PO_LINE_ORDER_ID_KEY);
+      dataImportEventPayload.getContext().put(PO_LINE_KEY, Json.encode(poLineAsJson));
+    }
   }
 
   private Future<Object> setApprovedFalseIfUserNotHaveApprovalPermission(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig,
