@@ -68,7 +68,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
       .map(order -> order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN))
-      .compose(order -> purchaseOrderHelper.updateOrder(order, requestContext))
+      .compose(order -> purchaseOrderHelper.updateOrder(order, false, requestContext))
       .onComplete(ar -> {
         if (ar.failed()) {
           LOGGER.error("handle:: Error during transfer order to Open status", ar.cause());
