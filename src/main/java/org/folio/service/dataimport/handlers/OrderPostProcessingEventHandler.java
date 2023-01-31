@@ -1,6 +1,6 @@
 package org.folio.service.dataimport.handlers;
 
-import io.vertx.core.Vertx;
+import io.vertx.core.Context;
 import io.vertx.core.json.Json;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -41,12 +41,14 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
+  private final Context vertxContext;
 
   @Autowired
   public OrderPostProcessingEventHandler(PurchaseOrderHelper purchaseOrderHelper,
-                                         PurchaseOrderStorageService purchaseOrderStorageService) {
+                                         PurchaseOrderStorageService purchaseOrderStorageService, Context vertxContext) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
+    this.vertxContext = vertxContext;
   }
 
   @Override
@@ -60,7 +62,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     }
 
     Map<String, String> okapiHeaders = extractOkapiHeaders(dataImportEventPayload);
-    RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
+    RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(payloadContext.get(ORDER_LINES_KEY), CompositePoLine.class);
 
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)

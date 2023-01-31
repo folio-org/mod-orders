@@ -1089,10 +1089,21 @@ public class MockServer {
   private void handleGetItemRecordsFromStorage(RoutingContext ctx) {
     logger.info("handleGetItemRecordsFromStorage got: " + ctx.request().path());
 
-    JsonObject items;
-    items = new JsonObject().put("items", new JsonArray());
-    addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
-    serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
+    // Attempt to find POLine in mock server memory
+    List<JsonObject> itemsList = serverRqRs.column(HttpMethod.SEARCH).get("items");
+    if (!itemsList.isEmpty()) {
+      JsonObject items = new JsonObject()
+        .put("items", itemsList)
+        .put(TOTAL_RECORDS, itemsList.size());
+
+      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+      serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
+    } else {
+      JsonObject items;
+      items = new JsonObject().put("items", new JsonArray());
+      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+      serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
+    }
   }
 
   private void handleGetInventoryItemRecords(RoutingContext ctx) {
