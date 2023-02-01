@@ -44,7 +44,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   @Value("${orders.kafka.OrderConsumer.loadLimit:5}")
   private int loadLimit;
 
-  @Value("${mod.orders.dataimport.kafka.max.distribution.number:100}")
+  @Value("${orders.dataimport.kafka.max.distribution.number:100}")
   private int maxDistributionNumber;
 
   @Autowired

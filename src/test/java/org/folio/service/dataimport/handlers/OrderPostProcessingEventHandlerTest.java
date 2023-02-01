@@ -140,8 +140,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withCost(new Cost().withCurrency("USD").withQuantityElectronic(1))
       .withFundDistribution(List.of(new FundDistribution()
         .withFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
-        .withValue(100d)))
-      .withAcquisitionMethod("306489dd-0053-49ee-a068-c316444a8f55");
+        .withValue(100d)));
 
     JsonObject itemJson = new JsonObject()
       .put(ID, "86481a22-633e-4b97-8061-0dc5fdaaeabb")
