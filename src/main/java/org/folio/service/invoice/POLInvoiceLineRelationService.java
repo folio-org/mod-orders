@@ -6,6 +6,7 @@ import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
@@ -19,11 +20,13 @@ import io.vertx.core.Future;
 import org.folio.service.finance.transaction.PendingPaymentService;
 import org.folio.service.finance.transaction.summary.InvoiceTransactionSummariesService;
 
+import javax.money.Monetary;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
+import static org.folio.orders.utils.HelperUtils.calculateEncumbranceEffectiveAmount;
 import static org.folio.service.finance.transaction.summary.InvoiceTransactionSummariesService.buildInvoiceTransactionsSummary;
 import static org.folio.service.invoice.PoLineInvoiceLineHolderBuilder.filterInvoiceLinesByStatuses;
 
@@ -63,7 +66,10 @@ public class POLInvoiceLineRelationService {
 
         if (CollectionUtils.isNotEmpty(forCreate) && CollectionUtils.isNotEmpty(forDelete)) {
           List<String> encumbranceForDeleteIds = forDelete.stream().map(Transaction::getId).distinct().collect(Collectors.toList());
-          copyAmountsAndRecalculateNewEncumbrance(forCreate, forDelete);
+          String currency = encumbrancesProcessingHolder.getEncumbrancesForCreate().stream()
+            .map(EncumbranceRelationsHolder::getCurrency).findFirst().orElseThrow(() -> new IllegalArgumentException("Idk why"));
+
+          copyAmountsAndRecalculateNewEncumbrance(forCreate, forDelete, currency);
           return removeEncumbranceReferenceFromTransactions(encumbranceForDeleteIds, requestContext)
             .map(encumbrancesProcessingHolder);
         } else {
@@ -104,19 +110,18 @@ public class POLInvoiceLineRelationService {
       .withDistributionType(org.folio.rest.acq.model.invoice.FundDistribution.DistributionType.fromValue(fundDistribution.getDistributionType().value()));
   }
 
-  private void copyAmountsAndRecalculateNewEncumbrance(List<Transaction> forCreate, List<Transaction> forDelete) {
-    BigDecimal amountExpended = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountExpended())
-      .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
-    BigDecimal amountAwaitingPayment = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountAwaitingPayment())
-      .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
+  private void copyAmountsAndRecalculateNewEncumbrance(List<Transaction> forCreate, List<Transaction> forDelete, String currency) {
+    double amountExpended = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountExpended())
+      .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue();
+    double amountAwaitingPayment = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountAwaitingPayment())
+      .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue();
 
     forCreate.stream().findFirst().ifPresent(transaction -> {
       Encumbrance encumbrance = transaction.getEncumbrance();
-      BigDecimal encumbranceAmount = BigDecimal.valueOf(encumbrance.getInitialAmountEncumbered())
-        .subtract(amountExpended).subtract(amountAwaitingPayment).max(BigDecimal.ZERO);
-      transaction.withAmount(encumbranceAmount.doubleValue())
-        .withEncumbrance(encumbrance.withAmountExpended(amountExpended.doubleValue()).withAmountAwaitingPayment(amountAwaitingPayment.doubleValue())
-          .withStatus(encumbranceAmount.compareTo(BigDecimal.ZERO) == 0 ? Encumbrance.Status.RELEASED : Encumbrance.Status.UNRELEASED));
+      double encumbranceAmount = HelperUtils.calculateEncumbranceEffectiveAmount(encumbrance.getInitialAmountEncumbered(),
+        amountExpended, amountAwaitingPayment, Monetary.getCurrency(currency));
+      transaction.withAmount(encumbranceAmount).withEncumbrance(encumbrance.withAmountExpended(amountExpended)
+        .withAmountAwaitingPayment(amountAwaitingPayment).withStatus(encumbranceAmount == 0d ? Encumbrance.Status.RELEASED : Encumbrance.Status.UNRELEASED));
     });
   }
 
