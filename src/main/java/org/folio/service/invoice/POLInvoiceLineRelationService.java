@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
-import static org.folio.orders.utils.HelperUtils.calculateEncumbranceEffectiveAmount;
 import static org.folio.service.finance.transaction.summary.InvoiceTransactionSummariesService.buildInvoiceTransactionsSummary;
 import static org.folio.service.invoice.PoLineInvoiceLineHolderBuilder.filterInvoiceLinesByStatuses;
 
@@ -67,7 +66,7 @@ public class POLInvoiceLineRelationService {
         if (CollectionUtils.isNotEmpty(forCreate) && CollectionUtils.isNotEmpty(forDelete)) {
           List<String> encumbranceForDeleteIds = forDelete.stream().map(Transaction::getId).distinct().collect(Collectors.toList());
           String currency = encumbrancesProcessingHolder.getEncumbrancesForCreate().stream()
-            .map(EncumbranceRelationsHolder::getCurrency).findFirst().orElseThrow(() -> new IllegalArgumentException("Idk why"));
+            .map(EncumbranceRelationsHolder::getCurrency).findFirst().orElseThrow();
 
           copyAmountsAndRecalculateNewEncumbrance(forCreate, forDelete, currency);
           return removeEncumbranceReferenceFromTransactions(encumbranceForDeleteIds, requestContext)
