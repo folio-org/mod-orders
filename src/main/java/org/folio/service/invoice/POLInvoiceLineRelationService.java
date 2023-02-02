@@ -6,6 +6,7 @@ import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -18,6 +19,7 @@ import io.vertx.core.Future;
 import org.folio.service.finance.transaction.PendingPaymentService;
 import org.folio.service.finance.transaction.summary.InvoiceTransactionSummariesService;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,21 +53,17 @@ public class POLInvoiceLineRelationService {
   public Future<EncumbrancesProcessingHolder> manageInvoiceRelation(EncumbrancesProcessingHolder encumbrancesProcessingHolder, RequestContext requestContext) {
     List<Transaction> forDelete = encumbrancesProcessingHolder.getEncumbrancesForDelete().stream()
       .map(EncumbranceRelationsHolder::getOldEncumbrance).collect(Collectors.toList());
+    List<Transaction> forCreate = encumbrancesProcessingHolder.getEncumbrancesForCreate().stream()
+      .map(EncumbranceRelationsHolder::getNewEncumbrance).collect(Collectors.toList());
     List<String> poLineIds = forDelete.stream().map(transaction -> transaction.getEncumbrance().getSourcePoLineId()).distinct().collect(Collectors.toList());
 
     return invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
       .compose(invoiceLines -> {
         validateInvoiceLineStatuses(invoiceLines);
 
-        if (CollectionUtils.isNotEmpty(encumbrancesProcessingHolder.getEncumbrancesForCreate()) && CollectionUtils.isNotEmpty(forDelete)) {
+        if (CollectionUtils.isNotEmpty(forCreate) && CollectionUtils.isNotEmpty(forDelete)) {
           List<String> encumbranceForDeleteIds = forDelete.stream().map(Transaction::getId).distinct().collect(Collectors.toList());
-
-          // Copy expended and awaiting payment to newly created encumbrance
-          double amountExpended = forDelete.stream().mapToDouble(encumbrance -> encumbrance.getEncumbrance().getAmountExpended()).sum();
-          double amountAwaitingPayment = forDelete.stream().mapToDouble(encumbrance -> encumbrance.getEncumbrance().getAmountAwaitingPayment()).sum();
-          encumbrancesProcessingHolder.getEncumbrancesForCreate().stream().findFirst().ifPresent(holder -> holder.getNewEncumbrance().getEncumbrance()
-            .withAmountExpended(amountExpended).withAmountAwaitingPayment(amountAwaitingPayment));
-
+          copyAmountsAndRecalculateNewEncumbrance(forCreate, forDelete);
           return removeEncumbranceReferenceFromTransactions(encumbranceForDeleteIds, requestContext)
             .map(encumbrancesProcessingHolder);
         } else {
@@ -104,6 +102,22 @@ public class POLInvoiceLineRelationService {
     return new org.folio.rest.acq.model.invoice.FundDistribution().withCode(fundDistribution.getCode()).withEncumbrance(fundDistribution.getEncumbrance())
       .withFundId(fundDistribution.getFundId()).withValue(fundDistribution.getValue()).withExpenseClassId(fundDistribution.getExpenseClassId())
       .withDistributionType(org.folio.rest.acq.model.invoice.FundDistribution.DistributionType.fromValue(fundDistribution.getDistributionType().value()));
+  }
+
+  private void copyAmountsAndRecalculateNewEncumbrance(List<Transaction> forCreate, List<Transaction> forDelete) {
+    BigDecimal amountExpended = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountExpended())
+      .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal amountAwaitingPayment = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountAwaitingPayment())
+      .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    forCreate.stream().findFirst().ifPresent(transaction -> {
+      Encumbrance encumbrance = transaction.getEncumbrance();
+      BigDecimal encumbranceAmount = BigDecimal.valueOf(encumbrance.getInitialAmountEncumbered())
+        .subtract(amountExpended).subtract(amountAwaitingPayment).max(BigDecimal.ZERO);
+      transaction.withAmount(encumbranceAmount.doubleValue())
+        .withEncumbrance(encumbrance.withAmountExpended(amountExpended.doubleValue()).withAmountAwaitingPayment(amountAwaitingPayment.doubleValue())
+          .withStatus(encumbranceAmount.compareTo(BigDecimal.ZERO) == 0 ? Encumbrance.Status.RELEASED : Encumbrance.Status.UNRELEASED));
+    });
   }
 
   private boolean isFundDistributionNotChanged(PoLineInvoiceLineHolder holder) {
