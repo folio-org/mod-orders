@@ -92,7 +92,7 @@ public class EncumbranceService {
   }
 
   public Future<Void> createEncumbrances(List<EncumbranceRelationsHolder> relationsHolders, RequestContext requestContext) {
-    if (relationsHolders.size() == 0)
+    if (relationsHolders.isEmpty())
       return Future.succeededFuture();
 
     Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
@@ -155,7 +155,7 @@ public class EncumbranceService {
 
 
   private Future<Void> updateEncumbrances(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
-    if (holder.getEncumbrancesForUpdate().size() == 0)
+    if (holder.getEncumbrancesForUpdate().isEmpty())
       return Future.succeededFuture();
 
     List<Transaction> encumbrances = holder.getEncumbrancesForUpdate().stream()
@@ -234,7 +234,7 @@ public class EncumbranceService {
   }
 
   public Future<Void> releaseEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
-    if (encumbrances.size() == 0)
+    if (encumbrances.isEmpty())
       return Future.succeededFuture();
 
     encumbrances.forEach(transaction -> transaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
@@ -242,7 +242,7 @@ public class EncumbranceService {
   }
 
   public Future<Void> unreleaseEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
-    if (encumbrances.size() == 0)
+    if (encumbrances.isEmpty())
       return Future.succeededFuture();
 
     encumbrances.forEach(transaction -> transaction.getEncumbrance().setStatus(Encumbrance.Status.UNRELEASED));
@@ -254,7 +254,7 @@ public class EncumbranceService {
   }
 
   public Future<Void> deleteEncumbrances(List<EncumbranceRelationsHolder> holders, RequestContext requestContext) {
-    if (holders.size() == 0)
+    if (holders.isEmpty())
       return Future.succeededFuture();
 
     // before deleting encumbrances, set the fund distribution encumbrance to null if a new encumbrance has not been created
@@ -405,7 +405,7 @@ public class EncumbranceService {
   private Future<Void> unreleaseEncumbrancesFirst(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
     // Update the encumbrances to be updated after unreleasing them
     List<Transaction> encumbrances = holder.getEncumbrancesToUnreleaseBefore();
-    if (encumbrances.size() == 0)
+    if (encumbrances.isEmpty())
       return Future.succeededFuture();
     String orderId = encumbrances.get(0).getEncumbrance().getSourcePurchaseOrderId();
     List<String> encumbranceIds = encumbrances.stream().map(Transaction::getId).collect(toList());
@@ -429,7 +429,7 @@ public class EncumbranceService {
   private Future<Void> releaseEncumbrancesAfter(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
     // Get the updated version of the encumbrances before releasing them.
     List<Transaction> encumbrances = holder.getEncumbrancesToUnreleaseAfter();
-    if (encumbrances.size() == 0)
+    if (encumbrances.isEmpty())
       return Future.succeededFuture();
     String orderId = encumbrances.get(0).getEncumbrance().getSourcePurchaseOrderId();
     List<String> encumbranceIds = encumbrances.stream().map(Transaction::getId).collect(toList());
