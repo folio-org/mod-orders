@@ -1,10 +1,12 @@
 package org.folio.service.finance.transaction.summary;
 
+import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -30,7 +32,11 @@ public class OrderTransactionSummariesService extends AbstractTransactionSummari
 
   public Future<Void> updateOrCreateTransactionSummary(String orderId, int number, RequestContext requestContext) {
     return getTransactionSummary(orderId, requestContext)
-      .recover(t -> null)
+      .recover(t -> {
+        if (HelperUtils.isNotFound(t))
+          return null;
+        throw new CompletionException(t);
+      })
       .compose(summary -> {
         if (summary != null) {
           return updateTransactionSummary(orderId, number, requestContext);
