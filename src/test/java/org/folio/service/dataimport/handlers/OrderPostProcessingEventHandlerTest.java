@@ -2,6 +2,7 @@ package org.folio.service.dataimport.handlers;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.TestContext;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ObserveKeyValues;
 import net.mguenther.kafka.junit.SendKeyValues;
@@ -24,6 +25,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.service.dataimport.PoLineImportProgressService;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -33,6 +35,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -79,7 +82,6 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
   private static final String GROUP_ID = "test-consumers-group";
   private static final String RECORD_ID_HEADER = "recordId";
-  private static final String INSTANCE_ID_KEY = "id";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String USER_ID = "6bece55a-831c-4197-bed1-coff1e00b7d8";
@@ -101,6 +103,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     .withExistingRecordType(ORDER);
 
   private CompositePurchaseOrder order;
+  private CompositePoLine poLine;
 
   @BeforeClass
   public static void setupClass() throws ExecutionException, InterruptedException, TimeoutException {
@@ -118,16 +121,12 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     order = new CompositePurchaseOrder()
       .withId(UUID.randomUUID().toString())
       .withPoNumber("10000");
-  }
 
-  @Test
-  public void shouldUpdateOrderStatusToOpenAndUseExistingInstanceHoldingsItem() throws InterruptedException {
-    // given
-    CompositePoLine poLine = new CompositePoLine()
+    poLine = new CompositePoLine()
       .withId(UUID.randomUUID().toString())
       .withTitleOrPackage("Mocked poLine for data-import")
       .withPurchaseOrderId(order.getId())
-      .withPoLineNumber("1024-1")
+      .withPoLineNumber("10000-1")
       .withSource(CompositePoLine.Source.MARC)
       .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE)
       .withEresource(new Eresource()
@@ -141,7 +140,11 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withFundDistribution(List.of(new FundDistribution()
         .withFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
         .withValue(100d)));
+  }
 
+  @Test
+  public void shouldUpdateOrderStatusToOpenAndUseExistingInstanceHoldingsItemWhenAllPoLinesProcessed(TestContext context) throws InterruptedException {
+    // given
     JsonObject itemJson = new JsonObject()
       .put(ID, "86481a22-633e-4b97-8061-0dc5fdaaeabb")
       .put(ITEM_HOLDINGS_RECORD_ID, "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63")
@@ -166,9 +169,17 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
         put(ORDER_LINES_KEY, Json.encodePrettily(poLine));
       }});
 
+    CompletableFuture<Object> future = new CompletableFuture<>();
+    PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
+    polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
+      .compose(v -> polProgressService.trackImportedPoLine(order.getId(), TENANT_ID))
+      .compose(v -> polProgressService.trackImportedPoLine(order.getId(), TENANT_ID))
+      .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
+
     SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
     // when
+    future.join();
     kafkaCluster.send(request);
 
     // then
@@ -193,6 +204,42 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
 
     verifyEncumbrancesOnPoUpdate(order.withCompositePoLines(List.of(poLine)));
+  }
+
+  @Test
+  public void shouldNotUpdateOrderStatusToOpenWhenNotAllPoLinesProcessed(TestContext context) throws InterruptedException {
+    // given
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(ORDER_LINES_KEY, Json.encodePrettily(poLine));
+      }});
+
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
+    polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
+      .compose(v -> polProgressService.trackImportedPoLine(order.getId(), TENANT_ID))
+      .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    future.join();
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    verifyPoLine(eventPayload);
+    assertNull(getPurchaseOrderUpdates());
   }
 
   @Test

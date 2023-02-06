@@ -86,7 +86,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
             promise.complete(kafkaRecord.key());
           }
         });
-      return Future.succeededFuture();
+      return promise.future();
     } catch (Exception e) {
       LOGGER.error("handle:: Failed to process kafka record from topic {}", kafkaRecord.topic(), e);
       return Future.failedFuture(e);

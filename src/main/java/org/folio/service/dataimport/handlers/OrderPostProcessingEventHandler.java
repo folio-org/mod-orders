@@ -1,6 +1,7 @@
 package org.folio.service.dataimport.handlers;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -18,6 +19,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.service.dataimport.PoLineImportProgressService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -35,20 +37,23 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 public class OrderPostProcessingEventHandler implements EventHandler {
   private static final Logger LOGGER = LogManager.getLogger();
   private static final String PAYLOAD_HAS_NO_DATA_MSG =
-    "Failed to handle event payload, cause event payload context does not contain ORDER data";
+    "Failed to handle event payload, cause event payload context does not contain ORDER_LINE data";
 
   private static final String ORDER_LINES_KEY = "ORDER_LINES";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final Context vertxContext;
+  private final PoLineImportProgressService poLineImportProgressService;
 
   @Autowired
   public OrderPostProcessingEventHandler(PurchaseOrderHelper purchaseOrderHelper,
-                                         PurchaseOrderStorageService purchaseOrderStorageService, Context vertxContext) {
+                                         PurchaseOrderStorageService purchaseOrderStorageService, Context vertxContext,
+                                         PoLineImportProgressService poLineImportProgressService) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.vertxContext = vertxContext;
+    this.poLineImportProgressService = poLineImportProgressService;
   }
 
   @Override
@@ -65,13 +70,16 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(payloadContext.get(ORDER_LINES_KEY), CompositePoLine.class);
 
-    purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
-      .map(HelperUtils::convertToCompositePurchaseOrder)
-      .map(order -> order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN))
-      .compose(order -> purchaseOrderHelper.updateOrder(order, false, requestContext))
+    poLineImportProgressService.isPoLinesImported(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant())
+      .compose(isLinesImported -> Boolean.TRUE.equals(isLinesImported)
+        ? purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
+          .map(HelperUtils::convertToCompositePurchaseOrder)
+          .map(order -> order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN))
+          .compose(order -> purchaseOrderHelper.updateOrder(order, false, requestContext))
+        : Future.succeededFuture())
       .onComplete(ar -> {
         if (ar.failed()) {
-          LOGGER.error("handle:: Error during transfer order to Open status", ar.cause());
+          LOGGER.error("handle:: Error during processing order to Open status", ar.cause());
           future.completeExceptionally(ar.cause());
           return;
         }

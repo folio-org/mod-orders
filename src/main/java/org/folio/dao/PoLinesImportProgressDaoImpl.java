@@ -14,12 +14,16 @@ import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
 
   private static final String TABLE_NAME = "po_lines_import_progress";
-  public static final String SAVE_POL_TOTAL_AMOUNT_SQL = "INSERT INTO %s (order_id, total_po_lines) VALUES ($1, $2)";
-  public static final String INCREASE_IMPORTED_POL_BY_ORDER_ID_SQL =
-    "UPDATE %s SET processed_po_lines = processed_po_lines + 1";
-  public static final String IS_ALL_POL_IMPORTED_BY_ORDER_ID_SQL =
-    "SELECT total_po_lines = processed_po_lines AS pol_imported " +
-    "FROM %s" +
+
+  private static final String SAVE_POL_TOTAL_AMOUNT_SQL =
+    "INSERT INTO %s (order_id, total_po_lines, processed_po_lines) VALUES ($1, $2, 0)";
+
+  private static final String INCREASE_IMPORTED_POL_BY_ORDER_ID_SQL =
+    "UPDATE %s SET processed_po_lines = processed_po_lines + 1 WHERE order_id = $1";
+
+  private static final String IS_ALL_POL_IMPORTED_BY_ORDER_ID_SQL =
+    "SELECT total_po_lines = processed_po_lines AS po_lines_processed " +
+    "FROM %s " +
     "WHERE order_id = $1";
 
   private final PostgresClientFactory pgClientFactory;
@@ -54,7 +58,7 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
     Tuple params = Tuple.of(UUID.fromString(orderId));
 
     return pgClientFactory.createInstance(tenantId).execute(sql, params)
-      .map(rows -> rows.iterator().next().getBoolean("pol_imported"));
+      .map(rows -> rows.iterator().next().getBoolean("po_lines_processed"));
   }
 
   private String prepareFullTableName(String tenantId, String table) {
