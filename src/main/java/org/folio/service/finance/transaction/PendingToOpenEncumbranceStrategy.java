@@ -58,7 +58,7 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
       CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     return prepareProcessEncumbrancesAndValidate(compPO, poAndLinesFromStorage, requestContext)
       .map(encumbrancesProcessingHolderBuilder::distributeHoldersByOperation)
-      .compose(holder -> polInvoiceLineRelationService.removePaidOrCancelledInvoiceEncumbrancesFromDeletion(holder, requestContext))
+      .compose(holder -> polInvoiceLineRelationService.manageInvoiceRelation(holder, requestContext))
       .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
   }
 

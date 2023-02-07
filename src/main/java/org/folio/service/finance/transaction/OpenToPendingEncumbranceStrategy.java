@@ -6,6 +6,7 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.folio.service.orders.OrderWorkflowType;
 
 import io.vertx.core.Future;
@@ -13,14 +14,14 @@ import io.vertx.core.Future;
 public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
   private final EncumbranceService encumbranceService;
-  private final TransactionSummariesService transactionSummariesService;
+  private final OrderTransactionSummariesService orderTransactionSummariesService;
   private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
 
   public OpenToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
-      TransactionSummariesService transactionSummariesService,
+      OrderTransactionSummariesService orderTransactionSummariesService,
       EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
     this.encumbranceService = encumbranceService;
-    this.transactionSummariesService = transactionSummariesService;
+    this.orderTransactionSummariesService = orderTransactionSummariesService;
     this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
   }
 
@@ -30,7 +31,7 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
 
       return getOrderEncumbrances(compPO, poAndLinesFromStorage, requestContext)
                 .map(this::makeEncumbrancesPending)
-                .compose(transactions -> transactionSummariesService.updateOrderTransactionSummary(compPO.getId(), transactions.size(), requestContext)
+                .compose(transactions -> orderTransactionSummariesService.updateTransactionSummary(compPO.getId(), transactions.size(), requestContext)
                     .map(vVoid -> transactions))
                 .compose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
     }

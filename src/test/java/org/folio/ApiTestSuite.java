@@ -50,6 +50,7 @@ import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderT
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
+import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.inventory.InventoryManagerTest;
@@ -246,6 +247,10 @@ public class ApiTestSuite {
 
   @Nested
   class OrderRolloverServiceTestNested extends OrderRolloverServiceTest {
+  }
+
+  @Nested
+  class PendingToOpenEncumbranceStrategyTestNested extends PendingToOpenEncumbranceStrategyTest {
   }
 
   @Nested

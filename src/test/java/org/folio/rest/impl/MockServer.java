@@ -2253,15 +2253,15 @@ public class MockServer {
           .withId(UUID.randomUUID().toString())
           .withFromFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
           .withEncumbrance(new Encumbrance()
-            .withSourcePurchaseOrderId("477f9ca8-b295-11eb-8529-0242ac130003")
-            .withSourcePoLineId("50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")
+            .withSourcePurchaseOrderId("d6966317-96c7-492f-8df6-dc6c19554452")
+            .withSourcePoLineId("a6edc906-2f9f-5fb2-a373-efac406f0ef2")
             .withStatus(Encumbrance.Status.UNRELEASED));
         Transaction transaction2 = new Transaction()
           .withId(UUID.randomUUID().toString())
           .withFromFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
           .withEncumbrance(new Encumbrance()
-            .withSourcePurchaseOrderId("477f9ca8-b295-11eb-8529-0242ac130003")
-            .withSourcePoLineId("50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")
+            .withSourcePurchaseOrderId("d6966317-96c7-492f-8df6-dc6c19554452")
+            .withSourcePoLineId("a6edc906-2f9f-5fb2-a373-efac406f0ef2")
             .withStatus(Encumbrance.Status.UNRELEASED));
         List<Transaction> transactions = List.of(transaction1);
         TransactionCollection transactionCollection = new TransactionCollection().withTransactions(List.of(transaction1, transaction2)).withTotalRecords(2);
@@ -2281,6 +2281,9 @@ public class MockServer {
       } else if (query.contains("id==(9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1)")) {
         TransactionCollection transactionCollection = new JsonObject(getMockData(ENCUMBRANCE_PATH)).mapTo(TransactionCollection.class);
         transactionCollection.getTransactions().get(0).withId("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1");
+        body = JsonObject.mapFrom(transactionCollection).encodePrettily();
+      } else if (query.contains("awaitingPayment.encumbranceId")) {
+        TransactionCollection transactionCollection = new TransactionCollection().withTotalRecords(0);
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else {
         body = getMockData(ENCUMBRANCE_PATH);
@@ -2768,22 +2771,22 @@ public class MockServer {
         .withPoLineId(poLineId2)
         .withReleaseEncumbrance(true);
       invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
+    } else if (query.contains(poLineId4)) {
+      InvoiceLine invoiceLine = new InvoiceLine()
+        .withId(UUID.randomUUID().toString())
+        .withPoLineId(poLineId2)
+        .withFundDistributions(List.of(new FundDistribution().withCode("HIST")
+          .withFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f").withEncumbrance("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1")
+          .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(80.0)))
+        .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.APPROVED)
+        .withReleaseEncumbrance(true);
+      invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
     } else if (query.contains("poLineId==")) {
       if (query.contains(poLineId3)) {
         InvoiceLine invoiceLine = new InvoiceLine()
           .withId(UUID.randomUUID().toString())
           .withPoLineId(poLineId2)
           .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.PAID)
-          .withReleaseEncumbrance(true);
-        invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
-      } else if(query.contains(poLineId4)) {
-        InvoiceLine invoiceLine = new InvoiceLine()
-          .withId(UUID.randomUUID().toString())
-          .withPoLineId(poLineId2)
-          .withFundDistributions(List.of(new FundDistribution().withCode("HIST")
-            .withFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f").withEncumbrance("9333fd47-4d9b-5bfc-afa3-3f2a49d4adb1")
-            .withDistributionType(FundDistribution.DistributionType.PERCENTAGE).withValue(80.0)))
-          .withInvoiceLineStatus(InvoiceLine.InvoiceLineStatus.APPROVED)
           .withReleaseEncumbrance(true);
         invoiceLineCollection = new InvoiceLineCollection().withInvoiceLines(List.of(invoiceLine)).withTotalRecords(1);
       } else {

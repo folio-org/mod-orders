@@ -241,7 +241,7 @@ public class PurchaseOrderHelper {
    * @param compPO updated {@link CompositePurchaseOrder} purchase order
    * @return completable future holding response indicating success (204 No Content) or error if failed
    */
-  public Future<Void> updateOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  public Future<Void> updateOrder(CompositePurchaseOrder compPO, boolean deleteHoldings, RequestContext requestContext) {
     JsonObject cachedTenantConfiguration = new JsonObject();
     return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .map(tenantConfiguration -> cachedTenantConfiguration.mergeIn(tenantConfiguration, true))
@@ -265,7 +265,7 @@ public class PurchaseOrderHelper {
           .compose(ok -> {
             if (isTransitionToPending(poFromStorage, compPO)) {
               checkOrderUnopenPermissions(requestContext);
-              return unOpenCompositeOrderManager.process(compPO, poFromStorage, requestContext);
+              return unOpenCompositeOrderManager.process(compPO, poFromStorage, deleteHoldings, requestContext);
             }
             return Future.succeededFuture();
           })
@@ -613,7 +613,7 @@ public class PurchaseOrderHelper {
     }
   }
 
-  private boolean isApprovalRequiredConfiguration(JsonObject config) {
+  public static boolean isApprovalRequiredConfiguration(JsonObject config) {
     return Optional.ofNullable(config.getString("approvals"))
       .map(approval -> new JsonObject(approval).getBoolean("isApprovalRequired"))
       .orElse(false);
@@ -847,13 +847,13 @@ public class PurchaseOrderHelper {
     return !CollectionUtils.isEqualCollection(newAcqUnits, acqUnitsFromStorage);
   }
 
-  private List<String> getProvidedPermissions(RequestContext requestContext) {
+  private static List<String> getProvidedPermissions(RequestContext requestContext) {
     return new JsonArray(requestContext.getHeaders().getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_ARRAY)).stream().
       map(Object::toString)
       .collect(Collectors.toList());
   }
 
-  private boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
+  public static boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
     return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_APPROVE);
   }
 
