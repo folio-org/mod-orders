@@ -41,10 +41,10 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
   }
 
   @Override
-  public Future<String> store(String jobExecutionId, Integer exponent, String orderId, String tenantId) {
+  public Future<String> store(String jobExecutionId, Integer sequenceNo, String orderId, String tenantId) {
     String table = prepareFullTableName(tenantId, TABLE_NAME);
     String sql = String.format(SQL, table);
-    Tuple params = Tuple.of(UUID.fromString(jobExecutionId), exponent, UUID.fromString(orderId));
+    Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo, UUID.fromString(orderId));
 
     return pgClientFactory.createInstance(tenantId).execute(sql, params)
       .map(rows -> rows.iterator().next().getValue(ORDER_ID_FIELD).toString());
