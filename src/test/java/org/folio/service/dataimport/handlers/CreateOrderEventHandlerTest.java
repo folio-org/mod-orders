@@ -1292,7 +1292,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   private CompositePoLine getCompositePoLine(DataImportEventPayload eventPayload) {
-    return Json.decodeValue(eventPayload.getContext().get(ORDER_LINES_KEY), CompositePoLine.class);
+    return Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
   }
 
   private CompositePurchaseOrder verifyOrder(DataImportEventPayload eventPayload) {
