@@ -14,6 +14,8 @@ public class EncumbrancesProcessingHolder {
   private List<EncumbranceRelationsHolder> encumbrancesForDelete;
   private List<EncumbranceRelationsHolder> encumbrancesForUpdate;
   private List<Transaction> encumbrancesForUnrelease;
+  private List<Transaction> encumbrancesToUnreleaseBefore;
+  private List<Transaction> encumbrancesToReleaseAfter;
 
   public EncumbrancesProcessingHolder() {
     this.encumbrancesFromStorage = new ArrayList<>();
@@ -22,6 +24,8 @@ public class EncumbrancesProcessingHolder {
     this.encumbrancesForUpdate = new ArrayList<>();
     this.encumbrancesForRelease = new ArrayList<>();
     this.encumbrancesForUnrelease = new ArrayList<>();
+    this.encumbrancesToUnreleaseBefore = new ArrayList<>();
+    this.encumbrancesToReleaseAfter = new ArrayList<>();
   }
 
   public EncumbrancesProcessingHolder addEncumbrancesForCreate(EncumbranceRelationsHolder encumbranceForCreate) {
@@ -69,6 +73,16 @@ public class EncumbrancesProcessingHolder {
     return this;
   }
 
+  public EncumbrancesProcessingHolder withEncumbrancesToUnreleaseBefore(List<Transaction> encumbrancesToUnreleaseBefore) {
+    this.encumbrancesToUnreleaseBefore = new ArrayList<>(encumbrancesToUnreleaseBefore);
+    return this;
+  }
+
+  public EncumbrancesProcessingHolder withEncumbrancesToReleaseAfter(List<Transaction> encumbrancesToReleaseAfter) {
+    this.encumbrancesToReleaseAfter = new ArrayList<>(encumbrancesToReleaseAfter);
+    return this;
+  }
+
   public List<EncumbranceRelationsHolder> getEncumbrancesForCreate() {
     return encumbrancesForCreate;
   }
@@ -87,6 +101,14 @@ public class EncumbrancesProcessingHolder {
 
   public List<Transaction> getEncumbrancesForUnrelease() {
     return encumbrancesForUnrelease;
+  }
+
+  public List<Transaction> getEncumbrancesToUnreleaseBefore() {
+    return encumbrancesToUnreleaseBefore;
+  }
+
+  public List<Transaction> getEncumbrancesToUnreleaseAfter() {
+    return encumbrancesToReleaseAfter;
   }
 
   public int getAllEncumbrancesQuantity() {
