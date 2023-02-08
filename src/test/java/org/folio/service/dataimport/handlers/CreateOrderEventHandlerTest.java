@@ -73,6 +73,7 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PRO
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -1140,13 +1141,15 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
-    JsonObject polLimitConfig = new JsonObject().put("configName", PO_LINES_LIMIT_PROPERTY).put("value", poLimit);
+    JsonObject polLimitConfig = new JsonObject().put(CONFIG_NAME, PO_LINES_LIMIT_PROPERTY).put("value", poLimit);
     addMockEntry(CONFIGS, polLimitConfig);
 
+    // when
     String jobExecutionId = UUID.randomUUID().toString();
+    DataImportEventPayload dataImportEventPayload;
     for (int i = 0; i < recordsNumber; i++) {
       record = getRecord(i);
-      DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      dataImportEventPayload = new DataImportEventPayload()
         .withJobExecutionId(jobExecutionId)
         .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
         .withTenant(TENANT_ID)
@@ -1159,10 +1162,12 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         }});
 
       kafkaCluster.send(prepareKafkaRequest(dataImportEventPayload));
+
       dataImportEventPayload = observeEvent(DI_COMPLETED.value());
       ordersIds.add(getPurchaseOrderId(dataImportEventPayload));
       orderLinesIds.add(verifyPoLine(dataImportEventPayload).getId());
 
+      //clean MockServer storage after 1st order complete (filled by 2 poLInes)
       if (i == 1) {
         MockServer.release();
         addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
