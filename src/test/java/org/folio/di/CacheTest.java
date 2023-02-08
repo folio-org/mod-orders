@@ -10,9 +10,12 @@ import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.folio.Organization;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.JobProfileSnapshotCache;
+import org.folio.service.caches.MappingParametersCache;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,6 +41,7 @@ public class CacheTest {
   public RunTestOnContext rule = new RunTestOnContext();
 
   private JobProfileSnapshotCache jobProfileSnapshotCache;
+  private MappingParametersCache mappingParametersCache;
 
   private OkapiConnectionParams okapiConnectionParams;
 
@@ -49,6 +53,7 @@ public class CacheTest {
   public void setUp() {
     Vertx vertx = rule.vertx();
     jobProfileSnapshotCache = new JobProfileSnapshotCache(vertx);
+    mappingParametersCache = new MappingParametersCache(vertx);
 
     HashMap<String, String> headers = new HashMap<>();
     headers.put(OKAPI_URL_HEADER, "http://localhost:" + snapshotMockServer.port());
@@ -58,7 +63,7 @@ public class CacheTest {
   }
 
   @Test
-  public void getItemFromCache(TestContext context) {
+  public void getJobProfileSnapshotFromCache(TestContext context) {
     Async async = context.async();
     String jobProfileSnapshotId = UUID.randomUUID().toString();
 
@@ -77,6 +82,32 @@ public class CacheTest {
           Optional<ProfileSnapshotWrapper> result = ar.result();
           context.assertNotNull(result.orElse(null));
           context.assertEquals(result.orElse(new ProfileSnapshotWrapper()).getContentType(), ProfileSnapshotWrapper.ContentType.JOB_PROFILE);
+          async.complete();
+        });
+  }
+
+  @Test
+  public void getMappingParametersFromCache(TestContext context) {
+    Async async = context.async();
+    String organizationId = UUID.randomUUID().toString();
+    Organization organization = new Organization();
+    organization.setId(organizationId);
+
+    WireMock.stubFor(
+      get("/organizations/organizations")
+        .willReturn(okJson(new JsonObject()
+          .put("organizations", JsonArray.of(organization))
+          .put("totalRecords", 1)
+          .toString())));
+
+    mappingParametersCache
+      .get(okapiConnectionParams)
+      .onComplete(
+        ar -> {
+          context.assertTrue(ar.succeeded());
+          MappingParameters result = ar.result();
+          context.assertNotNull(result);
+          context.assertEquals(organizationId, result.getOrganizations().get(0).getId());
           async.complete();
         });
   }
