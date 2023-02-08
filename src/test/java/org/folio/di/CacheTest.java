@@ -2,6 +2,7 @@ package org.folio.di;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.serverError;
 import static org.folio.dataimport.util.RestUtil.OKAPI_URL_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
@@ -14,6 +15,7 @@ import org.folio.Organization;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
+import org.folio.service.caches.CacheLoadingException;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.caches.MappingParametersCache;
 import org.junit.Before;
@@ -108,6 +110,24 @@ public class CacheTest {
           MappingParameters result = ar.result();
           context.assertNotNull(result);
           context.assertEquals(organizationId, result.getOrganizations().get(0).getId());
+          async.complete();
+        });
+  }
+
+  @Test
+  public void getMappingParametersFromCacheWithError(TestContext context) {
+    Async async = context.async();
+
+    WireMock.stubFor(
+      get("/organizations/organizations")
+        .willReturn(serverError()));
+
+    mappingParametersCache
+      .get(okapiConnectionParams)
+      .onComplete(
+        ar -> {
+          context.assertTrue(ar.failed());
+          context.assertEquals(ar.cause().getCause().getClass(), CacheLoadingException.class);
           async.complete();
         });
   }
