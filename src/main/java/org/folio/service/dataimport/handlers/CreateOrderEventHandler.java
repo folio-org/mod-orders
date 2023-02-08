@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingProfile;
+import org.folio.Record;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
@@ -22,8 +23,10 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.RestConstants;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -34,6 +37,7 @@ import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.IdStorageService;
+import org.folio.service.dataimport.PoLineImportProgressService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -41,7 +45,15 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -54,10 +66,10 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.ActionProfile.FolioRecord.ORDER;
+import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
-import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -90,22 +102,29 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String POST_PROCESSING = "POST_PROCESSING";
   private static final String WORKFLOW_STATUS_PATH = "order.po.workflowStatus";
   private static final String PO_LINE_ORDER_ID_KEY = "purchaseOrderId";
+  private static final String DEFAULT_PO_LINES_LIMIT = "1";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
   private final ConfigurationEntriesService configurationEntriesService;
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
+  private final PoLineImportProgressService poLineImportProgressService;
+  private final RestClient restClient;
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
                                  ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService,
-                                 JobProfileSnapshotCache jobProfileSnapshotCache) {
+                                 JobProfileSnapshotCache jobProfileSnapshotCache,
+                                 PoLineImportProgressService poLineImportProgressService,
+                                 RestClient restClient) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
     this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
+    this.poLineImportProgressService = poLineImportProgressService;
+    this.restClient = restClient;
   }
 
   @Override
@@ -299,6 +318,7 @@ public class CreateOrderEventHandler implements EventHandler {
           return Future.failedFuture(new EventProcessingException(Json.encode(errors)));
         }
         return purchaseOrderHelper.createPurchaseOrder(orderToSave, tenantConfig, requestContext)
+          .compose(savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig, requestContext)::map)
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
             if (e instanceof HttpException) {
@@ -314,6 +334,29 @@ public class CreateOrderEventHandler implements EventHandler {
       });
   }
 
+  private Future<Void> savePoLinesAmountPerOrder(String orderId, DataImportEventPayload eventPayload,
+                                                 JsonObject tenantConfig, RequestContext requestContext) {
+    eventPayload.setJobExecutionId(eventPayload.getJobExecutionId());
+    RequestEntry requestEntry = new RequestEntry("/change-manager/jobExecutions/{id}")
+      .withPathParameter("id", eventPayload.getJobExecutionId());
+
+    return restClient.getAsJsonObject(requestEntry, requestContext)
+      .map(jobJson -> determinePoLinesAmountPerOrder(eventPayload, jobJson.getJsonObject("progress").getInteger("total"), tenantConfig))
+      .compose(orderPolAmount -> poLineImportProgressService.savePoLinesAmountPerOrder(orderId, orderPolAmount, eventPayload.getTenant()));
+  }
+
+  private int determinePoLinesAmountPerOrder(DataImportEventPayload dataImportEventPayload, int totalRecordsAmount, JsonObject tenantConfig) {
+    int poLinesLimit = Integer.parseInt(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_PO_LINES_LIMIT));
+    if (totalRecordsAmount % poLinesLimit == 0) {
+      return poLinesLimit;
+    }
+
+    Record sourceRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+    int fullOrdersAmount = totalRecordsAmount / poLinesLimit;
+    int sequenceOrderNumber = sourceRecord.getOrder() / poLinesLimit + 1;
+    return sequenceOrderNumber <= fullOrdersAmount ? poLinesLimit : totalRecordsAmount % poLinesLimit;
+  }
+
   private Future<CompositePoLine> saveOrderLines(String orderId, DataImportEventPayload dataImportEventPayload,
                                                  JsonObject tenantConfig, RequestContext requestContext) {
     CompositePoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
@@ -326,6 +369,7 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     return poLineHelper.createPoLine(poLine, tenantConfig, requestContext)
+      .eventually(createPoLine -> poLineImportProgressService.trackImportedPoLine(orderId, dataImportEventPayload.getTenant()))
       .onComplete(ar -> dataImportEventPayload.getContext().put(PO_LINE_KEY, Json.encode(poLine)));
   }
 

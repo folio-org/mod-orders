@@ -610,6 +610,7 @@ public class MockServer {
     router.get(resourcePath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethod);
     router.get(resourcesPath(EXPORT_HISTORY)).handler(this::handleGetExportHistoryMethod);
     router.get("/data-import-profiles/jobProfileSnapshots/:id").handler(this::handleGetJobProfileSnapshotById);
+    router.get("/change-manager/jobExecutions/:id").handler(this::handleGetJobExecutionById);
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -2098,7 +2099,10 @@ public class MockServer {
     }
     String id = UUID.randomUUID().toString();
     JsonObject body = ctx.body().asJsonObject();
-    body.put(ID, id);
+    if (!body.containsKey(ID)) {
+      body.put(ID, id);
+    }
+
     org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
     addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER_STORAGE, body);
     addServerRqRsData(HttpMethod.SEARCH, PURCHASE_ORDER_STORAGE, body);
@@ -2853,6 +2857,22 @@ public class MockServer {
         ProfileSnapshotWrapper profileSnapshotClassSchema = jobProfileSnapshot.mapTo(ProfileSnapshotWrapper.class);
         profileSnapshotClassSchema.setId(id);
         serverResponse(ctx, 200, APPLICATION_JSON, Json.encodePrettily(profileSnapshotClassSchema));
+      } else {
+        serverResponse(ctx, 404, APPLICATION_JSON, id);
+      }
+    }
+  }
+
+  private void handleGetJobExecutionById(RoutingContext ctx) {
+    logger.info("handleGetJobExecutionById got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+    if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else {
+      Optional<JsonObject> jobExecutionOptional = getMockEntry("jobExecutions", id);
+      if (jobExecutionOptional.isPresent()) {
+        serverResponse(ctx, 200, APPLICATION_JSON, jobExecutionOptional.get().encodePrettily());
       } else {
         serverResponse(ctx, 404, APPLICATION_JSON, id);
       }
