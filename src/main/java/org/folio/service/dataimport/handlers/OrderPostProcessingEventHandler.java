@@ -39,7 +39,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private static final String PAYLOAD_HAS_NO_DATA_MSG =
     "Failed to handle event payload, cause event payload context does not contain ORDER_LINE data";
 
-  private static final String ORDER_LINES_KEY = "ORDER_LINES";
+  private static final String PO_LINE_KEY = "PO_LINE";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
@@ -61,14 +61,14 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
-    if (payloadContext == null || isBlank(payloadContext.get(ORDER_LINES_KEY))) {
+    if (payloadContext == null || isBlank(payloadContext.get(PO_LINE_KEY))) {
       LOGGER.warn("handle:: {}", PAYLOAD_HAS_NO_DATA_MSG);
       return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
     }
 
     Map<String, String> okapiHeaders = extractOkapiHeaders(dataImportEventPayload);
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
-    CompositePoLine poLine = Json.decodeValue(payloadContext.get(ORDER_LINES_KEY), CompositePoLine.class);
+    CompositePoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), CompositePoLine.class);
 
     poLineImportProgressService.isPoLinesImported(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant())
       .compose(isLinesImported -> Boolean.TRUE.equals(isLinesImported)

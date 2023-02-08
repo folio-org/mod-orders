@@ -43,8 +43,8 @@ import java.util.concurrent.TimeoutException;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
-import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
@@ -79,7 +79,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
-  private static final String ORDER_LINES_KEY = "ORDER_LINES";
+  private static final String PO_LINE_KEY = "PO_LINE";
   private static final String GROUP_ID = "test-consumers-group";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
@@ -159,14 +159,14 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
         put(ORDER.value(), Json.encodePrettily(order));
-        put(ORDER_LINES_KEY, Json.encodePrettily(poLine));
+        put(PO_LINE_KEY, Json.encodePrettily(poLine));
       }});
 
     CompletableFuture<Object> future = new CompletableFuture<>();
@@ -214,13 +214,13 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
-        put(ORDER_LINES_KEY, Json.encodePrettily(poLine));
+        put(PO_LINE_KEY, Json.encodePrettily(poLine));
       }});
 
     CompletableFuture<Void> future = new CompletableFuture<>();
@@ -328,8 +328,8 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   }
 
   private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
-    assertNotNull(eventPayload.getContext().get(ORDER_LINES_KEY));
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(ORDER_LINES_KEY), CompositePoLine.class);
+    assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
     assertNotNull(poLine.getId());
     assertNotNull(poLine.getTitleOrPackage());
     assertNotNull(poLine.getPurchaseOrderId());
