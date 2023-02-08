@@ -1,10 +1,12 @@
 package org.folio.service.finance.transaction.summary;
 
+import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -12,7 +14,6 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 
 public class OrderTransactionSummariesService extends AbstractTransactionSummariesService<OrderTransactionSummary> {
 
@@ -29,9 +30,24 @@ public class OrderTransactionSummariesService extends AbstractTransactionSummari
       return updateTransactionSummary(summary, requestContext);
     }
 
-    public Future<Void> createOrUpdateOrderTransactionSummary(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
-      Promise<Void> promise = Promise.promise();
+  public Future<Void> updateOrCreateTransactionSummary(String orderId, int number, RequestContext requestContext) {
+    return getTransactionSummary(orderId, requestContext)
+      .recover(t -> {
+        if (HelperUtils.isNotFound(t))
+          return null;
+        throw new CompletionException(t);
+      })
+      .compose(summary -> {
+        if (summary != null) {
+          return updateTransactionSummary(orderId, number, requestContext);
+        }
+        return createTransactionSummary(new OrderTransactionSummary().withId(orderId).withNumTransactions(number),
+            requestContext)
+          .mapEmpty();
+      });
+  }
 
+  public Future<Void> createOrUpdateOrderTransactionSummary(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
       Stream<String> orderIdFromCreate = holder.getEncumbrancesForCreate()
         .stream()
         .map(EncumbranceRelationsHolder::getOrderId);
@@ -45,28 +61,12 @@ public class OrderTransactionSummariesService extends AbstractTransactionSummari
 
       // update or create summary if not exists
       if (CollectionUtils.isEmpty(holder.getEncumbrancesFromStorage())) {
-        getTransactionSummary(orderId, requestContext).onComplete(result -> {
-          if (result.succeeded() && result.result() != null) {
-            updateTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
-              .onSuccess(a -> promise.complete())
-              .onFailure(promise::fail);
-          } else if (result.result() == null) {
-            createTransactionSummary(new OrderTransactionSummary().withId(orderId).withNumTransactions(holder.getAllEncumbrancesQuantity()), requestContext)
-              .onSuccess(a -> promise.complete())
-              .onFailure(promise::fail);
-          } else {
-            promise.fail(result.cause());
-          }
-        });
-
+        return updateOrCreateTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext);
       } else if (holder.getAllEncumbrancesQuantity() == 0) {
-        promise.complete();
+        return Future.succeededFuture();
       } else {
-        updateTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext)
-          .onSuccess(a -> promise.complete())
-          .onFailure(promise::fail);
+        return updateTransactionSummary(orderId, holder.getAllEncumbrancesQuantity(), requestContext);
       }
-      return promise.future();
     }
 
   @Override

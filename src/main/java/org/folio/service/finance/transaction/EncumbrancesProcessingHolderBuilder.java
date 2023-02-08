@@ -2,11 +2,13 @@ package org.folio.service.finance.transaction;
 
 import static java.util.stream.Collectors.toList;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 
 public class EncumbrancesProcessingHolderBuilder {
@@ -25,6 +27,7 @@ public class EncumbrancesProcessingHolderBuilder {
       .map(EncumbranceRelationsHolder::getOldEncumbrance)
       .filter(Objects::nonNull)
       .collect(toList()));
+    updateHolderToUpdateReleasedEncumbrances(holder);
     return holder;
   }
 
@@ -58,5 +61,19 @@ public class EncumbrancesProcessingHolderBuilder {
     return encumbranceRelationsHolders.stream()
       .filter(holder -> Objects.isNull(holder.getNewEncumbrance()))
       .collect(toList());
+  }
+
+  private void updateHolderToUpdateReleasedEncumbrances(EncumbrancesProcessingHolder holder) {
+    // To be updated, released encumbrances need to be unreleased first, and re-released afterwards.
+    var encumbrancesToUnreleaseBefore = new ArrayList<Transaction>();
+    var encumbrancesToReleaseAfter = new ArrayList<Transaction>();
+    holder.getEncumbrancesForUpdate().stream()
+      .filter(h -> Encumbrance.Status.RELEASED.equals(h.getOldEncumbrance().getEncumbrance().getStatus()))
+      .forEach(h -> {
+        encumbrancesToUnreleaseBefore.add(h.getOldEncumbrance());
+        encumbrancesToReleaseAfter.add(h.getNewEncumbrance());
+      });
+    holder.withEncumbrancesToUnreleaseBefore(encumbrancesToUnreleaseBefore);
+    holder.withEncumbrancesToReleaseAfter(encumbrancesToReleaseAfter);
   }
 }
