@@ -547,6 +547,7 @@
             "finance.order-transaction-summaries.item.get",
             "finance.order-transaction-summaries.item.post",
             "finance.order-transaction-summaries.item.put",
+            "finance-storage.order-transaction-summaries.item.get",
             "orders-storage.pieces.item.delete",
             "orders-storage.pieces.item.get",
             "orders-storage.pieces.collection.get",
