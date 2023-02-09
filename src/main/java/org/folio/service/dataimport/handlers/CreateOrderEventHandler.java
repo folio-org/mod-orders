@@ -159,8 +159,6 @@ public class CreateOrderEventHandler implements EventHandler {
         }
         return Future.succeededFuture(generatedOrderId);
       })
-      //.compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
-      //.compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
       .compose(orderId -> saveOrderLines(orderId, dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders, requestContext))
       .onComplete(ar -> {

@@ -653,6 +653,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
+    logger.debug("getCompositePurchaseOrder :: purchaseOrderId: {}", purchaseOrderId);
     Promise<CompositePurchaseOrder> promise = Promise.promise();
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(purchaseOrderId, requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
@@ -660,6 +661,7 @@ public class PurchaseOrderLineHelper {
       .onFailure(cause -> {
         // The case when specified order does not exist
         if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
+          logger.warn("getCompositePurchaseOrder :: {} = {}", ErrorCodes.ORDER_NOT_FOUND.getDescription(), purchaseOrderId);
           promise.fail(new HttpException(422, ErrorCodes.ORDER_NOT_FOUND));
         } else {
           promise.fail(cause);

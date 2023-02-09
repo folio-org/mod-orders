@@ -43,6 +43,7 @@ public class PurchaseOrderStorageService {
   }
 
   public Future<JsonObject> getPurchaseOrderByIdAsJson(String id, RequestContext requestContext) {
+    logger.debug("getPurchaseOrderByIdAsJson :: purchaseOrderId: {}", id);
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
     return restClient.getAsJsonObject(requestEntry, requestContext);
   }
