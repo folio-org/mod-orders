@@ -26,10 +26,10 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
       "  ON CONFLICT ON CONSTRAINT sequential_order_pk_constraint DO NOTHING " +
       "  RETURNING job_execution_id, sequential_no, order_id " +
       ") " +
-      "SELECT job_execution_id, sequential_no, order_id " +
+      "SELECT order_id " +
       "FROM insert_res " +
       "UNION ALL " +
-      "SELECT t.job_execution_id, t.sequential_no, t.order_id " +
+      "SELECT t.order_id " +
       "FROM %1$s t, input_row " +
       "WHERE t.job_execution_id = input_row.job_execution_id AND t.sequential_no = input_row.sequential_no";
 
@@ -47,7 +47,7 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
     Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo, UUID.fromString(orderId));
 
     return pgClientFactory.createInstance(tenantId).execute(sql, params)
-      .map(rows -> rows.iterator().next().getValue(ORDER_ID_FIELD).toString());
+      .map(rows -> rows.iterator().next().getValue(0).toString());
   }
 
   private String prepareFullTableName(String tenantId, String table) {
