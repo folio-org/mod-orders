@@ -3,6 +3,7 @@ package org.folio.service.dataimport.handlers;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,6 +12,7 @@ import org.folio.MappingProfile;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.RestConstants;
@@ -20,6 +22,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.service.dataimport.PoLineImportProgressService;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -30,6 +33,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
+import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
@@ -40,20 +44,24 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     "Failed to handle event payload, cause event payload context does not contain ORDER_LINE data";
 
   private static final String PO_LINE_KEY = "PO_LINE";
+  private static final String ID_FIELD = "id";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final Context vertxContext;
   private final PoLineImportProgressService poLineImportProgressService;
+  private final PurchaseOrderLineService purchaseOrderLineService;
 
   @Autowired
   public OrderPostProcessingEventHandler(PurchaseOrderHelper purchaseOrderHelper,
                                          PurchaseOrderStorageService purchaseOrderStorageService, Context vertxContext,
-                                         PoLineImportProgressService poLineImportProgressService) {
+                                         PoLineImportProgressService poLineImportProgressService,
+                                         PurchaseOrderLineService purchaseOrderLineService) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.vertxContext = vertxContext;
     this.poLineImportProgressService = poLineImportProgressService;
+    this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
   @Override
@@ -70,7 +78,8 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), CompositePoLine.class);
 
-    poLineImportProgressService.isPoLinesImported(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant())
+    ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext)
+      .compose(v -> poLineImportProgressService.isPoLinesImported(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
       .compose(isLinesImported -> Boolean.TRUE.equals(isLinesImported)
         ? purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
           .map(HelperUtils::convertToCompositePurchaseOrder)
@@ -79,7 +88,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
         : Future.succeededFuture())
       .onComplete(ar -> {
         if (ar.failed()) {
-          LOGGER.error("handle:: Error during processing order to Open status", ar.cause());
+          LOGGER.error("handle:: Error during processing order to Open status, jobId: {}", dataImportEventPayload.getJobExecutionId(), ar.cause());
           future.completeExceptionally(ar.cause());
           return;
         }
@@ -87,6 +96,21 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       });
 
     return future;
+  }
+
+  private Future<Void> ensurePoLineWithInstanceId(CompositePoLine poLine, DataImportEventPayload dataImportEventPayload,
+                                                  RequestContext requestContext) {
+    if (PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
+      return Future.succeededFuture();
+    }
+
+    String instanceAsString = dataImportEventPayload.getContext().get(INSTANCE.value());
+    if (StringUtils.isNotEmpty(instanceAsString)) {
+      JsonObject instanceJson = new JsonObject(instanceAsString);
+      poLine.setInstanceId(instanceJson.getString(ID_FIELD));
+      return purchaseOrderLineService.saveOrderLine(poLine, requestContext).mapEmpty();
+    }
+    return Future.failedFuture("Failed to handle event payload, cause event payload context does not contain INSTANCE data");
   }
 
   private Map<String, String> extractOkapiHeaders(DataImportEventPayload dataImportEventPayload) {

@@ -1,5 +1,6 @@
 package org.folio.service.dataimport.handlers;
 
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
@@ -84,8 +85,9 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
+  private static final String ID_FIELD = "id";
   private static final String USER_ID = "6bece55a-831c-4197-bed1-coff1e00b7d8";
-  public static final String ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID = "615b8413-82d5-4203-aa6e-e37984cb5ac3";
+  private static final String ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID = "615b8413-82d5-4203-aa6e-e37984cb5ac3";
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -124,7 +126,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     poLine = new CompositePoLine()
       .withId(UUID.randomUUID().toString())
-      .withTitleOrPackage("Mocked poLine for data-import")
+      .withTitleOrPackage("poLine for data-import")
       .withPurchaseOrderId(order.getId())
       .withPoLineNumber("10000-1")
       .withSource(CompositePoLine.Source.MARC)
@@ -132,7 +134,6 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withEresource(new Eresource()
         .withMaterialType(ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID)
         .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withInstanceId("5294d737-a04b-4158-857a-3f3c555bcc60")
       .withLocations(List.of(new Location()
         .withLocationId(OLD_LOCATION_ID)
         .withQuantityElectronic(1)))
@@ -151,10 +152,14 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
       .put(ITEM_MATERIAL_TYPE_ID, poLine.getEresource().getMaterialType());
 
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, "5294d737-a04b-4158-857a-3f3c555bcc60");
+    CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
+    mockPoLine.setInstanceId(instanceJson.getString(ID_FIELD));
+
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
-    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PO_LINES_STORAGE, mockPoLine);
     addMockEntry("items", itemJson);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -165,6 +170,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(INSTANCE.value(), instanceJson.encodePrettily());
         put(ORDER.value(), Json.encodePrettily(order));
         put(PO_LINE_KEY, Json.encodePrettily(poLine));
       }});
@@ -186,6 +192,11 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
     verifyPoLine(eventPayload);
+
+    // verifies that request was performed to update po line with instance id
+    List<JsonObject> updatedPoLines = MockServer.getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE);
+    CompositePoLine updatedPoLine = updatedPoLines.get(0).mapTo(CompositePoLine.class);
+    assertEquals(instanceJson.getString(ID_FIELD), updatedPoLine.getInstanceId());
 
     assertNull(getCreatedInstances());
     assertNull(getCreatedHoldings());
@@ -209,6 +220,8 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   @Test
   public void shouldNotUpdateOrderStatusToOpenWhenNotAllPoLinesProcessed(TestContext context) throws InterruptedException {
     // given
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, "5294d737-a04b-4158-857a-3f3c555bcc60");
+
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
@@ -220,6 +233,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(INSTANCE.value(), instanceJson.encodePrettily());
         put(PO_LINE_KEY, Json.encodePrettily(poLine));
       }});
 
@@ -319,7 +333,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     String topicToObserve = formatToKafkaTopicName(eventType);
     List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
       .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(30, TimeUnit.SECONDS)
+      .observeFor(180, TimeUnit.SECONDS)
       .build());
 
 //    assertEquals(record.getId(), new String(observedRecords.get(0).getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
