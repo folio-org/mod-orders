@@ -1,21 +1,27 @@
 package org.folio.dao;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.dao.util.PostgresClientFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
 
+import static java.lang.String.format;
 import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 
 @Repository
 public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorageDao {
 
-  private static final String TABLE_NAME = "sequential_order_id";
+  private static final Logger LOGGER = LogManager.getLogger();
 
-  private static final String ORDER_ID_FIELD = "order_id";
+  private static final String TABLE_NAME = "sequential_order_id";
 
   private static final String SQL =
     "WITH input_row(job_execution_id, sequential_no, order_id) AS " +
@@ -42,12 +48,18 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
 
   @Override
   public Future<String> store(String jobExecutionId, Integer sequenceNo, String orderId, String tenantId) {
-    String table = prepareFullTableName(tenantId, TABLE_NAME);
-    String sql = String.format(SQL, table);
-    Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo, UUID.fromString(orderId));
-
-    return pgClientFactory.createInstance(tenantId).execute(sql, params)
-      .map(rows -> rows.iterator().next().getValue(0).toString());
+    Promise<RowSet<Row>> promise = Promise.promise();
+    try {
+      LOGGER.trace("store:: jobExecutionId: {}, sequenceNo: {}, orderId: {}", jobExecutionId, sequenceNo, tenantId);
+      String table = prepareFullTableName(tenantId, TABLE_NAME);
+      String query = String.format(SQL, table);
+      Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo, UUID.fromString(orderId));
+      pgClientFactory.createInstance(tenantId).execute(query, params, promise);
+    } catch (Exception e) {
+      LOGGER.warn(format("store:: failed to store jobExecutionId: {}, sequenceNo: {}, orderId: {}", jobExecutionId, sequenceNo, tenantId), e);
+      promise.fail(e);
+    }
+    return promise.future().map(resultSet -> resultSet.iterator().next().getUUID(0).toString());
   }
 
   private String prepareFullTableName(String tenantId, String table) {
