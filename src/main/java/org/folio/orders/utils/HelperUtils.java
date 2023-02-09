@@ -368,7 +368,7 @@ public class HelperUtils {
 
   public static int getPoLineLimit(JsonObject config) {
     try {
-      logger.warn("getPoLineLimit:: {}", getPoLineLimit(config));
+      logger.warn("getPoLineLimit:: {}", config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
       return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
     } catch (NumberFormatException e) {
       throw new NumberFormatException("Invalid limit value in configuration.");
