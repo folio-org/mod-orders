@@ -41,7 +41,10 @@ import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.helper.BaseHelper;
+import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.exceptions.HttpException;
@@ -76,6 +79,8 @@ import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 
 public class HelperUtils {
+
+  private static final Logger logger = LogManager.getLogger(PurchaseOrderLineHelper.class);
 
   public static final String ID = "id";
   public static final String FUND_ID = "fundId";
@@ -363,6 +368,7 @@ public class HelperUtils {
 
   public static int getPoLineLimit(JsonObject config) {
     try {
+      logger.warn("getPoLineLimit:: {}", getPoLineLimit(config));
       return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
     } catch (NumberFormatException e) {
       throw new NumberFormatException("Invalid limit value in configuration.");

@@ -641,9 +641,12 @@ public class PurchaseOrderLineHelper {
 
 
   private Future<List<Error>> validatePoLineLimit(CompositePoLine compPOL, JsonObject tenantConfiguration, RequestContext requestContext) {
+    logger.warn("validatePoLineLimit :: purchaseOrderId: {}", compPOL.getPurchaseOrderId());
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
     return purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
       .map(poLines -> {
+        logger.warn("validatePoLineLimit :: poLines.getTotalRecords(): {}", poLines.getTotalRecords());
+        logger.warn("validatePoLineLimit :: getPoLineLimit(tenantConfiguration): {}", getPoLineLimit(tenantConfiguration));
         boolean isValid = poLines.getTotalRecords() < getPoLineLimit(tenantConfiguration);
         if (!isValid) {
           return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
@@ -653,7 +656,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
-    logger.debug("getCompositePurchaseOrder :: purchaseOrderId: {}", purchaseOrderId);
+    logger.warn("getCompositePurchaseOrder :: purchaseOrderId: {}", purchaseOrderId);
     Promise<CompositePurchaseOrder> promise = Promise.promise();
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(purchaseOrderId, requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)

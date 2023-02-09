@@ -150,7 +150,7 @@ public class CreateOrderEventHandler implements EventHandler {
       .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
       .compose(generatedOrderId -> {
         if (temporaryOrderIdForANewOrder.equals(generatedOrderId)) {
-          LOGGER.debug("new order with id: {} should be created for jobExecutionId: {}",
+          LOGGER.warn("new order with id: {} should be created for jobExecutionId: {}",
             generatedOrderId, dataImportEventPayload.getJobExecutionId());
           //TODO: the deduplication should be changed to poLines in the near future
           return idStorageService.store(sourceRecordId, generatedOrderId, dataImportEventPayload.getTenant())
@@ -235,7 +235,7 @@ public class CreateOrderEventHandler implements EventHandler {
         .whenComplete((processed, throwable) -> {
           if (throwable != null) {
             promise.fail(throwable);
-            LOGGER.error("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId(), throwable.getMessage());
+            LOGGER.error(format("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId()), throwable.getMessage());
           } else {
             promise.complete();
             LOGGER.debug(format("adjustEventType:: Job profile snapshot with id '%s' was retrieved from cache", profileSnapshotId));
@@ -314,7 +314,7 @@ public class CreateOrderEventHandler implements EventHandler {
   }
 
   private Future<String> generateSequentialOrderId(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, String orderId) {
-    LOGGER.debug("generateSequentialOrderId :: jobExecutionId: {}, newOrderId: {}, poLinesLimit: {} ",
+    LOGGER.warn("generateSequentialOrderId :: jobExecutionId: {}, newOrderId: {}, poLinesLimit: {} ",
       dataImportEventPayload.getJobExecutionId(), orderId, tenantConfig.getString(PO_LINES_LIMIT_PROPERTY));
 
     Integer poLinesLimit = Integer.valueOf(Optional.ofNullable(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY)).orElse(DEFAULT_POLINE_LIMIT));
@@ -330,7 +330,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId,
                                                    JsonObject tenantConfig, RequestContext requestContext) {
-    LOGGER.debug("saveOrder :: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
+    LOGGER.warn("saveOrder :: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     orderToSave.setId(orderId);
     // in this handler a purchase order always is created in PENDING status despite the status that is set during mapping
