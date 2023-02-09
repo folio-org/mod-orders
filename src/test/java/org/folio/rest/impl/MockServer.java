@@ -1091,7 +1091,7 @@ public class MockServer {
     logger.info("handleGetItemRecordsFromStorage got: " + ctx.request().path());
 
     // Attempt to find POLine in mock server memory
-    List<JsonObject> itemsList = serverRqRs.column(HttpMethod.SEARCH).get("items");
+    List<JsonObject> itemsList = getRqRsEntries(HttpMethod.SEARCH, ITEM_RECORDS);
     if (!itemsList.isEmpty()) {
       JsonObject items = new JsonObject()
         .put("items", itemsList)
