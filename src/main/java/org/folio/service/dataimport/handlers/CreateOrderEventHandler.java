@@ -109,26 +109,29 @@ public class CreateOrderEventHandler implements EventHandler {
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
   private final SequentialOrderIdService sequentialOrderIdService;
-  RetryPolicy retryPolicy = (failure, retryCount) -> 1000L;
-
-  CircuitBreaker circuitBreaker = CircuitBreaker.create("order line circuit breaker", Vertx.vertx(),
-    new CircuitBreakerOptions()
-        .setMaxRetries(5)       // number of retries
-        .setMaxFailures(5)      // number of failure before opening the circuit
-        .setTimeout(2000)       // consider a failure if the operation does not succeed in time
-    ).retryPolicy(retryPolicy); // retry every second
+  private final RetryPolicy retryPolicy = (failure, retryCount) -> 1000L;
+  private final Vertx vertx;
+  private final CircuitBreaker circuitBreaker;
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
                                  ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService,
                                  JobProfileSnapshotCache jobProfileSnapshotCache,
-                                 SequentialOrderIdService sequentialOrderIdService) {
+                                 SequentialOrderIdService sequentialOrderIdService,
+                                 @Autowired Vertx vertx) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
     this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
     this.sequentialOrderIdService = sequentialOrderIdService;
+    this.vertx = vertx;
+    circuitBreaker = CircuitBreaker.create("order line circuit breaker", vertx,
+      new CircuitBreakerOptions()
+        .setMaxRetries(5)       // number of retries
+        .setMaxFailures(5)      // number of failure before opening the circuit
+        .setTimeout(2000)       // consider a failure if the operation does not succeed in time
+    ).retryPolicy(retryPolicy); // retry every second
   }
 
   @Override
@@ -170,7 +173,7 @@ public class CreateOrderEventHandler implements EventHandler {
         }
         return Future.succeededFuture(generatedOrderId);
       })
-      .compose(orderId -> checkIfOrderSaved(orderId, requestContext, dataImportEventPayload.getJobExecutionId(), Vertx.vertx()))
+      .compose(orderId -> checkIfOrderSaved(orderId, requestContext, dataImportEventPayload.getJobExecutionId(), vertx))
       .compose(orderId -> saveOrderLines(orderId, dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders, requestContext))
       .onComplete(ar -> {
@@ -183,32 +186,28 @@ public class CreateOrderEventHandler implements EventHandler {
         }
         future.complete(dataImportEventPayload);
       });
-
     return future;
   }
 
-  public Future<String> checkIfOrderSaved(String orderId, RequestContext requestContext, String jobExecutionId, Vertx vertx) {
-    LOGGER.warn("checkIfOrderSaved:: orderId: {}, jobExecutionId: {} ", orderId, jobExecutionId);
+  private Future<String> checkIfOrderSaved(String orderId, RequestContext requestContext, String jobExecutionId, Vertx vertx) {
+    LOGGER.warn("checkIfOrderSaved:: orderId: {}, jobExecutionId: {}", orderId, jobExecutionId);
     Promise<String> finalPromise = Promise.promise();
-    vertx.setTimer(1000L, timerId -> // wait 1 second before first attempt at creating order
+    vertx.setTimer(1000L, timerId ->
       circuitBreaker.execute(promise -> {
         purchaseOrderHelper.getPurchaseOrderById(orderId, requestContext)
           .onSuccess(purchaseOrder -> {
-            LOGGER.warn("checkIfOrderSaved:: Order with orderId: {} exists.", orderId);
+            LOGGER.warn("checkIfOrderSaved:: Order with orderId: {} for jobExecutionId: {} exists.", orderId, jobExecutionId);
             promise.complete(purchaseOrder.getId());
           })
           .onFailure(e -> {
-            LOGGER.error("checkIfOrderSaved:: The error happened getting order {}", orderId, e);
+            LOGGER.error("checkIfOrderSaved:: The error happened getting order {} for jobExecutionId: {}", orderId, jobExecutionId, e);
             promise.fail(e);
           });
       }).onComplete(ar -> {
-        if (ar.succeeded()) {
-          LOGGER.warn("checkIfOrderSaved:: ar.succeeded() orderId: {}", orderId);
+        if (ar.succeeded())
           finalPromise.complete(orderId);
-        } else {
-          LOGGER.warn("checkIfOrderSaved:: ar.fail() orderId: {}", orderId);
+        else
           finalPromise.fail(ar.cause());
-        }
       }));
     return finalPromise.future();
   }
