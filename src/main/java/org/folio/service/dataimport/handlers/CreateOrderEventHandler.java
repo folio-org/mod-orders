@@ -56,6 +56,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static java.lang.Boolean.FALSE;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -336,7 +337,7 @@ public class CreateOrderEventHandler implements EventHandler {
           return Future.failedFuture(new EventProcessingException(Json.encode(errors)));
         }
         return purchaseOrderHelper.createPurchaseOrder(orderToSave, tenantConfig, requestContext)
-          .compose(savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig)::map)
+          .compose(order -> savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig).map(order))
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
             if (e instanceof HttpException) {
@@ -386,7 +387,7 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     return poLineHelper.createPoLine(poLine, tenantConfig, requestContext)
-      .eventually(createPoLine -> poLineImportProgressService.trackImportedPoLine(orderId, dataImportEventPayload.getTenant()))
+      .eventually(createPoLine -> poLineImportProgressService.trackProcessedPoLine(orderId, dataImportEventPayload.getTenant()))
       .onComplete(ar -> dataImportEventPayload.getContext().put(PO_LINE_KEY, Json.encode(poLine)));
   }
 
@@ -404,7 +405,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
     Optional<Integer> limitOptional = mappingProfile.getMappingDetails().getMappingFields().stream()
       .filter(mappingRule -> POL_LIMIT_RULE_NAME.equals(mappingRule.getName()) && isNotBlank(mappingRule.getValue()))
-      .map(mappingRule -> mappingRule.withEnabled("false"))
+      .map(mappingRule -> mappingRule.withEnabled(FALSE.toString()))
       .map(mappingRule -> Integer.parseInt(StringUtils.unwrap(mappingRule.getValue(), '"')))
       .findFirst();
 

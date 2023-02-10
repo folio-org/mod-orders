@@ -78,7 +78,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     CompositePoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), CompositePoLine.class);
 
     ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext)
-      .compose(v -> poLineImportProgressService.isPoLinesImported(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
+      .compose(v -> poLineImportProgressService.poLinesProcessed(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
       .compose(isLinesImported -> Boolean.TRUE.equals(isLinesImported)
         ? purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
           .map(HelperUtils::convertToCompositePurchaseOrder)

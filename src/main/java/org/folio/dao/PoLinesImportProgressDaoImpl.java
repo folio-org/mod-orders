@@ -13,7 +13,7 @@ import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 @Repository
 public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
 
-  private static final String TABLE_NAME = "po_lines_import_progress";
+  private static final String TABLE_NAME = "po_lines_processing_progress";
 
   private static final String SAVE_POL_TOTAL_AMOUNT_SQL =
     "INSERT INTO %s (order_id, total_po_lines, processed_po_lines) VALUES ($1, $2, 0)";
@@ -43,7 +43,7 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
   }
 
   @Override
-  public Future<Void> trackImportedPoLine(String orderId, String tenantId) {
+  public Future<Void> trackProcessedPoLine(String orderId, String tenantId) {
     String table = prepareFullTableName(tenantId, TABLE_NAME);
     String sql = String.format(INCREASE_IMPORTED_POL_BY_ORDER_ID_SQL, table);
     Tuple params = Tuple.of(UUID.fromString(orderId));
@@ -52,7 +52,7 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
   }
 
   @Override
-  public Future<Boolean> isPoLinesImported(String orderId, String tenantId) {
+  public Future<Boolean> poLinesProcessed(String orderId, String tenantId) {
     String table = prepareFullTableName(tenantId, TABLE_NAME);
     String sql = String.format(IS_ALL_POL_IMPORTED_BY_ORDER_ID_SQL, table);
     Tuple params = Tuple.of(UUID.fromString(orderId));

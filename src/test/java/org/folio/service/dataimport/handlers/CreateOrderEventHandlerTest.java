@@ -1146,7 +1146,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     Async async = context.async();
     PoLineImportProgressService poLineImportProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
-    poLineImportProgressService.isPoLinesImported(order.getId(), TENANT_ID)
+    poLineImportProgressService.poLinesProcessed(order.getId(), TENANT_ID)
       .onComplete(ar -> {
         context.assertTrue(ar.succeeded());
         context.assertTrue(ar.result());

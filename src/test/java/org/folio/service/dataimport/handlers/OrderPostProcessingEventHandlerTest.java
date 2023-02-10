@@ -179,8 +179,8 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     CompletableFuture<Object> future = new CompletableFuture<>();
     PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
     polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
-      .compose(v -> polProgressService.trackImportedPoLine(order.getId(), TENANT_ID))
-      .compose(v -> polProgressService.trackImportedPoLine(order.getId(), TENANT_ID))
+      .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
+      .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
     SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
@@ -241,7 +241,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     CompletableFuture<Void> future = new CompletableFuture<>();
     PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
     polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
-      .compose(v -> polProgressService.trackImportedPoLine(order.getId(), TENANT_ID))
+      .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
     SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
@@ -322,7 +322,6 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   private SendKeyValues<String, String> prepareKafkaRequest(DataImportEventPayload payload) {
     Event event = new Event().withEventPayload(Json.encode(payload));
     KeyValue<String, String> kafkaRecord = new KeyValue<>("test-key", Json.encode(event));
-//    kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
     kafkaRecord.addHeader(RestConstants.OKAPI_URL, payload.getOkapiUrl(), UTF_8);
     kafkaRecord.addHeader(OKAPI_PERMISSIONS_HEADER, payload.getContext().getOrDefault(OKAPI_PERMISSIONS_HEADER, ""), UTF_8);
     kafkaRecord.addHeader(OKAPI_USERID_HEADER, payload.getContext().getOrDefault(OKAPI_USERID_HEADER, ""), UTF_8);
@@ -334,10 +333,9 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     String topicToObserve = formatToKafkaTopicName(eventType);
     List<KeyValue<String, String>> observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicToObserve, 1)
       .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-      .observeFor(180, TimeUnit.SECONDS)
+      .observeFor(30, TimeUnit.SECONDS)
       .build());
 
-//    assertEquals(record.getId(), new String(observedRecords.get(0).getHeaders().lastHeader(RECORD_ID_HEADER).value(), UTF_8));
     Event obtainedEvent = Json.decodeValue(observedRecords.get(0).getValue(), Event.class);
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
   }

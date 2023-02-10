@@ -21,12 +21,12 @@ public class PoLineImportProgressServiceImpl implements PoLineImportProgressServ
   }
 
   @Override
-  public Future<Void> trackImportedPoLine(String orderId, String tenantId) {
-    return poLinesImportProgressDao.trackImportedPoLine(orderId, tenantId);
+  public Future<Void> trackProcessedPoLine(String orderId, String tenantId) {
+    return poLinesImportProgressDao.trackProcessedPoLine(orderId, tenantId);
   }
 
   @Override
-  public Future<Boolean> isPoLinesImported(String orderId, String tenantId) {
-    return poLinesImportProgressDao.isPoLinesImported(orderId, tenantId);
+  public Future<Boolean> poLinesProcessed(String orderId, String tenantId) {
+    return poLinesImportProgressDao.poLinesProcessed(orderId, tenantId);
   }
 }
