@@ -41,16 +41,16 @@ public class MappingParametersCache {
 
   public Future<MappingParameters> get(OkapiConnectionParams params) {
     try {
-      return Future.fromCompletionStage(cache.get(params.getTenantId(), (key, executor) -> loadJobProfileSnapshot(params)));
+      return Future.fromCompletionStage(cache.get(params.getTenantId(), (key, executor) -> loadMappingParameters(params)));
     } catch (Exception e) {
       LOGGER.warn("get:: Error loading organizations from cache, tenantId: '{}'", params.getTenantId(), e);
       return Future.failedFuture(e);
     }
   }
 
-  private CompletableFuture<MappingParameters> loadJobProfileSnapshot(OkapiConnectionParams params) {
+  private CompletableFuture<MappingParameters> loadMappingParameters(OkapiConnectionParams params) {
     String tenantId = params.getTenantId();
-    LOGGER.debug("loadJobProfileSnapshot:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
+    LOGGER.debug("loadMappingParameters:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
       tenantId, params.getOkapiUrl(), params.getTenantId());
 
     return RestUtil.doRequest(params, ORGANIZATIONS, HttpMethod.GET, null)
@@ -58,14 +58,14 @@ public class MappingParametersCache {
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
         if (httpResponse.getResponse().statusCode() == HttpStatus.SC_OK) {
-          LOGGER.info("loadJobProfileSnapshot:: Organizations was loaded for cache, tenantId '{}'", tenantId);
+          LOGGER.info("loadMappingParameters:: Organizations was loaded for cache, tenantId '{}'", tenantId);
           MappingParameters mappingParameters = new MappingParameters();
           OrganizationCollection organizationCollection = Json.decodeValue(httpResponse.getJson().encode(), OrganizationCollection.class);
 
           mappingParameters.withOrganizations(organizationCollection.getOrganizations());
           return CompletableFuture.completedFuture(mappingParameters);
         } else {
-          String message = String.format("loadJobProfileSnapshot:: Error loading organizations for cache, tenantId: '%s', status code: %s, response message: %s",
+          String message = String.format("loadMappingParameters:: Error loading organizations for cache, tenantId: '%s', status code: %s, response message: %s",
             tenantId, httpResponse.getResponse().statusCode(), httpResponse.getBody());
           LOGGER.warn(message);
           return CompletableFuture.failedFuture(new CacheLoadingException(message));
