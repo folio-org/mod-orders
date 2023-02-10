@@ -23,10 +23,8 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.RestConstants;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
@@ -34,6 +32,7 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
+import org.folio.service.caches.JobExecutionTotalRecordsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.IdStorageService;
@@ -110,21 +109,21 @@ public class CreateOrderEventHandler implements EventHandler {
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
   private final PoLineImportProgressService poLineImportProgressService;
-  private final RestClient restClient;
+  private final JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache;
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
                                  ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService,
                                  JobProfileSnapshotCache jobProfileSnapshotCache,
                                  PoLineImportProgressService poLineImportProgressService,
-                                 RestClient restClient) {
+                                 JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
     this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
     this.poLineImportProgressService = poLineImportProgressService;
-    this.restClient = restClient;
+    this.jobExecutionTotalRecordsCache = jobExecutionTotalRecordsCache;
   }
 
   @Override
@@ -318,7 +317,7 @@ public class CreateOrderEventHandler implements EventHandler {
           return Future.failedFuture(new EventProcessingException(Json.encode(errors)));
         }
         return purchaseOrderHelper.createPurchaseOrder(orderToSave, tenantConfig, requestContext)
-          .compose(savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig, requestContext)::map)
+          .compose(savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig)::map)
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
             if (e instanceof HttpException) {
@@ -334,14 +333,12 @@ public class CreateOrderEventHandler implements EventHandler {
       });
   }
 
-  private Future<Void> savePoLinesAmountPerOrder(String orderId, DataImportEventPayload eventPayload,
-                                                 JsonObject tenantConfig, RequestContext requestContext) {
-    eventPayload.setJobExecutionId(eventPayload.getJobExecutionId());
-    RequestEntry requestEntry = new RequestEntry("/change-manager/jobExecutions/{id}")
-      .withPathParameter("id", eventPayload.getJobExecutionId());
+  private Future<Void> savePoLinesAmountPerOrder(String orderId, DataImportEventPayload eventPayload, JsonObject tenantConfig) {
+    Map<String, String> headers = extractOkapiHeaders(eventPayload);
+    OkapiConnectionParams params = new OkapiConnectionParams(headers, Vertx.vertx());
 
-    return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(jobJson -> determinePoLinesAmountPerOrder(eventPayload, jobJson.getJsonObject("progress").getInteger("total"), tenantConfig))
+    return jobExecutionTotalRecordsCache.get(eventPayload.getJobExecutionId(), params)
+      .map(totalRecords -> determinePoLinesAmountPerOrder(eventPayload, totalRecords, tenantConfig))
       .compose(orderPolAmount -> poLineImportProgressService.savePoLinesAmountPerOrder(orderId, orderPolAmount, eventPayload.getTenant()));
   }
 
