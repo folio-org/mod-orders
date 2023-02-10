@@ -79,6 +79,7 @@ import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.CONFIGS;
+import static org.folio.rest.impl.MockServer.JOB_EXECUTIONS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
@@ -88,6 +89,7 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPP
 import static org.folio.service.dataimport.handlers.CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -342,7 +344,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     CompositePurchaseOrder order = Json.decodeValue(eventPayload.getContext().get(ActionProfile.FolioRecord.ORDER.value()), CompositePurchaseOrder.class);
-    assertEquals(order.getApproved(), Boolean.FALSE);
+    assertFalse(order.getApproved());
 
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
@@ -1203,12 +1205,11 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(CONFIGS, polLimitConfig);
 
     // when
-    String jobExecutionId = UUID.randomUUID().toString();
     DataImportEventPayload dataImportEventPayload;
     for (int i = 0; i < recordsNumber; i++) {
       record = getRecord(i);
       dataImportEventPayload = new DataImportEventPayload()
-        .withJobExecutionId(jobExecutionId)
+        .withJobExecutionId(jobExecutionJson.getString("id"))
         .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
         .withTenant(TENANT_ID)
         .withOkapiUrl(OKAPI_URL)
@@ -1230,6 +1231,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         MockServer.release();
         addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
         addMockEntry(CONFIGS, polLimitConfig);
+        addMockEntry(JOB_EXECUTIONS, jobExecutionJson);
       }
     }
 
@@ -1294,8 +1296,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     Event event = new Event().withEventPayload(Json.encode(payload));
     KeyValue<String, String> kafkaRecord = new KeyValue<>("test-key", Json.encode(event));
     if (!isEmpty(payload.getContext().get(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC.value()))) {
-      Record record = new JsonObject(payload.getContext()
-        .get(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
+      Record record = new JsonObject(payload.getContext().get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
       kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);
     } else {
       kafkaRecord.addHeader(RECORD_ID_HEADER, record.getId(), UTF_8);

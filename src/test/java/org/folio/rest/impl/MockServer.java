@@ -295,6 +295,7 @@ public class MockServer {
   public static final String OLD_HOLDING_ID = "758258bc-ecc1-41b8-abca-f7b610822ffd";
   public static final String NEW_HOLDING_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
   public static final String CONFIGS = "configs";
+  public static final String JOB_EXECUTIONS = "jobExecutions";
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
   public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
@@ -2870,7 +2871,7 @@ public class MockServer {
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
-      Optional<JsonObject> jobExecutionOptional = getMockEntry("jobExecutions", id);
+      Optional<JsonObject> jobExecutionOptional = getMockEntry(JOB_EXECUTIONS, id);
       if (jobExecutionOptional.isPresent()) {
         serverResponse(ctx, 200, APPLICATION_JSON, jobExecutionOptional.get().encodePrettily());
       } else {
