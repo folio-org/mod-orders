@@ -1,6 +1,7 @@
 package org.folio.service;
 
 import static javax.money.Monetary.getDefaultRounding;
+import static org.folio.orders.utils.HelperUtils.calculateEncumbranceEffectiveAmount;
 
 import java.util.List;
 import java.util.ListIterator;
@@ -66,7 +67,7 @@ public class FundsDistributionService {
               .orElse(Money.zero(fyCurrency));
           MonetaryAmount awaitingPayment = Optional.of(holder).map(EncumbranceRelationsHolder::getNewEncumbrance).map(Transaction::getEncumbrance).map(Encumbrance::getAmountAwaitingPayment)
               .map(aDouble -> Money.of(aDouble, fyCurrency)).orElse(Money.zero(fyCurrency));
-          MonetaryAmount amount = MonetaryFunctions.max().apply(initialAmount.subtract(expended).subtract(awaitingPayment), Money.zero(fyCurrency));
+          MonetaryAmount amount = calculateEncumbranceEffectiveAmount(initialAmount, expended, awaitingPayment, fyCurrency);
 
           holder.getNewEncumbrance().setAmount(amount.getNumber().doubleValue());
           holder.getNewEncumbrance().getEncumbrance().setInitialAmountEncumbered(initialAmount.getNumber().doubleValue());

@@ -35,6 +35,7 @@ import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.JobExecutionTotalRecordsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.IdStorageService;
 import org.folio.service.dataimport.PoLineImportProgressService;
 import org.folio.service.dataimport.utils.DataImportUtils;
@@ -66,10 +67,11 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.ActionProfile.FolioRecord.ORDER;
-import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
+import static org.folio.DataImportEventTypes.DI_COMPLETED;
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -109,6 +111,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private final ConfigurationEntriesService configurationEntriesService;
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
+  private final SequentialOrderIdService sequentialOrderIdService;
   private final PoLineImportProgressService poLineImportProgressService;
   private final JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache;
 
@@ -116,6 +119,7 @@ public class CreateOrderEventHandler implements EventHandler {
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
                                  ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService,
                                  JobProfileSnapshotCache jobProfileSnapshotCache,
+                                 SequentialOrderIdService sequentialOrderIdService,
                                  PoLineImportProgressService poLineImportProgressService,
                                  JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache) {
     this.purchaseOrderHelper = purchaseOrderHelper;
@@ -123,18 +127,20 @@ public class CreateOrderEventHandler implements EventHandler {
     this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
+    this.sequentialOrderIdService = sequentialOrderIdService;
     this.poLineImportProgressService = poLineImportProgressService;
     this.jobExecutionTotalRecordsCache = jobExecutionTotalRecordsCache;
   }
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    LOGGER.debug("handle:: jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
     if (payloadContext == null || isBlank(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))) {
-      LOGGER.warn("handle:: {}", PAYLOAD_HAS_NO_DATA_MSG);
+      LOGGER.warn("handle:: {}, jobExecutionId {}", PAYLOAD_HAS_NO_DATA_MSG, dataImportEventPayload.getJobExecutionId());
       return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
     }
 
@@ -146,18 +152,32 @@ public class CreateOrderEventHandler implements EventHandler {
 
     RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
     Future<JsonObject> tenantConfigFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    String temporaryOrderIdForANewOrder = UUID.randomUUID().toString();
 
     tenantConfigFuture
       .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
-      .compose(v -> prepareMappingResult(dataImportEventPayload))
+      .compose(orderId -> prepareMappingResult(dataImportEventPayload))
       .compose(v -> setApprovedFalseIfUserNotHaveApprovalPermission(dataImportEventPayload, tenantConfigFuture.result(), requestContext))
-      .compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
-      .compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
-      .compose(savedOrder -> saveOrderLines(savedOrder.getId(), dataImportEventPayload, tenantConfigFuture.result(), requestContext))
+      .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
+      .compose(generatedOrderId -> {
+        if (temporaryOrderIdForANewOrder.equals(generatedOrderId)) {
+          LOGGER.debug("new order with id: {} should be created for jobExecutionId: {}",
+            generatedOrderId, dataImportEventPayload.getJobExecutionId());
+          //TODO: the deduplication should be changed to poLines in the near future
+          return idStorageService.store(sourceRecordId, generatedOrderId, dataImportEventPayload.getTenant())
+            .compose(savedOrder -> saveOrder(dataImportEventPayload, generatedOrderId, tenantConfigFuture.result(), requestContext))
+            .map(CompositePurchaseOrder::getId);
+        }
+        return Future.succeededFuture(generatedOrderId);
+      })
+      //.compose(v -> idStorageService.store(sourceRecordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant()))
+      //.compose(orderId -> saveOrder(dataImportEventPayload, orderId, tenantConfigFuture.result(), requestContext))
+      .compose(orderId -> saveOrderLines(orderId, dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders, requestContext))
       .onComplete(ar -> {
         if (ar.failed()) {
-          LOGGER.error("handle:: Error during order or order line creation", ar.cause());
+          LOGGER.error("handle:: Error during order or order line creation for jobExecutionId: {}",
+            dataImportEventPayload.getJobExecutionId(), ar.cause());
           clearOrderIdInPoLineEntityIfNecessary(dataImportEventPayload);
           future.completeExceptionally(ar.cause());
           return;
@@ -193,6 +213,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, Map<String, String> okapiHeaders,
                                        RequestContext requestContext) {
+    LOGGER.debug("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId());
     WorkflowStatus workflowStatus = extractWorkflowStatus(dataImportEventPayload);
 
     Promise<Void> promise = Promise.promise();
@@ -227,7 +248,7 @@ public class CreateOrderEventHandler implements EventHandler {
         .whenComplete((processed, throwable) -> {
           if (throwable != null) {
             promise.fail(throwable);
-            LOGGER.error(throwable.getMessage());
+            LOGGER.error("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId(), throwable);
           } else {
             promise.complete();
             LOGGER.debug(format("adjustEventType:: Job profile snapshot with id '%s' was retrieved from cache", profileSnapshotId));
@@ -288,8 +309,24 @@ public class CreateOrderEventHandler implements EventHandler {
     return mappingProfileId.equals(currentMappingProfileId);
   }
 
+  private Future<String> generateSequentialOrderId(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, String orderId) {
+    LOGGER.debug("generateSequentialOrderId:: jobExecutionId: {}, newOrderId: {}, poLinesLimit: {} ",
+      dataImportEventPayload.getJobExecutionId(), orderId, tenantConfig.getString(PO_LINES_LIMIT_PROPERTY));
+
+    Integer poLinesLimit = Integer.valueOf(Optional.ofNullable(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY)).orElse(DEFAULT_POLINE_LIMIT));
+    Record parsedMarcBibRecord = new JsonObject(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
+    if (parsedMarcBibRecord.getOrder() == null) {
+      return Future.failedFuture(new IllegalArgumentException(
+        String.format("Order parameter is missing. jobExecutionId: %s", dataImportEventPayload.getJobExecutionId())));
+    }
+
+    int exponentOrder = parsedMarcBibRecord.getOrder() / poLinesLimit;
+    return sequentialOrderIdService.store(dataImportEventPayload.getJobExecutionId(), exponentOrder, orderId, dataImportEventPayload.getTenant());
+  }
+
   private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId,
                                                    JsonObject tenantConfig, RequestContext requestContext) {
+    LOGGER.debug("saveOrder:: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     orderToSave.setId(orderId);
     // in this handler a purchase order always is created in PENDING status despite the status that is set during mapping
@@ -340,6 +377,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<CompositePoLine> saveOrderLines(String orderId, DataImportEventPayload dataImportEventPayload,
                                                  JsonObject tenantConfig, RequestContext requestContext) {
+    LOGGER.debug("saveOrderLines:: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
     CompositePoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
     poLine.setPurchaseOrderId(orderId);
     poLine.setSource(CompositePoLine.Source.MARC);
