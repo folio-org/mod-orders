@@ -123,7 +123,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    LOGGER.debug("handle:: jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
+    LOGGER.warn("handle:: jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
@@ -149,6 +149,7 @@ public class CreateOrderEventHandler implements EventHandler {
       .compose(v -> setApprovedFalseIfUserNotHaveApprovalPermission(dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
       .compose(generatedOrderId -> {
+        LOGGER.warn("handle:: generatedOrderId = {}, jobExecutionId {}", generatedOrderId, dataImportEventPayload.getJobExecutionId());
         if (temporaryOrderIdForANewOrder.equals(generatedOrderId)) {
           LOGGER.warn("handle:: new order with id: {} should be created for jobExecutionId: {}",
             generatedOrderId, dataImportEventPayload.getJobExecutionId());
