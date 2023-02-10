@@ -204,7 +204,7 @@ public class CreateOrderEventHandler implements EventHandler {
       }).onComplete(ar -> {
         if (ar.succeeded()) {
           LOGGER.warn("checkIfOrderSaved:: ar.succeeded() orderId: {}", orderId);
-          finalPromise.complete();
+          finalPromise.complete(orderId);
         } else {
           LOGGER.warn("checkIfOrderSaved:: ar.fail() orderId: {}", orderId);
           finalPromise.fail(ar.cause());
