@@ -37,6 +37,7 @@ import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.IdStorageService;
 import org.folio.service.dataimport.PoLineImportProgressService;
+import org.folio.service.dataimport.utils.DataImportUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -137,7 +138,7 @@ public class CreateOrderEventHandler implements EventHandler {
       return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
     }
 
-    Map<String, String> okapiHeaders = extractOkapiHeaders(dataImportEventPayload);
+    Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
     String sourceRecordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
     Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
     prepareEventPayloadForMapping(dataImportEventPayload);
@@ -287,23 +288,6 @@ public class CreateOrderEventHandler implements EventHandler {
     return mappingProfileId.equals(currentMappingProfileId);
   }
 
-  private Map<String, String> extractOkapiHeaders(DataImportEventPayload dataImportEventPayload) {
-    Map<String, String> headers = new HashMap<>();
-    headers.put(RestVerticle.OKAPI_HEADER_TENANT, dataImportEventPayload.getTenant());
-    headers.put(RestVerticle.OKAPI_HEADER_TOKEN, dataImportEventPayload.getToken());
-    headers.put(RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl());
-
-    String permissionsHeader = dataImportEventPayload.getContext().get(PERMISSIONS_KEY);
-    if (StringUtils.isNotBlank(permissionsHeader)) {
-      headers.put(OKAPI_PERMISSIONS_HEADER, permissionsHeader);
-    }
-    String userId = dataImportEventPayload.getContext().get(USER_ID_KEY);
-    if (StringUtils.isNotBlank(userId)) {
-      headers.put(RestVerticle.OKAPI_USERID_HEADER, userId);
-    }
-    return headers;
-  }
-
   private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId,
                                                    JsonObject tenantConfig, RequestContext requestContext) {
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
@@ -334,7 +318,7 @@ public class CreateOrderEventHandler implements EventHandler {
   }
 
   private Future<Void> savePoLinesAmountPerOrder(String orderId, DataImportEventPayload eventPayload, JsonObject tenantConfig) {
-    Map<String, String> headers = extractOkapiHeaders(eventPayload);
+    Map<String, String> headers = DataImportUtils.extractOkapiHeaders(eventPayload);
     OkapiConnectionParams params = new OkapiConnectionParams(headers, Vertx.vertx());
 
     return jobExecutionTotalRecordsCache.get(eventPayload.getJobExecutionId(), params)
@@ -432,7 +416,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<Void> overrideCreateInventoryField(JsonObject poLineJson, DataImportEventPayload dataImportEventPayload) {
     String profileSnapshotId = dataImportEventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
-    Map<String, String> headers = extractOkapiHeaders(dataImportEventPayload);
+    Map<String, String> headers = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
     OkapiConnectionParams okapiParams = new OkapiConnectionParams(headers, Vertx.vertx());
 
     return jobProfileSnapshotCache.get(profileSnapshotId, okapiParams)

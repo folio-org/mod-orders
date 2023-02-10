@@ -23,6 +23,7 @@ import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.dataimport.OrderWriterFactory;
 import org.folio.service.dataimport.handlers.CreateOrderEventHandler;
+import org.folio.service.dataimport.utils.DataImportUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -98,10 +99,10 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     for (KafkaHeader header: kafkaRecord.headers()) {
       if (CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER.equalsIgnoreCase(header.key())) {
         String permissions = header.value().toString();
-        eventPayload.getContext().put(CreateOrderEventHandler.PERMISSIONS_KEY, permissions);
+        eventPayload.getContext().put(DataImportUtils.PERMISSIONS_KEY, permissions);
       } else if (RestVerticle.OKAPI_USERID_HEADER.equalsIgnoreCase(header.key())) {
         String userId = header.value().toString();
-        eventPayload.getContext().put(CreateOrderEventHandler.USER_ID_KEY, userId);
+        eventPayload.getContext().put(DataImportUtils.USER_ID_KEY, userId);
       }
     }
   }

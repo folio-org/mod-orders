@@ -15,13 +15,12 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
-import org.folio.rest.RestConstants;
-import org.folio.rest.RestVerticle;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.service.dataimport.PoLineImportProgressService;
+import org.folio.service.dataimport.utils.DataImportUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,7 +73,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
     }
 
-    Map<String, String> okapiHeaders = extractOkapiHeaders(dataImportEventPayload);
+    Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), CompositePoLine.class);
 
@@ -111,23 +110,6 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       return purchaseOrderLineService.saveOrderLine(poLine, requestContext).mapEmpty();
     }
     return Future.failedFuture("Failed to handle event payload, cause event payload context does not contain INSTANCE data");
-  }
-
-  private Map<String, String> extractOkapiHeaders(DataImportEventPayload dataImportEventPayload) {
-    Map<String, String> headers = new HashMap<>();
-    headers.put(RestVerticle.OKAPI_HEADER_TENANT, dataImportEventPayload.getTenant());
-    headers.put(RestVerticle.OKAPI_HEADER_TOKEN, dataImportEventPayload.getToken());
-    headers.put(RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl());
-
-    String permissionsHeader = dataImportEventPayload.getContext().get(CreateOrderEventHandler.PERMISSIONS_KEY);
-    if (StringUtils.isNotBlank(permissionsHeader)) {
-      headers.put(CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER, permissionsHeader);
-    }
-    String userId = dataImportEventPayload.getContext().get(CreateOrderEventHandler.USER_ID_KEY);
-    if (StringUtils.isNotBlank(userId)) {
-      headers.put(RestVerticle.OKAPI_USERID_HEADER, userId);
-    }
-    return headers;
   }
 
   @Override
