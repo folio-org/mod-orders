@@ -150,7 +150,7 @@ public class CreateOrderEventHandler implements EventHandler {
       .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
       .compose(generatedOrderId -> {
         if (temporaryOrderIdForANewOrder.equals(generatedOrderId)) {
-          LOGGER.warn("new order with id: {} should be created for jobExecutionId: {}",
+          LOGGER.warn("handle:: new order with id: {} should be created for jobExecutionId: {}",
             generatedOrderId, dataImportEventPayload.getJobExecutionId());
           //TODO: the deduplication should be changed to poLines in the near future
           return idStorageService.store(sourceRecordId, generatedOrderId, dataImportEventPayload.getTenant())
@@ -359,7 +359,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<CompositePoLine> saveOrderLines(String orderId, DataImportEventPayload dataImportEventPayload,
                                                  JsonObject tenantConfig, RequestContext requestContext) {
-    LOGGER.debug("saveOrderLines :: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
+    LOGGER.warn("saveOrderLines :: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
     CompositePoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
     poLine.setPurchaseOrderId(orderId);
     poLine.setSource(CompositePoLine.Source.MARC);

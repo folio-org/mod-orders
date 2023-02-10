@@ -77,6 +77,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   @Validate
   public void postOrdersCompositeOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    logger.warn("postOrdersCompositeOrders :: orderId: {}", compPO.getId());
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     // First validate content of the PO and proceed only if all is okay
     configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
@@ -92,6 +93,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
                 asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiUrl, url, compPO)));
               });
           } else {
+            logger.error("createPOandPOLines :: orderId: {}, errors: {}", compPO.getId(), errors.size());
             throw new HttpException(422, new Errors().withErrors(errors)
               .withTotalRecords(errors.size()));
           }

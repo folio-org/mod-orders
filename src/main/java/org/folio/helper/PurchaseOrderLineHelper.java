@@ -179,6 +179,7 @@ public class PurchaseOrderLineHelper {
    * @return completable future which might hold {@link CompositePoLine} on success, {@code null} if validation fails or an exception if any issue happens
    */
   public Future<CompositePoLine> createPoLine(CompositePoLine compPOL, JsonObject tenantConfig, RequestContext requestContext) {
+    logger.warn("createPoLine:: orderId: {}", compPOL.getPurchaseOrderId());
     // Validate PO Line content and retrieve order only if this operation is allowed
     JsonObject cachedTenantConfiguration= new JsonObject();
     cachedTenantConfiguration.mergeIn(tenantConfig, true);
@@ -228,6 +229,7 @@ public class PurchaseOrderLineHelper {
   }
 
   public Future<Void> setTenantDefaultCreateInventoryValues(CompositePoLine compPOL, JsonObject tenantConfiguration) {
+    logger.warn("setTenantDefaultCreateInventoryValues:: orderId: {}", compPOL.getPurchaseOrderId());
     Promise<JsonObject> promise = Promise.promise();
 
     if (isCreateInventoryNull(compPOL)) {
@@ -608,7 +610,7 @@ public class PurchaseOrderLineHelper {
    */
   private Future<List<Error>> validateNewPoLine(CompositePoLine compPOL, JsonObject tenantConfiguration,
     RequestContext requestContext) {
-    logger.debug("Validating if PO Line is valid...");
+    logger.warn("Validating if PO Line is valid... orderId: {}, poLineId: {}", compPOL.getPurchaseOrderId(), compPOL.getId());
     List<Error> errors = new ArrayList<>();
     if (compPOL.getPurchaseOrderId() == null) {
       errors.add(ErrorCodes.MISSING_ORDER_ID_IN_POL.toError());

@@ -20,6 +20,9 @@ import java.util.Optional;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.models.RequestContext;
@@ -37,6 +40,8 @@ import io.vertx.core.Future;
 
 public class CompositePoLineValidationService {
 
+  private static final Logger logger = LogManager.getLogger(PurchaseOrderLineHelper.class);
+
   private final ExpenseClassValidationService expenseClassValidationService;
 
   public CompositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService) {
@@ -44,6 +49,7 @@ public class CompositePoLineValidationService {
   }
 
   public Future<List<Error>> validatePoLine(CompositePoLine compPOL, RequestContext requestContext) {
+    logger.warn("Validating if PO Line is valid... orderId: {}, poLineId: {}", compPOL.getPurchaseOrderId(), compPOL.getId());
     List<Error> errors = new ArrayList<>();
     errors.addAll(validatePackagePoLine(compPOL));
 
