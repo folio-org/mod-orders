@@ -208,11 +208,23 @@ public class PurchaseOrderHelper {
   }
 
   /**
+   * Get purchase order by Id
+   *
+   * @param orderId purchase order id
+   * @return completable future with {@link PurchaseOrder} object
+   */
+  public Future<PurchaseOrder> getPurchaseOrderById(String orderId, RequestContext requestContext) {
+    logger.info("getPurchaseOrderById:: orderId: {}", orderId);
+    return purchaseOrderStorageService.getPurchaseOrderById(orderId, requestContext);
+  }
+
+  /**
    * Create a purchase order (PO) and a number of PO lines if provided.
    * @param compPO {@link CompositePurchaseOrder} object representing Purchase Order and optionally Purchase Order Line details.
    * @return completable future with {@link CompositePurchaseOrder} object with populated uuid on success or an exception if processing fails
    */
   public Future<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO, JsonObject tenantConfiguration, RequestContext requestContext) {
+    logger.info("createPurchaseOrder :: orderId: {}", compPO.getId());
     return validateNewPurchaseOrders(compPO, tenantConfiguration, requestContext)
       .compose(v -> setPoNumberIfMissing(compPO, requestContext))
       .compose(v -> processPoLineTags(compPO, requestContext))
@@ -223,6 +235,7 @@ public class PurchaseOrderHelper {
   }
 
   private Future<Void> validateNewPurchaseOrders(CompositePurchaseOrder compPO, JsonObject tenantConfiguration, RequestContext requestContext) {
+    logger.info("validateNewPurchaseOrders :: orderId: {}", compPO.getId());
     List<Future<Void>> futures = new ArrayList<>();
 
     futures.add(validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), requestContext));
@@ -513,6 +526,7 @@ public class PurchaseOrderHelper {
   }
 
   private Future<Void> setPoNumberIfMissing(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    logger.info("setPoNumberIfMissing :: orderId: {}", compPO.getId());
     if (null == compPO.getPoNumber()) {
       return poNumberHelper.generatePoNumber(requestContext)
         .onSuccess(compPO::setPoNumber)
@@ -557,6 +571,7 @@ public class PurchaseOrderHelper {
 
   private Future<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO, JsonObject cachedTenantConfiguration,
                                                                       RequestContext requestContext) {
+    logger.info("createPOandPOLines :: orderId: {}", compPO.getId());
     final WorkflowStatus finalStatus = compPO.getWorkflowStatus();
 
     // we should always create PO and PO lines in PENDING status and transition to OPEN only when it's all set
@@ -813,6 +828,7 @@ public class PurchaseOrderHelper {
   }
 
   private Future<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO, JsonObject tenantConfiguration) {
+    logger.info("setCreateInventoryDefaultValues:: orderId: {}", compPO.getId());
     List<Future<Void>> futures = compPO.getCompositePoLines()
       .stream()
       .map(compPOL -> purchaseOrderLineHelper.setTenantDefaultCreateInventoryValues(compPOL, tenantConfiguration))
@@ -823,6 +839,7 @@ public class PurchaseOrderHelper {
   }
 
   private Future<CompositePurchaseOrder> populateOrderSummary(CompositePurchaseOrder order, RequestContext requestContext) {
+    logger.info("populateOrderSummary :: orderId: {}", order.getId());
     return orderLinesSummaryPopulateService.populate(new CompositeOrderRetrieveHolder(order), requestContext)
       .map(CompositeOrderRetrieveHolder::getOrder);
   }
