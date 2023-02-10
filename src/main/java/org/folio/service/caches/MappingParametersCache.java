@@ -21,6 +21,9 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * The class responsible for caching {@link MappingParameters}
+ */
 @Component
 public class MappingParametersCache {
   private static final Logger LOGGER = LogManager.getLogger();
@@ -39,6 +42,11 @@ public class MappingParametersCache {
       .buildAsync();
   }
 
+  /**
+   * Retrieves {@link MappingParameters} from cache by tenantId
+   * @param params {@link OkapiConnectionParams} connection params
+   * @return CompletableFuture with {@link MappingParameters} object
+   */
   public Future<MappingParameters> get(OkapiConnectionParams params) {
     try {
       return Future.fromCompletionStage(cache.get(params.getTenantId(), (key, executor) -> loadMappingParameters(params)));
@@ -48,6 +56,11 @@ public class MappingParametersCache {
     }
   }
 
+  /**
+   * Generates {@link MappingParameters} with collection of {@link org.folio.Organization}
+   * @param params {@link OkapiConnectionParams} connection params
+   * @return CompletableFuture with {@link MappingParameters} object
+   */
   private CompletableFuture<MappingParameters> loadMappingParameters(OkapiConnectionParams params) {
     String tenantId = params.getTenantId();
     LOGGER.debug("loadMappingParameters:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
