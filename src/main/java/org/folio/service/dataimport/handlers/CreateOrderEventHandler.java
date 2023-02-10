@@ -1,5 +1,8 @@
 package org.folio.service.dataimport.handlers;
 
+import io.vertx.circuitbreaker.CircuitBreaker;
+import io.vertx.circuitbreaker.CircuitBreakerOptions;
+import io.vertx.circuitbreaker.RetryPolicy;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -106,7 +109,14 @@ public class CreateOrderEventHandler implements EventHandler {
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
   private final SequentialOrderIdService sequentialOrderIdService;
+  RetryPolicy retryPolicy = (failure, retryCount) -> 1000L;
 
+  CircuitBreaker circuitBreaker = CircuitBreaker.create("order line circuit breaker", Vertx.vertx(),
+    new CircuitBreakerOptions()
+        .setMaxRetries(5)       // number of retries
+        .setMaxFailures(5)      // number of failure before opening the circuit
+        .setTimeout(2000)       // consider a failure if the operation does not succeed in time
+    ).retryPolicy(retryPolicy); // retry every second
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
@@ -160,6 +170,7 @@ public class CreateOrderEventHandler implements EventHandler {
         }
         return Future.succeededFuture(generatedOrderId);
       })
+      .compose(orderId -> checkIfOrderSaved(orderId, requestContext, dataImportEventPayload.getJobExecutionId(), Vertx.vertx()))
       .compose(orderId -> saveOrderLines(orderId, dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders, requestContext))
       .onComplete(ar -> {
@@ -174,6 +185,32 @@ public class CreateOrderEventHandler implements EventHandler {
       });
 
     return future;
+  }
+
+  public Future<String> checkIfOrderSaved(String orderId, RequestContext requestContext, String jobExecutionId, Vertx vertx) {
+    LOGGER.warn("checkIfOrderSaved:: orderId: {}, jobExecutionId: {} ", orderId, jobExecutionId);
+    Promise<String> finalPromise = Promise.promise();
+    vertx.setTimer(1000L, timerId -> // wait 1 second before first attempt at creating order
+      circuitBreaker.execute(promise -> {
+        purchaseOrderHelper.getPurchaseOrderById(orderId, requestContext)
+          .onSuccess(purchaseOrder -> {
+            LOGGER.warn("checkIfOrderSaved:: Order with orderId: {} exists.", orderId);
+            promise.complete(purchaseOrder.getId());
+          })
+          .onFailure(e -> {
+            LOGGER.error("checkIfOrderSaved:: The error happened getting order {}", orderId, e);
+            promise.fail(e);
+          });
+      }).onComplete(ar -> {
+        if (ar.succeeded()) {
+          LOGGER.warn("checkIfOrderSaved:: ar.succeeded() orderId: {}", orderId);
+          finalPromise.complete();
+        } else {
+          LOGGER.warn("checkIfOrderSaved:: ar.fail() orderId: {}", orderId);
+          finalPromise.fail(ar.cause());
+        }
+      }));
+    return finalPromise.future();
   }
 
   private void clearOrderIdInPoLineEntityIfNecessary(DataImportEventPayload dataImportEventPayload) {

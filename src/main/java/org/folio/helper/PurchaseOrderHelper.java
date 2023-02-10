@@ -207,6 +207,11 @@ public class PurchaseOrderHelper {
       .onFailure(t -> logger.error("Error getting orders", t));
   }
 
+  public Future<PurchaseOrder> getPurchaseOrderById(String orderId, RequestContext requestContext) {
+    logger.warn("getPurchaseOrderById:: orderId: {}", orderId);
+    return purchaseOrderStorageService.getPurchaseOrderById(orderId, requestContext);
+  }
+
   /**
    * Create a purchase order (PO) and a number of PO lines if provided.
    * @param compPO {@link CompositePurchaseOrder} object representing Purchase Order and optionally Purchase Order Line details.
