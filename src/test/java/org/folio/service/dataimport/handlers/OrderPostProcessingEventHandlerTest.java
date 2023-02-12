@@ -44,6 +44,7 @@ import java.util.concurrent.TimeoutException;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
+import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.TestConfig.closeMockServer;
@@ -74,6 +75,7 @@ import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_L
 import static org.folio.service.inventory.InventoryManagerTest.OLD_LOCATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -83,11 +85,9 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final String PO_LINE_KEY = "PO_LINE";
   private static final String GROUP_ID = "test-consumers-group";
-  private static final String RECORD_ID_HEADER = "recordId";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String ID_FIELD = "id";
-  private static final String USER_ID = "6bece55a-831c-4197-bed1-coff1e00b7d8";
   private static final String ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID = "615b8413-82d5-4203-aa6e-e37984cb5ac3";
 
   private final JobProfile jobProfile = new JobProfile()
@@ -145,7 +145,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldUpdateOrderStatusToOpenAndUseExistingInstanceHoldingsItemWhenAllPoLinesProcessed(TestContext context) throws InterruptedException {
+  public void shouldOpenOrderAndUseExistingInstanceHoldingsItemWhenAllPoLinesProcessed(TestContext context) throws InterruptedException {
     // given
     JsonObject itemJson = new JsonObject()
       .put(ID, "86481a22-633e-4b97-8061-0dc5fdaaeabb")
@@ -184,9 +184,9 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
     SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    future.join();
 
     // when
-    future.join();
     kafkaCluster.send(request);
 
     // then
@@ -245,9 +245,9 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
     SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    future.join();
 
     // when
-    future.join();
     kafkaCluster.send(request);
 
     // then
@@ -255,6 +255,119 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
     verifyPoLine(eventPayload);
     assertNull(getPurchaseOrderUpdates());
+  }
+
+  @Test
+  public void shouldOpenOrderWhenAllPoLinesProcessedAndInventoryCreationIsNotRequired(TestContext context) throws InterruptedException {
+    // given
+    poLine.setInstanceId(null);
+    poLine.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+    CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
+
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, mockPoLine);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(ORDER.value(), Json.encodePrettily(order));
+        put(PO_LINE_KEY, Json.encodePrettily(poLine));
+      }});
+
+    CompletableFuture<Object> future = new CompletableFuture<>();
+    PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
+    polProgressService.savePoLinesAmountPerOrder(order.getId(), 1, TENANT_ID)
+      .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
+      .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    future.join();
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    verifyPoLine(eventPayload);
+
+    List<JsonObject> updatedPoLines = MockServer.getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE);
+    CompositePoLine updatedPoLine = updatedPoLines.get(0).mapTo(CompositePoLine.class);
+    assertNull(updatedPoLine.getInstanceId());
+
+    assertNull(getCreatedInstances());
+    assertNull(getCreatedHoldings());
+    assertNull(getCreatedItems());
+
+    List<JsonObject> ordersResp = getPurchaseOrderUpdates();
+    assertFalse(ordersResp.isEmpty());
+    CompositePurchaseOrder openedOrder = ordersResp.get(0).mapTo(CompositePurchaseOrder.class);
+    assertEquals(order.getId(), openedOrder.getId());
+    assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
+
+    verifyEncumbrancesOnPoUpdate(order.withCompositePoLines(List.of(poLine)));
+  }
+
+  @Test
+  public void shouldPublishDiErrorEventWhenHasNoPoLine() throws InterruptedException {
+    // given
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    assertNull(dataImportEventPayload.getContext().get(PO_LINE_KEY));
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+  }
+
+  @Test
+  public void shouldPublishDiErrorEventWhenHasNoInstanceAndInventoryRecordsCreationIsRequired() throws InterruptedException {
+    // given
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(PO_LINE_KEY, Json.encodePrettily(poLine));
+      }});
+
+    assertNotEquals(Eresource.CreateInventory.NONE, poLine.getEresource().getCreateInventory());
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_ERROR.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
   }
 
   @Test

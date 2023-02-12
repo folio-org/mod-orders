@@ -17,6 +17,7 @@ import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
 
   private static final String TABLE_NAME = "po_lines_processing_progress";
+  private static final String PO_LINES_PROCESSED_FIELD = "po_lines_processed";
 
   private static final String SAVE_POL_TOTAL_AMOUNT_SQL =
     "INSERT INTO %s (order_id, total_po_lines, processed_po_lines, creation_date) VALUES ($1, $2, 0, $3)";
@@ -61,7 +62,7 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
     Tuple params = Tuple.of(UUID.fromString(orderId));
 
     return pgClientFactory.createInstance(tenantId).execute(sql, params)
-      .map(rows -> rows.iterator().next().getBoolean("po_lines_processed"));
+      .map(rows -> rows.iterator().next().getBoolean(PO_LINES_PROCESSED_FIELD));
   }
 
   private String prepareFullTableName(String tenantId, String table) {
