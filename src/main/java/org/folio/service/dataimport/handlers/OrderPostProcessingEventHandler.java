@@ -65,11 +65,12 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    LOGGER.debug("handle:: jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
     if (payloadContext == null || isBlank(payloadContext.get(PO_LINE_KEY))) {
-      LOGGER.warn("handle:: {}", PAYLOAD_HAS_NO_DATA_MSG);
+      LOGGER.warn("handle:: {}, jobExecutionId {}", PAYLOAD_HAS_NO_DATA_MSG, dataImportEventPayload.getJobExecutionId());
       return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
     }
 
@@ -87,7 +88,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
         : Future.succeededFuture())
       .onComplete(ar -> {
         if (ar.failed()) {
-          LOGGER.error("handle:: Error during processing order to Open status, jobId: {}", dataImportEventPayload.getJobExecutionId(), ar.cause());
+          LOGGER.error("handle:: Error during processing order to Open status, jobExecutionId: {}", dataImportEventPayload.getJobExecutionId(), ar.cause());
           future.completeExceptionally(ar.cause());
           return;
         }
@@ -100,6 +101,8 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private Future<Void> ensurePoLineWithInstanceId(CompositePoLine poLine, DataImportEventPayload dataImportEventPayload,
                                                   RequestContext requestContext) {
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
+      LOGGER.debug("ensurePoLineWithInstanceId:: Skipping instanceId filling because poLine does not require inventory entities creation,  jobExecutionId: {}, poLineNumber: {}",
+        dataImportEventPayload.getJobExecutionId(), poLine.getPoLineNumber());
       return Future.succeededFuture();
     }
 

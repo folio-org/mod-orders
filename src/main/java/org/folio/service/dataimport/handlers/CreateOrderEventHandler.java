@@ -73,6 +73,7 @@ import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 @Component
@@ -481,12 +482,15 @@ public class CreateOrderEventHandler implements EventHandler {
     } else if (inventoryTypes.contains(INSTANCE)) {
       createInventoryFieldValue = Eresource.CreateInventory.INSTANCE;
     } else {
-      createInventoryFieldValue = Eresource.CreateInventory.NONE;
+      createInventoryFieldValue = NONE;
     }
 
-    if (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null) {
+    if (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null
+      && !NONE.toString().equals(poLineJson.getJsonObject(POL_ERESOURCE_FIELD).getString(POL_CREATE_INVENTORY_FIELD))){
       poLineJson.getJsonObject(POL_ERESOURCE_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
-    } else if (poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null) {
+    }
+    if (poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null
+      && !NONE.toString().equals(poLineJson.getJsonObject(POL_PHYSICAL_FIELD).getString(POL_CREATE_INVENTORY_FIELD))){
       poLineJson.getJsonObject(POL_PHYSICAL_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
     }
     return null;
