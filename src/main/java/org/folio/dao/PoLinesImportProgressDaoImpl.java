@@ -6,6 +6,9 @@ import org.folio.dao.util.PostgresClientFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
@@ -16,7 +19,7 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
   private static final String TABLE_NAME = "po_lines_processing_progress";
 
   private static final String SAVE_POL_TOTAL_AMOUNT_SQL =
-    "INSERT INTO %s (order_id, total_po_lines, processed_po_lines) VALUES ($1, $2, 0)";
+    "INSERT INTO %s (order_id, total_po_lines, processed_po_lines, creation_date) VALUES ($1, $2, 0, $3)";
 
   private static final String INCREASE_IMPORTED_POL_BY_ORDER_ID_SQL =
     "UPDATE %s SET processed_po_lines = processed_po_lines + 1 WHERE order_id = $1";
@@ -37,7 +40,7 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
   public Future<Void> savePoLinesAmountPerOrder(String orderId, int totalPoLines, String tenantId) {
     String table = prepareFullTableName(tenantId, TABLE_NAME);
     String sql = String.format(SAVE_POL_TOTAL_AMOUNT_SQL, table);
-    Tuple params = Tuple.of(UUID.fromString(orderId), totalPoLines);
+    Tuple params = Tuple.of(UUID.fromString(orderId), totalPoLines, LocalDateTime.now(ZoneId.of(ZoneOffset.UTC.getId())));
 
     return pgClientFactory.createInstance(tenantId).execute(sql, params).mapEmpty();
   }
