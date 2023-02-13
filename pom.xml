@@ -188,7 +188,6 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-circuit-breaker</artifactId>
-      <version>4.3.8</version>
     </dependency>
     <!--vertx-rx-java required for vertx-concurrent-1.0.0 -->
     <dependency>
