@@ -78,6 +78,7 @@ import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 @Component
 public class CreateOrderEventHandler implements EventHandler {
@@ -340,7 +341,7 @@ public class CreateOrderEventHandler implements EventHandler {
     String mappingProfileId = org.apache.commons.lang.StringUtils.EMPTY;
 
     if (childSnapshotWrappers != null && !childSnapshotWrappers.isEmpty()
-      && childSnapshotWrappers.get(0) != null && Objects.equals(childSnapshotWrappers.get(0).getContentType().value(), "MAPPING_PROFILE")) {
+      && childSnapshotWrappers.get(0) != null && Objects.equals(childSnapshotWrappers.get(0).getContentType(), MAPPING_PROFILE)) {
       mappingProfileId = childSnapshotWrappers.get(0).getProfileId();
     }
 
