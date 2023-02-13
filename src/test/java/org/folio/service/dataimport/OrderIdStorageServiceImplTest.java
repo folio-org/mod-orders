@@ -22,32 +22,56 @@ public class OrderIdStorageServiceImplTest extends DiAbstractRestTest {
   private IdStorageService orderIdStorageService = new OrderIdStorageServiceImpl(orderIdStorageDao);
 
   @Test
-  public void shouldSaveAndReturnNewOrderIdWhenHasNoOrderIdByRecordId(TestContext context) {
+  public void shouldSaveAndReturnNewRecordId(TestContext context) {
     Async async = context.async();
     String recordId = UUID.randomUUID().toString();
-    String orderId = UUID.randomUUID().toString();
-    Future<String> future = orderIdStorageService.store(recordId, orderId, TENANT_ID);
+    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID);
 
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
-      context.assertEquals(orderId, ar.result());
+      context.assertEquals(recordId, ar.result());
       async.complete();
     });
   }
 
   @Test
-  public void shouldNotSaveOrderIdAndReturnExistingByRecordId(TestContext context) {
+  public void shouldNotSaveRecordIdAndReturnExistingByRecordId(TestContext context) {
     Async async = context.async();
     String recordId = UUID.randomUUID().toString();
-    String existingOrderId = UUID.randomUUID().toString();
-    String newOrderId = UUID.randomUUID().toString();
-    Future<String> future = orderIdStorageService.store(recordId, existingOrderId, TENANT_ID)
-      .compose(v -> orderIdStorageService.store(recordId, newOrderId, TENANT_ID));
+    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID)
+      .compose(v -> orderIdStorageService.store(recordId, TENANT_ID));
+
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldReturnSavedRecordId(TestContext context) {
+    Async async = context.async();
+    String recordId = UUID.randomUUID().toString();
+    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID)
+      .compose(v -> orderIdStorageService.get(recordId, TENANT_ID));
 
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
-      context.assertEquals(existingOrderId, ar.result());
-      context.assertNotEquals(existingOrderId, newOrderId);
+      context.assertEquals(recordId, ar.result());
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotReturnNotExistingRecordId(TestContext context) {
+    Async async = context.async();
+    String recordId = UUID.randomUUID().toString();
+    String newRecordId = UUID.randomUUID().toString();
+    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID)
+      .compose(v -> orderIdStorageService.get(newRecordId, TENANT_ID));
+
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      context.assertEquals("", ar.result());
       async.complete();
     });
   }

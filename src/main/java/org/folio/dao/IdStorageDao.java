@@ -10,9 +10,16 @@ public interface IdStorageDao {
    * that existing (previously associated) entity id without saving association with the specified {@code entityId}.
    *
    * @param recordId - record id
-   * @param entityId - entity id
    * @param tenantId - tenant id
    * @return future with entity id that associated with specified {@code recordId}
    */
-  Future<String> store(String recordId, String entityId, String tenantId);
+  Future<String> store(String recordId, String tenantId);
+
+  /**
+   * Retrieves specific recordId if exists inside DB. If not - returns empty string.
+   * @param recordId - record id
+   * @param tenantId - tenant id
+   * @return future with record id  {@code recordId}
+   */
+  Future<String> get(String recordId, String tenantId);
 }

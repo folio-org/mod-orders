@@ -20,8 +20,14 @@ public class OrderIdStorageServiceImpl implements IdStorageService {
   }
 
   @Override
-  public Future<String> store(String recordId, String orderId, String tenantId) {
-    LOGGER.debug("store :: recordId: {}, orderId: {}, tenantId: {}", recordId, orderId, tenantId);
-    return orderIdStorageDao.store(recordId, orderId, tenantId);
+  public Future<String> store(String recordId, String tenantId) {
+    LOGGER.debug("store :: recordId: {}, tenantId: {}", recordId, tenantId);
+    return orderIdStorageDao.store(recordId, tenantId);
+  }
+
+  @Override
+  public Future<String> get(String recordId, String tenantId) {
+    LOGGER.debug("get :: recordId: {}, tenantId: {}", recordId, tenantId);
+    return orderIdStorageDao.get(recordId, tenantId);
   }
 }
