@@ -200,14 +200,16 @@ public class CreateOrderEventHandler implements EventHandler {
             promise.complete(purchaseOrder.getId());
           })
           .onFailure(e -> {
-            LOGGER.error("checkIfOrderSaved:: The error happened getting order {} for jobExecutionId: {}", orderId, jobExecutionId, e);
+            LOGGER.warn("checkIfOrderSaved:: Retry to get order {} for jobExecutionId: {}", orderId, jobExecutionId, e);
             promise.fail(e);
           });
       }).onComplete(ar -> {
         if (ar.succeeded())
           finalPromise.complete(orderId);
-        else
+        else {
+          LOGGER.error(format("checkIfOrderSaved:: The error happened getting order {} for jobExecutionId: {}", orderId, jobExecutionId), ar.cause());
           finalPromise.fail(ar.cause());
+        }
       }));
     return finalPromise.future();
   }
