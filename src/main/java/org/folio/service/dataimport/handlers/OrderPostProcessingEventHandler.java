@@ -80,11 +80,8 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
     ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext)
       .compose(v -> poLineImportProgressService.poLinesProcessed(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
-      .compose(isLinesImported -> Boolean.TRUE.equals(isLinesImported)
-        ? purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
-          .map(HelperUtils::convertToCompositePurchaseOrder)
-          .map(order -> order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN))
-          .compose(order -> purchaseOrderHelper.updateOrder(order, false, requestContext))
+      .compose(poLinesImported -> Boolean.TRUE.equals(poLinesImported)
+        ? openOrder(poLine, requestContext, dataImportEventPayload.getJobExecutionId())
         : Future.succeededFuture())
       .onComplete(ar -> {
         if (ar.failed()) {
@@ -96,6 +93,16 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       });
 
     return future;
+  }
+
+  private Future<Void> openOrder(CompositePoLine poLine, RequestContext requestContext, String jobExecutionId) {
+    LOGGER.info("All poLines for order were processed, initializing order opening, orderId: {}, poLineNumber: {}, jobExecutionId: {} ",
+      poLine.getPurchaseOrderId(), poLine.getPoLineNumber(), jobExecutionId);
+
+    return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
+      .map(HelperUtils::convertToCompositePurchaseOrder)
+      .map(order -> order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN))
+      .compose(order -> purchaseOrderHelper.updateOrder(order, false, requestContext));
   }
 
   private Future<Void> ensurePoLineWithInstanceId(CompositePoLine poLine, DataImportEventPayload dataImportEventPayload,
