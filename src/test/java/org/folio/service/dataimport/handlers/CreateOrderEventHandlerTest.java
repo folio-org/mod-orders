@@ -22,6 +22,7 @@ import org.folio.di.DiAbstractRestTest;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.orders.utils.AcqDesiredPermissions;
+import org.folio.processing.events.EventManager;
 import org.folio.rest.RestConstants;
 import org.folio.rest.client.TenantClient;
 import org.folio.rest.impl.MockServer;
@@ -197,6 +198,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   @Before
   public void setup() {
     MockServer.release();
+    registerCreateOrderEventHandler();
     record = getRecord(0);
 
     jobExecutionJson = new JsonObject()
@@ -1357,5 +1359,12 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertTrue(poLine.getCheckinItems());
     assertNotNull(poLine.getAcquisitionMethod());
     return poLine;
+  }
+
+  private void registerCreateOrderEventHandler() {
+    // Overrides events handlers registration to avoid messages produced by these tests
+    // from being processed by OrderPostProcessingHandler which in turn causes side effects on these tests' execution
+    EventManager.clearEventHandlers();
+    EventManager.registerEventHandler(getBeanFromSpringContext(vertx, CreateOrderEventHandler.class));
   }
 }
