@@ -610,12 +610,11 @@ public class ApplicationConfig {
         EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
         TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
         PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
-        ConfigurationEntriesService configurationEntriesService, RestClient restClient,
-        CompositePoLineValidationService compositePoLineValidationService, POLInvoiceLineRelationService polInvoiceLineRelationService,
-        OrganizationService organizationService) {
+        RestClient restClient, CompositePoLineValidationService compositePoLineValidationService,
+        POLInvoiceLineRelationService polInvoiceLineRelationService, OrganizationService organizationService) {
     return new PurchaseOrderLineHelper(inventoryManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, acquisitionsUnitsService, protectionService,
-      purchaseOrderLineService, purchaseOrderStorageService, configurationEntriesService, restClient, compositePoLineValidationService, polInvoiceLineRelationService,
+      purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService, polInvoiceLineRelationService,
       organizationService);
   }
 
