@@ -29,9 +29,9 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
       "(VALUES ($1::uuid, $2::integer, $3::uuid, $4::timestamptz)), " +
       "insert_res AS ( " +
       "  INSERT INTO %1$s (job_execution_id, sequential_no, order_id, saved_timestamp) " +
-      "  SELECT job_execution_id::uuid, sequential_no::integer, order_id::uuid, saved_timestamp::timestamptz FROM input_row " +
+      "  SELECT job_execution_id::uuid, sequential_no::integer, order_id::uuid FROM input_row " +
       "  ON CONFLICT ON CONSTRAINT sequential_order_pk_constraint DO NOTHING " +
-      "  RETURNING job_execution_id::uuid, sequential_no::integer, order_id::uuid, saved_timestamp::timestamptz " +
+      "  RETURNING job_execution_id::uuid, sequential_no::integer, order_id::uuid" +
       ") " +
       "SELECT order_id::uuid " +
       "FROM insert_res " +
