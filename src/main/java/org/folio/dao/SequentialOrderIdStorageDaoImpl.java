@@ -11,10 +11,8 @@ import org.folio.dao.util.PostgresClientFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static java.lang.String.format;
 import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 
 @Repository
@@ -25,13 +23,13 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
   private static final String TABLE_NAME = "sequential_order_id";
 
   private static final String SQL =
-    "WITH input_row(job_execution_id, sequential_no, order_id, saved_timestamp) AS " +
-      "(VALUES ($1::uuid, $2::integer, $3::uuid, $4::timestamptz)), " +
+    "WITH input_row(job_execution_id, sequential_no, order_id) AS " +
+      "(VALUES ($1::uuid, $2::integer, $3::uuid, now())), " +
       "insert_res AS ( " +
-      "  INSERT INTO %1$s (job_execution_id, sequential_no, order_id, saved_timestamp) " +
+      "  INSERT INTO %1$s (job_execution_id, sequential_no, order_id) " +
       "  SELECT job_execution_id::uuid, sequential_no::integer, order_id::uuid FROM input_row " +
       "  ON CONFLICT ON CONSTRAINT sequential_order_pk_constraint DO NOTHING " +
-      "  RETURNING job_execution_id::uuid, sequential_no::integer, order_id::uuid" +
+      "  RETURNING job_execution_id::uuid, sequential_no::integer, order_id::uuid " +
       ") " +
       "SELECT order_id::uuid " +
       "FROM insert_res " +
@@ -53,7 +51,7 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
     try {
       LOGGER.trace("store:: jobExecutionId: {}, sequenceNo: {}, orderId: {}", jobExecutionId, sequenceNo, tenantId);
       String query = String.format(SQL, prepareFullTableName(tenantId, TABLE_NAME));
-      Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo, UUID.fromString(orderId), LocalDateTime.now());
+      Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo, UUID.fromString(orderId));
       pgClientFactory.createInstance(tenantId).execute(query, params, promise);
     } catch (Exception e) {
       LOGGER.error("store:: failed to store jobExecutionId: {}, sequenceNo: {}, orderId: {}", jobExecutionId, sequenceNo, tenantId, e);
