@@ -18,10 +18,10 @@ public class OrderIdStorageDaoImpl implements IdStorageDao {
   private static final String TABLE_NAME = "processed_records";
   private static final String RECORD_ID_FIELD = "record_id";
   private static final String INSERT_SQL =
-    "INSERT INTO %1$s (record_id, created_date) VALUES ($1, $2) RETURNING record_id;";
+    "INSERT INTO %1$s (record_id, created_date) VALUES ($1, $2) RETURNING record_id::uuid;";
 
   private static final String GET_RECORD_ID_SQL =
-    "SELECT record_id FROM %1$s WHERE processed_records.record_id = $1";
+    "SELECT record_id FROM %1$s WHERE processed_records.record_id::uuid = $1";
 
   private final PostgresClientFactory pgClientFactory;
 

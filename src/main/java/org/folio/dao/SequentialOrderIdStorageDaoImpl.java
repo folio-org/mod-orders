@@ -31,12 +31,12 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
       "  INSERT INTO %1$s (job_execution_id, sequential_no, order_id, saved_timestamp) " +
       "  SELECT * FROM input_row " +
       "  ON CONFLICT ON CONSTRAINT sequential_order_pk_constraint DO NOTHING " +
-      "  RETURNING job_execution_id, sequential_no, order_id, saved_timestamp " +
+      "  RETURNING job_execution_id::uuid, sequential_no, order_id::uuid, saved_timestamp " +
       ") " +
-      "SELECT order_id " +
+      "SELECT order_id::uuid " +
       "FROM insert_res " +
       "UNION ALL " +
-      "SELECT t.order_id " +
+      "SELECT t.order_id::uuid " +
       "FROM %1$s t, input_row " +
       "WHERE t.job_execution_id = input_row.job_execution_id AND t.sequential_no = input_row.sequential_no";
 
