@@ -1,9 +1,10 @@
 package org.folio.dao;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kafka.common.protocol.types.Field;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.dao.util.PostgresClientFactory;
@@ -40,6 +41,9 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
   private static final String GET_ORDER_ID_SQL =
     "SELECT order_id::uuid FROM %1$s WHERE job_execution_id::uuid = $1 AND sequential_no::integer = $2";
 
+  private static final String INSERT_SQL =
+    "INSERT INTO %1$s (job_execution_id, sequential_no, order_id, saved_timestamp) VALUES ($1::uuid, $2::integer, $3::uuid, now())";
+
   private final PostgresClientFactory pgClientFactory;
 
   @Autowired
@@ -47,8 +51,7 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
     this.pgClientFactory = pgClientFactory;
   }
 
-  @Override
-  public Future<String> store(String jobExecutionId, Integer sequenceNo, String orderId, String tenantId) {
+  public Future<String> storeReturn(String jobExecutionId, Integer sequenceNo, String orderId, String tenantId) {
     String table = prepareFullTableName(tenantId, TABLE_NAME);
     String sql = String.format(SQL, table);
     Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo, UUID.fromString(orderId));
@@ -59,6 +62,20 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
         return get(jobExecutionId, sequenceNo, tenantId).result();
       }
       return rows.iterator().next().getUUID(0).toString();
+    });
+  }
+  public Future<String> store(String jobExecutionId, Integer sequenceNo, String orderId, String tenantId) {
+    Promise<RowSet<Row>> promise = Promise.promise();
+    String table = prepareFullTableName(tenantId, TABLE_NAME);
+    String query = String.format(INSERT_SQL, table);
+    Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo, UUID.fromString(orderId));
+    pgClientFactory.createInstance(tenantId).execute(query, params, promise);
+    return promise.future().map(insertResult ->
+        (insertResult.iterator().hasNext() == true)  ?
+          insertResult.iterator().next().getUUID(0).toString() :
+          orderId)
+      .onFailure(ar -> {
+        LOGGER.error("get:: jobExecutionId: {}, sequenceNo: {}, orderId: {}", jobExecutionId, sequenceNo, orderId, ar);
     });
   }
 
