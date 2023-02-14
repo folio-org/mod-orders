@@ -25,10 +25,10 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
   private static final String TABLE_NAME = "sequential_order_id";
 
   private static final String SQL =
-    "WITH input_row(job_execution_id, sequential_no, order_id, saved_timestamp) AS " +
+    "WITH input_row(job_execution_id::uuid, sequential_no, order_id, saved_timestamp) AS " +
       "(VALUES ($1, $2, $3, $4)), " +
       "insert_res AS ( " +
-      "  INSERT INTO %1$s (job_execution_id, sequential_no, order_id, saved_timestamp) " +
+      "  INSERT INTO %1$s (job_execution_id::uuid, sequential_no, order_id, saved_timestamp) " +
       "  SELECT * FROM input_row " +
       "  ON CONFLICT ON CONSTRAINT sequential_order_pk_constraint DO NOTHING " +
       "  RETURNING job_execution_id::uuid, sequential_no, order_id::uuid, saved_timestamp " +
@@ -38,7 +38,7 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
       "UNION ALL " +
       "SELECT t.order_id::uuid " +
       "FROM %1$s t, input_row " +
-      "WHERE t.job_execution_id = input_row.job_execution_id AND t.sequential_no = input_row.sequential_no";
+      "WHERE t.job_execution_id::uuid = input_row.job_execution_id::uuid AND t.sequential_no = input_row.sequential_no";
 
   private final PostgresClientFactory pgClientFactory;
 
