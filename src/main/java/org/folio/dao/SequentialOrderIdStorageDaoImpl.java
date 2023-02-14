@@ -38,7 +38,7 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
       "UNION ALL " +
       "SELECT t.order_id::uuid " +
       "FROM %1$s t, input_row " +
-      "WHERE t.job_execution_id::uuid = input_row.job_execution_id::uuid AND t.sequential_no = input_row.sequential_no";
+      "WHERE t.job_execution_id::uuid = input_row.job_execution_id::uuid AND t.sequential_no::integer = input_row.sequential_no::integer";
 
   private final PostgresClientFactory pgClientFactory;
 
