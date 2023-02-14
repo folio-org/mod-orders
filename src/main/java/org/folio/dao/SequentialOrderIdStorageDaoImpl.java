@@ -25,7 +25,7 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
   private static final String TABLE_NAME = "sequential_order_id";
 
   private static final String SQL =
-    "WITH input_row(job_execution_id, sequential_no, order_id, saved_timestamp) AS " +
+    "WITH input_row(job_execution_id::uuid, sequential_no, order_id, saved_timestamp) AS " +
       "(VALUES ($1, $2, $3, $4)), " +
       "insert_res AS ( " +
       "  INSERT INTO %1$s (job_execution_id, sequential_no, order_id, saved_timestamp) " +
