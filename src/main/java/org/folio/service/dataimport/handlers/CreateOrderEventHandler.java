@@ -24,8 +24,6 @@ import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.mapper.MappingContext;
-import org.folio.rest.RestConstants;
-import org.folio.rest.RestVerticle;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -35,10 +33,13 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
+import org.folio.service.caches.JobExecutionTotalRecordsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.IdStorageService;
+import org.folio.service.dataimport.PoLineImportProgressService;
+import org.folio.service.dataimport.utils.DataImportUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -58,6 +59,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static java.lang.Boolean.FALSE;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -71,8 +73,12 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
-import static org.folio.orders.utils.HelperUtils.*;
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 @Component
 public class CreateOrderEventHandler implements EventHandler {
@@ -81,7 +87,6 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String PAYLOAD_HAS_NO_DATA_MSG =
     "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
 
-  public static final String PERMISSIONS_KEY = "OKAPI_PERMISSIONS";
   public static final String USER_ID_KEY = "USER_ID";
   public static final String OKAPI_PERMISSIONS_HEADER = "X-Okapi-Permissions";
   static final String POL_LIMIT_RULE_NAME = "overridePoLinesLimit";
@@ -102,6 +107,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String POST_PROCESSING = "POST_PROCESSING";
   private static final String WORKFLOW_STATUS_PATH = "order.po.workflowStatus";
   private static final String PO_LINE_ORDER_ID_KEY = "purchaseOrderId";
+  private static final String DEFAULT_PO_LINES_LIMIT = "1";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
@@ -109,6 +115,8 @@ public class CreateOrderEventHandler implements EventHandler {
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
   private final SequentialOrderIdService sequentialOrderIdService;
+  private final PoLineImportProgressService poLineImportProgressService;
+  private final JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache;
   private final RetryPolicy retryPolicy = (failure, retryCount) -> 1000L;
   private final Vertx vertx;
   private final CircuitBreaker circuitBreaker;
@@ -118,13 +126,17 @@ public class CreateOrderEventHandler implements EventHandler {
                                  ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService,
                                  JobProfileSnapshotCache jobProfileSnapshotCache,
                                  SequentialOrderIdService sequentialOrderIdService,
-                                 @Autowired Vertx vertx) {
+                                 PoLineImportProgressService poLineImportProgressService,
+                                 JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache,
+                                 Vertx vertx) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
     this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
     this.sequentialOrderIdService = sequentialOrderIdService;
+    this.poLineImportProgressService = poLineImportProgressService;
+    this.jobExecutionTotalRecordsCache = jobExecutionTotalRecordsCache;
     this.vertx = vertx;
     circuitBreaker = CircuitBreaker.create("order line circuit breaker", vertx,
       new CircuitBreakerOptions()
@@ -146,7 +158,7 @@ public class CreateOrderEventHandler implements EventHandler {
       return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
     }
 
-    Map<String, String> okapiHeaders = extractOkapiHeaders(dataImportEventPayload);
+    Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
     String sourceRecordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
     try {
       idStorageService.get(sourceRecordId, dataImportEventPayload.getTenant())
@@ -235,7 +247,7 @@ public class CreateOrderEventHandler implements EventHandler {
         if (ar.succeeded())
           finalPromise.complete(orderId);
         else {
-          LOGGER.error(format("checkIfOrderSaved:: The error happened getting order {} for jobExecutionId: {}", orderId, jobExecutionId), ar.cause());
+          LOGGER.error("checkIfOrderSaved:: The error happened getting order {} for jobExecutionId: {}", orderId, jobExecutionId, ar.cause());
           finalPromise.fail(ar.cause());
         }
       }));
@@ -267,7 +279,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, Map<String, String> okapiHeaders,
                                        RequestContext requestContext) {
-    LOGGER.debug("adjustEventType :: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId());
+    LOGGER.debug("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId());
     WorkflowStatus workflowStatus = extractWorkflowStatus(dataImportEventPayload);
 
     Promise<Void> promise = Promise.promise();
@@ -302,7 +314,7 @@ public class CreateOrderEventHandler implements EventHandler {
         .whenComplete((processed, throwable) -> {
           if (throwable != null) {
             promise.fail(throwable);
-            LOGGER.error(format("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId()), throwable.getMessage());
+            LOGGER.error("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId(), throwable);
           } else {
             promise.complete();
             LOGGER.debug(format("adjustEventType:: Job profile snapshot with id '%s' was retrieved from cache", profileSnapshotId));
@@ -356,48 +368,31 @@ public class CreateOrderEventHandler implements EventHandler {
     String mappingProfileId = org.apache.commons.lang.StringUtils.EMPTY;
 
     if (childSnapshotWrappers != null && !childSnapshotWrappers.isEmpty()
-      && childSnapshotWrappers.get(0) != null && Objects.equals(childSnapshotWrappers.get(0).getContentType().value(), "MAPPING_PROFILE")) {
+      && childSnapshotWrappers.get(0) != null && Objects.equals(childSnapshotWrappers.get(0).getContentType(), MAPPING_PROFILE)) {
       mappingProfileId = childSnapshotWrappers.get(0).getProfileId();
     }
 
     return mappingProfileId.equals(currentMappingProfileId);
   }
 
-  private Map<String, String> extractOkapiHeaders(DataImportEventPayload dataImportEventPayload) {
-    Map<String, String> headers = new HashMap<>();
-    headers.put(RestVerticle.OKAPI_HEADER_TENANT, dataImportEventPayload.getTenant());
-    headers.put(RestVerticle.OKAPI_HEADER_TOKEN, dataImportEventPayload.getToken());
-    headers.put(RestConstants.OKAPI_URL, dataImportEventPayload.getOkapiUrl());
-
-    String permissionsHeader = dataImportEventPayload.getContext().get(PERMISSIONS_KEY);
-    if (StringUtils.isNotBlank(permissionsHeader)) {
-      headers.put(OKAPI_PERMISSIONS_HEADER, permissionsHeader);
-    }
-    String userId = dataImportEventPayload.getContext().get(USER_ID_KEY);
-    if (StringUtils.isNotBlank(userId)) {
-      headers.put(RestVerticle.OKAPI_USERID_HEADER, userId);
-    }
-    return headers;
-  }
-
   private Future<String> generateSequentialOrderId(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, String orderId) {
-    LOGGER.info("generateSequentialOrderId :: jobExecutionId: {}, newOrderId: {}, poLinesLimit: {} ",
+    LOGGER.info("generateSequentialOrderId:: jobExecutionId: {}, newOrderId: {}, poLinesLimit: {} ",
       dataImportEventPayload.getJobExecutionId(), orderId, tenantConfig.getString(PO_LINES_LIMIT_PROPERTY));
 
     Integer poLinesLimit = Integer.valueOf(Optional.ofNullable(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY)).orElse(DEFAULT_POLINE_LIMIT));
     Record parsedMarcBibRecord = new JsonObject(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
     if (parsedMarcBibRecord.getOrder() == null) {
       return Future.failedFuture(new IllegalArgumentException(
-        String.format("Order parameter is missing. jobExecutionId: {}", dataImportEventPayload.getJobExecutionId())));
+        String.format("Order parameter is missing. jobExecutionId: %s", dataImportEventPayload.getJobExecutionId())));
     }
 
-    int exponentOrder = parsedMarcBibRecord.getOrder() / poLinesLimit;
+    int exponentOrder = parsedMarcBibRecord.getOrder()/poLinesLimit;
     return sequentialOrderIdService.store(dataImportEventPayload.getJobExecutionId(), exponentOrder, orderId, dataImportEventPayload.getTenant());
   }
 
   private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId,
                                                    JsonObject tenantConfig, RequestContext requestContext) {
-    LOGGER.info("saveOrder :: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
+    LOGGER.info("saveOrder:: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
     CompositePurchaseOrder orderToSave = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     orderToSave.setId(orderId);
     // in this handler a purchase order always is created in PENDING status despite the status that is set during mapping
@@ -409,6 +404,7 @@ public class CreateOrderEventHandler implements EventHandler {
           return Future.failedFuture(new EventProcessingException(Json.encode(errors)));
         }
         return purchaseOrderHelper.createPurchaseOrder(orderToSave, tenantConfig, requestContext)
+          .compose(order -> savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig).map(order))
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
             if (e instanceof HttpException) {
@@ -424,9 +420,30 @@ public class CreateOrderEventHandler implements EventHandler {
       });
   }
 
+  private Future<Void> savePoLinesAmountPerOrder(String orderId, DataImportEventPayload eventPayload, JsonObject tenantConfig) {
+    Map<String, String> headers = DataImportUtils.extractOkapiHeaders(eventPayload);
+    OkapiConnectionParams params = new OkapiConnectionParams(headers, Vertx.vertx());
+
+    return jobExecutionTotalRecordsCache.get(eventPayload.getJobExecutionId(), params)
+      .map(totalRecords -> determinePoLinesAmountPerOrder(eventPayload, totalRecords, tenantConfig))
+      .compose(orderPolAmount -> poLineImportProgressService.savePoLinesAmountPerOrder(orderId, orderPolAmount, eventPayload.getTenant()));
+  }
+
+  private int determinePoLinesAmountPerOrder(DataImportEventPayload dataImportEventPayload, int totalRecordsAmount, JsonObject tenantConfig) {
+    int poLinesLimit = Integer.parseInt(tenantConfig.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_PO_LINES_LIMIT));
+    if (totalRecordsAmount % poLinesLimit == 0) {
+      return poLinesLimit;
+    }
+
+    Record sourceRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+    int fullOrdersAmount = totalRecordsAmount / poLinesLimit;
+    int sequenceOrderNumber = sourceRecord.getOrder() / poLinesLimit + 1;
+    return sequenceOrderNumber <= fullOrdersAmount ? poLinesLimit : totalRecordsAmount % poLinesLimit;
+  }
+
   private Future<CompositePoLine> saveOrderLines(String orderId, DataImportEventPayload dataImportEventPayload,
                                                  JsonObject tenantConfig, RequestContext requestContext) {
-    LOGGER.info("saveOrderLines :: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
+    LOGGER.info("saveOrderLines:: jobExecutionId: {}, orderId: {} ", dataImportEventPayload.getJobExecutionId(), orderId);
     CompositePoLine poLine = Json.decodeValue(dataImportEventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
     poLine.setPurchaseOrderId(orderId);
     poLine.setSource(CompositePoLine.Source.MARC);
@@ -437,6 +454,7 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     return poLineHelper.createPoLine(poLine, tenantConfig, requestContext)
+      .eventually(createPoLine -> poLineImportProgressService.trackProcessedPoLine(orderId, dataImportEventPayload.getTenant()))
       .onComplete(ar -> dataImportEventPayload.getContext().put(PO_LINE_KEY, Json.encode(poLine)));
   }
 
@@ -454,7 +472,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
     Optional<Integer> limitOptional = mappingProfile.getMappingDetails().getMappingFields().stream()
       .filter(mappingRule -> POL_LIMIT_RULE_NAME.equals(mappingRule.getName()) && isNotBlank(mappingRule.getValue()))
-      .map(mappingRule -> mappingRule.withEnabled("false"))
+      .map(mappingRule -> mappingRule.withEnabled(FALSE.toString()))
       .map(mappingRule -> Integer.parseInt(StringUtils.unwrap(mappingRule.getValue(), '"')))
       .findFirst();
 
@@ -465,7 +483,6 @@ public class CreateOrderEventHandler implements EventHandler {
   }
 
   private void prepareEventPayloadForMapping(DataImportEventPayload dataImportEventPayload) {
-    dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
     dataImportEventPayload.getContext().put(ORDER.value(), new JsonObject().encode());
   }
@@ -503,7 +520,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<Void> overrideCreateInventoryField(JsonObject poLineJson, DataImportEventPayload dataImportEventPayload) {
     String profileSnapshotId = dataImportEventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
-    Map<String, String> headers = extractOkapiHeaders(dataImportEventPayload);
+    Map<String, String> headers = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
     OkapiConnectionParams okapiParams = new OkapiConnectionParams(headers, Vertx.vertx());
 
     return jobProfileSnapshotCache.get(profileSnapshotId, okapiParams)
@@ -531,12 +548,15 @@ public class CreateOrderEventHandler implements EventHandler {
     } else if (inventoryTypes.contains(INSTANCE)) {
       createInventoryFieldValue = Eresource.CreateInventory.INSTANCE;
     } else {
-      createInventoryFieldValue = Eresource.CreateInventory.NONE;
+      createInventoryFieldValue = NONE;
     }
 
-    if (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null) {
+    if (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null
+      && !NONE.toString().equals(poLineJson.getJsonObject(POL_ERESOURCE_FIELD).getString(POL_CREATE_INVENTORY_FIELD))){
       poLineJson.getJsonObject(POL_ERESOURCE_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
-    } else if (poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null) {
+    }
+    if (poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null
+      && !NONE.toString().equals(poLineJson.getJsonObject(POL_PHYSICAL_FIELD).getString(POL_CREATE_INVENTORY_FIELD))){
       poLineJson.getJsonObject(POL_PHYSICAL_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
     }
     return null;

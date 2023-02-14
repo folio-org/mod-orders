@@ -74,7 +74,6 @@ import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
-import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
@@ -117,7 +116,6 @@ public class PurchaseOrderLineHelper {
   private final ProtectionService protectionService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
-  private final ConfigurationEntriesService configurationEntriesService;
   private final RestClient restClient;
   private final CompositePoLineValidationService compositePoLineValidationService;
   private final OrganizationService organizationService;
@@ -128,9 +126,8 @@ public class PurchaseOrderLineHelper {
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
     PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
-    ConfigurationEntriesService configurationEntriesService, RestClient restClient,
-    CompositePoLineValidationService compositePoLineValidationService, POLInvoiceLineRelationService polInvoiceLineRelationService,
-    OrganizationService organizationService) {
+    RestClient restClient, CompositePoLineValidationService compositePoLineValidationService,
+    POLInvoiceLineRelationService polInvoiceLineRelationService, OrganizationService organizationService) {
     this.inventoryManager = inventoryManager;
     this.encumbranceService = encumbranceService;
     this.expenseClassValidationService = expenseClassValidationService;
@@ -141,7 +138,6 @@ public class PurchaseOrderLineHelper {
     this.protectionService = protectionService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
-    this.configurationEntriesService = configurationEntriesService;
     this.restClient = restClient;
     this.compositePoLineValidationService = compositePoLineValidationService;
     this.polInvoiceLineRelationService = polInvoiceLineRelationService;

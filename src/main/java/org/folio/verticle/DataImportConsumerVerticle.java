@@ -27,6 +27,7 @@ import java.util.List;
 
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
 
 @Component
@@ -44,7 +45,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   @Value("${orders.kafka.OrderConsumer.loadLimit:5}")
   private int loadLimit;
 
-  @Value("${mod.orders.dataimport.kafka.max.distribution.number:100}")
+  @Value("${orders.dataimport.kafka.max.distribution.number:100}")
   private int maxDistributionNumber;
 
   @Autowired
@@ -58,7 +59,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
   public List<String> getEvents() {
     return List.of(
       DI_MARC_BIB_FOR_ORDER_CREATED.value(),
-      DI_INVENTORY_INSTANCE_MATCHED.value());
+      DI_INVENTORY_INSTANCE_MATCHED.value(),
+      DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
   }
 
   @Override

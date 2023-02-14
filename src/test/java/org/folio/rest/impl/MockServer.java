@@ -295,6 +295,7 @@ public class MockServer {
   public static final String OLD_HOLDING_ID = "758258bc-ecc1-41b8-abca-f7b610822ffd";
   public static final String NEW_HOLDING_ID = "fcd64ce1-6995-48f0-840e-89ffa2288371";
   public static final String CONFIGS = "configs";
+  public static final String JOB_EXECUTIONS = "jobExecutions";
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
   public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
@@ -611,6 +612,7 @@ public class MockServer {
     router.get(resourcePath(ACQUISITION_METHODS)).handler(this::handleGetAcquisitionMethod);
     router.get(resourcesPath(EXPORT_HISTORY)).handler(this::handleGetExportHistoryMethod);
     router.get("/data-import-profiles/jobProfileSnapshots/:id").handler(this::handleGetJobProfileSnapshotById);
+    router.get("/change-manager/jobExecutions/:id").handler(this::handleGetJobExecutionById);
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -1090,10 +1092,21 @@ public class MockServer {
   private void handleGetItemRecordsFromStorage(RoutingContext ctx) {
     logger.info("handleGetItemRecordsFromStorage got: " + ctx.request().path());
 
-    JsonObject items;
-    items = new JsonObject().put("items", new JsonArray());
-    addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
-    serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
+    // Attempt to find POLine in mock server memory
+    List<JsonObject> itemsList = getRqRsEntries(HttpMethod.SEARCH, ITEM_RECORDS);
+    if (!itemsList.isEmpty()) {
+      JsonObject items = new JsonObject()
+        .put("items", itemsList)
+        .put(TOTAL_RECORDS, itemsList.size());
+
+      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+      serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
+    } else {
+      JsonObject items;
+      items = new JsonObject().put("items", new JsonArray());
+      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+      serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
+    }
   }
 
   private void handleGetInventoryItemRecords(RoutingContext ctx) {
@@ -2087,9 +2100,10 @@ public class MockServer {
       return;
     }
     JsonObject body = ctx.body().asJsonObject();
-    if (isEmpty(body.getString("id"))) {
+    if (isEmpty(body.getString(ID))) {
       body.put(ID, UUID.randomUUID().toString());
     }
+
     org.folio.rest.acq.model.PurchaseOrder po = body.mapTo(org.folio.rest.acq.model.PurchaseOrder.class);
     addServerRqRsData(HttpMethod.POST, PURCHASE_ORDER_STORAGE, body);
     addServerRqRsData(HttpMethod.SEARCH, PURCHASE_ORDER_STORAGE, body);
@@ -2849,5 +2863,21 @@ public class MockServer {
       }
     }
   }
-}
 
+  private void handleGetJobExecutionById(RoutingContext ctx) {
+    logger.info("handleGetJobExecutionById got: " + ctx.request().path());
+    String id = ctx.request().getParam(ID);
+    logger.info("id: " + id);
+    if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
+      serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
+    } else {
+      Optional<JsonObject> jobExecutionOptional = getMockEntry(JOB_EXECUTIONS, id);
+      if (jobExecutionOptional.isPresent()) {
+        serverResponse(ctx, 200, APPLICATION_JSON, jobExecutionOptional.get().encodePrettily());
+      } else {
+        serverResponse(ctx, 404, APPLICATION_JSON, id);
+      }
+    }
+  }
+
+}
