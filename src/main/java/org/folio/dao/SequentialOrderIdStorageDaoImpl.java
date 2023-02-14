@@ -2,6 +2,8 @@ package org.folio.dao;
 
 import io.vertx.core.Future;
 import io.vertx.sqlclient.Tuple;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.common.protocol.types.Field;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.dao.util.PostgresClientFactory;
@@ -50,14 +52,21 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
     String table = prepareFullTableName(tenantId, TABLE_NAME);
     String sql = String.format(SQL, table);
     Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo, UUID.fromString(orderId));
-    try {
-      return pgClientFactory.createInstance(tenantId).execute(sql, params).map(rows -> rows.iterator().next().getUUID(0).toString());
-    } catch (Exception err) {
-      LOGGER.error(String.format("store:: jobExecutionId: {}, sequenceNo: {}, orderId: {}", jobExecutionId, sequenceNo, orderId), err.getCause());
-      sql = String.format(GET_ORDER_ID_SQL, table);
-      params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo);
-      return pgClientFactory.createInstance(tenantId).execute(sql, params).map(rows -> rows.iterator().next().getUUID(0).toString());
-    }
+    return pgClientFactory.createInstance(tenantId).execute(sql, params).map(rows ->
+    {
+      if (rows.size() == 0) {
+        LOGGER.error("get:: jobExecutionId: {}, sequenceNo: {}, orderId: {}", jobExecutionId, sequenceNo, orderId);
+        return get(jobExecutionId, sequenceNo, tenantId).result();
+      }
+      return rows.iterator().next().getUUID(0).toString();
+    });
+  }
+
+  public Future<String> get(String jobExecutionId, Integer sequenceNo, String tenantId) {
+    String table = prepareFullTableName(tenantId, TABLE_NAME);
+    String sql = String.format(GET_ORDER_ID_SQL, table);
+    Tuple params = Tuple.of(UUID.fromString(jobExecutionId), sequenceNo);
+    return pgClientFactory.createInstance(tenantId).execute(sql, params).map(rows -> rows.iterator().next().getUUID(0).toString());
   }
 
   private String prepareFullTableName(String tenantId, String table) {
