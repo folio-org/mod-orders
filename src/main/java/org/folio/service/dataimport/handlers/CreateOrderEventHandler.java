@@ -61,8 +61,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.*;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -179,6 +178,11 @@ public class CreateOrderEventHandler implements EventHandler {
             .compose(v -> setApprovedFalseIfUserNotHaveApprovalPermission(dataImportEventPayload, tenantConfigFuture.result(), requestContext))
             .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
             .compose(generatedOrderId -> {
+              if (isEmpty(generatedOrderId)) {
+                String errorMessage = format("handle:: generatedOrderId is null, jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
+                LOGGER.error(errorMessage);
+                return Future.failedFuture(new EventProcessingException(errorMessage));
+              }
               LOGGER.info("handle:: generatedOrderId = {}, jobExecutionId {}", generatedOrderId, dataImportEventPayload.getJobExecutionId());
               if (temporaryOrderIdForANewOrder.equals(generatedOrderId)) {
                 LOGGER.info("handle:: new order with id: {} should be created for jobExecutionId: {}",
@@ -209,6 +213,11 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<String> checkIfOrderSaved(String orderId, RequestContext requestContext, String jobExecutionId, Vertx vertx) {
     LOGGER.info("checkIfOrderSaved:: orderId: {}, jobExecutionId: {}", orderId, jobExecutionId);
+    if (isEmpty(orderId)) {
+      String errorMessage = format("handle:: checkIfOrderSaved is null, jobExecutionId {}", jobExecutionId);
+      LOGGER.error(errorMessage);
+      return Future.failedFuture(new EventProcessingException(errorMessage));
+    }
     Promise<String> finalPromise = Promise.promise();
     vertx.setTimer(1000L, timerId ->
       circuitBreaker.execute(promise -> {
