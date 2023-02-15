@@ -35,6 +35,7 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.JobExecutionTotalRecordsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
+import org.folio.service.caches.MappingParametersCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.IdStorageService;
@@ -120,6 +121,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private final RetryPolicy retryPolicy = (failure, retryCount) -> 1000L;
   private final Vertx vertx;
   private final CircuitBreaker circuitBreaker;
+  private final MappingParametersCache mappingParametersCache;
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
@@ -128,13 +130,15 @@ public class CreateOrderEventHandler implements EventHandler {
                                  SequentialOrderIdService sequentialOrderIdService,
                                  PoLineImportProgressService poLineImportProgressService,
                                  JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache,
-                                 Vertx vertx) {
+                                 Vertx vertx,
+                                 MappingParametersCache mappingParametersCache) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
     this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
     this.sequentialOrderIdService = sequentialOrderIdService;
+    this.mappingParametersCache = mappingParametersCache;
     this.poLineImportProgressService = poLineImportProgressService;
     this.jobExecutionTotalRecordsCache = jobExecutionTotalRecordsCache;
     this.vertx = vertx;
@@ -159,10 +163,9 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
+    OkapiConnectionParams okapiParams = getOkapiConnectionParams(okapiHeaders, vertx);
     String sourceRecordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
     Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
-    prepareEventPayloadForMapping(dataImportEventPayload);
-    MappingManager.map(dataImportEventPayload, new MappingContext());
 
     RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
     Future<JsonObject> tenantConfigFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
@@ -170,6 +173,17 @@ public class CreateOrderEventHandler implements EventHandler {
 
     tenantConfigFuture
       .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
+      .compose(tenantConfig -> {
+        Promise<Void> promise = Promise.promise();
+        prepareEventPayloadForMapping(dataImportEventPayload);
+        mappingParametersCache.get(okapiParams)
+          .onSuccess(mappingParameters -> {
+            MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+            promise.complete();
+          })
+          .onFailure(promise::fail);
+        return promise.future();
+      })
       .compose(orderId -> prepareMappingResult(dataImportEventPayload))
       .compose(v -> setApprovedFalseIfUserNotHaveApprovalPermission(dataImportEventPayload, tenantConfigFuture.result(), requestContext))
       .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
@@ -187,7 +201,7 @@ public class CreateOrderEventHandler implements EventHandler {
       })
       .compose(orderId -> checkIfOrderSaved(orderId, requestContext, dataImportEventPayload.getJobExecutionId(), vertx))
       .compose(orderId -> saveOrderLines(orderId, dataImportEventPayload, tenantConfigFuture.result(), requestContext))
-      .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders, requestContext))
+      .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiParams, requestContext))
       .onComplete(ar -> {
         if (ar.failed()) {
           LOGGER.error("handle:: Error during order or order line creation for jobExecutionId: {}",
@@ -250,7 +264,8 @@ public class CreateOrderEventHandler implements EventHandler {
     return Future.succeededFuture();
   }
 
-  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, Map<String, String> okapiHeaders,
+  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig,
+                                       OkapiConnectionParams okapiParams,
                                        RequestContext requestContext) {
     LOGGER.debug("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId());
     WorkflowStatus workflowStatus = extractWorkflowStatus(dataImportEventPayload);
@@ -272,12 +287,6 @@ public class CreateOrderEventHandler implements EventHandler {
       }
 
       String profileSnapshotId = dataImportEventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
-
-      Map<String, String> okapiHeadersLowerCaseKeys = okapiHeaders.entrySet().stream().collect(Collectors.toMap(
-        key -> key.getKey().toLowerCase(Locale.ROOT),
-        Map.Entry::getValue
-      ));
-      OkapiConnectionParams okapiParams = new OkapiConnectionParams(okapiHeadersLowerCaseKeys, Vertx.vertx());
 
       jobProfileSnapshotCache.get(profileSnapshotId, okapiParams)
         .toCompletionStage()
@@ -537,6 +546,14 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private void overridePoLinesLimit(JsonObject tenantConfig, Optional<Integer> poLinesLimitOptional) {
     poLinesLimitOptional.ifPresent(poLinesLimit -> tenantConfig.put(PO_LINES_LIMIT_PROPERTY, poLinesLimit));
+  }
+
+  private OkapiConnectionParams getOkapiConnectionParams(Map<String, String> okapiHeaders, Vertx vertx) {
+    Map<String, String> okapiHeadersLowerCaseKeys = okapiHeaders.entrySet().stream().collect(Collectors.toMap(
+      key -> key.getKey().toLowerCase(Locale.ROOT),
+      Map.Entry::getValue
+    ));
+    return new OkapiConnectionParams(okapiHeadersLowerCaseKeys, vertx);
   }
 
   @Override

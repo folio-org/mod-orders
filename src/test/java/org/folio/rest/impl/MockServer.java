@@ -144,6 +144,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
+import org.folio.Organization;
+import org.folio.OrganizationCollection;
 import org.folio.helper.BaseHelper;
 import org.folio.isbn.IsbnUtil;
 import org.folio.rest.RestVerticle;
@@ -613,6 +615,7 @@ public class MockServer {
     router.get(resourcesPath(EXPORT_HISTORY)).handler(this::handleGetExportHistoryMethod);
     router.get("/data-import-profiles/jobProfileSnapshots/:id").handler(this::handleGetJobProfileSnapshotById);
     router.get("/change-manager/jobExecutions/:id").handler(this::handleGetJobExecutionById);
+    router.get("/organizations/organizations").handler(this::handleGetOrganizations);
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -2880,4 +2883,15 @@ public class MockServer {
     }
   }
 
+  private void handleGetOrganizations(RoutingContext ctx) {
+    logger.info("handleGetOrganizations:: got: " + ctx.request().path());
+    Optional<List<Organization>> organizationsOptional = getMockEntries("organizations", Organization.class);
+    if (organizationsOptional.isPresent()) {
+      List<Organization> organizations = organizationsOptional.get();
+      OrganizationCollection organizationsClassSchema = new OrganizationCollection().withOrganizations(organizations).withTotalRecords(organizations.size());
+      serverResponse(ctx, 200, APPLICATION_JSON, Json.encodePrettily(organizationsClassSchema));
+    } else {
+      serverResponse(ctx, 404, APPLICATION_JSON, null);
+    }
+  }
 }
