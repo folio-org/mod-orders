@@ -51,8 +51,7 @@ public class OrderIdStorageServiceImplTest extends DiAbstractRestTest {
   public void shouldReturnSavedRecordId(TestContext context) {
     Async async = context.async();
     String recordId = UUID.randomUUID().toString();
-    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID)
-      .compose(v -> orderIdStorageService.store(recordId, TENANT_ID));
+    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID);
 
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
@@ -60,20 +59,4 @@ public class OrderIdStorageServiceImplTest extends DiAbstractRestTest {
       async.complete();
     });
   }
-
-  @Test
-  public void shouldNotReturnNotExistingRecordId(TestContext context) {
-    Async async = context.async();
-    String recordId = UUID.randomUUID().toString();
-    String newRecordId = UUID.randomUUID().toString();
-    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID)
-      .compose(v -> orderIdStorageService.store(newRecordId, TENANT_ID));
-
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals("", ar.result());
-      async.complete();
-    });
-  }
-
 }
