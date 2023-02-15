@@ -1318,7 +1318,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       String topicErrorToObserve = formatToKafkaTopicName("DI_ERROR");
       observedRecords = kafkaCluster.observe(ObserveKeyValues.on(topicErrorToObserve, 1)
         .with(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID)
-        .observeFor(15, TimeUnit.SECONDS)
+        .observeFor(150, TimeUnit.SECONDS)
         .build());
       String error = getCompositePurchaseOrder(observedRecords.get(0).getValue()).getContext().get("ERROR");
       throw new AssertionError(error);
