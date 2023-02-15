@@ -176,14 +176,12 @@ public class CreateOrderEventHandler implements EventHandler {
       .compose(tenantConfig -> {
         Promise<Void> promise = Promise.promise();
         prepareEventPayloadForMapping(dataImportEventPayload);
-        mappingParametersCache.get(okapiParams).onComplete(ar -> {
-          if (ar.failed()) {
-            promise.fail(ar.cause());
-            return;
-          }
-          MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(ar.result()));
-          promise.complete();
-        });
+        mappingParametersCache.get(okapiParams)
+          .onSuccess(mappingParameters -> {
+            MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+            promise.complete();
+          })
+          .onFailure(promise::fail);
         return promise.future();
       })
       .compose(orderId -> prepareMappingResult(dataImportEventPayload))
