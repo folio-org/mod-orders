@@ -52,7 +52,7 @@ public class OrderIdStorageServiceImplTest extends DiAbstractRestTest {
     Async async = context.async();
     String recordId = UUID.randomUUID().toString();
     Future<String> future = orderIdStorageService.store(recordId, TENANT_ID)
-      .compose(v -> orderIdStorageService.get(recordId, TENANT_ID));
+      .compose(v -> orderIdStorageService.store(recordId, TENANT_ID));
 
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
@@ -67,7 +67,7 @@ public class OrderIdStorageServiceImplTest extends DiAbstractRestTest {
     String recordId = UUID.randomUUID().toString();
     String newRecordId = UUID.randomUUID().toString();
     Future<String> future = orderIdStorageService.store(recordId, TENANT_ID)
-      .compose(v -> orderIdStorageService.get(newRecordId, TENANT_ID));
+      .compose(v -> orderIdStorageService.store(newRecordId, TENANT_ID));
 
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());

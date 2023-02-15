@@ -1269,6 +1269,73 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     Assertions.assertFalse(createOrderHandler.isEligible(dataImportEventPayload));
   }
 
+  @Test
+  public void shouldReturnFailedByDuplicateEventExceptionFutureWhenRecordIdIsDuplicated(TestContext context) {
+    Async async = context.async();
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    String recordId = UUID.randomUUID().toString();
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(RECORD_ID_HEADER, recordId);
+      }});
+
+    CreateOrderEventHandler createOrderHandler = getBeanFromSpringContext(vertx, CreateOrderEventHandler.class);
+    vertx.runOnContext(event -> Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload))
+      .onComplete(e -> Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload))
+        .onComplete(context.asyncAssertFailure(th -> {
+          context.assertTrue(th instanceof DuplicateEventException);
+          async.complete();
+        }))));
+  }
+
+  @Test
+  public void shouldNotReturnFailedByDuplicateEventExceptionFutureWhenRecordIdIsDifferent(TestContext context) {
+    Async async = context.async();
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    String recordId = UUID.randomUUID().toString();
+    String newRecordId = UUID.randomUUID().toString();
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(RECORD_ID_HEADER, recordId);
+      }});
+
+    CreateOrderEventHandler createOrderHandler = getBeanFromSpringContext(vertx, CreateOrderEventHandler.class);
+    vertx.runOnContext(event -> Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload))
+      .onComplete(e -> {
+        dataImportEventPayload.withContext(new HashMap<>() {{
+          put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+          put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+          put(RECORD_ID_HEADER, newRecordId);
+        }});
+        Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload));
+      })
+      .onComplete(context.asyncAssertSuccess(th -> {
+        context.assertEquals(th.getContext().get(RECORD_ID_HEADER), newRecordId);
+        async.complete();
+      })));
+  }
   private ProfileSnapshotWrapper buildProfileSnapshotWrapper(JobProfile jobProfile, ActionProfile actionProfile,
                                                              MappingProfile mappingProfile) {
     return new ProfileSnapshotWrapper()

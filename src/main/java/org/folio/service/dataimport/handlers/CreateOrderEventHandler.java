@@ -160,72 +160,50 @@ public class CreateOrderEventHandler implements EventHandler {
 
     Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
     String sourceRecordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
-    try {
-      idStorageService.get(sourceRecordId, dataImportEventPayload.getTenant())
-        .onSuccess(ar -> {
-          if (StringUtils.isNotEmpty(ar)) {
-            throw new DuplicateEventException(String.format("Source record with %s id for %s jobExecution is already exists", sourceRecordId, dataImportEventPayload.getJobExecutionId()));
-          }
-        })
-        .onFailure(ex ->
-          {
-            LOGGER.error("handle:: Error during order or order line creation for jobExecutionId: {}",
-              dataImportEventPayload.getJobExecutionId(), ex.getCause());
-            throw new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG);
-          }
-        );
+    idStorageService.store(sourceRecordId, dataImportEventPayload.getTenant())
+      .onComplete(result -> {
+        if (result.failed()) {
+          future.completeExceptionally(result.cause());
+        } else {
+          Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
+          prepareEventPayloadForMapping(dataImportEventPayload);
+          MappingManager.map(dataImportEventPayload, new MappingContext());
 
-      Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
-      prepareEventPayloadForMapping(dataImportEventPayload);
-      MappingManager.map(dataImportEventPayload, new MappingContext());
+          RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
+          Future<JsonObject> tenantConfigFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+          String temporaryOrderIdForANewOrder = UUID.randomUUID().toString();
 
-      RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
-      Future<JsonObject> tenantConfigFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
-      String temporaryOrderIdForANewOrder = UUID.randomUUID().toString();
-
-    tenantConfigFuture
-      .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
-      .compose(orderId -> prepareMappingResult(dataImportEventPayload))
-      .compose(v -> setApprovedFalseIfUserNotHaveApprovalPermission(dataImportEventPayload, tenantConfigFuture.result(), requestContext))
-      .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
-      .compose(generatedOrderId -> {
-        LOGGER.info("handle:: generatedOrderId = {}, jobExecutionId {}", generatedOrderId, dataImportEventPayload.getJobExecutionId());
-        if (temporaryOrderIdForANewOrder.equals(generatedOrderId)) {
-          LOGGER.info("handle:: new order with id: {} should be created for jobExecutionId: {}",
-            generatedOrderId, dataImportEventPayload.getJobExecutionId());
-          //TODO: the deduplication should be changed to poLines in the near future
-          return saveOrder(dataImportEventPayload, generatedOrderId, tenantConfigFuture.result(), requestContext)
-            .map(CompositePurchaseOrder::getId);
+          tenantConfigFuture
+            .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
+            .compose(orderId -> prepareMappingResult(dataImportEventPayload))
+            .compose(v -> setApprovedFalseIfUserNotHaveApprovalPermission(dataImportEventPayload, tenantConfigFuture.result(), requestContext))
+            .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
+            .compose(generatedOrderId -> {
+              LOGGER.info("handle:: generatedOrderId = {}, jobExecutionId {}", generatedOrderId, dataImportEventPayload.getJobExecutionId());
+              if (temporaryOrderIdForANewOrder.equals(generatedOrderId)) {
+                LOGGER.info("handle:: new order with id: {} should be created for jobExecutionId: {}",
+                  generatedOrderId, dataImportEventPayload.getJobExecutionId());
+                //TODO: the deduplication should be changed to poLines in the near future
+                return saveOrder(dataImportEventPayload, generatedOrderId, tenantConfigFuture.result(), requestContext)
+                  .map(CompositePurchaseOrder::getId);
+              }
+              return Future.succeededFuture(generatedOrderId);
+            })
+            .compose(orderId -> checkIfOrderSaved(orderId, requestContext, dataImportEventPayload.getJobExecutionId(), vertx))
+            .compose(orderId -> saveOrderLines(orderId, dataImportEventPayload, tenantConfigFuture.result(), requestContext))
+            .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders, requestContext))
+            .onComplete(ar -> {
+              if (ar.failed()) {
+                LOGGER.error("handle:: Error during order or order line creation for jobExecutionId: {}",
+                  dataImportEventPayload.getJobExecutionId(), ar.cause());
+                clearOrderIdInPoLineEntityIfNecessary(dataImportEventPayload);
+                future.completeExceptionally(ar.cause());
+                return;
+              }
+              future.complete(dataImportEventPayload);
+            });
         }
-        return Future.succeededFuture(generatedOrderId);
-      })
-      .compose(orderId -> checkIfOrderSaved(orderId, requestContext, dataImportEventPayload.getJobExecutionId(), vertx))
-      .compose(orderId -> saveOrderLines(orderId, dataImportEventPayload, tenantConfigFuture.result(), requestContext))
-      .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders, requestContext))
-      .onComplete(ar -> {
-        idStorageService.store(sourceRecordId, dataImportEventPayload.getTenant());
-        if (ar.failed()) {
-          LOGGER.error("handle:: Error during order or order line creation for jobExecutionId: {}",
-            dataImportEventPayload.getJobExecutionId(), ar.cause());
-          clearOrderIdInPoLineEntityIfNecessary(dataImportEventPayload);
-          future.completeExceptionally(ar.cause());
-          return;
-        }
-        future.complete(dataImportEventPayload);
       });
-    } catch (DuplicateEventException ex) {
-      LOGGER.error("handle:: Source record with {} id for {} jobExecution is already exists: {}",
-        sourceRecordId, dataImportEventPayload.getJobExecutionId(), DuplicateEventException.class);
-      future.completeExceptionally(new DuplicateEventException(String.format("Source record with %s id for %s jobExecution is already exists", sourceRecordId, dataImportEventPayload.getJobExecutionId())));
-    } catch (EventProcessingException ex) {
-      LOGGER.error("handle:: Can't get source record with {} id for {} jobExecution: {}",
-        sourceRecordId, dataImportEventPayload.getJobExecutionId(), DuplicateEventException.class);
-      future.completeExceptionally(new EventProcessingException(String.format("Can't get source record with %s id for %s jobExecution: {}", sourceRecordId, dataImportEventPayload.getJobExecutionId())));
-    }
-    catch (Exception ex){
-      LOGGER.error("handle:: Error for jobExecution: {}", dataImportEventPayload.getJobExecutionId());
-      future.completeExceptionally(new EventProcessingException(String.format(" Error for jobExecution: %s", dataImportEventPayload.getJobExecutionId())));
-    }
     return future;
   }
 
@@ -386,7 +364,7 @@ public class CreateOrderEventHandler implements EventHandler {
         String.format("Order parameter is missing. jobExecutionId: %s", dataImportEventPayload.getJobExecutionId())));
     }
 
-    int exponentOrder = parsedMarcBibRecord.getOrder()/poLinesLimit;
+    int exponentOrder = parsedMarcBibRecord.getOrder() / poLinesLimit;
     return sequentialOrderIdService.store(dataImportEventPayload.getJobExecutionId(), exponentOrder, orderId, dataImportEventPayload.getTenant());
   }
 
@@ -552,11 +530,11 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     if (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null
-      && !NONE.toString().equals(poLineJson.getJsonObject(POL_ERESOURCE_FIELD).getString(POL_CREATE_INVENTORY_FIELD))){
+      && !NONE.toString().equals(poLineJson.getJsonObject(POL_ERESOURCE_FIELD).getString(POL_CREATE_INVENTORY_FIELD))) {
       poLineJson.getJsonObject(POL_ERESOURCE_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
     }
     if (poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null
-      && !NONE.toString().equals(poLineJson.getJsonObject(POL_PHYSICAL_FIELD).getString(POL_CREATE_INVENTORY_FIELD))){
+      && !NONE.toString().equals(poLineJson.getJsonObject(POL_PHYSICAL_FIELD).getString(POL_CREATE_INVENTORY_FIELD))) {
       poLineJson.getJsonObject(POL_PHYSICAL_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
     }
     return null;

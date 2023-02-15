@@ -18,7 +18,7 @@ public class OrderIdStorageDaoImpl implements IdStorageDao {
   private static final String TABLE_NAME = "processed_records";
   private static final String RECORD_ID_FIELD = "record_id";
   private static final String INSERT_SQL =
-    "INSERT INTO %1$s (record_id, created_date) VALUES ($1, $2) RETURNING record_id::uuid;";
+    "INSERT INTO %1$s (record_id, created_date) VALUES ($1, now()) RETURNING record_id::uuid;";
 
   private static final String GET_RECORD_ID_SQL =
     "SELECT record_id::uuid FROM %1$s WHERE processed_records.record_id::uuid = $1";
@@ -34,8 +34,7 @@ public class OrderIdStorageDaoImpl implements IdStorageDao {
   public Future<String> store(String recordId, String tenantId) {
     String table = prepareFullTableName(tenantId, TABLE_NAME);
     String sql = String.format(INSERT_SQL, table);
-    LocalDateTime currentTime = LocalDateTime.now();
-    Tuple params = Tuple.of(UUID.fromString(recordId), currentTime);
+    Tuple params = Tuple.of(UUID.fromString(recordId));
 
     return pgClientFactory.createInstance(tenantId).execute(sql, params)
       .map(rows -> rows.iterator().next().getValue(RECORD_ID_FIELD).toString());
