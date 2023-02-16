@@ -5,14 +5,11 @@ import io.vertx.pgclient.PgException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.DataImportEventPayload;
-import org.folio.dao.IdStorageDao;
+import org.folio.dao.RecordIdStorageDao;
 import org.folio.kafka.exception.DuplicateEventException;
-import org.folio.processing.exceptions.EventProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -21,11 +18,11 @@ public class OrderIdStorageServiceImpl implements IdStorageService {
   private final static Logger LOGGER = LogManager.getLogger();
   public static final String PG_CONSTRAINT_ERROR_CODE = "23505";
 
-  private IdStorageDao orderIdStorageDao;
+  private RecordIdStorageDao orderRecordIdStorageDao;
 
   @Autowired
-  public OrderIdStorageServiceImpl(IdStorageDao orderIdStorageDao) {
-    this.orderIdStorageDao = orderIdStorageDao;
+  public OrderIdStorageServiceImpl(RecordIdStorageDao orderRecordIdStorageDao) {
+    this.orderRecordIdStorageDao = orderRecordIdStorageDao;
   }
 
   @Override
@@ -34,7 +31,7 @@ public class OrderIdStorageServiceImpl implements IdStorageService {
 
     CompletableFuture<String> future = new CompletableFuture<>();
 
-    orderIdStorageDao.store(recordId, tenantId)
+    orderRecordIdStorageDao.store(recordId, tenantId)
       .onSuccess(future::complete)
       .onFailure(ex -> {
         if (ex instanceof PgException) {

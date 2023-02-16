@@ -3,12 +3,12 @@ package org.folio.service.dataimport;
 import io.vertx.core.Future;
 
 /**
- * Service that manages record id deduplication
+ * Service that manages record id deduplication.
  */
 public interface IdStorageService {
 
   /**
-   * Stores specific recordId inside DB. If it is already exists - failed future with PgException.
+   * Stores specific recordId inside DB. If it is already exists - failed future with DuplicateEventException.
    * @param recordId - record id
    * @param tenantId - tenant id
    * @return future with record id  {@code recordId}
