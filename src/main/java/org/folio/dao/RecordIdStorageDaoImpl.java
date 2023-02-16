@@ -11,17 +11,17 @@ import java.util.UUID;
 import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 
 @Repository
-public class OrderRecordIdStorageDaoImpl implements RecordIdStorageDao {
+public class RecordIdStorageDaoImpl implements RecordIdStorageDao {
 
   private static final String TABLE_NAME = "processed_records";
   private static final String RECORD_ID_FIELD = "record_id";
   private static final String INSERT_SQL =
-    "INSERT INTO %1$s (record_id, created_date) VALUES ($1, now()) RETURNING record_id::uuid;";
+    "INSERT INTO %1$s (record_id, created_date) VALUES ($1::uuid, now()) RETURNING record_id::uuid;";
 
   private final PostgresClientFactory pgClientFactory;
 
   @Autowired
-  public OrderRecordIdStorageDaoImpl(PostgresClientFactory pgClientFactory) {
+  public RecordIdStorageDaoImpl(PostgresClientFactory pgClientFactory) {
     this.pgClientFactory = pgClientFactory;
   }
 

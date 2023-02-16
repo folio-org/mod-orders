@@ -6,7 +6,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.dao.RecordIdStorageDao;
-import org.folio.dao.OrderRecordIdStorageDaoImpl;
+import org.folio.dao.RecordIdStorageDaoImpl;
 import org.folio.dao.util.PostgresClientFactory;
 import org.folio.di.DiAbstractRestTest;
 import org.junit.Test;
@@ -18,7 +18,7 @@ import java.util.UUID;
 public class OrderIdStorageServiceImplTest extends DiAbstractRestTest {
 
   private PostgresClientFactory pgClientFactory = new PostgresClientFactory(Vertx.vertx());
-  private RecordIdStorageDao orderRecordIdStorageDao = new OrderRecordIdStorageDaoImpl(pgClientFactory);
+  private RecordIdStorageDao orderRecordIdStorageDao = new RecordIdStorageDaoImpl(pgClientFactory);
   private IdStorageService orderIdStorageService = new OrderIdStorageServiceImpl(orderRecordIdStorageDao);
 
   @Test
