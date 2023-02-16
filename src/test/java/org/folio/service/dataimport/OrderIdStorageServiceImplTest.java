@@ -5,8 +5,8 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.dao.IdStorageDao;
-import org.folio.dao.OrderIdStorageDaoImpl;
+import org.folio.dao.RecordIdStorageDao;
+import org.folio.dao.RecordIdStorageDaoImpl;
 import org.folio.dao.util.PostgresClientFactory;
 import org.folio.di.DiAbstractRestTest;
 import org.junit.Test;
@@ -18,38 +18,45 @@ import java.util.UUID;
 public class OrderIdStorageServiceImplTest extends DiAbstractRestTest {
 
   private PostgresClientFactory pgClientFactory = new PostgresClientFactory(Vertx.vertx());
-  private IdStorageDao orderIdStorageDao = new OrderIdStorageDaoImpl(pgClientFactory);
-  private IdStorageService orderIdStorageService = new OrderIdStorageServiceImpl(orderIdStorageDao);
+  private RecordIdStorageDao orderRecordIdStorageDao = new RecordIdStorageDaoImpl(pgClientFactory);
+  private IdStorageService orderIdStorageService = new OrderIdStorageServiceImpl(orderRecordIdStorageDao);
 
   @Test
-  public void shouldSaveAndReturnNewOrderIdWhenHasNoOrderIdByRecordId(TestContext context) {
+  public void shouldSaveAndReturnNewRecordId(TestContext context) {
     Async async = context.async();
     String recordId = UUID.randomUUID().toString();
-    String orderId = UUID.randomUUID().toString();
-    Future<String> future = orderIdStorageService.store(recordId, orderId, TENANT_ID);
+    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID);
 
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
-      context.assertEquals(orderId, ar.result());
+      context.assertEquals(recordId, ar.result());
       async.complete();
     });
   }
 
   @Test
-  public void shouldNotSaveOrderIdAndReturnExistingByRecordId(TestContext context) {
+  public void shouldNotSaveRecordIdAndReturnExistingByRecordId(TestContext context) {
     Async async = context.async();
     String recordId = UUID.randomUUID().toString();
-    String existingOrderId = UUID.randomUUID().toString();
-    String newOrderId = UUID.randomUUID().toString();
-    Future<String> future = orderIdStorageService.store(recordId, existingOrderId, TENANT_ID)
-      .compose(v -> orderIdStorageService.store(recordId, newOrderId, TENANT_ID));
+    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID)
+      .compose(v -> orderIdStorageService.store(recordId, TENANT_ID));
 
     future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(existingOrderId, ar.result());
-      context.assertNotEquals(existingOrderId, newOrderId);
+      context.assertTrue(ar.failed());
       async.complete();
     });
   }
 
+  @Test
+  public void shouldReturnSavedRecordId(TestContext context) {
+    Async async = context.async();
+    String recordId = UUID.randomUUID().toString();
+    Future<String> future = orderIdStorageService.store(recordId, TENANT_ID);
+
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      context.assertEquals(recordId, ar.result());
+      async.complete();
+    });
+  }
 }

@@ -86,7 +86,7 @@ public abstract class DiAbstractRestTest {
   protected static final String TOKEN = "token";
   protected static RequestSpecification spec;
   private static final String JOB_EXECUTION_ID_HEADER = "jobExecutionId";
-  private static final String RECORDS_ORDERS_TABLE = "records_orders";
+  private static final String RECORDS_PROCESSED_TABLE = "processed_records";
 
   public static EmbeddedKafkaCluster kafkaCluster;
 
@@ -237,7 +237,7 @@ public abstract class DiAbstractRestTest {
 
   private void clearTables(TestContext context) {
     PostgresClient pgClient = PostgresClient.getInstance(vertx, TENANT_ID);
-    pgClient.delete(RECORDS_ORDERS_TABLE, new Criterion(), context.asyncAssertSuccess());
+    pgClient.delete(RECORDS_PROCESSED_TABLE, new Criterion(), context.asyncAssertSuccess());
   }
 
   public static class RequestToResponseTransformer extends ResponseTransformer {
