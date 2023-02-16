@@ -54,7 +54,7 @@
     <raml-module-builder.version>35.0.4</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <mod-configuration-client.version>5.9.2-SNAPSHOT</mod-configuration-client.version>
+    <mod-configuration-client.version>5.9.1</mod-configuration-client.version>
     <sonar.exclusions>**/models/**.java, **/completablefuture/FolioVertxCompletableFuture.java,**/unopen/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <spring.version>5.3.20</spring.version>

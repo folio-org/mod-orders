@@ -35,6 +35,7 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.JobExecutionTotalRecordsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
+import org.folio.service.caches.MappingParametersCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.IdStorageService;
@@ -61,7 +62,9 @@ import java.util.stream.Collectors;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.*;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -119,6 +122,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private final RetryPolicy retryPolicy = (failure, retryCount) -> 1000L;
   private final Vertx vertx;
   private final CircuitBreaker circuitBreaker;
+  private final MappingParametersCache mappingParametersCache;
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
@@ -127,13 +131,15 @@ public class CreateOrderEventHandler implements EventHandler {
                                  SequentialOrderIdService sequentialOrderIdService,
                                  PoLineImportProgressService poLineImportProgressService,
                                  JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache,
-                                 Vertx vertx) {
+                                 Vertx vertx,
+                                 MappingParametersCache mappingParametersCache) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
     this.configurationEntriesService = configurationEntriesService;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
     this.sequentialOrderIdService = sequentialOrderIdService;
+    this.mappingParametersCache = mappingParametersCache;
     this.poLineImportProgressService = poLineImportProgressService;
     this.jobExecutionTotalRecordsCache = jobExecutionTotalRecordsCache;
     this.vertx = vertx;
@@ -158,6 +164,7 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
+    OkapiConnectionParams okapiParams = getOkapiConnectionParams(okapiHeaders, vertx);
     String sourceRecordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
     idStorageService.store(sourceRecordId, dataImportEventPayload.getTenant())
       .onComplete(result -> {
@@ -165,7 +172,6 @@ public class CreateOrderEventHandler implements EventHandler {
           future.completeExceptionally(result.cause());
         } else {
           Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
-          prepareEventPayloadForMapping(dataImportEventPayload);
           MappingManager.map(dataImportEventPayload, new MappingContext());
 
           RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
@@ -174,6 +180,17 @@ public class CreateOrderEventHandler implements EventHandler {
 
           tenantConfigFuture
             .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
+            .compose(tenantConfig -> {
+              Promise<Void> promise = Promise.promise();
+              prepareEventPayloadForMapping(dataImportEventPayload);
+              mappingParametersCache.get(okapiParams)
+                .onSuccess(mappingParameters -> {
+                  MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+                  promise.complete();
+                })
+                .onFailure(promise::fail);
+              return promise.future();
+            })
             .compose(orderId -> prepareMappingResult(dataImportEventPayload))
             .compose(v -> setApprovedFalseIfUserNotHaveApprovalPermission(dataImportEventPayload, tenantConfigFuture.result(), requestContext))
             .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
@@ -187,7 +204,6 @@ public class CreateOrderEventHandler implements EventHandler {
               if (temporaryOrderIdForANewOrder.equals(generatedOrderId)) {
                 LOGGER.info("handle:: new order with id: {} should be created for jobExecutionId: {}",
                   generatedOrderId, dataImportEventPayload.getJobExecutionId());
-                //TODO: the deduplication should be changed to poLines in the near future
                 return saveOrder(dataImportEventPayload, generatedOrderId, tenantConfigFuture.result(), requestContext)
                   .map(CompositePurchaseOrder::getId);
               }
@@ -195,7 +211,7 @@ public class CreateOrderEventHandler implements EventHandler {
             })
             .compose(orderId -> checkIfOrderSaved(orderId, requestContext, dataImportEventPayload.getJobExecutionId(), vertx))
             .compose(orderId -> saveOrderLines(orderId, dataImportEventPayload, tenantConfigFuture.result(), requestContext))
-            .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiHeaders, requestContext))
+            .compose(v -> adjustEventType(dataImportEventPayload, tenantConfigFuture.result(), okapiParams, requestContext))
             .onComplete(ar -> {
               if (ar.failed()) {
                 LOGGER.error("handle:: Error during order or order line creation for jobExecutionId: {}",
@@ -264,7 +280,8 @@ public class CreateOrderEventHandler implements EventHandler {
     return Future.succeededFuture();
   }
 
-  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig, Map<String, String> okapiHeaders,
+  private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig,
+                                       OkapiConnectionParams okapiParams,
                                        RequestContext requestContext) {
     LOGGER.debug("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId());
     WorkflowStatus workflowStatus = extractWorkflowStatus(dataImportEventPayload);
@@ -286,12 +303,6 @@ public class CreateOrderEventHandler implements EventHandler {
       }
 
       String profileSnapshotId = dataImportEventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
-
-      Map<String, String> okapiHeadersLowerCaseKeys = okapiHeaders.entrySet().stream().collect(Collectors.toMap(
-        key -> key.getKey().toLowerCase(Locale.ROOT),
-        Map.Entry::getValue
-      ));
-      OkapiConnectionParams okapiParams = new OkapiConnectionParams(okapiHeadersLowerCaseKeys, Vertx.vertx());
 
       jobProfileSnapshotCache.get(profileSnapshotId, okapiParams)
         .toCompletionStage()
@@ -370,11 +381,11 @@ public class CreateOrderEventHandler implements EventHandler {
     Record parsedMarcBibRecord = new JsonObject(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
     if (parsedMarcBibRecord.getOrder() == null) {
       return Future.failedFuture(new IllegalArgumentException(
-        String.format("Order parameter is missing. jobExecutionId: %s", dataImportEventPayload.getJobExecutionId())));
+        String.format("generateSequentialOrderId:: Order parameter is missing. jobExecutionId: %s", dataImportEventPayload.getJobExecutionId())));
     }
 
-    int exponentOrder = parsedMarcBibRecord.getOrder() / poLinesLimit;
-    return sequentialOrderIdService.store(dataImportEventPayload.getJobExecutionId(), exponentOrder, orderId, dataImportEventPayload.getTenant());
+    int sequentialNo = parsedMarcBibRecord.getOrder() / poLinesLimit;
+    return sequentialOrderIdService.store(dataImportEventPayload.getJobExecutionId(), sequentialNo, orderId, dataImportEventPayload.getTenant());
   }
 
   private Future<CompositePurchaseOrder> saveOrder(DataImportEventPayload dataImportEventPayload, String orderId,
@@ -551,6 +562,14 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private void overridePoLinesLimit(JsonObject tenantConfig, Optional<Integer> poLinesLimitOptional) {
     poLinesLimitOptional.ifPresent(poLinesLimit -> tenantConfig.put(PO_LINES_LIMIT_PROPERTY, poLinesLimit));
+  }
+
+  private OkapiConnectionParams getOkapiConnectionParams(Map<String, String> okapiHeaders, Vertx vertx) {
+    Map<String, String> okapiHeadersLowerCaseKeys = okapiHeaders.entrySet().stream().collect(Collectors.toMap(
+      key -> key.getKey().toLowerCase(Locale.ROOT),
+      Map.Entry::getValue
+    ));
+    return new OkapiConnectionParams(okapiHeadersLowerCaseKeys, vertx);
   }
 
   @Override

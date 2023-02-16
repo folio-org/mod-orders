@@ -15,6 +15,7 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
+import org.folio.Organization;
 import org.folio.ParsedRecord;
 import org.folio.Record;
 import org.folio.TestConfig;
@@ -105,6 +106,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String ID_FIELD = "id";
   private static final String JOB_PROFILE_SNAPSHOTS_MOCK = "jobProfileSnapshots";
+  private static final String ORGANIZATIONS_MOCK = "organizations";
   private static final String TENANT_APPROVAL_REQUIRED = "test_diku_limit_1";
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String USER_ID = "6bece55a-831c-4197-bed1-coff1e00b7d8";
@@ -128,7 +130,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .withMappingFields(new ArrayList<>(List.of(
         new MappingRule().withPath("order.po.workflowStatus").withValue("\"Pending\"").withEnabled("true"),
         new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
-        new MappingRule().withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
+        new MappingRule().withName("vendor").withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
         new MappingRule().withPath("order.po.approved").withValue("\"true\"").withEnabled("true"),
         new MappingRule().withPath("order.poLine.titleOrPackage").withValue("245$a").withEnabled("true"),
         new MappingRule().withPath("order.poLine.cost.currency").withValue("\"USD\"").withEnabled("true"),
@@ -147,7 +149,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .withMappingFields(new ArrayList<>(List.of(
         new MappingRule().withPath("order.po.workflowStatus").withValue("\"Open\"").withEnabled("true"),
         new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
-        new MappingRule().withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
+        new MappingRule().withName("vendor").withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
         new MappingRule().withPath("order.po.approved").withValue("\"true\"").withEnabled("true"),
         new MappingRule().withPath("order.po.poLinesLimit").withValue("7").withEnabled("true").withName("poLinesLimit"),
         new MappingRule().withPath("order.poLine.titleOrPackage").withValue("245$a").withEnabled("true"),
@@ -167,7 +169,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .withMappingFields(new ArrayList<>(List.of(
         new MappingRule().withPath("order.po.workflowStatus").withValue("\"Open\"").withEnabled("true"),
         new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
-        new MappingRule().withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
+        new MappingRule().withName("vendor").withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
         new MappingRule().withPath("order.po.approved").withValue("\"false\"").withEnabled("true"),
         new MappingRule().withPath("order.po.poLinesLimit").withValue("7").withEnabled("true").withName("poLinesLimit"),
         new MappingRule().withPath("order.poLine.titleOrPackage").withValue("245$a").withEnabled("true"),
@@ -178,6 +180,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
           .withAcceptedValues(new HashMap<>(Map.of(
             "df26d81b-9d63-4ff8-bf41-49bf75cfa70e", "Purchase"
           )))))));
+  private final Organization organization = new Organization()
+    .withId("e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1").withName("OrgName").withCode("OrgCode");
 
   private Record record;
   private JsonObject jobExecutionJson;
@@ -206,6 +210,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .put("progress", new JsonObject().put("total", 1));
 
     addMockEntry(JOB_EXECUTIONS, jobExecutionJson);
+    addMockEntry(ORGANIZATIONS_MOCK, organization);
   }
 
   private Record getRecord(Integer ordinalNumber) {
@@ -1207,6 +1212,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     for (int i = 0; i < recordsNumber; i++) {
       record = getRecord(i);
       dataImportEventPayload = new DataImportEventPayload()
+        .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
         .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
         .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
         .withTenant(TENANT_ID)
@@ -1230,6 +1236,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
         addMockEntry(CONFIGS, polLimitConfig);
         addMockEntry(JOB_EXECUTIONS, jobExecutionJson);
+        addMockEntry(ORGANIZATIONS_MOCK, organization);
       }
     }
 
@@ -1270,33 +1277,117 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldReturnFailedByDuplicateEventExceptionFutureWhenRecordIdIsDuplicated(TestContext context) {
-    Async async = context.async();
+  public void shouldCreatePendingOrderAndMapVendorMaterialSupplierAndAccessProviderFieldsWhenIncomingOrganizationCodeIsValid() throws InterruptedException {
+    // given
+    MappingProfile mappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(ORDER)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(new ArrayList<>(List.of(
+          new MappingRule().withPath("order.po.workflowStatus").withValue("\"Pending\"").withEnabled("true"),
+          new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
+          new MappingRule().withName("vendor").withPath("order.po.vendor").withValue("\"OrgCode\"").withEnabled("true"),
+          new MappingRule().withName("materialSupplier").withPath("order.poLine.physical.materialSupplier").withValue("\"ORGCode\"").withEnabled("true"),
+          new MappingRule().withName("accessProvider").withPath("order.poLine.eresource.accessProvider").withValue("\"OrGCoDe\"").withEnabled("true"),
+          new MappingRule().withPath("order.po.approved").withValue("\"true\"").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.titleOrPackage").withValue("245$a").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.cost.currency").withValue("\"USD\"").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.orderFormat").withValue("\"Physical Resource\"").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.checkinItems").withValue("\"true\"").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.acquisitionMethod").withValue("\"Purchase\"").withEnabled("true")
+            .withAcceptedValues(new HashMap<>(Map.of(
+              "df26d81b-9d63-4ff8-bf41-49bf75cfa70e", "Purchase"
+            )))))));
+
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
-    String recordId = UUID.randomUUID().toString();
-
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
-      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
       .withContext(new HashMap<>() {{
         put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
-        put(RECORD_ID_HEADER, recordId);
       }});
 
-    CreateOrderEventHandler createOrderHandler = getBeanFromSpringContext(vertx, CreateOrderEventHandler.class);
-    vertx.runOnContext(event -> Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload))
-      .onComplete(e -> Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload))
-        .onComplete(context.asyncAssertFailure(th -> {
-          context.assertTrue(th instanceof DuplicateEventException);
-          async.complete();
-        }))));
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertNotNull(createdOrder.getVendor());
+    assertEquals(createdOrder.getVendor(), organization.getId());
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertEquals(poLine.getPhysical().getMaterialSupplier(), organization.getId());
+
+    assertNotNull(poLine.getEresource());
+    assertEquals(poLine.getEresource().getAccessProvider(), organization.getId());
+  }
+
+  @Test
+  public void shouldCreatePendingOrderAndNotMapVendorMaterialSupplierAndAccessProviderFieldsWhenIncomingOrganizationCodeIsNotValid() throws InterruptedException {
+    // given
+    MappingProfile mappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(ORDER)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(new ArrayList<>(List.of(
+          new MappingRule().withPath("order.po.workflowStatus").withValue("\"Pending\"").withEnabled("true"),
+          new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
+          new MappingRule().withName("vendor").withPath("order.po.vendor").withValue("\"InvalidCode\"").withEnabled("true"),
+          new MappingRule().withName("materialSupplier").withPath("order.poLine.physical.materialSupplier").withValue("\"InvalidCode\"").withEnabled("true"),
+          new MappingRule().withName("accessProvider").withPath("order.poLine.eresource.accessProvider").withValue("\"InvalidCode\"").withEnabled("true"),
+          new MappingRule().withPath("order.po.approved").withValue("\"true\"").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.titleOrPackage").withValue("245$a").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.cost.currency").withValue("\"USD\"").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.orderFormat").withValue("\"Physical Resource\"").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.checkinItems").withValue("\"true\"").withEnabled("true"),
+          new MappingRule().withPath("order.poLine.acquisitionMethod").withValue("\"Purchase\"").withEnabled("true")
+            .withAcceptedValues(new HashMap<>(Map.of(
+              "df26d81b-9d63-4ff8-bf41-49bf75cfa70e", "Purchase"
+            )))))));
+
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertNull(createdOrder.getVendor());
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertNull(poLine.getPhysical().getMaterialSupplier());
+
+    assertNull(poLine.getEresource());
   }
 
   @Test
@@ -1336,6 +1427,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         async.complete();
       })));
   }
+
   private ProfileSnapshotWrapper buildProfileSnapshotWrapper(JobProfile jobProfile, ActionProfile actionProfile,
                                                              MappingProfile mappingProfile) {
     return new ProfileSnapshotWrapper()
@@ -1411,6 +1503,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertNotNull(createdOrder.getId());
     assertEquals(CompositePurchaseOrder.WorkflowStatus.PENDING, createdOrder.getWorkflowStatus());
     assertNotNull(createdOrder.getVendor());
+    assertEquals(createdOrder.getVendor(), organization.getId());
     assertEquals(CompositePurchaseOrder.OrderType.ONE_TIME, createdOrder.getOrderType());
     return createdOrder;
   }
