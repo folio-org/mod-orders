@@ -2,7 +2,6 @@ package org.folio.dao;
 
 import io.vertx.core.Future;
 import io.vertx.sqlclient.Tuple;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.dao.util.PostgresClientFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -18,9 +17,6 @@ public class OrderRecordIdStorageDaoImpl implements RecordIdStorageDao {
   private static final String RECORD_ID_FIELD = "record_id";
   private static final String INSERT_SQL =
     "INSERT INTO %1$s (record_id, created_date) VALUES ($1, now()) RETURNING record_id::uuid;";
-
-  private static final String GET_RECORD_ID_SQL =
-    "SELECT record_id::uuid FROM %1$s WHERE processed_records.record_id::uuid = $1";
 
   private final PostgresClientFactory pgClientFactory;
 

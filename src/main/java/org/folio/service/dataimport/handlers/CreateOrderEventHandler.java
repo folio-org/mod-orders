@@ -196,7 +196,7 @@ public class CreateOrderEventHandler implements EventHandler {
             .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
             .compose(generatedOrderId -> {
               if (isEmpty(generatedOrderId)) {
-                String errorMessage = format("handle:: generatedOrderId is null, jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
+                String errorMessage = format("handle:: generatedOrderId is null, jobExecutionId %s", dataImportEventPayload.getJobExecutionId());
                 LOGGER.error(errorMessage);
                 return Future.failedFuture(new EventProcessingException(errorMessage));
               }
@@ -230,7 +230,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private Future<String> checkIfOrderSaved(String orderId, RequestContext requestContext, String jobExecutionId, Vertx vertx) {
     LOGGER.info("checkIfOrderSaved:: orderId: {}, jobExecutionId: {}", orderId, jobExecutionId);
     if (isEmpty(orderId)) {
-      String errorMessage = format("handle:: checkIfOrderSaved is null, jobExecutionId {}", jobExecutionId);
+      String errorMessage = format("checkIfOrderSaved:: orderId is null, jobExecutionId %s", jobExecutionId);
       LOGGER.error(errorMessage);
       return Future.failedFuture(new EventProcessingException(errorMessage));
     }
