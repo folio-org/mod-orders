@@ -178,7 +178,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>data-import-processing-core</artifactId>
-      <version>4.0.0</version>
+      <version>4.0.1</version>
     </dependency>
     <dependency>
       <groupId>com.github.rworsnop</groupId>
@@ -248,8 +248,8 @@
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
-      <artifactId>mod-data-import-converter-storage-client</artifactId>
-      <version>1.14.0</version>
+      <artifactId>mod-di-converter-storage-client</artifactId>
+      <version>2.0.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
