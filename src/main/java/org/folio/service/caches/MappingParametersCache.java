@@ -27,9 +27,12 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class MappingParametersCache {
   private static final Logger LOGGER = LogManager.getLogger();
-  public static final String ORGANIZATIONS = "/organizations/organizations";
+  public static final String ORGANIZATIONS = "/organizations/organizations?limit=%s";
 
-  @Value("${orders.cache.organization.expiration.seconds:3600}")
+  @Value("${orders.cache.mapping.parameters.settings.limit:1000}")
+  public int settingsLimit;
+
+  @Value("${orders.cache.mapping.parameters.expiration.seconds:3600}")
   private long cacheExpirationTime;
 
   private AsyncCache<String, MappingParameters> cache;
@@ -66,7 +69,7 @@ public class MappingParametersCache {
     LOGGER.debug("loadMappingParameters:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
       tenantId, params.getOkapiUrl(), params.getTenantId());
 
-    return RestUtil.doRequest(params, ORGANIZATIONS, HttpMethod.GET, null)
+    return RestUtil.doRequest(params, String.format(ORGANIZATIONS, settingsLimit), HttpMethod.GET, null)
       .toCompletionStage()
       .toCompletableFuture()
       .thenCompose(httpResponse -> {

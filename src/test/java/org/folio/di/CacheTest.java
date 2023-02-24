@@ -96,7 +96,7 @@ public class CacheTest {
     organization.setId(organizationId);
 
     WireMock.stubFor(
-      get("/organizations/organizations")
+      get("/organizations/organizations?limit=0")
         .willReturn(okJson(new JsonObject()
           .put("organizations", JsonArray.of(organization))
           .put("totalRecords", 1)
@@ -119,7 +119,7 @@ public class CacheTest {
     Async async = context.async();
 
     WireMock.stubFor(
-      get("/organizations/organizations")
+      get("/organizations/organizations?limit=0")
         .willReturn(serverError()));
 
     mappingParametersCache
