@@ -25,6 +25,8 @@ import org.folio.service.ProtectionService;
 import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
 import org.folio.service.TagService;
+import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.FinanceExchangeRateService;
@@ -46,11 +48,11 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.EncumbrancesProcessingHolderBuilder;
 import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategy;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
+import org.folio.service.finance.transaction.PendingPaymentService;
 import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.finance.transaction.PendingPaymentService;
 import org.folio.service.finance.transaction.summary.InvoiceTransactionSummariesService;
 import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.folio.service.inventory.InventoryManager;
@@ -167,8 +169,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryService inventoryService) {
-    return new PurchaseOrderLineService(inventoryService, restClient);
+  PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryService inventoryService, InventoryCache inventoryCache) {
+    return new PurchaseOrderLineService(inventoryService, restClient, inventoryCache);
   }
 
   @Bean
@@ -182,10 +184,20 @@ public class ApplicationConfig {
   }
 
   @Bean
+  InventoryCache inventoryCache(InventoryService inventoryService) {
+    return new InventoryCache(inventoryService);
+  }
+
+  @Bean
+  ConfigurationEntriesCache configurationEntriesCache (ConfigurationEntriesService configurationEntriesService) {
+    return new ConfigurationEntriesCache(configurationEntriesService);
+  }
+
+  @Bean
   OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
-                                            ConfigurationEntriesService configurationEntriesService, ExchangeRateProviderResolver exchangeRateProviderResolver) {
+                                            ConfigurationEntriesCache configurationEntriesCache, ExchangeRateProviderResolver exchangeRateProviderResolver) {
     return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService,
-                                    configurationEntriesService, exchangeRateProviderResolver);
+                                    configurationEntriesCache, exchangeRateProviderResolver);
   }
 
   @Bean
@@ -411,9 +423,9 @@ public class ApplicationConfig {
   }
 
   @Bean("orderLinesSummaryPopulateService")
-  CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService(ConfigurationEntriesService configurationEntriesService,
+  CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService(ConfigurationEntriesCache configurationEntriesCache,
                                                                             ExchangeRateProviderResolver exchangeRateProviderResolver) {
-    return new OrderLinesSummaryPopulateService(configurationEntriesService, exchangeRateProviderResolver);
+    return new OrderLinesSummaryPopulateService(configurationEntriesCache, exchangeRateProviderResolver);
   }
 
   @Bean
@@ -454,9 +466,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
-                                    PieceStorageService pieceStorageService) {
-    return new InventoryManager(restClient, configurationEntriesService, pieceStorageService);
+  InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesCache configurationEntriesCache,
+                                    PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService) {
+    return new InventoryManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, inventoryService);
   }
 
   @Bean
@@ -594,13 +606,14 @@ public class ApplicationConfig {
     AcquisitionsUnitsService acquisitionsUnitsService, PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
     UnOpenCompositeOrderManager unOpenCompositeOrderManager,
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
-    ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
+    ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService, RestClient restClient) {
+    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService,
+    RestClient restClient) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
-      unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
+      unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
       poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager,
       organizationService, restClient);
   }

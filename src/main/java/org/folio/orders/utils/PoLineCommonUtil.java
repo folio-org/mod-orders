@@ -17,7 +17,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import io.vertx.core.json.JsonArray;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.core.exceptions.HttpException;
@@ -29,6 +28,7 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.parser.JsonPathParser;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public final class PoLineCommonUtil {
@@ -213,7 +213,7 @@ public final class PoLineCommonUtil {
       if (oldObject.getValueAt(field) instanceof JsonArray) {
         var oldList = ((JsonArray) oldObject.getValueAt(field)).getList();
         var newList = ((JsonArray) newObject.getValueAt(field)).getList();
-        if (oldList.size() != newList.size() || !oldList.containsAll(newList)) {
+        if (oldList.size() != newList.size() || !CollectionUtils.containsAll(oldList, newList)) {
           fields.add(field);
         }
       } else if (ObjectUtils.notEqual(oldObject.getValueAt(field), newObject.getValueAt(field))) {

@@ -83,6 +83,8 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
@@ -132,6 +134,12 @@ public class InventoryManagerTest {
   private PieceStorageService pieceStorageService;
   @Autowired
   private ConfigurationEntriesService configurationEntriesService;
+  @Autowired
+  private ConfigurationEntriesCache configurationEntriesCache;
+  @Autowired
+  private InventoryCache inventoryCache;
+  @Autowired
+  private InventoryService inventoryService;
 
 
   private Map<String, String> okapiHeadersMock;
@@ -1020,6 +1028,20 @@ public class InventoryManagerTest {
     public ConfigurationEntriesService configurationEntriesService() {
       return mock(ConfigurationEntriesService.class);
     }
+    @Bean
+    public ConfigurationEntriesCache configurationEntriesCache() {
+      return mock(ConfigurationEntriesCache.class);
+    }
+
+    @Bean
+    public InventoryCache inventoryCache() {
+      return mock(InventoryCache.class);
+    }
+
+    @Bean
+    public InventoryService inventoryService() {
+      return mock(InventoryService.class);
+    }
 
     @Bean
     public PieceStorageService pieceStorageService() {
@@ -1032,9 +1054,9 @@ public class InventoryManagerTest {
     }
 
     @Bean
-    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
-                                             PieceStorageService pieceStorageService) {
-      return spy(new InventoryManager(restClient, configurationEntriesService, pieceStorageService));
+    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesCache configurationEntriesCache,
+                                             PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService) {
+      return spy(new InventoryManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, inventoryService));
     }
   }
 }

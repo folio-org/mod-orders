@@ -46,7 +46,7 @@ public class OpenCompositeOrderInventoryService {
       .<List<Future<Void>>>executeBlocking(event -> {
         List<Future<Void>> futures = new ArrayList<>();
         for (CompositePoLine poLine : compPO.getCompositePoLines()) {
-          Future<Void> future = processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine),isInstanceMatchingDisabled, requestContext);
+          Future<Void> future = processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext);
           futures.add(future);
           semaphore.acquire(() -> future
             .onComplete(asyncResult -> semaphore.release()));

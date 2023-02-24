@@ -11,7 +11,6 @@ import static org.folio.rest.jaxrs.model.PurchaseOrder.OrderType.ONE_TIME;
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -52,6 +51,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.ManualCurrencyConversion;
@@ -89,6 +89,8 @@ public class OrderRolloverServiceTest {
   private PurchaseOrderLineService purchaseOrderLineService;
   @Mock
   private ConfigurationEntriesService configurationEntriesService;
+  @Mock
+  private ConfigurationEntriesCache configurationEntriesCache;
   @Mock
   private ExchangeRateProviderResolver exchangeRateProviderResolver;
   private RequestContext requestContext;
@@ -206,7 +208,7 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
     double exchangeEurToUsdRate = 1.0d;
-    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
+    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
     String polCurrency = systemCurrency;
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
     ExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
@@ -313,7 +315,7 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
     double exchangeEurToUsdRate = 1.0d;
-    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
+    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
     String polCurrency = systemCurrency;
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
     ExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
@@ -437,7 +439,7 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
     double exchangeEurToUsdRate = 0.82858d;
-    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
+    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
     ExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
     ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of());
@@ -539,7 +541,7 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
-    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesService).getSystemCurrency(requestContext);
+    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
 
     Encumbrance encumbrance = new Encumbrance()
       .withSourcePurchaseOrderId(orderId)

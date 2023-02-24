@@ -48,6 +48,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.service.caches.InventoryCache;
 import org.folio.service.inventory.InventoryService;
 
 import io.vertx.core.Future;
@@ -64,9 +65,12 @@ public class PurchaseOrderLineService {
   private static final String ORDER_LINES_BY_ORDER_ID_QUERY = "purchaseOrderId == %s";
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
   private final InventoryService inventoryService;
+  private final InventoryCache inventoryCache;
+
   private final RestClient restClient;
 
-  public PurchaseOrderLineService(InventoryService inventoryService, RestClient restClient) {
+  public PurchaseOrderLineService(InventoryService inventoryService, RestClient restClient, InventoryCache inventoryCache) {
+    this.inventoryCache = inventoryCache;
     this.inventoryService = inventoryService;
     this.restClient = restClient;
   }
@@ -424,7 +428,7 @@ public class PurchaseOrderLineService {
       return Future.succeededFuture();
     }
 
-    return inventoryService.getProductTypeUuidByIsbn(requestContext)
+    return inventoryCache.getProductTypeUuid(requestContext)
       .compose(isbnTypeId -> {
         Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
 
@@ -433,7 +437,7 @@ public class PurchaseOrderLineService {
                 List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
                 var setOfProductIds = buildSetOfProductIds(filteredCompLines, isbnTypeId);
                 for (String productID : setOfProductIds) {
-                  var future = inventoryService.convertToISBN13(productID, requestContext)
+                  var future = inventoryCache.convertToISBN13(productID, requestContext)
                     .map(normilizedId -> Map.entry(productID, normilizedId));
                   futures.add(future);
                   semaphore.acquire(() -> future
