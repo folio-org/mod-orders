@@ -1,7 +1,7 @@
 ## 12.7.0 - Unreleased
 
 ## 12.6.0 Orchid R1 2023 - Released
-This release focused on implement copy the amount awaiting payment and expended from the original encumbrance
+This release focused on replacing FolioVertxCompletableFuture usage refactoring, edit fund distributions with related invoices and orders import features
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.5.0...v12.6.0)
 
@@ -18,7 +18,7 @@ This release focused on implement copy the amount awaiting payment and expended 
 * [MODORDERS-817](https://issues.folio.org/browse/MODORDERS-817) - Associate mapped POLines with single Order based on POLine limit value
 * [MODORDERS-808](https://issues.folio.org/browse/MODORDERS-808) - Create "OrdersPostProcessingEventHandler" for mod-orders
 * [MODORDERS-807](https://issues.folio.org/browse/MODORDERS-807) - Copy number does not get applied to item when creating item through receiving app
-* [MODORDERS-805](https://issues.folio.org/browse/MODORDERS-805) - Replace FolioVertxCompletableFuture usage - merge and resolve merge conflicts
+* [MODORDERS-805](https://issues.folio.org/browse/MODORDERS-805) - Replace FolioVertxCompletableFuture usage - merge
 * [MODORDERS-804](https://issues.folio.org/browse/MODORDERS-804) - Remove validation for editing fund distribution when related invoice is approved or paid
 * [MODORDERS-803](https://issues.folio.org/browse/MODORDERS-803) - Implement Edit Fund Destribution blocking action (FLOW #3)
 * [MODORDERS-801](https://issues.folio.org/browse/MODORDERS-801) - Check and correct encumbrance ID links for invoices with Open or Reviewed status (FLOW #4)
@@ -33,7 +33,6 @@ This release focused on implement copy the amount awaiting payment and expended 
 * [MODORDERS-724](https://issues.folio.org/browse/MODORDERS-724) - Replace use of deprecated class HttpClientFactory
 * [MODORDERS-696](https://issues.folio.org/browse/MODORDERS-696) - Replace all utility methods for HTTP calls from HelperUtils
 * [MODORDERS-647](https://issues.folio.org/browse/MODORDERS-647) - Implement Find or create logic for Holdings generated through the GOBI API
-* [MODORDERS-598](https://issues.folio.org/browse/MODORDERS-598) - Replace CompletableFuture.allOf with FolioVertxCompletableFuture.allOf
 
 ### Bug Fixes
 * [MODORDERS-841](https://issues.folio.org/browse/MODORDERS-841) - Encumbrance current amount is calculated incorrectly after changing fund distribution when related paid invoice exists
