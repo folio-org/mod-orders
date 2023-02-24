@@ -42,7 +42,6 @@ This release focused on implement copy the amount awaiting payment and expended 
 * [MODORDERS-816](https://issues.folio.org/browse/MODORDERS-816) - A user with order create permission can not add suffix and prefix to the order
 * [MODORDERS-810](https://issues.folio.org/browse/MODORDERS-810) - Invoice is unable to approve due to protected fields on productIds
 * [MODORDERS-713](https://issues.folio.org/browse/MODORDERS-713) - Add prefix and suffix to PO number when create or update order
-* [MODORDERS-473](https://issues.folio.org/browse/MODORDERS-473) - Memory leak in orders app
 
 
 ## 12.5.0 Nolana R3 2022 - Released
