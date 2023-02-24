@@ -1,9 +1,47 @@
-## 12.6.0 - Unreleased
+## 12.7.0 - Unreleased
+
+## 12.6.0 Orchid R1 2023 - Released
+This release focused on replacing FolioVertxCompletableFuture usage refactoring, edit fund distributions with related invoices and orders import features
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.5.0...v12.6.0)
+
+### Stories
+* [MODORDERS-844](https://issues.folio.org/browse/MODORDERS-844) - Add cache to store organisations info for mapping
+* [MODORDERS-843](https://issues.folio.org/browse/MODORDERS-843) - Adjust deduplication mechanism to store info by POLine id
+* [MODORDERS-842](https://issues.folio.org/browse/MODORDERS-842) - Incorrect displaying initial amount encumbered after changing distribution percentage
+* [MODORDERS-840](https://issues.folio.org/browse/MODORDERS-840) - Extend error handling logic if can't create OrderLine
+* [MODORDERS-834](https://issues.folio.org/browse/MODORDERS-834) - Flow #2. Copy the amount awaiting payment and expended from the original encumbrance
+* [MODORDERS-820](https://issues.folio.org/browse/MODORDERS-820) - Introduce "deleteHolding" param to orders put endpoint
+* [MODORDERS-825](https://issues.folio.org/browse/MODORDERS-825) - Align the module with API breaking change
+* [MODORDERS-823](https://issues.folio.org/browse/MODORDERS-823) - Implement logic that defines which event should be issued as a result of saving Pending Orders
+* [MODORDERS-821](https://issues.folio.org/browse/MODORDERS-821) - Implement "Create new holdings for location" flag
+* [MODORDERS-817](https://issues.folio.org/browse/MODORDERS-817) - Associate mapped POLines with single Order based on POLine limit value
+* [MODORDERS-808](https://issues.folio.org/browse/MODORDERS-808) - Create "OrdersPostProcessingEventHandler" for mod-orders
+* [MODORDERS-807](https://issues.folio.org/browse/MODORDERS-807) - Copy number does not get applied to item when creating item through receiving app
+* [MODORDERS-805](https://issues.folio.org/browse/MODORDERS-805) - Replace FolioVertxCompletableFuture usage - merge
+* [MODORDERS-804](https://issues.folio.org/browse/MODORDERS-804) - Remove validation for editing fund distribution when related invoice is approved or paid
+* [MODORDERS-803](https://issues.folio.org/browse/MODORDERS-803) - Implement Edit Fund Destribution blocking action (FLOW #3)
+* [MODORDERS-801](https://issues.folio.org/browse/MODORDERS-801) - Check and correct encumbrance ID links for invoices with Open or Reviewed status (FLOW #4)
+* [MODORDERS-800](https://issues.folio.org/browse/MODORDERS-800) - Implement moving encumbered value from budget 1 to budget 2 (FLOW #2)
+* [MODORDERS-789](https://issues.folio.org/browse/MODORDERS-789) - Creating large amounts of polines performance issue
+* [MODORDERS-788](https://issues.folio.org/browse/MODORDERS-788) - Implement fetching related invoices on PUT PO Line method to be able to implement all futher flows
+* [MODORDERS-784](https://issues.folio.org/browse/MODORDERS-784) - Logging improvement - Configuration
+* [MODORDERS-783](https://issues.folio.org/browse/MODORDERS-783) - Implement Orders Export History API
+* [MODORDERS-780](https://issues.folio.org/browse/MODORDERS-780) - Replace FolioVertxCompletableFuture usage
 * [MODORDERS-775](https://issues.folio.org/browse/MODORDERS-775) - Add deduplication mechanism for Create Order event
 * [MODORDERS-773](https://issues.folio.org/browse/MODORDERS-773) - Implement action profile handler for order creation
-* [MODORDERS-844](https://issues.folio.org/browse/MODORDERS-844) - Add cache to store organisations info for mapping
-* [MODORDERS-808](https://issues.folio.org/browse/MODORDERS-808) - Create "OrdersPostProcessingEventHandler" for mod-orders
-* [MODORDERS-843](https://issues.folio.org/browse/MODORDERS-843) - Adjust deduplication mechanism to store info by POLine id
+* [MODORDERS-724](https://issues.folio.org/browse/MODORDERS-724) - Replace use of deprecated class HttpClientFactory
+* [MODORDERS-696](https://issues.folio.org/browse/MODORDERS-696) - Replace all utility methods for HTTP calls from HelperUtils
+* [MODORDERS-647](https://issues.folio.org/browse/MODORDERS-647) - Implement Find or create logic for Holdings generated through the GOBI API
+
+### Bug Fixes
+* [MODORDERS-841](https://issues.folio.org/browse/MODORDERS-841) - Encumbrance current amount is calculated incorrectly after changing fund distribution when related paid invoice exists
+* [MODORDERS-833](https://issues.folio.org/browse/MODORDERS-833) - Negative encumbrance values appear for expense classes after rollover
+* [MODORDERS-827](https://issues.folio.org/browse/MODORDERS-827) - Order view is not restricted by Acquisition unit
+* [MODORDERS-816](https://issues.folio.org/browse/MODORDERS-816) - A user with order create permission can not add suffix and prefix to the order
+* [MODORDERS-810](https://issues.folio.org/browse/MODORDERS-810) - Invoice is unable to approve due to protected fields on productIds
+* [MODORDERS-713](https://issues.folio.org/browse/MODORDERS-713) - Add prefix and suffix to PO number when create or update order
+
 
 ## 12.5.0 Nolana R3 2022 - Released
 This release focused on upgrade RMB and module interface dependencies
