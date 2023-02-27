@@ -57,7 +57,7 @@ public class InventoryCache {
       return Future
         .fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> getProductTypeUuidByIsbn(requestContext, requestEntry)));
     } catch (Exception e) {
-      log.error("get:: Error loading identifier types from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
+      log.error("getProductTypeUuid:: Error loading identifier types from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
       return Future.failedFuture(e);
     }
   }
@@ -70,7 +70,7 @@ public class InventoryCache {
       var cacheKey = buildUniqueKey(requestEntry, requestContext);
       return Future.fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> convertToISBN13(isbn, requestEntry, requestContext)));
     } catch (Exception e) {
-      log.error("get:: Error normilizing isbn value: '{}'", isbn, e);
+      log.error("convertToISBN13:: Error normalizing isbn value: '{}'", isbn, e);
       return Future.failedFuture(e);
     }
   }
@@ -83,7 +83,7 @@ public class InventoryCache {
 
       return Future.fromCompletionStage(asyncJsonCache.get(cacheKey, (key, executor) -> getEntryTypeId(entryType, entryTypeValue, requestContext)));
     } catch (Exception e) {
-      log.error("get:: Error loading inventory entry from cache: '{}'", entryType, e);
+      log.error("getEntryId:: Error loading inventory entry from cache: '{}'", entryType, e);
       return Future.failedFuture(e);
     }
   }

@@ -65,7 +65,7 @@ public class ConfigurationEntriesCache {
 
       return Future.fromCompletionStage(configsCache.get(cacheKey, (key, executor) -> loadConfiguration(requestEntry, requestContext)));
     } catch (Exception e) {
-      log.warn("get:: Error loading identifier types from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
+      log.error("loadConfiguration:: Error loading tenant configuration from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
       return Future.failedFuture(e);
     }
   }
@@ -95,7 +95,7 @@ public class ConfigurationEntriesCache {
 
       return Future.fromCompletionStage(systemCurrencyCache.get(cacheKey, (key, executor) -> getSystemCurrency(requestEntry, requestContext)));
     } catch (Exception e) {
-      log.warn("get:: Error loading identifier types from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
+      log.warn("get:: Error loading system currency from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
       return Future.failedFuture(e);
     }
   }

@@ -165,7 +165,7 @@ public class OrganizationService {
           .toCompletionStage()
           .toCompletableFuture()));
     } catch (Exception e) {
-      log.error("get:: Error loading identifier types from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
+      log.error("getAndCacheVendorById:: Error loading organization from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
       return Future.failedFuture(e);
     }
   }
