@@ -38,7 +38,7 @@ import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.transaction.TransactionService;
@@ -63,15 +63,15 @@ public class OrderRolloverService {
   private final FundService fundService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TransactionService transactionService;
-  private final ConfigurationEntriesService configurationService;
+  private final ConfigurationEntriesCache configurationEntriesCache;
   private final ExchangeRateProviderResolver exchangeRateProviderResolver;
 
   public OrderRolloverService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
-                              ConfigurationEntriesService configurationEntriesService, ExchangeRateProviderResolver exchangeRateProviderResolver) {
+    ConfigurationEntriesCache configurationEntriesCache, ExchangeRateProviderResolver exchangeRateProviderResolver) {
     this.fundService = fundService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.transactionService = transactionService;
-    this.configurationService = configurationEntriesService;
+    this.configurationEntriesCache = configurationEntriesCache;
     this.exchangeRateProviderResolver = exchangeRateProviderResolver;
   }
 
@@ -82,7 +82,7 @@ public class OrderRolloverService {
         .collect(toList()));
 
     return fundIdsFuture
-      .compose(ledgerFundIds -> configurationService.getSystemCurrency(requestContext)
+      .compose(ledgerFundIds -> configurationEntriesCache.getSystemCurrency(requestContext)
         .compose(systemCurrency -> rolloverOrdersByFundIds(ledgerFundIds, ledgerFYRollover, systemCurrency, requestContext))
       .onSuccess(v -> logger.info("Order Rollover success : All orders processed")))
       .onFailure(t -> logger.error("Order Rollover failed", t));

@@ -48,7 +48,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.service.inventory.InventoryService;
+import org.folio.service.caches.InventoryCache;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -63,11 +63,12 @@ public class PurchaseOrderLineService {
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private static final String ORDER_LINES_BY_ORDER_ID_QUERY = "purchaseOrderId == %s";
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
-  private final InventoryService inventoryService;
+  private final InventoryCache inventoryCache;
+
   private final RestClient restClient;
 
-  public PurchaseOrderLineService(InventoryService inventoryService, RestClient restClient) {
-    this.inventoryService = inventoryService;
+  public PurchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache) {
+    this.inventoryCache = inventoryCache;
     this.restClient = restClient;
   }
 
@@ -424,7 +425,7 @@ public class PurchaseOrderLineService {
       return Future.succeededFuture();
     }
 
-    return inventoryService.getProductTypeUuidByIsbn(requestContext)
+    return inventoryCache.getProductTypeUuid(requestContext)
       .compose(isbnTypeId -> {
         Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
 
@@ -433,7 +434,7 @@ public class PurchaseOrderLineService {
                 List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
                 var setOfProductIds = buildSetOfProductIds(filteredCompLines, isbnTypeId);
                 for (String productID : setOfProductIds) {
-                  var future = inventoryService.convertToISBN13(productID, requestContext)
+                  var future = inventoryCache.convertToISBN13(productID, requestContext)
                     .map(normilizedId -> Map.entry(productID, normilizedId));
                   futures.add(future);
                   semaphore.acquire(() -> future

@@ -63,7 +63,8 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.InventoryCache;
 import org.folio.service.pieces.PieceStorageService;
 
 import io.vertx.core.CompositeFuture;
@@ -72,7 +73,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.shareddata.Lock;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 
@@ -146,13 +146,17 @@ public class InventoryManager {
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
   private final RestClient restClient;
-  private final ConfigurationEntriesService configurationEntriesService;
+  private final ConfigurationEntriesCache configurationEntriesCache;
+  private final InventoryCache inventoryCache;
+  private final InventoryService inventoryService;
   private final PieceStorageService pieceStorageService;
 
-  public InventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
-                          PieceStorageService pieceStorageService) {
+  public InventoryManager(RestClient restClient, ConfigurationEntriesCache configurationEntriesCache,
+      PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService) {
     this.restClient = restClient;
-    this.configurationEntriesService = configurationEntriesService;
+    this.configurationEntriesCache = configurationEntriesCache;
+    this.inventoryCache = inventoryCache;
+    this.inventoryService = inventoryService;
     this.pieceStorageService = pieceStorageService;
   }
 
@@ -376,10 +380,6 @@ public class InventoryManager {
         }
         return Future.succeededFuture();
       });
-  }
-
-  public String buildLookupEndpoint(String type, Object... params) {
-    return String.format(INVENTORY_LOOKUP_ENDPOINTS.get(type), params);
   }
 
   private Future<JsonObject> createHoldingsRecord(String instanceId, String locationId, RequestContext requestContext) {
@@ -739,8 +739,9 @@ public class InventoryManager {
 
   public Future<JsonObject> getEntryId(String entryType, ErrorCodes errorCode, RequestContext requestContext) {
     Promise<JsonObject> promise = Promise.promise();
-
-    getAndCache(entryType, requestContext).onSuccess(promise::complete)
+    getEntryTypeValue(entryType, requestContext)
+      .compose(entryTypeValue -> inventoryCache.getEntryId(entryType, entryTypeValue, requestContext))
+      .onSuccess(promise::complete)
       .onFailure(t -> getEntryTypeValue(entryType, requestContext)
         .onComplete(result -> {
           if (result.succeeded()) {
@@ -966,36 +967,6 @@ public class InventoryManager {
       .map(jsonObject -> jsonObject.getString(HOLDINGS_SOURCES));
   }
 
-  /**
-   * Caches id's in Vert.X Context and returns it by tenantId.entryType.key.
-   *
-   * @param entryType name of object whose id we want to get from cache
-   * @return configuration value by entry type
-   */
-  public Future<JsonObject> getAndCache(String entryType, RequestContext requestContext) {
-      Context ctx = requestContext.getContext();
-      Map<String, String> okapiHeaders = requestContext.getHeaders();
-
-      return getEntryTypeValue(entryType, requestContext)
-        .compose(key -> {
-          String tenantSpecificKey = buildTenantSpecificKey(key, entryType, okapiHeaders);
-          JsonObject response = ctx.get(tenantSpecificKey);
-          if (response == null) {
-            String endpoint = buildLookupEndpoint(entryType, encodeQuery(key));
-            RequestEntry requestEntry = new RequestEntry(endpoint);
-            return restClient.getAsJsonObject(requestEntry, requestContext)
-              .map(entries -> {
-                JsonObject result = new JsonObject();
-                result.put(entryType, getFirstObjectFromResponse(entries, entryType).getString(ID));
-                ctx.put(tenantSpecificKey, result);
-                return result;
-              });
-          } else {
-            return Future.succeededFuture(response);
-          }
-        });
-    }
-
   public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
     if (piece.getItemId() == null || piece.getPoLineId() == null) {
       return Future.succeededFuture();
@@ -1018,7 +989,7 @@ public class InventoryManager {
       .collect(joining(" or "));
 
     // query contains special characters so must be encoded before submitting
-    String endpoint = buildLookupEndpoint(INSTANCES, encodeQuery(query));
+    String endpoint = inventoryService.buildInventoryLookupEndpoint(INSTANCES, encodeQuery(query));
     return restClient.getAsJsonObject(endpoint, false, requestContext);
   }
 
@@ -1128,11 +1099,6 @@ public class InventoryManager {
     }
   }
 
-  private String buildTenantSpecificKey(String key, String entryType, Map<String, String> okapiHeaders) {
-    String tenantId = TenantTool.tenantId(okapiHeaders);
-    return String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, entryType, key);
-  }
-
   /**
    * Loads configuration and gets tenant specific value
    *
@@ -1140,7 +1106,7 @@ public class InventoryManager {
    * @return tenant specific value or system default one
    */
   private Future<String> getEntryTypeValue(String entryType, RequestContext requestContext) {
-    return configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .map(configs -> {
         switch (entryType) {
           case INSTANCE_STATUSES:
@@ -1301,10 +1267,5 @@ public class InventoryManager {
       .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
     Optional.ofNullable(piece.getDiscoverySuppress())
       .ifPresentOrElse(discSup -> item.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> item.remove(ITEM_DISCOVERY_SUPPRESS));
-  }
-
-  private void releaseLock(Lock lock, String lockName) {
-    logger.debug("Released lock {}", lockName);
-    lock.release();
   }
 }

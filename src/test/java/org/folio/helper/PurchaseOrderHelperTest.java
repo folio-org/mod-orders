@@ -41,6 +41,7 @@ import org.folio.service.PrefixService;
 import org.folio.service.ProtectionService;
 import org.folio.service.SuffixService;
 import org.folio.service.TagService;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -98,9 +99,6 @@ public class PurchaseOrderHelperTest {
 
   private  Map<String, String> okapiHeadersMock;
   private Context ctxMock;
-  private RequestContext requestContext;
-
-  private WebClient httpClient;
   private static boolean runningOnOwn;
 
   @BeforeAll
@@ -131,8 +129,7 @@ public class PurchaseOrderHelperTest {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
-    httpClient = WebClientFactory.getWebClient(Vertx.vertx());
-    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+
   }
 
   @AfterEach
@@ -176,6 +173,10 @@ public class PurchaseOrderHelperTest {
     @Bean
     public ConfigurationEntriesService configurationEntriesService() {
       return mock(ConfigurationEntriesService.class);
+    }
+    @Bean
+    public ConfigurationEntriesCache configurationEntriesCache() {
+      return mock(ConfigurationEntriesCache.class);
     }
 
     @Bean
@@ -315,14 +316,14 @@ public class PurchaseOrderHelperTest {
               AcquisitionsUnitsService acquisitionsUnitsService, PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
               UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
               PurchaseOrderStorageService purchaseOrderStorageService,
-              ConfigurationEntriesService configurationEntriesService, PoNumberHelper poNumberHelper,
+              ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
               OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
               CompositePoLineValidationService compositePoLineValidationService,
               ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService, RestClient restClient) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
         purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
-        unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesService,
+        unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
         poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager, organizationService, restClient);
     }
   }

@@ -29,7 +29,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.ValidateFundDistributionsRequest;
 import org.folio.rest.jaxrs.resource.OrdersOrderLines;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
 import org.folio.spring.SpringContextUtil;
@@ -47,7 +47,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   @Autowired
   private PurchaseOrderLineHelper helper;
   @Autowired
-  private ConfigurationEntriesService configurationEntriesService;
+  private ConfigurationEntriesCache configurationEntriesCache;
   @Autowired
   private CompositePoLineValidationService compositePoLineValidationService;
   @Autowired
@@ -71,7 +71,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   public void postOrdersOrderLines(String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
-    configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> helper.createPoLine(poLine, tenantConfig, requestContext))
       .onSuccess(pol -> {
         String okapiUrl = okapiHeaders.get(OKAPI_URL);
@@ -123,7 +123,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
     if (!lineId.equals(poLine.getId())) {
       errors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
     }
-    configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> helper.setTenantDefaultCreateInventoryValues(poLine, tenantConfig))
       .compose(v -> compositePoLineValidationService.validatePoLine(poLine, requestContext))
       .onSuccess(errors::addAll)

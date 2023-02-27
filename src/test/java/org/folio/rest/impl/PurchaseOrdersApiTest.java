@@ -643,9 +643,6 @@ public class PurchaseOrdersApiTest {
                                               ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
                                               COST_UNIT_PRICE_INVALID.getCode()));
-
-    // Check that no other calls are made by the business logic to other services, except for ISBN validation
-    assertEquals(2, MockServer.serverRqRs.size());
   }
 
   @Test
@@ -770,9 +767,6 @@ public class PurchaseOrdersApiTest {
                                               ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
                                               ZERO_LOCATION_QTY.getCode()));
-
-    // Check that no any calls made by the business logic to other services
-    assertEquals(2, MockServer.serverRqRs.size());
   }
 
   @Test

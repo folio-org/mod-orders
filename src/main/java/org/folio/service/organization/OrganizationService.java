@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -31,10 +32,18 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.UserService;
+import org.springframework.stereotype.Component;
+
+import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 
+@Component
 public class OrganizationService {
   private static final Logger log = LogManager.getLogger(OrganizationService.class);
   private final RestClient restClient;
@@ -42,10 +51,16 @@ public class OrganizationService {
   private static final String ORGANIZATIONS_STORAGE_VENDORS = "/organizations-storage/organizations/";
   private static final String ORGANIZATIONS_WITH_QUERY_ENDPOINT = "/organizations-storage/organizations?limit=%d&&query=%s";
   private static final String PO_LINE_NUMBER = "poLineNumber";
+  private final AsyncCache<String, Organization> asyncCache;
+  private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
 
   private final Errors processingErrors = new Errors();
-
   public OrganizationService(RestClient restClient) {
+    asyncCache = Caffeine.newBuilder()
+      .expireAfterWrite(30, TimeUnit.SECONDS)
+      .executor(task -> Vertx.currentContext()
+        .runOnContext(v -> task.run()))
+      .buildAsync();
     this.restClient = restClient;
   }
 
@@ -55,41 +70,36 @@ public class OrganizationService {
    * and has status "Active" with isVendor flag enabled. If not, adds
    * corresponding error to {@link Errors} object.
    *
-   * @param compPO
-   *          composite purchase order
+   * @param vendorId organization id
+   *
    * @return CompletableFuture with {@link Errors} object
    */
-  public Future<Errors> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
+  public Future<Errors> validateVendor(String vendorId, RequestContext requestContext) {
     Promise<Errors> promise = Promise.promise();
-    String id = compPO.getVendor();
 
-    log.debug("Validating vendor with id={}", id);
+    log.debug("Validating vendor with id={}", vendorId);
 
     List<Error> errors = new ArrayList<>();
-    if (id != null) {
-      getVendorById(id, requestContext)
-        .map(organization -> {
-          if(!organization.getStatus().equals(Organization.Status.ACTIVE)) {
-            errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, id));
-          }
-          if (null == organization.getIsVendor() || !organization.getIsVendor()) {
-            errors.add(createErrorWithId(ORGANIZATION_NOT_A_VENDOR, id));
-          }
-          return handleAndReturnErrors(errors);
-        })
-        .onSuccess(promise::complete)
-        .onFailure(cause -> {
-          if (cause instanceof HttpException && HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) cause).getCode())) {
-            errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, id));
-          } else {
-            log.error("Failed to validate vendor's status", cause);
-            errors.add(createErrorWithId(VENDOR_ISSUE, id).withAdditionalProperty(ERROR_CAUSE, cause.getMessage()));
-          }
-          promise.complete(handleAndReturnErrors(errors));
-        });
-    } else {
-      promise.complete(handleAndReturnErrors(errors));
-    }
+    getAndCacheVendorById(vendorId, requestContext)
+      .map(organization -> {
+        if(!organization.getStatus().equals(Organization.Status.ACTIVE)) {
+          errors.add(createErrorWithId(ORDER_VENDOR_IS_INACTIVE, organization.getId()));
+        }
+        if (null == organization.getIsVendor() || !organization.getIsVendor()) {
+          errors.add(createErrorWithId(ORGANIZATION_NOT_A_VENDOR, organization.getId()));
+        }
+        return handleAndReturnErrors(errors);
+      })
+      .onSuccess(promise::complete)
+      .onFailure(cause -> {
+        if (cause instanceof HttpException && HttpStatus.HTTP_NOT_FOUND.toInt() == (((HttpException) cause).getCode())) {
+          errors.add(createErrorWithId(ORDER_VENDOR_NOT_FOUND, vendorId));
+        } else {
+          log.error("Failed to validate vendor's status", cause);
+          errors.add(createErrorWithId(VENDOR_ISSUE, vendorId).withAdditionalProperty(ERROR_CAUSE, cause.getMessage()));
+        }
+        promise.complete(handleAndReturnErrors(errors));
+      });
     return promise.future();
   }
 
@@ -141,6 +151,25 @@ public class OrganizationService {
     return promise.future();
   }
 
+  public Future<Organization> getAndCacheVendorById(String vendorId, RequestContext requestContext) {
+    try {
+      if (vendorId == null) {
+        return Future.succeededFuture(null);
+      }
+      var tenantId = TenantTool.tenantId(requestContext.getHeaders());
+      var userId = UserService.getCurrentUserId(requestContext.getHeaders());
+      var cacheKey = String.format(UNIQUE_CACHE_KEY_PATTERN, tenantId, userId, vendorId);
+
+      return Future
+        .fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> getVendorById(vendorId, requestContext)
+          .toCompletionStage()
+          .toCompletableFuture()));
+    } catch (Exception e) {
+      log.error("getAndCacheVendorById:: Error loading organization from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
+      return Future.failedFuture(e);
+    }
+  }
+
   /**
    * Builds {@link Errors} object based on list of {@link Error}
    *
@@ -190,7 +219,7 @@ public class OrganizationService {
    * @param vendorId vendor's id
    * @return CompletableFuture with {@link Organization} object
    */
-  private Future<Organization> getVendorById(String vendorId, RequestContext requestContext) {
+  public Future<Organization> getVendorById(String vendorId, RequestContext requestContext) {
     return restClient.get(ORGANIZATIONS_STORAGE_VENDORS + vendorId, Organization.class, requestContext);
   }
 

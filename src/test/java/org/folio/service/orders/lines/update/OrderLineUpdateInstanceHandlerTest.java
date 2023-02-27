@@ -13,6 +13,7 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.RestClientTest.X_OKAPI_TENANT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,6 +33,8 @@ import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
+import org.folio.service.caches.ConfigurationEntriesCache;
+import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.inventory.InventoryService;
@@ -216,13 +219,23 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
 
     @Bean
-    InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesService configurationEntriesService,
-        PieceStorageService pieceStorageService) {
-      return new InventoryManager(restClient, configurationEntriesService, pieceStorageService);
+    public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesCache configurationEntriesCache,
+      PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService) {
+      return new InventoryManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, inventoryService);
     }
 
-    @Bean PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryService inventoryService) {
-      return new PurchaseOrderLineService(inventoryService, restClient);
+    @Bean
+    PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache) {
+      return new PurchaseOrderLineService(restClient, inventoryCache);
+    }
+
+    @Bean
+    InventoryCache inventoryCache(InventoryService inventoryService) {
+      return new InventoryCache(inventoryService);
+    }
+    @Bean
+    ConfigurationEntriesCache configurationEntriesCache(ConfigurationEntriesService configurationEntriesService) {
+      return new ConfigurationEntriesCache(configurationEntriesService);
     }
 
     @Bean OrderLinePatchOperationService orderLinePatchOperationService(
