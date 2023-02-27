@@ -225,8 +225,8 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
 
     @Bean
-    PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryService inventoryService, InventoryCache inventoryCache) {
-      return new PurchaseOrderLineService(inventoryService, restClient, inventoryCache);
+    PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache) {
+      return new PurchaseOrderLineService(restClient, inventoryCache);
     }
 
     @Bean
