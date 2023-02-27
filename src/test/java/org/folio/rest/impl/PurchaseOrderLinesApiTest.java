@@ -149,11 +149,9 @@ import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.rest.jaxrs.model.Tags;
 import org.folio.rest.jaxrs.model.ValidateFundDistributionsRequest;
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -416,7 +414,7 @@ public class PurchaseOrderLinesApiTest {
 
     Errors errors = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors, 4);
+    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors, 2);
   }
 
   @Test
@@ -524,7 +522,7 @@ public class PurchaseOrderLinesApiTest {
 
     //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(4, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
 
@@ -679,11 +677,10 @@ public class PurchaseOrderLinesApiTest {
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
     // 2 calls each to fetch Order Line and Purchase Order
-    // + 2 calls for ISBN validation
+    // + 1 calls for ISBN validation. The next call can retrieve data from cache
     // + 1 call to get the line encumbrances
     // + 1 call to check invoice relationships
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(8, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
@@ -741,7 +738,6 @@ public class PurchaseOrderLinesApiTest {
 
     // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
@@ -1705,7 +1701,7 @@ public class PurchaseOrderLinesApiTest {
 
     // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
@@ -1738,7 +1734,7 @@ public class PurchaseOrderLinesApiTest {
 
     // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
@@ -1770,7 +1766,7 @@ public class PurchaseOrderLinesApiTest {
 
     // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus

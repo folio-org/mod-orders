@@ -24,7 +24,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.resource.OrdersCompositeOrders;
 import org.folio.rest.jaxrs.resource.OrdersRollover;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
 import org.folio.spring.SpringContextUtil;
@@ -45,7 +45,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   @Autowired
   private OrderReEncumberService orderReEncumberService;
   @Autowired
-  private ConfigurationEntriesService configurationEntriesService;
+  private ConfigurationEntriesCache configurationEntriesCache;
   @Autowired
   private PurchaseOrderHelper purchaseOrderHelper;
 
@@ -79,7 +79,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     // First validate content of the PO and proceed only if all is okay
-    configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+    configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> purchaseOrderHelper.validateOrder(compPO, tenantConfig, requestContext)
         .compose(errors -> {
           if (CollectionUtils.isEmpty(errors)) {

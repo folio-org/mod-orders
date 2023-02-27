@@ -1,13 +1,43 @@
 package org.folio.service.dataimport.handlers;
 
-import io.vertx.circuitbreaker.CircuitBreaker;
-import io.vertx.circuitbreaker.CircuitBreakerOptions;
-import io.vertx.circuitbreaker.RetryPolicy;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import static java.lang.Boolean.FALSE;
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.folio.ActionProfile.Action.CREATE;
+import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.ITEM;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.ActionProfile.FolioRecord.ORDER;
+import static org.folio.DataImportEventTypes.DI_COMPLETED;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -33,54 +63,25 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.JobExecutionTotalRecordsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.caches.MappingParametersCache;
-import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.IdStorageService;
 import org.folio.service.dataimport.PoLineImportProgressService;
+import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.utils.DataImportUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
-import java.time.Period;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static java.lang.Boolean.FALSE;
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.ActionProfile.Action.CREATE;
-import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.ActionProfile.FolioRecord.ITEM;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.ActionProfile.FolioRecord.ORDER;
-import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
-import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
-import static org.folio.DataImportEventTypes.DI_COMPLETED;
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
-import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
-import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import io.vertx.circuitbreaker.CircuitBreaker;
+import io.vertx.circuitbreaker.CircuitBreakerOptions;
+import io.vertx.circuitbreaker.RetryPolicy;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 
 @Component
 public class CreateOrderEventHandler implements EventHandler {
@@ -113,7 +114,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
-  private final ConfigurationEntriesService configurationEntriesService;
+  private final ConfigurationEntriesCache configurationEntriesCache;
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
   private final SequentialOrderIdService sequentialOrderIdService;
@@ -126,7 +127,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
-                                 ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService,
+                                 ConfigurationEntriesCache configurationEntriesCache, IdStorageService idStorageService,
                                  JobProfileSnapshotCache jobProfileSnapshotCache,
                                  SequentialOrderIdService sequentialOrderIdService,
                                  PoLineImportProgressService poLineImportProgressService,
@@ -135,7 +136,7 @@ public class CreateOrderEventHandler implements EventHandler {
                                  MappingParametersCache mappingParametersCache) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
-    this.configurationEntriesService = configurationEntriesService;
+    this.configurationEntriesCache = configurationEntriesCache;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
     this.sequentialOrderIdService = sequentialOrderIdService;
@@ -175,7 +176,7 @@ public class CreateOrderEventHandler implements EventHandler {
           MappingManager.map(dataImportEventPayload, new MappingContext());
 
           RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
-          Future<JsonObject> tenantConfigFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+          Future<JsonObject> tenantConfigFuture = configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
           String temporaryOrderIdForANewOrder = UUID.randomUUID().toString();
 
           tenantConfigFuture

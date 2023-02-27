@@ -125,6 +125,7 @@ public class EncumbranceService {
 
 
   public Future<Void> updateEncumbrancesOrderStatus(CompositePurchaseOrder compPo, RequestContext requestContext) {
+    logger.info("updateEncumbrancesOrderStatus:: orderId {}  ", compPo.getId());
     return getOrderUnreleasedEncumbrances(compPo.getId(), requestContext).compose(encumbrs -> {
       if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
         return orderTransactionSummariesService.updateTransactionSummary(compPo.getId(), encumbrs.size(), requestContext)

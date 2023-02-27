@@ -15,7 +15,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
 
@@ -25,12 +25,12 @@ import io.vertx.core.Future;
 public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDataPopulateService {
   protected final Logger logger = LogManager.getLogger(OrderLinesSummaryPopulateService.class);
 
-  private final ConfigurationEntriesService configurationEntriesService;
+  private final ConfigurationEntriesCache configurationEntriesCache;
   private final ExchangeRateProviderResolver exchangeRateProviderResolver;
 
-  public OrderLinesSummaryPopulateService(ConfigurationEntriesService configurationEntriesService,
+  public OrderLinesSummaryPopulateService(ConfigurationEntriesCache configurationEntriesCache,
       ExchangeRateProviderResolver exchangeRateProviderResolver) {
-    this.configurationEntriesService = configurationEntriesService;
+    this.configurationEntriesCache = configurationEntriesCache;
     this.exchangeRateProviderResolver = exchangeRateProviderResolver;
   }
 
@@ -55,7 +55,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
    */
   public Future<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines,
       RequestContext requestContext) {
-    return configurationEntriesService.getSystemCurrency(requestContext)
+    return configurationEntriesCache.getSystemCurrency(requestContext)
       .compose(toCurrency -> getCollect(compositePoLines, requestContext, toCurrency)
         .map(amounts -> amounts.stream()
         .reduce(Money.of(0, toCurrency), Money::add)
