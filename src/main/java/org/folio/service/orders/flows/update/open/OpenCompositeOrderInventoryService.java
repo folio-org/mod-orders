@@ -46,12 +46,15 @@ public class OpenCompositeOrderInventoryService {
       .<List<Future<Void>>>executeBlocking(event -> {
         List<Future<Void>> futures = new ArrayList<>();
         for (CompositePoLine poLine : compPO.getCompositePoLines()) {
-          Future<Void> future = processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext);
-          futures.add(future);
-          semaphore.acquire(() -> future
-            .onComplete(asyncResult -> semaphore.release()));
+          semaphore.acquire(() -> {
+            Future<Void> future = processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext);
+            futures.add(future);
+            future.onComplete(asyncResult -> semaphore.release());
+            if (futures.size() == compPO.getCompositePoLines().size()) {
+              event.complete(futures);
+            }
+          });
         }
-        event.complete(futures);
       })
       .compose(futures -> GenericCompositeFuture.all(new ArrayList<>(futures))
         .mapEmpty());

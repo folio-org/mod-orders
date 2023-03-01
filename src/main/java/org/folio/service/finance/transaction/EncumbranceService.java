@@ -4,7 +4,6 @@ import static java.util.Objects.requireNonNullElse;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.rest.core.exceptions.ErrorCodes.ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES;
@@ -92,32 +91,34 @@ public class EncumbranceService {
   }
 
   public Future<Void> createEncumbrances(List<EncumbranceRelationsHolder> relationsHolders, RequestContext requestContext) {
-    if (relationsHolders.isEmpty())
+    if (CollectionUtils.isEmpty(relationsHolders))
       return Future.succeededFuture();
 
-    Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
+    Semaphore semaphore = new Semaphore(1, requestContext.getContext().owner());
 
     return requestContext.getContext().owner()
-      .<List<Future<Transaction>>>executeBlocking(event -> {
-
+      .<List<Future<Transaction>>>executeBlocking(promise -> {
         List<Future<Transaction>> futures = new ArrayList<>();
-
         for (EncumbranceRelationsHolder holder : relationsHolders) {
-          Future<Transaction> createTransactionFuture = transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
-            .map(transaction -> {
-              holder.getFundDistribution().setEncumbrance(transaction.getId());
+          semaphore.acquire(() -> {
+            Future<Transaction> createTransactionFuture = transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
+              .map(transaction -> {
+                holder.getFundDistribution().setEncumbrance(transaction.getId());
+                return null;
+              });
+            var future = createTransactionFuture.otherwise(fail -> {
+              checkCustomTransactionError(fail);
               return null;
-            });
-          var future = createTransactionFuture.otherwise(fail -> {
-            checkCustomTransactionError(fail);
-            return null;
+            })
+            .onComplete(asyncResult -> semaphore.release());
+
+            futures.add(future);
+            if (futures.size() == relationsHolders.size()) {
+              promise.complete(futures);
+            }
           });
 
-          futures.add(future);
-          semaphore.acquire(() -> future
-            .onComplete(asyncResult -> semaphore.release()));
         }
-        event.complete(futures);
       })
       .compose(futures -> GenericCompositeFuture.all(new ArrayList<>(futures))
         .mapEmpty());
