@@ -139,7 +139,7 @@ public class OrderRolloverService {
         for (AtomicInteger chunkNumber = new AtomicInteger(); chunkNumber.get() < numberOfChunks; chunkNumber.getAndIncrement()) {
           // can produce "thread blocked" warnings because of large number of data
           semaphore.acquire(() -> {
-            Future<Void> future = purchaseOrderLineService.getOrderLines(query, chunkNumber.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
+            Future<Void> future = purchaseOrderLineService.getOrderLines(query, chunkNumber.get() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
               .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, workflowStatus, requestContext))
               .compose(modifiedPoLines -> purchaseOrderLineService.saveOrderLines(modifiedPoLines, requestContext))
               .onComplete(asyncResult -> semaphore.release());
