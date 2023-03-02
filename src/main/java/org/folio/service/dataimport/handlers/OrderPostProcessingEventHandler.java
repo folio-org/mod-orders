@@ -107,16 +107,20 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
   private Future<Void> ensurePoLineWithInstanceId(CompositePoLine poLine, DataImportEventPayload dataImportEventPayload,
                                                   RequestContext requestContext) {
+    LOGGER.info("ensurePoLineWithInstanceId :: orderFormat: {}, jobExecutionId: {}",
+      poLine.getOrderFormat().value(), dataImportEventPayload.getJobExecutionId());
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
-      LOGGER.debug("ensurePoLineWithInstanceId:: Skipping instanceId filling because poLine does not require inventory entities creation,  jobExecutionId: {}, poLineNumber: {}",
+      LOGGER.info("ensurePoLineWithInstanceId:: Skipping instanceId filling because poLine does not require inventory entities creation,  jobExecutionId: {}, poLineNumber: {}",
         dataImportEventPayload.getJobExecutionId(), poLine.getPoLineNumber());
       return Future.succeededFuture();
     }
 
     String instanceAsString = dataImportEventPayload.getContext().get(INSTANCE.value());
     if (StringUtils.isNotEmpty(instanceAsString)) {
+      LOGGER.info("ensurePoLineWithInstanceId :: instanceAsString isNotEmpty");
       JsonObject instanceJson = new JsonObject(instanceAsString);
       poLine.setInstanceId(instanceJson.getString(ID_FIELD));
+      LOGGER.info("ensurePoLineWithInstanceId :: poLine set instanceId = {}", instanceJson.getString(ID_FIELD));
       return purchaseOrderLineService.saveOrderLine(poLine, requestContext).mapEmpty();
     }
     return Future.failedFuture("Failed to handle event payload, cause event payload context does not contain INSTANCE data");

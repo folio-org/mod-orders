@@ -19,6 +19,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -32,6 +34,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public final class PoLineCommonUtil {
+
+  private static final Logger LOGGER = LogManager.getLogger();
   public static final String DASH_SEPARATOR = "-";
   private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
 
@@ -49,6 +53,7 @@ public final class PoLineCommonUtil {
 
   public static boolean isInventoryUpdateNotRequired(CompositePoLine compPOL) {
     // in case of "Other" order format check Physical createInventory value only
+    LOGGER.info("isInventoryUpdateNotRequired :: orderFormat: {}", compPOL.getOrderFormat().value());
     if (compPOL.getOrderFormat() == OTHER || compPOL.getOrderFormat() == PHYSICAL_RESOURCE) {
       return isUpdateNotRequiredForPhysical(compPOL);
     } else if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
