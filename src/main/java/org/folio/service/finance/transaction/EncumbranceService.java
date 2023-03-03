@@ -125,13 +125,13 @@ public class EncumbranceService {
   }
 
 
-  public Future<Void> updateEncumbrancesOrderStatus(CompositePurchaseOrder compPo, RequestContext requestContext) {
-    logger.info("updateEncumbrancesOrderStatus:: orderId {}  ", compPo.getId());
+  public Future<Void> updateEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder compPo, RequestContext requestContext) {
+    logger.info("updateEncumbrancesOrderStatusAndReleaseIfClosed:: orderId {}  ", compPo.getId());
     return getOrderUnreleasedEncumbrances(compPo.getId(), requestContext).compose(encumbrs -> {
       if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
         return orderTransactionSummariesService.updateTransactionSummary(compPo.getId(), encumbrs.size(), requestContext)
           .map(v -> {
-            syncEncumbrancesOrderStatus(compPo.getWorkflowStatus(), encumbrs);
+            syncEncumbrancesOrderStatusAndReleaseIfClosed(compPo.getWorkflowStatus(), encumbrs);
             return encumbrs;
           })
           .compose(transactions -> transactionService.updateTransactions(transactions, requestContext));
@@ -144,10 +144,14 @@ public class EncumbranceService {
     return orderTransactionSummariesService.updateTransactionSummary(compOrderLine.getPurchaseOrderId(), encumbrs.size(), requestContext);
   }
 
-  private void syncEncumbrancesOrderStatus(CompositePurchaseOrder.WorkflowStatus workflowStatus,
-                                           List<Transaction> encumbrances) {
+  private void syncEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder.WorkflowStatus workflowStatus,
+      List<Transaction> encumbrances) {
     Encumbrance.OrderStatus orderStatus = Encumbrance.OrderStatus.fromValue(workflowStatus.value());
-    encumbrances.forEach(encumbrance -> encumbrance.getEncumbrance().setOrderStatus(orderStatus));
+    encumbrances.forEach(encumbrance -> {
+      encumbrance.getEncumbrance().setOrderStatus(orderStatus);
+      if (orderStatus == Encumbrance.OrderStatus.CLOSED)
+        encumbrance.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
+    });
   }
 
 
