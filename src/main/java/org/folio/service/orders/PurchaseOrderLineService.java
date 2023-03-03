@@ -131,20 +131,28 @@ public class PurchaseOrderLineService {
 
   public Future<List<CompositePoLine>> getCompositePoLinesByOrderId(String orderId, RequestContext requestContext) {
     return getOrderLines("purchaseOrderId==" + orderId, 0, Integer.MAX_VALUE, requestContext)
-      .compose(poLines -> {
-        Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
-        return requestContext.getContext().owner()
-          .<List<Future<CompositePoLine>>>executeBlocking(event -> {
-            List<Future<CompositePoLine>> futures = new ArrayList<>();
-            for (PoLine line : poLines) {
-              var future = operateOnPoLine(HttpMethod.GET, line, requestContext);
+      .compose(poLines -> requestContext.getContext().owner()
+        .<List<Future<CompositePoLine>>>executeBlocking(event -> {
+          if (CollectionUtils.isEmpty(poLines)) {
+            event.complete(new ArrayList<>());
+            return;
+          }
+
+          Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
+          List<Future<CompositePoLine>> futures = new ArrayList<>();
+          for (PoLine line : poLines) {
+            semaphore.acquire(() -> {
+              var future = operateOnPoLine(HttpMethod.GET, line, requestContext)
+                .onComplete(asyncResult -> semaphore.release());
+
               futures.add(future);
-              semaphore.acquire(() -> future
-                .onComplete(asyncResult -> semaphore.release()));
-            }
-            event.complete(futures);
-          });
-       })
+              if (futures.size() == poLines.size()) {
+                event.complete(futures);
+              }
+            });
+
+          }
+        }))
       .compose(HelperUtils::collectResultsOnSuccess);
   }
 
@@ -428,19 +436,27 @@ public class PurchaseOrderLineService {
     return inventoryCache.getProductTypeUuid(requestContext)
       .compose(isbnTypeId -> {
         Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
-
         return requestContext.getContext().owner()
           .<List<Future<Map.Entry<String, String>>>>executeBlocking(event -> {
                 List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
                 var setOfProductIds = buildSetOfProductIds(filteredCompLines, isbnTypeId);
-                for (String productID : setOfProductIds) {
-                  var future = inventoryCache.convertToISBN13(productID, requestContext)
-                    .map(normilizedId -> Map.entry(productID, normilizedId));
-                  futures.add(future);
-                  semaphore.acquire(() -> future
-                    .onComplete(asyncResult -> semaphore.release()));
+                if (CollectionUtils.isEmpty(setOfProductIds)) {
+                  event.complete(futures);
+                  return;
                 }
-                event.complete(futures);
+
+                for (String productID : setOfProductIds) {
+                  semaphore.acquire(() -> {
+                    var future = inventoryCache.convertToISBN13(productID, requestContext)
+                      .map(normalizedId -> Map.entry(productID, normalizedId))
+                      .onComplete(asyncResult -> semaphore.release());
+                    futures.add(future);
+                    if (futures.size() == setOfProductIds.size()) {
+                      event.complete(futures);
+                    }
+                  });
+
+                }
               })
           .compose(GenericCompositeFuture::join)
           .map(result -> result.result()
