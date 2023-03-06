@@ -18,6 +18,10 @@ import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -493,8 +497,7 @@ public class CreateOrderEventHandler implements EventHandler {
     calculateActivationDue(poLineJson);
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
 
-    if (WorkflowStatus.OPEN.value().equals(orderJson.getString(ORDER_STATUS_FIELD))
-      && (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null || poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null)) {
+    if (WorkflowStatus.OPEN.value().equals(orderJson.getString(ORDER_STATUS_FIELD))) {
       return overrideCreateInventoryField(poLineJson, dataImportEventPayload)
         .onComplete(v -> dataImportEventPayload.getContext().put(PO_LINE_KEY, poLineJson.encode()));
     }
@@ -550,16 +553,25 @@ public class CreateOrderEventHandler implements EventHandler {
       createInventoryFieldValue = NONE;
     }
 
-    if (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null
-      && !NONE.toString().equals(poLineJson.getJsonObject(POL_ERESOURCE_FIELD).getString(POL_CREATE_INVENTORY_FIELD))) {
-      poLineJson.getJsonObject(POL_ERESOURCE_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
-    }
-    if (poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null
-      && !NONE.toString().equals(poLineJson.getJsonObject(POL_PHYSICAL_FIELD).getString(POL_CREATE_INVENTORY_FIELD))) {
-      poLineJson.getJsonObject(POL_PHYSICAL_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
+    if (PHYSICAL_RESOURCE.value().equals(poLineJson.getString("orderFormat"))
+      || OTHER.value().equals(poLineJson.getString("orderFormat"))) {
+      setCreateInventoryValue(poLineJson, POL_PHYSICAL_FIELD, createInventoryFieldValue.value());
+    } else if (ELECTRONIC_RESOURCE.value().equals(poLineJson.getString("orderFormat"))) {
+      setCreateInventoryValue(poLineJson, POL_ERESOURCE_FIELD, createInventoryFieldValue.value());
+    } else if (P_E_MIX.value().equals(poLineJson.getString("orderFormat"))) {
+      setCreateInventoryValue(poLineJson, POL_PHYSICAL_FIELD, createInventoryFieldValue.value());
+      setCreateInventoryValue(poLineJson, POL_ERESOURCE_FIELD, createInventoryFieldValue.value());
     }
     return null;
   }
+
+  private void setCreateInventoryValue(JsonObject poLineJson, String resourceDetailsFieldName, String createInventoryFieldValue) {
+    if (poLineJson.getJsonObject(resourceDetailsFieldName) == null) {
+      poLineJson.put(resourceDetailsFieldName, new JsonObject());
+    }
+    poLineJson.getJsonObject(resourceDetailsFieldName).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue);
+  }
+
 
   private void overridePoLinesLimit(JsonObject tenantConfig, Optional<Integer> poLinesLimitOptional) {
     poLinesLimitOptional.ifPresent(poLinesLimit -> tenantConfig.put(PO_LINES_LIMIT_PROPERTY, poLinesLimit));
