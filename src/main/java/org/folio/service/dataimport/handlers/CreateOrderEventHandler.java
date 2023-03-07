@@ -422,7 +422,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private Future<Void> savePoLinesAmountPerOrder(String orderId, DataImportEventPayload eventPayload, JsonObject tenantConfig) {
     LOGGER.info("savePoLinesAmountPerOrder:: orderId:{}, jobExecutionId:{}", orderId, eventPayload.getJobExecutionId());
     Map<String, String> headers = DataImportUtils.extractOkapiHeaders(eventPayload);
-    OkapiConnectionParams params = new OkapiConnectionParams(headers, Vertx.vertx());
+    OkapiConnectionParams params = new OkapiConnectionParams(headers, vertx);
 
     return jobExecutionTotalRecordsCache.get(eventPayload.getJobExecutionId(), params)
       .map(totalRecords -> determinePoLinesAmountPerOrder(eventPayload, totalRecords, tenantConfig))
@@ -522,7 +522,7 @@ public class CreateOrderEventHandler implements EventHandler {
     LOGGER.info("overrideCreateInventoryField:: jobExecutionId:{}", dataImportEventPayload.getJobExecutionId());
     String profileSnapshotId = dataImportEventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
     Map<String, String> headers = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
-    OkapiConnectionParams okapiParams = new OkapiConnectionParams(headers, Vertx.vertx());
+    OkapiConnectionParams okapiParams = new OkapiConnectionParams(headers, vertx);
 
     return jobProfileSnapshotCache.get(profileSnapshotId, okapiParams)
       .compose(snapshotOptional -> snapshotOptional
