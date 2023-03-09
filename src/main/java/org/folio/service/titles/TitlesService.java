@@ -136,7 +136,7 @@ public class TitlesService {
   }
 
   private Future<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
-    return getTitles(MAX_IDS_FOR_GET_RQ_15, 0, query, requestContext)
+    return getTitles(Integer.MAX_VALUE, 0, query, requestContext)
       .map(TitleCollection::getTitles);
   }
 
