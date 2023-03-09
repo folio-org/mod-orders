@@ -34,7 +34,7 @@ public class AcquisitionsUnitsService {
   private static final String ACTIVE_UNITS_CQL = IS_DELETED_PROP + "==false";
   private static final String ENDPOINT_ACQ_UNITS_MEMBERSHIPS = resourcesPath(ACQUISITIONS_MEMBERSHIPS);
   private static final String ENDPOINT_ACQ_UNITS_MEMBERSHIPS_BY_ID = ENDPOINT_ACQ_UNITS_MEMBERSHIPS + "/{id}";
-  private static final String ENDPOINT_ACQ_UNITS = resourcesPath(ACQUISITIONS_UNITS);
+  public static final String ENDPOINT_ACQ_UNITS = resourcesPath(ACQUISITIONS_UNITS);
   private static final String ENDPOINT_ACQ_UNITS_BY_ID = ENDPOINT_ACQ_UNITS + "/{id}";
 
   private final RestClient restClient;
@@ -58,7 +58,10 @@ public class AcquisitionsUnitsService {
           .withLimit(limit)
           .withOffset(offset);
       })
-      .compose(requestEntry -> restClient.get(requestEntry, AcquisitionsUnitCollection.class, requestContext))
+      .compose(requestEntry -> getAcquisitionsUnits(requestEntry, requestContext));
+  }
+  public Future<AcquisitionsUnitCollection> getAcquisitionsUnits(RequestEntry requestEntry, RequestContext requestContext) {
+    return restClient.get(requestEntry, AcquisitionsUnitCollection.class, requestContext)
       .onFailure(t -> logger.error("Failed to retrieve acq units", t));
   }
 
