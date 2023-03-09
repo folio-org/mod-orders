@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -43,7 +43,7 @@ public class OpenCompositeOrderInventoryService {
   public Future<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
       boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
-    if (MapUtils.isEmpty(lineIdsTitles)) {
+    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return Future.succeededFuture();
     }
     return requestContext.getContext().owner()
