@@ -299,6 +299,7 @@
             "inventory-storage.holdings.item.delete",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
+            "inventory-storage.holdings-sources.collection.get",
             "inventory.items.item.get",
             "inventory.items.item.put",
             "inventory.items.item.delete",
@@ -401,6 +402,7 @@
             "inventory.items.item.put",
             "inventory.items.item.post",
             "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings-sources.collection.get",
             "inventory-storage.holdings.item.post",
             "inventory-storage.holdings.item.get",
             "inventory-storage.items.item.post",
@@ -460,6 +462,7 @@
             "configuration.entries.collection.get",
             "inventory.items.item.put",
             "inventory.items.collection.get",
+            "inventory-storage.holdings-sources.collection.get",
             "inventory.instances.item.post",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
@@ -506,12 +509,13 @@
             "inventory.items.item.delete",
             "inventory.items.collection.get",
             "inventory-storage.holdings.item.get",
+            "inventory-storage.holdings-sources.collection.get",
             "inventory-storage.holdings.item.delete",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
             "inventory-storage.loan-types.collection.get",
+            "inventory-storage.holdings-sources.collection.get",
             "inventory-storage.items.item.post",
-            "inventory-storage.instance-types.collection.get",
             "inventory-storage.instance-statuses.collection.get",
             "finance.order-transaction-summaries.item.get",
             "finance.order-transaction-summaries.item.post",
@@ -1623,6 +1627,7 @@
         "orders.holding-summary.collection.get",
         "orders.acquisition-methods.all",
         "orders.export-history.all"
+
       ]
     },
     {
