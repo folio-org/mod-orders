@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -42,14 +43,17 @@ public class OpenCompositeOrderInventoryService {
   public Future<Void> processInventory(Map<String, List<Title>> lineIdsTitles, CompositePurchaseOrder compPO,
       boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
+    if (MapUtils.isEmpty(lineIdsTitles)) {
+      return Future.succeededFuture();
+    }
     return requestContext.getContext().owner()
       .<List<Future<Void>>>executeBlocking(event -> {
         List<Future<Void>> futures = new ArrayList<>();
         for (CompositePoLine poLine : compPO.getCompositePoLines()) {
           semaphore.acquire(() -> {
-            Future<Void> future = processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext);
+            Future<Void> future = processInventory(poLine, getFirstTitleIdIfExist(lineIdsTitles, poLine), isInstanceMatchingDisabled, requestContext)
+              .onComplete(asyncResult -> semaphore.release());
             futures.add(future);
-            future.onComplete(asyncResult -> semaphore.release());
             if (futures.size() == compPO.getCompositePoLines().size()) {
               event.complete(futures);
             }
