@@ -236,7 +236,7 @@ public class PurchaseOrderHelper {
       .compose(v -> processPoLineTags(compPO, requestContext))
       .compose(v -> createPOandPOLines(compPO, tenantConfiguration, requestContext))
       .compose(aCompPO -> populateOrderSummary(aCompPO, requestContext))
-      .compose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
+      .compose(compOrder -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(compOrder, requestContext)
         .map(v -> compOrder));
   }
 
@@ -327,7 +327,7 @@ public class PurchaseOrderHelper {
             }
           })
           .compose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value(), requestContext))
-          .compose(v -> encumbranceService.updateEncumbrancesOrderStatus(compPO, requestContext));
+          .compose(v -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(compPO, requestContext));
       });
   }
 

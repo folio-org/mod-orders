@@ -93,7 +93,8 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
         if (Boolean.TRUE.equals(isStatusChanged)) {
           return purchaseOrderHelper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value(), requestContext)
             .compose(aVoid -> purchaseOrderStorageService.saveOrder(purchaseOrder, requestContext))
-            .compose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatus(convert(purchaseOrder), requestContext));
+            .compose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(
+              convert(purchaseOrder), requestContext));
         }
         return Future.succeededFuture();
       });
