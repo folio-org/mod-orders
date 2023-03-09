@@ -24,7 +24,7 @@ public interface PoLinesImportProgressDao {
    * @param tenantId - tenant id
    * @return Future of void
    */
-  Future<Void> trackProcessedPoLine(String orderId, String tenantId);
+  Future<Boolean> trackProcessedPoLine(String orderId, String tenantId);
 
   /**
    * Checks whether all po line for particular order with specified {@code orderId} have been processed.

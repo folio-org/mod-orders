@@ -22,8 +22,10 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
   private static final String SAVE_POL_TOTAL_AMOUNT_SQL =
     "INSERT INTO %s (order_id, total_po_lines, processed_po_lines, creation_date) VALUES ($1, $2, 0, $3)";
 
-  private static final String INCREASE_IMPORTED_POL_BY_ORDER_ID_SQL =
-    "UPDATE %s SET processed_po_lines = processed_po_lines + 1 WHERE order_id = $1";
+  private static final String INCREASE_AND_CHECK_IMPORTED_POL_BY_ORDER_ID_SQL =
+    "UPDATE %s SET processed_po_lines = processed_po_lines + 1 " +
+    "WHERE order_id = $1 " +
+    "RETURNING total_po_lines <= processed_po_lines AS po_lines_processed";
 
   private static final String IS_ALL_POL_IMPORTED_BY_ORDER_ID_SQL =
     "SELECT total_po_lines = processed_po_lines AS po_lines_processed " +
@@ -47,12 +49,13 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
   }
 
   @Override
-  public Future<Void> trackProcessedPoLine(String orderId, String tenantId) {
+  public Future<Boolean> trackProcessedPoLine(String orderId, String tenantId) {
     String table = prepareFullTableName(tenantId, TABLE_NAME);
-    String sql = String.format(INCREASE_IMPORTED_POL_BY_ORDER_ID_SQL, table);
+    String sql = String.format(INCREASE_AND_CHECK_IMPORTED_POL_BY_ORDER_ID_SQL, table);
     Tuple params = Tuple.of(UUID.fromString(orderId));
 
-    return pgClientFactory.createInstance(tenantId).execute(sql, params).mapEmpty();
+    return pgClientFactory.createInstance(tenantId).execute(sql, params)
+      .map(rows -> rows.iterator().next().getBoolean(PO_LINES_PROCESSED_FIELD));
   }
 
   @Override
