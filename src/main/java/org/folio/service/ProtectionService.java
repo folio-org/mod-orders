@@ -34,9 +34,6 @@ public class ProtectionService {
   private static final Logger log = LogManager.getLogger(ProtectionService.class);
 
   public static final String ACQUISITIONS_UNIT_ID = "acquisitionsUnitId";
-  private static final String IS_DELETED_PROP = "isDeleted";
-  private static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
-
   private final AcquisitionsUnitsService acquisitionsUnitsService;
 
   public ProtectionService(AcquisitionsUnitsService acquisitionsUnitsService) {
