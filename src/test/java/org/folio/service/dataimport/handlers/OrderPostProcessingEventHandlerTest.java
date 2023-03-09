@@ -1,8 +1,11 @@
 package org.folio.service.dataimport.handlers;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ObserveKeyValues;
@@ -312,6 +315,56 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
 
     verifyEncumbrancesOnPoUpdate(order.withCompositePoLines(List.of(poLine)));
+  }
+
+  @Test
+  public void shouldOpenOrderOnceWhenHandlingMultipleEventsAndAllPoLinesProcessed(TestContext context) {
+    // given
+    Async async = context.async();
+    poLine.setInstanceId(null);
+    poLine.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+    CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
+
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, mockPoLine);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(ORDER.value(), Json.encodePrettily(order));
+        put(PO_LINE_KEY, Json.encodePrettily(poLine));
+      }});
+
+    PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
+    OrderPostProcessingEventHandler orderPostProcessingHandler = getBeanFromSpringContext(vertx, OrderPostProcessingEventHandler.class);
+
+    // when
+    Future<CompositeFuture> future = polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
+      .compose(v -> CompositeFuture.join(
+        Future.fromCompletionStage(orderPostProcessingHandler.handle(dataImportEventPayload)),
+        Future.fromCompletionStage(orderPostProcessingHandler.handle(dataImportEventPayload))
+      ));
+
+    // then
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      List<JsonObject> ordersResp = getPurchaseOrderUpdates();
+
+      // verifies that the order opening process was triggered only one time
+      // by checking that request to update the order with status "Open" was performed once
+      context.assertEquals(1, ordersResp.size());
+      CompositePurchaseOrder openedOrder = ordersResp.get(0).mapTo(CompositePurchaseOrder.class);
+      context.assertEquals(order.getId(), openedOrder.getId());
+      context.assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
+      async.complete();
+    });
   }
 
   @Test
