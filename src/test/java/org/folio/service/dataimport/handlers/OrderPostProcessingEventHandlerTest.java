@@ -180,7 +180,6 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
     polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
       .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
-      .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
     SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
@@ -240,7 +239,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     CompletableFuture<Void> future = new CompletableFuture<>();
     PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
-    polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
+    polProgressService.savePoLinesAmountPerOrder(order.getId(), 3, TENANT_ID)
       .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
