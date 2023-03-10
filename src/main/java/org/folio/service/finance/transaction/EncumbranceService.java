@@ -189,7 +189,9 @@ public class EncumbranceService {
         .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithCompPOLines, requestContext))
         .collect(toList());
     return collectResultsOnSuccess(futures)
-      .map(listOfLists -> listOfLists.stream().flatMap(List::stream).collect(toList()));
+      .map(listOfLists -> listOfLists.stream()
+        .flatMap(List::stream)
+        .collect(toList()));
   }
 
   public Future<List<Transaction>> getPoLineEncumbrances(String poLineId, RequestContext requestContext) {
@@ -244,7 +246,7 @@ public class EncumbranceService {
       return Future.succeededFuture();
 
     encumbrances.forEach(transaction -> transaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
-    return transactionService.updateTransactions(encumbrances,requestContext );
+    return transactionService.updateTransactions(encumbrances, requestContext);
   }
 
   public Future<Void> unreleaseEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
@@ -385,12 +387,12 @@ public class EncumbranceService {
   private Future<Boolean> hasNotInvoiceLineWithReleaseEncumbrance(CompositePoLine poLine, RequestContext requestContext) {
     return invoiceLineService.retrieveInvoiceLines("poLineId == " + poLine.getId() + AND + "releaseEncumbrance == true", requestContext)
       .map(invoiceLines -> !invoiceLines.isEmpty())
-       .otherwise(t -> {
-        Throwable cause = t.getCause();
+      .recover(cause -> {
         // ignore 404 errors as mod-invoice may be unavailable
         if (cause instanceof HttpException && ((HttpException)cause).getCode() == HttpStatus.HTTP_NOT_FOUND.toInt())
-          return false;
-        throw t instanceof CompletionException ? (CompletionException) t : new CompletionException(cause);
+          return Future.succeededFuture(false);
+
+        return Future.failedFuture(cause);
       });
   }
 
