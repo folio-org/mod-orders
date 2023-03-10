@@ -1,5 +1,22 @@
 ## 12.7.0 - Unreleased
 
+## 12.6.1 Orchid R1 2022 - Released
+This release focused on resolving performance and memory issues
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.4.0...v12.5.0)
+
+### Stories
+* [MODORDERS-850](https://issues.folio.org/browse/MODORDERS-850) - Refactor inventoryManager in order to support caching
+* [MODORDERS-750](https://issues.folio.org/browse/MODORDERS-750) - Introduce Caffeine Cache for inventory entry types
+
+### Bug Fixes
+* [MODORDERS-862](https://issues.folio.org/browse/MODORDERS-862) - Issues with receiving Pieces
+* [MODORDERS-859](https://issues.folio.org/browse/MODORDERS-859) - Encumbrances are not always released when an order is closed
+* [MODORDERS-858](https://issues.folio.org/browse/MODORDERS-858) - Module restarts when importing a big file
+* [MODORDERS-855](https://issues.folio.org/browse/MODORDERS-855) - Module freeze when reopening order
+* [FAT-4844](https://issues.folio.org/browse/FAT-4844) - Updated permissions
+
+
 ## 12.6.0 Orchid R1 2023 - Released
 This release focused on replacing FolioVertxCompletableFuture usage refactoring, edit fund distributions with related invoices and orders import features
 
