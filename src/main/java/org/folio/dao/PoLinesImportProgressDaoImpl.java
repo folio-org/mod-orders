@@ -16,6 +16,7 @@ import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 @Repository
 public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
 
+  private static final String PO_LINES_PROGRESS_NOT_FOUND_MSG = "PO lines processing progress does not exist for orderId: %s";
   private static final String TABLE_NAME = "po_lines_processing_progress";
   private static final String PO_LINES_PROCESSED_FIELD = "po_lines_processed";
 
@@ -55,7 +56,9 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
     Tuple params = Tuple.of(UUID.fromString(orderId));
 
     return pgClientFactory.createInstance(tenantId).execute(sql, params)
-      .map(rows -> rows.iterator().next().getBoolean(PO_LINES_PROCESSED_FIELD));
+      .compose(rows -> rows.iterator().hasNext()
+        ? Future.succeededFuture(rows.iterator().next().getBoolean(PO_LINES_PROCESSED_FIELD))
+        : Future.failedFuture(String.format(PO_LINES_PROGRESS_NOT_FOUND_MSG, orderId)));
   }
 
   @Override
@@ -65,7 +68,9 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
     Tuple params = Tuple.of(UUID.fromString(orderId));
 
     return pgClientFactory.createInstance(tenantId).execute(sql, params)
-      .map(rows -> rows.iterator().next().getBoolean(PO_LINES_PROCESSED_FIELD));
+      .compose(rows -> rows.iterator().hasNext()
+        ? Future.succeededFuture(rows.iterator().next().getBoolean(PO_LINES_PROCESSED_FIELD))
+        : Future.failedFuture(String.format(PO_LINES_PROGRESS_NOT_FOUND_MSG, orderId)));
   }
 
   private String prepareFullTableName(String tenantId, String table) {
