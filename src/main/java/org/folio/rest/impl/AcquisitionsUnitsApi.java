@@ -64,7 +64,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     acquisitionsUnitsService.getAcquisitionsUnits(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(units -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new acquisitions units: {}", JsonObject.mapFrom(units).encodePrettily());
+          logger.info("Successfully retrieved acquisitions units: {}", JsonObject.mapFrom(units).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(units)));
       })
@@ -142,7 +142,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(memberships -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new acquisitions units memberships: {}", JsonObject.mapFrom(memberships).encodePrettily());
+          logger.info("Successfully retrieved acquisitions units memberships: {}", JsonObject.mapFrom(memberships).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(memberships)));
       })
