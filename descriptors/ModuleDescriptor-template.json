@@ -406,6 +406,7 @@
             "inventory-storage.holdings.item.post",
             "inventory-storage.holdings.item.get",
             "inventory-storage.items.item.post",
+            "inventory-storage.loan-types.collection.get",
             "finance.encumbrances.item.put",
             "finance.order-transaction-summaries.item.put",
             "finance.transactions.collection.get",
