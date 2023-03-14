@@ -425,7 +425,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<Void> savePoLinesAmountPerOrder(String orderId, DataImportEventPayload eventPayload, JsonObject tenantConfig) {
     Map<String, String> headers = DataImportUtils.extractOkapiHeaders(eventPayload);
-    OkapiConnectionParams params = new OkapiConnectionParams(headers, Vertx.vertx());
+    OkapiConnectionParams params = new OkapiConnectionParams(headers, vertx);
 
     return jobExecutionTotalRecordsCache.get(eventPayload.getJobExecutionId(), params)
       .map(totalRecords -> determinePoLinesAmountPerOrder(eventPayload, totalRecords, tenantConfig))
@@ -457,7 +457,9 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     return poLineHelper.createPoLine(poLine, tenantConfig, requestContext)
-      .eventually(createPoLine -> poLineImportProgressService.trackProcessedPoLine(orderId, dataImportEventPayload.getTenant()))
+      .recover(e -> poLineImportProgressService.trackProcessedPoLine(orderId, dataImportEventPayload.getTenant())
+        .onFailure(trackingError -> LOGGER.warn("saveOrderLines:: Failed to track processed PO line by orderId: {}, jobExecutionId: {}", orderId, dataImportEventPayload.getJobExecutionId(), trackingError))
+        .compose(v -> Future.failedFuture(e)))
       .onComplete(ar -> dataImportEventPayload.getContext().put(PO_LINE_KEY, Json.encode(poLine)));
   }
 
@@ -523,7 +525,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private Future<Void> overrideCreateInventoryField(JsonObject poLineJson, DataImportEventPayload dataImportEventPayload) {
     String profileSnapshotId = dataImportEventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
     Map<String, String> headers = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
-    OkapiConnectionParams okapiParams = new OkapiConnectionParams(headers, Vertx.vertx());
+    OkapiConnectionParams okapiParams = new OkapiConnectionParams(headers, vertx);
 
     return jobProfileSnapshotCache.get(profileSnapshotId, okapiParams)
       .compose(snapshotOptional -> snapshotOptional
