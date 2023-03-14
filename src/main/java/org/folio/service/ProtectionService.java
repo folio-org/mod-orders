@@ -5,6 +5,7 @@ import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.service.AcquisitionsUnitsService.ACQUISITIONS_UNIT_IDS;
+import static org.folio.service.AcquisitionsUnitsService.ENDPOINT_ACQ_UNITS;
 import static org.folio.service.UserService.getCurrentUserId;
 
 import java.util.Collections;
@@ -21,6 +22,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -32,9 +34,6 @@ public class ProtectionService {
   private static final Logger log = LogManager.getLogger(ProtectionService.class);
 
   public static final String ACQUISITIONS_UNIT_ID = "acquisitionsUnitId";
-  private static final String IS_DELETED_PROP = "isDeleted";
-  private static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
-
   private final AcquisitionsUnitsService acquisitionsUnitsService;
 
   public ProtectionService(AcquisitionsUnitsService acquisitionsUnitsService) {
@@ -140,8 +139,15 @@ public class ProtectionService {
    * @return list of {@link AcquisitionsUnit}
    */
   private Future<List<AcquisitionsUnit>> getUnitsByIds(List<String> unitIds, RequestContext requestContext) {
-    String query = combineCqlExpressions("and", ALL_UNITS_CQL, convertIdsToCqlQuery(unitIds));
-    return acquisitionsUnitsService.getAcquisitionsUnits(query, 0, Integer.MAX_VALUE, requestContext)
+    return Future.succeededFuture()
+      .map(v-> {
+        String query = combineCqlExpressions("and", convertIdsToCqlQuery(unitIds));
+        return new RequestEntry(ENDPOINT_ACQ_UNITS)
+          .withQuery(query)
+          .withLimit(Integer.MAX_VALUE)
+          .withOffset(0);
+      })
+      .compose(requestEntry -> acquisitionsUnitsService.getAcquisitionsUnits(requestEntry, requestContext))
       .map(AcquisitionsUnitCollection::getAcquisitionsUnits);
   }
 

@@ -42,9 +42,13 @@ public class ReOpenCompositeOrderManager {
 
   public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                                        RequestContext requestContext) {
-    addPoLinesIfNeeded(compPO, poFromStorage);
-    return processEncumbrances(compPO, poFromStorage, requestContext)
-            .compose(v -> updatePoLineStatuses(compPO, requestContext));
+    return Future.succeededFuture()
+      .map(v -> {
+        addPoLinesIfNeeded(compPO, poFromStorage);
+        return null;
+      })
+      .compose(v -> processEncumbrances(compPO, poFromStorage, requestContext))
+      .compose(v -> updatePoLineStatuses(compPO, requestContext));
   }
 
   private void addPoLinesIfNeeded(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {

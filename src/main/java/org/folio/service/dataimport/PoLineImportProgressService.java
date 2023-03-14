@@ -19,13 +19,14 @@ public interface PoLineImportProgressService {
   Future<Void> savePoLinesAmountPerOrder(String orderId, int totalPoLines, String tenantId);
 
   /**
-   * Increases by one a number of po lines which have been processed/imported by specified {@code orderId}.
+   * Increases by one a number of po lines which have been processed by specified {@code orderId}
+   * and checks whether all po lines have been processed for order with specified orderId.
    *
    * @param orderId  - order id
    * @param tenantId - tenant id
-   * @return Future of void
+   * @return Future with {@code true} if all po lines for have been processed, otherwise Future with {@code false}
    */
-  Future<Void> trackProcessedPoLine(String orderId, String tenantId);
+  Future<Boolean> trackProcessedPoLine(String orderId, String tenantId);
 
   /**
    * Checks whether all po line for particular order with specified {@code orderId} have been processed.

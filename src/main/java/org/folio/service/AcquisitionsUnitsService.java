@@ -22,7 +22,6 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnitMembership;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitMembershipCollection;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import one.util.streamex.StreamEx;
 
 public class AcquisitionsUnitsService {
@@ -35,8 +34,8 @@ public class AcquisitionsUnitsService {
   private static final String ACTIVE_UNITS_CQL = IS_DELETED_PROP + "==false";
   private static final String ENDPOINT_ACQ_UNITS_MEMBERSHIPS = resourcesPath(ACQUISITIONS_MEMBERSHIPS);
   private static final String ENDPOINT_ACQ_UNITS_MEMBERSHIPS_BY_ID = ENDPOINT_ACQ_UNITS_MEMBERSHIPS + "/{id}";
-  private static final String ENDTOPINT_ACQ_UNITS = resourcesPath(ACQUISITIONS_UNITS);
-  private static final String ENDTOPINT_ACQ_UNITS_BY_ID = ENDTOPINT_ACQ_UNITS + "/{id}";
+  public static final String ENDPOINT_ACQ_UNITS = resourcesPath(ACQUISITIONS_UNITS);
+  private static final String ENDPOINT_ACQ_UNITS_BY_ID = ENDPOINT_ACQ_UNITS + "/{id}";
 
   private final RestClient restClient;
 
@@ -45,39 +44,39 @@ public class AcquisitionsUnitsService {
   }
 
   public Future<AcquisitionsUnitCollection> getAcquisitionsUnits(String query, int offset, int limit, RequestContext requestContext) {
-    Promise<AcquisitionsUnitCollection> promise = Promise.promise();
-
-    try {
-      // In case if client did not specify filter by "deleted" units, return only "active" units
-      if (StringUtils.isEmpty(query)) {
-        query = ACTIVE_UNITS_CQL;
-      } else if (!query.contains(IS_DELETED_PROP)) {
-        query = combineCqlExpressions("and", ACTIVE_UNITS_CQL, query);
-      }
-      RequestEntry requestEntry = new RequestEntry(ENDTOPINT_ACQ_UNITS).withQuery(query).withLimit(limit).withOffset(offset);
-      restClient.get(requestEntry, AcquisitionsUnitCollection.class, requestContext)
-                .onSuccess(promise::complete)
-                .onFailure(promise::fail);
-    } catch (Exception e) {
-      logger.error(e);
-      promise.fail(e);
-    }
-
-    return promise.future();
+    return Future.succeededFuture()
+      .map(v -> {
+        String combinedQuery = query;
+        // In case if client did not specify filter by "deleted" units, return only "active" units
+        if (StringUtils.isEmpty(query)) {
+          combinedQuery = ACTIVE_UNITS_CQL;
+        } else if (!query.contains(IS_DELETED_PROP)) {
+          combinedQuery = combineCqlExpressions("and", ACTIVE_UNITS_CQL, query);
+        }
+        return new RequestEntry(ENDPOINT_ACQ_UNITS)
+          .withQuery(combinedQuery)
+          .withLimit(limit)
+          .withOffset(offset);
+      })
+      .compose(requestEntry -> getAcquisitionsUnits(requestEntry, requestContext));
+  }
+  public Future<AcquisitionsUnitCollection> getAcquisitionsUnits(RequestEntry requestEntry, RequestContext requestContext) {
+    return restClient.get(requestEntry, AcquisitionsUnitCollection.class, requestContext)
+      .onFailure(t -> logger.error("Failed to retrieve acq units", t));
   }
 
   public Future<AcquisitionsUnit> createAcquisitionsUnit(AcquisitionsUnit unit, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENDTOPINT_ACQ_UNITS);
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS);
     return restClient.post(requestEntry, unit, AcquisitionsUnit.class, requestContext);
   }
 
   public Future<Void> updateAcquisitionsUnit(AcquisitionsUnit unit, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENDTOPINT_ACQ_UNITS_BY_ID).withId(unit.getId());
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_BY_ID).withId(unit.getId());
     return restClient.put(requestEntry, unit, requestContext);
   }
 
   public Future<AcquisitionsUnit> getAcquisitionsUnit(String id, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENDTOPINT_ACQ_UNITS_BY_ID).withId(id);
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_BY_ID).withId(id);
     return restClient.get(requestEntry, AcquisitionsUnit.class, requestContext);
   }
 
@@ -124,7 +123,8 @@ public class AcquisitionsUnitsService {
   }
 
   public Future<AcquisitionsUnitMembershipCollection> getAcquisitionsUnitsMemberships(String query, int offset, int limit, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_MEMBERSHIPS).withQuery(query)
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_MEMBERSHIPS)
+      .withQuery(query)
       .withLimit(limit)
       .withOffset(offset);
     return restClient.get(requestEntry, AcquisitionsUnitMembershipCollection.class, requestContext);

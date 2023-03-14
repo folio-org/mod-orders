@@ -78,8 +78,9 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), CompositePoLine.class);
 
+    LOGGER.info("handle:: jobExecutionId {}, poLineId {}, orderId {}", dataImportEventPayload.getJobExecutionId(), poLine.getId(), poLine.getPurchaseOrderId());
     ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext)
-      .compose(v -> poLineImportProgressService.poLinesProcessed(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
+      .compose(v -> poLineImportProgressService.trackProcessedPoLine(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
       .compose(poLinesImported -> Boolean.TRUE.equals(poLinesImported)
         ? openOrder(poLine, requestContext, dataImportEventPayload.getJobExecutionId())
         : Future.succeededFuture())

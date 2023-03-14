@@ -108,20 +108,20 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     purchaseOrderHelper.validateExistingOrder(orderId, compPO, requestContext)
-      .compose(validationErrors -> {
-        if (CollectionUtils.isEmpty(validationErrors)) {
-          return purchaseOrderHelper.updateOrder(compPO, deleteHoldings, requestContext)
-            .onSuccess(v -> {
-              if (logger.isInfoEnabled()) {
-                logger.info("Successfully Updated Order: {}", JsonObject.mapFrom(compPO).encodePrettily());
-              }
-              asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
-            });
-        } else {
+      .map(validationErrors -> {
+        if (CollectionUtils.isNotEmpty(validationErrors)) {
           Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
           logger.error("Validation error. Failed to update purchase order : {}", JsonObject.mapFrom(errors).encodePrettily());
           throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
+        return null;
+      })
+      .compose(v-> purchaseOrderHelper.updateOrder(compPO, deleteHoldings, requestContext) )
+      .onSuccess(v -> {
+        if (logger.isInfoEnabled()) {
+          logger.info("Successfully Updated Order: {}", JsonObject.mapFrom(compPO).encodePrettily());
+        }
+        asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
       })
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }

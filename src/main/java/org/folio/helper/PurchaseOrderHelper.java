@@ -236,7 +236,7 @@ public class PurchaseOrderHelper {
       .compose(v -> processPoLineTags(compPO, requestContext))
       .compose(v -> createPOandPOLines(compPO, tenantConfiguration, requestContext))
       .compose(aCompPO -> populateOrderSummary(aCompPO, requestContext))
-      .compose(compOrder -> encumbranceService.updateEncumbrancesOrderStatus(compOrder, requestContext)
+      .compose(compOrder -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(compOrder, requestContext)
         .map(v -> compOrder));
   }
 
@@ -264,7 +264,7 @@ public class PurchaseOrderHelper {
    */
   public Future<Void> updateOrder(CompositePurchaseOrder compPO, boolean deleteHoldings, RequestContext requestContext) {
     return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(compPO.getId(), requestContext)
-      .compose(jsonPoFromStorage -> validateIfPOProtectedFieldsChanged(compPO, jsonPoFromStorage))
+      .map(jsonPoFromStorage -> validateIfPOProtectedFieldsChanged(compPO, jsonPoFromStorage))
       .map(HelperUtils::convertToCompositePurchaseOrder)
       .compose(lines -> purchaseOrderLineService.populateOrderLines(lines, requestContext))
       .compose(poFromStorage -> {
@@ -307,8 +307,12 @@ public class PurchaseOrderHelper {
           })
           .compose(ok -> {
             if (isTransitionToReopen(poFromStorage, compPO)) {
-              checkOrderReopenPermissions(requestContext);
-              return reOpenCompositeOrderManager.process(compPO, poFromStorage, requestContext);
+              return Future.succeededFuture()
+                .map(v -> {
+                  checkOrderReopenPermissions(requestContext);
+                  return null;
+                })
+                .compose(v -> reOpenCompositeOrderManager.process(compPO, poFromStorage, requestContext));
             }
             return Future.succeededFuture();
           })
@@ -323,7 +327,7 @@ public class PurchaseOrderHelper {
             }
           })
           .compose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value(), requestContext))
-          .compose(v -> encumbranceService.updateEncumbrancesOrderStatus(compPO, requestContext));
+          .compose(v -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(compPO, requestContext));
       });
   }
 
@@ -334,14 +338,17 @@ public class PurchaseOrderHelper {
 
     if (isEmpty(compPO.getCompositePoLines())) {
       purchaseOrderLineService.getPoLinesByOrderId(compPO.getId(), requestContext)
-        .onSuccess(promise::complete);
+        .onSuccess(promise::complete)
+        .onFailure(promise::fail);
     } else {
-      requestContext.getContext().executeBlocking(executeBlockingPromise -> {
-        List<PoLine> poLines = HelperUtils.convertToPoLines(compPO.getCompositePoLines());
-        changeOrderStatus(purchaseOrder, poLines);
-        promise.complete(poLines);
-        executeBlockingPromise.complete();
-      });
+      Future.succeededFuture()
+        .map(v -> {
+          List<PoLine> poLines = HelperUtils.convertToPoLines(compPO.getCompositePoLines());
+          changeOrderStatus(purchaseOrder, poLines);
+          promise.complete(poLines);
+          return null;
+        })
+        .onFailure(promise::fail);
     }
 
     return promise.future()
@@ -351,7 +358,7 @@ public class PurchaseOrderHelper {
         compPO.setCloseReason(purchaseOrder.getCloseReason());
         return null;
       })
-      .compose(aVoid -> purchaseOrderStorageService.saveOrder(purchaseOrder, requestContext));
+      .compose(ok -> purchaseOrderStorageService.saveOrder(purchaseOrder, requestContext));
   }
 
   public Future<Void> handleFinalOrderItemsStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, String initialOrdersStatus,
@@ -364,7 +371,7 @@ public class PurchaseOrderHelper {
     return Future.succeededFuture();
   }
 
-  public Future<JsonObject> validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
+  public JsonObject validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
       JsonObject compPOFromStorageJson) {
     WorkflowStatus storagePOWorkflowStatus = WorkflowStatus.fromValue(compPOFromStorageJson.getString(WORKFLOW_STATUS));
     if (!PENDING.equals(storagePOWorkflowStatus)) {
@@ -373,7 +380,7 @@ public class PurchaseOrderHelper {
       CompositePurchaseOrder storageCompPO = compPOFromStorageJson.mapTo(CompositePurchaseOrder.class);
       verifyProtectedFieldsChanged(fieldNames, JsonObject.mapFrom(storageCompPO), JsonObject.mapFrom(compPO));
     }
-    return Future.succeededFuture(compPOFromStorageJson);
+    return compPOFromStorageJson;
   }
 
   /**
@@ -736,7 +743,11 @@ public class PurchaseOrderHelper {
     List<String> updatedAcqUnitIds = updatedOrder.getAcqUnitIds();
     List<String> currentAcqUnitIds = poFromStorage.getAcqUnitIds();
 
-    return Future.future(promise -> promise.complete(verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds, requestContext)))
+    return Future.succeededFuture()
+      .map(v -> {
+        verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds, requestContext);
+        return null;
+      })
       // Check that all newly assigned units are active/exist
       .compose(ok -> protectionService.verifyIfUnitsAreActive(ListUtils.subtract(updatedAcqUnitIds, currentAcqUnitIds), requestContext))
       .map(ok -> getInvolvedOperations(updatedOrder, poFromStorage))
@@ -752,14 +763,13 @@ public class PurchaseOrderHelper {
    * @param newAcqUnitIds acquisitions units assigned to purchase order from request
    * @param currentAcqUnitIds acquisitions units assigned to purchase order from storage
    */
-  private Void verifyUserHasManagePermission(List<String> newAcqUnitIds, List<String> currentAcqUnitIds, RequestContext requestContext) {
+  private void verifyUserHasManagePermission(List<String> newAcqUnitIds, List<String> currentAcqUnitIds, RequestContext requestContext) {
     Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newAcqUnitIds));
     Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(currentAcqUnitIds));
 
     if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && isUserDoesNotHaveDesiredPermission(MANAGE, requestContext)){
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
     }
-    return null;
   }
 
   private Future<Void> processPoLineTags(CompositePurchaseOrder compPO, RequestContext requestContext) {

@@ -454,7 +454,9 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     return poLineHelper.createPoLine(poLine, tenantConfig, requestContext)
-      .eventually(createPoLine -> poLineImportProgressService.trackProcessedPoLine(orderId, dataImportEventPayload.getTenant()))
+      .recover(e -> poLineImportProgressService.trackProcessedPoLine(orderId, dataImportEventPayload.getTenant())
+        .onFailure(trackingError -> LOGGER.warn("saveOrderLines:: Failed to track processed PO line by orderId: {}, jobExecutionId: {}", orderId, dataImportEventPayload.getJobExecutionId(), trackingError))
+        .compose(v -> Future.failedFuture(e)))
       .onComplete(ar -> dataImportEventPayload.getContext().put(PO_LINE_KEY, Json.encode(poLine)));
   }
 

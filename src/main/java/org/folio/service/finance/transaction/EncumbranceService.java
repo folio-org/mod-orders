@@ -125,13 +125,13 @@ public class EncumbranceService {
   }
 
 
-  public Future<Void> updateEncumbrancesOrderStatus(CompositePurchaseOrder compPo, RequestContext requestContext) {
-    logger.info("updateEncumbrancesOrderStatus:: orderId {}  ", compPo.getId());
+  public Future<Void> updateEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder compPo, RequestContext requestContext) {
+    logger.info("updateEncumbrancesOrderStatusAndReleaseIfClosed:: orderId {}  ", compPo.getId());
     return getOrderUnreleasedEncumbrances(compPo.getId(), requestContext).compose(encumbrs -> {
       if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
         return orderTransactionSummariesService.updateTransactionSummary(compPo.getId(), encumbrs.size(), requestContext)
           .map(v -> {
-            syncEncumbrancesOrderStatus(compPo.getWorkflowStatus(), encumbrs);
+            syncEncumbrancesOrderStatusAndReleaseIfClosed(compPo.getWorkflowStatus(), encumbrs);
             return encumbrs;
           })
           .compose(transactions -> transactionService.updateTransactions(transactions, requestContext));
@@ -144,10 +144,14 @@ public class EncumbranceService {
     return orderTransactionSummariesService.updateTransactionSummary(compOrderLine.getPurchaseOrderId(), encumbrs.size(), requestContext);
   }
 
-  private void syncEncumbrancesOrderStatus(CompositePurchaseOrder.WorkflowStatus workflowStatus,
-                                           List<Transaction> encumbrances) {
+  private void syncEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder.WorkflowStatus workflowStatus,
+      List<Transaction> encumbrances) {
     Encumbrance.OrderStatus orderStatus = Encumbrance.OrderStatus.fromValue(workflowStatus.value());
-    encumbrances.forEach(encumbrance -> encumbrance.getEncumbrance().setOrderStatus(orderStatus));
+    encumbrances.forEach(encumbrance -> {
+      encumbrance.getEncumbrance().setOrderStatus(orderStatus);
+      if (orderStatus == Encumbrance.OrderStatus.CLOSED)
+        encumbrance.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
+    });
   }
 
 
@@ -185,7 +189,9 @@ public class EncumbranceService {
         .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithCompPOLines, requestContext))
         .collect(toList());
     return collectResultsOnSuccess(futures)
-      .map(listOfLists -> listOfLists.stream().flatMap(List::stream).collect(toList()));
+      .map(listOfLists -> listOfLists.stream()
+        .flatMap(List::stream)
+        .collect(toList()));
   }
 
   public Future<List<Transaction>> getPoLineEncumbrances(String poLineId, RequestContext requestContext) {
@@ -240,7 +246,7 @@ public class EncumbranceService {
       return Future.succeededFuture();
 
     encumbrances.forEach(transaction -> transaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
-    return transactionService.updateTransactions(encumbrances,requestContext );
+    return transactionService.updateTransactions(encumbrances, requestContext);
   }
 
   public Future<Void> unreleaseEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
@@ -381,12 +387,12 @@ public class EncumbranceService {
   private Future<Boolean> hasNotInvoiceLineWithReleaseEncumbrance(CompositePoLine poLine, RequestContext requestContext) {
     return invoiceLineService.retrieveInvoiceLines("poLineId == " + poLine.getId() + AND + "releaseEncumbrance == true", requestContext)
       .map(invoiceLines -> !invoiceLines.isEmpty())
-       .otherwise(t -> {
-        Throwable cause = t.getCause();
+      .recover(cause -> {
         // ignore 404 errors as mod-invoice may be unavailable
         if (cause instanceof HttpException && ((HttpException)cause).getCode() == HttpStatus.HTTP_NOT_FOUND.toInt())
-          return false;
-        throw t instanceof CompletionException ? (CompletionException) t : new CompletionException(cause);
+          return Future.succeededFuture(false);
+
+        return Future.failedFuture(cause);
       });
   }
 
