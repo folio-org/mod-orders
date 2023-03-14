@@ -402,8 +402,8 @@ public class CreateOrderEventHandler implements EventHandler {
         if (CollectionUtils.isNotEmpty(errors)) {
           return Future.failedFuture(new EventProcessingException(Json.encode(errors)));
         }
-        return purchaseOrderHelper.createPurchaseOrder(orderToSave, tenantConfig, requestContext)
-          .compose(order -> savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig).map(order))
+        return savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig).map(orderToSave)
+          .compose(order -> purchaseOrderHelper.createPurchaseOrder(order, tenantConfig, requestContext))
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
             if (e instanceof HttpException) {
