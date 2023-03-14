@@ -4,7 +4,7 @@ import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_30;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.OPEN;
 
@@ -54,7 +54,7 @@ import io.vertxconcurrent.Semaphore;
 public class OrderRolloverService {
   private static final Logger logger = LogManager.getLogger();
 
-  private static final String PO_LINE_FUND_DISTR_QUERY = "fundDistribution = \"/@fundId == \"%s\"";
+  private static final String PO_LINE_FUND_DISTR_QUERY = "fundDistribution = \"/@fundId = \"%s\"";
   private static final String ORDER_TYPE_QUERY = "purchaseOrder.orderType == %s";
   private static final String ENCUMBR_FY_QUERY = "fiscalYearId == \"%s\"";
   private static final String ENCUMBRANCE_BY_POLINE_ID_QUERY = "encumbrance.sourcePoLineId == \"%s\"";
@@ -93,7 +93,7 @@ public class OrderRolloverService {
   private Future<Void> rolloverOrdersByFundIds(List<String> ledgerFundIds, LedgerFiscalYearRollover ledgerFYRollover, String systemCurrency, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(ledgerFundIds)) return Future.succeededFuture();
 
-    var fundIdChunks = Lists.partition(ledgerFundIds, MAX_IDS_FOR_GET_RQ_30);
+    var fundIdChunks = Lists.partition(ledgerFundIds, MAX_IDS_FOR_GET_RQ_15);
 
     return requestContext.getContext().<List<Future<Void>>>executeBlocking(promise -> {
         List<Future<Void>> futures = new ArrayList<>();
@@ -113,7 +113,7 @@ public class OrderRolloverService {
           });
         }
       })
-      .compose(futures -> GenericCompositeFuture.join(futures))
+      .compose(GenericCompositeFuture::join)
       .mapEmpty();
   }
 
@@ -136,10 +136,11 @@ public class OrderRolloverService {
         // only 1 active thread because of chunk size = 200 records
         Semaphore semaphore = new Semaphore(1, ctx.owner());
 
-        for (AtomicInteger chunkNumber = new AtomicInteger(); chunkNumber.get() < numberOfChunks; chunkNumber.getAndIncrement()) {
+        AtomicInteger atomicChunkCounter = new AtomicInteger();
+        for (int chunkNumber = 0; chunkNumber < numberOfChunks; chunkNumber++) {
           // can produce "thread blocked" warnings because of large number of data
           semaphore.acquire(() -> {
-            Future<Void> future = purchaseOrderLineService.getOrderLines(query, chunkNumber.get() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
+            Future<Void> future = purchaseOrderLineService.getOrderLines(query, atomicChunkCounter.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
               .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, workflowStatus, requestContext))
               .compose(modifiedPoLines -> purchaseOrderLineService.saveOrderLines(modifiedPoLines, requestContext))
               .onComplete(asyncResult -> semaphore.release());
@@ -149,7 +150,6 @@ public class OrderRolloverService {
               promise.complete(futures);
             }
           });
-
         }
       }))
       .compose(GenericCompositeFuture::join)
