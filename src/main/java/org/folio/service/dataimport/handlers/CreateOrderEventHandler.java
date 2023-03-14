@@ -102,6 +102,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String MAPPING_RESULT_FIELD = "order";
   private static final String INSTANCE_ID_FIELD = "id";
   private static final String ORDER_STATUS_FIELD = "workflowStatus";
+  private static final String ORDER_FORMAT_FIELD = "orderFormat";
   private static final String POL_ACTIVATION_DUE_FIELD = "activationDue";
   private static final String POL_ERESOURCE_FIELD = "eresource";
   private static final String POL_PHYSICAL_FIELD = "physical";
@@ -459,7 +460,7 @@ public class CreateOrderEventHandler implements EventHandler {
     return poLineHelper.createPoLine(poLine, tenantConfig, requestContext)
       .recover(e -> poLineImportProgressService.trackProcessedPoLine(orderId, dataImportEventPayload.getTenant())
         .onFailure(trackingError -> LOGGER.warn("saveOrderLines:: Failed to track processed PO line by orderId: {}, jobExecutionId: {}", orderId, dataImportEventPayload.getJobExecutionId(), trackingError))
-        .compose(v -> Future.failedFuture(e)))
+        .transform(v -> Future.failedFuture(e)))
       .onComplete(ar -> dataImportEventPayload.getContext().put(PO_LINE_KEY, Json.encode(poLine)));
   }
 
@@ -555,12 +556,12 @@ public class CreateOrderEventHandler implements EventHandler {
       createInventoryFieldValue = NONE;
     }
 
-    if (PHYSICAL_RESOURCE.value().equals(poLineJson.getString("orderFormat"))
-      || OTHER.value().equals(poLineJson.getString("orderFormat"))) {
+    if (PHYSICAL_RESOURCE.value().equals(poLineJson.getString(ORDER_FORMAT_FIELD))
+      || OTHER.value().equals(poLineJson.getString(ORDER_FORMAT_FIELD))) {
       setCreateInventoryValue(poLineJson, POL_PHYSICAL_FIELD, createInventoryFieldValue.value());
-    } else if (ELECTRONIC_RESOURCE.value().equals(poLineJson.getString("orderFormat"))) {
+    } else if (ELECTRONIC_RESOURCE.value().equals(poLineJson.getString(ORDER_FORMAT_FIELD))) {
       setCreateInventoryValue(poLineJson, POL_ERESOURCE_FIELD, createInventoryFieldValue.value());
-    } else if (P_E_MIX.value().equals(poLineJson.getString("orderFormat"))) {
+    } else if (P_E_MIX.value().equals(poLineJson.getString(ORDER_FORMAT_FIELD))) {
       setCreateInventoryValue(poLineJson, POL_PHYSICAL_FIELD, createInventoryFieldValue.value());
       setCreateInventoryValue(poLineJson, POL_ERESOURCE_FIELD, createInventoryFieldValue.value());
     }
