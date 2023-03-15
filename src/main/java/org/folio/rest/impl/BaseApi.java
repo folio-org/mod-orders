@@ -24,8 +24,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 
 public class BaseApi {
-
-  private static final String ERROR_CAUSE = "cause";
   private final Logger logger = LogManager.getLogger();
   private final Errors processingErrors = new Errors();
 
@@ -60,7 +58,7 @@ public class BaseApi {
   }
 
   public Response buildErrorResponse(Throwable throwable) {
-    logger.error("Exception encountered", throwable.getCause());
+    logger.error("Exception encountered", throwable);
     final int code = defineErrorCode(throwable);
     final Errors errors = convertToErrors(throwable);
     final Response.ResponseBuilder responseBuilder = createResponseBuilder(code);
