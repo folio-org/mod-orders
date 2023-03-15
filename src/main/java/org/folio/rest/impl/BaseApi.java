@@ -11,6 +11,7 @@ import static org.folio.rest.core.exceptions.ExceptionUtil.convertToErrors;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Optional;
 
 import javax.ws.rs.core.Response;
 
@@ -24,8 +25,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 
 public class BaseApi {
-
-  private static final String ERROR_CAUSE = "cause";
   private final Logger logger = LogManager.getLogger();
   private final Errors processingErrors = new Errors();
 
@@ -60,7 +59,8 @@ public class BaseApi {
   }
 
   public Response buildErrorResponse(Throwable throwable) {
-    logger.error("Exception encountered", throwable.getCause());
+    final Throwable cause = Optional.ofNullable(throwable.getCause()).orElse(throwable);
+    logger.error("Exception encountered", cause);
     final int code = defineErrorCode(throwable);
     final Errors errors = convertToErrors(throwable);
     final Response.ResponseBuilder responseBuilder = createResponseBuilder(code);
