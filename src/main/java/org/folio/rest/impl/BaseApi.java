@@ -11,7 +11,6 @@ import static org.folio.rest.core.exceptions.ExceptionUtil.convertToErrors;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.Optional;
 
 import javax.ws.rs.core.Response;
 
