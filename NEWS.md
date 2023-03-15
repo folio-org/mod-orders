@@ -1,9 +1,20 @@
 ## 12.7.0 - Unreleased
 
+## 12.6.2 Orchid R1 2022 - Released
+This release focused on fixing rollover and receiving flows
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.1...v12.6.2)
+
+### Bug Fixes
+* [MODORDERS-863](https://issues.folio.org/browse/MODORDERS-863) - Error when importing open orders that create multi-line POs
+* [FAT-4999](https://issues.folio.org/browse/FAT-4999) - Added missed permission
+* [FAT-4863](https://issues.folio.org/browse/FAT-4863) - Fixed encumbrances processing during rollover
+
+
 ## 12.6.1 Orchid R1 2022 - Released
 This release focused on resolving performance and memory issues
 
-[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.4.0...v12.5.0)
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.0...v12.6.1)
 
 ### Stories
 * [MODORDERS-850](https://issues.folio.org/browse/MODORDERS-850) - Refactor inventoryManager in order to support caching
