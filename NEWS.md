@@ -1,6 +1,15 @@
 ## 12.7.0 - Unreleased
 
-## 12.6.2 Orchid R1 2022 - Released
+## 12.6.3 Orchid R1 2023 - Released
+This release focused on fixing po line product identifiers mapping
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.2...v12.6.3)
+
+### Bug Fixes
+* [MODDICORE-318](https://issues.folio.org/browse/MODDICORE-318) - Update di-processing-core to v4.0.3 to fix POL product identifiers mapping (MODDICORE-307)
+
+
+## 12.6.2 Orchid R1 2023 - Released
 This release focused on fixing rollover and receiving flows
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.1...v12.6.2)
@@ -11,7 +20,7 @@ This release focused on fixing rollover and receiving flows
 * [FAT-4863](https://issues.folio.org/browse/FAT-4863) - Fixed encumbrances processing during rollover
 
 
-## 12.6.1 Orchid R1 2022 - Released
+## 12.6.1 Orchid R1 2023 - Released
 This release focused on resolving performance and memory issues
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.0...v12.6.1)
