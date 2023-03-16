@@ -55,7 +55,8 @@ public class RestClient {
         return bufferHttpResponse.bodyAsJsonObject()
           .put(ID, id)
           .mapTo(responseType);
-      });
+      })
+      .onFailure(log::error);
   }
 
   private MultiMap convertToCaseInsensitiveMap(Map<String, String> okapiHeaders) {

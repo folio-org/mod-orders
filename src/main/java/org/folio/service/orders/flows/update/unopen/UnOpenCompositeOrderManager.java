@@ -302,7 +302,7 @@ public class UnOpenCompositeOrderManager {
       });
       return collectResultsOnSuccess(deletedHoldingIds)
         .map(resultDeletedHoldingVsLocationIds -> resultDeletedHoldingVsLocationIds.stream()
-          .filter(pair -> Objects.nonNull(pair.getKey())).collect(toList()))
+          .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey())).collect(toList()))
         .map(resultDeletedHoldingVsLocationIds -> {
           if (logger.isDebugEnabled()) {
             String deletedIds = resultDeletedHoldingVsLocationIds.stream().map(Pair::getKey).collect(Collectors.joining(","));
