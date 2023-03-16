@@ -1,10 +1,9 @@
 package org.folio.service.finance.rollover;
 
-import static org.folio.service.finance.transaction.EncumbranceService.AND;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.vertx.core.json.JsonObject;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
@@ -14,20 +13,20 @@ import org.folio.rest.core.models.RequestEntry;
 
 import io.vertx.core.Future;
 
-public class RolloverErrorService {
+public class LedgerRolloverErrorService {
     private static final String ENDPOINT = "/finance/ledger-rollovers-errors";
     private static final String ENDPOINT_BY_ID = "/finance-storage/ledger-rollovers-errors/{id}";
 
     private final RestClient restClient;
 
-    public RolloverErrorService(RestClient restClient) {
+    public LedgerRolloverErrorService(RestClient restClient) {
         this.restClient = restClient;
     }
 
-    public Future<LedgerFiscalYearRolloverErrorCollection> getLedgerFyRolloverErrors(String orderId, String rolloverId, RequestContext requestContext) {
-        String query = "details.purchaseOrderId==" + orderId + AND + "ledgerRolloverId==" + rolloverId ;
-        RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
-        return restClient.get(requestEntry, LedgerFiscalYearRolloverErrorCollection.class, requestContext);
+    public Future<LedgerFiscalYearRolloverErrorCollection> getRolloverErrorsByRolloverId(String rolloverId, RequestContext requestContext) {
+      String query = "ledgerRolloverId==" + rolloverId ;
+      RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
+      return restClient.get(requestEntry, LedgerFiscalYearRolloverErrorCollection.class, requestContext);
     }
 
     public Future<LedgerFiscalYearRolloverErrorCollection> getLedgerFyRolloverErrors(String orderId, RequestContext requestContext) {
@@ -35,6 +34,26 @@ public class RolloverErrorService {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
         return restClient.get(requestEntry, LedgerFiscalYearRolloverErrorCollection.class, requestContext);
     }
+
+    public Future<LedgerFiscalYearRolloverError> saveRolloverError(String rolloverId, Throwable t, LedgerFiscalYearRolloverError.ErrorType errorType,
+                                         String failedAction, RequestContext requestContext) {
+      String message;
+      try {
+        JsonObject errorObj = new JsonObject(t.getMessage());
+        message = errorObj.getJsonArray("errors").getJsonObject(0).getString("message");
+        if (message == null)
+          message = t.getMessage();
+      } catch (Exception ex) {
+        message = t.getMessage();
+      }
+      LedgerFiscalYearRolloverError error = new LedgerFiscalYearRolloverError()
+        .withLedgerRolloverId(rolloverId)
+        .withErrorType(errorType)
+        .withFailedAction(failedAction)
+        .withErrorMessage(message);
+      RequestEntry requestEntry = new RequestEntry(ENDPOINT);
+      return restClient.post(requestEntry, error, LedgerFiscalYearRolloverError.class, requestContext);
+  }
 
     public Future<Void> deleteRolloverErrors(List<LedgerFiscalYearRolloverError> errors, RequestContext requestContext) {
       return GenericCompositeFuture.join(errors.stream()

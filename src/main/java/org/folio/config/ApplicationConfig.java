@@ -38,8 +38,9 @@ import org.folio.service.finance.budget.BudgetService;
 import org.folio.service.finance.expenceclass.BudgetExpenseClassService;
 import org.folio.service.finance.expenceclass.ExpenseClassService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
-import org.folio.service.finance.rollover.RolloverErrorService;
-import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.rollover.LedgerRolloverErrorService;
+import org.folio.service.finance.rollover.LedgerRolloverProgressService;
+import org.folio.service.finance.rollover.LedgerRolloverService;
 import org.folio.service.finance.transaction.ClosedToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilder;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -195,9 +196,11 @@ public class ApplicationConfig {
 
   @Bean
   OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
-                                            ConfigurationEntriesCache configurationEntriesCache, ExchangeRateProviderResolver exchangeRateProviderResolver) {
+                                            ConfigurationEntriesCache configurationEntriesCache, ExchangeRateProviderResolver exchangeRateProviderResolver,
+                                            LedgerRolloverProgressService ledgerRolloverProgressService, LedgerRolloverErrorService ledgerRolloverErrorService) {
     return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService,
-                                    configurationEntriesCache, exchangeRateProviderResolver);
+                                    configurationEntriesCache, exchangeRateProviderResolver,
+                                    ledgerRolloverProgressService, ledgerRolloverErrorService);
   }
 
   @Bean
@@ -345,7 +348,7 @@ public class ApplicationConfig {
                                                           FundService fundService,
                                                           ExchangeRateProviderResolver exchangeRateProviderResolver,
                                                           FiscalYearService fiscalYearService,
-                                                          RolloverRetrieveService rolloverRetrieveService,
+                                                          LedgerRolloverService ledgerRolloverService,
                                                           TransactionService transactionService,
                                                           FundsDistributionService fundsDistributionService) {
     return new ReEncumbranceHoldersBuilder(budgetService,
@@ -353,32 +356,37 @@ public class ApplicationConfig {
                                            fundService,
                                            exchangeRateProviderResolver,
                                            fiscalYearService,
-                                           rolloverRetrieveService,
+                                           ledgerRolloverService,
                                            transactionService, fundsDistributionService);
   }
 
   @Bean
   OrderReEncumberService orderReEncumberService(PurchaseOrderStorageService purchaseOrderStorageService,
                                                 ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder,
-                                                RolloverErrorService rolloverErrorService,
-                                                RolloverRetrieveService rolloverRetrieveService,
+                                                LedgerRolloverErrorService ledgerRolloverErrorService,
+                                                LedgerRolloverProgressService ledgerRolloverProgressService,
                                                 PurchaseOrderLineService purchaseOrderLineService,
                                                 TransactionService transactionService,
                                                 OrderTransactionSummariesService orderTransactionSummariesService,
                                                 BudgetRestrictionService budgetRestrictionService) {
-    return new OrderReEncumberService(purchaseOrderStorageService, reEncumbranceHoldersBuilder, rolloverErrorService,
-                                      rolloverRetrieveService, purchaseOrderLineService, transactionService,
+    return new OrderReEncumberService(purchaseOrderStorageService, reEncumbranceHoldersBuilder, ledgerRolloverErrorService,
+      ledgerRolloverProgressService, purchaseOrderLineService, transactionService,
                                       orderTransactionSummariesService, budgetRestrictionService);
   }
 
   @Bean
-  RolloverErrorService rolloverErrorService(RestClient restClient) {
-    return new RolloverErrorService(restClient);
+  LedgerRolloverErrorService ledgerRolloverErrorService(RestClient restClient) {
+    return new LedgerRolloverErrorService(restClient);
   }
 
   @Bean
-  RolloverRetrieveService rolloverRetrieveService(RestClient restClient) {
-    return new RolloverRetrieveService(restClient);
+  LedgerRolloverService ledgerRolloverService(RestClient restClient) {
+    return new LedgerRolloverService(restClient);
+  }
+
+  @Bean
+  LedgerRolloverProgressService ledgerRolloverProgressService(RestClient restClient) {
+    return new LedgerRolloverProgressService(restClient);
   }
 
   @Bean

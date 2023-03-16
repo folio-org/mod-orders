@@ -39,8 +39,8 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.finance.budget.BudgetRestrictionService;
-import org.folio.service.finance.rollover.RolloverErrorService;
-import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.rollover.LedgerRolloverErrorService;
+import org.folio.service.finance.rollover.LedgerRolloverProgressService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.javamoney.moneta.Money;
@@ -55,8 +55,8 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder;
-  private final RolloverErrorService rolloverErrorService;
-  private final RolloverRetrieveService rolloverRetrieveService;
+  private final LedgerRolloverErrorService ledgerRolloverErrorService;
+  private final LedgerRolloverProgressService ledgerRolloverProgressService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TransactionService transactionService;
   private final OrderTransactionSummariesService orderTransactionSummariesService;
@@ -64,16 +64,15 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   public OrderReEncumberService(PurchaseOrderStorageService purchaseOrderStorageService,
                                 ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder,
-                                RolloverErrorService rolloverErrorService,
-                                RolloverRetrieveService rolloverRetrieveService,
-                                PurchaseOrderLineService purchaseOrderLineService,
+                                LedgerRolloverErrorService ledgerRolloverErrorService,
+                                LedgerRolloverProgressService ledgerRolloverProgressService, PurchaseOrderLineService purchaseOrderLineService,
                                 TransactionService transactionService,
                                 OrderTransactionSummariesService orderTransactionSummariesService,
                                 BudgetRestrictionService budgetRestrictionService) {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.reEncumbranceHoldersBuilder = reEncumbranceHoldersBuilder;
-    this.rolloverErrorService = rolloverErrorService;
-    this.rolloverRetrieveService = rolloverRetrieveService;
+    this.ledgerRolloverErrorService = ledgerRolloverErrorService;
+    this.ledgerRolloverProgressService = ledgerRolloverProgressService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.transactionService = transactionService;
     this.orderTransactionSummariesService = orderTransactionSummariesService;
@@ -103,7 +102,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
             if (isRolloversPartiallyCompleted(holders, ledgerIds)) {
               return Future.succeededFuture(orderRetrieveHolder.withNeedReEncumber(true));
             }
-            return rolloverErrorService.getLedgerFyRolloverErrors(orderRetrieveHolder.getOrderId(), requestContext)
+            return ledgerRolloverErrorService.getLedgerFyRolloverErrors(orderRetrieveHolder.getOrderId(), requestContext)
               .map(LedgerFiscalYearRolloverErrorCollection::getLedgerFiscalYearRolloverErrors)
               .map(ledgerFyRolloverErrors -> orderRetrieveHolder.withNeedReEncumber(!ledgerFyRolloverErrors.isEmpty()));
           }));
@@ -172,9 +171,9 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
             .collect(toList());
 
     return GenericCompositeFuture.join(holders.stream()
-            .filter(holder -> Objects.nonNull(holder.getRollover()))
             .map(ReEncumbranceHolder::getRollover)
-            .map(rollover -> rolloverRetrieveService.getRolloversProgress(rollover.getId(), requestContext)
+            .filter(Objects::nonNull)
+            .map(rollover -> ledgerRolloverProgressService.getRolloversProgress(rollover.getId(), requestContext)
                     .onSuccess(progresses -> {
                       if (isRolloverNotCompleted(progresses)) {
                         ledgerIds.add(rollover.getLedgerId());
@@ -201,9 +200,9 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   }
 
   private Future<Void> deleteRolloverErrors(String orderId, RequestContext requestContext) {
-    return rolloverErrorService.getLedgerFyRolloverErrors(orderId, requestContext)
+    return ledgerRolloverErrorService.getLedgerFyRolloverErrors(orderId, requestContext)
             .map(LedgerFiscalYearRolloverErrorCollection::getLedgerFiscalYearRolloverErrors)
-            .compose(errors -> rolloverErrorService.deleteRolloverErrors(errors, requestContext));
+            .compose(errors -> ledgerRolloverErrorService.deleteRolloverErrors(errors, requestContext));
   }
 
   private Future<Void> updatePoLines(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
