@@ -58,7 +58,7 @@ import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
-import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.rollover.LedgerRolloverService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.spi.DefaultNumberValue;
@@ -91,7 +91,7 @@ public class ReEncumbranceHoldersBuilderTest {
   @Mock
   private BudgetService budgetService;
   @Mock
-  private RolloverRetrieveService rolloverRetrieveService;
+  private LedgerRolloverService ledgerRolloverService;
   @Mock
   private ExchangeRateProviderResolver exchangeRateProviderResolver;
   @Mock
@@ -364,7 +364,7 @@ public class ReEncumbranceHoldersBuilderTest {
     LedgerFiscalYearRollover rollover2 = new LedgerFiscalYearRollover().withLedgerId(ledgerId2);
 
 
-    when(rolloverRetrieveService.getLedgerFyRollovers(anyString(), anyList(), any())).thenReturn(Future.succeededFuture(Arrays.asList(rollover1, rollover2)));
+    when(ledgerRolloverService.getLedgerFyRollovers(anyString(), anyList(), any())).thenReturn(Future.succeededFuture(Arrays.asList(rollover1, rollover2)));
 
     List<ReEncumbranceHolder> resultHolders = reEncumbranceHoldersBuilder.withRollovers(holders, requestContext).result();
 
@@ -399,7 +399,7 @@ public class ReEncumbranceHoldersBuilderTest {
     assertThat(resultHolders, hasItem(allOf(hasProperty("rollover", nullValue()), hasProperty("ledgerId", is(fund3.getLedgerId())))));
     assertThat(resultHolders, hasItem(allOf(hasProperty("rollover", nullValue()), hasProperty("ledgerId", is(fund4.getLedgerId())))));
 
-    verify(rolloverRetrieveService, never()).getLedgerFyRollovers(anyString(), anyList(), any());
+    verify(ledgerRolloverService, never()).getLedgerFyRollovers(anyString(), anyList(), any());
   }
 
   @Test
@@ -416,7 +416,7 @@ public class ReEncumbranceHoldersBuilderTest {
     assertThat(resultHolders, hasItem(allOf(hasProperty("rollover", nullValue()), hasProperty("ledgerId"))));
 
 
-    verify(rolloverRetrieveService, never()).getLedgerFyRollovers(anyString(), anyList(), any());
+    verify(ledgerRolloverService, never()).getLedgerFyRollovers(anyString(), anyList(), any());
   }
 
   @Test

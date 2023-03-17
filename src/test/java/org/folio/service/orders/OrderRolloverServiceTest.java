@@ -1,5 +1,6 @@
 package org.folio.service.orders;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.singletonList;
 import static org.folio.TestConfig.mockPort;
@@ -7,7 +8,6 @@ import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.folio.rest.jaxrs.model.PurchaseOrder.OrderType.ONE_TIME;
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -41,6 +41,9 @@ import javax.money.convert.ExchangeRateProvider;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -49,14 +52,14 @@ import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
+import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.ConfigurationEntriesCache;
-import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.ManualCurrencyConversion;
 import org.folio.service.exchange.ManualExchangeRateProvider;
 import org.folio.service.finance.FundService;
+import org.folio.service.finance.rollover.LedgerRolloverErrorService;
+import org.folio.service.finance.rollover.LedgerRolloverProgressService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.spi.DefaultNumberValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,24 +87,23 @@ public class OrderRolloverServiceTest {
   @Mock
   private TransactionService transactionService;
   @Mock
-  private PurchaseOrderStorageService purchaseOrderStorageService;
-  @Mock
   private PurchaseOrderLineService purchaseOrderLineService;
-  @Mock
-  private ConfigurationEntriesService configurationEntriesService;
   @Mock
   private ConfigurationEntriesCache configurationEntriesCache;
   @Mock
   private ExchangeRateProviderResolver exchangeRateProviderResolver;
+  @Mock
+  private LedgerRolloverProgressService ledgerRolloverProgressService;
+  @Mock
+  private LedgerRolloverErrorService ledgerRolloverErrorService;
   private RequestContext requestContext;
-  private Map<String, String> okapiHeadersMock;
 
-  private String systemCurrency = "USD";
+  private final String systemCurrency = "USD";
 
   @BeforeEach
   public void initMocks() {
     MockitoAnnotations.openMocks(this);
-    okapiHeadersMock = new HashMap<>();
+    Map<String, String> okapiHeadersMock = new HashMap<>();
     okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
@@ -109,6 +111,53 @@ public class OrderRolloverServiceTest {
     requestContext = new RequestContext(Vertx.vertx().getOrCreateContext(), okapiHeadersMock);
   }
 
+  @Test
+  @DisplayName("Should start preview rollover and check that start rollover was invoked")
+  void shouldStartPreviewRolloverAndCheckThatStartRolloverWasInvoked(VertxTestContext vertxTestContext) {
+    String fromFiscalYearId = UUID.randomUUID().toString();
+    String ledgerId = UUID.randomUUID().toString();
+    String toFiscalYearId = UUID.randomUUID().toString();
+
+    EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
+    EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
+    EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
+
+    LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
+      .withId(UUID.randomUUID().toString())
+      .withFromFiscalYearId(fromFiscalYearId)
+      .withLedgerId(ledgerId)
+      .withToFiscalYearId(toFiscalYearId)
+      .withEncumbrancesRollover(List.of(ongoingEncumbranceBasedOnExpended, oneTimeEncumbrance, ongoingEncumbranceBasedOnInitialAmount));
+
+    LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
+      .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
+      .withBudgetsClosingRolloverStatus(RolloverStatus.SUCCESS).withFinancialRolloverStatus(RolloverStatus.SUCCESS)
+      .withOrdersRolloverStatus(RolloverStatus.IN_PROGRESS);
+    LedgerFiscalYearRolloverErrorCollection errorCollection = new LedgerFiscalYearRolloverErrorCollection().withTotalRecords(0);
+
+    doReturn(succeededFuture(progress)).when(ledgerRolloverProgressService)
+      .getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture(errorCollection)).when(ledgerRolloverErrorService)
+      .getRolloverErrorsByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture()).when(ledgerRolloverProgressService)
+      .updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
+
+    OrderRolloverService spy = Mockito.spy(orderRolloverService);
+    doReturn(succeededFuture()).when(spy).startRollover(ledgerFiscalYearRollover, progress, requestContext);
+
+    Future<Void> future = spy.rollover(ledgerFiscalYearRollover, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        verify(spy, times(1)).startRollover(ledgerFiscalYearRollover, progress, requestContext);
+        verify(ledgerRolloverProgressService, times(1)).updateRolloverProgress(progress, requestContext);
+        verify(ledgerRolloverProgressService, times(2)).getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+        vertxTestContext.completeNow();
+      })
+      .onFailure(vertxTestContext::failNow);
+  }
 
   @Test
   @DisplayName("Should update order lines cost And Encumbrance Links where Pol Currency equals systemCurrency")
@@ -151,13 +200,6 @@ public class OrderRolloverServiceTest {
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
       new Fund().withId(fundId3).withLedgerId(ledgerId));
 
-    PurchaseOrder purchaseOrder1 = new PurchaseOrder().withId(orderId1).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PurchaseOrder purchaseOrder2 = new PurchaseOrder().withId(orderId2).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PurchaseOrder purchaseOrder3 = new PurchaseOrder().withId(orderId3).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-
-    List<PurchaseOrder> orders = List.of(purchaseOrder1, purchaseOrder2, purchaseOrder3);
-    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection().withPurchaseOrders(orders).withTotalRecords(3);
-
     FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(100d)
       .withEncumbrance(prevEncumbrId1);
     FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(100d)
@@ -191,6 +233,16 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
 
+    LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
+      .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
+      .withBudgetsClosingRolloverStatus(RolloverStatus.SUCCESS).withFinancialRolloverStatus(RolloverStatus.SUCCESS)
+      .withOrdersRolloverStatus(RolloverStatus.IN_PROGRESS);
+    LedgerFiscalYearRolloverErrorCollection errorCollection = new LedgerFiscalYearRolloverErrorCollection().withTotalRecords(0);
+
+    doReturn(succeededFuture(progress)).when(ledgerRolloverProgressService).getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture(errorCollection)).when(ledgerRolloverErrorService).getRolloverErrorsByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
+
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(60d);
     Transaction transactionOneTime = new Transaction().withId(currEncumbrId1).withFromFundId(fundId1)
@@ -223,7 +275,7 @@ public class OrderRolloverServiceTest {
     when(exchangeRate.getBaseCurrency()).thenReturn(Monetary.getCurrency(polCurrency));
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
 
-    Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
         assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
@@ -273,10 +325,6 @@ public class OrderRolloverServiceTest {
 
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId));
 
-    PurchaseOrder purchaseOrder1 = new PurchaseOrder().withId(orderId1).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    List<PurchaseOrder> orders = List.of(purchaseOrder1);
-    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection().withPurchaseOrders(orders).withTotalRecords(1);
-
     FundDistribution fundDistributionOneTime = new FundDistribution()
       .withFundId(fundId1)
       .withValue(50d)
@@ -307,6 +355,16 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(any(), any());
 
+    LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
+      .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
+      .withBudgetsClosingRolloverStatus(RolloverStatus.SUCCESS).withFinancialRolloverStatus(RolloverStatus.SUCCESS)
+      .withOrdersRolloverStatus(RolloverStatus.IN_PROGRESS);
+    LedgerFiscalYearRolloverErrorCollection errorCollection = new LedgerFiscalYearRolloverErrorCollection().withTotalRecords(0);
+
+    doReturn(succeededFuture(progress)).when(ledgerRolloverProgressService).getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture(errorCollection)).when(ledgerRolloverErrorService).getRolloverErrorsByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
+
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(580d);
     Transaction transactionOneTime = new Transaction().withId(currEncumbrId1).withFromFundId(fundId1)
@@ -330,7 +388,7 @@ public class OrderRolloverServiceTest {
     when(exchangeRate.getBaseCurrency()).thenReturn(Monetary.getCurrency(polCurrency));
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
 
-    Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
         assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
@@ -382,13 +440,6 @@ public class OrderRolloverServiceTest {
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
       new Fund().withId(fundId3).withLedgerId(ledgerId));
 
-    PurchaseOrder purchaseOrder1 = new PurchaseOrder().withId(orderId1).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PurchaseOrder purchaseOrder2 = new PurchaseOrder().withId(orderId2).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-    PurchaseOrder purchaseOrder3 = new PurchaseOrder().withId(orderId3).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-
-    List<PurchaseOrder> orders = List.of(purchaseOrder1, purchaseOrder2, purchaseOrder3);
-    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection().withPurchaseOrders(orders).withTotalRecords(3);
-
     FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(100d)
       .withEncumbrance(prevEncumbrId1);
     FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(100d)
@@ -422,6 +473,16 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLines(any(), any());
 
+    LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
+      .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
+      .withBudgetsClosingRolloverStatus(RolloverStatus.SUCCESS).withFinancialRolloverStatus(RolloverStatus.SUCCESS)
+      .withOrdersRolloverStatus(RolloverStatus.IN_PROGRESS);
+    LedgerFiscalYearRolloverErrorCollection errorCollection = new LedgerFiscalYearRolloverErrorCollection().withTotalRecords(0);
+
+    doReturn(succeededFuture(progress)).when(ledgerRolloverProgressService).getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture(errorCollection)).when(ledgerRolloverErrorService).getRolloverErrorsByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
+
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
       .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(30.16d);
     Transaction transactionOneTime = new Transaction().withId(currEncumbrId1).withFromFundId(fundId1)
@@ -453,7 +514,7 @@ public class OrderRolloverServiceTest {
     when(exchangeRate.getBaseCurrency()).thenReturn(Monetary.getCurrency(polCurrency));
     when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
 
-    Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
         assertThat(fundDistributionOneTime.getEncumbrance(), equalTo(currEncumbrId1));
@@ -503,13 +564,6 @@ public class OrderRolloverServiceTest {
 
     List<Fund> funds = singletonList(new Fund().withId(fundId).withLedgerId(ledgerId));
 
-    PurchaseOrder purchaseOrder = new PurchaseOrder()
-      .withId(orderId)
-      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED)
-      .withOrderType(ONE_TIME);
-    List<PurchaseOrder> orders = singletonList(purchaseOrder);
-    PurchaseOrderCollection purchaseOrderCollection = new PurchaseOrderCollection().withPurchaseOrders(orders).withTotalRecords(1);
-
     FundDistribution fundDistribution = new FundDistribution()
       .withFundId(fundId)
       .withValue(100d)
@@ -535,6 +589,15 @@ public class OrderRolloverServiceTest {
       .withPoLines(new ArrayList<>())
       .withTotalRecords(0);
 
+    LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
+      .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
+      .withBudgetsClosingRolloverStatus(RolloverStatus.SUCCESS).withFinancialRolloverStatus(RolloverStatus.SUCCESS)
+      .withOrdersRolloverStatus(RolloverStatus.IN_PROGRESS);
+    LedgerFiscalYearRolloverErrorCollection errorCollection = new LedgerFiscalYearRolloverErrorCollection().withTotalRecords(0);
+
+    doReturn(succeededFuture(progress)).when(ledgerRolloverProgressService).getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture(errorCollection)).when(ledgerRolloverErrorService).getRolloverErrorsByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
     doReturn(succeededFuture(emptyPoLineCollection), succeededFuture(poLineCollection))
       .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
@@ -557,7 +620,7 @@ public class OrderRolloverServiceTest {
 
     doReturn(succeededFuture(null)).when(transactionService).deleteTransactions(anyList(), any());
 
-    Future<Void> future = orderRolloverService.rollover(ledgerFiscalYearRollover, requestContext);
+    Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
         assertThat(fundDistribution.getEncumbrance(), equalTo(null));
@@ -567,6 +630,57 @@ public class OrderRolloverServiceTest {
         vertxTestContext.completeNow();
       })
       .onFailure(vertxTestContext::failNow);
+  }
+
+  @Test
+  @DisplayName("Should fail when retrieve exchange rate provider and handle rollover error")
+  void shouldFailWhenRetrieveExchangeRateProviderAndHandleRolloverError(VertxTestContext vertxTestContext) {
+    String fromFiscalYearId = UUID.randomUUID().toString();
+    String ledgerId = UUID.randomUUID().toString();
+    String toFiscalYearId = UUID.randomUUID().toString();
+    String fundId1 = UUID.randomUUID().toString();
+    String fundId2 = UUID.randomUUID().toString();
+    String fundId3 = UUID.randomUUID().toString();
+
+    EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
+    EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
+    EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
+
+    LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
+      .withId(UUID.randomUUID().toString())
+      .withFromFiscalYearId(fromFiscalYearId)
+      .withLedgerId(ledgerId)
+      .withToFiscalYearId(toFiscalYearId)
+      .withEncumbrancesRollover(List.of(ongoingEncumbranceBasedOnExpended, oneTimeEncumbrance, ongoingEncumbranceBasedOnInitialAmount));
+
+    List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
+      new Fund().withId(fundId3).withLedgerId(ledgerId));
+
+    LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
+      .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
+      .withBudgetsClosingRolloverStatus(RolloverStatus.SUCCESS).withFinancialRolloverStatus(RolloverStatus.SUCCESS)
+      .withOrdersRolloverStatus(RolloverStatus.IN_PROGRESS);
+    LedgerFiscalYearRolloverErrorCollection errorCollection = new LedgerFiscalYearRolloverErrorCollection().withTotalRecords(0);
+
+    doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
+    doReturn(succeededFuture(progress)).when(ledgerRolloverProgressService).getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture(errorCollection)).when(ledgerRolloverErrorService).getRolloverErrorsByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
+    doReturn(succeededFuture(new LedgerFiscalYearRolloverError())).when(ledgerRolloverErrorService)
+      .saveRolloverError(anyString(), any(Throwable.class), any(LedgerFiscalYearRolloverError.ErrorType.class), anyString(), eq(requestContext));
+    doReturn(failedFuture("Error loading system currency from cache")).when(configurationEntriesCache).getSystemCurrency(requestContext);
+
+    Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        verify(ledgerRolloverErrorService, times(1)).saveRolloverError(anyString(),
+          any(Throwable.class), any(LedgerFiscalYearRolloverError.ErrorType.class), anyString(), eq(requestContext));
+        verify(ledgerRolloverProgressService, times(1)).updateRolloverProgress(progress, requestContext);
+        vertxTestContext.completeNow();
+      });
   }
 
 }

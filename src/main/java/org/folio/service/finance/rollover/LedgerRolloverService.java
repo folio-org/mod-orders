@@ -5,8 +5,6 @@ import static org.folio.service.finance.transaction.EncumbranceService.AND;
 
 import java.util.List;
 
-import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
-import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgressCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -15,14 +13,13 @@ import org.folio.rest.jaxrs.model.LedgerFiscalYearRolloverCollection;
 
 import io.vertx.core.Future;
 
-public class RolloverRetrieveService {
+public class LedgerRolloverService {
 
     private static final String LEDGER_ROLLOVERS_ENDPOINT = "/finance/ledger-rollovers";
-    private static final String LEDGER_ROLLOVERS_PROGRESS_ENDPOINT = "/finance/ledger-rollovers-progress";
 
     private final RestClient restClient;
 
-    public RolloverRetrieveService(RestClient restClient) {
+    public LedgerRolloverService(RestClient restClient) {
         this.restClient = restClient;
     }
 
@@ -41,16 +38,5 @@ public class RolloverRetrieveService {
         return restClient.get(requestEntry, LedgerFiscalYearRolloverCollection.class, requestContext)
                 .map(LedgerFiscalYearRolloverCollection::getLedgerFiscalYearRollovers);
     }
-
-    public Future<List<LedgerFiscalYearRolloverProgress>> getRolloversProgress(String rolloverId, RequestContext requestContext) {
-        String query = "ledgerRolloverId==" + rolloverId;
-        RequestEntry requestEntry = new RequestEntry(LEDGER_ROLLOVERS_PROGRESS_ENDPOINT)
-                .withQuery(query)
-                .withOffset(0)
-                .withLimit(1);
-        return restClient.get(requestEntry, LedgerFiscalYearRolloverProgressCollection.class, requestContext)
-                .map(LedgerFiscalYearRolloverProgressCollection::getLedgerFiscalYearRolloverProgresses);
-    }
-
 
 }
