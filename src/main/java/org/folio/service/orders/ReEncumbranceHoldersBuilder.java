@@ -36,7 +36,7 @@ import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
-import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.rollover.LedgerRolloverService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 
@@ -52,20 +52,20 @@ public class ReEncumbranceHoldersBuilder {
   private final FundService fundService;
   private final ExchangeRateProviderResolver exchangeRateProviderResolver;
   private final FiscalYearService fiscalYearService;
-  private final RolloverRetrieveService rolloverRetrieveService;
+  private final LedgerRolloverService ledgerRolloverService;
   private final TransactionService transactionService;
   private final FundsDistributionService fundsDistributionService;
 
   public ReEncumbranceHoldersBuilder(BudgetService budgetService, LedgerService ledgerService, FundService fundService,
                                      ExchangeRateProviderResolver exchangeRateProviderResolver, FiscalYearService fiscalYearService,
-                                     RolloverRetrieveService rolloverRetrieveService, TransactionService transactionService,
+                                     LedgerRolloverService ledgerRolloverService, TransactionService transactionService,
                                      FundsDistributionService fundsDistributionService) {
     this.budgetService = budgetService;
     this.ledgerService = ledgerService;
     this.fundService = fundService;
     this.exchangeRateProviderResolver = exchangeRateProviderResolver;
     this.fiscalYearService = fiscalYearService;
-    this.rolloverRetrieveService = rolloverRetrieveService;
+    this.ledgerRolloverService = ledgerRolloverService;
     this.transactionService = transactionService;
     this.fundsDistributionService = fundsDistributionService;
   }
@@ -166,7 +166,7 @@ public class ReEncumbranceHoldersBuilder {
     if (ledgerIds.isEmpty() || fiscalYearId.isEmpty()) {
       return Future.succeededFuture(holders);
     }
-    return rolloverRetrieveService.getLedgerFyRollovers(fiscalYearId.get(), ledgerIds, requestContext)
+    return ledgerRolloverService.getLedgerFyRollovers(fiscalYearId.get(), ledgerIds, requestContext)
       .map(rollovers -> withRollovers(rollovers, holders));
   }
 

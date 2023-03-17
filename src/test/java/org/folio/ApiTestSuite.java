@@ -46,6 +46,9 @@ import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.FundServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
+import org.folio.service.finance.rollover.LedgerRolloverErrorServiceTest;
+import org.folio.service.finance.rollover.LedgerRolloverProgressServiceTest;
+import org.folio.service.finance.rollover.LedgerRolloverServiceTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategyTest;
@@ -443,4 +446,17 @@ public class ApiTestSuite {
   @Nested
   class ExportHistoryImplTestNested extends ExportHistoryImplTest {
   }
+
+  @Nested
+  class LedgerRolloverServiceTestNested extends LedgerRolloverServiceTest {
+  }
+
+  @Nested
+  class LedgerRolloverErrorServiceTestNested extends LedgerRolloverErrorServiceTest {
+  }
+
+  @Nested
+  class LedgerRolloverProgressServiceTestNested extends LedgerRolloverProgressServiceTest {
+  }
+
 }
