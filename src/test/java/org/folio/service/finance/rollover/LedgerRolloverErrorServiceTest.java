@@ -72,7 +72,7 @@ public class LedgerRolloverErrorServiceTest {
       .withErrorType(LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER).withFailedAction("Overall order rollover")
       .withErrorMessage("Error when retrieving exchange rate provider");
     var errorCollection = new LedgerFiscalYearRolloverErrorCollection()
-      .withLedgerFiscalYearRolloverErrors(List.of(rolloverError)).withTotalRecords(0);
+      .withLedgerFiscalYearRolloverErrors(List.of(rolloverError)).withTotalRecords(1);
 
     doReturn(succeededFuture(errorCollection)).when(restClient).get(any(RequestEntry.class),
       eq(LedgerFiscalYearRolloverErrorCollection.class), eq(requestContext));
