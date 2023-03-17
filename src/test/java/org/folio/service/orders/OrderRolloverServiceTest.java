@@ -1,5 +1,6 @@
 package org.folio.service.orders;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.singletonList;
 import static org.folio.TestConfig.mockPort;
@@ -41,6 +42,7 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
@@ -109,6 +111,53 @@ public class OrderRolloverServiceTest {
     requestContext = new RequestContext(Vertx.vertx().getOrCreateContext(), okapiHeadersMock);
   }
 
+  @Test
+  @DisplayName("Should start preview rollover and check that start rollover was invoked")
+  void shouldStartPreviewRolloverAndCheckThatStartRolloverWasInvoked(VertxTestContext vertxTestContext) {
+    String fromFiscalYearId = UUID.randomUUID().toString();
+    String ledgerId = UUID.randomUUID().toString();
+    String toFiscalYearId = UUID.randomUUID().toString();
+
+    EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
+    EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
+    EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
+
+    LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
+      .withId(UUID.randomUUID().toString())
+      .withFromFiscalYearId(fromFiscalYearId)
+      .withLedgerId(ledgerId)
+      .withToFiscalYearId(toFiscalYearId)
+      .withEncumbrancesRollover(List.of(ongoingEncumbranceBasedOnExpended, oneTimeEncumbrance, ongoingEncumbranceBasedOnInitialAmount));
+
+    LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
+      .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
+      .withBudgetsClosingRolloverStatus(RolloverStatus.SUCCESS).withFinancialRolloverStatus(RolloverStatus.SUCCESS)
+      .withOrdersRolloverStatus(RolloverStatus.IN_PROGRESS);
+    LedgerFiscalYearRolloverErrorCollection errorCollection = new LedgerFiscalYearRolloverErrorCollection().withTotalRecords(0);
+
+    doReturn(succeededFuture(progress)).when(ledgerRolloverProgressService)
+      .getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture(errorCollection)).when(ledgerRolloverErrorService)
+      .getRolloverErrorsByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture()).when(ledgerRolloverProgressService)
+      .updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
+
+    OrderRolloverService spy = Mockito.spy(orderRolloverService);
+    doReturn(succeededFuture()).when(spy).startRollover(ledgerFiscalYearRollover, progress, requestContext);
+
+    Future<Void> future = spy.rollover(ledgerFiscalYearRollover, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        verify(spy, times(1)).startRollover(ledgerFiscalYearRollover, progress, requestContext);
+        verify(ledgerRolloverProgressService, times(1)).updateRolloverProgress(progress, requestContext);
+        verify(ledgerRolloverProgressService, times(2)).getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+        vertxTestContext.completeNow();
+      })
+      .onFailure(vertxTestContext::failNow);
+  }
 
   @Test
   @DisplayName("Should update order lines cost And Encumbrance Links where Pol Currency equals systemCurrency")
@@ -581,6 +630,57 @@ public class OrderRolloverServiceTest {
         vertxTestContext.completeNow();
       })
       .onFailure(vertxTestContext::failNow);
+  }
+
+  @Test
+  @DisplayName("Should fail when retrieve exchange rate provider and handle rollover error")
+  void shouldFailWhenRetrieveExchangeRateProviderAndHandleRolloverError(VertxTestContext vertxTestContext) {
+    String fromFiscalYearId = UUID.randomUUID().toString();
+    String ledgerId = UUID.randomUUID().toString();
+    String toFiscalYearId = UUID.randomUUID().toString();
+    String fundId1 = UUID.randomUUID().toString();
+    String fundId2 = UUID.randomUUID().toString();
+    String fundId3 = UUID.randomUUID().toString();
+
+    EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
+    EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.REMAINING);
+    EncumbranceRollover ongoingEncumbranceBasedOnInitialAmount = new EncumbranceRollover()
+      .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT);
+
+    LedgerFiscalYearRollover ledgerFiscalYearRollover = new LedgerFiscalYearRollover()
+      .withId(UUID.randomUUID().toString())
+      .withFromFiscalYearId(fromFiscalYearId)
+      .withLedgerId(ledgerId)
+      .withToFiscalYearId(toFiscalYearId)
+      .withEncumbrancesRollover(List.of(ongoingEncumbranceBasedOnExpended, oneTimeEncumbrance, ongoingEncumbranceBasedOnInitialAmount));
+
+    List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
+      new Fund().withId(fundId3).withLedgerId(ledgerId));
+
+    LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
+      .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
+      .withBudgetsClosingRolloverStatus(RolloverStatus.SUCCESS).withFinancialRolloverStatus(RolloverStatus.SUCCESS)
+      .withOrdersRolloverStatus(RolloverStatus.IN_PROGRESS);
+    LedgerFiscalYearRolloverErrorCollection errorCollection = new LedgerFiscalYearRolloverErrorCollection().withTotalRecords(0);
+
+    doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
+    doReturn(succeededFuture(progress)).when(ledgerRolloverProgressService).getRolloversProgressByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture(errorCollection)).when(ledgerRolloverErrorService).getRolloverErrorsByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
+    doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
+    doReturn(succeededFuture(new LedgerFiscalYearRolloverError())).when(ledgerRolloverErrorService)
+      .saveRolloverError(anyString(), any(Throwable.class), any(LedgerFiscalYearRolloverError.ErrorType.class), anyString(), eq(requestContext));
+    doReturn(failedFuture("Error loading system currency from cache")).when(configurationEntriesCache).getSystemCurrency(requestContext);
+
+    Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        verify(ledgerRolloverErrorService, times(1)).saveRolloverError(anyString(),
+          any(Throwable.class), any(LedgerFiscalYearRolloverError.ErrorType.class), anyString(), eq(requestContext));
+        verify(ledgerRolloverProgressService, times(1)).updateRolloverProgress(progress, requestContext);
+        vertxTestContext.completeNow();
+      });
   }
 
 }
