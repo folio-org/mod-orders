@@ -3,7 +3,9 @@ package org.folio.service.orders;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.CLOSED;
@@ -13,6 +15,7 @@ import static org.folio.rest.jaxrs.model.RolloverStatus.SUCCESS;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -339,8 +342,14 @@ public class OrderRolloverService {
   }
 
   private Future<List<Transaction>> getEncumbrancesForRollover(List<String> polineIds, LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
-    String query = buildQueryEncumbrancesForRollover(polineIds, ledgerFYRollover);
-    return transactionService.getTransactions(query, requestContext);
+    var futures = ofSubLists(new ArrayList<>(polineIds), MAX_IDS_FOR_GET_RQ_15)
+      .map(ids -> buildQueryEncumbrancesForRollover(ids, ledgerFYRollover))
+      .map(query -> transactionService.getTransactions(query, requestContext))
+      .toList();
+    return collectResultsOnSuccess(futures)
+      .map(lists -> lists.stream()
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList()));
   }
 
   private String buildQueryEncumbrancesForRollover(List<String> polineIds, LedgerFiscalYearRollover ledgerFYRollover) {
