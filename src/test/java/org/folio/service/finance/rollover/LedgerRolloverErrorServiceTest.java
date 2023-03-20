@@ -1,21 +1,23 @@
 package org.folio.service.finance.rollover;
 
-import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
-import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
-import org.folio.rest.core.RestClient;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.core.models.RequestEntry;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.InjectMocks;
-import org.mockito.ArgumentCaptor;
-import org.mockito.MockitoAnnotations;
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.core.RestClientTest.X_OKAPI_TENANT;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -24,23 +26,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.TestConfig.mockPort;
-import static org.folio.TestConstants.X_OKAPI_TOKEN;
-import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.rest.RestConstants.OKAPI_URL;
-import static org.folio.rest.core.RestClientTest.X_OKAPI_TENANT;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.doReturn;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 public class LedgerRolloverErrorServiceTest {
@@ -88,7 +90,7 @@ public class LedgerRolloverErrorServiceTest {
         verify(restClient).get(argumentCaptor.capture(), eq(LedgerFiscalYearRolloverErrorCollection.class), eq(requestContext));
 
         RequestEntry requestEntry = argumentCaptor.getValue();
-        assertEquals("/finance/ledger-rollovers-errors", requestEntry.getBaseEndpoint());
+        assertEquals(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS), requestEntry.getBaseEndpoint());
         assertThat(URLDecoder.decode(requestEntry.buildEndpoint(), StandardCharsets.UTF_8), containsString("ledgerRolloverId==" + rolloverId));
         vertxTestContext.completeNow();
       });
@@ -128,7 +130,7 @@ public class LedgerRolloverErrorServiceTest {
 
         assertNull(rolloverErrorAfterCapture.getId());
         assertNotEquals(rolloverError, rolloverErrorAfterCapture);
-        assertEquals("/finance/ledger-rollovers-errors", requestEntry.getBaseEndpoint());
+        assertEquals(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS), requestEntry.buildEndpoint());
         vertxTestContext.completeNow();
       });
   }
