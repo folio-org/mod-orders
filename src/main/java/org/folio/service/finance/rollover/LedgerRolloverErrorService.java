@@ -14,7 +14,7 @@ import org.folio.rest.core.models.RequestEntry;
 import io.vertx.core.Future;
 
 public class LedgerRolloverErrorService {
-    private static final String ENDPOINT = "/finance/ledger-rollovers-errors";
+    private static final String ENDPOINT = "/finance-storage/ledger-rollovers-errors";
     private static final String ENDPOINT_BY_ID = "/finance-storage/ledger-rollovers-errors/{id}";
 
     private final RestClient restClient;
