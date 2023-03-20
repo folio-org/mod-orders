@@ -1893,9 +1893,7 @@ public class PurchaseOrdersApiTest {
     PurchaseOrder storageUpdatedOrder = orderUpdates.get(0).mapTo(PurchaseOrder.class);
     assertNotNull(storageUpdatedOrder.getWorkflowStatus());
 
-    //MODORDERS-234 Status automatically changes to Open
-    assertEquals(PurchaseOrder.WorkflowStatus.OPEN, storageUpdatedOrder.getWorkflowStatus());
-
+    assertEquals(PurchaseOrder.WorkflowStatus.CLOSED, storageUpdatedOrder.getWorkflowStatus());
   }
 
   @Test
