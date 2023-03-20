@@ -3,7 +3,6 @@ package org.folio.service.finance.rollover;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import io.vertx.core.json.JsonObject;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
@@ -12,9 +11,10 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 public class LedgerRolloverErrorService {
-    private static final String ENDPOINT = "/finance/ledger-rollovers-errors";
+    private static final String ENDPOINT = "/finance-storage/ledger-rollovers-errors";
     private static final String ENDPOINT_BY_ID = "/finance-storage/ledger-rollovers-errors/{id}";
 
     private final RestClient restClient;
