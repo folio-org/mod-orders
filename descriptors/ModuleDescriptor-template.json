@@ -900,8 +900,8 @@
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines.item.put",
-            "finance-storage.ledger-rollovers-errors.collection.get",
-            "finance-storage.ledger-rollovers-errors.item.put",
+            "finance.ledger-rollovers-errors.collection.get",
+            "finance-storage.ledger-rollovers-errors.item.post",
             "finance-storage.ledger-rollovers-errors.item.delete",
             "finance.ledger-rollovers-progress.item.put"
 
