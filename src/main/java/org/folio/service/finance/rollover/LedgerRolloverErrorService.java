@@ -14,8 +14,11 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 public class LedgerRolloverErrorService {
-    private static final String ENDPOINT = "/finance-storage/ledger-rollovers-errors";
-    private static final String ENDPOINT_BY_ID = "/finance-storage/ledger-rollovers-errors/{id}";
+
+    // use only for get by query requests
+    private static final String ENDPOINT = "/finance/ledger-rollovers-errors";
+    private static final String STORAGE_ENDPOINT = "/finance-storage/ledger-rollovers-errors";
+    private static final String STORAGE_ENDPOINT_BY_ID = "/finance-storage/ledger-rollovers-errors/{id}";
 
     private final RestClient restClient;
 
@@ -51,7 +54,7 @@ public class LedgerRolloverErrorService {
         .withErrorType(errorType)
         .withFailedAction(failedAction)
         .withErrorMessage(message);
-      RequestEntry requestEntry = new RequestEntry(ENDPOINT);
+      RequestEntry requestEntry = new RequestEntry(STORAGE_ENDPOINT);
       return restClient.post(requestEntry, error, LedgerFiscalYearRolloverError.class, requestContext);
   }
 
@@ -63,7 +66,7 @@ public class LedgerRolloverErrorService {
     }
 
     public Future<Void> deleteRolloverError(String id, RequestContext requestContext) {
-        RequestEntry requestEntry = new RequestEntry(ENDPOINT_BY_ID).withId(id);
+        RequestEntry requestEntry = new RequestEntry(STORAGE_ENDPOINT_BY_ID).withId(id);
         return restClient.delete(requestEntry, requestContext);
     }
 }
