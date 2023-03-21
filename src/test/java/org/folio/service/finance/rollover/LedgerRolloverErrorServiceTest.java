@@ -5,6 +5,7 @@ import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
+import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.RestClientTest.X_OKAPI_TENANT;
@@ -130,7 +131,7 @@ public class LedgerRolloverErrorServiceTest {
 
         assertNull(rolloverErrorAfterCapture.getId());
         assertNotEquals(rolloverError, rolloverErrorAfterCapture);
-        assertEquals(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS), requestEntry.buildEndpoint());
+        assertEquals(resourcesPath(LEDGER_FY_ROLLOVER_ERRORS_STORAGE), requestEntry.buildEndpoint());
         vertxTestContext.completeNow();
       });
   }
