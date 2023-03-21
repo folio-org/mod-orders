@@ -1,5 +1,13 @@
 ## 12.7.0 - Unreleased
 
+## 12.6.4 Orchid R1 2023 - Released
+The primary focus of this release was to rewrite the orders rollover interaction in an asynchronous way
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.3...v12.6.4)
+
+### Bug Fixes
+* [MODORDERS-865](https://issues.folio.org/browse/MODORDERS-865) - Rewrite the orders rollover interaction in an asynchronous way
+
 ## 12.6.3 Orchid R1 2023 - Released
 This release focused on fixing po line product identifiers mapping
 
