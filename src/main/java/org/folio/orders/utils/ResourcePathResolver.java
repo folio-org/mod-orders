@@ -44,7 +44,8 @@ public class ResourcePathResolver {
   public static final String EXPENSE_CLASSES_URL = "finance.expense-classes";
   public static final String CONFIGURATION_ENTRIES = "configurations.entries";
   public static final String LEDGER_FY_ROLLOVERS = "finance.ledger-rollovers";
-  public static final String LEDGER_FY_ROLLOVER_ERRORS = "finance-storage.ledger-rollovers-errors";
+  public static final String LEDGER_FY_ROLLOVER_ERRORS = "finance.ledger-rollovers-errors";
+  public static final String LEDGER_FY_ROLLOVER_ERRORS_STORAGE = "finance-storage.ledger-rollovers-errors";
   public static final String ORDER_INVOICE_RELATIONSHIP = "order-invoice-relationship";
   public static final String EXPORT_HISTORY = "export-history";
   public static final String TAGS = "tags";
@@ -86,7 +87,8 @@ public class ResourcePathResolver {
     apis.put(EXPENSE_CLASSES_URL, "/finance/expense-classes");
     apis.put(CONFIGURATION_ENTRIES, "/configurations/entries");
     apis.put(LEDGER_FY_ROLLOVERS, "/finance/ledger-rollovers");
-    apis.put(LEDGER_FY_ROLLOVER_ERRORS, "/finance-storage/ledger-rollovers-errors");
+    apis.put(LEDGER_FY_ROLLOVER_ERRORS, "/finance/ledger-rollovers-errors");
+    apis.put(LEDGER_FY_ROLLOVER_ERRORS_STORAGE, "/finance-storage/ledger-rollovers-errors");
     apis.put(ORDER_INVOICE_RELATIONSHIP, "/orders-storage/order-invoice-relns");
     apis.put(EXPORT_HISTORY, "/orders-storage/export-history");
     apis.put(TAGS, "/tags");
