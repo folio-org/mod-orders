@@ -54,6 +54,7 @@ public class ExceptionUtil {
   public static boolean isErrorMessageJson(String errorMessage) {
     if (!StringUtils.isEmpty(errorMessage)) {
       Pattern pattern = Pattern.compile("(message).*(code).*(parameters)");
+      errorMessage = errorMessage.replaceAll("\r\n", "");
       Matcher matcher = pattern.matcher(errorMessage);
       if (matcher.find()) {
         return matcher.groupCount() == 3;
@@ -76,6 +77,10 @@ public class ExceptionUtil {
       return new JsonObject(jsonMessage).mapTo(Error.class);
     }
     return error;
+  }
+
+  public static Errors mapToErrors(String errorsStr) {
+    return new JsonObject(errorsStr).mapTo(Errors.class);
   }
 
   private static Errors convertVertxHttpException(io.vertx.ext.web.handler.HttpException throwable) {
