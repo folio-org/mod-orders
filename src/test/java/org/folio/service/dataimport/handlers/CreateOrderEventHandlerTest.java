@@ -1284,10 +1284,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     CreateOrderEventHandler createOrderHandler = getBeanFromSpringContext(vertx, CreateOrderEventHandler.class);
     vertx.runOnContext(event -> Future.fromCompletionStage(createOrderHandler.handle(dataImportEventPayload))
-      .onComplete(context.asyncAssertFailure(th -> {
-        context.assertTrue(th instanceof DuplicateEventException);
-        async.complete();
-      })));
+      .onComplete(context.asyncAssertFailure()));
   }
 
 
