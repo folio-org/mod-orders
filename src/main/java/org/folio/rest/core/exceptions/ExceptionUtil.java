@@ -54,10 +54,21 @@ public class ExceptionUtil {
   public static boolean isErrorMessageJson(String errorMessage) {
     if (!StringUtils.isEmpty(errorMessage)) {
       Pattern pattern = Pattern.compile("(message).*(code).*(parameters)");
-      errorMessage = errorMessage.replaceAll("\r\n", "");
       Matcher matcher = pattern.matcher(errorMessage);
       if (matcher.find()) {
         return matcher.groupCount() == 3;
+      }
+    }
+    return false;
+  }
+
+  public static boolean isErrorsMessageJson(String errorsMessage) {
+    if (!StringUtils.isEmpty(errorsMessage)) {
+      Pattern pattern = Pattern.compile("(errors).*(message).*(code).*(parameters)");
+      errorsMessage = errorsMessage.replaceAll("\r\n", "");
+      Matcher matcher = pattern.matcher(errorsMessage);
+      if (matcher.find()) {
+        return matcher.groupCount() == 4;
       }
     }
     return false;
