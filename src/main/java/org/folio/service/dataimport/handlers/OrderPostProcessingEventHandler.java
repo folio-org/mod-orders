@@ -27,6 +27,7 @@ import org.folio.service.orders.PurchaseOrderStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,22 +62,25 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private final Context vertxContext;
   private final PoLineImportProgressService poLineImportProgressService;
   private final PurchaseOrderLineService purchaseOrderLineService;
-  private final HashMap<CompositePoLine.OrderFormat, BiConsumer<CompositePoLine, String>> orderFormatToAdjustingMaterialType = new HashMap<>() {{
-    put(PHYSICAL_RESOURCE, (CompositePoLine pol, String materialType) -> pol.getPhysical().setMaterialType(materialType));
-    put(ELECTRONIC_RESOURCE, (CompositePoLine pol, String materialType) -> pol.getEresource().setMaterialType(materialType));
-    put(OTHER, (CompositePoLine pol, String materialType) -> pol.getPhysical().setMaterialType(materialType));
-    put(P_E_MIX, (CompositePoLine pol, String materialType) -> {
+  private static final EnumMap<CompositePoLine.OrderFormat, BiConsumer<CompositePoLine, String>> orderFormatToAdjustingMaterialType =
+    new EnumMap<>(CompositePoLine.OrderFormat.class);
+
+  private static final EnumMap<CompositePoLine.OrderFormat, Location> orderFormatToLocation = new EnumMap<>(CompositePoLine.OrderFormat.class);
+
+  static {
+    orderFormatToAdjustingMaterialType.put(PHYSICAL_RESOURCE, (CompositePoLine pol, String materialType) -> pol.getPhysical().setMaterialType(materialType));
+    orderFormatToAdjustingMaterialType.put(ELECTRONIC_RESOURCE, (CompositePoLine pol, String materialType) -> pol.getEresource().setMaterialType(materialType));
+    orderFormatToAdjustingMaterialType.put(OTHER, (CompositePoLine pol, String materialType) -> pol.getPhysical().setMaterialType(materialType));
+    orderFormatToAdjustingMaterialType.put(P_E_MIX, (CompositePoLine pol, String materialType) -> {
       pol.getPhysical().setMaterialType(materialType);
       pol.getEresource().setMaterialType(materialType);
     });
-  }};
 
-  private final HashMap<CompositePoLine.OrderFormat, Location> orderFormatToLocation = new HashMap<>() {{
-    put(PHYSICAL_RESOURCE, new Location().withQuantityPhysical(1));
-    put(ELECTRONIC_RESOURCE, new Location().withQuantityElectronic(1));
-    put(OTHER, new Location().withQuantityPhysical(1));
-    put(P_E_MIX, new Location().withQuantityPhysical(1).withQuantityElectronic(1));
-  }};
+    orderFormatToLocation.put(PHYSICAL_RESOURCE, new Location().withQuantityPhysical(1));
+    orderFormatToLocation.put(ELECTRONIC_RESOURCE, new Location().withQuantityElectronic(1));
+    orderFormatToLocation.put(OTHER, new Location().withQuantityPhysical(1));
+    orderFormatToLocation.put(P_E_MIX, new Location().withQuantityPhysical(1).withQuantityElectronic(1));
+  }
 
   @Autowired
   public OrderPostProcessingEventHandler(PurchaseOrderHelper purchaseOrderHelper,
@@ -129,7 +133,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       JsonObject holdingsAsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
       String permanentLocationId = holdingsAsJson.getString(PERMANENT_LOCATION_ID);
       List<Location> locations = poLine.getLocations();
-      if (locations.size() > 0) {
+      if (!locations.isEmpty()) {
         locations.stream().findFirst().ifPresent(location -> location.setLocationId(permanentLocationId));
       } else {
         locations.add(orderFormatToLocation.get(poLine.getOrderFormat()).withLocationId(permanentLocationId));
