@@ -138,6 +138,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
         new MappingRule().withName("vendor").withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
         new MappingRule().withPath("order.po.approved").withValue("\"true\"").withEnabled("true"),
+        new MappingRule().withPath("order.po.poNumberPrefix").withValue("\"pref\"").withEnabled("true"),
+        new MappingRule().withPath("order.po.poNumberSuffix").withValue("\"suf\"").withEnabled("true"),
         new MappingRule().withPath("order.poLine.titleOrPackage").withValue("245$a").withEnabled("true"),
         new MappingRule().withPath("order.poLine.cost.currency").withValue("\"USD\"").withEnabled("true"),
         new MappingRule().withPath("order.poLine.orderFormat").withValue("\"Physical Resource\"").withEnabled("true"),
@@ -253,6 +255,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
+
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertTrue(createdOrder.getPoNumber().contains("pref"));
+    assertTrue(createdOrder.getPoNumber().contains("suf"));
   }
 
   @Test
