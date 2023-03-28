@@ -19,6 +19,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.service.dataimport.PoLineImportProgressService;
 import org.folio.service.dataimport.utils.DataImportUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -27,13 +28,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
+import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
+import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 
 @Component
@@ -44,12 +53,30 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
   private static final String PO_LINE_KEY = "PO_LINE";
   private static final String ID_FIELD = "id";
+  private static final String MATERIAL_TYPE_ID = "materialTypeId";
+  private static final String PERMANENT_LOCATION_ID = "permanentLocationId";
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final Context vertxContext;
   private final PoLineImportProgressService poLineImportProgressService;
   private final PurchaseOrderLineService purchaseOrderLineService;
+  private final HashMap<CompositePoLine.OrderFormat, BiConsumer<CompositePoLine, String>> orderFormatToAdjustingMaterialType = new HashMap<>() {{
+    put(PHYSICAL_RESOURCE, (CompositePoLine pol, String materialType) -> pol.getPhysical().setMaterialType(materialType));
+    put(ELECTRONIC_RESOURCE, (CompositePoLine pol, String materialType) -> pol.getEresource().setMaterialType(materialType));
+    put(OTHER, (CompositePoLine pol, String materialType) -> pol.getPhysical().setMaterialType(materialType));
+    put(P_E_MIX, (CompositePoLine pol, String materialType) -> {
+      pol.getPhysical().setMaterialType(materialType);
+      pol.getEresource().setMaterialType(materialType);
+    });
+  }};
+
+  private final HashMap<CompositePoLine.OrderFormat, Location> orderFormatToLocation = new HashMap<>() {{
+    put(PHYSICAL_RESOURCE, new Location().withQuantityPhysical(1));
+    put(ELECTRONIC_RESOURCE, new Location().withQuantityElectronic(1));
+    put(OTHER, new Location().withQuantityPhysical(1));
+    put(P_E_MIX, new Location().withQuantityPhysical(1).withQuantityElectronic(1));
+  }};
 
   @Autowired
   public OrderPostProcessingEventHandler(PurchaseOrderHelper purchaseOrderHelper,
@@ -77,6 +104,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), CompositePoLine.class);
+    adjustLocationAndMaterialType(poLine, payloadContext);
 
     LOGGER.info("handle:: jobExecutionId {}, poLineId {}, orderId {}", dataImportEventPayload.getJobExecutionId(), poLine.getId(), poLine.getPurchaseOrderId());
     ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext)
@@ -94,6 +122,25 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       });
 
     return future;
+  }
+
+  private void adjustLocationAndMaterialType(CompositePoLine poLine, HashMap<String, String> payloadContext) {
+    if (payloadContext.get(HOLDINGS.value()) != null) {
+      JsonObject holdingsAsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
+      String permanentLocationId = holdingsAsJson.getString(PERMANENT_LOCATION_ID);
+      List<Location> locations = poLine.getLocations();
+      if (locations.size() > 0) {
+        locations.stream().findFirst().ifPresent(location -> location.setLocationId(permanentLocationId));
+      } else {
+        locations.add(orderFormatToLocation.get(poLine.getOrderFormat()).withLocationId(permanentLocationId));
+      }
+    }
+
+    if (payloadContext.get(ITEM.value()) != null) {
+      JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
+      String materialType = itemAsJson.getString(MATERIAL_TYPE_ID);
+      orderFormatToAdjustingMaterialType.get(poLine.getOrderFormat()).accept(poLine, materialType);
+    }
   }
 
   private Future<Void> openOrder(CompositePoLine poLine, RequestContext requestContext, String jobExecutionId) {
