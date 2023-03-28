@@ -45,6 +45,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 import static org.folio.service.UserService.getCurrentUserId;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -543,10 +544,20 @@ public class PurchaseOrderHelper {
     logger.info("setPoNumberIfMissing :: orderId: {}", compPO.getId());
     if (null == compPO.getPoNumber()) {
       return poNumberHelper.generatePoNumber(requestContext)
+        .compose(poNumber -> adjustPrefixAndSuffix(poNumber, compPO))
         .onSuccess(compPO::setPoNumber)
         .mapEmpty();
     }
     return Future.succeededFuture();
+  }
+
+  private Future<String> adjustPrefixAndSuffix(String poNumber, CompositePurchaseOrder compPO) {
+    List<String> valuesToConcat = Arrays.asList(compPO.getPoNumberPrefix(), poNumber, compPO.getPoNumberSuffix());
+    String result = "";
+    for (String value: valuesToConcat) {
+      result += value == null ? "" : value;
+    }
+    return Future.succeededFuture(result);
   }
 
   private Future<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
