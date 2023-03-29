@@ -133,7 +133,7 @@
             "finance.ledger-rollovers.collection.get",
             "finance.ledger-rollovers-progress.collection.get",
             "finance.ledger-rollovers-errors.collection.get",
-            "finance-storage.ledger-rollovers-errors.item.delete",
+            "finance.ledger-rollovers-errors.item.delete",
             "finance.exchange-rate.item.get"
           ]
         }
@@ -901,8 +901,7 @@
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines.item.put",
             "finance.ledger-rollovers-errors.collection.get",
-            "finance-storage.ledger-rollovers-errors.item.post",
-            "finance-storage.ledger-rollovers-errors.item.delete",
+            "finance.ledger-rollovers-errors.item.post",
             "finance.ledger-rollovers-progress.item.put"
 
           ]
