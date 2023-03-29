@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
@@ -65,7 +66,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private static final EnumMap<CompositePoLine.OrderFormat, BiConsumer<CompositePoLine, String>> orderFormatToAdjustingMaterialType =
     new EnumMap<>(CompositePoLine.OrderFormat.class);
 
-  private static final EnumMap<CompositePoLine.OrderFormat, Location> orderFormatToLocation = new EnumMap<>(CompositePoLine.OrderFormat.class);
+  private static final EnumMap<CompositePoLine.OrderFormat, Supplier<Location>> orderFormatToLocation = new EnumMap<>(CompositePoLine.OrderFormat.class);
 
   static {
     orderFormatToAdjustingMaterialType.put(PHYSICAL_RESOURCE, (CompositePoLine pol, String materialType) -> pol.getPhysical().setMaterialType(materialType));
@@ -76,10 +77,10 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       pol.getEresource().setMaterialType(materialType);
     });
 
-    orderFormatToLocation.put(PHYSICAL_RESOURCE, new Location().withQuantityPhysical(1));
-    orderFormatToLocation.put(ELECTRONIC_RESOURCE, new Location().withQuantityElectronic(1));
-    orderFormatToLocation.put(OTHER, new Location().withQuantityPhysical(1));
-    orderFormatToLocation.put(P_E_MIX, new Location().withQuantityPhysical(1).withQuantityElectronic(1));
+    orderFormatToLocation.put(PHYSICAL_RESOURCE, () -> new Location().withQuantityPhysical(1));
+    orderFormatToLocation.put(ELECTRONIC_RESOURCE, () -> new Location().withQuantityElectronic(1));
+    orderFormatToLocation.put(OTHER, () -> new Location().withQuantityPhysical(1));
+    orderFormatToLocation.put(P_E_MIX, () -> new Location().withQuantityPhysical(1).withQuantityElectronic(1));
   }
 
   @Autowired
@@ -136,7 +137,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       if (!locations.isEmpty()) {
         locations.stream().findFirst().ifPresent(location -> location.setLocationId(permanentLocationId));
       } else {
-        locations.add(orderFormatToLocation.get(poLine.getOrderFormat()).withLocationId(permanentLocationId));
+        locations.add(orderFormatToLocation.get(poLine.getOrderFormat()).get().withLocationId(permanentLocationId));
       }
     }
 
