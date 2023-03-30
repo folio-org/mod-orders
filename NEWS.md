@@ -1,5 +1,9 @@
 ## 12.7.0 - Unreleased
 
+## 12.6.6 Orchid R1 2023 - Released
+[MODORDERS-878](https://issues.folio.org/browse/MODORDERS-878) Adjust prefix and suffix for generated poNumber
+[MODORDERS-876](https://issues.folio.org/browse/MODORDERS-876) Extra holdings/items created for open orders via data import, some without POL links
+
 ## 12.6.5 Orchid R1 2023 - Released
 This release focused on fixing po line "create inventory" field overriding
 
