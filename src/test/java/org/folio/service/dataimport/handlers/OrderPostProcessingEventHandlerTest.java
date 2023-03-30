@@ -27,6 +27,7 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.service.dataimport.PoLineImportProgressService;
@@ -71,10 +72,13 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.folio.service.dataimport.handlers.CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER;
+import static org.folio.service.inventory.InventoryManager.HOLDINGS_RECORDS;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_MATERIAL_TYPE_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryManagerTest.NEW_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManagerTest.OLD_LOCATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -92,6 +96,10 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String ID_FIELD = "id";
   private static final String ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID = "615b8413-82d5-4203-aa6e-e37984cb5ac3";
+  private static final String PHYSICAL_RESOURCE_MATERIAL_TYPE_ID = "1a54b431-2e4f-452d-9cae-9cee66c9a892";
+  private static final String HOLDINGS_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63";
+  private static final String ITEM_ID = "86481a22-633e-4b97-8061-0dc5fdaaeabb";
+  private static final String INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -151,12 +159,12 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   public void shouldOpenOrderAndUseExistingInstanceHoldingsItemWhenAllPoLinesProcessed(TestContext context) throws InterruptedException {
     // given
     JsonObject itemJson = new JsonObject()
-      .put(ID, "86481a22-633e-4b97-8061-0dc5fdaaeabb")
-      .put(ITEM_HOLDINGS_RECORD_ID, "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63")
+      .put(ID, ITEM_ID)
+      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
       .put(ITEM_MATERIAL_TYPE_ID, poLine.getEresource().getMaterialType());
 
-    JsonObject instanceJson = new JsonObject().put(ID_FIELD, "5294d737-a04b-4158-857a-3f3c555bcc60");
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
     CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
     mockPoLine.setInstanceId(instanceJson.getString(ID_FIELD));
 
@@ -221,9 +229,200 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
+  public void shouldOpenOrderAndPoLineShouldContainLocationAndMaterialTypeFromCreatedHoldingsAndItemIfThoseExistForPhysicalResource(TestContext context)
+    throws InterruptedException {
+    CompositePoLine physicalPoLine = new CompositePoLine()
+      .withId(UUID.randomUUID().toString())
+      .withTitleOrPackage("poLine for data-import")
+      .withPurchaseOrderId(order.getId())
+      .withPoLineNumber("10000-1")
+      .withSource(CompositePoLine.Source.MARC)
+      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withPhysical(new Physical())
+      .withCost(new Cost().withCurrency("USD"));
+
+    JsonObject itemJson = new JsonObject()
+      .put(ID, ITEM_ID)
+      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
+      .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
+
+    JsonObject holdingsJson = new JsonObject()
+      .put(ID, HOLDINGS_ID)
+      .put(HOLDING_PERMANENT_LOCATION_ID, NEW_LOCATION_ID);
+
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
+
+    CompositePoLine updatedPoLine = shouldReturnUpdatedPoLine(physicalPoLine, instanceJson, holdingsJson, itemJson, context);
+
+    assertEquals(instanceJson.getString(ID_FIELD), updatedPoLine.getInstanceId());
+    assertEquals(itemJson.getString(ITEM_MATERIAL_TYPE_ID), updatedPoLine.getPhysical().getMaterialType());
+    Location location = updatedPoLine.getLocations().get(0);
+    assertEquals(holdingsJson.getString(HOLDING_PERMANENT_LOCATION_ID), location.getLocationId());
+    assertEquals(1, location.getQuantityPhysical());
+  }
+
+  @Test
+  public void shouldOpenOrderAndPoLineShouldContainLocationAndMaterialTypeFromCreatedHoldingsAndItemIfThoseExistForEResource(TestContext context)
+    throws InterruptedException {
+    CompositePoLine eresourcePoLine = new CompositePoLine()
+      .withId(UUID.randomUUID().toString())
+      .withTitleOrPackage("poLine for data-import")
+      .withPurchaseOrderId(order.getId())
+      .withPoLineNumber("10000-1")
+      .withSource(CompositePoLine.Source.MARC)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withEresource(new Eresource())
+      .withCost(new Cost().withCurrency("USD"));
+
+    JsonObject itemJson = new JsonObject()
+      .put(ID, ITEM_ID)
+      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
+      .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
+
+    JsonObject holdingsJson = new JsonObject()
+      .put(ID, HOLDINGS_ID)
+      .put(HOLDING_PERMANENT_LOCATION_ID, NEW_LOCATION_ID);
+
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
+
+    CompositePoLine updatedPoLine = shouldReturnUpdatedPoLine(eresourcePoLine, instanceJson, holdingsJson, itemJson, context);
+
+    assertEquals(instanceJson.getString(ID_FIELD), updatedPoLine.getInstanceId());
+    assertEquals(itemJson.getString(ITEM_MATERIAL_TYPE_ID), updatedPoLine.getEresource().getMaterialType());
+    Location location = updatedPoLine.getLocations().get(0);
+    assertEquals(holdingsJson.getString(HOLDING_PERMANENT_LOCATION_ID), location.getLocationId());
+    assertEquals(1, location.getQuantityElectronic());
+  }
+
+  @Test
+  public void shouldOpenOrderAndPoLineShouldContainLocationAndMaterialTypeFromCreatedHoldingsAndItemIfThoseExistForP_E_MIX(TestContext context)
+    throws InterruptedException {
+    CompositePoLine P_E_MIX_PoLine = new CompositePoLine()
+      .withId(UUID.randomUUID().toString())
+      .withTitleOrPackage("poLine for data-import")
+      .withPurchaseOrderId(order.getId())
+      .withPoLineNumber("10000-1")
+      .withSource(CompositePoLine.Source.MARC)
+      .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
+      .withPhysical(new Physical())
+      .withEresource(new Eresource())
+      .withCost(new Cost().withCurrency("USD"));
+
+    JsonObject itemJson = new JsonObject()
+      .put(ID, ITEM_ID)
+      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
+      .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
+
+    JsonObject holdingsJson = new JsonObject()
+      .put(ID, HOLDINGS_ID)
+      .put(HOLDING_PERMANENT_LOCATION_ID, NEW_LOCATION_ID);
+
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
+
+    CompositePoLine updatedPoLine = shouldReturnUpdatedPoLine(P_E_MIX_PoLine, instanceJson, holdingsJson, itemJson, context);
+
+    assertEquals(instanceJson.getString(ID_FIELD), updatedPoLine.getInstanceId());
+    assertEquals(itemJson.getString(ITEM_MATERIAL_TYPE_ID), updatedPoLine.getPhysical().getMaterialType());
+    assertEquals(itemJson.getString(ITEM_MATERIAL_TYPE_ID), updatedPoLine.getEresource().getMaterialType());
+    Location location = updatedPoLine.getLocations().get(0);
+    assertEquals(holdingsJson.getString(HOLDING_PERMANENT_LOCATION_ID), location.getLocationId());
+    assertEquals(1, location.getQuantityPhysical());
+    assertEquals(1, location.getQuantityElectronic());
+  }
+
+  @Test
+  public void shouldOpenOrderAndPoLineShouldContainLocationAndMaterialTypeFromCreatedHoldingsAndItemIfThoseExistForOther(TestContext context)
+    throws InterruptedException {
+    CompositePoLine otherPoLine = new CompositePoLine()
+      .withId(UUID.randomUUID().toString())
+      .withTitleOrPackage("poLine for data-import")
+      .withPurchaseOrderId(order.getId())
+      .withPoLineNumber("10000-1")
+      .withSource(CompositePoLine.Source.MARC)
+      .withOrderFormat(CompositePoLine.OrderFormat.OTHER)
+      .withPhysical(new Physical())
+      .withCost(new Cost().withCurrency("USD"));
+
+    JsonObject itemJson = new JsonObject()
+      .put(ID, ITEM_ID)
+      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
+      .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
+
+    JsonObject holdingsJson = new JsonObject()
+      .put(ID, HOLDINGS_ID)
+      .put(HOLDING_PERMANENT_LOCATION_ID, NEW_LOCATION_ID);
+
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
+
+    CompositePoLine updatedPoLine = shouldReturnUpdatedPoLine(otherPoLine, instanceJson, holdingsJson, itemJson, context);
+
+    assertEquals(instanceJson.getString(ID_FIELD), updatedPoLine.getInstanceId());
+    assertEquals(itemJson.getString(ITEM_MATERIAL_TYPE_ID), updatedPoLine.getPhysical().getMaterialType());
+    Location location = updatedPoLine.getLocations().get(0);
+    assertEquals(holdingsJson.getString(HOLDING_PERMANENT_LOCATION_ID), location.getLocationId());
+    assertEquals(1, location.getQuantityPhysical());
+  }
+
+  private CompositePoLine shouldReturnUpdatedPoLine(CompositePoLine poLine, JsonObject instanceJson, JsonObject holdingsJson,
+                                                    JsonObject itemJson, TestContext context) throws InterruptedException {
+    CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
+    mockPoLine.setInstanceId(instanceJson.getString(ID_FIELD));
+
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, mockPoLine);
+    addMockEntry(HOLDINGS_RECORDS, holdingsJson);
+    addMockEntry(ITEM_RECORDS, itemJson);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(INSTANCE.value(), instanceJson.encodePrettily());
+        put(ITEM.value(), itemJson.encodePrettily());
+        put(HOLDINGS.value(), holdingsJson.encodePrettily());
+        put(ORDER.value(), Json.encodePrettily(order));
+        put(PO_LINE_KEY, Json.encodePrettily(poLine));
+      }});
+
+    CompletableFuture<Object> future = new CompletableFuture<>();
+    PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
+    polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
+      .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
+      .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+    future.join();
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    verifyPoLine(eventPayload);
+
+    assertNull(getCreatedInstances());
+    assertNull(getCreatedHoldings());
+    assertNull(getCreatedItems());
+
+    List<JsonObject> updatedPoLines = MockServer.getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE);
+    return updatedPoLines.get(0).mapTo(CompositePoLine.class);
+  }
+
+  @Test
   public void shouldNotUpdateOrderStatusToOpenWhenNotAllPoLinesProcessed(TestContext context) throws InterruptedException {
     // given
-    JsonObject instanceJson = new JsonObject().put(ID_FIELD, "5294d737-a04b-4158-857a-3f3c555bcc60");
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
 
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
