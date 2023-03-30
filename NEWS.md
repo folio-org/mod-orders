@@ -1,5 +1,13 @@
 ## 12.7.0 - Unreleased
 
+## 12.6.5 Orchid R1 2023 - Released
+This release focused on fixing po line "create inventory" field overriding
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.4...v12.6.5)
+
+### Bug Fixes
+* [MODORDERS-860](https://issues.folio.org/browse/MODORDERS-860) - Adjust POL "create inventory" field overriding
+
 ## 12.6.4 Orchid R1 2023 - Released
 The primary focus of this release was to rewrite the orders rollover interaction in an asynchronous way
 
