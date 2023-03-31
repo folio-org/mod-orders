@@ -33,7 +33,7 @@ public class PoNumberAPI extends BaseApi implements OrdersPoNumber {
 
   @Override
   @Validate
-  public void getOrdersPoNumber(String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
+  public void getOrdersPoNumber(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
     logger.info("Receiving generated poNumber ...");
 
@@ -44,7 +44,7 @@ public class PoNumberAPI extends BaseApi implements OrdersPoNumber {
 
   @Override
   @Validate
-  public void postOrdersPoNumberValidate(String lang, PoNumber poNumber, Map<String, String> okapiHeaders,
+  public void postOrdersPoNumberValidate(PoNumber poNumber, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     // @Validate asserts the pattern of a PO Number, the below method is used to

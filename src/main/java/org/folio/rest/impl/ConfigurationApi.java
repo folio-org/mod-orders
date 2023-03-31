@@ -44,7 +44,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void getOrdersConfigurationReasonsForClosure(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersConfigurationReasonsForClosure(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     reasonForClosureService.getReasonsForClosure(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(reasonForClosureCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(reasonForClosureCollection))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -52,7 +52,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void putOrdersConfigurationReasonsForClosureById(String id, String lang, ReasonForClosure entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void putOrdersConfigurationReasonsForClosureById(String id, ReasonForClosure entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     reasonForClosureService.updateReasonForClosure(id, entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
@@ -61,7 +61,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void postOrdersConfigurationReasonsForClosure(String lang, ReasonForClosure entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersConfigurationReasonsForClosure(ReasonForClosure entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     reasonForClosureService.createReasonForClosure(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(obj -> asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(REASONS_FOR_CLOSURE, obj.getId()), obj))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -69,7 +69,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void getOrdersConfigurationReasonsForClosureById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersConfigurationReasonsForClosureById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     reasonForClosureService.getReasonForClosureById(id, new RequestContext(vertxContext, okapiHeaders))
     .onSuccess(reasonForClosure -> asyncResultHandler.handle(succeededFuture(buildOkResponse(reasonForClosure))))
     .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -77,7 +77,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void deleteOrdersConfigurationReasonsForClosureById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void deleteOrdersConfigurationReasonsForClosureById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     reasonForClosureService.deleteReasonForClosure(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -85,7 +85,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void getOrdersConfigurationSuffixes(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersConfigurationSuffixes(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.getSuffixes(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
     .onSuccess(suffixCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(suffixCollection))))
     .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -93,7 +93,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void putOrdersConfigurationSuffixesById(String id, String lang, Suffix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void putOrdersConfigurationSuffixesById(String id, Suffix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.updateSuffix(id, entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -101,7 +101,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void postOrdersConfigurationSuffixes(String lang, Suffix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersConfigurationSuffixes(Suffix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.createSuffix(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(suffix -> asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(SUFFIXES, suffix.getId()), suffix))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -109,7 +109,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void getOrdersConfigurationSuffixesById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersConfigurationSuffixesById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.getSuffixById(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(suffix -> asyncResultHandler.handle(succeededFuture(buildOkResponse(suffix))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -117,7 +117,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void deleteOrdersConfigurationSuffixesById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void deleteOrdersConfigurationSuffixesById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     suffixService.deleteSuffix(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -125,7 +125,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void getOrdersConfigurationPrefixes(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersConfigurationPrefixes(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.getPrefixes(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(prefixCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(prefixCollection))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -133,7 +133,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void putOrdersConfigurationPrefixesById(String id, String lang, Prefix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void putOrdersConfigurationPrefixesById(String id, Prefix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.updatePrefix(id, entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -141,7 +141,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void postOrdersConfigurationPrefixes(String lang, Prefix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersConfigurationPrefixes(Prefix entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.createPrefix(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(prefix -> asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(PREFIXES, prefix.getId()), prefix))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -149,7 +149,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void getOrdersConfigurationPrefixesById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersConfigurationPrefixesById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.getPrefixById(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(prefix -> asyncResultHandler.handle(succeededFuture(buildOkResponse(prefix))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -157,7 +157,7 @@ public class ConfigurationApi extends BaseApi implements OrdersConfiguration {
 
   @Override
   @Validate
-  public void deleteOrdersConfigurationPrefixesById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void deleteOrdersConfigurationPrefixesById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     prefixService.deletePrefix(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));

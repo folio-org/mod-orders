@@ -55,7 +55,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void deleteOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
+  public void deleteOrdersCompositeOrdersById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     purchaseOrderHelper.deleteOrder(id, new RequestContext(vertxContext, okapiHeaders))
@@ -65,7 +65,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void getOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersCompositeOrdersById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     purchaseOrderHelper.getCompositeOrder(id, new RequestContext(vertxContext, okapiHeaders))
@@ -75,7 +75,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void postOrdersCompositeOrders(String lang, CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
+  public void postOrdersCompositeOrders(CompositePurchaseOrder compPO, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     // First validate content of the PO and proceed only if all is okay
@@ -101,7 +101,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void putOrdersCompositeOrdersById(String orderId, boolean deleteHoldings, String lang, CompositePurchaseOrder compPO,
+  public void putOrdersCompositeOrdersById(String orderId, boolean deleteHoldings, CompositePurchaseOrder compPO,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     // Set order id from path if not specified in body
     populateOrderId(orderId, compPO);
@@ -141,7 +141,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void getOrdersCompositeOrders(int offset, int limit, String query, String lang,
+  public void getOrdersCompositeOrders(String totalRecords, int offset, int limit, String query,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     purchaseOrderHelper
@@ -157,7 +157,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void postOrdersCompositeOrdersReEncumberById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersCompositeOrdersReEncumberById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     orderReEncumberService.reEncumber(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
@@ -165,7 +165,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
   @Override
   @Validate
-  public void postOrdersRollover(String lang, LedgerFiscalYearRollover ledgerFYRollover, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersRollover(LedgerFiscalYearRollover ledgerFYRollover, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     orderRolloverService.rollover(ledgerFYRollover, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));

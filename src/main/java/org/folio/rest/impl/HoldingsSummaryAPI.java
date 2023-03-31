@@ -34,7 +34,7 @@ public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldingSummary 
 
   @Override
   @Validate
-  public void getOrdersHoldingSummaryById(String holdingId, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersHoldingSummaryById(String holdingId, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     var requestContext = new RequestContext(vertxContext, okapiHeaders);

@@ -59,7 +59,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
 
   @Override
   @Validate
-  public void getOrdersOrderLines(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersOrderLines(String totalRecords, int offset, int limit, String query, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     helper.getOrderLines(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(lines -> asyncResultHandler.handle(succeededFuture(buildOkResponse(lines))))
@@ -68,7 +68,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
 
   @Override
   @Validate
-  public void postOrdersOrderLines(String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
+  public void postOrdersOrderLines(CompositePoLine poLine, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
@@ -83,7 +83,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
 
   @Override
   @Validate
-  public void getOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersOrderLinesById(String lineId, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Started Invocation of POLine Request with id = {}", lineId);
     helper.getCompositePoLine(lineId, new RequestContext(vertxContext, okapiHeaders))
@@ -99,7 +99,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
 
   @Override
   @Validate
-  public void deleteOrdersOrderLinesById(String lineId, String lang, Map<String, String> okapiHeaders,
+  public void deleteOrdersOrderLinesById(String lineId, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     helper.deleteLine(lineId, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
@@ -108,7 +108,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
 
   @Override
   @Validate
-  public void putOrdersOrderLinesById(String lineId, String lang, CompositePoLine poLine, Map<String, String> okapiHeaders,
+  public void putOrdersOrderLinesById(String lineId, CompositePoLine poLine, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Handling PUT Order Line operation...");
     // Set id if this is available only in path

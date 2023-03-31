@@ -28,7 +28,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
 
   @Override
   @Validate
-  public void postOrdersOrderTemplates(String lang, OrderTemplate entity, Map<String, String> okapiHeaders,
+  public void postOrdersOrderTemplates(OrderTemplate entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper orderTemplatesHelper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     orderTemplatesHelper.createOrderTemplate(entity)
@@ -45,7 +45,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
 
   @Override
   @Validate
-  public void getOrdersOrderTemplates(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersOrderTemplates(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.getOrderTemplates(query, offset, limit)
@@ -60,7 +60,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
 
   @Override
   @Validate
-  public void putOrdersOrderTemplatesById(String id, String lang, OrderTemplate entity, Map<String, String> okapiHeaders,
+  public void putOrdersOrderTemplatesById(String id, OrderTemplate entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
 
@@ -85,7 +85,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
 
   @Override
   @Validate
-  public void getOrdersOrderTemplatesById(String id, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersOrderTemplatesById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.getOrderTemplateById(id)
@@ -101,7 +101,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
 
   @Override
   @Validate
-  public void deleteOrdersOrderTemplatesById(String id, String lang, Map<String, String> okapiHeaders,
+  public void deleteOrdersOrderTemplatesById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.deleteOrderTemplate(id)
