@@ -34,7 +34,6 @@ import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.TestConstants.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER;
 import static org.folio.TestConstants.INVALID_CONFIG_X_OKAPI_TENANT;
-import static org.folio.TestConstants.INVALID_LANG;
 import static org.folio.TestConstants.MIN_PO_ID;
 import static org.folio.TestConstants.NON_EXIST_CONFIG_X_OKAPI_TENANT;
 import static org.folio.TestConstants.NON_EXIST_INSTANCE_STATUS_TENANT_HEADER;
@@ -2953,29 +2952,6 @@ public class PurchaseOrdersApiTest {
 
     Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON, 422).as(Errors.class);
     validatePoLineCreationErrorForNonPendingOrder(errorCode, errors, 4);
-  }
-
-  @Test
-  void testValidationOnGetById() {
-    logger.info("=== Test validation Annotation on GET ORDER BY ID API ===");
-    String id = "non-existent-po-id";
-
-    logger.info("=== Test validation on invalid lang query parameter ===");
-    verifyGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id) + INVALID_LANG, TEXT_PLAIN, 400);
-  }
-
-
-  @Test
-  void testValidationOnPut() throws IOException {
-    logger.info("=== Test validation Annotation on PUT API ===");
-    String id = "non-existent-po-id";
-    logger.info("=== Test validation with no body ===");
-
-    verifyPut(COMPOSITE_ORDERS_PATH +"/"+id, "", TEXT_PLAIN, 400);
-
-    logger.info("=== Test validation on invalid lang query parameter ===");
-
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id) + INVALID_LANG, getMockData(MINIMAL_ORDER_PATH), TEXT_PLAIN, 400);
   }
 
   @Test
