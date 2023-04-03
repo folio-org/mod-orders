@@ -65,7 +65,7 @@ public class ExceptionUtil {
 
   public static boolean isErrorsMessageJson(String errorsMessage) {
     if (!StringUtils.isEmpty(errorsMessage)) {
-      errorsMessage = errorsMessage.replaceAll("\r\n", "");
+      errorsMessage = errorsMessage.replace("\r\n", "");
       Matcher matcher = ERRORS_PATTERN.matcher(errorsMessage);
       if (matcher.find()) {
         return matcher.groupCount() == 4;
