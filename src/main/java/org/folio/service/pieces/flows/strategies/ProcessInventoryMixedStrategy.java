@@ -29,13 +29,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
                                                                       InventoryManager inventoryManager,
                                                                       RestClient restClient,
                                                                       RequestContext requestContext) {
-    List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
-    compPOL.getLocations()
-      .forEach(location -> itemsPerHolding.add(inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getInstanceId(), location, requestContext)
-        .map(holding -> {
-          updateLocationWithHoldingInfo(holding, location);
-          return null;
-        })));
+    List<Future<JsonObject>> itemsPerHolding = updateMixedHolding(compPOL, inventoryManager, restClient, requestContext);
     return collectResultsOnSuccess(itemsPerHolding)
       .map(aVoid -> {
         updateLocations(compPOL);
@@ -57,6 +51,19 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
             );
         }
       );
+  }
+
+  private List<Future<JsonObject>> updateMixedHolding(CompositePoLine compPOL, InventoryManager inventoryManager, RestClient restClient, RequestContext requestContext) {
+    List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
+    compPOL.getLocations().forEach(location -> itemsPerHolding.add(
+      findHoldingsId(compPOL, location, restClient, requestContext)
+        .compose(aVoid -> inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getInstanceId(), location, requestContext)
+          .map(holding -> {
+            updateLocationWithHoldingInfo(holding, location);
+            return null;
+          }))
+    ));
+    return itemsPerHolding;
   }
 
   private void updateLocationWithHoldingInfo(JsonObject holding, Location location) {
