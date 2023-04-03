@@ -90,9 +90,11 @@ public abstract class ProcessInventoryStrategy {
     return itemsPerHolding;
   }
 
-  private Future<Void> findHoldingsId(CompositePoLine compPOL, Location location, RestClient restClient, RequestContext requestContext) {
+  protected Future<Void> findHoldingsId(CompositePoLine compPOL, Location location, RestClient restClient, RequestContext requestContext) {
     if (ObjectUtils.notEqual(CompositePoLine.Source.USER, compPOL.getSource()) &&
-        StringUtils.isNotBlank(location.getLocationId()) && StringUtils.isBlank(location.getHoldingId())) {
+        StringUtils.isNotBlank(compPOL.getInstanceId()) &&
+        StringUtils.isNotBlank(location.getLocationId()) &&
+        StringUtils.isBlank(location.getHoldingId())) {
 
       String query = String.format(HOLDINGS_LOOKUP_QUERY, compPOL.getInstanceId(), location.getLocationId());
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
