@@ -27,6 +27,8 @@ public class ExceptionUtil {
   private static final String DETAIL = "detail";
   private static final String MESSAGE = "message";
   public static final String NOT_PROVIDED = "Not Provided";
+  private static final Pattern ERROR_PATTERN = Pattern.compile("(message).*(code).*(parameters)");
+  private static final Pattern ERRORS_PATTERN = Pattern.compile("(errors).*(message).*(code).*(parameters)");
 
   private ExceptionUtil() {
   }
@@ -53,10 +55,20 @@ public class ExceptionUtil {
 
   public static boolean isErrorMessageJson(String errorMessage) {
     if (!StringUtils.isEmpty(errorMessage)) {
-      Pattern pattern = Pattern.compile("(message).*(code).*(parameters)");
-      Matcher matcher = pattern.matcher(errorMessage);
+      Matcher matcher = ERROR_PATTERN.matcher(errorMessage);
       if (matcher.find()) {
         return matcher.groupCount() == 3;
+      }
+    }
+    return false;
+  }
+
+  public static boolean isErrorsMessageJson(String errorsMessage) {
+    if (!StringUtils.isEmpty(errorsMessage)) {
+      errorsMessage = errorsMessage.replace("\r\n", "");
+      Matcher matcher = ERRORS_PATTERN.matcher(errorsMessage);
+      if (matcher.find()) {
+        return matcher.groupCount() == 4;
       }
     }
     return false;
@@ -76,6 +88,10 @@ public class ExceptionUtil {
       return new JsonObject(jsonMessage).mapTo(Error.class);
     }
     return error;
+  }
+
+  public static Errors mapToErrors(String errorsStr) {
+    return new JsonObject(errorsStr).mapTo(Errors.class);
   }
 
   private static Errors convertVertxHttpException(io.vertx.ext.web.handler.HttpException throwable) {
