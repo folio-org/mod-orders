@@ -35,7 +35,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
 
   @Override
   @Validate
-  public void getOrdersTitles(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersTitles(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     titlesService.getTitles(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
@@ -45,7 +45,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
 
   @Override
   @Validate
-  public void postOrdersTitles(String lang, Title entity, Map<String, String> okapiHeaders,
+  public void postOrdersTitles(Title entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     titlesService.createTitle(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(title -> asyncResultHandler.handle(
@@ -55,7 +55,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
 
   @Override
   @Validate
-  public void getOrdersTitlesById(String id, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersTitlesById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     titlesService.getTitleById(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(title -> asyncResultHandler.handle(succeededFuture(buildOkResponse(title))))
@@ -64,7 +64,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
 
   @Override
   @Validate
-  public void deleteOrdersTitlesById(String id, String lang, Map<String, String> okapiHeaders,
+  public void deleteOrdersTitlesById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     titlesService.deleteTitle(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
@@ -73,7 +73,7 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
 
   @Override
   @Validate
-  public void putOrdersTitlesById(String id, String lang, Title entity, Map<String, String> okapiHeaders,
+  public void putOrdersTitlesById(String id, Title entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     // Set id if this is available only in path
     if (isEmpty(entity.getId())) {

@@ -44,7 +44,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   @Override
   @Validate
-  public void getOrdersPieces(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersPieces(String totalRecords, int offset, int limit, String query, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceStorageService.getPieces(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(pieces -> asyncResultHandler.handle(succeededFuture(buildOkResponse(pieces))))
@@ -53,7 +53,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   @Override
   @Validate
-  public void postOrdersPieces(boolean createItem, String lang, Piece entity, Map<String, String> okapiHeaders,
+  public void postOrdersPieces(boolean createItem, Piece entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceCreateFlowManager.createPiece(entity, createItem, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(piece -> {
@@ -68,7 +68,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   @Override
   @Validate
-  public void getOrdersPiecesById(String id, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersPiecesById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceStorageService.getPieceById(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(piece -> asyncResultHandler.handle(succeededFuture(buildOkResponse(piece))))
@@ -77,7 +77,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   @Override
   @Validate
-  public void putOrdersPiecesById(String pieceId, boolean createItem, boolean deleteHolding, String lang, Piece piece,
+  public void putOrdersPiecesById(String pieceId, boolean createItem, boolean deleteHolding, Piece piece,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     if (StringUtils.isEmpty(piece.getId())) {
       piece.setId(pieceId);
@@ -90,7 +90,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   @Override
   @Validate
-  public void deleteOrdersPiecesById(String pieceId, boolean deleteHolding, String lang, Map<String, String> okapiHeaders,
+  public void deleteOrdersPiecesById(String pieceId, boolean deleteHolding, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceDeleteFlowManager.deletePiece(pieceId, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))

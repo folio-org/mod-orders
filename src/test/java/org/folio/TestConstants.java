@@ -19,7 +19,6 @@ public final class TestConstants {
 
   public static final String PO_LINE_NUMBER_VALUE = "1";
 
-  public static final String INVALID_LANG = "?lang=english";
   public static final String BAD_QUERY = "unprocessableQuery";
   public static final String ID = "id";
 

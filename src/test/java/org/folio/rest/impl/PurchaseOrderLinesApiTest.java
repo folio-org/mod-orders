@@ -23,7 +23,6 @@ import static org.folio.TestConstants.ID_BAD_FORMAT;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.TestConstants.INVALID_LANG;
 import static org.folio.TestConstants.NON_EXIST_CONFIG_X_OKAPI_TENANT;
 import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
 import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
@@ -473,12 +472,6 @@ public class PurchaseOrderLinesApiTest {
   void testValidationOnPutLineWithoutBody() {
     logger.info("=== Test validation on PUT line with no body ===");
     verifyPut(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST), "", TEXT_PLAIN, 400);
-  }
-
-  @Test
-  void testValidationOnPutWithIncorrectLang() throws IOException {
-    logger.info("=== Test validation on PUT line with invalid lang query parameter ===");
-    verifyPut(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST) + INVALID_LANG, getMockData(PO_LINE_MIN_CONTENT_PATH), TEXT_PLAIN, 400);
   }
 
   @Test
