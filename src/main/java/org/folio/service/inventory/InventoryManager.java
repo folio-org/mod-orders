@@ -6,7 +6,6 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.orders.utils.HelperUtils.LANG;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
@@ -193,8 +192,7 @@ public class InventoryManager {
   }
 
   public Future<JsonObject> getItemRecordById(String itemId, boolean skipThrowNorFoundException, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(itemId)
-      .withQueryParameter(LANG, "en");
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(itemId);
     return restClient.getAsJsonObject(requestEntry, skipThrowNorFoundException, requestContext);
   }
 
@@ -347,7 +345,7 @@ public class InventoryManager {
   public Future<JsonObject> getHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
     if (StringUtils.isNotEmpty(holdingId)) {
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
-        .withId(holdingId).withQueryParameter(LANG, "en");
+        .withId(holdingId);
       return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
     }
     return Future.succeededFuture(new JsonObject());
@@ -863,7 +861,7 @@ public class InventoryManager {
 
   public Future<List<JsonObject>> getItemsByHoldingId(String holdingId, RequestContext requestContext) {
     String query = String.format("holdingsRecordId==%s", holdingId);
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS)).withQuery(query).withQueryParameter(LANG, "en")
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS)).withQuery(query)
       .withOffset(0).withLimit(Integer.MAX_VALUE);
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(itemsCollection -> {
@@ -1018,7 +1016,7 @@ public class InventoryManager {
   public Future<Void> deleteHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
     if (StringUtils.isNotEmpty(holdingId)) {
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
-        .withId(holdingId).withQueryParameter(LANG, "en");
+        .withId(holdingId);
       return restClient.delete(requestEntry, skipNotFoundException, requestContext);
     }
     return Future.succeededFuture();
@@ -1147,7 +1145,7 @@ public class InventoryManager {
    */
   private Future<String> createItemInInventory(JsonObject itemData, RequestContext requestContext) {
     Promise<String> promise = Promise.promise();
-    RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT).withQueryParameter(LANG, "en");
+    RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT);
     logger.info("Trying to create Item in inventory");
     restClient.postJsonObjectAndGetId(requestEntry, itemData, requestContext)
       .onSuccess(promise::complete)

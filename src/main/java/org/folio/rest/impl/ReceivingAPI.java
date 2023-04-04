@@ -30,7 +30,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
 
   @Override
   @Validate
-  public void postOrdersReceive(String lang, ReceivingCollection entity, Map<String, String> okapiHeaders,
+  public void postOrdersReceive(ReceivingCollection entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Receiving {} items", entity.getTotalRecords());
     ReceivingHelper helper = new ReceivingHelper(entity, okapiHeaders, vertxContext);
@@ -41,7 +41,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
 
   @Override
   @Validate
-  public void postOrdersCheckIn(String lang, CheckinCollection entity, Map<String, String> okapiHeaders,
+  public void postOrdersCheckIn(CheckinCollection entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Checkin {} items", entity.getTotalRecords());
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext);
@@ -52,7 +52,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
 
   @Override
   @Validate
-  public void getOrdersReceivingHistory(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersReceivingHistory(String totalRecords, int offset, int limit, String query, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     ReceivingHelper helper = new ReceivingHelper(okapiHeaders, vertxContext);

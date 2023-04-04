@@ -32,7 +32,7 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
   }
 
   @Override
-  public void getOrdersAcquisitionMethods(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersAcquisitionMethods(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionMethodsService.getAcquisitionMethods(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(acquisitionMethods -> asyncResultHandler.handle(succeededFuture(buildOkResponse(acquisitionMethods))))
@@ -40,7 +40,7 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
   }
 
   @Override
-  public void postOrdersAcquisitionMethods(String lang, AcquisitionMethod entity, Map<String, String> okapiHeaders,
+  public void postOrdersAcquisitionMethods(AcquisitionMethod entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionMethodsService.createAcquisitionMethod(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(acquisitionMethod -> asyncResultHandler.handle(
@@ -49,7 +49,7 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
   }
 
   @Override
-  public void getOrdersAcquisitionMethodsById(String id, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersAcquisitionMethodsById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionMethodsService.getAcquisitionMethodById(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(acquisitionMethod -> asyncResultHandler.handle(succeededFuture(buildOkResponse(acquisitionMethod))))
@@ -57,7 +57,7 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
   }
 
   @Override
-  public void deleteOrdersAcquisitionMethodsById(String id, String lang, Map<String, String> okapiHeaders,
+  public void deleteOrdersAcquisitionMethodsById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionMethodsService.deleteAcquisitionMethod(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
@@ -65,7 +65,7 @@ public class AcquisitionMethodAPI extends BaseApi implements OrdersAcquisitionMe
   }
 
   @Override
-  public void putOrdersAcquisitionMethodsById(String id, String lang, AcquisitionMethod entity, Map<String, String> okapiHeaders,
+  public void putOrdersAcquisitionMethodsById(String id, AcquisitionMethod entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     // Set id if this is available only in path

@@ -5,7 +5,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.helper.BaseHelper.ID;
-import static org.folio.orders.utils.HelperUtils.URL_WITH_LANG_PARAM;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -13,7 +12,6 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
@@ -238,7 +236,7 @@ public class PurchaseOrderLineService {
 
   public Future<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine, RequestContext requestContext) {
     logger.debug("Updating PO line...");
-    String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES_STORAGE, poLineId), EN);
+    String endpoint = resourceByIdPath(PO_LINES_STORAGE, poLineId);
     return operateOnObject(HttpMethod.PUT, endpoint, poLine, requestContext);
   }
   public Future<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
@@ -260,11 +258,11 @@ public class PurchaseOrderLineService {
     final HttpMethod operation;
     // In case the id is available in the PO line from storage, depending on the request content the sub-object is going to be updated or removed
     if (StringUtils.isNotEmpty(storageId)) {
-      url = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(prop, storageId), EN);
+      url = resourceByIdPath(prop, storageId);
       operation = (subObjContent != null) ? HttpMethod.PUT : HttpMethod.DELETE;
     } else if (subObjContent != null) {
       operation = HttpMethod.POST;
-      url = String.format(URL_WITH_LANG_PARAM, resourcesPath(prop), EN);
+      url = resourcesPath(prop);
     } else {
       // There is no object in storage nor in request - skipping operation
       return Future.succeededFuture();

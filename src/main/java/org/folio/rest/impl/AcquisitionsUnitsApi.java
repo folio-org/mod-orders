@@ -42,7 +42,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void postAcquisitionsUnitsUnits(String lang, AcquisitionsUnit entity, Map<String, String> okapiHeaders,
+  public void postAcquisitionsUnitsUnits(AcquisitionsUnit entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.createAcquisitionsUnit(entity, new RequestContext(vertxContext, okapiHeaders))
@@ -58,7 +58,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void getAcquisitionsUnitsUnits(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
+  public void getAcquisitionsUnitsUnits(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.getAcquisitionsUnits(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
@@ -73,7 +73,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void putAcquisitionsUnitsUnitsById(String id, String lang, AcquisitionsUnit entity, Map<String, String> okapiHeaders,
+  public void putAcquisitionsUnitsUnitsById(String id, AcquisitionsUnit entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     if (entity.getId() != null && !entity.getId().equals(id)) {
@@ -91,7 +91,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void getAcquisitionsUnitsUnitsById(String id, String lang, Map<String, String> okapiHeaders,
+  public void getAcquisitionsUnitsUnitsById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.getAcquisitionsUnit(id, new RequestContext(vertxContext, okapiHeaders))
@@ -106,7 +106,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void deleteAcquisitionsUnitsUnitsById(String id, String lang, Map<String, String> okapiHeaders,
+  public void deleteAcquisitionsUnitsUnitsById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.deleteAcquisitionsUnit(id, new RequestContext(vertxContext, okapiHeaders))
@@ -121,7 +121,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void postAcquisitionsUnitsMemberships(String lang, AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders,
+  public void postAcquisitionsUnitsMemberships(AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders,
                                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     acquisitionsUnitsService.createAcquisitionsUnitsMembership(entity, new RequestContext(vertxContext, okapiHeaders))
@@ -137,7 +137,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void getAcquisitionsUnitsMemberships(String query, int offset, int limit, String lang, Map<String, String> okapiHeaders,
+  public void getAcquisitionsUnitsMemberships(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders,
                                               Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(memberships -> {
@@ -151,7 +151,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void putAcquisitionsUnitsMembershipsById(String id, String lang, AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void putAcquisitionsUnitsMembershipsById(String id, AcquisitionsUnitMembership entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     if (entity.getId() != null && !entity.getId().equals(id)) {
       addProcessingError(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
       asyncResultHandler.handle(succeededFuture(buildErrorResponse(422)));
@@ -167,7 +167,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void getAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getAcquisitionsUnitsMembershipsById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionsUnitsService.getAcquisitionsUnitsMembership(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(membership -> {
         if (logger.isInfoEnabled()) {
@@ -180,7 +180,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
   @Override
   @Validate
-  public void deleteAcquisitionsUnitsMembershipsById(String id, String lang, Map<String, String> okapiHeaders,
+  public void deleteAcquisitionsUnitsMembershipsById(String id, Map<String, String> okapiHeaders,
                                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
    acquisitionsUnitsService.deleteAcquisitionsUnitsMembership(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(ok -> {
