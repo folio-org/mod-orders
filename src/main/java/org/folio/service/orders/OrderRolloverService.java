@@ -64,7 +64,7 @@ import io.vertxconcurrent.Semaphore;
 public class OrderRolloverService {
   private static final Logger logger = LogManager.getLogger();
 
-  private static final String PO_LINE_FUND_DISTR_QUERY = "fundDistribution = \"/@fundId = \"%s\"";
+  private static final String PO_LINE_FUND_DISTR_QUERY = "fundDistribution =/@fundId \"%s\"";
   private static final String ORDER_TYPE_QUERY = "purchaseOrder.orderType == %s";
   private static final String ENCUMBR_FY_QUERY = "fiscalYearId == \"%s\"";
   private static final String ENCUMBRANCE_BY_POLINE_ID_QUERY = "encumbrance.sourcePoLineId == \"%s\"";
