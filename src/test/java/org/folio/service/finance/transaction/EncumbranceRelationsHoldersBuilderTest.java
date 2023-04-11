@@ -6,7 +6,7 @@ import static org.folio.rest.acq.model.finance.Encumbrance.OrderStatus.OPEN;
 import static org.folio.rest.acq.model.finance.Encumbrance.OrderType.ONGOING;
 import static org.folio.rest.acq.model.finance.Encumbrance.Status.UNRELEASED;
 import static org.folio.rest.acq.model.finance.Transaction.Source.PO_LINE;
-import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_FISCAL_YEARS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.empty;
@@ -19,6 +19,7 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -41,10 +42,12 @@ import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Ongoing;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
@@ -54,6 +57,7 @@ import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -68,9 +72,6 @@ import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 public class EncumbranceRelationsHoldersBuilderTest {
-
-  private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
-  private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
 
   @InjectMocks
   private EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
@@ -104,9 +105,12 @@ public class EncumbranceRelationsHoldersBuilderTest {
   EncumbranceRelationsHolder holder2;
   EncumbranceRelationsHolder holder3;
 
+  private AutoCloseable mockitoMocks;
+
+
   @BeforeEach
   public void initMocks(){
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
     order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString())
         .withReEncumber(true)
         .withOrderType(CompositePurchaseOrder.OrderType.ONGOING)
@@ -195,6 +199,11 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holder3 = new EncumbranceRelationsHolder().withPurchaseOrder(order).withPoLine(line3)
         .withFundDistribution(distribution3).withNewEncumbrance(newEncumbrance3);
 
+  }
+
+  @AfterEach
+  public void resetMocks() throws Exception {
+    mockitoMocks.close();
   }
 
   @Test
@@ -429,6 +438,39 @@ public class EncumbranceRelationsHoldersBuilderTest {
         hasProperty("fiscalYearId", is(fiscalYear.getId())),
         hasProperty("currency", is(fiscalYear.getCurrency()))
     ))));
+  }
+
+  @Test
+  void testShouldThrowExceptionWithMultipleFiscalYears() {
+    //Given
+    FiscalYear fiscalYear1 = new FiscalYear()
+      .withId(UUID.randomUUID().toString());
+    FiscalYear fiscalYear2 = new FiscalYear()
+      .withId(UUID.randomUUID().toString());
+
+    Budget budget1 = new Budget()
+      .withId(UUID.randomUUID().toString())
+      .withFundId(holder1.getFundId())
+      .withFiscalYearId(fiscalYear1.getId());
+    Budget budget2 = new Budget()
+      .withId(UUID.randomUUID().toString())
+      .withFundId(holder2.getFundId())
+      .withFiscalYearId(fiscalYear2.getId());
+
+    List<EncumbranceRelationsHolder> holders = new ArrayList<>();
+    holders.add(holder1.withBudget(budget1));
+    holders.add(holder2.withBudget(budget2));
+
+    //When
+    HttpException httpException = assertThrows(HttpException.class, () -> encumbranceRelationsHoldersBuilder
+      .withFiscalYearData(holders, requestContextMock).result());
+
+    //Then
+    assertEquals(422, httpException.getCode());
+    Error error = httpException.getError();
+    assertEquals(MULTIPLE_FISCAL_YEARS.getCode(), error.getCode());
+    assertEquals(List.of(fiscalYear1.getId(), fiscalYear2.getId()).toString(), error.getParameters().get(0).getValue());
+    assertEquals(order.getId(), error.getParameters().get(1).getValue());
   }
 
   @Test

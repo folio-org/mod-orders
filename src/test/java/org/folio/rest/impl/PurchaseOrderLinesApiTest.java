@@ -575,7 +575,7 @@ public class PurchaseOrderLinesApiTest {
     body.setTags(new Tags().withTagList(Collections.singletonList("updated")));
     body.setCost(new Cost().withCurrency("USD").withListUnitPrice(70.0).withQuantityPhysical(1));
     body.setFundDistribution(Collections.singletonList(new FundDistribution()
-      .withCode("EUROHIST")
+      .withCode("MISCHIST")
       .withFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f")
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(100D)));
@@ -619,7 +619,7 @@ public class PurchaseOrderLinesApiTest {
     body.setTags(null);
     body.setCost(new Cost().withCurrency("USD").withListUnitPrice(70.0).withQuantityPhysical(1));
     body.setFundDistribution(Collections.singletonList(new FundDistribution()
-      .withCode("EUROHIST")
+      .withCode("MISCHIST")
       .withFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f")
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(100D)));

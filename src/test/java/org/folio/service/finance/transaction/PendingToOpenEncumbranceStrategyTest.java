@@ -138,7 +138,7 @@ public class PendingToOpenEncumbranceStrategyTest {
     FundDistribution fd2 = new FundDistribution()
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(50d)
-      .withCode("EUROHIST")
+      .withCode("GENRL")
       .withFundId("1b6d3338-186e-4e35-9e75-1b886b0da53e");
     poLine.getFundDistribution().add(fd2);
 
