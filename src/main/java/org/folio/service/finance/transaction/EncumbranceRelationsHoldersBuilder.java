@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.orders.utils.HelperUtils.getConversionQuery;
+import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_FISCAL_YEARS;
 
 import java.util.List;
 import java.util.Map;
@@ -24,12 +25,14 @@ import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Ongoing;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
@@ -159,18 +162,27 @@ public class EncumbranceRelationsHoldersBuilder {
   }
 
   public Future<List<EncumbranceRelationsHolder>> withFiscalYearData(List<EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
-    return encumbranceHolders.stream()
+    if (encumbranceHolders.isEmpty())
+      return Future.succeededFuture(encumbranceHolders);
+    List<String> fiscalYearIds = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getBudget)
       .map(Budget::getFiscalYearId)
-      .findFirst()
-      .map(fiscalYearId -> fiscalYearService.getFiscalYearById(fiscalYearId, requestContext)
-        .map(fiscalYear -> {
-          encumbranceHolders.forEach(holder -> holder.withCurrentFiscalYearId(fiscalYear.getId())
-            .withCurrency(fiscalYear.getCurrency()));
-          return encumbranceHolders;
-        }))
-      .orElseGet(() ->  Future.succeededFuture(encumbranceHolders));
-
+      .distinct()
+      .collect(toList());
+    if (fiscalYearIds.size() > 1) {
+      List<Parameter> parameters = List.of(
+        new Parameter().withKey("fiscalYearIds").withValue(fiscalYearIds.toString()),
+        new Parameter().withKey("poId").withValue(encumbranceHolders.get(0).getPurchaseOrder().getId())
+      );
+      throw new HttpException(422, MULTIPLE_FISCAL_YEARS.toError().withParameters(parameters));
+    }
+    String fiscalYearId = fiscalYearIds.get(0);
+    return fiscalYearService.getFiscalYearById(fiscalYearId, requestContext)
+      .map(fiscalYear -> {
+        encumbranceHolders.forEach(holder -> holder.withCurrentFiscalYearId(fiscalYear.getId())
+          .withCurrency(fiscalYear.getCurrency()));
+        return encumbranceHolders;
+      });
   }
 
   public Future<List<EncumbranceRelationsHolder>> withConversion(List<EncumbranceRelationsHolder> encumbranceHolders, RequestContext requestContext) {
