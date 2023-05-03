@@ -3,6 +3,7 @@ package org.folio.service.dataimport.handlers;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -34,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
@@ -131,21 +133,38 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
   private void adjustLocationAndMaterialType(CompositePoLine poLine, HashMap<String, String> payloadContext) {
     if (payloadContext.get(HOLDINGS.value()) != null) {
-      JsonObject holdingsAsJson = new JsonObject(payloadContext.get(HOLDINGS.value()));
-      String permanentLocationId = holdingsAsJson.getString(PERMANENT_LOCATION_ID);
-      List<Location> locations = poLine.getLocations();
-      if (!locations.isEmpty()) {
-        locations.stream().findFirst().ifPresent(location -> location.setLocationId(permanentLocationId));
-      } else {
-        locations.add(orderFormatToLocation.get(poLine.getOrderFormat()).get().withLocationId(permanentLocationId));
+      JsonArray holdingsAsJson = new JsonArray(payloadContext.get(HOLDINGS.value()));
+      if (holdingsAsJson.size() > 0) {
+        List<String> permanentLocationIds = holdingsAsJson.stream()
+          .map(holding -> ((JsonObject) holding).getString(PERMANENT_LOCATION_ID))
+          .collect(Collectors.toList());
+
+        List<Location> poLineLocations = poLine.getLocations();
+        Location locationTemplate = !poLineLocations.isEmpty() ? poLineLocations.get(0)
+          : orderFormatToLocation.get(poLine.getOrderFormat()).get();
+
+        poLine.setLocations(permanentLocationIds.stream()
+          .map(permanentLocationId -> getCopyOfLocation(locationTemplate).withLocationId(permanentLocationId))
+          .collect(Collectors.toList()));
       }
     }
 
     if (payloadContext.get(ITEM.value()) != null) {
-      JsonObject itemAsJson = new JsonObject(payloadContext.get(ITEM.value()));
-      String materialType = itemAsJson.getString(MATERIAL_TYPE_ID);
-      orderFormatToAdjustingMaterialType.get(poLine.getOrderFormat()).accept(poLine, materialType);
+      JsonArray itemsAsJson = new JsonArray(payloadContext.get(ITEM.value()));
+      if (itemsAsJson.size() > 0) {
+        String materialType = itemsAsJson.getJsonObject(0).getString(MATERIAL_TYPE_ID);
+        orderFormatToAdjustingMaterialType.get(poLine.getOrderFormat()).accept(poLine, materialType);
+      }
     }
+  }
+
+  private Location getCopyOfLocation(Location locationTemplate) {
+    return new Location()
+      .withLocationId(locationTemplate.getLocationId())
+      .withHoldingId(locationTemplate.getHoldingId())
+      .withQuantity(locationTemplate.getQuantity())
+      .withQuantityElectronic(locationTemplate.getQuantityElectronic())
+      .withQuantityPhysical(locationTemplate.getQuantityPhysical());
   }
 
   private Future<Void> openOrder(CompositePoLine poLine, RequestContext requestContext, String jobExecutionId) {
