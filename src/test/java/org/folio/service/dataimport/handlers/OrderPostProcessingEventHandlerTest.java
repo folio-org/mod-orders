@@ -73,7 +73,6 @@ import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTI
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
 import static org.folio.service.dataimport.handlers.CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER;
-import static org.folio.service.inventory.InventoryManager.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
@@ -101,6 +100,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   private static final String HOLDINGS_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63";
   private static final String ITEM_ID = "86481a22-633e-4b97-8061-0dc5fdaaeabb";
   private static final String INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
+  private static final String HOLDING_ID_FIELD = "holdingId";
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -244,7 +244,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     JsonObject itemJson = new JsonObject()
       .put(ID, ITEM_ID)
-      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(HOLDING_ID_FIELD, HOLDINGS_ID)
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
       .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
 
@@ -279,7 +279,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     JsonObject itemJson = new JsonObject()
       .put(ID, ITEM_ID)
-      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(HOLDING_ID_FIELD, HOLDINGS_ID)
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
       .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
 
@@ -315,7 +315,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     JsonObject itemJson = new JsonObject()
       .put(ID, ITEM_ID)
-      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(HOLDING_ID_FIELD, HOLDINGS_ID)
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
       .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
 
@@ -334,7 +334,6 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     Location location = updatedPoLine.getLocations().get(0);
     assertEquals(holdingJson.getString(HOLDING_PERMANENT_LOCATION_ID), location.getLocationId());
     assertEquals(1, location.getQuantityPhysical());
-    assertEquals(1, location.getQuantityElectronic());
   }
 
   @Test
@@ -352,7 +351,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     JsonObject itemJson = new JsonObject()
       .put(ID, ITEM_ID)
-      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(HOLDING_ID_FIELD, HOLDINGS_ID)
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
       .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
 
@@ -385,25 +384,26 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withEresource(new Eresource())
       .withCost(new Cost().withCurrency("USD"));
 
+    String holdingsId2 = UUID.randomUUID().toString();
+
     JsonObject itemJson1 = new JsonObject()
       .put(ID, ITEM_ID)
-      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(HOLDING_ID_FIELD, HOLDINGS_ID)
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
       .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
 
     JsonObject itemJson2 = new JsonObject()
       .put(ID, ITEM_ID)
-      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
+      .put(HOLDING_ID_FIELD, holdingsId2)
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
       .put(ITEM_MATERIAL_TYPE_ID, ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID);
-
 
     JsonObject holdingJson1 = new JsonObject()
       .put(ID, HOLDINGS_ID)
       .put(HOLDING_PERMANENT_LOCATION_ID, NEW_LOCATION_ID);
 
     JsonObject holdingJson2 = new JsonObject()
-      .put(ID, HOLDINGS_ID)
+      .put(ID, holdingsId2)
       .put(HOLDING_PERMANENT_LOCATION_ID, OLD_LOCATION_ID);
 
     JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
@@ -421,6 +421,60 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       assertEquals(holdingsArray.getJsonObject(i).getString(HOLDING_PERMANENT_LOCATION_ID), location.getLocationId());
       assertEquals(1, location.getQuantityElectronic());
     }
+  }
+
+  @Test
+  public void shouldOpenOrderAndPoLineShouldContainLocationsQuantityDependsOnAmountOfItemsPerHoldings(TestContext context)
+    throws InterruptedException {
+    CompositePoLine eresourcePoLine = new CompositePoLine()
+      .withId(UUID.randomUUID().toString())
+      .withTitleOrPackage("poLine for data-import")
+      .withPurchaseOrderId(order.getId())
+      .withPoLineNumber("10000-1")
+      .withSource(CompositePoLine.Source.MARC)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withEresource(new Eresource())
+      .withCost(new Cost().withCurrency("USD"));
+
+    String holdingsId2 = UUID.randomUUID().toString();
+
+    JsonObject itemJson1 = new JsonObject()
+      .put(ID, UUID.randomUUID().toString())
+      .put(HOLDING_ID_FIELD, HOLDINGS_ID)
+      .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
+      .put(ITEM_MATERIAL_TYPE_ID, PHYSICAL_RESOURCE_MATERIAL_TYPE_ID);
+
+    JsonObject itemJson2 = new JsonObject()
+      .put(ID, UUID.randomUUID().toString())
+      .put(HOLDING_ID_FIELD, holdingsId2)
+      .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
+      .put(ITEM_MATERIAL_TYPE_ID, ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID);
+
+    JsonObject holdingJson1 = new JsonObject()
+      .put(ID, HOLDINGS_ID)
+      .put(HOLDING_PERMANENT_LOCATION_ID, NEW_LOCATION_ID);
+
+    JsonObject holdingJson2 = new JsonObject()
+      .put(ID, holdingsId2)
+      .put(HOLDING_PERMANENT_LOCATION_ID, OLD_LOCATION_ID);
+
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
+
+    JsonArray holdingsArray = new JsonArray().add(holdingJson1).add(holdingJson2);
+    JsonArray itemsArray = new JsonArray().add(itemJson1).add(itemJson1).add(itemJson1).add(itemJson2).add(itemJson2);
+
+    CompositePoLine updatedPoLine = shouldReturnUpdatedPoLine(eresourcePoLine, instanceJson, holdingsArray, itemsArray, context);
+
+    assertEquals(instanceJson.getString(ID_FIELD), updatedPoLine.getInstanceId());
+    assertEquals(itemJson1.getString(ITEM_MATERIAL_TYPE_ID), updatedPoLine.getEresource().getMaterialType());
+    assertEquals(holdingsArray.size(), updatedPoLine.getLocations().size());
+    Location location1 = updatedPoLine.getLocations().get(0);
+    assertEquals(holdingsArray.getJsonObject(0).getString(HOLDING_PERMANENT_LOCATION_ID), location1.getLocationId());
+    assertEquals(3, location1.getQuantityElectronic());
+
+    Location location2 = updatedPoLine.getLocations().get(1);
+    assertEquals(holdingsArray.getJsonObject(1).getString(HOLDING_PERMANENT_LOCATION_ID), location2.getLocationId());
+    assertEquals(2, location2.getQuantityElectronic());
   }
 
   private CompositePoLine shouldReturnUpdatedPoLine(CompositePoLine poLine, JsonObject instanceJson, JsonArray holdingsJson,

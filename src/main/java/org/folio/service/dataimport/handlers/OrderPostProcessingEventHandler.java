@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
-import java.util.function.Supplier;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -59,7 +59,8 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private static final String ID_FIELD = "id";
   private static final String MATERIAL_TYPE_ID = "materialTypeId";
   private static final String PERMANENT_LOCATION_ID = "permanentLocationId";
-
+  private static final String HOLDING_ID_FIELD = "holdingId";
+  private static final JsonArray EMPTY_JSON_ARRAY = new JsonArray();
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final Context vertxContext;
@@ -68,7 +69,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private static final EnumMap<CompositePoLine.OrderFormat, BiConsumer<CompositePoLine, String>> orderFormatToAdjustingMaterialType =
     new EnumMap<>(CompositePoLine.OrderFormat.class);
 
-  private static final EnumMap<CompositePoLine.OrderFormat, Supplier<Location>> orderFormatToLocation = new EnumMap<>(CompositePoLine.OrderFormat.class);
+  private static final EnumMap<CompositePoLine.OrderFormat, Function<Integer, Location>> orderFormatToLocation = new EnumMap<>(CompositePoLine.OrderFormat.class);
 
   static {
     orderFormatToAdjustingMaterialType.put(PHYSICAL_RESOURCE, (CompositePoLine pol, String materialType) -> pol.getPhysical().setMaterialType(materialType));
@@ -79,10 +80,10 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       pol.getEresource().setMaterialType(materialType);
     });
 
-    orderFormatToLocation.put(PHYSICAL_RESOURCE, () -> new Location().withQuantityPhysical(1));
-    orderFormatToLocation.put(ELECTRONIC_RESOURCE, () -> new Location().withQuantityElectronic(1));
-    orderFormatToLocation.put(OTHER, () -> new Location().withQuantityPhysical(1));
-    orderFormatToLocation.put(P_E_MIX, () -> new Location().withQuantityPhysical(1).withQuantityElectronic(1));
+    orderFormatToLocation.put(PHYSICAL_RESOURCE, quantity -> new Location().withQuantityPhysical(quantity));
+    orderFormatToLocation.put(ELECTRONIC_RESOURCE, quantity-> new Location().withQuantityElectronic(quantity));
+    orderFormatToLocation.put(OTHER, quantity -> new Location().withQuantityPhysical(quantity));
+    orderFormatToLocation.put(P_E_MIX, quantity -> new Location().withQuantityPhysical(quantity));
   }
 
   @Autowired
@@ -132,39 +133,30 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   }
 
   private void adjustLocationAndMaterialType(CompositePoLine poLine, HashMap<String, String> payloadContext) {
-    if (payloadContext.get(HOLDINGS.value()) != null) {
-      JsonArray holdingsAsJson = new JsonArray(payloadContext.get(HOLDINGS.value()));
-      if (holdingsAsJson.size() > 0) {
-        List<String> permanentLocationIds = holdingsAsJson.stream()
-          .map(holding -> ((JsonObject) holding).getString(PERMANENT_LOCATION_ID))
-          .collect(Collectors.toList());
+    JsonArray holdingsAsJson = payloadContext.get(HOLDINGS.value()) != null ? new JsonArray(payloadContext.get(HOLDINGS.value())) : EMPTY_JSON_ARRAY;
+    JsonArray itemsAsJson = payloadContext.get(ITEM.value()) != null ? new JsonArray(payloadContext.get(ITEM.value())) : EMPTY_JSON_ARRAY;
+    CompositePoLine.OrderFormat orderFormat = poLine.getOrderFormat();
 
-        List<Location> poLineLocations = poLine.getLocations();
-        Location locationTemplate = !poLineLocations.isEmpty() ? poLineLocations.get(0)
-          : orderFormatToLocation.get(poLine.getOrderFormat()).get();
-
-        poLine.setLocations(permanentLocationIds.stream()
-          .map(permanentLocationId -> getCopyOfLocation(locationTemplate).withLocationId(permanentLocationId))
-          .collect(Collectors.toList()));
-      }
+    if (holdingsAsJson.size() > 0) {
+      List<Location> locations = holdingsAsJson.stream()
+        .map(holding -> constructLocation((JsonObject) holding, itemsAsJson, orderFormat))
+        .collect(Collectors.toList());
+      poLine.setLocations(locations);
     }
 
-    if (payloadContext.get(ITEM.value()) != null) {
-      JsonArray itemsAsJson = new JsonArray(payloadContext.get(ITEM.value()));
-      if (itemsAsJson.size() > 0) {
-        String materialType = itemsAsJson.getJsonObject(0).getString(MATERIAL_TYPE_ID);
-        orderFormatToAdjustingMaterialType.get(poLine.getOrderFormat()).accept(poLine, materialType);
-      }
+    if (itemsAsJson.size() > 0) {
+      String materialType = itemsAsJson.getJsonObject(0).getString(MATERIAL_TYPE_ID);
+      orderFormatToAdjustingMaterialType.get(poLine.getOrderFormat()).accept(poLine, materialType);
     }
   }
 
-  private Location getCopyOfLocation(Location locationTemplate) {
-    return new Location()
-      .withLocationId(locationTemplate.getLocationId())
-      .withHoldingId(locationTemplate.getHoldingId())
-      .withQuantity(locationTemplate.getQuantity())
-      .withQuantityElectronic(locationTemplate.getQuantityElectronic())
-      .withQuantityPhysical(locationTemplate.getQuantityPhysical());
+  private Location constructLocation(JsonObject holding, JsonArray itemsAsJson, CompositePoLine.OrderFormat orderFormat) {
+    String locationId = holding.getString(PERMANENT_LOCATION_ID);
+    Integer quantity = (int) itemsAsJson.stream()
+      .map(item -> (JsonObject) item)
+      .filter(item -> StringUtils.equals(item.getString(HOLDING_ID_FIELD), holding.getString(ID_FIELD)))
+      .count();
+    return orderFormatToLocation.get(orderFormat).apply(quantity).withLocationId(locationId);
   }
 
   private Future<Void> openOrder(CompositePoLine poLine, RequestContext requestContext, String jobExecutionId) {
