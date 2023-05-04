@@ -60,6 +60,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private static final String MATERIAL_TYPE_ID = "materialTypeId";
   private static final String PERMANENT_LOCATION_ID = "permanentLocationId";
   private static final String HOLDING_ID_FIELD = "holdingId";
+  private static final String P_E_MIX_UNSUPPORTED_MSG = "Open P/E mix orders do not support multiple item import";
   private static final JsonArray EMPTY_JSON_ARRAY = new JsonArray();
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
@@ -68,7 +69,8 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private final PurchaseOrderLineService purchaseOrderLineService;
   private static final EnumMap<CompositePoLine.OrderFormat, BiConsumer<CompositePoLine, String>> orderFormatToAdjustingMaterialType =
     new EnumMap<>(CompositePoLine.OrderFormat.class);
-
+  private static final EnumMap<CompositePoLine.OrderFormat, BiConsumer<CompositePoLine, List<Location>>> orderFormatToAdjustingCostDetails =
+    new EnumMap<>(CompositePoLine.OrderFormat.class);
   private static final EnumMap<CompositePoLine.OrderFormat, Function<Integer, Location>> orderFormatToLocation = new EnumMap<>(CompositePoLine.OrderFormat.class);
 
   static {
@@ -79,6 +81,11 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       pol.getPhysical().setMaterialType(materialType);
       pol.getEresource().setMaterialType(materialType);
     });
+
+    orderFormatToAdjustingCostDetails.put(PHYSICAL_RESOURCE, ((poLine, locations) -> poLine.getCost().setQuantityPhysical(getLocationsPhysicalQuantitySum(locations))));
+    orderFormatToAdjustingCostDetails.put(ELECTRONIC_RESOURCE, ((poLine, locations) -> poLine.getCost().setQuantityElectronic(getLocationsElectronicQuantitySum(locations))));
+    orderFormatToAdjustingCostDetails.put(OTHER, ((poLine, locations) -> poLine.getCost().setQuantityPhysical(getLocationsPhysicalQuantitySum(locations))));
+    orderFormatToAdjustingCostDetails.put(P_E_MIX, ((poLine, locations) -> poLine.getCost().setQuantityPhysical(getLocationsPhysicalQuantitySum(locations))));
 
     orderFormatToLocation.put(PHYSICAL_RESOURCE, quantity -> new Location().withQuantityPhysical(quantity));
     orderFormatToLocation.put(ELECTRONIC_RESOURCE, quantity-> new Location().withQuantityElectronic(quantity));
@@ -112,10 +119,10 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     Map<String, String> okapiHeaders = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), CompositePoLine.class);
-    adjustLocationAndMaterialType(poLine, payloadContext);
 
     LOGGER.info("handle:: jobExecutionId {}, poLineId {}, orderId {}", dataImportEventPayload.getJobExecutionId(), poLine.getId(), poLine.getPurchaseOrderId());
-    ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext)
+    adjustLocationAndMaterialType(poLine, payloadContext)
+      .onSuccess(v -> ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext))
       .compose(v -> poLineImportProgressService.trackProcessedPoLine(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
       .compose(poLinesImported -> Boolean.TRUE.equals(poLinesImported)
         ? openOrder(poLine, requestContext, dataImportEventPayload.getJobExecutionId())
@@ -132,7 +139,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     return future;
   }
 
-  private void adjustLocationAndMaterialType(CompositePoLine poLine, HashMap<String, String> payloadContext) {
+  private Future<Void> adjustLocationAndMaterialType(CompositePoLine poLine, HashMap<String, String> payloadContext) {
     JsonArray holdingsAsJson = payloadContext.get(HOLDINGS.value()) != null ? new JsonArray(payloadContext.get(HOLDINGS.value())) : EMPTY_JSON_ARRAY;
     JsonArray itemsAsJson = payloadContext.get(ITEM.value()) != null ? new JsonArray(payloadContext.get(ITEM.value())) : EMPTY_JSON_ARRAY;
     CompositePoLine.OrderFormat orderFormat = poLine.getOrderFormat();
@@ -142,12 +149,25 @@ public class OrderPostProcessingEventHandler implements EventHandler {
         .map(holding -> constructLocation((JsonObject) holding, itemsAsJson, orderFormat))
         .collect(Collectors.toList());
       poLine.setLocations(locations);
+      orderFormatToAdjustingCostDetails.get(orderFormat).accept(poLine, locations);
     }
 
     if (itemsAsJson.size() > 0) {
+      if (orderFormat.equals(P_E_MIX) && itemsAsJson.size() > 1) {
+        return Future.failedFuture(P_E_MIX_UNSUPPORTED_MSG);
+      }
       String materialType = itemsAsJson.getJsonObject(0).getString(MATERIAL_TYPE_ID);
       orderFormatToAdjustingMaterialType.get(poLine.getOrderFormat()).accept(poLine, materialType);
     }
+    return Future.succeededFuture();
+  }
+
+  private static Integer getLocationsPhysicalQuantitySum(List<Location> locations) {
+    return locations.stream().mapToInt(Location::getQuantityPhysical).sum();
+  }
+
+  private static Integer getLocationsElectronicQuantitySum(List<Location> locations) {
+    return locations.stream().mapToInt(Location::getQuantityElectronic).sum();
   }
 
   private Location constructLocation(JsonObject holding, JsonArray itemsAsJson, CompositePoLine.OrderFormat orderFormat) {
