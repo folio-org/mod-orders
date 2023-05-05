@@ -85,10 +85,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     orderFormatToAdjustingCostDetails.put(PHYSICAL_RESOURCE, ((poLine, locations) -> poLine.getCost().setQuantityPhysical(getLocationsPhysicalQuantitySum(locations))));
     orderFormatToAdjustingCostDetails.put(ELECTRONIC_RESOURCE, ((poLine, locations) -> poLine.getCost().setQuantityElectronic(getLocationsElectronicQuantitySum(locations))));
     orderFormatToAdjustingCostDetails.put(OTHER, ((poLine, locations) -> poLine.getCost().setQuantityPhysical(getLocationsPhysicalQuantitySum(locations))));
-    orderFormatToAdjustingCostDetails.put(P_E_MIX, ((poLine, locations) ->
-      poLine.getCost()
-        .withQuantityPhysical(getLocationsPhysicalQuantitySum(locations))
-        .withQuantityElectronic(null)));
+    orderFormatToAdjustingCostDetails.put(P_E_MIX, ((poLine, locations) -> poLine.getCost().setQuantityPhysical(getLocationsPhysicalQuantitySum(locations))));
 
     orderFormatToLocation.put(PHYSICAL_RESOURCE, quantity -> new Location().withQuantityPhysical(quantity));
     orderFormatToLocation.put(ELECTRONIC_RESOURCE, quantity -> new Location().withQuantityElectronic(quantity));

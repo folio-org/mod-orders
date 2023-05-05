@@ -317,7 +317,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
       .withPhysical(new Physical())
       .withEresource(new Eresource())
-      .withCost(new Cost().withCurrency("USD"));
+      .withCost(new Cost().withCurrency("USD").withQuantityElectronic(2));
 
     JsonObject itemJson = new JsonObject()
       .put(ID, ITEM_ID)
@@ -342,7 +342,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     assertEquals(1, location.getQuantityPhysical());
     assertNull(location.getQuantityElectronic());
     assertEquals(1, updatedPoLine.getCost().getQuantityPhysical());
-    assertNull(updatedPoLine.getCost().getQuantityElectronic());
+    assertEquals(2, updatedPoLine.getCost().getQuantityElectronic());
   }
 
   @Test
