@@ -85,10 +85,13 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     orderFormatToAdjustingCostDetails.put(PHYSICAL_RESOURCE, ((poLine, locations) -> poLine.getCost().setQuantityPhysical(getLocationsPhysicalQuantitySum(locations))));
     orderFormatToAdjustingCostDetails.put(ELECTRONIC_RESOURCE, ((poLine, locations) -> poLine.getCost().setQuantityElectronic(getLocationsElectronicQuantitySum(locations))));
     orderFormatToAdjustingCostDetails.put(OTHER, ((poLine, locations) -> poLine.getCost().setQuantityPhysical(getLocationsPhysicalQuantitySum(locations))));
-    orderFormatToAdjustingCostDetails.put(P_E_MIX, ((poLine, locations) -> poLine.getCost().setQuantityPhysical(getLocationsPhysicalQuantitySum(locations))));
+    orderFormatToAdjustingCostDetails.put(P_E_MIX, ((poLine, locations) ->
+      poLine.getCost()
+        .withQuantityPhysical(getLocationsPhysicalQuantitySum(locations))
+        .withQuantityElectronic(null)));
 
     orderFormatToLocation.put(PHYSICAL_RESOURCE, quantity -> new Location().withQuantityPhysical(quantity));
-    orderFormatToLocation.put(ELECTRONIC_RESOURCE, quantity-> new Location().withQuantityElectronic(quantity));
+    orderFormatToLocation.put(ELECTRONIC_RESOURCE, quantity -> new Location().withQuantityElectronic(quantity));
     orderFormatToLocation.put(OTHER, quantity -> new Location().withQuantityPhysical(quantity));
     orderFormatToLocation.put(P_E_MIX, quantity -> new Location().withQuantityPhysical(quantity));
   }
@@ -122,7 +125,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
     LOGGER.info("handle:: jobExecutionId {}, poLineId {}, orderId {}", dataImportEventPayload.getJobExecutionId(), poLine.getId(), poLine.getPurchaseOrderId());
     adjustLocationAndMaterialType(poLine, payloadContext)
-      .onSuccess(v -> ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext))
+      .compose(adjustedPoLine -> ensurePoLineWithInstanceId(adjustedPoLine, dataImportEventPayload, requestContext))
       .compose(v -> poLineImportProgressService.trackProcessedPoLine(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
       .compose(poLinesImported -> Boolean.TRUE.equals(poLinesImported)
         ? openOrder(poLine, requestContext, dataImportEventPayload.getJobExecutionId())
@@ -139,7 +142,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     return future;
   }
 
-  private Future<Void> adjustLocationAndMaterialType(CompositePoLine poLine, HashMap<String, String> payloadContext) {
+  private Future<CompositePoLine> adjustLocationAndMaterialType(CompositePoLine poLine, HashMap<String, String> payloadContext) {
     JsonArray holdingsAsJson = payloadContext.get(HOLDINGS.value()) != null ? new JsonArray(payloadContext.get(HOLDINGS.value())) : EMPTY_JSON_ARRAY;
     JsonArray itemsAsJson = payloadContext.get(ITEM.value()) != null ? new JsonArray(payloadContext.get(ITEM.value())) : EMPTY_JSON_ARRAY;
     CompositePoLine.OrderFormat orderFormat = poLine.getOrderFormat();
@@ -159,7 +162,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
       String materialType = itemsAsJson.getJsonObject(0).getString(MATERIAL_TYPE_ID);
       orderFormatToAdjustingMaterialType.get(poLine.getOrderFormat()).accept(poLine, materialType);
     }
-    return Future.succeededFuture();
+    return Future.succeededFuture(poLine);
   }
 
   private static Integer getLocationsPhysicalQuantitySum(List<Location> locations) {
