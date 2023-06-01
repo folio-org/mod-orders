@@ -31,6 +31,7 @@ import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.service.caches.InventoryCache;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
@@ -51,11 +52,14 @@ public class OrderLinePatchOperationService {
 
   private final PurchaseOrderLineService purchaseOrderLineService;
 
+  private final InventoryCache inventoryCache;
+
   public OrderLinePatchOperationService(RestClient restClient, OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
-      PurchaseOrderLineService purchaseOrderLineService) {
+                                        PurchaseOrderLineService purchaseOrderLineService, InventoryCache inventoryCache) {
     this.restClient = restClient;
     this.orderLinePatchOperationHandlerResolver = orderLinePatchOperationHandlerResolver;
     this.purchaseOrderLineService = purchaseOrderLineService;
+    this.inventoryCache = inventoryCache;
   }
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
@@ -96,7 +100,8 @@ public class OrderLinePatchOperationService {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
         return restClient.getAsJsonObject(requestEntry, requestContext)
           .map(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine))
-          .compose(updatedPoLine -> purchaseOrderLineService.saveOrderLine(updatedPoLine, requestContext))
+          .compose(updatedPoLine -> validateAndNormalizeIfISBN(updatedPoLine, requestContext))
+          .compose(validatedPoLine -> purchaseOrderLineService.saveOrderLine(validatedPoLine, requestContext))
           .onSuccess(v -> promise.complete())
           .onFailure(promise::fail);
       })
@@ -153,4 +158,32 @@ public class OrderLinePatchOperationService {
     return poLine;
   }
 
+  private Future<PoLine> validateAndNormalizeIfISBN(PoLine poLine, RequestContext requestContext) {
+    return inventoryCache.getProductTypeUuid(requestContext)
+      .map(isbnTypeId -> {
+        if (Objects.equals(poLine.getDetails().getProductIds().get(0).getProductIdType(), isbnTypeId)) {
+          return inventoryCache.convertToISBN13(extractProductId(poLine.getDetails().getProductIds().get(0).getProductId()), requestContext)
+            .map(normalizedISBN -> {
+              poLine.getDetails().getProductIds().get(0).setQualifier(extractQualifier(poLine.getDetails().getProductIds().get(0).getProductId()));
+              poLine.getDetails().getProductIds().get(0).setProductId(normalizedISBN);
+              return poLine;
+            }).result();
+        }
+        return poLine;
+      });
+  }
+
+  private String extractProductId(String value) {
+    if(value == null || !value.contains(" ")){
+      return value;
+    }
+    return value.substring(0, value.indexOf(" "));
+  }
+
+  private String extractQualifier(String value) {
+    if(value == null || !value.contains(" ")){
+      return null;
+    }
+    return value.substring(value.indexOf(" ") + 1);
+  }
 }
