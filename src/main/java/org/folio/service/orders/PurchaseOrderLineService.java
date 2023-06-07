@@ -1,7 +1,6 @@
 package org.folio.service.orders;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.helper.BaseHelper.ID;
@@ -15,16 +14,16 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLine;
+import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
+import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletionException;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -45,7 +44,6 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.service.caches.InventoryCache;
 
 import io.vertx.core.Future;
@@ -437,7 +435,7 @@ public class PurchaseOrderLineService {
         return requestContext.getContext().owner()
           .<List<Future<Map.Entry<String, String>>>>executeBlocking(event -> {
                 List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
-                var setOfProductIds = buildSetOfProductIds(filteredCompLines, isbnTypeId);
+                var setOfProductIds = buildSetOfProductIdsFromCompositePoLine(filteredCompLines, isbnTypeId);
                 if (CollectionUtils.isEmpty(setOfProductIds)) {
                   event.complete(futures);
                   return;
@@ -453,7 +451,6 @@ public class PurchaseOrderLineService {
                       event.complete(futures);
                     }
                   });
-
                 }
               })
           .compose(GenericCompositeFuture::join)
@@ -474,48 +471,5 @@ public class PurchaseOrderLineService {
           .mapEmpty();
       });
   }
-
-  private Set<String> buildSetOfProductIds(List<CompositePoLine> compositePoLines, String isbnTypeId) {
-    return compositePoLines.stream()
-      .flatMap(pol -> pol.getDetails().getProductIds().stream())
-      .filter(productId -> isISBN(isbnTypeId, productId))
-      .map(ProductId::getProductId)
-      .collect(Collectors.toSet());
-  }
-
-  private void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
-    List<ProductId> notISBNs = getNonISBNProductIds(compPOL, isbnTypeId);
-    List<ProductId> isbns = getDeduplicatedISBNs(compPOL, isbnTypeId);
-    isbns.addAll(notISBNs);
-    compPOL.getDetails().setProductIds(isbns);
-  }
-
-  private List<ProductId> getDeduplicatedISBNs(CompositePoLine compPOL, String isbnTypeId) {
-    Map<String, List<ProductId>> uniqueISBNProductIds = compPOL.getDetails().getProductIds().stream()
-      .filter(productId -> isISBN(isbnTypeId, productId))
-      .distinct()
-      .collect(groupingBy(ProductId::getProductId));
-
-    return uniqueISBNProductIds.values().stream()
-      .flatMap(productIds -> productIds.stream()
-        .filter(isUniqueISBN(productIds)))
-      .collect(toList());
-  }
-
-  private Predicate<ProductId> isUniqueISBN(List<ProductId> productIds) {
-    return productId -> productIds.size() == 1 || StringUtils.isNotEmpty(productId.getQualifier());
-  }
-
-  private List<ProductId> getNonISBNProductIds(CompositePoLine compPOL, String isbnTypeId) {
-    return compPOL.getDetails().getProductIds().stream()
-      .filter(productId -> !isISBN(isbnTypeId, productId))
-      .collect(toList());
-  }
-
-  private boolean isISBN(String isbnTypeId, ProductId productId) {
-    return Objects.equals(productId.getProductIdType(), isbnTypeId);
-  }
-
-
 }
 

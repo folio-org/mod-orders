@@ -1,5 +1,6 @@
 package org.folio.service.orders.lines.update;
 
+import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME;
 import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME_TYPE_ID;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_CONTRIBUTORS;
@@ -12,17 +13,26 @@ import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLISHER;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_RECORDS_BY_ID_ENDPOINT;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_TITLE;
 import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDPOINTS;
+import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIds;
+import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
+import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.vertxconcurrent.Semaphore;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -99,8 +109,7 @@ public class OrderLinePatchOperationService {
       .map(poLine -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
         return restClient.getAsJsonObject(requestEntry, requestContext)
-          .map(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine))
-          .compose(updatedPoLine -> validateAndNormalizeIfISBN(updatedPoLine, requestContext))
+          .compose(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine, requestContext))
           .compose(validatedPoLine -> purchaseOrderLineService.saveOrderLine(validatedPoLine, requestContext))
           .onSuccess(v -> promise.complete())
           .onFailure(promise::fail);
@@ -123,24 +132,68 @@ public class OrderLinePatchOperationService {
     return Future.succeededFuture();
   }
 
-  private PoLine updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine) {
-    Pair<String, String> instancePublication = Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_PUBLICATION)).orElse(new JsonArray())
-      .stream()
-      .map(JsonObject.class::cast)
-      .findFirst()
-      .map(publication -> Pair.of(publication.getString(INSTANCE_PUBLISHER), publication.getString(INSTANCE_DATE_OF_PUBLICATION)))
-      .orElse(new MutablePair<>());
+  private Future<PoLine> updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine, RequestContext requestContext) {
+    Promise<PoLine> promise = Promise.promise();
+    Pair<String, String> instancePublication = getInstancePublication(lookupObj);
+    List<ProductId> productIds = getProductIds(lookupObj);
 
-    List<Contributor> contributors = Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_CONTRIBUTORS))
-      .orElse(new JsonArray())
-      .stream()
-      .map(JsonObject.class::cast)
-      .map(jsonObject -> new Contributor()
-        .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
-        .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
-      .collect(Collectors.toList());
+    poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
+    poLine.setPublisher(instancePublication.getLeft());
+    poLine.setPublicationDate(instancePublication.getRight());
+    poLine.setContributors(getContributors(lookupObj));
 
-    List<ProductId> productIds = Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_IDENTIFIERS))
+    inventoryCache.getProductTypeUuid(requestContext)
+      .compose(isbnTypeId -> {
+        Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
+        return requestContext.getContext().owner()
+          .<List<Future<Map.Entry<String, String>>>>executeBlocking(event -> {
+            List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
+            Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
+            if (CollectionUtils.isEmpty(setOfProductIds)) {
+              event.complete(futures);
+              return;
+            }
+
+            for (String productID : setOfProductIds) {
+              semaphore.acquire(() -> {
+                var future = inventoryCache.convertToISBN13(extractProductId(productID), requestContext)
+                  .map(normalizedId -> Map.entry(productID, normalizedId))
+                  .onComplete(asyncResult -> semaphore.release());
+                futures.add(future);
+                if (futures.size() == setOfProductIds.size()) {
+                  event.complete(futures);
+                }
+              });
+            }
+          })
+          .compose(GenericCompositeFuture::join)
+          .map(result -> result.result()
+            .list()
+            .stream()
+            .map(entry -> (Map.Entry<String, String>) entry)
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
+          .map(productIdsMap -> {
+            // update productids with normalized values
+            productIds.stream()
+              .filter(productId -> isISBN(isbnTypeId, productId))
+              .forEach(productId -> {
+                productId.withQualifier(extractQualifier(productId.getProductId()));
+                productId.setProductId(productIdsMap.get(productId.getProductId()));
+              });
+            return null;
+          })
+          .onSuccess(v -> {
+            poLine.getDetails().setProductIds(removeISBNDuplicates(productIds, isbnTypeId));
+            promise.complete(poLine);
+          })
+          .onFailure(promise::fail)
+          .mapEmpty();
+      });
+    return promise.future();
+  }
+
+  private static List<ProductId> getProductIds(JsonObject lookupObj) {
+    return Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_IDENTIFIERS))
       .orElse(new JsonArray())
       .stream()
       .map(JsonObject.class::cast)
@@ -148,29 +201,26 @@ public class OrderLinePatchOperationService {
         .withProductId(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_VALUE))
         .withProductIdType(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_ID)))
       .collect(Collectors.toList());
-
-    poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
-    poLine.setPublisher(instancePublication.getLeft());
-    poLine.setPublicationDate(instancePublication.getRight());
-    poLine.setContributors(contributors);
-    poLine.getDetails().setProductIds(productIds);
-
-    return poLine;
   }
 
-  private Future<PoLine> validateAndNormalizeIfISBN(PoLine poLine, RequestContext requestContext) {
-    return inventoryCache.getProductTypeUuid(requestContext)
-      .map(isbnTypeId -> {
-        if (Objects.equals(poLine.getDetails().getProductIds().get(0).getProductIdType(), isbnTypeId)) {
-          return inventoryCache.convertToISBN13(extractProductId(poLine.getDetails().getProductIds().get(0).getProductId()), requestContext)
-            .map(normalizedISBN -> {
-              poLine.getDetails().getProductIds().get(0).setQualifier(extractQualifier(poLine.getDetails().getProductIds().get(0).getProductId()));
-              poLine.getDetails().getProductIds().get(0).setProductId(normalizedISBN);
-              return poLine;
-            }).result();
-        }
-        return poLine;
-      });
+  private static List<Contributor> getContributors(JsonObject lookupObj) {
+    return Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_CONTRIBUTORS))
+      .orElse(new JsonArray())
+      .stream()
+      .map(JsonObject.class::cast)
+      .map(jsonObject -> new Contributor()
+        .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
+        .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
+      .collect(Collectors.toList());
+  }
+
+  private Pair<String, String> getInstancePublication(JsonObject lookupObj) {
+    return Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_PUBLICATION)).orElse(new JsonArray())
+      .stream()
+      .map(JsonObject.class::cast)
+      .findFirst()
+      .map(publication -> Pair.of(publication.getString(INSTANCE_PUBLISHER), publication.getString(INSTANCE_DATE_OF_PUBLICATION)))
+      .orElse(new MutablePair<>());
   }
 
   private String extractProductId(String value) {
