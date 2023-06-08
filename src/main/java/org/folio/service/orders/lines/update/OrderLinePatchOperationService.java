@@ -1,6 +1,7 @@
 package org.folio.service.orders.lines.update;
 
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
+import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_CONNECTION_UPDATE_ERROR;
 import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME;
 import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME_TYPE_ID;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_CONTRIBUTORS;
@@ -16,6 +17,8 @@ import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDP
 import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIds;
 import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
+import static org.folio.service.orders.utils.ProductIdUtils.extractProductId;
+import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +38,7 @@ import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Contributor;
@@ -186,7 +190,7 @@ public class OrderLinePatchOperationService {
             poLine.getDetails().setProductIds(removeISBNDuplicates(productIds, isbnTypeId));
             promise.complete(poLine);
           })
-          .onFailure(promise::fail)
+          .onFailure(t -> promise.fail(new HttpException(400, INSTANCE_CONNECTION_UPDATE_ERROR.toError())))
           .mapEmpty();
       });
     return promise.future();
@@ -221,19 +225,5 @@ public class OrderLinePatchOperationService {
       .findFirst()
       .map(publication -> Pair.of(publication.getString(INSTANCE_PUBLISHER), publication.getString(INSTANCE_DATE_OF_PUBLICATION)))
       .orElse(new MutablePair<>());
-  }
-
-  private String extractProductId(String value) {
-    if(value == null || !value.contains(" ")){
-      return value;
-    }
-    return value.substring(0, value.indexOf(" "));
-  }
-
-  private String extractQualifier(String value) {
-    if(value == null || !value.contains(" ")){
-      return null;
-    }
-    return value.substring(value.indexOf(" ") + 1);
   }
 }

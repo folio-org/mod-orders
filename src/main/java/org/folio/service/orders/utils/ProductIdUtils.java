@@ -46,6 +46,20 @@ public class ProductIdUtils {
     return isbns;
   }
 
+  public static  String extractProductId(String value) {
+    if(value == null || !value.contains(" ")){
+      return value;
+    }
+    return value.substring(0, value.indexOf(" "));
+  }
+
+  public static  String extractQualifier(String value) {
+    if(value == null || !value.contains(" ")){
+      return null;
+    }
+    return value.substring(value.indexOf(" ") + 1);
+  }
+
   private static Predicate<ProductId> isUniqueISBN(List<ProductId> productIds) {
     return productId -> productIds.size() == 1 || StringUtils.isNotEmpty(productId.getQualifier());
   }
