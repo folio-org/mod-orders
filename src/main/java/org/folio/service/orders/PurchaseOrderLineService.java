@@ -14,7 +14,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLine;
+import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
 import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
 
@@ -435,7 +435,7 @@ public class PurchaseOrderLineService {
         return requestContext.getContext().owner()
           .<List<Future<Map.Entry<String, String>>>>executeBlocking(event -> {
                 List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
-                var setOfProductIds = buildSetOfProductIdsFromCompositePoLine(filteredCompLines, isbnTypeId);
+                var setOfProductIds = buildSetOfProductIdsFromCompositePoLines(filteredCompLines, isbnTypeId);
                 if (CollectionUtils.isEmpty(setOfProductIds)) {
                   event.complete(futures);
                   return;

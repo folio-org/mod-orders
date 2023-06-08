@@ -1,7 +1,7 @@
 package org.folio.service.orders.lines.update;
 
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
-import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_CONNECTION_UPDATE_ERROR;
+import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_INVALID_PRODUCT_ID_ERROR;
 import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME;
 import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME_TYPE_ID;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_CONTRIBUTORS;
@@ -190,7 +190,7 @@ public class OrderLinePatchOperationService {
             poLine.getDetails().setProductIds(removeISBNDuplicates(productIds, isbnTypeId));
             promise.complete(poLine);
           })
-          .onFailure(t -> promise.fail(new HttpException(400, INSTANCE_CONNECTION_UPDATE_ERROR.toError())))
+          .onFailure(t -> promise.fail(new HttpException(400, INSTANCE_INVALID_PRODUCT_ID_ERROR.toError())))
           .mapEmpty();
       });
     return promise.future();

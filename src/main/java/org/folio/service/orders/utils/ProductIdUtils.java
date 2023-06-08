@@ -16,7 +16,7 @@ import static java.util.stream.Collectors.toList;
 
 public class ProductIdUtils {
 
-  public static Set<String> buildSetOfProductIdsFromCompositePoLine(List<CompositePoLine> compositePoLines, String isbnTypeId) {
+  public static Set<String> buildSetOfProductIdsFromCompositePoLines(List<CompositePoLine> compositePoLines, String isbnTypeId) {
     List<ProductId> productIds = compositePoLines.stream()
       .flatMap(pol -> pol.getDetails().getProductIds().stream())
       .collect(Collectors.toList());
@@ -47,17 +47,17 @@ public class ProductIdUtils {
   }
 
   public static  String extractProductId(String value) {
-    if(value == null || !value.contains(" ")){
+    if(value == null || !value.contains(" ")) {
       return value;
     }
-    return value.substring(0, value.indexOf(" "));
+    return value.split(" ")[0];
   }
 
   public static  String extractQualifier(String value) {
-    if(value == null || !value.contains(" ")){
+    if(value == null || !value.contains(" ")) {
       return null;
     }
-    return value.substring(value.indexOf(" ") + 1);
+    return value.split(" ")[1];
   }
 
   private static Predicate<ProductId> isUniqueISBN(List<ProductId> productIds) {
