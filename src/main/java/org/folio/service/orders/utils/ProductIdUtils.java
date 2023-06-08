@@ -50,14 +50,14 @@ public class ProductIdUtils {
     if(value == null || !value.contains(" ")) {
       return value;
     }
-    return value.split(" ")[0];
+    return value.substring(0, value.indexOf(" "));
   }
 
   public static  String extractQualifier(String value) {
     if(value == null || !value.contains(" ")) {
       return null;
     }
-    return value.split(" ")[1];
+    return value.substring(value.indexOf(" ") + 1);
   }
 
   private static Predicate<ProductId> isUniqueISBN(List<ProductId> productIds) {
