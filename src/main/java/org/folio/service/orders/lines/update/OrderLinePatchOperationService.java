@@ -1,6 +1,5 @@
 package org.folio.service.orders.lines.update;
 
-import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_INVALID_PRODUCT_ID_ERROR;
 import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME;
 import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME_TYPE_ID;
@@ -14,13 +13,12 @@ import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLISHER;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_RECORDS_BY_ID_ENDPOINT;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_TITLE;
 import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDPOINTS;
-import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIds;
-import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
-import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
-import static org.folio.service.orders.utils.ProductIdUtils.extractProductId;
-import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
+import static org.folio.service.orders.utils.HelperUtils.buildSetOfProductIds;
+import static org.folio.service.orders.utils.HelperUtils.isISBN;
+import static org.folio.service.orders.utils.HelperUtils.removeISBNDuplicates;
+import static org.folio.service.orders.utils.HelperUtils.extractProductId;
+import static org.folio.service.orders.utils.HelperUtils.extractQualifier;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,14 +26,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import io.vertxconcurrent.Semaphore;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -52,6 +47,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.service.orders.utils.HelperUtils;
 
 
 public class OrderLinePatchOperationService {
@@ -148,33 +144,12 @@ public class OrderLinePatchOperationService {
 
     inventoryCache.getProductTypeUuid(requestContext)
       .compose(isbnTypeId -> {
-        Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
-        return requestContext.getContext().owner()
-          .<List<Future<Map.Entry<String, String>>>>executeBlocking(event -> {
-            List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
-            Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
-            if (CollectionUtils.isEmpty(setOfProductIds)) {
-              event.complete(futures);
-              return;
-            }
-
-            for (String productID : setOfProductIds) {
-              semaphore.acquire(() -> {
-                var future = inventoryCache.convertToISBN13(extractProductId(productID), requestContext)
-                  .map(normalizedId -> Map.entry(productID, normalizedId))
-                  .onComplete(asyncResult -> semaphore.release());
-                futures.add(future);
-                if (futures.size() == setOfProductIds.size()) {
-                  event.complete(futures);
-                }
-              });
-            }
-          })
-          .compose(GenericCompositeFuture::join)
-          .map(result -> result.result()
-            .list()
+        Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
+         return HelperUtils.executeWithSemaphores(setOfProductIds,
+          productId -> inventoryCache.convertToISBN13(extractProductId(productId), requestContext)
+            .map(normalizedId -> Map.entry(productId, normalizedId)), requestContext)
+          .map(result -> result
             .stream()
-            .map(entry -> (Map.Entry<String, String>) entry)
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
           .map(productIdsMap -> {
             // update productids with normalized values

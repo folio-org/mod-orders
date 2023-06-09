@@ -14,9 +14,9 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
-import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
-import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
+import static org.folio.service.orders.utils.HelperUtils.buildSetOfProductIdsFromCompositePoLines;
+import static org.folio.service.orders.utils.HelperUtils.isISBN;
+import static org.folio.service.orders.utils.HelperUtils.removeISBNDuplicates;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -431,33 +431,12 @@ public class PurchaseOrderLineService {
 
     return inventoryCache.getProductTypeUuid(requestContext)
       .compose(isbnTypeId -> {
-        Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, requestContext.getContext().owner());
-        return requestContext.getContext().owner()
-          .<List<Future<Map.Entry<String, String>>>>executeBlocking(event -> {
-                List<Future<Map.Entry<String, String>>> futures = new ArrayList<>();
-                var setOfProductIds = buildSetOfProductIdsFromCompositePoLines(filteredCompLines, isbnTypeId);
-                if (CollectionUtils.isEmpty(setOfProductIds)) {
-                  event.complete(futures);
-                  return;
-                }
-
-                for (String productID : setOfProductIds) {
-                  semaphore.acquire(() -> {
-                    var future = inventoryCache.convertToISBN13(productID, requestContext)
-                      .map(normalizedId -> Map.entry(productID, normalizedId))
-                      .onComplete(asyncResult -> semaphore.release());
-                    futures.add(future);
-                    if (futures.size() == setOfProductIds.size()) {
-                      event.complete(futures);
-                    }
-                  });
-                }
-              })
-          .compose(GenericCompositeFuture::join)
-          .map(result -> result.result()
-            .list()
+        var setOfProductIds = buildSetOfProductIdsFromCompositePoLines(filteredCompLines, isbnTypeId);
+        return org.folio.service.orders.utils.HelperUtils.executeWithSemaphores(setOfProductIds,
+          productId -> inventoryCache.convertToISBN13(productId, requestContext)
+            .map(normalizedId -> Map.entry(productId, normalizedId)), requestContext)
+          .map(result -> result
             .stream()
-            .map(entry -> (Map.Entry<String, String>) entry)
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
           .map(productIdsMap -> {
             // update productids with normalized values
