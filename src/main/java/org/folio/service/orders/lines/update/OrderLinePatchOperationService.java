@@ -166,7 +166,7 @@ public class OrderLinePatchOperationService {
             promise.complete(poLine);
           })
           .onFailure(t -> {
-            logger.error("Failed update poLine with instance", t);
+            logger.error("Failed update poLine {} with instance", poLine.getId(), t);
             promise.fail(new HttpException(400, INSTANCE_INVALID_PRODUCT_ID_ERROR.toError()));
           })
           .mapEmpty();
