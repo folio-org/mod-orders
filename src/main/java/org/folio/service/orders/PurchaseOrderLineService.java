@@ -14,9 +14,9 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.service.orders.utils.HelperUtils.buildSetOfProductIdsFromCompositePoLines;
-import static org.folio.service.orders.utils.HelperUtils.isISBN;
-import static org.folio.service.orders.utils.HelperUtils.removeISBNDuplicates;
+import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
+import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
+import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
 
 import java.util.ArrayList;
 import java.util.Collection;

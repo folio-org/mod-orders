@@ -13,11 +13,11 @@ import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLISHER;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_RECORDS_BY_ID_ENDPOINT;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_TITLE;
 import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDPOINTS;
-import static org.folio.service.orders.utils.HelperUtils.buildSetOfProductIds;
-import static org.folio.service.orders.utils.HelperUtils.isISBN;
-import static org.folio.service.orders.utils.HelperUtils.removeISBNDuplicates;
-import static org.folio.service.orders.utils.HelperUtils.extractProductId;
-import static org.folio.service.orders.utils.HelperUtils.extractQualifier;
+import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIds;
+import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
+import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
+import static org.folio.service.orders.utils.ProductIdUtils.extractProductId;
+import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
 
 import java.util.List;
 import java.util.Objects;
