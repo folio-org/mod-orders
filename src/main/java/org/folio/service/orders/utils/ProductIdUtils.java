@@ -49,14 +49,14 @@ public class ProductIdUtils {
   }
 
   public static  String extractProductId(String value) {
-    if(value == null || !value.contains(" ")) {
+    if (value == null || !value.contains(" ")) {
       return value;
     }
     return value.substring(0, value.indexOf(" "));
   }
 
   public static  String extractQualifier(String value) {
-    if(value == null || !value.contains(" ")) {
+    if (value == null || !value.contains(" ")) {
       return null;
     }
     return value.substring(value.indexOf(" ") + 1);
