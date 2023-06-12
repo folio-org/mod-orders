@@ -165,7 +165,10 @@ public class OrderLinePatchOperationService {
             poLine.getDetails().setProductIds(removeISBNDuplicates(productIds, isbnTypeId));
             promise.complete(poLine);
           })
-          .onFailure(t -> promise.fail(new HttpException(400, INSTANCE_INVALID_PRODUCT_ID_ERROR.toError())))
+          .onFailure(t -> {
+            logger.error("Failed update poLine with instance", t);
+            promise.fail(new HttpException(400, INSTANCE_INVALID_PRODUCT_ID_ERROR.toError()));
+          })
           .mapEmpty();
       });
     return promise.future();
