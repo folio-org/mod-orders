@@ -192,7 +192,6 @@ import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineFieldNames;
 import org.folio.orders.utils.POProtectedFields;
-import org.folio.rest.acq.model.Ongoing;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.Fund;
@@ -3471,9 +3470,6 @@ public class PurchaseOrdersApiTest {
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
       CompositePurchaseOrder.OrderType.ONGOING.value());
-    Ongoing ongoing = new Ongoing();
-    ongoing.setManualRenewal(true);
-    allProtectedFieldsModification.put(POProtectedFields.ONGOING.getFieldName(), JsonObject.mapFrom(ongoing));
 
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
@@ -3572,7 +3568,6 @@ public class PurchaseOrdersApiTest {
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
       CompositePurchaseOrder.OrderType.ONE_TIME.value());
-    allProtectedFieldsModification.put(POProtectedFields.ONGOING.getFieldName(), null);
     CloseReason closeReason = new CloseReason();
     closeReason.setNote("testing reason on Closed Order");
     closeReason.setReason("Complete");
