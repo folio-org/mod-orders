@@ -33,6 +33,7 @@ public final class TestConstants {
   public static final String PO_ID_OPEN_STATUS = "c1465131-ed35-4308-872c-d7cdf0afc5f7";
   public static final String PO_WFD_ID_OPEN_STATUS = "a1465131-ed35-4308-872c-d7cdf0afc5f7";
   public static final String PO_ID_CLOSED_STATUS = "07f65192-44a4-483d-97aa-b137bbd96390";
+  public static final String PO_CLOSED_STATUS = "07f65192-44a4-483d-97aa-b137bbd96391";
   public static final String PO_ID_OPEN_TO_BE_CLOSED = "9d56b621-202d-414b-9e7f-5fefe4422ab3";
   public static final String PO_ID_OPEN_TO_CANCEL = "f56c70bc-8a31-4f56-b606-c6d8e597b7c1";
   public static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
