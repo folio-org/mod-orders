@@ -3468,9 +3468,6 @@ public class PurchaseOrdersApiTest {
     allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER.getFieldName(), "testPO");
     allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
-    allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
-      CompositePurchaseOrder.OrderType.ONGOING.value());
-
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
 
