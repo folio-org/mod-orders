@@ -108,7 +108,8 @@ public enum ErrorCodes {
   FORBIDDEN_DELETE_USED_VALUE("forbiddenDeleteUsedValue", "Deleting the value used is prohibited"),
   ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES("errorRemovingInvoiceLineEncumbrances", "Error removing invoice line encumbrance links after deleting the encumbrances: %s"),
   PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR("poLineHasRelatedApprovedInvoice", "Composite POL related invoice lines contains lines which has status APPROVED for the current fiscal year, invoice line ids: %s"),
-  MULTIPLE_FISCAL_YEARS("multipleFiscalYears", "Order line fund distributions have active budgets in multiple fiscal years.");
+  MULTIPLE_FISCAL_YEARS("multipleFiscalYears", "Order line fund distributions have active budgets in multiple fiscal years."),
+  INSTANCE_INVALID_PRODUCT_ID_ERROR("instanceInvalidProductIdError", "Instance connection could not be changed, the chosen instance contains an invalid Product ID.");
 
 
   private final String code;
