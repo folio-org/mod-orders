@@ -713,7 +713,7 @@ public class PurchaseOrderLineHelper {
     compositePoLine.getFundDistribution().stream()
       .filter(fundDistribution -> storageFundIds.contains(fundDistribution.getFundId()) && fundDistribution.getEncumbrance() == null)
       .forEach(fundDistribution -> storagePoLine.getFundDistribution().stream()
-          .filter(storageFundDistribution -> storageFundDistribution.getFundId().equals(fundDistribution.getFundId()))
+          .filter(storageFundDistribution -> storageFundDistribution.getFundId().equals(fundDistribution.getFundId()) && storageFundDistribution.getExpenseClassId().equals(fundDistribution.getExpenseClassId()))
           .findFirst()
           .ifPresent(storageFundDistribution -> fundDistribution.setEncumbrance(storageFundDistribution.getEncumbrance())));
 
