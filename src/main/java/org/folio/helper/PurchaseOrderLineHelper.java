@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -713,7 +714,8 @@ public class PurchaseOrderLineHelper {
     compositePoLine.getFundDistribution().stream()
       .filter(fundDistribution -> storageFundIds.contains(fundDistribution.getFundId()) && fundDistribution.getEncumbrance() == null)
       .forEach(fundDistribution -> storagePoLine.getFundDistribution().stream()
-          .filter(storageFundDistribution -> storageFundDistribution.getFundId().equals(fundDistribution.getFundId()) && storageFundDistribution.getExpenseClassId().equals(fundDistribution.getExpenseClassId()))
+          .filter(storageFundDistribution -> storageFundDistribution.getFundId().equals(fundDistribution.getFundId())
+            && Objects.equals(storageFundDistribution.getExpenseClassId(), fundDistribution.getExpenseClassId()))
           .findFirst()
           .ifPresent(storageFundDistribution -> fundDistribution.setEncumbrance(storageFundDistribution.getEncumbrance())));
 
