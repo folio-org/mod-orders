@@ -68,6 +68,8 @@ public enum ErrorCodes {
   BUDGET_IS_INACTIVE("budgetIsInactive", "Cannot create encumbrance from the not active budget"),
   FUND_CANNOT_BE_PAID("fundCannotBePaid", "Fund cannot be paid due to restrictions"),
   MISSING_ONGOING("missingOngoing", "Ongoing field must be present for Ongoing order"),
+  WRONG_ONGOING_SUBSCRIPTION_FIELDS_CHANGED("wrongOngoingSubscriptionFieldsChanged", "Fields [reviewDate, manualRenewal] could not be changed when ongoing subscription = true"),
+  WRONG_ONGOING_NOT_SUBSCRIPTION_FIELDS_CHANGED("wrongOngoingNotSubscriptionFieldsChanged", "Fields [interval, renewalDate, reviewPeriod, manualRenewal] could not be changed when ongoing subscription = false"),
   ONGOING_NOT_ALLOWED("ongoingNotAllowed", "Ongoing field must be absent for One-time order"),
   CANNOT_MIX_TYPES_FOR_ZERO_PRICE("cannotMixTypesForZeroPrice", "Fund distribution types cannot be mixed for a price of 0"),
   INCORRECT_FUND_DISTRIBUTION_TOTAL("incorrectFundDistributionTotal","Fund distribution total must add to 100% or totalPrice"),

@@ -3,11 +3,15 @@ package org.folio.orders.utils;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
 import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
+import static org.folio.rest.core.exceptions.ErrorCodes.WRONG_ONGOING_NOT_SUBSCRIPTION_FIELDS_CHANGED;
+import static org.folio.rest.core.exceptions.ErrorCodes.WRONG_ONGOING_SUBSCRIPTION_FIELDS_CHANGED;
+
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -20,10 +24,13 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.parser.JsonPathParser;
@@ -34,6 +41,9 @@ import io.vertx.core.json.JsonObject;
 public final class PoLineCommonUtil {
   public static final String DASH_SEPARATOR = "-";
   private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
+
+  public static final List<String> NOT_EDITABLE_ONGOING_SUBSCRIPTION_FIELDS = List.of("reviewDate", "manualRenewal");
+  public static final List<String> NOT_EDITABLE_ONGOING_NOT_SUBSCRIPTION_FIELDS = List.of("interval", "renewalDate", "reviewPeriod", "manualRenewal");
 
   private PoLineCommonUtil() {
 
@@ -228,5 +238,30 @@ public final class PoLineCommonUtil {
     }
 
     return objectFromStorage;
+  }
+
+  public static void verifyOngoingFieldsChanged(JsonObject compPOFromStorageJson, CompositePurchaseOrder compPO) {
+    JsonObject ongoingJson = compPOFromStorageJson.getJsonObject("ongoing");
+    if (Objects.nonNull(ongoingJson) && Objects.nonNull(compPO.getOngoing())) {
+      JsonPathParser oldObject = new JsonPathParser(ongoingJson);
+      JsonPathParser newObject = new JsonPathParser(JsonObject.mapFrom(compPO.getOngoing()));
+      if (Boolean.TRUE.equals(compPO.getOngoing().getIsSubscription())) {
+        checkFieldsChanged(oldObject, newObject, NOT_EDITABLE_ONGOING_SUBSCRIPTION_FIELDS, WRONG_ONGOING_SUBSCRIPTION_FIELDS_CHANGED);
+      } else {
+        checkFieldsChanged(oldObject, newObject, NOT_EDITABLE_ONGOING_NOT_SUBSCRIPTION_FIELDS, WRONG_ONGOING_NOT_SUBSCRIPTION_FIELDS_CHANGED);
+      }
+    }
+  }
+
+  private static void checkFieldsChanged(JsonPathParser oldObject, JsonPathParser newObject, List<String> fields, ErrorCodes error) {
+    List<Parameter> parameters = new ArrayList<>();
+    for (String field: fields) {
+      if (ObjectUtils.notEqual(oldObject.getValueAt(field), newObject.getValueAt(field))) {
+        parameters.add(new Parameter().withKey(field).withValue(newObject.getValueAt(field).toString()));
+      }
+    }
+    if (!parameters.isEmpty()) {
+      throw new HttpException(400, error, parameters);
+    }
   }
 }

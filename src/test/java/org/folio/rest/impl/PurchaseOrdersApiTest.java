@@ -18,41 +18,7 @@ import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConfig.mockPort;
-import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.TestConstants.ACTIVE_ACCESS_PROVIDER_B;
-import static org.folio.TestConstants.BAD_QUERY;
-import static org.folio.TestConstants.COMPOSITE_PO_LINES_PREFIX;
-import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
-import static org.folio.TestConstants.EMPTY_CONFIG_X_OKAPI_TENANT;
-import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
-import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
-import static org.folio.TestConstants.ID;
-import static org.folio.TestConstants.ID_BAD_FORMAT;
-import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
-import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
-import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_B;
-import static org.folio.TestConstants.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER;
-import static org.folio.TestConstants.INVALID_CONFIG_X_OKAPI_TENANT;
-import static org.folio.TestConstants.MIN_PO_ID;
-import static org.folio.TestConstants.NON_EXIST_CONFIG_X_OKAPI_TENANT;
-import static org.folio.TestConstants.NON_EXIST_INSTANCE_STATUS_TENANT_HEADER;
-import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT_HEADER;
-import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
-import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
-import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
-import static org.folio.TestConstants.PO_ID_OPEN_TO_BE_CLOSED;
-import static org.folio.TestConstants.PO_ID_OPEN_TO_CANCEL;
-import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITHOUT_PO_LINES;
-import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
-import static org.folio.TestConstants.PO_LINE_ID_FOR_SUCCESS_CASE;
-import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
-import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
-import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
-import static org.folio.TestConstants.X_ECHO_STATUS;
-import static org.folio.TestConstants.X_OKAPI_TOKEN;
-import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.TestConstants.X_OKAPI_USER_ID_WITH_ACQ_UNITS;
+import static org.folio.TestConstants.*;
 import static org.folio.TestUtils.getInstanceId;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
@@ -192,7 +158,6 @@ import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineFieldNames;
 import org.folio.orders.utils.POProtectedFields;
-import org.folio.rest.acq.model.Ongoing;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.ExchangeRate;
 import org.folio.rest.acq.model.finance.Fund;
@@ -2989,7 +2954,6 @@ public class PurchaseOrdersApiTest {
 
   @Test
   @Disabled
-    //
   void testGetOrdersWithParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
     String sortBy = " sortBy poNumber";
@@ -3469,12 +3433,6 @@ public class PurchaseOrdersApiTest {
     allProtectedFieldsModification.put(POProtectedFields.PO_NUMBER.getFieldName(), "testPO");
     allProtectedFieldsModification.put(POProtectedFields.MANUAL_PO.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
-    allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
-      CompositePurchaseOrder.OrderType.ONGOING.value());
-    Ongoing ongoing = new Ongoing();
-    ongoing.setManualRenewal(true);
-    allProtectedFieldsModification.put(POProtectedFields.ONGOING.getFieldName(), JsonObject.mapFrom(ongoing));
-
     checkPreventProtectedFieldsModificationRule(COMPOSITE_ORDERS_BY_ID_PATH, reqData, allProtectedFieldsModification);
   }
 
@@ -3561,7 +3519,7 @@ public class PurchaseOrdersApiTest {
   void testUpdateOrderWithProtectedFieldsChangingForClosedOrder() {
     logger.info("=== Test case when closed order errors if protected fields are changed ===");
 
-    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS);
+    JsonObject reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_CLOSED_STATUS);
     assertThat(reqData.getString("workflowStatus"), is(CompositePurchaseOrder.WorkflowStatus.CLOSED.value()));
 
     Map<String, Object> allProtectedFieldsModification = new HashMap<>();
@@ -3572,7 +3530,6 @@ public class PurchaseOrdersApiTest {
     allProtectedFieldsModification.put(POProtectedFields.RE_ENCUMBER.getFieldName(), true);
     allProtectedFieldsModification.put(POProtectedFields.ORDER_TYPE.getFieldName(),
       CompositePurchaseOrder.OrderType.ONE_TIME.value());
-    allProtectedFieldsModification.put(POProtectedFields.ONGOING.getFieldName(), null);
     CloseReason closeReason = new CloseReason();
     closeReason.setNote("testing reason on Closed Order");
     closeReason.setReason("Complete");
@@ -3898,6 +3855,27 @@ public class PurchaseOrdersApiTest {
     logger.info("===  Test case when reopen permission is required and user does not have required permission===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS).mapTo(CompositePurchaseOrder.class);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    List<CompositePoLine> poLines = reqData.getCompositePoLines();
+    poLines.forEach(line -> line.getEresource().setAccessProvider(ACTIVE_VENDOR_ID));
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 403).as(Errors.class);
+
+    assertEquals(ErrorCodes.USER_HAS_NO_REOPEN_PERMISSIONS.getCode(), errors.getErrors().get(0).getCode());
+
+    // set unopen permission header
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, REOPEN_PERMISSIONS_HEADER), "", 204);
+  }
+
+  @Test
+  void testPutOrderHonorsUserReopenPermissionsWithOngoingSubscription() {
+    logger.info("===  Test case when reopen permission is required and user does not have required permission===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_CLOSED_STATUS_WITH_ONGOING).mapTo(CompositePurchaseOrder.class);
     reqData.setVendor(ACTIVE_VENDOR_ID);
     List<CompositePoLine> poLines = reqData.getCompositePoLines();
     poLines.forEach(line -> line.getEresource().setAccessProvider(ACTIVE_VENDOR_ID));

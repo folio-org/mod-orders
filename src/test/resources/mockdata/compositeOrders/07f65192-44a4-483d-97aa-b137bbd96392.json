@@ -9,6 +9,7 @@
   "reEncumber": false,
   "ongoing": {
     "interval": 182,
+    "isSubscription": true,
     "manualRenewal": true,
     "reviewPeriod": 30,
     "renewalDate": "2019-04-09T00:00:00.000Z"
