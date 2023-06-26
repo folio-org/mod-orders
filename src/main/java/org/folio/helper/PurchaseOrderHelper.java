@@ -380,9 +380,8 @@ public class PurchaseOrderHelper {
     if (!PENDING.equals(storagePOWorkflowStatus)) {
       List<String> fieldNames = OPEN.equals(storagePOWorkflowStatus) ? getFieldNamesForOpenOrder() : getFieldNames();
       // MODORDERS-429 double conversion required until HttpClient returns e.g. 'ongoing.renewalDate' in different format
-      CompositePurchaseOrder storageCompPO = compPOFromStorageJson.mapTo(CompositePurchaseOrder.class);
-      verifyProtectedFieldsChanged(fieldNames, JsonObject.mapFrom(storageCompPO), JsonObject.mapFrom(compPO));
-      verifyOngoingFieldsChanged(JsonObject.mapFrom(storageCompPO), compPO);
+      verifyProtectedFieldsChanged(fieldNames, compPOFromStorageJson, JsonObject.mapFrom(compPO));
+      verifyOngoingFieldsChanged(compPOFromStorageJson, compPO);
     }
     return compPOFromStorageJson;
   }
