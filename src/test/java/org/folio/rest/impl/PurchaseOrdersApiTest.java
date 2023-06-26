@@ -2954,7 +2954,6 @@ public class PurchaseOrdersApiTest {
 
   @Test
   @Disabled
-    //
   void testGetOrdersWithParameters() {
     logger.info("=== Test Get Orders - With empty query ===");
     String sortBy = " sortBy poNumber";
@@ -3856,6 +3855,27 @@ public class PurchaseOrdersApiTest {
     logger.info("===  Test case when reopen permission is required and user does not have required permission===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS).mapTo(CompositePurchaseOrder.class);
+    reqData.setVendor(ACTIVE_VENDOR_ID);
+    List<CompositePoLine> poLines = reqData.getCompositePoLines();
+    poLines.forEach(line -> line.getEresource().setAccessProvider(ACTIVE_VENDOR_ID));
+    assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
+    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
+
+    Errors errors = verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 403).as(Errors.class);
+
+    assertEquals(ErrorCodes.USER_HAS_NO_REOPEN_PERMISSIONS.getCode(), errors.getErrors().get(0).getCode());
+
+    // set unopen permission header
+    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, REOPEN_PERMISSIONS_HEADER), "", 204);
+  }
+
+  @Test
+  void testPutOrderHonorsUserReopenPermissionsWithOngoingSubscription() {
+    logger.info("===  Test case when reopen permission is required and user does not have required permission===");
+
+    CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_CLOSED_STATUS_WITH_ONGOING).mapTo(CompositePurchaseOrder.class);
     reqData.setVendor(ACTIVE_VENDOR_ID);
     List<CompositePoLine> poLines = reqData.getCompositePoLines();
     poLines.forEach(line -> line.getEresource().setAccessProvider(ACTIVE_VENDOR_ID));
