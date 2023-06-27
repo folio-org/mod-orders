@@ -60,6 +60,7 @@ import com.google.common.collect.Lists;
 
 import io.vertx.core.Future;
 import io.vertxconcurrent.Semaphore;
+import org.javamoney.moneta.spi.MoneyUtils;
 
 public class OrderRolloverService {
   private static final Logger logger = LogManager.getLogger();
@@ -278,7 +279,7 @@ public class OrderRolloverService {
     poLine.getFundDistribution().forEach(fundDistr -> {
       if (fundDistr.getDistributionType().equals(DistributionType.AMOUNT)) {
         MonetaryAmount fdAmount = Money.of(fundDistr.getValue(), poLine.getCost().getCurrency());
-        MonetaryAmount newFdAmount = fdAmount.divide(poLineEstimatedPriceBeforeRollover).multiply(poLineEstimatedPriceAfterRollover);
+        MonetaryAmount newFdAmount = (poLineEstimatedPriceBeforeRollover != 0) ? fdAmount.divide(poLineEstimatedPriceBeforeRollover).multiply(poLineEstimatedPriceAfterRollover) : Money.of(0, poLine.getCost().getCurrency());
         fundDistr.setValue(newFdAmount.getNumber().doubleValue());
       }
       var currEncumbrances = currEncumbranceFundIdMap.getOrDefault(fundDistr.getFundId(), emptyList());
