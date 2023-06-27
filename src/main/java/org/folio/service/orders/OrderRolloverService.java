@@ -60,7 +60,6 @@ import com.google.common.collect.Lists;
 
 import io.vertx.core.Future;
 import io.vertxconcurrent.Semaphore;
-import org.javamoney.moneta.spi.MoneyUtils;
 
 public class OrderRolloverService {
   private static final Logger logger = LogManager.getLogger();
@@ -369,7 +368,8 @@ public class OrderRolloverService {
     LedgerFiscalYearRollover ledgerFYRollover) {
     String typesQuery = buildOrderTypesQuery(ledgerFYRollover);
     String fundIdsQuery = fundIds.stream().map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId)).collect(Collectors.joining(OR));
-    return "(" + typesQuery + ")" +  AND + " (purchaseOrder.workflowStatus==" + workflowStatus.value() + ") " + AND + "(" + fundIdsQuery + ")";
+    String sortByCreatedDate = " sortBy metadata.createdDate";
+    return "(" + typesQuery + ")" +  AND + " (purchaseOrder.workflowStatus==" + workflowStatus.value() + ") " + AND + "(" + fundIdsQuery + ")" + sortByCreatedDate;
   }
 
   private String buildOrderTypesQuery(LedgerFiscalYearRollover ledgerFYRollover) {
