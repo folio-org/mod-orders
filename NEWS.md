@@ -1,5 +1,13 @@
 ## 12.7.0 - Unreleased
 
+## 12.6.7 Orchid R1 2023 - Released
+This release focused on fixing zero division issue during rollover process
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.6...v12.6.7)
+
+### Bug Fixes
+* [MODORDERS-901](https://issues.folio.org/browse/MODORDERS-901) - Zero division issue
+
 ## 12.6.6 Orchid R1 2023 - Released
 [MODORDERS-878](https://issues.folio.org/browse/MODORDERS-878) Adjust prefix and suffix for generated poNumber
 [MODORDERS-876](https://issues.folio.org/browse/MODORDERS-876) Extra holdings/items created for open orders via data import, some without POL links
