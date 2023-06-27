@@ -258,7 +258,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
       MonetaryAmount newFundAmount;
       if (fundDistr.getDistributionType().equals(FundDistribution.DistributionType.AMOUNT)) {
         MonetaryAmount fdAmount = Money.of(fundDistr.getValue(), poLine.getCost().getCurrency());
-        newFundAmount = (poLineEstimatedPriceBeforeRollover.isZero()) ? fdAmount.divide(poLineEstimatedPriceBeforeRollover.getNumber().doubleValue())
+        newFundAmount = (!poLineEstimatedPriceBeforeRollover.isZero()) ? fdAmount.divide(poLineEstimatedPriceBeforeRollover.getNumber().doubleValue())
                                 .multiply(poLineEstimatedPriceAfterRollover.getNumber().doubleValue()) : Money.of(0, poLine.getCost().getCurrency());
         fundDistr.setValue(newFundAmount.getNumber().doubleValue());
       }
