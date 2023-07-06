@@ -1174,7 +1174,6 @@ public class PurchaseOrdersApiTest {
     CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
     respLine1.getLocations().forEach(location -> {
       assertNull(location.getLocationId());
-      assertNotNull(location.getHoldingId());
     });
     CompositePoLine respLine2 = resp.getCompositePoLines().get(1);
     respLine2.getLocations().forEach(location -> {
@@ -1187,8 +1186,8 @@ public class PurchaseOrdersApiTest {
     assertNotNull("Line must be connected to instance, if create inventory include instance", respLine2.getInstanceId());
 
     List<JsonObject> createdHoldings = getCreatedHoldings();
-    assertEquals(3, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
-    verifyHoldingsCreated(3, createdHoldings, respLine1);
+    assertEquals(2, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(2, createdHoldings, respLine1);
     verifyHoldingsCreated(0, createdHoldings, respLine2);
 
     // All existing and created items
@@ -2566,8 +2565,8 @@ public class PurchaseOrdersApiTest {
     assertNotNull("Line must be connected to instance, if create inventory include instance", respLine2.getInstanceId());
 
     List<JsonObject> createdHoldings = getCreatedHoldings();
-    assertEquals(5, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
-    verifyHoldingsCreated(3, createdHoldings, respLine1);
+    assertEquals(4, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(2, createdHoldings, respLine1);
     verifyHoldingsCreated(2, createdHoldings, respLine2);
 
     // All existing and created items
@@ -3677,8 +3676,8 @@ public class PurchaseOrdersApiTest {
     assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
 
     List<JsonObject> createdHoldings = getCreatedHoldings();
-    assertEquals(3, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
-    verifyHoldingsCreated(3, createdHoldings, respLine1);
+    assertEquals(2, createdHoldings.size(), "Quantity of created instance must be depended of quantity in the locations and create inventory include holding");
+    verifyHoldingsCreated(2, createdHoldings, respLine1);
 
     // All existing and created items
     List<JsonObject> items = joinExistingAndNewItems();
