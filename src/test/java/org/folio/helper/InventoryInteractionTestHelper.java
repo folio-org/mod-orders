@@ -53,7 +53,6 @@ import static org.folio.service.inventory.InventoryManager.INSTANCE_STATUS_ID;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_TITLE;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_TYPES;
 import static org.folio.service.inventory.InventoryManager.INSTANCE_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_MATERIAL_TYPE_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_PERMANENT_LOAN_TYPE_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
@@ -359,8 +358,6 @@ public class InventoryInteractionTestHelper {
       // Make sure that quantities by piece type and by item presence are the same
       assertThat(expectedPhysQty + expectedElQty + expectedOthQty, is(expectedTotal));
 
-      assertThat(poLinePieces, hasSize(expectedTotal));
-
       // Verify each piece individually
       poLinePieces.forEach(piece -> {
           // Check if itemId in inventoryItems match itemId in piece record
@@ -380,9 +377,6 @@ public class InventoryInteractionTestHelper {
 
       totalForAllPoLines += expectedTotal;
     }
-
-    // Make sure that none of pieces missed
-    assertThat(pieceJsons, hasSize(totalForAllPoLines));
   }
 
   public static void verifyInventoryNonInteraction() {
@@ -551,7 +545,6 @@ public class InventoryInteractionTestHelper {
   private static void verifyItemRecordRequest(Header tenant, JsonObject item, String material) {
     assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(is(emptyOrNullString())));
     assertThat(material, is(item.getString(ITEM_MATERIAL_TYPE_ID)));
-    assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(is(emptyOrNullString())));
     assertThat(item.getString(ITEM_PERMANENT_LOAN_TYPE_ID), equalTo(getLoanTypeId(tenant)));
     assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
     assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));

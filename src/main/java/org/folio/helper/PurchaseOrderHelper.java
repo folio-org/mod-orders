@@ -24,6 +24,7 @@ import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToPen
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToReopen;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
+import static org.folio.orders.utils.PoLineCommonUtil.verifyOngoingFieldsChanged;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
@@ -265,7 +266,7 @@ public class PurchaseOrderHelper {
    */
   public Future<Void> updateOrder(CompositePurchaseOrder compPO, boolean deleteHoldings, RequestContext requestContext) {
     return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(compPO.getId(), requestContext)
-      .map(jsonPoFromStorage -> validateIfPOProtectedFieldsChanged(compPO, jsonPoFromStorage))
+      .map(jsonPoFromStorage -> validateIfPOProtectedAndOngoingFieldsChanged(compPO, jsonPoFromStorage))
       .map(HelperUtils::convertToCompositePurchaseOrder)
       .compose(lines -> purchaseOrderLineService.populateOrderLines(lines, requestContext))
       .compose(poFromStorage -> {
@@ -373,14 +374,13 @@ public class PurchaseOrderHelper {
     return Future.succeededFuture();
   }
 
-  public JsonObject validateIfPOProtectedFieldsChanged(CompositePurchaseOrder compPO,
-      JsonObject compPOFromStorageJson) {
+  public JsonObject validateIfPOProtectedAndOngoingFieldsChanged(CompositePurchaseOrder compPO,
+                                                                 JsonObject compPOFromStorageJson) {
     WorkflowStatus storagePOWorkflowStatus = WorkflowStatus.fromValue(compPOFromStorageJson.getString(WORKFLOW_STATUS));
     if (!PENDING.equals(storagePOWorkflowStatus)) {
       List<String> fieldNames = OPEN.equals(storagePOWorkflowStatus) ? getFieldNamesForOpenOrder() : getFieldNames();
-      // MODORDERS-429 double conversion required until HttpClient returns e.g. 'ongoing.renewalDate' in different format
-      CompositePurchaseOrder storageCompPO = compPOFromStorageJson.mapTo(CompositePurchaseOrder.class);
-      verifyProtectedFieldsChanged(fieldNames, JsonObject.mapFrom(storageCompPO), JsonObject.mapFrom(compPO));
+      verifyProtectedFieldsChanged(fieldNames, compPOFromStorageJson, JsonObject.mapFrom(compPO));
+      verifyOngoingFieldsChanged(compPOFromStorageJson, compPO);
     }
     return compPOFromStorageJson;
   }

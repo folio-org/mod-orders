@@ -6,8 +6,8 @@ import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
+import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.RolloverStatus.ERROR;
@@ -278,7 +278,7 @@ public class OrderRolloverService {
     poLine.getFundDistribution().forEach(fundDistr -> {
       if (fundDistr.getDistributionType().equals(DistributionType.AMOUNT)) {
         MonetaryAmount fdAmount = Money.of(fundDistr.getValue(), poLine.getCost().getCurrency());
-        MonetaryAmount newFdAmount = fdAmount.divide(poLineEstimatedPriceBeforeRollover).multiply(poLineEstimatedPriceAfterRollover);
+        MonetaryAmount newFdAmount = (poLineEstimatedPriceBeforeRollover != 0) ? fdAmount.divide(poLineEstimatedPriceBeforeRollover).multiply(poLineEstimatedPriceAfterRollover) : Money.of(0, poLine.getCost().getCurrency());
         fundDistr.setValue(newFdAmount.getNumber().doubleValue());
       }
       var currEncumbrances = currEncumbranceFundIdMap.getOrDefault(fundDistr.getFundId(), emptyList());
@@ -368,7 +368,8 @@ public class OrderRolloverService {
     LedgerFiscalYearRollover ledgerFYRollover) {
     String typesQuery = buildOrderTypesQuery(ledgerFYRollover);
     String fundIdsQuery = fundIds.stream().map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId)).collect(Collectors.joining(OR));
-    return "(" + typesQuery + ")" +  AND + " (purchaseOrder.workflowStatus==" + workflowStatus.value() + ") " + AND + "(" + fundIdsQuery + ")";
+    String sortByCreatedDate = " sortBy metadata.createdDate";
+    return "(" + typesQuery + ")" +  AND + " (purchaseOrder.workflowStatus==" + workflowStatus.value() + ") " + AND + "(" + fundIdsQuery + ")" + sortByCreatedDate;
   }
 
   private String buildOrderTypesQuery(LedgerFiscalYearRollover ledgerFYRollover) {

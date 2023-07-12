@@ -235,7 +235,8 @@ public class UnOpenCompositeOrderManager {
 
   private void updateLocations(CompositePoLine compPOL, List<Pair<String, String>> deletedHoldingVsLocationIds) {
     if (CollectionUtils.isNotEmpty(deletedHoldingVsLocationIds)) {
-      Map<String, List<Location>> holdingIdVsLocations = compPOL.getLocations().stream().collect(groupingBy(Location::getHoldingId));
+      Map<String, List<Location>> holdingIdVsLocations = compPOL.getLocations().stream().filter(entity -> Objects.nonNull(entity.getHoldingId()))
+        .collect(groupingBy(Location::getHoldingId));
       deletedHoldingVsLocationIds.forEach(holdingIdVsLocationId -> {
         String holdingId = holdingIdVsLocationId.getKey();
         String locationId = holdingIdVsLocationId.getValue();

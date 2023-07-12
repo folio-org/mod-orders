@@ -241,8 +241,9 @@ public class OrderLineUpdateInstanceHandlerTest {
     @Bean OrderLinePatchOperationService orderLinePatchOperationService(
         RestClient restClient,
         OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
-        PurchaseOrderLineService purchaseOrderLineService) {
-      return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver, purchaseOrderLineService);
+        PurchaseOrderLineService purchaseOrderLineService,
+        InventoryCache inventoryCache) {
+      return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver, purchaseOrderLineService, inventoryCache);
     }
 
     @Bean PatchOperationHandler orderLineUpdateInstanceHandler(

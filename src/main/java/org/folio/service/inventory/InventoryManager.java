@@ -310,18 +310,21 @@ public class InventoryManager {
   }
 
   public Future<JsonObject> getOrCreateHoldingsJsonRecord(String instanceId, Location location, RequestContext requestContext) {
-    if (location.getHoldingId() != null) {
-      String holdingId = location.getHoldingId();
-      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
-        .withId(holdingId);
-      return restClient.getAsJsonObject(requestEntry, requestContext)
-         .recover(throwable -> {
-           handleHoldingsError(holdingId, throwable);
-           return null;
-         });
-    } else {
-      return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
+    if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
+      if (location.getHoldingId() != null) {
+        String holdingId = location.getHoldingId();
+        RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
+          .withId(holdingId);
+        return restClient.getAsJsonObject(requestEntry, requestContext)
+          .recover(throwable -> {
+            handleHoldingsError(holdingId, throwable);
+            return null;
+          });
+      } else {
+        return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
+      }
     }
+    return Future.succeededFuture();
   }
 
   private static void handleHoldingsError(String holdingId, Throwable throwable) {

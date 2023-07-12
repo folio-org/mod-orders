@@ -296,6 +296,7 @@
           ],
           "modulePermissions": [
             "inventory-storage.holdings.item.get",
+            "inventory-storage.holdings.item.post",
             "inventory-storage.holdings.item.delete",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
@@ -1091,7 +1092,7 @@
     },
     {
       "id": "circulation",
-      "version": "10.0 11.0 12.0 13.0"
+      "version": "10.0 11.0 12.0 13.0 14.0"
     },
     {
       "id": "finance-storage.budget-expense-classes",
