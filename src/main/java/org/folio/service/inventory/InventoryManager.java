@@ -303,7 +303,7 @@ public class InventoryManager {
   }
 
   public Future<JsonObject> getOrCreateHoldingsJsonRecord(Eresource eresource, String instanceId, Location location, RequestContext requestContext) {
-    if (location.getHoldingId() != null) {
+    if (StringUtils.isNotEmpty(location.getHoldingId())) {
       String holdingId = location.getHoldingId();
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
         .withId(holdingId);
@@ -312,7 +312,7 @@ public class InventoryManager {
           handleHoldingsError(holdingId, throwable);
           return null;
         });
-    } else if (eresource.getCreateInventory().equals(Eresource.CreateInventory.NONE) || eresource.getCreateInventory().equals(Eresource.CreateInventory.INSTANCE) ) {
+    } else if (Eresource.CreateInventory.NONE == eresource.getCreateInventory() || Eresource.CreateInventory.INSTANCE == eresource.getCreateInventory()) {
       if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
         return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
       }
