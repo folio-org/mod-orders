@@ -24,7 +24,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
-import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.*;
 
 
 import java.util.ArrayList;
@@ -303,7 +302,7 @@ public class InventoryManager {
     }
   }
 
-  public Future<JsonObject> getOrCreateHoldingsJsonRecord(CompositePoLine poLine, String instanceId, Location location, RequestContext requestContext) {
+  public Future<JsonObject> getOrCreateHoldingsJsonRecord(Eresource eresource, String instanceId, Location location, RequestContext requestContext) {
     if (location.getHoldingId() != null) {
       String holdingId = location.getHoldingId();
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
@@ -313,7 +312,7 @@ public class InventoryManager {
           handleHoldingsError(holdingId, throwable);
           return null;
         });
-    } else if (poLine.getEresource().getCreateInventory().equals(NONE) || poLine.getEresource().getCreateInventory().equals(INSTANCE) ) {
+    } else if (eresource.getCreateInventory().equals(Eresource.CreateInventory.NONE) || eresource.getCreateInventory().equals(Eresource.CreateInventory.INSTANCE) ) {
       if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
         return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
       }
