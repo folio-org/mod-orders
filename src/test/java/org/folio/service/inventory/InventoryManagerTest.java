@@ -847,7 +847,7 @@ public class InventoryManagerTest {
 
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
 
-    JsonObject holdingIdAct = inventoryManager.getOrCreateHoldingsJsonRecord(instanceId, location, requestContext).result();
+    JsonObject holdingIdAct = inventoryManager.getOrCreateHoldingsJsonRecord(null, instanceId, location, requestContext).result();
 
     assertThat(holdingIdAct.size(), equalTo(holdingsCollection.size()));
     verify(restClient, times(0)).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
@@ -872,7 +872,7 @@ public class InventoryManagerTest {
 
     doReturn(Future.failedFuture(new HttpException(NOT_FOUND, "Not_Found")))
       .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    var future = inventoryManager.getOrCreateHoldingsJsonRecord(instanceId, location, requestContext);
+    var future = inventoryManager.getOrCreateHoldingsJsonRecord(null, instanceId, location, requestContext);
     vertxTestContext.assertFailure(future)
       .onComplete(completionException -> {
         HttpException httpException = (HttpException) completionException.cause();

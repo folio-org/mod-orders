@@ -24,6 +24,8 @@ import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.*;
+
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -51,16 +53,8 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.*;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.rest.jaxrs.model.ReceivedItem;
-import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
@@ -309,21 +303,22 @@ public class InventoryManager {
     }
   }
 
-  public Future<JsonObject> getOrCreateHoldingsJsonRecord(String instanceId, Location location, RequestContext requestContext) {
-    if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
-      if (location.getHoldingId() != null) {
-        String holdingId = location.getHoldingId();
-        RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
-          .withId(holdingId);
-        return restClient.getAsJsonObject(requestEntry, requestContext)
-          .recover(throwable -> {
-            handleHoldingsError(holdingId, throwable);
-            return null;
-          });
-      } else {
+  public Future<JsonObject> getOrCreateHoldingsJsonRecord(CompositePoLine poLine, String instanceId, Location location, RequestContext requestContext) {
+    if (location.getHoldingId() != null) {
+      String holdingId = location.getHoldingId();
+      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
+        .withId(holdingId);
+      return restClient.getAsJsonObject(requestEntry, requestContext)
+        .recover(throwable -> {
+          handleHoldingsError(holdingId, throwable);
+          return null;
+        });
+    } else if (poLine.getEresource().getCreateInventory().equals(NONE) || poLine.getEresource().getCreateInventory().equals(INSTANCE) ) {
+      if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
         return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
       }
-    }
+    } else
+      return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
     return Future.succeededFuture();
   }
 
