@@ -316,8 +316,9 @@ public class InventoryManager {
       if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
         return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
       }
-    } else
+    } else {
       return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
+    }
     return Future.succeededFuture();
   }
 
