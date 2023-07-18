@@ -54,6 +54,7 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -309,20 +310,22 @@ public class InventoryManager {
     }
   }
 
-  public Future<JsonObject> getOrCreateHoldingsJsonRecord(String instanceId, Location location, RequestContext requestContext) {
-    if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
-      if (location.getHoldingId() != null) {
-        String holdingId = location.getHoldingId();
-        RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
-          .withId(holdingId);
-        return restClient.getAsJsonObject(requestEntry, requestContext)
-          .recover(throwable -> {
-            handleHoldingsError(holdingId, throwable);
-            return null;
-          });
-      } else {
+  public Future<JsonObject> getOrCreateHoldingsJsonRecord(Eresource eresource, String instanceId, Location location, RequestContext requestContext) {
+    if (StringUtils.isNotEmpty(location.getHoldingId())) {
+      String holdingId = location.getHoldingId();
+      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
+        .withId(holdingId);
+      return restClient.getAsJsonObject(requestEntry, requestContext)
+        .recover(throwable -> {
+          handleHoldingsError(holdingId, throwable);
+          return null;
+        });
+    } else if (Eresource.CreateInventory.NONE == eresource.getCreateInventory() || Eresource.CreateInventory.INSTANCE == eresource.getCreateInventory()) {
+      if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
         return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
       }
+    } else {
+      return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
     }
     return Future.succeededFuture();
   }
