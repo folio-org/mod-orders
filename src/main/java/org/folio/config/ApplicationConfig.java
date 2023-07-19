@@ -723,9 +723,8 @@ public class ApplicationConfig {
     return new OrderLineUpdateInstanceStrategyResolver(strategies);
   }
 
-  @Bean PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder(FiscalYearService fiscalYearService, InvoiceLineService invoiceLineService,
-                                                                      EncumbranceService encumbranceService) {
-    return new PoLineInvoiceLineHolderBuilder(fiscalYearService, invoiceLineService, encumbranceService);
+  @Bean PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder(InvoiceLineService invoiceLineService) {
+    return new PoLineInvoiceLineHolderBuilder(invoiceLineService);
   }
 
   @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(InvoiceLineService invoiceLineService, PendingPaymentService pendingPaymentService, InvoiceTransactionSummariesService invoiceTransactionSummariesService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {

@@ -47,8 +47,8 @@ public class POLInvoiceLineRelationService {
       return Future.succeededFuture();
     } else {
       return poLineInvoiceLineHolderBuilder.buildHolder(holder.getPoLineFromRequest(), holder.getPoLineFromStorage(), requestContext)
-        .map(poLineInvoiceLineHolder -> holder.withOpenOrReviewedInvoiceLines(poLineInvoiceLineHolder.getOpenOrReviewedInvoiceLines())
-          .withPaidOrCancelledInvoiceLines(poLineInvoiceLineHolder.getPaidOrCancelledInvoiceLines())).mapEmpty();
+        .map(poLineInvoiceLineHolder -> holder.withOpenOrReviewedInvoiceLines(poLineInvoiceLineHolder.getOpenOrReviewedInvoiceLines()))
+        .mapEmpty();
     }
   }
 
