@@ -57,7 +57,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
     List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
     compPOL.getLocations().forEach(location -> itemsPerHolding.add(
       findHoldingsId(compPOL, location, restClient, requestContext)
-        .compose(aVoid -> inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getInstanceId(), location, requestContext)
+        .compose(aVoid -> inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getEresource(), compPOL.getInstanceId(), location, requestContext)
           .map(holding -> {
             updateLocationWithHoldingInfo(holding, location);
             return null;
