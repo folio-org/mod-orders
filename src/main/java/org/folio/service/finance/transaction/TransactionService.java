@@ -8,7 +8,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.ERROR_RETRIEVING_TRANSAC
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,7 +54,7 @@ public class TransactionService {
   }
 
   public Future<List<Transaction>> getTransactionsByIds(List<String> trIds, RequestContext requestContext) {
-    Set<String> uniqueTrIds = new HashSet<>(trIds);
+    Set<String> uniqueTrIds = new LinkedHashSet<>(trIds);
     return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(uniqueTrIds), MAX_IDS_FOR_GET_RQ_15)
         .map(ids -> getTransactionsChunksByIds(ids, requestContext))
       .toList())
