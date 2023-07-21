@@ -8,7 +8,9 @@ import static org.folio.rest.core.exceptions.ErrorCodes.ERROR_RETRIEVING_TRANSAC
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -52,12 +54,13 @@ public class TransactionService {
   }
 
   public Future<List<Transaction>> getTransactionsByIds(List<String> trIds, RequestContext requestContext) {
-    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(trIds), MAX_IDS_FOR_GET_RQ_15)
+    Set<String> uniqueTrIds = new LinkedHashSet<>(trIds);
+    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(uniqueTrIds), MAX_IDS_FOR_GET_RQ_15)
         .map(ids -> getTransactionsChunksByIds(ids, requestContext))
       .toList())
       .map(lists -> lists.stream().flatMap(Collection::stream).collect(Collectors.toList()))
       .map(trList -> {
-        if (trList.size() != trIds.size()) {
+        if (trList.size() != uniqueTrIds.size()) {
           List<Parameter> parameters = new ArrayList<>();
           parameters.add(new Parameter().withKey("trIds").withValue(trIds.toString()));
           throw new HttpException(500, ERROR_RETRIEVING_TRANSACTION.toError().withParameters(parameters));
