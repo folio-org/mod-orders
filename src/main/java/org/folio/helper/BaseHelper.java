@@ -85,8 +85,8 @@ public abstract class BaseHelper {
     final int code;
 
     if (throwable instanceof HttpException httpException) {
-      code = (httpException).getCode();
-      error = (httpException).getError();
+      code = httpException.getCode();
+      error = httpException.getError();
     } else {
       code = INTERNAL_SERVER_ERROR.getStatusCode();
       error = GENERIC_ERROR_CODE.toError().withAdditionalProperty(ERROR_CAUSE, throwable.getMessage());

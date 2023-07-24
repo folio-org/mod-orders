@@ -106,7 +106,7 @@ public class BaseApi {
   public static int defineErrorCode(Throwable throwable) {
     final Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
     if (cause instanceof HttpException httpException) {
-      return (httpException).getCode();
+      return httpException.getCode();
     }
     return INTERNAL_SERVER_ERROR.getStatusCode();
   }

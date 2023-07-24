@@ -445,7 +445,7 @@ public class HelperUtils {
     return compositePoLines
       .stream()
       .map(HelperUtils::convertToPoLine)
-      .toList();
+      .collect(toList());
   }
 
   public static boolean isProductIdsExist(CompositePoLine compPOL) {
@@ -482,7 +482,7 @@ public class HelperUtils {
   }
 
   public static boolean isNotFound(Throwable t) {
-    return t instanceof HttpException httpException && (httpException).getCode() == 404;
+    return t instanceof HttpException httpException && httpException.getCode() == 404;
   }
 
   public static ConversionQuery getConversionQuery(Double exchangeRate, String fromCurrency, String toCurrency) {

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -42,7 +43,7 @@ public class ExceptionUtil {
       errors = convertVertxHttpException(httpException);
     } else if (cause instanceof HttpException httpException) {
       errors = httpException.getErrors();
-      List<Error> errorList = errors.getErrors().stream().map(ExceptionUtil::mapToError).toList();
+      List<Error> errorList = errors.getErrors().stream().map(ExceptionUtil::mapToError).collect(Collectors.toList());
       errors.setErrors(errorList);
     } else {
       errors = new Errors().withErrors(Collections.singletonList(GENERIC_ERROR_CODE.toError()

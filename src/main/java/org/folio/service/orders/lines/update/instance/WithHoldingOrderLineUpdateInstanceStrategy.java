@@ -54,8 +54,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         case FIND_OR_CREATE -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
           // TODO: onSuccess or compose ???
           .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
-        case CREATE ->
-          createHoldingsAndUpdateItems(holder, newInstanceId, requestContext).onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
+        case CREATE -> createHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
+          .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
         default -> Future.succeededFuture();
       };
     } else {
