@@ -232,33 +232,36 @@ public class OpenCompositeOrderHolderBuilder {
       return Collections.emptyMap();
     }
 
-    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    switch (compPOL.getOrderFormat()) {
-    case P_E_MIX:
-      if (!isItemsUpdateRequiredForPhysical(compPOL)) {
-        quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
+    var quantities = new EnumMap<Piece.Format, Integer>(Piece.Format.class);
+    return switch (compPOL.getOrderFormat()) {
+      case P_E_MIX -> {
+        if (!isItemsUpdateRequiredForPhysical(compPOL)) {
+          quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
+        }
+        if (!isItemsUpdateRequiredForEresource(compPOL)) {
+          quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
+        }
+        yield quantities;
       }
-      if (!isItemsUpdateRequiredForEresource(compPOL)) {
-        quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
+      case PHYSICAL_RESOURCE -> {
+        if (!isItemsUpdateRequiredForPhysical(compPOL)) {
+          quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
+        }
+        yield quantities;
       }
-      return quantities;
-    case PHYSICAL_RESOURCE:
-      if (!isItemsUpdateRequiredForPhysical(compPOL)) {
-        quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
+      case ELECTRONIC_RESOURCE -> {
+        if (!isItemsUpdateRequiredForEresource(compPOL)) {
+          quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
+        }
+        yield quantities;
       }
-      return quantities;
-    case ELECTRONIC_RESOURCE:
-      if (!isItemsUpdateRequiredForEresource(compPOL)) {
-        quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
+      case OTHER -> {
+        if (!isItemsUpdateRequiredForPhysical(compPOL)) {
+          quantities.put(Piece.Format.OTHER, calculatePiecesQuantity(Piece.Format.OTHER, locations));
+        }
+        yield quantities;
       }
-      return quantities;
-    case OTHER:
-      if (!isItemsUpdateRequiredForPhysical(compPOL)) {
-        quantities.put(Piece.Format.OTHER, calculatePiecesQuantity(Piece.Format.OTHER, locations));
-      }
-      return quantities;
-    default:
-      return Collections.emptyMap();
-    }
+      default -> Collections.emptyMap();
+    };
   }
 }

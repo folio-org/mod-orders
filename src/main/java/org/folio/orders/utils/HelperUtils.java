@@ -199,32 +199,34 @@ public class HelperUtils {
       return Collections.emptyMap();
     }
 
-    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    switch (compPOL.getOrderFormat()) {
-      case P_E_MIX:
+    var quantities = new EnumMap<Piece.Format, Integer>(Piece.Format.class);
+    return switch (compPOL.getOrderFormat()) {
+      case P_E_MIX -> {
         if (PoLineCommonUtil.isItemsUpdateRequiredForPhysical(compPOL)) {
           quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
         }
         if (PoLineCommonUtil.isItemsUpdateRequiredForEresource(compPOL)) {
           quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
         }
-
-        return quantities;
-      case PHYSICAL_RESOURCE:
+        yield quantities;
+      }
+      case PHYSICAL_RESOURCE -> {
         int pQty = PoLineCommonUtil.isItemsUpdateRequiredForPhysical(compPOL) ? calculatePiecesQuantity(Piece.Format.PHYSICAL, locations) : 0;
         quantities.put(Piece.Format.PHYSICAL, pQty);
-        return quantities;
-      case ELECTRONIC_RESOURCE:
+        yield quantities;
+      }
+      case ELECTRONIC_RESOURCE -> {
         int eQty = PoLineCommonUtil.isItemsUpdateRequiredForEresource(compPOL) ? calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations) : 0;
         quantities.put(Piece.Format.ELECTRONIC, eQty);
-        return quantities;
-      case OTHER:
+        yield quantities;
+      }
+      case OTHER -> {
         int oQty = PoLineCommonUtil.isItemsUpdateRequiredForPhysical(compPOL) ? calculatePiecesQuantity(Piece.Format.OTHER, locations) : 0;
         quantities.put(Piece.Format.OTHER, oQty);
-        return quantities;
-      default:
-        return Collections.emptyMap();
-    }
+        yield quantities;
+      }
+      default -> Collections.emptyMap();
+    };
   }
 
   /**
@@ -235,15 +237,11 @@ public class HelperUtils {
    * @return quantity of items expected in the inventory for PO Line
    */
   public static int calculatePiecesQuantity(Piece.Format format, List<Location> locations) {
-    switch (format) {
-      case ELECTRONIC:
-        return getElectronicLocationsQuantity(locations);
-      case PHYSICAL:
-      case OTHER:
-        return getPhysicalLocationsQuantity(locations);
-      default:
-        return 0;
-    }
+    return switch (format) {
+      case ELECTRONIC -> getElectronicLocationsQuantity(locations);
+      case PHYSICAL, OTHER -> getPhysicalLocationsQuantity(locations);
+      default -> 0;
+    };
   }
 
   /**
@@ -447,7 +445,7 @@ public class HelperUtils {
     return compositePoLines
       .stream()
       .map(HelperUtils::convertToPoLine)
-      .collect(toList());
+      .toList();
   }
 
   public static boolean isProductIdsExist(CompositePoLine compPOL) {
@@ -484,7 +482,7 @@ public class HelperUtils {
   }
 
   public static boolean isNotFound(Throwable t) {
-    return t instanceof HttpException && ((HttpException) t).getCode() == 404;
+    return t instanceof HttpException httpException && (httpException).getCode() == 404;
   }
 
   public static ConversionQuery getConversionQuery(Double exchangeRate, String fromCurrency, String toCurrency) {

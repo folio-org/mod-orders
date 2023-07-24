@@ -144,16 +144,10 @@ public final class TestUtils {
 
   public static void verifyLocationQuantity(Location location, CompositePoLine.OrderFormat orderFormat) {
     switch (orderFormat) {
-      case P_E_MIX:
+      case P_E_MIX ->
         assertEquals(location.getQuantityPhysical() + location.getQuantityElectronic(), location.getQuantity().intValue());
-        break;
-      case ELECTRONIC_RESOURCE:
-        assertEquals(location.getQuantityElectronic(), location.getQuantity());
-        break;
-      case PHYSICAL_RESOURCE:
-      case OTHER:
-        assertEquals(location.getQuantityPhysical(), location.getQuantity());
-        break;
+      case ELECTRONIC_RESOURCE -> assertEquals(location.getQuantityElectronic(), location.getQuantity());
+      case PHYSICAL_RESOURCE, OTHER -> assertEquals(location.getQuantityPhysical(), location.getQuantity());
     }
   }
 

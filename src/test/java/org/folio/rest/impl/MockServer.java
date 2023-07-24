@@ -149,9 +149,11 @@ import org.folio.OrganizationCollection;
 import org.folio.helper.BaseHelper;
 import org.folio.isbn.IsbnUtil;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.acq.model.Alert;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.acq.model.Piece;
 import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.acq.model.ReportingCode;
 import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.acq.model.Title;
@@ -2074,16 +2076,9 @@ public class MockServer {
         Matcher matcher = Pattern.compile(".*poNumber==(\\S[^)]+).*").matcher(query);
         final String poNumber = matcher.find() ? matcher.group(1) : EMPTY;
         switch (poNumber) {
-          case EXISTING_PO_NUMBER:
-            po.put(TOTAL_RECORDS, 1);
-            break;
-          case NONEXISTING_PO_NUMBER:
-            po.put(TOTAL_RECORDS, 0);
-            break;
-          case EMPTY:
-            po.put(TOTAL_RECORDS, 0);
-            break;
-          default:
+          case EXISTING_PO_NUMBER -> po.put(TOTAL_RECORDS, 1);
+          case NONEXISTING_PO_NUMBER, EMPTY -> po.put(TOTAL_RECORDS, 0);
+          default ->
             //modify later as needed
             po.put(TOTAL_RECORDS, 0);
         }
@@ -2151,7 +2146,7 @@ public class MockServer {
 
     JsonObject body = null;
     switch (status) {
-      case 201:
+      case 201 -> {
         contentType = APPLICATION_JSON;
         if (ctx.body().asJsonObject() != null) {
           body = JsonObject.mapFrom(ctx.body().asJsonObject().mapTo(getSubObjClass(subObj)));
@@ -2159,20 +2154,13 @@ public class MockServer {
             body.put(ID, UUID.randomUUID().toString());
           }
           respBody = body.encodePrettily();
-        }
-        else {
+        } else {
           respBody = EMPTY;
         }
-        break;
-      case 400:
-        respBody = "Unable to add -- malformed JSON at 13:3";
-        break;
-      case 403:
-        respBody = "Access requires permission: foo.bar.baz";
-        break;
-      case 500:
-        respBody = INTERNAL_SERVER_ERROR.getReasonPhrase();
-        break;
+      }
+      case 400 -> respBody = "Unable to add -- malformed JSON at 13:3";
+      case 403 -> respBody = "Access requires permission: foo.bar.baz";
+      case 500 -> respBody = INTERNAL_SERVER_ERROR.getReasonPhrase();
     }
 
     addServerRqRsData(HttpMethod.POST, subObj, body);
@@ -2190,15 +2178,9 @@ public class MockServer {
       try {
         status = Integer.parseInt(echoStatus);
         switch (status) {
-          case 400:
-            respBody = "Unable to add -- malformed JSON at 13:3";
-            break;
-          case 403:
-            respBody = "Access requires permission: foo.bar.baz";
-            break;
-          case 500:
-            respBody = INTERNAL_SERVER_ERROR.getReasonPhrase();
-            break;
+          case 400 -> respBody = "Unable to add -- malformed JSON at 13:3";
+          case 403 -> respBody = "Access requires permission: foo.bar.baz";
+          case 500 -> respBody = INTERNAL_SERVER_ERROR.getReasonPhrase();
         }
         serverResponse(ctx, status, APPLICATION_JSON, respBody);
         return;
@@ -2313,39 +2295,26 @@ public class MockServer {
   }
 
   private Class<?> getSubObjClass(String subObj) {
-    switch (subObj) {
-      case ALERTS:
-        return org.folio.rest.acq.model.Alert.class;
-      case REPORTING_CODES:
-        return org.folio.rest.acq.model.ReportingCode.class;
-      case PIECES_STORAGE:
-        return org.folio.rest.acq.model.Piece.class;
-      case ACQUISITIONS_UNITS:
-        return AcquisitionsUnit.class;
-      case ACQUISITION_METHODS:
-        return AcquisitionMethod.class;
-      case ACQUISITIONS_MEMBERSHIPS:
-        return AcquisitionsUnitMembership.class;
-      case ORDER_TEMPLATES:
-        return OrderTemplate.class;
-      case ORDER_TRANSACTION_SUMMARIES:
-        return OrderTransactionSummary.class;
-      case ENCUMBRANCES:
-        return Transaction.class;
-      case TITLES:
-        return Title.class;
-      case REASONS_FOR_CLOSURE:
-        return ReasonForClosure.class;
-      case PREFIXES:
-        return Prefix.class;
-      case SUFFIXES:
-        return Suffix.class;
-      case TAGS:
-        return Tag.class;
-    }
-
-    fail("The sub-object is unknown");
-    return null;
+    return switch (subObj) {
+      case ALERTS -> Alert.class;
+      case REPORTING_CODES -> ReportingCode.class;
+      case PIECES_STORAGE -> Piece.class;
+      case ACQUISITIONS_UNITS -> AcquisitionsUnit.class;
+      case ACQUISITION_METHODS -> AcquisitionMethod.class;
+      case ACQUISITIONS_MEMBERSHIPS -> AcquisitionsUnitMembership.class;
+      case ORDER_TEMPLATES -> OrderTemplate.class;
+      case ORDER_TRANSACTION_SUMMARIES -> OrderTransactionSummary.class;
+      case ENCUMBRANCES -> Transaction.class;
+      case TITLES -> Title.class;
+      case REASONS_FOR_CLOSURE -> ReasonForClosure.class;
+      case PREFIXES -> Prefix.class;
+      case SUFFIXES -> Suffix.class;
+      case TAGS -> Tag.class;
+      default -> {
+        fail("The sub-object is unknown");
+        yield null;
+      }
+    };
   }
 
   private void handlePostPOLine(RoutingContext ctx) {

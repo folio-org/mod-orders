@@ -351,7 +351,7 @@ public class CreateOrderEventHandler implements EventHandler {
       .getChildSnapshotWrappers()
       .stream()
       .filter(e -> e.getContentType() == ProfileSnapshotWrapper.ContentType.ACTION_PROFILE)
-      .collect(Collectors.toList());
+      .toList();
 
     if (!actionProfiles.isEmpty() && checkIfCurrentProfileIsTheLastOne(dataImportEventPayload, actionProfiles)) {
       LOGGER.debug("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED_READY_FOR_POST_PROCESSING for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
@@ -411,8 +411,8 @@ public class CreateOrderEventHandler implements EventHandler {
           .compose(order -> savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig).map(order))
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
-            if (e instanceof HttpException) {
-              String message = ((HttpException) e).getError().getMessage();
+            if (e instanceof HttpException httpException) {
+              String message = httpException.getError().getMessage();
               if (message.contains(ID_UNIQUENESS_ERROR_MSG)) {
                 LOGGER.debug("saveOrder:: Failed to create order with existing id: '{}' due to duplicated event. Ignoring event processing", orderId);
                 return Future.failedFuture(new DuplicateEventException(message));
