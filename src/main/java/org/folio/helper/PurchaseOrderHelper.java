@@ -553,11 +553,11 @@ public class PurchaseOrderHelper {
 
   private Future<String> adjustPrefixAndSuffix(String poNumber, CompositePurchaseOrder compPO) {
     List<String> valuesToConcat = Arrays.asList(compPO.getPoNumberPrefix(), poNumber, compPO.getPoNumberSuffix());
-    StringBuilder result = new StringBuilder();
+    String result = "";
     for (String value: valuesToConcat) {
-      result.append(value == null ? "" : value);
+      result += value == null ? "" : value;
     }
-    return Future.succeededFuture(result.toString());
+    return Future.succeededFuture(result);
   }
 
   private Future<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
