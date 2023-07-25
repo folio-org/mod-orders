@@ -351,7 +351,7 @@ public class CreateOrderEventHandler implements EventHandler {
       .getChildSnapshotWrappers()
       .stream()
       .filter(e -> e.getContentType() == ProfileSnapshotWrapper.ContentType.ACTION_PROFILE)
-      .toList();
+      .collect(Collectors.toList());
 
     if (!actionProfiles.isEmpty() && checkIfCurrentProfileIsTheLastOne(dataImportEventPayload, actionProfiles)) {
       LOGGER.debug("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED_READY_FOR_POST_PROCESSING for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());

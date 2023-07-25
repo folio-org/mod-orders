@@ -235,7 +235,7 @@ public class InventoryInteractionTestHelper {
     List<Piece> pieces = pieceJsons
       .stream()
       .map(pieceObj -> pieceObj.mapTo(Piece.class))
-      .toList();
+      .collect(Collectors.toList());
 
     // Verify quantity of created pieces
     int totalForAllPoLines = 0;
@@ -310,7 +310,7 @@ public class InventoryInteractionTestHelper {
     List<Piece> pieces = pieceJsons
       .stream()
       .map(pieceObj -> pieceObj.mapTo(Piece.class))
-      .toList();
+      .collect(Collectors.toList());
 
     // Verify quantity of created pieces
     int totalForAllPoLines = 0;
@@ -346,7 +346,7 @@ public class InventoryInteractionTestHelper {
       List<Piece> poLinePieces = pieces
         .stream()
         .filter(piece -> piece.getPoLineId().equals(poLine.getId()))
-        .toList();
+        .collect(Collectors.toList());
 
 
       Map<String, Long> piecesByLocationIdQuantity =

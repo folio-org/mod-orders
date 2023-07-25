@@ -331,7 +331,7 @@ public class InventoryManager {
   }
 
   private static void handleHoldingsError(String holdingId, Throwable throwable) {
-    if (throwable instanceof HttpException httpException && httpException.getCode() == 404) {
+    if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
       String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
       Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
       throw new HttpException(NOT_FOUND, error);
@@ -345,7 +345,7 @@ public class InventoryManager {
       ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> fetchHoldingsByFundIds(ids, requestContext)).toList())
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
-        .toList());
+        .collect(Collectors.toList()));
   }
 
   public Future<JsonObject> getHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
@@ -369,7 +369,7 @@ public class InventoryManager {
         String deletedIds = holdings.stream().map(holding -> holding.getString(ID)).collect(Collectors.joining(","));
         logger.debug(String.format("Holding ids : %s", deletedIds));
       }
-      return holdings.stream().filter(Objects::nonNull).toList();
+      return holdings.stream().filter(Objects::nonNull).collect(toList());
     });
   }
 
@@ -418,7 +418,7 @@ public class InventoryManager {
   private Future<Void> updateHoldingRecords(List<JsonObject> holdingRecords, RequestContext requestContext) {
     return GenericCompositeFuture.join(holdingRecords.stream()
         .map(holdingRecord -> updateHolding(holdingRecord, requestContext))
-        .toList())
+        .collect(toList()))
         .mapEmpty();
   }
 
@@ -522,7 +522,7 @@ public class InventoryManager {
           validateItemsCreation(compPOL.getId(), pieces.size(), results.size());
           return results.stream()
             .flatMap(List::stream)
-            .toList();
+            .collect(toList());
         });
       });
   }
@@ -560,7 +560,7 @@ public class InventoryManager {
   public Future<List<Piece>> handleItemRecords(CompositePoLine compPOL, PoLineUpdateHolder holder, RequestContext requestContext) {
     List<Location> polLocations = compPOL.getLocations().stream()
       .filter(location -> location.getLocationId().equals(holder.getNewLocationId()))
-      .toList();
+      .collect(toList());
     Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, polLocations);
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
@@ -575,7 +575,7 @@ public class InventoryManager {
         List<Piece> pieces = existingPieces.getPieces().stream()
           .filter(piece -> piece.getLocationId().equals(holder.getOldLocationId()))
           .map(piece -> piece.withLocationId(holder.getNewLocationId()))
-          .toList();
+          .collect(toList());
         if (!pieces.isEmpty()) {
           needUpdatePieces.addAll(pieces);
         }
@@ -584,7 +584,7 @@ public class InventoryManager {
       .compose(needUpdatePieces -> {
         if (!needUpdatePieces.isEmpty()) {
           return getItemRecordsByIds(needUpdatePieces.stream().map(Piece::getItemId)
-            .toList(), requestContext)
+            .collect(toList()), requestContext)
             .map(items -> buildPieceItemPairList(needUpdatePieces, items));
         }
         return Future.succeededFuture(Collections.<PieceItemPair>emptyList());
@@ -602,7 +602,7 @@ public class InventoryManager {
         return collectResultsOnSuccess(updatedItemIds)
           .map(results -> {
             validateItemsCreation(compPOL.getId(), updatedItemIds.size(), results.size());
-            return pieceItemPairs.stream().map(PieceItemPair::getPiece).toList();
+            return pieceItemPairs.stream().map(PieceItemPair::getPiece).collect(toList());
           });
       });
   }
@@ -619,7 +619,7 @@ public class InventoryManager {
           .findAny()
           .ifPresent(pieceItemPair::withItem);
         return pieceItemPair;
-      }).toList();
+      }).collect(toList());
   }
 
   private List<String> getPhysicalItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
@@ -641,7 +641,7 @@ public class InventoryManager {
         return materialTypeId.equals(typeId);
       })
       .map(HelperUtils::extractId)
-      .toList();
+      .collect(toList());
   }
 
   /**
@@ -709,7 +709,7 @@ public class InventoryManager {
       .map(contributorNameTypes -> {
         List<String> retrievedIds = contributorNameTypes.stream()
           .map(o -> o.getString(ID).toLowerCase())
-          .toList();
+          .collect(toList());
         if (retrievedIds.size() != ids.size()) {
           ids.removeAll(retrievedIds);
           throw new HttpException(500, buildErrorWithParameter(String.join(", ", ids), MISSING_CONTRIBUTOR_NAME_TYPE));
@@ -733,7 +733,7 @@ public class InventoryManager {
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(entries -> entries.getJsonArray(CONTRIBUTOR_NAME_TYPES).stream()
         .map(JsonObject::mapFrom)
-        .toList()
+        .collect(Collectors.toList())
       )
        .recover(e -> {
         logger.error("The issue happened getting contributor name types", e);
@@ -797,7 +797,7 @@ public class InventoryManager {
         invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorNameTypeId());
         invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
         return invContributor;
-      }).toList();
+      }).collect(toList());
       instance.put(INSTANCE_CONTRIBUTORS, contributors);
     }
 
@@ -812,7 +812,7 @@ public class InventoryManager {
             identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
             return identifier;
           })
-          .toList();
+          .collect(toList());
       instance.put(INSTANCE_IDENTIFIERS, new JsonArray(identifiers));
     }
     return instance;
@@ -845,7 +845,7 @@ public class InventoryManager {
         invContributor.put(CONTRIBUTOR_NAME_TYPE_ID, compPolContributor.getContributorNameTypeId());
         invContributor.put(CONTRIBUTOR_NAME, compPolContributor.getContributor());
         return invContributor;
-      }).toList();
+      }).collect(toList());
       instance.put(INSTANCE_CONTRIBUTORS, contributors);
     }
 
@@ -859,7 +859,7 @@ public class InventoryManager {
             identifier.put(INSTANCE_IDENTIFIER_TYPE_VALUE, pId.getProductId());
             return identifier;
           })
-          .toList();
+          .collect(toList());
       instance.put(INSTANCE_IDENTIFIERS, new JsonArray(identifiers));
     }
     return instance;
@@ -1209,7 +1209,7 @@ public class InventoryManager {
     return Optional.ofNullable(entries.getJsonArray(key))
       .map(objects -> objects.stream()
         .map(JsonObject.class::cast)
-        .toList())
+        .collect(toList()))
       .orElseGet(Collections::emptyList);
   }
 
@@ -1241,7 +1241,7 @@ public class InventoryManager {
       .map(jsonHoldings -> jsonHoldings.getJsonArray(HOLDINGS_RECORDS)
         .stream()
         .map(JsonObject.class::cast)
-        .toList())
+        .collect(toList()))
       .map(holdings -> {
         if (holdings.size() == holdingIds.size()) {
           return holdings;
@@ -1250,7 +1250,7 @@ public class InventoryManager {
           .filter(id -> holdings.stream()
             .noneMatch(holding -> holding.getString(ID).equals(id)))
           .map(id -> new Parameter().withValue(id).withKey("holdings"))
-          .toList();
+          .collect(Collectors.toList());
         throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
       });
   }

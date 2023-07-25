@@ -33,9 +33,7 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 public class RestClient {
 
   private static final Logger log = LogManager.getLogger(RestClient.class);
-  private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
-  private static final String SENDING_POST_WITH_BODY_MSG = "Sending 'POST {}' with body: {}";
-
+    private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
   private static final ErrorConverter ERROR_CONVERTER = ErrorConverter.createFullBody(
     result -> {
       String error = result.response().bodyAsString();
@@ -53,7 +51,7 @@ public class RestClient {
 
   public <T> Future<T> post(String endpoint, T entity, Class<T> responseType, RequestContext requestContext) {
     if (log.isDebugEnabled()) {
-      log.debug(SENDING_POST_WITH_BODY_MSG, endpoint, JsonObject.mapFrom(entity).encodePrettily());
+      log.debug("Sending 'POST {}' with body: {}", endpoint, JsonObject.mapFrom(entity).encodePrettily());
     }
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
@@ -142,7 +140,7 @@ public class RestClient {
   }
 
   private <T>void handleGetMethodErrorResponse(Promise<T> promise, Throwable t, boolean skipError404) {
-    if (skipError404 && t instanceof HttpException httpException &&  httpException.getCode() == 404) {
+    if (skipError404 && t instanceof HttpException && ((HttpException) t).getCode() == 404) {
       log.warn(t);
       promise.complete();
     } else {
@@ -151,7 +149,7 @@ public class RestClient {
     }
   }
   private void handleErrorResponse(Promise<Void> promise, Throwable t, boolean skipError404) {
-    if (skipError404 && t instanceof HttpException httpException &&  httpException.getCode() == 404){
+    if (skipError404 && t instanceof HttpException && ((HttpException) t).getCode() == 404){
       log.warn(t);
       promise.complete();
     } else {
@@ -257,7 +255,7 @@ public class RestClient {
 
   public Future<String> postJsonObjectAndGetId(RequestEntry requestEntry, JsonObject entity, RequestContext requestContext) {
     if (log.isDebugEnabled()) {
-      log.debug(SENDING_POST_WITH_BODY_MSG, requestEntry.buildEndpoint(), JsonObject.mapFrom(entity).encodePrettily());
+      log.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), JsonObject.mapFrom(entity).encodePrettily());
     }
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
@@ -272,7 +270,7 @@ public class RestClient {
 
   public Future<JsonObject> postJsonObject(RequestEntry requestEntry, JsonObject jsonObject, RequestContext requestContext) {
     if (log.isDebugEnabled()) {
-      log.debug(SENDING_POST_WITH_BODY_MSG, requestEntry.buildEndpoint(), jsonObject.encodePrettily());
+      log.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), jsonObject.encodePrettily());
     }
     var endpoint = requestEntry.buildEndpoint();
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
