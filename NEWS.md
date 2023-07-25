@@ -1,5 +1,14 @@
 ## 12.7.0 - Unreleased
 
+## 12.6.8 Orchid R1 2023 - Released
+This release focused on fixing transaction issue when changing funds on PO
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.7...v12.6.8)
+
+### Bug Fixes
+* [MODORDERS-912](https://issues.folio.org/browse/MODORDERS-912) - Issues with changing funds on a PO
+
+
 ## 12.6.7 Orchid R1 2023 - Released
 This release focused on fixing zero division issue during rollover process
 
