@@ -1,11 +1,14 @@
 package org.folio.orders.utils;
 
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
+import static org.folio.orders.utils.HelperUtils.isNotFound;
+import static org.folio.rest.core.exceptions.ErrorCodes.PREFIX_NOT_FOUND;
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,6 +17,8 @@ import java.util.UUID;
 
 import javax.money.convert.ConversionQuery;
 
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -26,6 +31,12 @@ public class HelperUtilsTest {
   public void testShouldReturnEmptyString(){
     String act = HelperUtils.combineCqlExpressions("");
     assertThat(act, is(emptyOrNullString()));
+  }
+
+  @Test
+  public void testShouldReturnFalseWhenIsNotFound(){
+    var actual = isNotFound(new Throwable(new HttpException(404, PREFIX_NOT_FOUND)));
+    assertFalse(actual);
   }
 
   @Test
