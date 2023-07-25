@@ -1,7 +1,6 @@
 package org.folio.orders.utils;
 
 import static io.vertx.core.Future.succeededFuture;
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -16,6 +15,11 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 
+import javax.money.CurrencyUnit;
+import javax.money.Monetary;
+import javax.money.MonetaryAmount;
+import javax.money.convert.ConversionQuery;
+import javax.money.convert.ConversionQueryBuilder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -29,12 +33,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.money.CurrencyUnit;
-import javax.money.Monetary;
-import javax.money.MonetaryAmount;
-import javax.money.convert.ConversionQuery;
-import javax.money.convert.ConversionQueryBuilder;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
@@ -433,8 +431,8 @@ public class HelperUtils {
     pol.remove(ALERTS);
     pol.remove(REPORTING_CODES);
     PoLine poLine = pol.mapTo(PoLine.class);
-    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
-    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
+    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).toList());
+    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).toList());
     return poLine;
   }
 
@@ -443,7 +441,7 @@ public class HelperUtils {
     return compositePoLines
       .stream()
       .map(HelperUtils::convertToPoLine)
-      .collect(toList());
+      .toList();
   }
 
   public static boolean isProductIdsExist(CompositePoLine compPOL) {

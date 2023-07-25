@@ -1,7 +1,6 @@
 package org.folio.helper;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEqualCollection;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -24,21 +23,19 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.C
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
+import javax.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -249,7 +246,6 @@ public class PurchaseOrderLineHelper {
       case P_E_MIX -> isEresourceInventoryNotPresent(compPOL) || isPhysicalInventoryNotPresent(compPOL);
       case ELECTRONIC_RESOURCE -> isEresourceInventoryNotPresent(compPOL);
       case OTHER, PHYSICAL_RESOURCE -> isPhysicalInventoryNotPresent(compPOL);
-      default -> false;
     };
   }
 
@@ -503,7 +499,7 @@ public class PurchaseOrderLineHelper {
         lineFromStorage.setPoLineNumber(buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
         return purchaseOrderLineService.saveOrderLine(lineFromStorage, requestContext);
       })
-      .collect(toList());
+      .toList();
 
     return GenericCompositeFuture.join(new ArrayList<>(futures))
       .mapEmpty();
@@ -550,7 +546,7 @@ public class PurchaseOrderLineHelper {
     RequestContext requestContext) {
     return getNewPoLines(compOrder, poLinesFromStorage)
       .map(compPOL -> createPoLine(compPOL, compOrder, requestContext))
-      .collect(toList());
+      .toList();
   }
 
   private boolean hasNewPoLines(CompositePurchaseOrder compPO, List<PoLine> poLinesFromStorage) {
@@ -561,7 +557,7 @@ public class PurchaseOrderLineHelper {
     List<String> lineIdsInStorage = poLinesFromStorage
       .stream()
       .map(PoLine::getId)
-      .collect(toList());
+      .toList();
 
     return compPO.getCompositePoLines()
       .stream()
@@ -650,7 +646,7 @@ public class PurchaseOrderLineHelper {
       .onSuccess(promise::complete)
       .onFailure(cause -> {
         // The case when specified order does not exist
-        if (cause instanceof HttpException && ((HttpException) cause).getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
+        if (cause instanceof HttpException httpException && httpException.getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
           promise.fail(new HttpException(422, ErrorCodes.ORDER_NOT_FOUND));
         } else {
           promise.fail(cause);
@@ -703,7 +699,7 @@ public class PurchaseOrderLineHelper {
 
     List<String> storageFundIds = storagePoLine.getFundDistribution().stream()
       .map(FundDistribution::getFundId)
-      .collect(Collectors.toList());
+      .toList();
 
     compositePoLine.getFundDistribution().stream()
       .filter(fundDistribution -> storageFundIds.contains(fundDistribution.getFundId()) && fundDistribution.getEncumbrance() == null)
@@ -728,7 +724,7 @@ public class PurchaseOrderLineHelper {
     if (isStatusChanged(compOrderLine, poLineFromStorage) && isCurrentStatusCanceled(compOrderLine)) {
       return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
         .compose(poLines -> {
-          List<PoLine> notCanceledPoLines = poLines.stream().filter(poLine -> !isDbPoLineStatusCancelled(poLine)).collect(toList());
+          List<PoLine> notCanceledPoLines = poLines.stream().filter(poLine -> !isDbPoLineStatusCancelled(poLine)).toList();
           if (CollectionUtils.isNotEmpty(notCanceledPoLines)) {
             return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
               .compose(items -> {

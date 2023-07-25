@@ -1,6 +1,5 @@
 package org.folio.helper;
 
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.helper.BaseHelper.MAX_REPEAT_ON_FAILURE;
@@ -491,12 +490,12 @@ public class PurchaseOrderHelper {
   public Future<List<Error>> validateOrderPoLines(CompositePurchaseOrder compositeOrder, RequestContext requestContext) {
     List<Future<List<Error>>> poLinesErrors = compositeOrder.getCompositePoLines().stream()
       .map(compositePoLine -> compositePoLineValidationService.validatePoLine(compositePoLine, requestContext))
-      .collect(toList());
+      .toList();
 
     return collectResultsOnSuccess(poLinesErrors).map(
       lists -> lists.stream()
         .flatMap(Collection::stream)
-        .collect(toList()));
+        .toList());
   }
 
   /**
@@ -553,11 +552,11 @@ public class PurchaseOrderHelper {
 
   private Future<String> adjustPrefixAndSuffix(String poNumber, CompositePurchaseOrder compPO) {
     List<String> valuesToConcat = Arrays.asList(compPO.getPoNumberPrefix(), poNumber, compPO.getPoNumberSuffix());
-    String result = "";
+    StringBuilder result = new StringBuilder();
     for (String value: valuesToConcat) {
-      result += value == null ? "" : value;
+      result.append(value == null ? "" : value);
     }
-    return Future.succeededFuture(result);
+    return Future.succeededFuture(result.toString());
   }
 
   private Future<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
@@ -686,7 +685,7 @@ public class PurchaseOrderHelper {
       compPO.getCompositePoLines()
             .stream()
             .map(compositePoLine -> purchaseOrderLineHelper.createPoLine(compositePoLine, compPO, requestContext))
-            .collect(Collectors.toList());
+            .toList();
     return collectResultsOnSuccess(futures);
   }
 
@@ -793,7 +792,7 @@ public class PurchaseOrderHelper {
           .stream()
           .filter(StringUtils::isNotBlank)
           .map(tag -> StringUtils.deleteWhitespace(tag).toLowerCase())
-          .collect(toList());
+          .toList();
 
         line.getTags().setTagList(processedTagList);
       }
@@ -832,7 +831,7 @@ public class PurchaseOrderHelper {
       List<CompositePoLine> clonedLines = poFromStorage.getCompositePoLines()
         .stream()
         .map(line -> JsonObject.mapFrom(line).mapTo(CompositePoLine.class))
-        .collect(toList());
+        .toList();
       clonedCompPO.setCompositePoLines(clonedLines);
     }
     if (compPO.getCloseReason() != null && REASON_CANCELLED.equals(compPO.getCloseReason().getReason())) {
@@ -846,7 +845,7 @@ public class PurchaseOrderHelper {
       List<CompositePoLine> clonedLines = poFromStorage.getCompositePoLines()
         .stream()
         .map(line -> JsonObject.mapFrom(line).mapTo(CompositePoLine.class))
-        .collect(toList());
+        .toList();
       compPO.setCompositePoLines(clonedLines);
     }
     compPO.getCompositePoLines().forEach(line -> {
@@ -868,7 +867,7 @@ public class PurchaseOrderHelper {
     List<Future<Void>> futures = compPO.getCompositePoLines()
       .stream()
       .map(compPOL -> purchaseOrderLineHelper.setTenantDefaultCreateInventoryValues(compPOL, tenantConfiguration))
-      .collect(toList());
+      .toList();
 
     return GenericCompositeFuture.join(futures)
       .mapEmpty();
@@ -884,12 +883,12 @@ public class PurchaseOrderHelper {
   private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
     return GenericCompositeFuture.join(items.stream()
       .map(item -> inventoryManager.updateItem(item, requestContext))
-      .collect(toList()))
+      .toList())
       .mapEmpty();
   }
 
   private List<CompositePoLine> getNonPackageLines(List<CompositePoLine> compositePoLines) {
-    return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
+    return compositePoLines.stream().filter(line -> !line.getIsPackage()).toList();
   }
 
   private boolean isUserDoesNotHaveDesiredPermission(AcqDesiredPermissions acqPerm, RequestContext requestContext) {
@@ -903,7 +902,7 @@ public class PurchaseOrderHelper {
   private static List<String> getProvidedPermissions(RequestContext requestContext) {
     return new JsonArray(requestContext.getHeaders().getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_ARRAY)).stream().
       map(Object::toString)
-      .collect(Collectors.toList());
+      .toList();
   }
 
   public static boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
@@ -929,11 +928,11 @@ public class PurchaseOrderHelper {
     if (CollectionUtils.isEmpty(poLines)) {
       return Future.succeededFuture();
     }
-    List<String> poLineIds = poLines.stream().map(PoLine::getId).collect(toList());
+    List<String> poLineIds = poLines.stream().map(PoLine::getId).toList();
     return GenericCompositeFuture.join(
       StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
         .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemsStatus(chunk, currentStatus, newStatus, requestContext)))
-        .collect(toList()))
+        .toList())
       .mapEmpty();
   }
 

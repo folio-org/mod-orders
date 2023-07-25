@@ -1,6 +1,5 @@
 package org.folio.service.orders.lines.update.instance;
 
-import static java.util.stream.Collectors.toList;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 
@@ -113,7 +112,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         List<Location> pieceHoldingIds = pieces
           .stream()
           .map(piece -> new Location().withHoldingId(piece.getHoldingId()).withLocationId(piece.getLocationId()))
-          .collect(toList());
+          .toList();
         List<Location> storageHoldingIds = holder.getStoragePoLine().getLocations();
 
         StreamEx.of(ListUtils.union(pieceHoldingIds, storageHoldingIds))
@@ -148,7 +147,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           parameters.add(parameter);
           return null;
         }))
-      .collect(toList()))
+      .toList())
       .mapEmpty()
       .map(v -> {
         if (CollectionUtils.isNotEmpty(parameters)) {
@@ -164,7 +163,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         locations.stream().map(Location::getHoldingId))
       .distinct()
       .filter(Objects::nonNull)
-      .collect(toList());
+      .toList();
   }
 
 }
