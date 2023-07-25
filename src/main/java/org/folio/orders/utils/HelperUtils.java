@@ -225,7 +225,6 @@ public class HelperUtils {
         quantities.put(Piece.Format.OTHER, oQty);
         yield quantities;
       }
-      default -> Collections.emptyMap();
     };
   }
 
@@ -240,7 +239,6 @@ public class HelperUtils {
     return switch (format) {
       case ELECTRONIC -> getElectronicLocationsQuantity(locations);
       case PHYSICAL, OTHER -> getPhysicalLocationsQuantity(locations);
-      default -> 0;
     };
   }
 

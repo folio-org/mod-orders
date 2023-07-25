@@ -34,9 +34,11 @@ public class HelperUtilsTest {
   }
 
   @Test
-  public void testShouldReturnFalseWhenIsNotFound(){
-    var actual = isNotFound(new Throwable(new HttpException(404, PREFIX_NOT_FOUND)));
-    assertFalse(actual);
+  void testShouldReturnBooleanWhenIsNotFound(){
+    var actual = isNotFound(new HttpException(404, PREFIX_NOT_FOUND));
+    assertTrue(actual);
+    var actual2 = isNotFound(new Throwable(new HttpException(401, PREFIX_NOT_FOUND)));
+    assertFalse(actual2);
   }
 
   @Test
