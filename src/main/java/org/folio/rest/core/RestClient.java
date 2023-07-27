@@ -178,6 +178,7 @@ public class RestClient {
       .send()
       .map(HttpResponse::bodyAsJsonObject)
       .map(jsonObject -> {
+        log.info("Successfully retrieved: {}", jsonObject.encodePrettily());
         if (log.isDebugEnabled()) {
           log.debug("Successfully retrieved: {}", jsonObject.encodePrettily());
         }

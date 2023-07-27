@@ -42,6 +42,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
     return calculateTotalEstimatedPrice(compositePoLines, requestContext).map(totalAmount -> {
       compPO.setTotalEstimatedPrice(totalAmount);
       compPO.setTotalItems(calculateTotalItemsQuantity(compositePoLines));
+      logger.info("populate: totalAmount={}, calculateTotalItemsQuantity={}", totalAmount, calculateTotalItemsQuantity(compositePoLines));
       return holder;
     });
   }
@@ -56,11 +57,14 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
   public Future<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines,
       RequestContext requestContext) {
     return configurationEntriesCache.getSystemCurrency(requestContext)
-      .compose(toCurrency -> getCollect(compositePoLines, requestContext, toCurrency)
-        .map(amounts -> amounts.stream()
-        .reduce(Money.of(0, toCurrency), Money::add)
-        .getNumber()
-        .doubleValue()));
+      .compose(toCurrency -> {
+        logger.info("calculateTotalEstimatedPrice: currency={}", toCurrency);
+        return getCollect(compositePoLines, requestContext, toCurrency)
+          .map(amounts -> amounts.stream()
+            .reduce(Money.of(0, toCurrency), Money::add)
+            .getNumber()
+            .doubleValue());
+      });
   }
 
   private Future<List<Money>> getCollect(List<CompositePoLine> compositePoLines, RequestContext requestContext, String toCurrency) {

@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -36,6 +38,7 @@ import one.util.streamex.StreamEx;
 
 @Log4j2
 public class TitlesService {
+  private static final Logger logger = LogManager.getLogger(TitlesService.class);
   private static final String ENDPOINT = resourcesPath(TITLES);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
 
@@ -69,6 +72,7 @@ public class TitlesService {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(resultQuery)
           .withOffset(offset)
           .withLimit(limit);
+        logger.info("getTitles: query={}; resultQuery={}", query, resultQuery);
         return restClient.get(requestEntry, TitleCollection.class, requestContext);
       });
 
@@ -142,6 +146,7 @@ public class TitlesService {
 
   public Future<Map<String, List<Title>>> fetchNonPackageTitles(CompositePurchaseOrder compPO, RequestContext requestContext) {
     List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());
+    logger.info("fetchNonPackageTitles: nonPackageLineIds={}", lineIds);
     return getTitlesByPoLineIds(lineIds, requestContext);
   }
 

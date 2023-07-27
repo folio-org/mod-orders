@@ -60,8 +60,10 @@ public class ProtectionService {
    */
   public Future<Void> isOperationRestricted(List<String> unitIds, Set<ProtectedOperationType> operations, RequestContext requestContext) {
     if (CollectionUtils.isNotEmpty(unitIds)) {
+      log.info("isOperationRestricted: unitIds is not Empty, unitIds={}", unitIds);
       return getUnitsByIds(unitIds, requestContext)
         .compose(units -> {
+          log.info("isOperationRestricted: found units={}", units);
           if (unitIds.size() == units.size()) {
             // In case any unit is "soft deleted", just skip it (refer to MODORDERS-294)
             List<AcquisitionsUnit> activeUnits = units.stream()
@@ -73,6 +75,7 @@ public class ProtectionService {
             }
             return Future.succeededFuture();
           } else {
+            log.error("isOperationRestricted: fail with units={}", extractUnitIds(units));
             // In case any unit "hard deleted" or never existed by specified uuid
             throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), buildUnitsNotFoundError(unitIds, extractUnitIds(units)));
           }
@@ -125,6 +128,7 @@ public class ProtectionService {
     return acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, 0, 0, requestContext)
       .map(unit -> {
         if (unit.getTotalRecords() == 0) {
+          log.error("User isn't member of orders units");
           throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_PERMISSIONS);
         }
         return null;

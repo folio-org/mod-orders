@@ -340,8 +340,10 @@ public class PurchaseOrderLineService {
    */
   public Future<CompositePurchaseOrder> populateOrderLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+      logger.info("Order has {} poLines", compPO.getCompositePoLines().size());
       return getCompositePoLinesByOrderId(compPO.getId(), requestContext)
         .map(poLines -> {
+          logger.info("Found {} poLines with ids={}", poLines.size(), poLines.stream().map(CompositePoLine::getId).toArray());
           PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return compPO.withCompositePoLines(poLines);
         })

@@ -439,7 +439,10 @@ public class PurchaseOrderHelper {
   public Future<CompositePurchaseOrder> getCompositeOrder(String orderId, RequestContext requestContext) {
     Promise<CompositePurchaseOrder> promise = Promise.promise();
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(orderId, requestContext)
-      .map(HelperUtils::convertToCompositePurchaseOrder)
+      .map(purchaseOrderJson -> {
+        logger.info("getCompositeOrder: orderId={}, purchaseOrderJson={}", orderId, purchaseOrderJson);
+        return HelperUtils.convertToCompositePurchaseOrder(purchaseOrderJson);
+      })
       .compose(compPO -> protectionService.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ, requestContext)
         .onFailure(t -> {
           logger.error("User with id={} is forbidden to view order with id={}", getCurrentUserId(requestContext.getHeaders()),
@@ -453,10 +456,13 @@ public class PurchaseOrderHelper {
             return null;
           })
           .compose(po -> combinedPopulateService.populate(new CompositeOrderRetrieveHolder(compPO), requestContext)))
-        .map(CompositeOrderRetrieveHolder::getOrder))
+        .map(compositeOrderRetrieveHolder -> {
+          logger.info("getCompositeOrder: orderId={}", compositeOrderRetrieveHolder.getOrderId());
+          return compositeOrderRetrieveHolder.getOrder();
+        }))
       .onSuccess(promise::complete)
       .onFailure(t -> {
-        logger.error("Failed to build composite purchase order with id={}", orderId, t.getCause());
+        logger.error("Failed to build composite purchase order with id={}", orderId, t);
         promise.fail(t);
       });
     return promise.future();
@@ -704,6 +710,7 @@ public class PurchaseOrderHelper {
   private void populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<CompositePoLine> lines) {
     getNonPackageLines(lines).forEach(line -> {
       if (lineIdsTitles.containsKey(line.getId())) {
+        logger.info("populateInstanceId: lineId={}; instanceId={}", line.getId(), lineIdsTitles.get(line.getId()).get(0).getInstanceId());
         line.setInstanceId(lineIdsTitles.get(line.getId()).get(0).getInstanceId());
       }
     });
