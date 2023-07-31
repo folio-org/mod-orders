@@ -65,6 +65,8 @@ public class OrderRolloverService {
   private static final Logger logger = LogManager.getLogger();
 
   private static final String PO_LINE_FUND_DISTR_QUERY = "fundDistribution =/@fundId \"%s\"";
+  // Following cql query filters po_lines which do not contain 'encumbrance' value in entire fundDistribution array.
+  // That condition skips po_lines already processed in previous fiscal years.
   private static final String PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY = "fundDistribution == \"*\\\"encumbrance\\\": \\\"*\"";
   private static final String ORDER_TYPE_QUERY = "purchaseOrder.orderType == %s";
   private static final String ENCUMBR_FY_QUERY = "fiscalYearId == \"%s\"";
