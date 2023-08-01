@@ -120,7 +120,7 @@ public class POLInvoiceLineRelationService {
       double encumbranceAmount = HelperUtils.calculateEncumbranceEffectiveAmount(encumbrance.getInitialAmountEncumbered(),
         amountExpended, amountAwaitingPayment, Monetary.getCurrency(currency));
       transaction.withAmount(encumbranceAmount).withEncumbrance(encumbrance.withAmountExpended(amountExpended)
-        .withAmountAwaitingPayment(amountAwaitingPayment).withStatus(encumbranceAmount == 0d ? Encumbrance.Status.RELEASED : Encumbrance.Status.UNRELEASED));
+        .withAmountAwaitingPayment(amountAwaitingPayment).withStatus(encumbrance.getStatus()));
     });
   }
 

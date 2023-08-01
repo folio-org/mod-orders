@@ -51,6 +51,7 @@ public enum ErrorCodes {
   PROHIBITED_FIELD_CHANGING("protectedFieldChanging","Protected fields can't be modified"),
   ORDER_UNITS_NOT_FOUND("orderAcqUnitsNotFound", "Acquisitions units assigned to order cannot be found"),
   USER_HAS_NO_PERMISSIONS("userHasNoPermission", "User does not have permissions - operation is restricted"),
+  USER_NOT_A_MEMBER_OF_THE_ACQ("userNotAMemberOfTheAcq", "User is not a member of the specified acquisitions group - operation is restricted"),
   USER_HAS_NO_ACQ_PERMISSIONS("userHasNoAcqUnitsPermission", "User does not have permissions to manage acquisition units assignments - operation is restricted"),
   USER_HAS_NO_APPROVAL_PERMISSIONS("userHasNoApprovalPermission", "User does not have permissions to approve order - operation is restricted"),
   USER_HAS_NO_UNOPEN_PERMISSIONS("userHasNoOrderUnopenPermission", "User does not have permissions to move order from open to pending - operation is restricted"),

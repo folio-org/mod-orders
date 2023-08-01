@@ -3,7 +3,7 @@ package org.folio.service;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_NOT_A_MEMBER_OF_THE_ACQ;
 import static org.folio.service.AcquisitionsUnitsService.ACQUISITIONS_UNIT_IDS;
 import static org.folio.service.AcquisitionsUnitsService.ENDPOINT_ACQ_UNITS;
 import static org.folio.service.UserService.getCurrentUserId;
@@ -125,7 +125,7 @@ public class ProtectionService {
     return acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, 0, 0, requestContext)
       .map(unit -> {
         if (unit.getTotalRecords() == 0) {
-          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_PERMISSIONS);
+          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_NOT_A_MEMBER_OF_THE_ACQ);
         }
         return null;
       })
