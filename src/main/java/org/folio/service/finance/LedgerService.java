@@ -23,7 +23,7 @@ import io.vertx.core.Future;
 
 public class LedgerService {
 
-  private static final String ENDPOINT = "/finance/ledgers";
+  private static final String ENDPOINT = "/finance-storage/ledgers";
 
   private final RestClient restClient;
 
