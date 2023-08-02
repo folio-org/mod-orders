@@ -72,7 +72,7 @@ public class ResourcePathResolver {
     apis.put(ENCUMBRANCES, "/finance/encumbrances");
     apis.put(FUNDS, "/finance/funds");
     apis.put(BUDGETS, "/finance/budgets");
-    apis.put(LEDGERS, "/finance/ledgers");
+    apis.put(LEDGERS, "/finance-storage/ledgers");
     apis.put(ORDER_TRANSACTION_SUMMARIES, "/finance/order-transaction-summaries");
     apis.put(TITLES, "/orders-storage/titles");
     apis.put(REASONS_FOR_CLOSURE, "/orders-storage/configuration/reasons-for-closure");
