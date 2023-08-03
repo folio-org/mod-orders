@@ -65,6 +65,9 @@ public class OrderRolloverService {
   private static final Logger logger = LogManager.getLogger();
 
   private static final String PO_LINE_FUND_DISTR_QUERY = "fundDistribution =/@fundId \"%s\"";
+  // Following cql query filters po_lines which do not contain 'encumbrance' value in entire fundDistribution array.
+  // That condition skips po_lines already processed in previous fiscal years.
+  private static final String PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY = "fundDistribution == \"*\\\"encumbrance\\\": \\\"*\"";
   private static final String ORDER_TYPE_QUERY = "purchaseOrder.orderType == %s";
   private static final String ENCUMBR_FY_QUERY = "fiscalYearId == \"%s\"";
   private static final String ENCUMBRANCE_BY_POLINE_ID_QUERY = "encumbrance.sourcePoLineId == \"%s\"";
@@ -369,7 +372,19 @@ public class OrderRolloverService {
     String typesQuery = buildOrderTypesQuery(ledgerFYRollover);
     String fundIdsQuery = fundIds.stream().map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId)).collect(Collectors.joining(OR));
     String sortByCreatedDate = " sortBy metadata.createdDate";
-    return "(" + typesQuery + ")" +  AND + " (purchaseOrder.workflowStatus==" + workflowStatus.value() + ") " + AND + "(" + fundIdsQuery + ")" + sortByCreatedDate;
+
+    var resultQuery = "(" + typesQuery + ")" + AND + " (purchaseOrder.workflowStatus==" + CLOSED.value() + ") " + AND + "(" + fundIdsQuery + ")";
+
+    if (workflowStatus == CLOSED) {
+      // MODORDERS-904 Avoid rollover re-processing of old already processed closed orders in previous fiscal years
+      String nonEmptyEncumbranceFilter = " AND ("  + PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY + ")";
+      resultQuery = resultQuery + nonEmptyEncumbranceFilter;
+    }
+
+    resultQuery = resultQuery + sortByCreatedDate;
+    logger.debug("buildOpenOrClosedOrderQueryByFundIdsAndTypes :: resulting PO line query: {}", resultQuery);
+
+    return resultQuery;
   }
 
   private String buildOrderTypesQuery(LedgerFiscalYearRollover ledgerFYRollover) {
