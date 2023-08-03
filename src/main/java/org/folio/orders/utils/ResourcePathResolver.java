@@ -48,8 +48,6 @@ public class ResourcePathResolver {
   public static final String ORDER_INVOICE_RELATIONSHIP = "order-invoice-relationship";
   public static final String EXPORT_HISTORY = "export-history";
   public static final String TAGS = "tags";
-  public static final String PREFIX = "poNumberPrefix";
-  public static final String SUFFIX = "poNumberSuffix";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -72,7 +70,7 @@ public class ResourcePathResolver {
     apis.put(ENCUMBRANCES, "/finance/encumbrances");
     apis.put(FUNDS, "/finance/funds");
     apis.put(BUDGETS, "/finance/budgets");
-    apis.put(LEDGERS, "/finance/ledgers");
+    apis.put(LEDGERS, "/finance-storage/ledgers");
     apis.put(ORDER_TRANSACTION_SUMMARIES, "/finance/order-transaction-summaries");
     apis.put(TITLES, "/orders-storage/titles");
     apis.put(REASONS_FOR_CLOSURE, "/orders-storage/configuration/reasons-for-closure");

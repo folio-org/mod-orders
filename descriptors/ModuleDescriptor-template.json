@@ -83,6 +83,7 @@
           ],
           "modulePermissions": [
             "modperms.orders.item.put",
+            "finance-storage.ledgers.collection.get",
             "orders-storage.configuration.prefixes.collection.get",
             "orders-storage.configuration.suffixes.collection.get"
           ]
