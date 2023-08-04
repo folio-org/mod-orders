@@ -245,18 +245,12 @@ public class PurchaseOrderLineHelper {
   }
 
   public static boolean isCreateInventoryNull(CompositePoLine compPOL) {
-    switch (compPOL.getOrderFormat()) {
-      case P_E_MIX:
-        return isEresourceInventoryNotPresent(compPOL)
-          || isPhysicalInventoryNotPresent(compPOL);
-      case ELECTRONIC_RESOURCE:
-        return isEresourceInventoryNotPresent(compPOL);
-      case OTHER:
-      case PHYSICAL_RESOURCE:
-        return isPhysicalInventoryNotPresent(compPOL);
-      default:
-        return false;
-    }
+    return switch (compPOL.getOrderFormat()) {
+      case P_E_MIX -> isEresourceInventoryNotPresent(compPOL) || isPhysicalInventoryNotPresent(compPOL);
+      case ELECTRONIC_RESOURCE -> isEresourceInventoryNotPresent(compPOL);
+      case OTHER, PHYSICAL_RESOURCE -> isPhysicalInventoryNotPresent(compPOL);
+      default -> false;
+    };
   }
 
   public Future<CompositePoLine> getCompositePoLine(String polineId, RequestContext requestContext) {

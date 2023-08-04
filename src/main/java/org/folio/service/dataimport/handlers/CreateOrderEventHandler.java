@@ -411,8 +411,8 @@ public class CreateOrderEventHandler implements EventHandler {
           .compose(order -> savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig).map(order))
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
-            if (e instanceof HttpException) {
-              String message = ((HttpException) e).getError().getMessage();
+            if (e instanceof HttpException httpException) {
+              String message = httpException.getError().getMessage();
               if (message.contains(ID_UNIQUENESS_ERROR_MSG)) {
                 LOGGER.debug("saveOrder:: Failed to create order with existing id: '{}' due to duplicated event. Ignoring event processing", orderId);
                 return Future.failedFuture(new DuplicateEventException(message));

@@ -18,25 +18,20 @@ public class OrderLineUpdateInstanceHandler implements PatchOperationHandler {
   public Future<Void> handle(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
     PoLine storagePoLine = holder.getStoragePoLine();
 
-    switch (storagePoLine.getOrderFormat()) {
-      case P_E_MIX:
-        return orderLineUpdateInstanceStrategyResolver
-            .resolve(CreateInventoryType.fromValue(storagePoLine.getPhysical().getCreateInventory().value()))
-            .updateInstance(holder, requestContext)
-            .compose(v -> orderLineUpdateInstanceStrategyResolver
-                .resolve(CreateInventoryType.fromValue(storagePoLine.getEresource().getCreateInventory().value()))
-                .updateInstance(holder, requestContext));
-      case ELECTRONIC_RESOURCE:
-        return orderLineUpdateInstanceStrategyResolver
-            .resolve(CreateInventoryType.fromValue(storagePoLine.getEresource().getCreateInventory().value()))
-            .updateInstance(holder, requestContext);
-      case OTHER:
-      case PHYSICAL_RESOURCE:
-        return orderLineUpdateInstanceStrategyResolver
-            .resolve(CreateInventoryType.fromValue(storagePoLine.getPhysical().getCreateInventory().value()))
-            .updateInstance(holder, requestContext);
-      default:
-        return Future.succeededFuture();
-    }
+    return switch (storagePoLine.getOrderFormat()) {
+      case P_E_MIX -> orderLineUpdateInstanceStrategyResolver
+        .resolve(CreateInventoryType.fromValue(storagePoLine.getPhysical().getCreateInventory().value()))
+        .updateInstance(holder, requestContext)
+        .compose(v -> orderLineUpdateInstanceStrategyResolver
+          .resolve(CreateInventoryType.fromValue(storagePoLine.getEresource().getCreateInventory().value()))
+          .updateInstance(holder, requestContext));
+      case ELECTRONIC_RESOURCE -> orderLineUpdateInstanceStrategyResolver
+        .resolve(CreateInventoryType.fromValue(storagePoLine.getEresource().getCreateInventory().value()))
+        .updateInstance(holder, requestContext);
+      case OTHER, PHYSICAL_RESOURCE -> orderLineUpdateInstanceStrategyResolver
+        .resolve(CreateInventoryType.fromValue(storagePoLine.getPhysical().getCreateInventory().value()))
+        .updateInstance(holder, requestContext);
+      default -> Future.succeededFuture();
+    };
   }
 }
