@@ -83,7 +83,6 @@
           ],
           "modulePermissions": [
             "modperms.orders.item.put",
-            "finance-storage.ledgers.collection.get",
             "orders-storage.configuration.prefixes.collection.get",
             "orders-storage.configuration.suffixes.collection.get"
           ]
@@ -128,14 +127,14 @@
             "orders-storage.po-lines.item.put",
             "finance.funds.collection.get",
             "finance.ledgers.current-fiscal-year.item.get",
-            "finance.ledgers.collection.get",
             "finance.funds.budget.item.get",
             "finance.transactions.collection.get",
             "finance.ledger-rollovers.collection.get",
             "finance.ledger-rollovers-progress.collection.get",
             "finance.ledger-rollovers-errors.collection.get",
             "finance.ledger-rollovers-errors.item.delete",
-            "finance.exchange-rate.item.get"
+            "finance.exchange-rate.item.get",
+            "finance-storage.ledgers.collection.get"
           ]
         }
       ]
@@ -219,7 +218,6 @@
             "finance.transactions.collection.get",
             "finance.budgets.collection.get",
             "finance.funds.budget.item.get",
-            "finance.ledgers.collection.get",
             "finance.encumbrances.item.delete",
             "finance.encumbrances.item.post",
             "finance.encumbrances.item.put",
@@ -233,6 +231,7 @@
             "finance.release-encumbrance.item.post",
             "finance.expense-classes.collection.get",
             "finance-storage.transactions.item.put",
+            "finance-storage.ledgers.collection.get",
             "finance-storage.budget-expense-classes.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
@@ -478,6 +477,7 @@
             "finance.order-transaction-summaries.item.post",
             "finance.order-transaction-summaries.item.put",
             "finance.encumbrances.item.put",
+            "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.post",
             "orders-storage.pieces.collection.get",
             "orders-storage.po-lines.item.get",
@@ -524,6 +524,7 @@
             "finance.order-transaction-summaries.item.post",
             "finance.order-transaction-summaries.item.put",
             "finance.encumbrances.item.put",
+            "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.get",
             "orders-storage.pieces.item.post",
             "orders-storage.pieces.item.put",
@@ -556,6 +557,7 @@
             "finance.order-transaction-summaries.item.get",
             "finance.order-transaction-summaries.item.post",
             "finance.order-transaction-summaries.item.put",
+            "finance-storage.ledgers.collection.get",
             "finance-storage.order-transaction-summaries.item.get",
             "orders-storage.pieces.item.delete",
             "orders-storage.pieces.item.get",
@@ -1672,7 +1674,6 @@
         "finance.funds.budget.item.get",
         "finance.funds.collection.get",
         "finance.budgets.collection.get",
-        "finance.ledgers.collection.get",
         "finance.encumbrances.item.delete",
         "finance.encumbrances.item.post",
         "finance.encumbrances.item.put",
@@ -1682,6 +1683,7 @@
         "finance.fiscal-years.item.get",
         "finance.order-transaction-summaries.item.post",
         "finance.order-transaction-summaries.item.put",
+        "finance-storage.ledgers.collection.get",
         "finance-storage.order-transaction-summaries.item.get",
         "finance.exchange-rate.item.get",
         "finance.release-encumbrance.item.post",
@@ -1748,7 +1750,6 @@
         "finance.funds.budget.item.get",
         "finance.funds.collection.get",
         "finance.budgets.collection.get",
-        "finance.ledgers.collection.get",
         "finance.fiscal-years.item.get",
         "finance.ledgers.current-fiscal-year.item.get",
         "finance.transactions.collection.get",
@@ -1761,6 +1762,7 @@
         "finance.expense-classes.collection.get",
         "finance-storage.budget-expense-classes.collection.get",
         "finance-storage.transactions.item.put",
+        "finance-storage.ledgers.collection.get",
         "inventory.instances.collection.get",
         "inventory.instances.item.post",
         "inventory.items.collection.get",
