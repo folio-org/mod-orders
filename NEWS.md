@@ -1,4 +1,5 @@
 ## 12.7.0 - Unreleased
+* [MODORDERS-908](https://issues.folio.org/browse/MODORDERS-908) - Obtain organisations with pagination
 
 ## 12.6.8 Orchid R1 2023 - Released
 This release focused on fixing transaction issue when changing funds on PO
