@@ -49,20 +49,15 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
       holder.createStoragePatchOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType.REPLACE_INSTANCE_REF, newInstanceId);
 
-      switch (replaceInstanceRef.getHoldingsOperation()) {
-        case MOVE:
-          return moveHoldings(holder, newInstanceId, requestContext);
-        case FIND_OR_CREATE:
-          return findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
-            // TODO: onSuccess or compose ???
-              .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
-        case CREATE:
-          return createHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
-              .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
-      case NONE:
-        default:
-          return Future.succeededFuture();
-      }
+      return switch (replaceInstanceRef.getHoldingsOperation()) {
+        case MOVE -> moveHoldings(holder, newInstanceId, requestContext);
+        case FIND_OR_CREATE -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
+          // TODO: onSuccess or compose ???
+          .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
+        case CREATE -> createHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
+          .onSuccess(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), holder.getStoragePoLine(), requestContext));
+        default -> Future.succeededFuture();
+      };
     } else {
       return Future.succeededFuture();
     }
@@ -147,8 +142,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       .map(item -> inventoryManager.updateItem(item, requestContext)
         .otherwise(ex -> {
           Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));
-          if (ex.getCause() instanceof HttpException) {
-            HttpException httpException = (HttpException) ex.getCause();
+          if (ex.getCause() instanceof HttpException httpException) {
             parameter.withAdditionalProperty("originalError", httpException.getError().getMessage());
           }
           parameters.add(parameter);

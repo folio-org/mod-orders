@@ -1111,19 +1111,12 @@ public class InventoryManager {
    */
   private Future<String> getEntryTypeValue(String entryType, RequestContext requestContext) {
     return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .map(configs -> {
-        switch (entryType) {
-          case INSTANCE_STATUSES:
-            return configs.getString(CONFIG_NAME_INSTANCE_STATUS_CODE, DEFAULT_INSTANCE_STATUS_CODE);
-          case INSTANCE_TYPES:
-            return configs.getString(CONFIG_NAME_INSTANCE_TYPE_CODE, DEFAULT_INSTANCE_TYPE_CODE);
-          case LOAN_TYPES:
-            return configs.getString(CONFIG_NAME_LOAN_TYPE_NAME, DEFAULT_LOAN_TYPE_NAME);
-          case HOLDINGS_SOURCES:
-            return configs.getString(CONFIG_NAME_HOLDINGS_SOURCE_NAME, DEFAULT_HOLDINGS_SOURCE_NAME);
-          default:
-            throw new IllegalArgumentException("Unexpected inventory entry type: " + entryType);
-        }
+      .map(configs -> switch (entryType) {
+        case INSTANCE_STATUSES -> configs.getString(CONFIG_NAME_INSTANCE_STATUS_CODE, DEFAULT_INSTANCE_STATUS_CODE);
+        case INSTANCE_TYPES -> configs.getString(CONFIG_NAME_INSTANCE_TYPE_CODE, DEFAULT_INSTANCE_TYPE_CODE);
+        case LOAN_TYPES -> configs.getString(CONFIG_NAME_LOAN_TYPE_NAME, DEFAULT_LOAN_TYPE_NAME);
+        case HOLDINGS_SOURCES -> configs.getString(CONFIG_NAME_HOLDINGS_SOURCE_NAME, DEFAULT_HOLDINGS_SOURCE_NAME);
+        default -> throw new IllegalArgumentException("Unexpected inventory entry type: " + entryType);
       });
   }
 

@@ -373,7 +373,7 @@ public class OrderRolloverService {
     String fundIdsQuery = fundIds.stream().map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId)).collect(Collectors.joining(OR));
     String sortByCreatedDate = " sortBy metadata.createdDate";
 
-    var resultQuery = "(" + typesQuery + ")" + AND + " (purchaseOrder.workflowStatus==" + CLOSED.value() + ") " + AND + "(" + fundIdsQuery + ")";
+    var resultQuery = "(" + typesQuery + ")" + AND + " (purchaseOrder.workflowStatus==" + workflowStatus + ") " + AND + "(" + fundIdsQuery + ")";
 
     if (workflowStatus == CLOSED) {
       // MODORDERS-904 Avoid rollover re-processing of old already processed closed orders in previous fiscal years

@@ -1,4 +1,5 @@
 ## 12.7.0 - Unreleased
+* [MODORDERS-908](https://issues.folio.org/browse/MODORDERS-908) - Obtain organisations with pagination
 
 ## 12.6.0 Orchid R1 2023 - Released
 This release focused on replacing FolioVertxCompletableFuture usage refactoring, edit fund distributions with related invoices and orders import features

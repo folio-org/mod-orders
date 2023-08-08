@@ -1,6 +1,5 @@
 package org.folio.rest.core.exceptions;
 
-import static java.util.stream.Collectors.toList;
 import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.POSTGRE_SQL_ERROR;
 
@@ -11,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -39,11 +39,11 @@ public class ExceptionUtil {
     Map<Character,String> pgFields = PgExceptionUtil.getBadRequestFields(throwable);
     if (!MapUtils.isEmpty(pgFields)) {
       errors = convertPgExceptions(pgFields);
-    } else if (cause instanceof io.vertx.ext.web.handler.HttpException) {
-      errors = convertVertxHttpException((io.vertx.ext.web.handler.HttpException) cause);
-    } else if (cause instanceof HttpException) {
-      errors = ((HttpException) cause).getErrors();
-      List<Error> errorList = errors.getErrors().stream().map(ExceptionUtil::mapToError).collect(toList());
+    } else if (cause instanceof io.vertx.ext.web.handler.HttpException httpException) {
+      errors = convertVertxHttpException(httpException);
+    } else if (cause instanceof HttpException httpException) {
+      errors = httpException.getErrors();
+      List<Error> errorList = errors.getErrors().stream().map(ExceptionUtil::mapToError).collect(Collectors.toList());
       errors.setErrors(errorList);
     } else {
       errors = new Errors().withErrors(Collections.singletonList(GENERIC_ERROR_CODE.toError()
