@@ -52,6 +52,7 @@ public class MappingParametersCache {
 
   @Autowired
   public MappingParametersCache(Vertx vertx, RestClient restClient) {
+    LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
     cache = Caffeine.newBuilder()
       .expireAfterAccess(cacheExpirationTime, TimeUnit.SECONDS)
       .executor(task -> vertx.runOnContext(v -> task.run()))
@@ -88,8 +89,9 @@ public class MappingParametersCache {
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
         if (httpResponse.getResponse().statusCode() == HttpStatus.SC_OK) {
-          LOGGER.info("loadMappingParameters:: The first chunk of organizations was loaded for cache, tenantId '{}'", tenantId);
           OrganizationCollection orgCollection = Json.decodeValue(httpResponse.getJson().encode(), OrganizationCollection.class);
+          LOGGER.info("loadMappingParameters:: The first chunk of organizations was loaded for cache, tenantId '{}', organizations '{}', totalRecords '{}'",
+            tenantId, orgCollection.getOrganizations().size(), orgCollection.getTotalRecords());
 
           MappingParameters mappingParameters = new MappingParameters();
           if (orgCollection.getTotalRecords() > settingsLimit) {
@@ -117,7 +119,8 @@ public class MappingParametersCache {
         .collect(toList()))
       .toCompletionStage()
       .thenCompose(organizations -> {
-        LOGGER.info("getRemainingOrganizations:: Organizations were loaded for cache, tenantId '{}'", params.getTenantId());
+        LOGGER.info("getRemainingOrganizations:: Organizations were loaded for cache, tenantId '{}', organizations '{}'",
+          params.getTenantId(), organizations.size());
         organizationCollection.getOrganizations().addAll(organizations);
         return CompletableFuture.completedFuture(mappingParameters.withOrganizations(organizationCollection.getOrganizations()));
       });
