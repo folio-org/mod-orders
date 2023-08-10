@@ -77,7 +77,7 @@ public class OrganizationService {
   public Future<Errors> validateVendor(String vendorId, RequestContext requestContext) {
     Promise<Errors> promise = Promise.promise();
 
-    log.debug("Validating vendor with id={}", vendorId);
+    log.info("Validating vendor with id={}", vendorId);
 
     List<Error> errors = new ArrayList<>();
     getAndCacheVendorById(vendorId, requestContext)
@@ -119,7 +119,7 @@ public class OrganizationService {
 
     List<Error> errors = new ArrayList<>();
     if (!ids.isEmpty()) {
-      log.debug("Validating {} access provider(s) for order with id={}", ids.size(), poLines.get(0).getPurchaseOrderId());
+      log.info("Validating {} access provider(s) for order with id={}", ids.size(), poLines.get(0).getPurchaseOrderId());
 
       getAccessProvidersByIds(ids, requestContext).map(organizations -> {
           // Validate access provider status Active
@@ -145,7 +145,7 @@ public class OrganizationService {
           promise.complete(handleAndReturnErrors(errors));
         });
     } else {
-      log.debug("Order does not have any access provider to validate");
+      log.info("Order does not have any access provider to validate");
       promise.complete(handleAndReturnErrors(errors));
     }
     return promise.future();

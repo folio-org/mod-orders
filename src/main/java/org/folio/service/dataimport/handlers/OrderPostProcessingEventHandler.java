@@ -97,7 +97,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    LOGGER.debug("handle:: jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
+    LOGGER.info("handle:: jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     dataImportEventPayload.setEventType(DI_ORDER_CREATED.value());
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
@@ -161,7 +161,7 @@ public class OrderPostProcessingEventHandler implements EventHandler {
   private Future<Void> ensurePoLineWithInstanceId(CompositePoLine poLine, DataImportEventPayload dataImportEventPayload,
                                                   RequestContext requestContext) {
     if (PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
-      LOGGER.debug("ensurePoLineWithInstanceId:: Skipping instanceId filling because poLine does not require inventory entities creation,  jobExecutionId: {}, poLineNumber: {}",
+      LOGGER.info("ensurePoLineWithInstanceId:: Skipping instanceId filling because poLine does not require inventory entities creation,  jobExecutionId: {}, poLineNumber: {}",
         dataImportEventPayload.getJobExecutionId(), poLine.getPoLineNumber());
       return Future.succeededFuture();
     }

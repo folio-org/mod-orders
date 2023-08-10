@@ -20,10 +20,10 @@ public class PieceService {
   }
 
   public void receiptConsistencyPiecePoLine(JsonObject jsonObj, RequestContext requestContext) {
-    logger.debug("Sending event to verify receipt status");
+    logger.info("Sending event to verify receipt status");
 
     receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, jsonObj, requestContext);
 
-    logger.debug("Event to verify receipt status - sent");
+    logger.info("Event to verify receipt status - sent");
   }
 }

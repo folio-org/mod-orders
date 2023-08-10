@@ -160,7 +160,7 @@ public class PurchaseOrderLineService {
     Promise<CompositePoLine> promise = Promise.promise();
     JsonObject line = JsonObject.mapFrom(poline);
     if (logger.isDebugEnabled()) {
-      logger.debug("The PO line prior to {} operation: {}", operation, line.encodePrettily());
+      logger.info("The PO line prior to {} operation: {}", operation, line.encodePrettily());
     }
 
     List<Future<Void>> futures = new ArrayList<>();
@@ -170,7 +170,7 @@ public class PurchaseOrderLineService {
     GenericCompositeFuture.join(new ArrayList<>(futures))
       .onSuccess(v -> {
         if (logger.isDebugEnabled()) {
-          logger.debug("The PO line after {} operation on sub-objects: {}", operation, line.encodePrettily());
+          logger.info("The PO line after {} operation on sub-objects: {}", operation, line.encodePrettily());
         }
         promise.complete(line.mapTo(CompositePoLine.class));
       })
@@ -237,13 +237,13 @@ public class PurchaseOrderLineService {
   }
 
   public Future<JsonObject> updateOrderLineSummary(String poLineId, JsonObject poLine, RequestContext requestContext) {
-    logger.debug("Updating PO line...");
+    logger.info("Updating PO line...");
     String endpoint = String.format(URL_WITH_LANG_PARAM, resourceByIdPath(PO_LINES_STORAGE, poLineId), EN);
     return operateOnObject(HttpMethod.PUT, endpoint, poLine, requestContext);
   }
   public Future<JsonObject> updatePoLineSubObjects(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     JsonObject updatedLineJson = mapFrom(compOrderLine);
-    logger.debug("Updating PO line sub-objects...");
+    logger.info("Updating PO line sub-objects...");
 
     List<Future<Void>> futures = new ArrayList<>();
 

@@ -79,7 +79,7 @@ public class OpenCompositeOrderFlowValidator {
   }
 
   public Future<Void> checkLocationsAndPiecesConsistency(List<CompositePoLine> poLines, RequestContext requestContext) {
-    logger.debug("checkLocationsAndPiecesConsistency start");
+    logger.info("checkLocationsAndPiecesConsistency start");
     List<CompositePoLine> linesWithIdWithoutManualPieceReceived = poLines.stream().filter(
         compositePoLine -> StringUtils.isNotEmpty(compositePoLine.getId()) && Boolean.FALSE.equals(compositePoLine.getCheckinItems()))
       .collect(Collectors.toList());

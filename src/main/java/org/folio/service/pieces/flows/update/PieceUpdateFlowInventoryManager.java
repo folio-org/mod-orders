@@ -60,7 +60,7 @@ public class PieceUpdateFlowInventoryManager {
       .compose(holdingId -> handleItem(holder, requestContext))
       .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
       .compose(aVoid -> deleteHolding(holder, requestContext))
-      .onSuccess(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE))
+      .onSuccess(pair -> logger.info(UPDATE_INVENTORY_FOR_LINE_DONE))
       .mapEmpty();
   }
 
@@ -72,7 +72,7 @@ public class PieceUpdateFlowInventoryManager {
       .compose(holdingId -> handleItem(holder, requestContext))
       .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
       .compose(aVoid -> deleteHolding(holder, requestContext))
-      .onSuccess(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE))
+      .onSuccess(pair -> logger.info(UPDATE_INVENTORY_FOR_LINE_DONE))
       .mapEmpty();
   }
 

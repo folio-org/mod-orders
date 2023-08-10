@@ -65,7 +65,7 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
 
   @Override
   public void start(Promise<Void> startPromise) {
-    LOGGER.debug("DataImportConsumerVerticle :: start");
+    LOGGER.info("DataImportConsumerVerticle :: start");
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, maxDistributionNumber);
 
     List<Future<Void>> futures = new ArrayList<>();

@@ -71,7 +71,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       int piecesQty = StreamEx.ofValues(checkinPieces)
         .mapToInt(Map::size)
         .sum();
-      logger.debug("{} piece record(s) are going to be checkedIn for {} PO line(s)", piecesQty, poLinesQty);
+      logger.info("{} piece record(s) are going to be checkedIn for {} PO line(s)", piecesQty, poLinesQty);
     }
   }
 
@@ -301,7 +301,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       }
 
       return collectResultsOnSuccess(futures).map(updatedPoLines -> {
-        logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
+        logger.info("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
 
         // Send event to check order status for successfully processed PO Lines
         List<PoLine> successPoLines = StreamEx.of(poLines)
@@ -316,7 +316,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   private void updateOrderStatus(List<PoLine> poLines, CheckinCollection checkinCollection, RequestContext requestContext) {
     if (!poLines.isEmpty()) {
-      logger.debug("Sending event to verify order status");
+      logger.info("Sending event to verify order status");
 
       Map<String, Boolean> orderClosedStatusesMap = groupCheckinPiecesByPoLineId(checkinCollection, poLines);
       List<JsonObject> orderClosedStatusesJsonList = orderClosedStatusesMap.entrySet().stream()
@@ -328,7 +328,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       messageContent.put(OKAPI_HEADERS, okapiHeaders);
       messageContent.put(EVENT_PAYLOAD, new JsonArray(orderClosedStatusesJsonList));
       HelperUtils.sendEvent(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE, messageContent, requestContext);
-      logger.debug("Event to verify order status - sent");
+      logger.info("Event to verify order status - sent");
     }
   }
 

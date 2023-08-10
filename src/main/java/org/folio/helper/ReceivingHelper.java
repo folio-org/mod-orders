@@ -72,7 +72,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       int piecesQty = StreamEx.ofValues(receivingItems)
                                .mapToInt(Map::size)
                                .sum();
-      logger.debug("{} piece record(s) are going to be received for {} PO line(s)", piecesQty, poLinesQty);
+      logger.info("{} piece record(s) are going to be received for {} PO line(s)", piecesQty, poLinesQty);
     }
   }
 
@@ -133,7 +133,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
         }
 
         return collectResultsOnSuccess(futures).map(updatedPoLines -> {
-          logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
+          logger.info("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
 
           // Send event to check order status for successfully processed PO Lines
           updateOrderStatus(StreamEx.of(poLines)
@@ -149,7 +149,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   private void updateOrderStatus(List<PoLine> poLines, RequestContext requestContext) {
     if (!poLines.isEmpty()) {
-      logger.debug("Sending event to verify order status");
+      logger.info("Sending event to verify order status");
 
       // Collect order ids which should be processed
       List<JsonObject> poIds = StreamEx
@@ -164,7 +164,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       messageContent.put(EVENT_PAYLOAD, new JsonArray(poIds));
       HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent, requestContext);
 
-      logger.debug("Event to verify order status - sent");
+      logger.info("Event to verify order status - sent");
     }
   }
 

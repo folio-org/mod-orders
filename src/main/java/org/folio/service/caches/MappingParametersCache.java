@@ -80,7 +80,7 @@ public class MappingParametersCache {
    */
   private CompletableFuture<MappingParameters> loadMappingParameters(OkapiConnectionParams params) {
     String tenantId = params.getTenantId();
-    LOGGER.debug("loadMappingParameters:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
+    LOGGER.info("loadMappingParameters:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
       tenantId, params.getOkapiUrl(), params.getTenantId());
 
     return RestUtil.doRequest(params, format(getOrganizationsLimitPath(), settingsLimit), HttpMethod.GET, null)

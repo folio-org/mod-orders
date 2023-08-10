@@ -28,7 +28,7 @@ public class ConfigurationEntriesService {
     return restClient.get(requestEntry, Configs.class, requestContext)
       .map(configs -> {
         if (logger.isDebugEnabled()) {
-          logger.debug("The response from mod-configuration: {}", JsonObject.mapFrom(configs).encodePrettily());
+          logger.info("The response from mod-configuration: {}", JsonObject.mapFrom(configs).encodePrettily());
         }
         JsonObject config = new JsonObject();
 

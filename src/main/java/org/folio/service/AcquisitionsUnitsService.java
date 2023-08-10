@@ -115,7 +115,7 @@ public class AcquisitionsUnitsService {
           .collect(Collectors.toList());
 
         if (logger.isDebugEnabled()) {
-          logger.debug("User belongs to {} acq units: {}", ids.size(), StreamEx.of(ids).joining(", "));
+          logger.info("User belongs to {} acq units: {}", ids.size(), StreamEx.of(ids).joining(", "));
         }
 
         return ids;
@@ -160,7 +160,7 @@ public class AcquisitionsUnitsService {
           .collect(Collectors.toList());
 
         if (logger.isDebugEnabled()) {
-          logger.debug("{} acq units with 'protectRead==false' are found: {}", ids.size(), StreamEx.of(ids).joining(", "));
+          logger.info("{} acq units with 'protectRead==false' are found: {}", ids.size(), StreamEx.of(ids).joining(", "));
         }
 
         return ids;

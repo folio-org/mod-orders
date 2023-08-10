@@ -289,7 +289,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private Future<Void> adjustEventType(DataImportEventPayload dataImportEventPayload, JsonObject tenantConfig,
                                        OkapiConnectionParams okapiParams,
                                        RequestContext requestContext) {
-    LOGGER.debug("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId());
+    LOGGER.info("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId());
     WorkflowStatus workflowStatus = extractWorkflowStatus(dataImportEventPayload);
 
     Promise<Void> promise = Promise.promise();
@@ -321,7 +321,7 @@ public class CreateOrderEventHandler implements EventHandler {
             LOGGER.error("adjustEventType:: jobExecutionId: {}", dataImportEventPayload.getJobExecutionId(), throwable);
           } else {
             promise.complete();
-            LOGGER.debug(format("adjustEventType:: Job profile snapshot with id '%s' was retrieved from cache", profileSnapshotId));
+            LOGGER.info(format("adjustEventType:: Job profile snapshot with id '%s' was retrieved from cache", profileSnapshotId));
           }
         });
     }
@@ -340,7 +340,7 @@ public class CreateOrderEventHandler implements EventHandler {
   }
 
   private void setDiCompletedEvent(DataImportEventPayload dataImportEventPayload) {
-    LOGGER.debug("setDiCompletedEvent:: set event type DI_COMPLETED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
+    LOGGER.info("setDiCompletedEvent:: set event type DI_COMPLETED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setEventType(DI_COMPLETED.value());
     dataImportEventPayload.getContext().put(POST_PROCESSING, "true");
@@ -354,11 +354,11 @@ public class CreateOrderEventHandler implements EventHandler {
       .collect(Collectors.toList());
 
     if (!actionProfiles.isEmpty() && checkIfCurrentProfileIsTheLastOne(dataImportEventPayload, actionProfiles)) {
-      LOGGER.debug("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED_READY_FOR_POST_PROCESSING for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
+      LOGGER.info("setEventTypeForOpenOrder:: set event type DI_ORDER_CREATED_READY_FOR_POST_PROCESSING for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
       dataImportEventPayload.setEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value());
       dataImportEventPayload.getContext().put(POST_PROCESSING, "true");
     } else {
-      LOGGER.debug("setEventTypeForOpenOrder:: set event type DI_PENDING_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
+      LOGGER.info("setEventTypeForOpenOrder:: set event type DI_PENDING_ORDER_CREATED for jobExecutionId {}", dataImportEventPayload.getJobExecutionId());
       dataImportEventPayload.setEventType(DI_PENDING_ORDER_CREATED.value());
     }
 
@@ -414,7 +414,7 @@ public class CreateOrderEventHandler implements EventHandler {
             if (e instanceof HttpException) {
               String message = ((HttpException) e).getError().getMessage();
               if (message.contains(ID_UNIQUENESS_ERROR_MSG)) {
-                LOGGER.debug("saveOrder:: Failed to create order with existing id: '{}' due to duplicated event. Ignoring event processing", orderId);
+                LOGGER.info("saveOrder:: Failed to create order with existing id: '{}' due to duplicated event. Ignoring event processing", orderId);
                 return Future.failedFuture(new DuplicateEventException(message));
               }
             }

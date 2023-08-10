@@ -68,7 +68,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       Event event = DatabindCodec.mapper().readValue(kafkaRecord.value(), Event.class);
       DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
       String jobExecutionId = eventPayload.getJobExecutionId();
-      LOGGER.debug("handle:: Data import event payload has been received with event type: {}, jobExecutionId: {}, recordId: {}, chunkId: {}",
+      LOGGER.info("handle:: Data import event payload has been received with event type: {}, jobExecutionId: {}, recordId: {}, chunkId: {}",
         eventPayload.getEventType(), jobExecutionId, recordId, chunkId);
 
       OkapiConnectionParams okapiParams = new OkapiConnectionParams(headersMap, vertx);

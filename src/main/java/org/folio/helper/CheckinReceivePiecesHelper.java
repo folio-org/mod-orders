@@ -130,7 +130,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           int piecesQty = StreamEx.ofValues(piecesByPoLine)
             .mapToInt(List::size)
             .sum();
-          logger.debug("{} piece record(s) retrieved from storage for {} PO line(s)", piecesQty, poLinesQty);
+          logger.info("{} piece record(s) retrieved from storage for {} PO line(s)", piecesQty, poLinesQty);
         }
         return piecesByPoLine;
       });
@@ -686,7 +686,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         long successQty = results.stream()
           .filter(result -> result)
           .count();
-        logger.debug("{} out of {} inventory item(s) successfully updated", successQty, results.size());
+        logger.info("{} out of {} inventory item(s) successfully updated", successQty, results.size());
       }
       return piecesGroupedByPoLine;
     });
@@ -725,7 +725,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           long successQty = results.result().list().stream()
             .filter(Objects::isNull)
             .count();
-          logger.debug("{} out of {} holdings successfully processed", successQty, results.result().size());
+          logger.info("{} out of {} holdings successfully processed", successQty, results.result().size());
         }
       })
       .mapEmpty();

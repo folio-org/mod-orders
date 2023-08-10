@@ -21,7 +21,7 @@ public class SequentialOrderIdServiceImpl implements SequentialOrderIdService {
 
   @Override
   public Future<String> store(String jobExecutionId, Integer sequenceNo, String orderId, String tenantId) {
-    LOGGER.debug("store :: jobExecutionId: {}, sequenceNo: {}, orderId: {}, tenantId: {}",
+    LOGGER.info("store :: jobExecutionId: {}, sequenceNo: {}, orderId: {}, tenantId: {}",
       jobExecutionId, sequenceNo, orderId, tenantId);
     return sequenceIdStorageDao.store(jobExecutionId, sequenceNo, orderId, tenantId);
   }

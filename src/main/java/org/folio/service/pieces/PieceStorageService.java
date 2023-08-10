@@ -85,7 +85,7 @@ public class PieceStorageService {
       .onSuccess(v -> {
         if (logger.isDebugEnabled()) {
           String deletedIds = String.join(",", pieceIds);
-          logger.debug("Pieces were removed : {}", deletedIds);
+          logger.info("Pieces were removed : {}", deletedIds);
         }
       })
       .mapEmpty();

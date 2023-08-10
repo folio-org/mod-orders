@@ -61,7 +61,7 @@ public class JobExecutionTotalRecordsCache {
   }
 
   private CompletableFuture<Integer> loadJobExecutionRecordsAmount(String jobExecutionId, OkapiConnectionParams params) {
-    LOGGER.debug("Trying to load total records amount for jobExecution by id '{}' for cache, okapi url: {}, tenantId: {}",
+    LOGGER.info("Trying to load total records amount for jobExecution by id '{}' for cache, okapi url: {}, tenantId: {}",
       jobExecutionId, params.getOkapiUrl(), params.getTenantId());
 
     return RestUtil.doRequest(params, JOB_EXECUTION_URL + jobExecutionId, HttpMethod.GET, null)

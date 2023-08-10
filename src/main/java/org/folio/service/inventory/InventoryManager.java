@@ -363,7 +363,7 @@ public class InventoryManager {
     return collectResultsOnSuccess(futures).map(holdings -> {
       if (logger.isDebugEnabled()) {
         String deletedIds = holdings.stream().map(holding -> holding.getString(ID)).collect(Collectors.joining(","));
-        logger.debug(String.format("Holding ids : %s", deletedIds));
+        logger.info(String.format("Holding ids : %s", deletedIds));
       }
       return holdings.stream().filter(Objects::nonNull).collect(toList());
     });
@@ -475,7 +475,7 @@ public class InventoryManager {
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
-    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId,
+    logger.info("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId,
         location.getHoldingId());
     if (piecesWithItemsQty == 0) {
       return Future.succeededFuture(Collections.emptyList());
@@ -561,7 +561,7 @@ public class InventoryManager {
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
 
-    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId, holder.getOldHoldingId());
+    logger.info("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId, holder.getOldHoldingId());
     if (piecesWithItemsQty == 0) {
       return Future.succeededFuture(Collections.emptyList());
     }
@@ -674,7 +674,7 @@ public class InventoryManager {
    * @return id of newly created Instance Record
    */
   private Future<String> createInstanceRecord(CompositePoLine compPOL, RequestContext requestContext) {
-    logger.debug("Start processing instance record");
+    logger.info("Start processing instance record");
     JsonObject lookupObj = new JsonObject();
     Future<Void> instanceTypeFuture = getEntryId(INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
       .onSuccess(lookupObj::mergeIn)
@@ -689,7 +689,7 @@ public class InventoryManager {
     return CompositeFuture.join(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
       .map(v -> buildInstanceRecordJsonObject(compPOL, lookupObj))
       .compose(instanceRecJson -> {
-        logger.debug("Instance record to save : {}", instanceRecJson);
+        logger.info("Instance record to save : {}", instanceRecJson);
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
         return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
       });
@@ -868,7 +868,7 @@ public class InventoryManager {
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(itemsCollection -> {
         List<JsonObject> items = extractEntities(itemsCollection, ITEMS);
-        logger.debug("{} existing items found for holding with '{}' id", items.size(), holdingId);
+        logger.info("{} existing items found for holding with '{}' id", items.size(), holdingId);
         return items;
       });
   }
@@ -883,7 +883,7 @@ public class InventoryManager {
    */
   public Future<String> openOrderCreateItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
-    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
+    logger.info("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
     Promise<String> itemFuture = Promise.promise();
     try {
       Piece pieceWithHoldingId = new Piece().withHoldingId(holdingId);
@@ -919,7 +919,7 @@ public class InventoryManager {
           return item;
         })
         .compose(item -> {
-          logger.debug("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
+          logger.info("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
           return createItemRecords(item, quantity, requestContext);
         });
     } else {
@@ -945,7 +945,7 @@ public class InventoryManager {
           return item;
         })
         .compose(item -> {
-          logger.debug("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
+          logger.info("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
           return createItemRecords(item, quantity, requestContext);
         });
     } else {
@@ -1025,7 +1025,7 @@ public class InventoryManager {
   }
 
   public Future<List<JsonObject>> getItemsByPoLineIdsAndStatus(List<String> poLineIds, String itemStatus, RequestContext requestContext) {
-    logger.debug("getItemsByStatus start");
+    logger.info("getItemsByStatus start");
     List<Future<List<JsonObject>>> futures = StreamEx
       .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> {
@@ -1231,7 +1231,7 @@ public class InventoryManager {
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(itemsCollection -> {
         List<JsonObject> items = extractEntities(itemsCollection, ITEMS);
-        logger.debug("{} existing items found out of {} for PO Line with '{}' id", items.size(), expectedQuantity, poLineId);
+        logger.info("{} existing items found out of {} for PO Line with '{}' id", items.size(), expectedQuantity, poLineId);
         return items;
       });
   }

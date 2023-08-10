@@ -27,7 +27,7 @@ public class HandlersTestHelper {
   private static final Logger logger = LogManager.getLogger();
 
   public static void verifyCheckinOrderStatusUpdateEvent(int msgQty) {
-    // logger.debug("Verifying event bus messages");
+    // logger.info("Verifying event bus messages");
     // Wait until event bus registers message
     await().atLeast(50, MILLISECONDS)
       .atMost(5, SECONDS)
@@ -43,7 +43,7 @@ public class HandlersTestHelper {
   }
 
   public static void verifyOrderStatusUpdateEvent(int msgQty) {
-    logger.debug("Verifying event bus messages");
+    logger.info("Verifying event bus messages");
     // Wait until event bus registers message
 
     await().atLeast(100, MILLISECONDS)
@@ -60,7 +60,7 @@ public class HandlersTestHelper {
   }
 
   public static void verifyReceiptStatusUpdateEvent(int msgQty) {
-    logger.debug("Verifying event bus messages");
+    logger.info("Verifying event bus messages");
     // Wait until event bus registers message
     await().atLeast(50, MILLISECONDS)
       .atMost(5, SECONDS)

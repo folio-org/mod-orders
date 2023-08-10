@@ -1307,7 +1307,7 @@ public class PurchaseOrdersApiTest {
     assertThat(createdPieces, notNullValue());
 
     int piecesSize = createdPieces.size();
-    logger.debug("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + createdItems.size());
+    logger.info("------------------- piecesSize, itemSize --------------------\n" + piecesSize + " " + createdItems.size());
     // Verify total number of pieces created should be equal to total quantity
     assertEquals(calculateTotalQuantity(respLine1), piecesSize);
 

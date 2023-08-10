@@ -269,7 +269,7 @@ public class PurchaseOrderLineHelper {
     return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
       .compose(line -> verifyDeleteAllowed(line, requestContext)
         .compose(ok -> {
-          logger.debug("Deleting PO line...");
+          logger.info("Deleting PO line...");
           return encumbranceService.deletePoLineEncumbrances(line, requestContext)
             .compose(v -> purchaseOrderLineService.deletePoLine(line, requestContext));
       }))
@@ -399,7 +399,7 @@ public class PurchaseOrderLineHelper {
     return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
       .map(JsonObject::mapFrom)
       .map(line -> {
-        logger.debug("Validating if the retrieved PO line corresponds to PO");
+        logger.info("Validating if the retrieved PO line corresponds to PO");
         validateOrderId(orderId, line);
         return line;
       });
@@ -461,7 +461,7 @@ public class PurchaseOrderLineHelper {
   }
 
   public Future<Void> updatePoLines(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO, RequestContext requestContext) {
-    logger.debug("updatePoLines start");
+    logger.info("updatePoLines start");
     if (isPoLinesUpdateRequired(poFromStorage, compPO)) {
       List<PoLine> existingPoLines = HelperUtils.convertToPoLines(poFromStorage.getCompositePoLines());
       if (isNotEmpty(compPO.getCompositePoLines())) {
@@ -470,7 +470,7 @@ public class PurchaseOrderLineHelper {
           throw new HttpException(422, poFromStorage.getWorkflowStatus() == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
         }
         validatePOLineProtectedFieldsChangedInPO(poFromStorage, compPO, existingPoLines);
-        logger.debug("updatePoLines start");
+        logger.info("updatePoLines start");
         return handlePoLines(compPO, existingPoLines, requestContext);
       } else {
         return updatePoLinesNumber(compPO, existingPoLines, requestContext);
@@ -515,7 +515,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> handlePoLines(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage, RequestContext requestContext) {
-    logger.debug("handlePoLines start");
+    logger.info("handlePoLines start");
     List<Future<?>> futures = new ArrayList<>(processPoLinesCreation(compOrder, poLinesFromStorage, requestContext));
     if (!poLinesFromStorage.isEmpty()) {
       futures.addAll(processPoLinesUpdate(compOrder, poLinesFromStorage, requestContext));
@@ -604,7 +604,7 @@ public class PurchaseOrderLineHelper {
    */
   private Future<List<Error>> validateNewPoLine(CompositePoLine compPOL, JsonObject tenantConfiguration,
     RequestContext requestContext) {
-    logger.debug("Validating if PO Line is valid...");
+    logger.info("Validating if PO Line is valid...");
     List<Error> errors = new ArrayList<>();
     if (compPOL.getPurchaseOrderId() == null) {
       errors.add(ErrorCodes.MISSING_ORDER_ID_IN_POL.toError());

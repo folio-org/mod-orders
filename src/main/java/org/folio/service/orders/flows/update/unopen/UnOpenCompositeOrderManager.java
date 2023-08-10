@@ -124,7 +124,7 @@ public class UnOpenCompositeOrderManager {
       return deleteExpectedPieces(compPOL, requestContext).onSuccess(pieces -> {
         if (logger.isDebugEnabled()) {
           String deletedIds = pieces.stream().map(Piece::getId).collect(Collectors.joining(","));
-          logger.debug(String.format("Pieces were removed : %s", deletedIds));
+          logger.info(String.format("Pieces were removed : %s", deletedIds));
         }
       })
       .mapEmpty();
@@ -159,7 +159,7 @@ public class UnOpenCompositeOrderManager {
         updateLocations(compPOL, deletedHoldingVsLocationIds);
         return null;
       })
-      .onSuccess(v -> logger.debug("Pieces, Holdings deleted after UnOpen order"))
+      .onSuccess(v -> logger.info("Pieces, Holdings deleted after UnOpen order"))
       .mapEmpty();
   }
 
@@ -209,7 +209,7 @@ public class UnOpenCompositeOrderManager {
                                     updateLocations(compPOL, deletedHoldingVsLocationIds);
                                     return null;
                                   })
-                                  .onSuccess(v -> logger.debug("Items and holdings deleted after UnOpen order"))
+                                  .onSuccess(v -> logger.info("Items and holdings deleted after UnOpen order"))
                                   .mapEmpty();
                               }
                               return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
@@ -223,7 +223,7 @@ public class UnOpenCompositeOrderManager {
                                         updateLocations(compPOL, deletedHoldingVsLocationIds);
                                         return null;
                                       })
-                                      .onSuccess(v -> logger.debug("Pieces, Items, Holdings deleted after UnOpen order"))
+                                      .onSuccess(v -> logger.info("Pieces, Items, Holdings deleted after UnOpen order"))
                                       .mapEmpty();
                                   }
                                   return Future.succeededFuture();
@@ -277,7 +277,7 @@ public class UnOpenCompositeOrderManager {
           String deletedIds = resultDeletedHoldingVsLocationIds.stream()
             .map(Pair::getKey)
             .collect(Collectors.joining(","));
-          logger.debug(String.format("Holdings were removed : %s", deletedIds));
+          logger.info(String.format("Holdings were removed : %s", deletedIds));
         }
         return resultDeletedHoldingVsLocationIds;
       });
@@ -306,7 +306,7 @@ public class UnOpenCompositeOrderManager {
         .map(resultDeletedHoldingVsLocationIds -> {
           if (logger.isDebugEnabled()) {
             String deletedIds = resultDeletedHoldingVsLocationIds.stream().map(Pair::getKey).collect(Collectors.joining(","));
-            logger.debug(String.format("Holdings were removed : %s", deletedIds));
+            logger.info(String.format("Holdings were removed : %s", deletedIds));
           }
           return resultDeletedHoldingVsLocationIds;
         });
@@ -333,7 +333,7 @@ public class UnOpenCompositeOrderManager {
     return collectResultsOnSuccess(deletedItems).map(resultDeletedItems -> {
       if (logger.isDebugEnabled()) {
         String deletedIds = resultDeletedItems.stream().map(item -> item.getString(ID)).collect(Collectors.joining(","));
-        logger.debug(String.format("Item were removed : %s", deletedIds));
+        logger.info(String.format("Item were removed : %s", deletedIds));
       }
       return resultDeletedItems;
     });

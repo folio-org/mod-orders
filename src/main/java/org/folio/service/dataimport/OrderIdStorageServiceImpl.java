@@ -27,7 +27,7 @@ public class OrderIdStorageServiceImpl implements IdStorageService {
 
   @Override
   public Future<String> store(String recordId, String tenantId) {
-    LOGGER.debug("get :: recordId: {}, tenantId: {}", recordId, tenantId);
+    LOGGER.info("get :: recordId: {}, tenantId: {}", recordId, tenantId);
 
     CompletableFuture<String> future = new CompletableFuture<>();
 

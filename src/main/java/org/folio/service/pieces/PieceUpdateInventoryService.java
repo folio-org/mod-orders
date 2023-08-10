@@ -53,7 +53,7 @@ public class PieceUpdateInventoryService {
     final int ITEM_QUANTITY = 1;
     Promise<String> itemFuture = Promise.promise();
     try {
-      logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
+      logger.info("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
         if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
           inventoryManager.createMissingElectronicItems(compPOL, piece, ITEM_QUANTITY, requestContext)
             .onSuccess(idS -> itemFuture.complete(idS.get(0)))

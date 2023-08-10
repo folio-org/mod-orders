@@ -43,7 +43,7 @@ public class RestClient {
 
   public <T> Future<T> post(String endpoint, T entity, Class<T> responseType, RequestContext requestContext) {
     if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}' with body: {}", endpoint, JsonObject.mapFrom(entity).encodePrettily());
+      log.info("Sending 'POST {}' with body: {}", endpoint, JsonObject.mapFrom(entity).encodePrettily());
     }
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
@@ -72,7 +72,7 @@ public class RestClient {
   public <T> Future<Void> put(String endpoint, T dataObject,  RequestContext requestContext) {
     var recordData = JsonObject.mapFrom(dataObject);
     if (log.isDebugEnabled()) {
-      log.debug("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
+      log.info("Sending 'PUT {}' with body: {}", endpoint, recordData.encodePrettily());
     }
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
@@ -93,7 +93,7 @@ public class RestClient {
   public <T>Future<Void> patch(String endpoint, T dataObject, RequestContext requestContext) {
     var recordData = JsonObject.mapFrom(dataObject);
     if (log.isDebugEnabled()) {
-      log.debug("Sending 'PATCH {}' with body: {}", endpoint, recordData.encodePrettily());
+      log.info("Sending 'PATCH {}' with body: {}", endpoint, recordData.encodePrettily());
     }
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
@@ -115,7 +115,7 @@ public class RestClient {
   }
 
   public Future<Void> delete(String endpointById, boolean skipError404, RequestContext requestContext) {
-    log.debug(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpointById);
+    log.info(CALLING_ENDPOINT_MSG, HttpMethod.DELETE, endpointById);
 
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     Promise<Void> promise = Promise.promise();
@@ -167,7 +167,7 @@ public class RestClient {
   }
 
   public <T> Future<T> get(String endpoint, boolean skipError404, Class<T> responseType,  RequestContext requestContext) {
-    log.debug("Calling GET {}", endpoint);
+    log.info("Calling GET {}", endpoint);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
     Promise<T> promise = Promise.promise();
@@ -179,7 +179,7 @@ public class RestClient {
       .map(HttpResponse::bodyAsJsonObject)
       .map(jsonObject -> {
         if (log.isDebugEnabled()) {
-          log.debug("Successfully retrieved: {}", jsonObject.encodePrettily());
+          log.info("Successfully retrieved: {}", jsonObject.encodePrettily());
         }
         return jsonObject.mapTo(responseType);
       })
@@ -191,7 +191,7 @@ public class RestClient {
 
 
   public Future<JsonObject> getAsJsonObject(String endpoint, boolean skipError404, RequestContext requestContext) {
-    log.debug("Calling GET {}", endpoint);
+    log.info("Calling GET {}", endpoint);
     Promise<JsonObject> promise = Promise.promise();
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     var webClient = getVertxWebClient(requestContext.getContext());
@@ -203,7 +203,7 @@ public class RestClient {
       .map(HttpResponse::bodyAsJsonObject)
       .onSuccess(jsonObject -> {
         if (log.isDebugEnabled()) {
-          log.debug("Successfully retrieved: {}", jsonObject.encodePrettily());
+          log.info("Successfully retrieved: {}", jsonObject.encodePrettily());
         }
         promise.complete(jsonObject);
       })
@@ -247,7 +247,7 @@ public class RestClient {
 
   public Future<String> postJsonObjectAndGetId(RequestEntry requestEntry, JsonObject entity, RequestContext requestContext) {
     if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), JsonObject.mapFrom(entity).encodePrettily());
+      log.info("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), JsonObject.mapFrom(entity).encodePrettily());
     }
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
@@ -262,7 +262,7 @@ public class RestClient {
 
   public Future<JsonObject> postJsonObject(RequestEntry requestEntry, JsonObject jsonObject, RequestContext requestContext) {
     if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), jsonObject.encodePrettily());
+      log.info("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), jsonObject.encodePrettily());
     }
     var endpoint = requestEntry.buildEndpoint();
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());

@@ -68,7 +68,7 @@ public class OpenCompositeOrderInventoryService {
       RequestContext requestContext) {
 
     if (logger.isDebugEnabled()) {
-      logger.debug("Executing a strategy for: {}", compPOL.getOrderFormat().value());
+      logger.info("Executing a strategy for: {}", compPOL.getOrderFormat().value());
     }
     return processInventoryStrategyResolver.getHoldingAndItemStrategy(compPOL.getOrderFormat().value())
       .processInventory(compPOL, titleId, isInstanceMatchingDisabled, inventoryManager, openCompositeOrderPieceService, restClient, requestContext);

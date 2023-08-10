@@ -160,15 +160,15 @@ public class InventoryInteractionTestHelper {
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> piecesSearches = getPieceSearches();
     assertNotNull(instancesSearches);
-    logger.debug("--------------------------- Instances found -------------------------------\n" + new JsonArray(instancesSearches).encodePrettily());
+    logger.info("--------------------------- Instances found -------------------------------\n" + new JsonArray(instancesSearches).encodePrettily());
     if (checkHoldingSearches) {
       assertNotNull(holdingsSearches);
-      logger.debug("--------------------------- Holdings found -------------------------------\n" + new JsonArray(holdingsSearches).encodePrettily());
+      logger.info("--------------------------- Holdings found -------------------------------\n" + new JsonArray(holdingsSearches).encodePrettily());
     }
     assertNotNull(itemsSearches);
-    logger.debug("--------------------------- Items found -------------------------------\n" + new JsonArray(itemsSearches).encodePrettily());
+    logger.info("--------------------------- Items found -------------------------------\n" + new JsonArray(itemsSearches).encodePrettily());
     assertNotNull(piecesSearches);
-    logger.debug("--------------------------- Pieces found -------------------------------\n" + new JsonArray(piecesSearches).encodePrettily());
+    logger.info("--------------------------- Pieces found -------------------------------\n" + new JsonArray(piecesSearches).encodePrettily());
 
     // Check that creation of the new instances and items was done
     List<JsonObject> createdInstances = getCreatedInstances();
@@ -176,15 +176,15 @@ public class InventoryInteractionTestHelper {
     List<JsonObject> createdItems = getCreatedItems();
     List<JsonObject> createdPieces = getCreatedPieces();
     assertNotNull(createdInstances);
-    logger.debug("--------------------------- Instances created -------------------------------\n" + new JsonArray(createdInstances).encodePrettily());
+    logger.info("--------------------------- Instances created -------------------------------\n" + new JsonArray(createdInstances).encodePrettily());
     assertNotNull(createdHoldings);
-    logger.debug("--------------------------- Holdings created -------------------------------\n" + new JsonArray(createdHoldings).encodePrettily());
+    logger.info("--------------------------- Holdings created -------------------------------\n" + new JsonArray(createdHoldings).encodePrettily());
     if (checkItemsCreated) {
       assertNotNull(createdItems);
-      logger.debug("--------------------------- Items created -------------------------------\n" + new JsonArray(createdItems).encodePrettily());
+      logger.info("--------------------------- Items created -------------------------------\n" + new JsonArray(createdItems).encodePrettily());
     }
     assertNotNull(createdPieces);
-    logger.debug("--------------------------- Pieces created -------------------------------\n" + new JsonArray(createdPieces).encodePrettily());
+    logger.info("--------------------------- Pieces created -------------------------------\n" + new JsonArray(createdPieces).encodePrettily());
   }
 
   public static void verifyPiecesQuantityForSuccessCase(List<CompositePoLine> poLines, List<JsonObject> createdPieces) {

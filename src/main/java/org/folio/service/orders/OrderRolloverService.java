@@ -241,7 +241,7 @@ public class OrderRolloverService {
   }
 
   private List<PoLine> applyPoLinesRolloverChanges(List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders) {
-    logger.debug("Starting apply rollover changes");
+    logger.info("Starting apply rollover changes");
     poLineEncumbrancesHolders.forEach(holder -> {
       var currEncumbranceFundIdMap = holder.getEncumbrances().stream().collect(groupingBy(Transaction::getFromFundId));
       if (!MapUtils.isEmpty(currEncumbranceFundIdMap)) {

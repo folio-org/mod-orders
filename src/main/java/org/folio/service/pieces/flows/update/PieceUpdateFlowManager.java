@@ -65,8 +65,8 @@ public class PieceUpdateFlowManager {
         messageToEventBus.put("poLineIdUpdate", holder.getPieceToUpdate().getPoLineId());
         Piece.ReceivingStatus receivingStatusStorage = holder.getPieceFromStorage().getReceivingStatus();
         Piece.ReceivingStatus receivingStatusUpdate = holder.getPieceToUpdate().getReceivingStatus();
-        logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
-        logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
+        logger.info("receivingStatusStorage -- {}", receivingStatusStorage);
+        logger.info("receivingStatusUpdate -- {}", receivingStatusUpdate);
         if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
           pieceService.receiptConsistencyPiecePoLine(messageToEventBus, requestContext);
         }

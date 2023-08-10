@@ -44,7 +44,7 @@ public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy
       })
       .map(aVoid -> encumbrancesProcessingHolderBuilder.distributeHoldersByOperation(encumbranceRelationsHolders))
       .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext))
-      .onSuccess(holders -> LOG.debug("End processing encumbrances for piece add/delete"));
+      .onSuccess(holders -> LOG.info("End processing encumbrances for piece add/delete"));
   }
 
   public Future<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(List<EncumbranceRelationsHolder> encumbranceRelationsHolders,

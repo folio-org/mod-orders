@@ -18,7 +18,7 @@ public class ExchangeRateProviderResolver {
             .map(query -> query.get(RATE_KEY, Double.class))
             .map(rate -> (ExchangeRateProvider) new ManualExchangeRateProvider())
             .orElseGet(() -> new FinanceApiExchangeRateProvider(requestContext));
-    logger.debug("Created ExchangeRateProvider name: {}", exchangeRateProvider.getContext().getProviderName());
+    logger.info("Created ExchangeRateProvider name: {}", exchangeRateProvider.getContext().getProviderName());
     return exchangeRateProvider;
   }
 }

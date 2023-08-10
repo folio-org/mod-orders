@@ -64,7 +64,7 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<List<Piece>> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
                                                      boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("Get pieces by poLine ID");
+    logger.info("Get pieces by poLine ID");
     return openCompositeOrderHolderBuilder.buildHolder(compPOL, titleId, expectedPiecesWithItem, requestContext)
       .compose(holder -> {
         if (CollectionUtils.isNotEmpty(holder.getPiecesWithLocationToProcess()) &&
@@ -93,7 +93,7 @@ public class OpenCompositeOrderPieceService {
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
     piecesToCreate.forEach(piece -> piece.setTitleId(holder.getTitleId()));
-    logger.debug("Trying to create pieces");
+    logger.info("Trying to create pieces");
     List<Future<Piece>> piecesToCreateFutures = new ArrayList<>();
     piecesToCreate.forEach(piece ->
       piecesToCreateFutures.add(createPiece(piece, isInstanceMatchingDisabled, requestContext))
@@ -106,7 +106,7 @@ public class OpenCompositeOrderPieceService {
   }
 
   public Future<Piece> createPiece(Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("createPiece start");
+    logger.info("createPiece start");
     return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
       .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
         .map(v -> order))
@@ -129,8 +129,8 @@ public class OpenCompositeOrderPieceService {
                 messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
 
                 Piece.ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
-                logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
-                logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
+                logger.info("receivingStatusStorage -- {}", receivingStatusStorage);
+                logger.info("receivingStatusUpdate -- {}", receivingStatusUpdate);
 
                 if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
                   receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, messageToEventBus, requestContext);

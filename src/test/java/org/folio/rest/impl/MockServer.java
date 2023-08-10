@@ -1347,7 +1347,7 @@ public class MockServer {
   }
 
   private JsonObject getOrganizationById(String organizationId) {
-    logger.debug("Searching for organization by id={}", organizationId);
+    logger.info("Searching for organization by id={}", organizationId);
     JsonObject body;
     try {
       switch (organizationId) {
