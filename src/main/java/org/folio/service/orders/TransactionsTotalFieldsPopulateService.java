@@ -28,6 +28,7 @@ public class TransactionsTotalFieldsPopulateService implements CompositeOrderDyn
   @Override
   public Future<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
+    log.info("[ORDERS_AUDIT] TransactionsTotalFieldsPopulateService calculateTotalEstimatedPrice");
     return Optional.of(holder)
       .map(CompositeOrderRetrieveHolder::getFiscalYear)
       .map(s -> withTotalFields(holder, requestContext))

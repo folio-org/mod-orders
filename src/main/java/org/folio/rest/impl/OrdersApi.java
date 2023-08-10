@@ -68,6 +68,8 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
   public void getOrdersCompositeOrdersById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
+    logger.info("[ORDERS_AUDIT] Getting order by id {}", id);
+
     purchaseOrderHelper.getCompositeOrder(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(order -> asyncResultHandler.handle(succeededFuture(buildOkResponse(order))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));

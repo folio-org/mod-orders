@@ -438,6 +438,9 @@ public class PurchaseOrderHelper {
    */
   public Future<CompositePurchaseOrder> getCompositeOrder(String orderId, RequestContext requestContext) {
     Promise<CompositePurchaseOrder> promise = Promise.promise();
+
+    logger.info("[ORDERS_AUDIT] getCompositeOrder {}", orderId);
+
     purchaseOrderStorageService.getPurchaseOrderByIdAsJson(orderId, requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
       .compose(compPO -> protectionService.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ, requestContext)
@@ -449,6 +452,7 @@ public class PurchaseOrderHelper {
         .compose(ok -> purchaseOrderLineService.populateOrderLines(compPO, requestContext)
           .compose(compPOWithLines -> titlesService.fetchNonPackageTitles(compPOWithLines, requestContext))
           .map(linesIdTitles -> {
+            logger.info("[ORDERS_AUDIT] populateInstanceId");
             populateInstanceId(linesIdTitles, compPO.getCompositePoLines());
             return null;
           })
@@ -707,6 +711,7 @@ public class PurchaseOrderHelper {
         line.setInstanceId(lineIdsTitles.get(line.getId()).get(0).getInstanceId());
       }
     });
+    logger.info("populateInstanceId completed");
   }
 
   /**

@@ -37,6 +37,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
   @Override
   public Future<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder,
       RequestContext requestContext) {
+    logger.info("[ORDERS_AUDIT] OrderLinesSummaryPopulateService populate");
     CompositePurchaseOrder compPO = holder.getOrder();
     List<CompositePoLine> compositePoLines = holder.getOrder().getCompositePoLines();
     return calculateTotalEstimatedPrice(compositePoLines, requestContext).map(totalAmount -> {
@@ -55,6 +56,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
    */
   public Future<Double> calculateTotalEstimatedPrice(List<CompositePoLine> compositePoLines,
       RequestContext requestContext) {
+    logger.info("[ORDERS_AUDIT] OrderLinesSummaryPopulateService calculateTotalEstimatedPrice");
     return configurationEntriesCache.getSystemCurrency(requestContext)
       .compose(toCurrency -> getCollect(compositePoLines, requestContext, toCurrency)
         .map(amounts -> amounts.stream()
@@ -84,6 +86,7 @@ public class OrderLinesSummaryPopulateService implements CompositeOrderDynamicDa
   }
 
   private int calculateTotalItemsQuantity(List<CompositePoLine> poLines) {
+    logger.info("[ORDERS_AUDIT] OrderLinesSummaryPopulateService calculateTotalItemsQuantity");
     return poLines.stream()
       .mapToInt(HelperUtils::calculateTotalQuantity)
       .sum();

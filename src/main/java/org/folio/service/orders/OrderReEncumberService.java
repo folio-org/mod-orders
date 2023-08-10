@@ -81,6 +81,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   public Future<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder orderRetrieveHolder,
                                                             RequestContext requestContext) {
+    logger.info("[ORDERS_AUDIT] OrderReEncumberService populate");
     orderRetrieveHolder.withNeedReEncumber(false);
     List<ReEncumbranceHolder> reEncumbranceHolders = reEncumbranceHoldersBuilder.buildReEncumbranceHoldersWithOrdersData(orderRetrieveHolder.getOrder());
     if (reEncumbranceHolders.isEmpty()) {
