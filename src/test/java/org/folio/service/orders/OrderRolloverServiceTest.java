@@ -2,6 +2,7 @@ package org.folio.service.orders;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static java.lang.Thread.sleep;
 import static java.util.Collections.singletonList;
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
@@ -40,10 +41,10 @@ import javax.money.convert.ExchangeRateProvider;
 
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
-import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverErrorCollection;
+import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -66,6 +67,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -231,7 +233,8 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(poLineCollection), succeededFuture(emptyPoLineCollection))
       .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
+    doReturn(succeededFuture(poLineOneTime), succeededFuture(poLineOngoing2), succeededFuture(poLineOngoing3))
+      .when(purchaseOrderLineService).saveOrderLine(any(PoLine.class), any());
 
     LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
       .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
@@ -353,7 +356,7 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(poLineCollection), succeededFuture(emptyPoLineCollection))
       .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(any(), any());
+    doReturn(succeededFuture(poLineOneTime)).when(purchaseOrderLineService).saveOrderLine(any(PoLine.class), any());
 
     LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
       .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
@@ -471,7 +474,8 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(poLineCollection), succeededFuture(emptyPoLineCollection))
       .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
     doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture()).when(purchaseOrderLineService).saveOrderLines(any(), any());
+    doReturn(succeededFuture(poLineOneTime), succeededFuture(poLineOngoing2), succeededFuture(poLineOngoing3))
+      .when(purchaseOrderLineService).saveOrderLine(any(PoLine.class), any());
 
     LedgerFiscalYearRolloverProgress progress = new LedgerFiscalYearRolloverProgress().withId(UUID.randomUUID().toString())
       .withLedgerRolloverId(ledgerFiscalYearRollover.getId()).withOverallRolloverStatus(RolloverStatus.IN_PROGRESS)
@@ -541,7 +545,8 @@ public class OrderRolloverServiceTest {
 
   @Test
   @DisplayName("Should remove encumbrance links and encumbrances if needed for closed orders")
-  void shouldRemoveEncumbranceLinksAndEncumbrancesIfNeededForClosedOrders(VertxTestContext vertxTestContext) {
+  void shouldRemoveEncumbranceLinksAndEncumbrancesIfNeededForClosedOrders(VertxTestContext vertxTestContext)
+    throws InterruptedException {
     String fromFiscalYearId = UUID.randomUUID().toString();
     String ledgerId = UUID.randomUUID().toString();
     String toFiscalYearId = UUID.randomUUID().toString();
@@ -599,10 +604,13 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(errorCollection)).when(ledgerRolloverErrorService).getRolloverErrorsByRolloverId(ledgerFiscalYearRollover.getId(), requestContext);
     doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
     doReturn(succeededFuture(funds)).when(fundService).getFundsByLedgerId(ledgerId, requestContext);
+
     doReturn(succeededFuture(emptyPoLineCollection), succeededFuture(poLineCollection))
-      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture(poLines)).when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any());
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLines(eq(poLines), any());
+      .when(purchaseOrderLineService).getOrderLineCollection(anyString(), anyInt(), anyInt(), any(RequestContext.class));
+    doReturn(succeededFuture(poLineCollection.getPoLines()))
+      .when(purchaseOrderLineService).getOrderLines(anyString(), anyInt(), anyInt(), any(RequestContext.class));
+
+    doReturn(succeededFuture(poLine)).when(purchaseOrderLineService).saveOrderLine(any(PoLine.class), any());
 
     doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
 
@@ -621,12 +629,16 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(null)).when(transactionService).deleteTransactions(anyList(), any());
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
+    sleep(3000);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
-        assertThat(fundDistribution.getEncumbrance(), equalTo(null));
         verify(transactionService, times(1)).deleteTransactions(
           argThat(transactions -> transactions.size() == 1 && currEncumbrId.equals(transactions.get(0).getId())), any());
-        verify(purchaseOrderLineService, times(1)).saveOrderLines(eq(poLines), any());
+
+        ArgumentCaptor<PoLine> argumentCaptor = ArgumentCaptor.forClass(PoLine.class);
+        verify(purchaseOrderLineService).saveOrderLine(argumentCaptor.capture(), any(RequestContext.class));
+        assertThat(argumentCaptor.getAllValues().get(0).getFundDistribution().get(0).getEncumbrance(), equalTo(null));
+
         vertxTestContext.completeNow();
       })
       .onFailure(vertxTestContext::failNow);

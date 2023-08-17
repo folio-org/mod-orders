@@ -7,6 +7,7 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.dao.FailedLedgerRolloverPoLineDao;
 import org.folio.helper.PoNumberHelper;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
@@ -197,10 +198,11 @@ public class ApplicationConfig {
   @Bean
   OrderRolloverService rolloverOrderService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
                                             ConfigurationEntriesCache configurationEntriesCache, ExchangeRateProviderResolver exchangeRateProviderResolver,
-                                            LedgerRolloverProgressService ledgerRolloverProgressService, LedgerRolloverErrorService ledgerRolloverErrorService) {
+                                            LedgerRolloverProgressService ledgerRolloverProgressService, LedgerRolloverErrorService ledgerRolloverErrorService,
+                                            FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao) {
     return new OrderRolloverService(fundService, purchaseOrderLineService, transactionService,
                                     configurationEntriesCache, exchangeRateProviderResolver,
-                                    ledgerRolloverProgressService, ledgerRolloverErrorService);
+                                    ledgerRolloverProgressService, ledgerRolloverErrorService, failedLedgerRolloverPoLineDao);
   }
 
   @Bean

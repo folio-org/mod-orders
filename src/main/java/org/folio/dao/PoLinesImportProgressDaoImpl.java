@@ -1,17 +1,18 @@
 package org.folio.dao;
 
-import io.vertx.core.Future;
-import io.vertx.sqlclient.Tuple;
-import org.folio.dao.util.PostgresClientFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
+import static org.folio.dao.util.DbUtils.prepareFullTableName;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
-import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
+import org.folio.dao.util.PostgresClientFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import io.vertx.core.Future;
+import io.vertx.sqlclient.Tuple;
 
 @Repository
 public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
@@ -71,10 +72,6 @@ public class PoLinesImportProgressDaoImpl implements PoLinesImportProgressDao {
       .compose(rows -> rows.iterator().hasNext()
         ? Future.succeededFuture(rows.iterator().next().getBoolean(PO_LINES_PROCESSED_FIELD))
         : Future.failedFuture(String.format(PO_LINES_PROGRESS_NOT_FOUND_MSG, orderId)));
-  }
-
-  private String prepareFullTableName(String tenantId, String table) {
-    return String.format("%s.%s", convertToPsqlStandard(tenantId), table);
   }
 
 }

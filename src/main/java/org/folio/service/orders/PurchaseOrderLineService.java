@@ -75,7 +75,9 @@ public class PurchaseOrderLineService {
 
 
   public Future<List<PoLine>> getOrderLines(String query, int offset, int limit, RequestContext requestContext) {
-    return getOrderLineCollection(query, offset, limit, requestContext).map(PoLineCollection::getPoLines);
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
+    return restClient.get(requestEntry, PoLineCollection.class, requestContext)
+      .map(PoLineCollection::getPoLines);
   }
 
   public Future<PoLine> getOrderLineById(String lineId, RequestContext requestContext) {
@@ -347,6 +349,7 @@ public class PurchaseOrderLineService {
           HttpException ex = new HttpException(500, ErrorCodes.ERROR_RETRIEVING_PO_LINES.toError()
             .withParameters(List.of(idParam, causeParam)));
           logger.error(ex.getMessage(), t);
+          // TODO: replace CompletionException with more meaningful exception type everywhere it possible. No need after MODORDERS-780
           throw new CompletionException(ex);
         });
     } else {
