@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import javax.money.Monetary;
 import javax.money.MonetaryAmount;
@@ -21,6 +20,7 @@ import javax.money.MonetaryOperator;
 import javax.money.convert.CurrencyConversion;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -207,7 +207,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   private List<ReEncumbranceHolder> ensureReEncumbranceHoldersExist(List<ReEncumbranceHolder> holders) {
     return Optional.of(holders)
-      .filter(Predicate.not(List::isEmpty))
+      .filter(CollectionUtils::isNotEmpty)
       .orElseThrow(() -> new HttpException(HttpResponseStatus.CONFLICT.code(), ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND.toError()));
   }
 
