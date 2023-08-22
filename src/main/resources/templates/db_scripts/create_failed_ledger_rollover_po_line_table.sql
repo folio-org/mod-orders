@@ -1,5 +1,5 @@
 -- Creates table to store failures during rollover
-CREATE TABLE IF NOT EXISTS failed_ledger_rollover_po_line
+CREATE TABLE IF NOT EXISTS ${myuniversity}_${mymodule}.failed_ledger_rollover_po_line
 (
   id uuid NOT NULL PRIMARY KEY,
   rollover_id uuid,
@@ -11,3 +11,4 @@ CREATE TABLE IF NOT EXISTS failed_ledger_rollover_po_line
   workflow_status text
 );
 
+CREATE INDEX IF NOT EXISTS rollover_id_idx ON ${myuniversity}_${mymodule}.failed_ledger_rollover_po_line USING btree (rollover_id);
