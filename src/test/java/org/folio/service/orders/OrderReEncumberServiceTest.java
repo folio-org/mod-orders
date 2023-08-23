@@ -5,6 +5,7 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.ROLLOVER_NOT_COMPLETED;
+import static org.folio.rest.core.exceptions.ErrorCodes.ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND;
 import static org.folio.rest.jaxrs.model.RolloverStatus.ERROR;
 import static org.folio.rest.jaxrs.model.RolloverStatus.IN_PROGRESS;
 import static org.folio.rest.jaxrs.model.RolloverStatus.NOT_STARTED;
@@ -397,7 +398,7 @@ public class OrderReEncumberServiceTest {
   }
 
   @Test
-  void reEncumberWithEmptyHoldersShouldCompleteSuccessfully(VertxTestContext vertxTestContext) {
+  void reEncumberWithEmptyHoldersShouldFailed(VertxTestContext vertxTestContext) {
 
     String orderId = UUID.randomUUID().toString();
 
@@ -422,13 +423,18 @@ public class OrderReEncumberServiceTest {
     when(exchangeRateProviderResolver.resolve(conversionQuery, requestContext)).thenReturn(exchangeRateProvider);
     Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
 
-    vertxTestContext.assertComplete(future)
-      .onSuccess(result -> vertxTestContext.completeNow())
-      .onFailure(vertxTestContext::failNow);
+    vertxTestContext.assertFailure(future)
+      .onComplete(throwable -> {
+        assertTrue(throwable.failed());
+        HttpException httpException = (HttpException) throwable.cause();
+        assertEquals(409, httpException.getCode());
+        assertEquals(ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND.toError(), httpException.getError());
+        vertxTestContext.completeNow();
+      });
   }
 
   @Test
-  void shouldFilterReEncumberHoldersWithEmptyEncumbranceRollover(VertxTestContext vertxTestContext) {
+  void shouldFailReEncumberHoldersWithEmptyEncumbranceRollover(VertxTestContext vertxTestContext) {
 
     CompositePoLine line= new CompositePoLine().withCost(new Cost().withCurrency("USD").withListUnitPrice(1d));
     String orderId = UUID.randomUUID().toString();
@@ -469,14 +475,14 @@ public class OrderReEncumberServiceTest {
 
     Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
 
-    vertxTestContext.assertComplete(future)
-      .onSuccess(result -> {
-        verify(spyReEncumbranceHoldersBuilder).withPreviousFyEncumbrances(argumentCaptorForList.capture(), any());
-        List<ReEncumbranceHolder> argumentHolders = argumentCaptorForList.getValue();
-        assertThat(argumentHolders, hasSize(0));
+    vertxTestContext.assertFailure(future)
+      .onComplete(throwable -> {
+        assertTrue(throwable.failed());
+        HttpException httpException = (HttpException) throwable.cause();
+        assertEquals(409, httpException.getCode());
+        assertEquals(ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND.toError(), httpException.getError());
         vertxTestContext.completeNow();
-      })
-      .onFailure(vertxTestContext::failNow);
+      });
   }
 
   @Test

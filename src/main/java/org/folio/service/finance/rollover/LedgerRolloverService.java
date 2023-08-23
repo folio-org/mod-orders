@@ -1,6 +1,7 @@
 package org.folio.service.finance.rollover;
 
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.rest.jaxrs.model.LedgerFiscalYearRollover.RolloverType.COMMIT;
 import static org.folio.service.finance.transaction.EncumbranceService.AND;
 
 import java.util.List;
@@ -32,7 +33,8 @@ public class LedgerRolloverService {
     }
 
     public Future<List<LedgerFiscalYearRollover>> getLedgerFyRollovers(String fiscalYeaId, List<String> ledgerIds, RequestContext requestContext) {
-        String query = "toFiscalYearId==" + fiscalYeaId + AND + convertIdsToCqlQuery(ledgerIds, "ledgerId");
+        String query = String.format("rolloverType==%s AND toFiscalYearId==%s AND %s",
+          COMMIT, fiscalYeaId, convertIdsToCqlQuery(ledgerIds, "ledgerId"));
         RequestEntry requestEntry = new RequestEntry(LEDGER_ROLLOVERS_ENDPOINT)
                 .withQuery(query).withOffset(0).withLimit(ledgerIds.size());
         return restClient.get(requestEntry, LedgerFiscalYearRolloverCollection.class, requestContext)
