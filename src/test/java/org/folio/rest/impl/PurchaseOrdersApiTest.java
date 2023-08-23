@@ -3771,6 +3771,19 @@ public class PurchaseOrdersApiTest {
   }
 
   @Test
+  void testPostOrdersToIgnoreNextPolNumber() throws Exception {
+    logger.info("=== Test Post order to verify nextPolNumber is ignored ===");
+
+    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(reqData);
+
+    CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    assertThat(resp.getCompositePoLines().get(0).getPoLineNumber(), equalTo("268758-1"));
+  }
+
+  @Test
   void testPutOrdersWithInvalidIsbn() throws Exception {
     logger.info("=== Test Put Order with invalid ISBN ===");
 
