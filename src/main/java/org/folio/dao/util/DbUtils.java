@@ -2,7 +2,7 @@ package org.folio.dao.util;
 
 import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 
-public class DbUtils {
+public final class DbUtils {
 
   private DbUtils() {
   }

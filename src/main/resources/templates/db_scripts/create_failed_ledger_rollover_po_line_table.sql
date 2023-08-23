@@ -11,4 +11,4 @@ CREATE TABLE IF NOT EXISTS ${myuniversity}_${mymodule}.failed_ledger_rollover_po
   workflow_status text
 );
 
-CREATE INDEX IF NOT EXISTS rollover_id_idx ON ${myuniversity}_${mymodule}.failed_ledger_rollover_po_line USING btree (rollover_id);
+CREATE INDEX IF NOT EXISTS failed_ledger_rollover_po_line_rollover_id_idx ON ${myuniversity}_${mymodule}.failed_ledger_rollover_po_line USING btree (rollover_id);

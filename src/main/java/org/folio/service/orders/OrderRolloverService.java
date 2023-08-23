@@ -217,30 +217,33 @@ public class OrderRolloverService {
       .mapEmpty();
   }
 
-  private Future<Void> saveOrderLines(List<PoLine> orderLines, LedgerFiscalYearRollover ledgerFYRollover, PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
+  private Future<Void> saveOrderLines(List<PoLine> orderLines, LedgerFiscalYearRollover ledgerFYRollover,
+      PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
     return GenericCompositeFuture.join(orderLines.stream()
         .map(poLine -> purchaseOrderLineService.saveOrderLine(poLine, requestContext)
-          .recover(t -> {
-            logger.error("PO line {} update failed while making rollover", poLine.getId(), t);
-            var failureDto = new FailedLedgerRolloverPoLineDto(
-              UUID.randomUUID(), // id
-              UUID.fromString(ledgerFYRollover.getId()), // rolloverId
-              UUID.fromString(ledgerFYRollover.getLedgerId()), // ledgerId
-              UUID.fromString(poLine.getId()), // poLineId
-              JsonObject.mapFrom(poLine).encode(), // requestBody
-              t.getMessage(), // responseBody
-              ((HttpException)t).getCode(), // statusCode
-              workflowStatus.value() // purchase order workflow status (Open / Closed)
-            );
-
-          return failedLedgerRolloverPoLineDao.saveFailedRolloverRecord(failureDto, requestContext.getHeaders().get(OKAPI_HEADER_TENANT))
+          .recover(t -> handlePoLineUpdateFailure(poLine, ledgerFYRollover, workflowStatus, t, requestContext)
             .map(a -> {
               throw new HttpException(400, ErrorCodes.PO_LINE_ROLLOVER_FAILED.toError());
-            });
-
-          }))
-        .collect(toList()))
+            })))
+        .toList())
       .mapEmpty();
+  }
+
+  private Future<Void> handlePoLineUpdateFailure(PoLine poLine, LedgerFiscalYearRollover ledgerFYRollover, PurchaseOrder.WorkflowStatus workflowStatus,
+      Throwable t, RequestContext requestContext) {
+    logger.error("PO line {} update failed while making rollover", poLine.getId(), t);
+    var failureDto = new FailedLedgerRolloverPoLineDto(
+      UUID.randomUUID(), // id
+      UUID.fromString(ledgerFYRollover.getId()), // rolloverId
+      UUID.fromString(ledgerFYRollover.getLedgerId()), // ledgerId
+      UUID.fromString(poLine.getId()), // poLineId
+      JsonObject.mapFrom(poLine).encode(), // requestBody
+      t.getMessage(), // responseBody
+      ((HttpException) t).getCode(), // statusCode
+      workflowStatus.value() // purchase order workflow status (Open / Closed)
+    );
+
+    return failedLedgerRolloverPoLineDao.saveFailedRolloverRecord(failureDto, requestContext.getHeaders().get(OKAPI_HEADER_TENANT));
   }
 
   private Future<List<PoLine>> rolloverOrders(String systemCurrency, List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
