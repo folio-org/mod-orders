@@ -13,6 +13,7 @@ public enum ErrorCodes {
   MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY("idMismatch", "Mismatch between id in path and request body"),
   INCORRECT_ORDER_ID_IN_POL("orderIdMismatch", "Mismatch between order id in the request and storage"),
   POL_LINES_LIMIT_EXCEEDED("polLimitExceeded", "Your FOLIO system is configured to limit the number of PO Lines on each order"),
+  PO_LINE_ROLLOVER_FAILED("poLineRolloverFailed", "PO line update failed while making rollover"),
   MISSING_MATERIAL_TYPE("materialTypeRequired", "The Material Type is required but not available in PO line"),
   PIECE_POL_MISMATCH("piecePolMismatch", "The piece does not correspond to PO line"),
   PIECE_ALREADY_RECEIVED("pieceAlreadyReceived", "The piece record is already received"),

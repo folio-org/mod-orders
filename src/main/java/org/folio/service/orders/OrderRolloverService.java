@@ -7,6 +7,7 @@ import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.CLOSED;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.OPEN;
@@ -18,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -27,10 +29,13 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
 
+import io.vertx.core.AsyncResult;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.dao.FailedLedgerRolloverPoLineDao;
+import org.folio.models.FailedLedgerRolloverPoLineDto;
 import org.folio.models.PoLineEncumbrancesHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
@@ -38,6 +43,8 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverProgress;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.EncumbranceRollover;
@@ -59,6 +66,7 @@ import org.javamoney.moneta.Money;
 import com.google.common.collect.Lists;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 import io.vertxconcurrent.Semaphore;
 
 public class OrderRolloverService {
@@ -82,10 +90,12 @@ public class OrderRolloverService {
   private final ExchangeRateProviderResolver exchangeRateProviderResolver;
   private final LedgerRolloverProgressService ledgerRolloverProgressService;
   private final LedgerRolloverErrorService ledgerRolloverErrorService;
+  private final FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao;
 
   public OrderRolloverService(FundService fundService, PurchaseOrderLineService purchaseOrderLineService, TransactionService transactionService,
     ConfigurationEntriesCache configurationEntriesCache, ExchangeRateProviderResolver exchangeRateProviderResolver,
-    LedgerRolloverProgressService ledgerRolloverProgressService, LedgerRolloverErrorService ledgerRolloverErrorService) {
+    LedgerRolloverProgressService ledgerRolloverProgressService, LedgerRolloverErrorService ledgerRolloverErrorService,
+    FailedLedgerRolloverPoLineDao failedLedgerRolloverPoLineDao) {
     this.fundService = fundService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.transactionService = transactionService;
@@ -93,6 +103,7 @@ public class OrderRolloverService {
     this.exchangeRateProviderResolver = exchangeRateProviderResolver;
     this.ledgerRolloverProgressService = ledgerRolloverProgressService;
     this.ledgerRolloverErrorService = ledgerRolloverErrorService;
+    this.failedLedgerRolloverPoLineDao = failedLedgerRolloverPoLineDao;
   }
 
   public Future<Void> rollover(LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
@@ -112,7 +123,7 @@ public class OrderRolloverService {
     var fundIdsFuture = fundService.getFundsByLedgerId(ledgerFYRollover.getLedgerId(), requestContext)
       .map(ledgerFunds -> ledgerFunds.stream()
         .map(Fund::getId)
-        .collect(toList()));
+        .toList());
 
     return fundIdsFuture
       .compose(ledgerFundIds -> configurationEntriesCache.getSystemCurrency(requestContext)
@@ -143,11 +154,12 @@ public class OrderRolloverService {
           semaphore.acquire(() -> {
             // perform rollover for open orders and then for closed orders
             var future = rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, OPEN, requestContext)
-              .compose(v -> rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, CLOSED, requestContext))
+              .andThen(openOrdersResult -> rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, CLOSED, requestContext)
+              .andThen(closedOrdersResult -> throwExceptionIfOneOfFailed(openOrdersResult, closedOrdersResult)))
               .onComplete(asyncResult -> semaphore.release());
+
             futures.add(future);
             if (futures.size() == fundIdChunks.size()) {
-
               promise.complete(futures);
             }
           });
@@ -155,6 +167,15 @@ public class OrderRolloverService {
       })
       .compose(GenericCompositeFuture::join)
       .mapEmpty();
+  }
+
+  private void throwExceptionIfOneOfFailed(AsyncResult<Void> openOrdersResult, AsyncResult<Void> closedOrdersResult) {
+    if (openOrdersResult.failed()) {
+      throw new RuntimeException(openOrdersResult.cause());
+    }
+    if (closedOrdersResult.failed()) {
+      throw new RuntimeException(closedOrdersResult.cause());
+    }
   }
 
   private Future<Void> rolloverOrdersByFundIds(List<String> chunkFundIds, LedgerFiscalYearRollover ledgerFYRollover,
@@ -182,7 +203,7 @@ public class OrderRolloverService {
           semaphore.acquire(() -> {
             Future<Void> future = purchaseOrderLineService.getOrderLines(query, atomicChunkCounter.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
               .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, workflowStatus, requestContext))
-              .compose(modifiedPoLines -> purchaseOrderLineService.saveOrderLines(modifiedPoLines, requestContext))
+              .compose(modifiedPoLines -> saveOrderLines(modifiedPoLines, ledgerFYRollover, workflowStatus, requestContext))
               .onComplete(asyncResult -> semaphore.release());
 
             futures.add(future);
@@ -194,6 +215,35 @@ public class OrderRolloverService {
       }))
       .compose(GenericCompositeFuture::join)
       .mapEmpty();
+  }
+
+  private Future<Void> saveOrderLines(List<PoLine> orderLines, LedgerFiscalYearRollover ledgerFYRollover,
+      PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
+    return GenericCompositeFuture.join(orderLines.stream()
+        .map(poLine -> purchaseOrderLineService.saveOrderLine(poLine, requestContext)
+          .recover(t -> handlePoLineUpdateFailure(poLine, ledgerFYRollover, workflowStatus, t, requestContext)
+            .map(a -> {
+              throw new HttpException(400, ErrorCodes.PO_LINE_ROLLOVER_FAILED.toError());
+            })))
+        .toList())
+      .mapEmpty();
+  }
+
+  private Future<Void> handlePoLineUpdateFailure(PoLine poLine, LedgerFiscalYearRollover ledgerFYRollover, PurchaseOrder.WorkflowStatus workflowStatus,
+      Throwable t, RequestContext requestContext) {
+    logger.error("PO line {} update failed while making rollover", poLine.getId(), t);
+    var failureDto = new FailedLedgerRolloverPoLineDto(
+      UUID.randomUUID(), // id
+      UUID.fromString(ledgerFYRollover.getId()), // rolloverId
+      UUID.fromString(ledgerFYRollover.getLedgerId()), // ledgerId
+      UUID.fromString(poLine.getId()), // poLineId
+      JsonObject.mapFrom(poLine).encode(), // requestBody
+      t.getMessage(), // responseBody
+      ((HttpException) t).getCode(), // statusCode
+      workflowStatus.value() // purchase order workflow status (Open / Closed)
+    );
+
+    return failedLedgerRolloverPoLineDao.saveFailedRolloverRecord(failureDto, requestContext.getHeaders().get(OKAPI_HEADER_TENANT));
   }
 
   private Future<List<PoLine>> rolloverOrders(String systemCurrency, List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
@@ -235,9 +285,9 @@ public class OrderRolloverService {
     return ledgerRolloverErrorService.getRolloverErrorsByRolloverId(progress.getLedgerRolloverId(), requestContext)
       .compose(rolloverErrors -> {
         if (rolloverErrors.getTotalRecords() == 0) {
-          progress.setOverallRolloverStatus(RolloverStatus.SUCCESS);
+          progress.setOverallRolloverStatus(SUCCESS);
         } else {
-          progress.setOverallRolloverStatus(RolloverStatus.ERROR);
+          progress.setOverallRolloverStatus(ERROR);
         }
         return ledgerRolloverProgressService.updateRolloverProgress(progress, requestContext);
       });
