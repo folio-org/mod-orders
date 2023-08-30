@@ -15,6 +15,7 @@ import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
 import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
+import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
 import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
 
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Predicates;
@@ -430,19 +432,22 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> validateAndNormalizeISBN(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    return validateAndNormalizeISBNCommon(compositePoLines, requestContext, Predicates.alwaysFalse(), ProductId::setProductId);
+    return validateAndNormalizeISBNCommon(compositePoLines, requestContext, Predicates.alwaysFalse(),
+      UnaryOperator.identity(), ProductId::setProductId);
   }
 
   public Future<Void> validateAndNormalizeISBNAndProductType(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
     return inventoryCache.getInvalidISBNProductTypeId(requestContext)
       .compose(invalidIsbnTypeId -> validateAndNormalizeISBNCommon(compositePoLines, requestContext,
-        ProductIdUtils::isISBNValidationException, (productId, newProductId) -> Optional.ofNullable(newProductId)
-          .ifPresentOrElse(productId::setProductId, () -> productId.setProductIdType(invalidIsbnTypeId))));
+        ProductIdUtils::isISBNValidationException, ProductIdUtils::extractProductId, (productId, newProductId) ->
+          Optional.ofNullable(newProductId).ifPresentOrElse(productId::setProductId, () ->
+            productId.withProductIdType(invalidIsbnTypeId).withQualifier(extractQualifier(productId.getProductId())))));
   }
 
   public Future<Void> validateAndNormalizeISBNCommon(List<CompositePoLine> compositePoLines, RequestContext requestContext,
-                                                     Predicate<Throwable> validationExceptionChecker,
-                                                     BiConsumer<ProductId, String> updateProductId) {
+                                                     Predicate<Throwable> validationExceptionPredicate,
+                                                     UnaryOperator<String> productIdUnaryOperator,
+                                                     BiConsumer<ProductId, String> productIdBiConsumer) {
     var filteredCompLines = compositePoLines.stream()
       .filter(HelperUtils::isProductIdsExist)
       .toList();
@@ -455,11 +460,11 @@ public class PurchaseOrderLineService {
       .compose(isbnTypeId -> {
         var setOfProductIds = buildSetOfProductIdsFromCompositePoLines(filteredCompLines, isbnTypeId);
         return org.folio.service.orders.utils.HelperUtils.executeWithSemaphores(setOfProductIds,
-            productId -> inventoryCache.convertToISBN13(productId, requestContext)
-              .map(normalizedId -> Map.entry(productId, normalizedId))
-              .recover(throwable -> validationExceptionChecker.test(throwable) ?
-                Future.succeededFuture(Maps.immutableEntry(productId, null)) :
-                Future.failedFuture(throwable)), requestContext)
+          productId -> inventoryCache.convertToISBN13(productIdUnaryOperator.apply(productId), requestContext)
+            .map(normalizedId -> Map.entry(productId, normalizedId))
+            .recover(throwable -> validationExceptionPredicate.test(throwable) ?
+              Future.succeededFuture(Maps.immutableEntry(productId, null)) :
+              Future.failedFuture(throwable)), requestContext)
           .map(result -> result
             .stream()
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
@@ -468,7 +473,7 @@ public class PurchaseOrderLineService {
             filteredCompLines.stream()
               .flatMap(poline -> poline.getDetails().getProductIds().stream())
               .filter(productId -> isISBN(isbnTypeId, productId))
-              .forEach(productId -> updateProductId.accept(productId, productIdsMap.get(productId.getProductId())));
+              .forEach(productId -> productIdBiConsumer.accept(productId, productIdsMap.get(productId.getProductId())));
             return null;
           })
           .onSuccess(v -> filteredCompLines.forEach(poLine -> removeISBNDuplicates(poLine, isbnTypeId)))
