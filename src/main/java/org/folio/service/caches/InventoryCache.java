@@ -25,6 +25,8 @@ public class InventoryCache {
 
   private final AsyncCache<String, String> asyncCache;
   private final AsyncCache<String, JsonObject> asyncJsonCache;
+  private static final String ISBN_PRODUCT_TYPE_NAME = "ISBN";
+  private static final String INVALID_ISBN_PRODUCT_TYPE_NAME = "Invalid ISBN";
   private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
   private final InventoryService inventoryService;
 
@@ -43,19 +45,28 @@ public class InventoryCache {
       .buildAsync();
   }
 
+  public Future<String> getISBNProductTypeId(RequestContext requestContext) {
+    return getProductTypeUuid(ISBN_PRODUCT_TYPE_NAME, requestContext);
+  }
+
+  public Future<String> getInvalidISBNProductTypeId(RequestContext requestContext) {
+    return getProductTypeUuid(INVALID_ISBN_PRODUCT_TYPE_NAME, requestContext);
+  }
+
   /**
    * Retrieves {@link String} from cache by tenantId
+   * @param productType {@link String} product type name
    * @param requestContext {@link RequestContext} connection params
-   * @return CompletableFuture with {@link String} ISBN UUID value
+   * @return CompletableFuture with {@link String} product type UUID value
    */
-  public Future<String> getProductTypeUuid(RequestContext requestContext) {
+  public Future<String> getProductTypeUuid(String productType, RequestContext requestContext) {
     try {
       RequestEntry requestEntry = new RequestEntry("/identifier-types").withLimit(1)
-        .withQuery("name==ISBN");
+        .withQuery(String.format("name==%s", productType));
       var cacheKey = buildUniqueKey(requestEntry, requestContext);
 
       return Future
-        .fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> getProductTypeUuidByIsbn(requestContext, requestEntry)));
+        .fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> getProductTypeUuid(requestContext, requestEntry)));
     } catch (Exception e) {
       log.error("getProductTypeUuid:: Error loading identifier types from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
       return Future.failedFuture(e);
@@ -88,8 +99,8 @@ public class InventoryCache {
     }
   }
 
-  private CompletableFuture<String> getProductTypeUuidByIsbn(RequestContext requestContext, RequestEntry requestEntry) {
-    return inventoryService.getProductTypeUuidByIsbn(requestEntry.buildEndpoint(), requestContext)
+  private CompletableFuture<String> getProductTypeUuid(RequestContext requestContext, RequestEntry requestEntry) {
+    return inventoryService.getProductTypeUuid(requestEntry.buildEndpoint(), requestContext)
       .toCompletionStage()
       .toCompletableFuture();
   }

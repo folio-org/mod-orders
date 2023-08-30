@@ -33,7 +33,7 @@ public class InventoryService {
 
   }
 
-  public Future<String> getProductTypeUuidByIsbn(String endpoint, RequestContext requestContext) {
+  public Future<String> getProductTypeUuid(String endpoint, RequestContext requestContext) {
     return restClient.getAsJsonObject(endpoint, false, requestContext)
       .compose(identifierTypes -> {
         String identifierTypeId = extractId(getFirstObjectFromResponse(identifierTypes, IDENTIFIER_TYPES));

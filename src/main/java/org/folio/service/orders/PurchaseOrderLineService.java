@@ -1,7 +1,6 @@
 package org.folio.service.orders;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
-import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.helper.BaseHelper.ID;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -23,9 +22,14 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletionException;
+import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Predicates;
+import com.google.common.collect.Maps;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -43,6 +47,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.service.caches.InventoryCache;
 
@@ -52,6 +57,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertxconcurrent.Semaphore;
+import org.folio.service.orders.utils.ProductIdUtils;
 
 public class PurchaseOrderLineService {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderLineService.class);
@@ -91,7 +97,7 @@ public class PurchaseOrderLineService {
       .map(ids -> getOrderLinesChunk(ids, requestContext)).toList())
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
-        .collect(toList()));
+        .toList());
   }
 
   public Future<Void> saveOrderLine(PoLine poLine, RequestContext requestContext) {
@@ -112,7 +118,7 @@ public class PurchaseOrderLineService {
           //TODO: always POL_LINES_LIMIT_EXCEEDED message hides other error messages. to fix
           throw new HttpException(400, ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
         }))
-      .collect(toList()))
+      .toList())
       .mapEmpty();
   }
 
@@ -225,7 +231,7 @@ public class PurchaseOrderLineService {
       })
       .onFailure(t -> {
         Throwable cause = t instanceof CompletionException ? t.getCause() : t;
-        int code = cause instanceof HttpException ? ((HttpException) cause).getCode() : 500;
+        int code = cause instanceof HttpException httpException? httpException.getCode() : 500;
         String message = String.format(EXCEPTION_CALLING_ENDPOINT_MSG, operation, url, cause.getMessage());
         logger.error(message, t);
         promise.fail(new HttpException(code, message));
@@ -381,7 +387,7 @@ public class PurchaseOrderLineService {
   public Future<Void> deletePoLinesByOrderId(String orderId, RequestContext requestContext) {
     return getLinesByOrderId(orderId, requestContext)
       .compose(jsonObjects -> GenericCompositeFuture.join(jsonObjects.stream()
-        .map(line -> deleteLineById(line.getId(), requestContext)).collect(toList())))
+        .map(line -> deleteLineById(line.getId(), requestContext)).toList()))
        .recover(t -> {
         logger.error("Exception deleting poLine data for order id={}", orderId, t);
         throw new CompletionException(t.getCause());
@@ -424,29 +430,45 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> validateAndNormalizeISBN(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
+    return validateAndNormalizeISBNCommon(compositePoLines, requestContext, Predicates.alwaysFalse(), ProductId::setProductId);
+  }
+
+  public Future<Void> validateAndNormalizeISBNAndProductType(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
+    return inventoryCache.getInvalidISBNProductTypeId(requestContext)
+      .compose(invalidIsbnTypeId -> validateAndNormalizeISBNCommon(compositePoLines, requestContext,
+        ProductIdUtils::isISBNValidationException, (productId, newProductId) -> Optional.ofNullable(newProductId)
+          .ifPresentOrElse(productId::setProductId, () -> productId.setProductIdType(invalidIsbnTypeId))));
+  }
+
+  public Future<Void> validateAndNormalizeISBNCommon(List<CompositePoLine> compositePoLines, RequestContext requestContext,
+                                                     Predicate<Throwable> validationExceptionChecker,
+                                                     BiConsumer<ProductId, String> updateProductId) {
     var filteredCompLines = compositePoLines.stream()
       .filter(HelperUtils::isProductIdsExist)
-      .collect(toList());
+      .toList();
 
     if (filteredCompLines.isEmpty()) {
       return Future.succeededFuture();
     }
 
-    return inventoryCache.getProductTypeUuid(requestContext)
+    return inventoryCache.getISBNProductTypeId(requestContext)
       .compose(isbnTypeId -> {
         var setOfProductIds = buildSetOfProductIdsFromCompositePoLines(filteredCompLines, isbnTypeId);
         return org.folio.service.orders.utils.HelperUtils.executeWithSemaphores(setOfProductIds,
-          productId -> inventoryCache.convertToISBN13(productId, requestContext)
-            .map(normalizedId -> Map.entry(productId, normalizedId)), requestContext)
+            productId -> inventoryCache.convertToISBN13(productId, requestContext)
+              .map(normalizedId -> Map.entry(productId, normalizedId))
+              .recover(throwable -> validationExceptionChecker.test(throwable) ?
+                Future.succeededFuture(Maps.immutableEntry(productId, null)) :
+                Future.failedFuture(throwable)), requestContext)
           .map(result -> result
             .stream()
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
           .map(productIdsMap -> {
-            // update productids with normalized values
+            // update product ids with normalized values
             filteredCompLines.stream()
               .flatMap(poline -> poline.getDetails().getProductIds().stream())
               .filter(productId -> isISBN(isbnTypeId, productId))
-              .forEach(productId -> productId.setProductId(productIdsMap.get(productId.getProductId())));
+              .forEach(productId -> updateProductId.accept(productId, productIdsMap.get(productId.getProductId())));
             return null;
           })
           .onSuccess(v -> filteredCompLines.forEach(poLine -> removeISBNDuplicates(poLine, isbnTypeId)))
