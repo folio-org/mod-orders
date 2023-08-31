@@ -24,11 +24,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.HashMap;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
@@ -440,8 +440,9 @@ public class PurchaseOrderLineService {
     return inventoryCache.getInvalidISBNProductTypeId(requestContext)
       .compose(invalidIsbnTypeId -> validateAndNormalizeISBNCommon(compositePoLines, requestContext,
         ProductIdUtils::isISBNValidationException, ProductIdUtils::extractProductId, (productId, newProductId) ->
-          Optional.ofNullable(newProductId).ifPresentOrElse(productId::setProductId, () ->
-            productId.withProductIdType(invalidIsbnTypeId).withQualifier(extractQualifier(productId.getProductId())))));
+          Optional.ofNullable(newProductId).ifPresentOrElse(id ->
+            productId.withQualifier(extractQualifier(productId.getProductId())).withProductId(id), () ->
+            productId.withProductIdType(invalidIsbnTypeId))));
   }
 
   public Future<Void> validateAndNormalizeISBNCommon(List<CompositePoLine> compositePoLines, RequestContext requestContext,
@@ -467,7 +468,7 @@ public class PurchaseOrderLineService {
               Future.failedFuture(throwable)), requestContext)
           .map(result -> result
             .stream()
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
+            .collect(HashMap<String, String>::new, (m,v) -> m.put(v.getKey(), v.getValue()), HashMap::putAll))
           .map(productIdsMap -> {
             // update product ids with normalized values
             filteredCompLines.stream()

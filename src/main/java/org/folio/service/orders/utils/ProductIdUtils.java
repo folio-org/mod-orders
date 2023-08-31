@@ -1,5 +1,6 @@
 package org.folio.service.orders.utils;
 
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -39,8 +40,8 @@ public class ProductIdUtils {
   }
 
   public static boolean isISBNValidationException(Throwable throwable) {
-    return throwable instanceof HttpException httpException
-      && httpException.getError().equals(ISBN_NOT_VALID.toError());
+    return throwable instanceof HttpException httpException && Objects.nonNull(httpException.getError())
+      && httpException.getError().getCode().equals(ISBN_NOT_VALID.getCode());
   }
 
   public static void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
@@ -51,8 +52,7 @@ public class ProductIdUtils {
   public static List<ProductId> removeISBNDuplicates(List<ProductId> productIds, String isbnTypeId) {
     List<ProductId> notISBNs = getNonISBNProductIds(productIds, isbnTypeId);
     List<ProductId> isbns = getDeduplicatedISBNs(productIds, isbnTypeId);
-    isbns.addAll(notISBNs);
-    return isbns;
+    return ListUtils.union(notISBNs, isbns);
   }
 
   public static  String extractProductId(String value) {
