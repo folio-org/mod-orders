@@ -40,8 +40,7 @@ public class ProductIdUtils {
   }
 
   public static boolean isISBNValidationException(Throwable throwable) {
-    return throwable instanceof HttpException httpException && Objects.nonNull(httpException.getError())
-      && ISBN_NOT_VALID.getCode().equals(httpException.getError().getCode());
+    return throwable instanceof HttpException httpException && ISBN_NOT_VALID.getCode().equals(httpException.getError().getCode());
   }
 
   public static void removeISBNDuplicates(CompositePoLine compPOL, String isbnTypeId) {
