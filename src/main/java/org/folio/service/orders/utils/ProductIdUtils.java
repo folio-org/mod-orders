@@ -51,7 +51,7 @@ public class ProductIdUtils {
   public static List<ProductId> removeISBNDuplicates(List<ProductId> productIds, String isbnTypeId) {
     List<ProductId> notISBNs = getNonISBNProductIds(productIds, isbnTypeId);
     List<ProductId> isbns = getDeduplicatedISBNs(productIds, isbnTypeId);
-    return ListUtils.union(isbns, notISBNs);
+    return ListUtils.union(notISBNs, isbns);
   }
 
   public static  String extractProductId(String value) {
