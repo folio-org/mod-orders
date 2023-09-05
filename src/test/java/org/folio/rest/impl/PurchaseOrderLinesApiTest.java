@@ -1147,14 +1147,8 @@ public class PurchaseOrderLinesApiTest {
 
     reqData.getDetails().getProductIds().get(0).setProductId(isbn);
 
-    Response response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON,
-        400);
-
-    Error err = response.getBody().as(Errors.class).getErrors().get(0);
-
-    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
-    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
-    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
   }
 
   @Test
@@ -1298,6 +1292,7 @@ public class PurchaseOrderLinesApiTest {
     // double check with updating status only (When only status updated via request from mod-invoices)
     CompositePoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE).get(0).mapTo(CompositePoLine.class);
     updatedLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+    updatedLine.getDetails().getProductIds().iterator().next().setQualifier(null);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(updatedLine).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);

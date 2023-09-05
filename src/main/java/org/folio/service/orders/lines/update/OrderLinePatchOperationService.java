@@ -142,7 +142,7 @@ public class OrderLinePatchOperationService {
     poLine.setPublicationDate(instancePublication.getRight());
     poLine.setContributors(getContributors(lookupObj));
 
-    inventoryCache.getProductTypeUuid(requestContext)
+    inventoryCache.getISBNProductTypeId(requestContext)
       .compose(isbnTypeId -> {
         Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
          return HelperUtils.executeWithSemaphores(setOfProductIds,
@@ -182,7 +182,7 @@ public class OrderLinePatchOperationService {
       .map(jsonObject -> new ProductId()
         .withProductId(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_VALUE))
         .withProductIdType(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_ID)))
-      .collect(Collectors.toList());
+      .toList();
   }
 
   private static List<Contributor> getContributors(JsonObject lookupObj) {
@@ -193,7 +193,7 @@ public class OrderLinePatchOperationService {
       .map(jsonObject -> new Contributor()
         .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
         .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
-      .collect(Collectors.toList());
+      .toList();
   }
 
   private Pair<String, String> getInstancePublication(JsonObject lookupObj) {
