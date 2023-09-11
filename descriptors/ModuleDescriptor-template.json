@@ -124,7 +124,7 @@
           "modulePermissions": [
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.collection.get",
-            "orders-storage.po-lines.item.put",
+            "orders-storage.po-lines-batch.collection.put",
             "finance.funds.collection.get",
             "finance.ledgers.current-fiscal-year.item.get",
             "finance.funds.budget.item.get",
