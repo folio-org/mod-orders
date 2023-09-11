@@ -69,6 +69,7 @@ public class PurchaseOrderLineService {
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private static final String ORDER_LINES_BY_ORDER_ID_QUERY = "purchaseOrderId == %s";
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
+  private static final int PO_LINE_BATCH_PARTITION_SIZE = 100;
   private final InventoryCache inventoryCache;
 
   private final RestClient restClient;
@@ -121,7 +122,7 @@ public class PurchaseOrderLineService {
 
 
   public Future<Void> saveOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
-    List<PoLineCollection> poLineCollections = ListUtils.partition(orderLines, 100)
+    List<PoLineCollection> poLineCollections = ListUtils.partition(orderLines, PO_LINE_BATCH_PARTITION_SIZE)
       .stream()
       .map(lines -> new PoLineCollection().withPoLines(lines).withTotalRecords(lines.size()))
       .toList();
