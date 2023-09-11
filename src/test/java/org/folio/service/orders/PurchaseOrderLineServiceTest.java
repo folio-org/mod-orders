@@ -137,13 +137,13 @@ public class PurchaseOrderLineServiceTest {
     String orderLineId1 = UUID.randomUUID().toString();
     String orderLineId2 = UUID.randomUUID().toString();
     List<PoLine> purchaseOrderLines = List.of(new PoLine().withId(orderLineId1), new PoLine().withId(orderLineId2));
-    when(restClientMock.put(any(RequestEntry.class), any(PoLine.class), eq(requestContext))).thenReturn(Future.succeededFuture(null));
+    PoLineCollection poLineCollection = new PoLineCollection().withPoLines(purchaseOrderLines).withTotalRecords(purchaseOrderLines.size());
+    when(restClientMock.put(any(RequestEntry.class), any(PoLineCollection.class), eq(requestContext))).thenReturn(Future.succeededFuture(null));
 
     var future = purchaseOrderLineService.saveOrderLines(purchaseOrderLines, requestContext);
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
-        verify(restClientMock).put(any(RequestEntry.class), eq(purchaseOrderLines.get(0)), eq(requestContext));
-        verify(restClientMock).put(any(RequestEntry.class), eq(purchaseOrderLines.get(1)), eq(requestContext));
+        verify(restClientMock).put(any(RequestEntry.class), eq(poLineCollection), eq(requestContext));
         vertxTestContext.completeNow();
       });
 

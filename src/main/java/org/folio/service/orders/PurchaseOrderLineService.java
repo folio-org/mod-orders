@@ -33,6 +33,7 @@ import java.util.function.UnaryOperator;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -64,9 +65,11 @@ import org.folio.service.orders.utils.ProductIdUtils;
 public class PurchaseOrderLineService {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderLineService.class);
   private static final String ENDPOINT = "/orders-storage/po-lines";
+  private static final String BATCH_ENDPOINT = "/orders-storage/po-lines-batch";
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private static final String ORDER_LINES_BY_ORDER_ID_QUERY = "purchaseOrderId == %s";
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
+  private static final int PO_LINE_BATCH_PARTITION_SIZE = 100;
   private final InventoryCache inventoryCache;
 
   private final RestClient restClient;
@@ -112,14 +115,20 @@ public class PurchaseOrderLineService {
     return saveOrderLine(poLine, requestContext);
   }
 
+  public Future<Void> saveOrderLines(PoLineCollection poLineCollection, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(BATCH_ENDPOINT);
+    return restClient.put(requestEntry, poLineCollection, requestContext);
+  }
+
 
   public Future<Void> saveOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
-    return GenericCompositeFuture.join(orderLines.stream()
-      .map(poLine -> saveOrderLine(poLine, requestContext)
-        .recover(t -> {
-          //TODO: always POL_LINES_LIMIT_EXCEEDED message hides other error messages. to fix
-          throw new HttpException(400, ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
-        }))
+    List<PoLineCollection> poLineCollections = ListUtils.partition(orderLines, PO_LINE_BATCH_PARTITION_SIZE)
+      .stream()
+      .map(lines -> new PoLineCollection().withPoLines(lines).withTotalRecords(lines.size()))
+      .toList();
+
+    return GenericCompositeFuture.join(poLineCollections.stream()
+      .map(poLineCollection -> saveOrderLines(poLineCollection, requestContext))
       .toList())
       .mapEmpty();
   }
