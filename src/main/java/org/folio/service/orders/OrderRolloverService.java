@@ -219,12 +219,17 @@ public class OrderRolloverService {
 
   private Future<Void> saveOrderLines(List<PoLine> orderLines, LedgerFiscalYearRollover ledgerFYRollover,
       PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
-    return GenericCompositeFuture.join(orderLines.stream()
-        .map(poLine -> purchaseOrderLineService.saveOrderLine(poLine, requestContext)
-          .recover(t -> handlePoLineUpdateFailure(poLine, ledgerFYRollover, workflowStatus, t, requestContext)
-            .map(a -> {
-              throw new HttpException(400, ErrorCodes.PO_LINE_ROLLOVER_FAILED.toError());
-            })))
+    return purchaseOrderLineService.saveOrderLines(orderLines, requestContext)
+      .recover(t -> handlePoLineUpdateFailures(orderLines, ledgerFYRollover, workflowStatus, t, requestContext)
+        .map(a -> {
+          throw new HttpException(400, ErrorCodes.PO_LINE_ROLLOVER_FAILED.toError());
+        }));
+  }
+
+  private Future<Void> handlePoLineUpdateFailures(List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover, PurchaseOrder.WorkflowStatus workflowStatus,
+                                                 Throwable t, RequestContext requestContext) {
+    return GenericCompositeFuture.join(poLines.stream()
+        .map(poLine -> handlePoLineUpdateFailure(poLine, ledgerFYRollover, workflowStatus, t, requestContext))
         .toList())
       .mapEmpty();
   }

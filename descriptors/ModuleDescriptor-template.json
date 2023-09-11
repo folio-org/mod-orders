@@ -903,7 +903,7 @@
             "finance.transactions.collection.get",
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.po-lines.collection.get",
-            "orders-storage.po-lines.item.put",
+            "orders-storage.po-lines-batch.collection.put",
             "finance.ledger-rollovers-errors.collection.get",
             "finance.ledger-rollovers-errors.item.post",
             "finance.ledger-rollovers-progress.item.put"
