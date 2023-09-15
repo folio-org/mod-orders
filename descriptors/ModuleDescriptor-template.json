@@ -604,7 +604,11 @@
           "methods": ["DELETE"],
           "pathPattern": "/orders/acquisition-methods/{id}",
           "permissionsRequired": ["orders.acquisition-method.item.delete"],
-          "modulePermissions": ["orders-storage.acquisition-method.item.delete"]
+          "modulePermissions": [
+            "orders-storage.acquisition-method.item.delete",
+            "orders-storage.acquisition-method.item.get",
+            "orders-storage.po-lines.collection.get"
+          ]
         }
       ]
     },
