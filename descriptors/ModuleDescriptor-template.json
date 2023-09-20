@@ -177,7 +177,8 @@
             "acquisitions-units-storage.memberships.collection.get",
             "inventory-storage.identifier-types.collection.get",
             "isbn-utils.convert-to-13.get",
-            "finance-storage.budget-expense-classes.collection.get"
+            "finance-storage.budget-expense-classes.collection.get",
+            "user-tenants.collection.get"
           ]
         },
         {
