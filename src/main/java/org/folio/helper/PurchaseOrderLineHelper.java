@@ -187,6 +187,7 @@ public class PurchaseOrderLineHelper {
             // The PO Line can be created only for order in Pending state
             .map(this::validateOrderState)
             .compose(po -> protectionService.isOperationRestricted(po.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
+            .compose(v -> createShadowInstanceIfNeeded(compPOL, requestContext))
             .compose(v -> createPoLine(compPOL, po, requestContext)));
         } else {
             Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
@@ -297,6 +298,7 @@ public class PurchaseOrderLineHelper {
           compOrderLine.setPoLineNumber(lineFromStorage.getString(PO_LINE_NUMBER));
 
           return polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
+            .compose(v -> createShadowInstanceIfNeeded(compOrderLine, requestContext))
             .compose(v -> updateOrderLine(compOrderLine, lineFromStorage, requestContext))
             .compose(v -> updateEncumbranceStatus(compOrderLine, lineFromStorage, requestContext))
             .compose(v -> polInvoiceLineRelationService.updateInvoiceLineReference(poLineInvoiceLineHolder, requestContext))
@@ -884,6 +886,13 @@ public class PurchaseOrderLineHelper {
         .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext)));
   }
 
-
+  private Future<Void> createShadowInstanceIfNeeded(CompositePoLine compositePoLine, RequestContext requestContext) {
+    String instanceId = compositePoLine.getInstanceId();
+    if (Boolean.TRUE.equals(compositePoLine.getIsPackage()) && Objects.nonNull(instanceId)) {
+      return Future.succeededFuture();
+    }
+    return inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext)
+      .mapEmpty();
+  }
 
 }

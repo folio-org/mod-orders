@@ -27,6 +27,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
@@ -43,16 +44,19 @@ public class TitlesService {
   private final RestClient restClient;
 
   private final AcquisitionsUnitsService acquisitionsUnitsService;
+  private final InventoryManager inventoryManager;
 
   public TitlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService,
-                       AcquisitionsUnitsService acquisitionsUnitsService) {
+                       AcquisitionsUnitsService acquisitionsUnitsService, InventoryManager inventoryManager) {
     this.restClient = restClient;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.acquisitionsUnitsService = acquisitionsUnitsService;
+    this.inventoryManager = inventoryManager;
   }
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
-    return populateTitle(title, title.getPoLineId(), requestContext)
+    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext)
+      .compose(shadowInstance -> populateTitle(title, title.getPoLineId(), requestContext))
       .compose(v -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
         return restClient.post(requestEntry, title, Title.class, requestContext);
@@ -80,8 +84,10 @@ public class TitlesService {
   }
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
-    return restClient.put(requestEntry, title, requestContext);
+    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext).compose(shadowInstance -> {
+      RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
+      return restClient.put(requestEntry, title, requestContext);
+    });
   }
 
   public Future<Void> deleteTitle(String id, RequestContext requestContext) {
