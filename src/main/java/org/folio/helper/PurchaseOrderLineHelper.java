@@ -888,7 +888,7 @@ public class PurchaseOrderLineHelper {
 
   private Future<Void> createShadowInstanceIfNeeded(CompositePoLine compositePoLine, RequestContext requestContext) {
     String instanceId = compositePoLine.getInstanceId();
-    if (Boolean.TRUE.equals(compositePoLine.getIsPackage()) && Objects.nonNull(instanceId)) {
+    if (Boolean.TRUE.equals(compositePoLine.getIsPackage()) || Objects.isNull(instanceId)) {
       return Future.succeededFuture();
     }
     return inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext)

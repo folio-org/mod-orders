@@ -258,7 +258,8 @@
             "organizations-storage.organizations.collection.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put",
-            "orders-storage.order-invoice-relationships.collection.get"
+            "orders-storage.order-invoice-relationships.collection.get",
+            "user-tenants.collection.get"
           ]
         },
         {
