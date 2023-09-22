@@ -82,8 +82,10 @@ public class OrderLinePatchOperationService {
 
   private Future<Void> patchOrderLine(PatchOrderLineRequest request, String lineId, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
+    String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
 
     purchaseOrderLineService.getOrderLineById(lineId, requestContext)
+      .compose(poLine -> inventoryManager.createShadowInstanceIfNeeded(newInstanceId, requestContext).map(poLine))
       .map(poLine -> {
         OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
           .withPathOrderLineRequest(request)
@@ -109,7 +111,6 @@ public class OrderLinePatchOperationService {
 
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
     purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .compose(poLine -> inventoryManager.createShadowInstanceIfNeeded(newInstanceId, requestContext).map(poLine))
       .map(poLine -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
         return restClient.getAsJsonObject(requestEntry, requestContext)
