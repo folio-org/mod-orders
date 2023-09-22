@@ -76,16 +76,16 @@ public class OrderLinePatchOperationService {
   }
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
-    return patchOrderLine(request, lineId, requestContext)
+    String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
+    return inventoryManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
+      .compose(v -> patchOrderLine(request, lineId, requestContext))
       .compose(v -> updateInventoryInstanceInformation(request, lineId, requestContext));
   }
 
   private Future<Void> patchOrderLine(PatchOrderLineRequest request, String lineId, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
-    String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
 
     purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .compose(poLine -> inventoryManager.createShadowInstanceIfNeeded(newInstanceId, requestContext).map(poLine))
       .map(poLine -> {
         OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
           .withPathOrderLineRequest(request)
