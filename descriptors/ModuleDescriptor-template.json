@@ -175,10 +175,12 @@
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
+            "inventory.instances.item.get",
             "inventory-storage.identifier-types.collection.get",
             "isbn-utils.convert-to-13.get",
             "finance-storage.budget-expense-classes.collection.get",
-            "user-tenants.collection.get"
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -236,6 +238,7 @@
             "finance-storage.budget-expense-classes.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
+            "inventory.instances.item.get",
             "inventory-storage.holdings.item.post",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
@@ -259,7 +262,8 @@
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put",
             "orders-storage.order-invoice-relationships.collection.get",
-            "user-tenants.collection.get"
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -312,7 +316,8 @@
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put",
             "orders-storage.pieces.collection.get",
-            "user-tenants.collection.get"
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -751,7 +756,10 @@
           "modulePermissions": [
             "orders-storage.titles.collection.get",
             "orders-storage.titles.item.post",
-            "orders-storage.po-lines.item.get"
+            "orders-storage.po-lines.item.get",
+            "inventory.instances.item.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -764,7 +772,12 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/titles/{id}",
           "permissionsRequired": ["orders.titles.item.put"],
-          "modulePermissions": ["orders-storage.titles.item.put"]
+          "modulePermissions": [
+            "orders-storage.titles.item.put",
+            "inventory.instances.item.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
+          ]
         },
         {
           "methods": ["DELETE"],
