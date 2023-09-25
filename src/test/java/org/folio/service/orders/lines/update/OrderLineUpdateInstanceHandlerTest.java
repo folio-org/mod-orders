@@ -214,6 +214,12 @@ public class OrderLineUpdateInstanceHandlerTest {
     @Bean InventoryService inventoryService (RestClient restClient) {
       return new InventoryService(restClient);
     }
+    @Bean SharingInstanceService sharingInstanceService (RestClient restClient) {
+      return new SharingInstanceService(restClient);
+    }
+    @Bean ConsortiumConfigurationService consortiumConfigurationService (RestClient restClient) {
+      return new ConsortiumConfigurationService(restClient);
+    }
 
     @Bean
     ConfigurationEntriesService configurationEntriesService(RestClient restClient) {

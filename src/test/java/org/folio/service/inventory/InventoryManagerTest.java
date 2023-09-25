@@ -142,6 +142,10 @@ public class InventoryManagerTest {
   private InventoryCache inventoryCache;
   @Autowired
   private InventoryService inventoryService;
+  @Autowired
+  private SharingInstanceService sharingInstanceService;
+  @Autowired
+  private ConsortiumConfigurationService consortiumConfigurationService;
 
 
   private Map<String, String> okapiHeadersMock;
@@ -1048,6 +1052,14 @@ public class InventoryManagerTest {
     @Bean
     public PieceStorageService pieceStorageService() {
       return mock(PieceStorageService.class);
+    }
+    @Bean
+    public ConsortiumConfigurationService consortiumConfigurationService() {
+      return mock(ConsortiumConfigurationService.class);
+    }
+    @Bean
+    public SharingInstanceService sharingInstanceService() {
+      return mock(SharingInstanceService.class);
     }
 
     @Bean
