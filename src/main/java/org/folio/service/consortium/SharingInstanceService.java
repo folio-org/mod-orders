@@ -29,7 +29,7 @@ public class SharingInstanceService {
   private static final Logger logger = LogManager.getLogger(SharingInstanceService.class);
 
   private static final String SHARE_INSTANCE_ENDPOINT = "/consortia/{id}/sharing/instances";
-  private static final String SHARING_INSTANCE_ERROR = "Error during sharing Instance for sourceTenantId: %s, targetTenantId: %s, instanceIdentifier: %s";
+  private static final String SHARING_INSTANCE_ERROR = "Error during sharing Instance for sourceTenantId: %s, targetTenantId: %s, instanceIdentifier: %s, error: %s";
 
   private final RestClient restClient;
 
@@ -62,15 +62,15 @@ public class SharingInstanceService {
           return Future.succeededFuture(response);
         } else {
           String message = String.format(SHARING_INSTANCE_ERROR, sharingInstance.sourceTenantId(), sharingInstance.targetTenantId(),
-            sharingInstance.instanceIdentifier());
+            sharingInstance.instanceIdentifier(), sharingInstance.error());
           return Future.failedFuture(new ConsortiumException(message));
         }
       });
   }
 
-  private RequestContext createRequestContextWithUpdatedTenantId(Context context, Map<String, String> headers, String tenantId) {
+  private RequestContext createRequestContextWithUpdatedTenantId(Context context, Map<String, String> headers, String centralTenantId) {
     Map<String, String> modifiedHeaders  = new CaseInsensitiveMap<>(headers);
-    modifiedHeaders.put(XOkapiHeaders.TENANT, tenantId);
+    modifiedHeaders.put(XOkapiHeaders.TENANT, centralTenantId);
     return new RequestContext(context, modifiedHeaders );
   }
 

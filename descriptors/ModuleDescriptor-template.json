@@ -1148,12 +1148,20 @@
     {
       "id": "orders-storage.export-history",
       "version": "1.0"
+    },
+    {
+      "id": "user-tenants",
+      "version": "1.0"
     }
   ],
   "optional": [
     {
       "id": "invoice",
       "version": "7.0"
+    },
+    {
+      "id": "consortia",
+      "version": "1.0"
     }
   ],
   "permissionSets": [

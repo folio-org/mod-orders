@@ -1291,8 +1291,6 @@ public class InventoryManager {
               return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration.get(), requestContext);
             });
         }
-        logger.warn("ECS mode is not enabled for tenant with id {} when creating shadow instance with id {}",
-          TenantTool.tenantId(requestContext.getHeaders()), instanceId);
         return Future.succeededFuture();
       });
   }
