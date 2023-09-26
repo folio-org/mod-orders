@@ -37,6 +37,7 @@ public class ResourcePathResolver {
   public static final String PREFIXES = "configuration.prefixes";
   public static final String SUFFIXES = "configuration.suffixes";
   public static final String TRANSACTIONS_ENDPOINT = "finance.transactions";
+  public static final String USER_TENANTS_ENDPOINT = "user.tenants";
   public static final String FINANCE_RELEASE_ENCUMBRANCE = "finance.release-encumbrance";
   public static final String BUDGET_EXPENSE_CLASSES = "finance-storage.budget-expense-classes";
   public static final String CURRENT_BUDGET = "finance.current-budgets";
@@ -77,6 +78,7 @@ public class ResourcePathResolver {
     apis.put(PREFIXES, "/orders-storage/configuration/prefixes");
     apis.put(SUFFIXES, "/orders-storage/configuration/suffixes");
     apis.put(TRANSACTIONS_ENDPOINT, "/finance/transactions");
+    apis.put(USER_TENANTS_ENDPOINT, "/user-tenants");
     apis.put(FINANCE_RELEASE_ENCUMBRANCE, "/finance/release-encumbrance");
     apis.put(BUDGET_EXPENSE_CLASSES, "/finance-storage/budget-expense-classes");
     apis.put(CURRENT_BUDGET, "/finance/funds/%s/budget");

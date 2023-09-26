@@ -79,8 +79,6 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.IntStreamEx;
 import one.util.streamex.StreamEx;
 
-import javax.ws.rs.NotFoundException;
-
 public class InventoryManager {
   private static final Logger logger = LogManager.getLogger(InventoryManager.class);
 
@@ -1281,23 +1279,21 @@ public class InventoryManager {
   }
 
   public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
-    return getInstanceById(instanceId, true, requestContext)
-      .compose(instance -> {
-        if (Objects.nonNull(instance) && !instance.isEmpty()) {
-          return Future.succeededFuture();
-        }
-        logger.info("Instance with id: {} not found. Checking consortium", instanceId);
-        return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-          .compose(consortiumConfiguration -> {
-              if (consortiumConfiguration.isPresent()) {
-                logger.info("Creating shadow instance with instanceId: {}", instanceId);
-                return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration.get(), requestContext);
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(consortiumConfiguration -> {
+        if (consortiumConfiguration.isPresent()) {
+          return getInstanceById(instanceId, true, requestContext)
+            .compose(instance -> {
+              if (Objects.nonNull(instance) && !instance.isEmpty()) {
+                return Future.succeededFuture();
               }
-              String notFoundMessage = String.format("Instance with id %s does not exist and it's not a consortia shared instance", instanceId);
-              logger.error(notFoundMessage);
-              return Future.failedFuture(new NotFoundException(notFoundMessage));
-            }
-          );
+              logger.info("Creating shadow instance with instanceId: {}", instanceId);
+              return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration.get(), requestContext);
+            });
+        }
+        logger.warn("ECS mode is not enabled for tenant with id {} when creating shadow instance with id {}",
+          TenantTool.tenantId(requestContext.getHeaders()), instanceId);
+        return Future.succeededFuture();
       });
   }
 

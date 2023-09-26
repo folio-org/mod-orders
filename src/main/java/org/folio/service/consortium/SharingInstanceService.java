@@ -19,7 +19,12 @@ import org.folio.rest.tools.utils.TenantTool;
 import java.util.Map;
 import java.util.UUID;
 
-
+/**
+ * The `SharingInstanceService` class manages the creation of shadow instances
+ * within a consortium using the `mod-consortia` module.
+ * It provides methods for creating shadow instances and sharing them within the consortium.
+ * This service is responsible for making REST API calls to the `mod-consortia` module.
+ */
 public class SharingInstanceService {
   private static final Logger logger = LogManager.getLogger(SharingInstanceService.class);
 
@@ -32,6 +37,14 @@ public class SharingInstanceService {
     this.restClient = restClient;
   }
 
+  /**
+   * Creates a shadow instance and shares it within the consortium.
+   *
+   * @param instanceId              the unique identifier of the instance to be shared
+   * @param consortiumConfiguration the consortium configuration
+   * @param requestContext          the request context
+   * @return a Future that resolves with the created SharingInstance
+   */
   public Future<SharingInstance> createShadowInstance(String instanceId, ConsortiumConfiguration consortiumConfiguration, RequestContext requestContext) {
     SharingInstance sharingInstance = new SharingInstance(UUID.fromString(instanceId),
       consortiumConfiguration.centralTenantId(), TenantTool.tenantId(requestContext.getHeaders()));
@@ -40,7 +53,7 @@ public class SharingInstanceService {
     return shareInstance(consortiumConfiguration.consortiumId(), sharingInstance, consortiaRequestContext);
   }
 
-  public Future<SharingInstance> shareInstance(String consortiumId, SharingInstance sharingInstance, RequestContext requestContext) {
+  private Future<SharingInstance> shareInstance(String consortiumId, SharingInstance sharingInstance, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(SHARE_INSTANCE_ENDPOINT).withId(consortiumId);
     return restClient.post(requestEntry, sharingInstance, SharingInstance.class, requestContext)
       .compose(response -> {
