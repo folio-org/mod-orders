@@ -473,6 +473,7 @@
             "inventory.items.item.put",
             "inventory.items.collection.get",
             "inventory-storage.holdings-sources.collection.get",
+            "inventory.instances.item.get",
             "inventory.instances.item.post",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
@@ -495,7 +496,9 @@
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
             "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.reporting-codes.item.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -514,6 +517,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "configuration.entries.collection.get",
+            "inventory.instances.item.get",
             "inventory.instances.item.post",
             "inventory.items.item.get",
             "inventory.items.item.put",
@@ -544,7 +548,9 @@
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
             "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.reporting-codes.item.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
