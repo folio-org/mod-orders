@@ -63,6 +63,7 @@ import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
+import static org.folio.orders.utils.ResourcePathResolver.USER_TENANTS_ENDPOINT;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
@@ -604,6 +605,7 @@ public class MockServer {
     router.get(resourcePath(PREFIXES)).handler(ctx -> handleGetGenericSubObj(ctx, PREFIXES));
     router.get(resourcePath(SUFFIXES)).handler(ctx -> handleGetGenericSubObj(ctx, SUFFIXES));
     router.get(resourcesPath(TRANSACTIONS_ENDPOINT)).handler(this::handleTransactionGetEntry);
+    router.get(resourcesPath(USER_TENANTS_ENDPOINT)).handler(this::handleUserTenantsGetEntry);
     router.get("/finance/funds/:id/budget").handler(this::handleGetBudgetByFinanceId);
     router.get(resourcesPath(FINANCE_EXCHANGE_RATE)).handler(this::handleGetRateOfExchange);
     router.get(resourcesPath(LEDGER_FY_ROLLOVERS)).handler(this::handleGetFyRollovers);
@@ -2292,6 +2294,12 @@ public class MockServer {
     } catch(IOException e) {
       logger.error("handleTransactionGetEntry error", e);
     }
+  }
+
+  private void handleUserTenantsGetEntry(RoutingContext ctx) {
+    String body = new JsonObject().put("userTenants", org.assertj.core.util.Lists.emptyList()).encodePrettily();
+    serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
+    addServerRqRsData(HttpMethod.GET, USER_TENANTS_ENDPOINT, new JsonObject(body));
   }
 
   private Class<?> getSubObjClass(String subObj) {

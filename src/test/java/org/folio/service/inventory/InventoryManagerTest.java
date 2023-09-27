@@ -86,6 +86,8 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.SharingInstanceService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.hamcrest.core.IsInstanceOf;
@@ -140,6 +142,10 @@ public class InventoryManagerTest {
   private InventoryCache inventoryCache;
   @Autowired
   private InventoryService inventoryService;
+  @Autowired
+  private SharingInstanceService sharingInstanceService;
+  @Autowired
+  private ConsortiumConfigurationService consortiumConfigurationService;
 
 
   private Map<String, String> okapiHeadersMock;
@@ -1047,6 +1053,14 @@ public class InventoryManagerTest {
     public PieceStorageService pieceStorageService() {
       return mock(PieceStorageService.class);
     }
+    @Bean
+    public ConsortiumConfigurationService consortiumConfigurationService() {
+      return mock(ConsortiumConfigurationService.class);
+    }
+    @Bean
+    public SharingInstanceService sharingInstanceService() {
+      return mock(SharingInstanceService.class);
+    }
 
     @Bean
     public RestClient restClient() {
@@ -1055,8 +1069,9 @@ public class InventoryManagerTest {
 
     @Bean
     public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesCache configurationEntriesCache,
-                                             PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService) {
-      return spy(new InventoryManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, inventoryService));
+                                             PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService,
+                                             ConsortiumConfigurationService consortiumConfigurationService, SharingInstanceService sharingInstanceService) {
+      return spy(new InventoryManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, inventoryService, sharingInstanceService, consortiumConfigurationService));
     }
   }
 }

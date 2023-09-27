@@ -42,6 +42,7 @@ import org.folio.rest.impl.protection.ReceivingCheckinProtectionTest;
 import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
+import org.folio.service.consortium.SharingInstanceServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.FundServiceTest;
@@ -190,6 +191,10 @@ public class ApiTestSuite {
 
   @Nested
   class PrefixServiceTestNested extends PrefixServiceTest {
+  }
+
+  @Nested
+  class SharingInstanceServiceTestNested extends SharingInstanceServiceTest {
   }
 
   @Nested

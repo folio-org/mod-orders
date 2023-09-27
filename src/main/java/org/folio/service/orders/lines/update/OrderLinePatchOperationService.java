@@ -41,6 +41,7 @@ import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.service.caches.InventoryCache;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
@@ -63,17 +64,21 @@ public class OrderLinePatchOperationService {
   private final PurchaseOrderLineService purchaseOrderLineService;
 
   private final InventoryCache inventoryCache;
+  private final InventoryManager inventoryManager;
 
   public OrderLinePatchOperationService(RestClient restClient, OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
-                                        PurchaseOrderLineService purchaseOrderLineService, InventoryCache inventoryCache) {
+                                        PurchaseOrderLineService purchaseOrderLineService, InventoryCache inventoryCache, InventoryManager inventoryManager) {
     this.restClient = restClient;
     this.orderLinePatchOperationHandlerResolver = orderLinePatchOperationHandlerResolver;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.inventoryCache = inventoryCache;
+    this.inventoryManager = inventoryManager;
   }
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
-    return patchOrderLine(request, lineId, requestContext)
+    String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
+    return inventoryManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
+      .compose(v -> patchOrderLine(request, lineId, requestContext))
       .compose(v -> updateInventoryInstanceInformation(request, lineId, requestContext));
   }
 

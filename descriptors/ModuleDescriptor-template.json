@@ -175,9 +175,12 @@
             "configuration.entries.collection.get",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
+            "inventory.instances.item.get",
             "inventory-storage.identifier-types.collection.get",
             "isbn-utils.convert-to-13.get",
-            "finance-storage.budget-expense-classes.collection.get"
+            "finance-storage.budget-expense-classes.collection.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -235,6 +238,7 @@
             "finance-storage.budget-expense-classes.collection.get",
             "inventory.instances.collection.get",
             "inventory.instances.item.post",
+            "inventory.instances.item.get",
             "inventory-storage.holdings.item.post",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
@@ -257,7 +261,9 @@
             "organizations-storage.organizations.collection.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put",
-            "orders-storage.order-invoice-relationships.collection.get"
+            "orders-storage.order-invoice-relationships.collection.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -309,7 +315,9 @@
             "orders-storage.po-lines.item.patch",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put",
-            "orders-storage.pieces.collection.get"
+            "orders-storage.pieces.collection.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -465,6 +473,7 @@
             "inventory.items.item.put",
             "inventory.items.collection.get",
             "inventory-storage.holdings-sources.collection.get",
+            "inventory.instances.item.get",
             "inventory.instances.item.post",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
@@ -487,7 +496,9 @@
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
             "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.reporting-codes.item.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -506,6 +517,7 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "configuration.entries.collection.get",
+            "inventory.instances.item.get",
             "inventory.instances.item.post",
             "inventory.items.item.get",
             "inventory.items.item.put",
@@ -536,7 +548,9 @@
             "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
             "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.reporting-codes.item.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -748,7 +762,10 @@
           "modulePermissions": [
             "orders-storage.titles.collection.get",
             "orders-storage.titles.item.post",
-            "orders-storage.po-lines.item.get"
+            "orders-storage.po-lines.item.get",
+            "inventory.instances.item.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         },
         {
@@ -761,7 +778,12 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/titles/{id}",
           "permissionsRequired": ["orders.titles.item.put"],
-          "modulePermissions": ["orders-storage.titles.item.put"]
+          "modulePermissions": [
+            "orders-storage.titles.item.put",
+            "inventory.instances.item.get",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
+          ]
         },
         {
           "methods": ["DELETE"],
@@ -1132,12 +1154,20 @@
     {
       "id": "orders-storage.export-history",
       "version": "1.0"
+    },
+    {
+      "id": "user-tenants",
+      "version": "1.0"
     }
   ],
   "optional": [
     {
       "id": "invoice",
       "version": "7.0"
+    },
+    {
+      "id": "consortia",
+      "version": "1.0"
     }
   ],
   "permissionSets": [

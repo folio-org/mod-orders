@@ -36,6 +36,8 @@ import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.SharingInstanceService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.inventory.InventoryService;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -212,6 +214,12 @@ public class OrderLineUpdateInstanceHandlerTest {
     @Bean InventoryService inventoryService (RestClient restClient) {
       return new InventoryService(restClient);
     }
+    @Bean SharingInstanceService sharingInstanceService (RestClient restClient) {
+      return new SharingInstanceService(restClient);
+    }
+    @Bean ConsortiumConfigurationService consortiumConfigurationService (RestClient restClient) {
+      return new ConsortiumConfigurationService(restClient);
+    }
 
     @Bean
     ConfigurationEntriesService configurationEntriesService(RestClient restClient) {
@@ -220,8 +228,9 @@ public class OrderLineUpdateInstanceHandlerTest {
 
     @Bean
     public InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesCache configurationEntriesCache,
-      PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService) {
-      return new InventoryManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, inventoryService);
+                                             PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService,
+                                             ConsortiumConfigurationService consortiumConfigurationService, SharingInstanceService sharingInstanceService) {
+      return new InventoryManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, inventoryService, sharingInstanceService, consortiumConfigurationService);
     }
 
     @Bean
@@ -242,8 +251,9 @@ public class OrderLineUpdateInstanceHandlerTest {
         RestClient restClient,
         OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
         PurchaseOrderLineService purchaseOrderLineService,
-        InventoryCache inventoryCache) {
-      return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver, purchaseOrderLineService, inventoryCache);
+        InventoryCache inventoryCache,
+        InventoryManager inventoryManager) {
+      return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver, purchaseOrderLineService, inventoryCache, inventoryManager);
     }
 
     @Bean PatchOperationHandler orderLineUpdateInstanceHandler(

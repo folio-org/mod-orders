@@ -42,6 +42,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.PieceItemPair;
 import org.folio.models.PoLineUpdateHolder;
+import org.folio.models.consortium.SharingInstance;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -65,6 +66,8 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.SharingInstanceService;
 import org.folio.service.pieces.PieceStorageService;
 
 import io.vertx.core.CompositeFuture;
@@ -150,14 +153,18 @@ public class InventoryManager {
   private final InventoryCache inventoryCache;
   private final InventoryService inventoryService;
   private final PieceStorageService pieceStorageService;
+  private final SharingInstanceService sharingInstanceService;
+  private final ConsortiumConfigurationService consortiumConfigurationService;
 
   public InventoryManager(RestClient restClient, ConfigurationEntriesCache configurationEntriesCache,
-      PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService) {
+                          PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService, SharingInstanceService sharingInstanceService, ConsortiumConfigurationService consortiumConfigurationService) {
     this.restClient = restClient;
     this.configurationEntriesCache = configurationEntriesCache;
     this.inventoryCache = inventoryCache;
     this.inventoryService = inventoryService;
     this.pieceStorageService = pieceStorageService;
+    this.sharingInstanceService = sharingInstanceService;
+    this.consortiumConfigurationService = consortiumConfigurationService;
   }
 
   static {
@@ -1019,6 +1026,11 @@ public class InventoryManager {
     return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
   }
 
+  public Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(instanceId);
+    return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
+  }
+
   public Future<Void> deleteHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
     if (StringUtils.isNotEmpty(holdingId)) {
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
@@ -1265,4 +1277,22 @@ public class InventoryManager {
     Optional.ofNullable(piece.getDiscoverySuppress())
       .ifPresentOrElse(discSup -> item.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> item.remove(ITEM_DISCOVERY_SUPPRESS));
   }
+
+  public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(consortiumConfiguration -> {
+        if (consortiumConfiguration.isPresent()) {
+          return getInstanceById(instanceId, true, requestContext)
+            .compose(instance -> {
+              if (Objects.nonNull(instance) && !instance.isEmpty()) {
+                return Future.succeededFuture();
+              }
+              logger.info("Creating shadow instance with instanceId: {}", instanceId);
+              return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration.get(), requestContext);
+            });
+        }
+        return Future.succeededFuture();
+      });
+  }
+
 }

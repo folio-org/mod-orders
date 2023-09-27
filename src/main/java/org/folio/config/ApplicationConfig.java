@@ -29,6 +29,8 @@ import org.folio.service.TagService;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.SharingInstanceService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.folio.service.exchange.FinanceExchangeRateService;
 import org.folio.service.finance.FiscalYearService;
@@ -451,8 +453,8 @@ public class ApplicationConfig {
 
   @Bean
   TitlesService titlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService,
-      AcquisitionsUnitsService acquisitionsUnitsService) {
-    return new TitlesService(restClient, purchaseOrderLineService, acquisitionsUnitsService);
+      AcquisitionsUnitsService acquisitionsUnitsService, InventoryManager inventoryManager) {
+    return new TitlesService(restClient, purchaseOrderLineService, acquisitionsUnitsService, inventoryManager);
   }
 
   @Bean
@@ -477,8 +479,9 @@ public class ApplicationConfig {
 
   @Bean
   InventoryManager inventoryManager(RestClient restClient, ConfigurationEntriesCache configurationEntriesCache,
-                                    PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService) {
-    return new InventoryManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, inventoryService);
+                                    PieceStorageService pieceStorageService, InventoryCache inventoryCache, InventoryService inventoryService,
+                                    ConsortiumConfigurationService consortiumConfigurationService, SharingInstanceService sharingInstanceService) {
+    return new InventoryManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, inventoryService, sharingInstanceService, consortiumConfigurationService);
   }
 
   @Bean
@@ -682,8 +685,9 @@ public class ApplicationConfig {
       RestClient restClient,
       OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
       PurchaseOrderLineService purchaseOrderLineService,
-      InventoryCache inventoryCache) {
-    return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver, purchaseOrderLineService, inventoryCache);
+      InventoryCache inventoryCache,
+      InventoryManager inventoryManager) {
+    return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver, purchaseOrderLineService, inventoryCache, inventoryManager);
   }
 
   @Bean PatchOperationHandler orderLineUpdateInstanceHandler(
@@ -732,5 +736,15 @@ public class ApplicationConfig {
 
   @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(InvoiceLineService invoiceLineService, PendingPaymentService pendingPaymentService, InvoiceTransactionSummariesService invoiceTransactionSummariesService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
     return new POLInvoiceLineRelationService(invoiceLineService, pendingPaymentService, invoiceTransactionSummariesService, poLineInvoiceLineHolderBuilder);
+  }
+
+  @Bean
+  ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient) {
+    return new ConsortiumConfigurationService(restClient);
+  }
+
+  @Bean
+  SharingInstanceService sharingInstanceService(RestClient restClient) {
+    return new SharingInstanceService(restClient);
   }
 }
