@@ -59,7 +59,7 @@
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <spring.version>5.3.24</spring.version>
     <vertx.version>4.4.5</vertx.version>
-    <log4j.version>2.19.0</log4j.version>
+    <log4j.version>2.20.0</log4j.version>
     <argLine />
   </properties>
 
