@@ -40,7 +40,7 @@
   </licenses>
 
   <properties>
-    <aspectj.version>1.9.19</aspectj.version>
+    <aspectj.version>1.9.20.1</aspectj.version>
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
     <jsonschema_paths>
@@ -51,14 +51,14 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
     <ramlfiles_acq_models_path>${ramlfiles_path}/acq-models</ramlfiles_acq_models_path>
-    <raml-module-builder.version>35.0.4</raml-module-builder.version>
+    <raml-module-builder.version>35.1.0</raml-module-builder.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <mod-configuration-client.version>5.9.1</mod-configuration-client.version>
     <sonar.exclusions>**/models/**.java, **/completablefuture/FolioVertxCompletableFuture.java,**/unopen/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
-    <spring.version>5.3.20</spring.version>
-    <vertx.version>4.3.5</vertx.version>
+    <spring.version>5.3.24</spring.version>
+    <vertx.version>4.4.5</vertx.version>
     <log4j.version>2.19.0</log4j.version>
     <argLine />
   </properties>
@@ -210,7 +210,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.8.2</version>
+      <version>5.10.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
