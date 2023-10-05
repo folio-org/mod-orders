@@ -42,7 +42,7 @@
   <properties>
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
-    <!--RMB configurations-->
+    <!--Configurations-->
     <jsonschema_paths>
       acq-models/common/schemas,acq-models/mod-orders/schemas,acq-models/mod-orders-storage/schemas,acq-models/acquisitions-unit/schemas,acq-models/mod-invoice-storage/schemas,raml-util/schemas
     </jsonschema_paths>
