@@ -2,7 +2,7 @@
 
 ## 12.7.0 - Released (Poppy R2 2023)
 
-This release focused on....
+This release focused on fixing several bugs in rollover and implement new feature relate to POL or other parts 
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.0...v12.7.0)
 
