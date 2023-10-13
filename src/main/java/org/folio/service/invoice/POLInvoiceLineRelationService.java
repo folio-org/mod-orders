@@ -64,11 +64,11 @@ public class POLInvoiceLineRelationService {
         validateInvoiceLineStatuses(invoiceLines);
 
         if (CollectionUtils.isNotEmpty(forCreate) && CollectionUtils.isNotEmpty(forDelete)) {
-          List<String> encumbranceForDeleteIds = forDelete.stream().map(Transaction::getId).distinct().collect(Collectors.toList());
+          List<String> encumbranceForDeleteIds = forDelete.stream().map(Transaction::getId).distinct().toList();
           String currency = encumbrancesProcessingHolder.getEncumbrancesForCreate().stream()
             .map(EncumbranceRelationsHolder::getCurrency).findFirst().orElseThrow();
 
-          copyAmountsAndRecalculateNewEncumbrance(forCreate, forDelete, currency);
+          copyAmountsAndRecalculateNewEncumbrance(forCreate, forDelete, invoiceLines, currency);
           return removeEncumbranceReferenceFromTransactions(encumbranceForDeleteIds, requestContext)
             .map(encumbrancesProcessingHolder);
         } else {
@@ -109,18 +109,23 @@ public class POLInvoiceLineRelationService {
       .withDistributionType(org.folio.rest.acq.model.invoice.FundDistribution.DistributionType.fromValue(fundDistribution.getDistributionType().value()));
   }
 
-  private void copyAmountsAndRecalculateNewEncumbrance(List<Transaction> forCreate, List<Transaction> forDelete, String currency) {
+  private void copyAmountsAndRecalculateNewEncumbrance(List<Transaction> forCreate, List<Transaction> forDelete, List<InvoiceLine> invoiceLines, String currency) {
     double amountExpended = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountExpended())
       .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue();
     double amountAwaitingPayment = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountAwaitingPayment())
       .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue();
+    boolean isReleaseEncumbranceEnabled = filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.PAID))
+      .stream()
+      .anyMatch(InvoiceLine::getReleaseEncumbrance);
 
     forCreate.stream().findFirst().ifPresent(transaction -> {
       Encumbrance encumbrance = transaction.getEncumbrance();
       double encumbranceAmount = HelperUtils.calculateEncumbranceEffectiveAmount(encumbrance.getInitialAmountEncumbered(),
         amountExpended, amountAwaitingPayment, Monetary.getCurrency(currency));
+      var encumbranceStatus = isReleaseEncumbranceEnabled && encumbranceAmount == 0d ?
+        Encumbrance.Status.RELEASED : Encumbrance.Status.UNRELEASED;
       transaction.withAmount(encumbranceAmount).withEncumbrance(encumbrance.withAmountExpended(amountExpended)
-        .withAmountAwaitingPayment(amountAwaitingPayment).withStatus(encumbrance.getStatus()));
+        .withAmountAwaitingPayment(amountAwaitingPayment).withStatus(encumbranceStatus));
     });
   }
 
