@@ -1,5 +1,16 @@
 ## 12.8.0 - Unreleased
 
+## 12.7.1 - Released (Poppy R2 2023)
+
+This release focused on fixing encumbrance status when changing fund distribution
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.7.0...v12.7.1)
+
+### Bug Fixes
+
+* [MODORDERS-943](https://issues.folio.org/browse/MODORDERS-943) - Encumbrance status becomes "Unreleased" after changing fund distribution
+
+
 ## 12.7.0 - Released (Poppy R2 2023)
 
 This release focused on fixing several bugs in rollover and implement new feature relate to POL or other parts 
