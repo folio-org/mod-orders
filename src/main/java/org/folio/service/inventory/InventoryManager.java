@@ -101,6 +101,7 @@ public class InventoryManager {
   public static final String HOLDING_SOURCE = "sourceId";
   public static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
   public static final String ITEM_BARCODE = "barcode";
+  public static final String ITEM_ACCESSION_NUMBER = "accessionNumber";
   public static final String ITEM_LEVEL_CALL_NUMBER = "itemLevelCallNumber";
   public static final String ITEM_STATUS = "status";
   public static final String ITEM_STATUS_NAME = "name";
