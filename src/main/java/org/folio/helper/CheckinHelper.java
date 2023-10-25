@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.service.inventory.InventoryManager.ITEM_ACCESSION_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
 import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
 import static org.folio.service.inventory.InventoryManager.ITEM_DISCOVERY_SUPPRESS;
@@ -357,6 +358,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
     if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getAccessionNumber())) {
+      itemRecord.put(ITEM_ACCESSION_NUMBER, checkinPiece.getAccessionNumber());
     }
     if (StringUtils.isNotEmpty(checkinPiece.getCallNumber())) {
       itemRecord.put(ITEM_LEVEL_CALL_NUMBER, checkinPiece.getCallNumber());
