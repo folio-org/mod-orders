@@ -568,9 +568,14 @@
             "inventory-storage.holdings.item.delete",
             "finance.encumbrances.item.put",
             "finance.encumbrances.item.post",
+            "finance.encumbrances.item.delete",
             "finance.order-transaction-summaries.item.get",
             "finance.order-transaction-summaries.item.post",
             "finance.order-transaction-summaries.item.put",
+            "finance.funds.collection.get",
+            "finance.funds.budget.item.get",
+            "finance.fiscal-years.item.get",
+            "finance.transactions.collection.get",
             "finance-storage.ledgers.collection.get",
             "finance-storage.order-transaction-summaries.item.get",
             "orders-storage.pieces.item.delete",
@@ -581,7 +586,10 @@
             "orders-storage.po-lines.collection.get",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.alerts.item.get",
-            "orders-storage.reporting-codes.item.get"
+            "orders-storage.reporting-codes.item.get",
+            "orders-storage.order-invoice-relationships.collection.get",
+            "invoice.invoice-lines.collection.get",
+            "invoice.invoice-lines.item.put"
           ]
         }
       ]
