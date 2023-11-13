@@ -83,7 +83,7 @@
     <junit-bom.version>5.9.0</junit-bom.version>
 
     <!--Sonar exclusion-->
-    <sonar.exclusions>**/models/**.java, **/completablefuture/FolioVertxCompletableFuture.java,**/unopen/**.java</sonar.exclusions>
+    <sonar.exclusions>**/models/**.java,**/unopen/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <argLine />
   </properties>
