@@ -17,6 +17,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
+import java.util.Date;
+
 public class PieceUpdateFlowManager {
   private static final Logger logger = LogManager.getLogger(PieceUpdateFlowManager.class);
 
@@ -68,6 +70,7 @@ public class PieceUpdateFlowManager {
         logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
         logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
         if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
+          holder.getPieceToUpdate().setStatusUpdatedDate(new Date());
           pieceService.receiptConsistencyPiecePoLine(messageToEventBus, requestContext);
         }
         return null;
