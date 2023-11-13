@@ -152,7 +152,10 @@ public class PieceApiTest {
     pieceRequest.put("receivingStatus", "Received");
 
     addMockEntry(PIECES_STORAGE, pieceStorage);
-    verifyPut(String.format(PIECES_ID_PATH, pieceId), pieceRequest, "", 204);
+    verifyPut(String.format(PIECES_ID_PATH, pieceId), pieceRequest, "", 204)
+      .then()
+      .assertThat()
+      .body("statusUpdatedDate", notNullValue());;
 
     // Message sent to event bus
     HandlersTestHelper.verifyReceiptStatusUpdateEvent(1);

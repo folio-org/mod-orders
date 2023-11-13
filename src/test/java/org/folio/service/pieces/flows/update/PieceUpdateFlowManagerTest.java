@@ -13,8 +13,7 @@ import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLD
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -235,7 +234,7 @@ public class PieceUpdateFlowManagerTest {
     Piece pieceFromStorage = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
       .withHoldingId(oldHoldingId).withFormat(Piece.Format.ELECTRONIC);
     Piece incomingPieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-      .withHoldingId(holdingIdToUpdate).withFormat(Piece.Format.ELECTRONIC);
+      .withHoldingId(holdingIdToUpdate).withFormat(Piece.Format.ELECTRONIC).withReceivingStatus(Piece.ReceivingStatus.RECEIVED);
     Cost cost = new Cost().withQuantityElectronic(1);
     Location loc = new Location().withHoldingId(oldHoldingId).withQuantityElectronic(1).withQuantity(1);
     PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
@@ -265,6 +264,7 @@ public class PieceUpdateFlowManagerTest {
     Piece pieceToUpdate = pieceToUpdateCapture.getValue();
     PieceUpdateHolder pieceUpdateHolder = pieceUpdateHolderCapture.getValue();
 
+    assertNotNull(pieceToUpdate.getStatusUpdatedDate());
     verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
     verify(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     verify(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
