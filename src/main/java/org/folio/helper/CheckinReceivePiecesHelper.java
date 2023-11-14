@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -400,8 +401,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
       .filter(this::isSuccessfullyProcessedPiece)
-      .map((Piece piece) -> storeUpdatedPieceRecord(piece, requestContext))
-      .collect(Collectors.toList());
+      .map(piece -> piece.withStatusUpdatedDate(new Date()))
+      .map(piece -> storeUpdatedPieceRecord(piece, requestContext))
+      .toList();
 
     return GenericCompositeFuture.join(futures)
       .map(v -> piecesGroupedByPoLine);
