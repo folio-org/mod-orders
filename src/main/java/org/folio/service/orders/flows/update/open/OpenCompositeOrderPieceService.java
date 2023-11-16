@@ -5,6 +5,7 @@ import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
@@ -121,18 +122,23 @@ public class OpenCompositeOrderPieceService {
       .compose(v -> inventoryManager.updateItemWithPieceFields(piece, requestContext))
       .onSuccess(vVoid ->
         pieceStorageService.getPieceById(piece.getId(), requestContext).onSuccess(pieceStorage -> {
+            Piece.ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
             Piece.ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
+            boolean isReceivingStatusChanged = receivingStatusStorage.compareTo(receivingStatusUpdate) != 0;
+
+            if(isReceivingStatusChanged) {
+              piece.setStatusUpdatedDate(new Date());
+            }
+
             pieceStorageService.updatePiece(piece, requestContext)
               .onSuccess(ok -> {
                 promise.complete();
                 JsonObject messageToEventBus = new JsonObject();
                 messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
-
-                Piece.ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
                 logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
                 logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
 
-                if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
+                if (isReceivingStatusChanged) {
                   receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, messageToEventBus, requestContext);
                 }
               })
