@@ -1,6 +1,5 @@
 package org.folio.service.titles;
 
-import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -12,26 +11,20 @@ import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
-import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.inventory.InventoryManager;
-import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 
@@ -39,25 +32,20 @@ import one.util.streamex.StreamEx;
 public class TitlesService {
   private static final String ENDPOINT = resourcesPath(TITLES);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
-
-  private final PurchaseOrderLineService purchaseOrderLineService;
   private final RestClient restClient;
 
   private final AcquisitionsUnitsService acquisitionsUnitsService;
   private final InventoryManager inventoryManager;
 
-  public TitlesService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService,
-                       AcquisitionsUnitsService acquisitionsUnitsService, InventoryManager inventoryManager) {
+  public TitlesService(RestClient restClient, AcquisitionsUnitsService acquisitionsUnitsService, InventoryManager inventoryManager) {
     this.restClient = restClient;
-    this.purchaseOrderLineService = purchaseOrderLineService;
     this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.inventoryManager = inventoryManager;
   }
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
     return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext)
-      .compose(shadowInstance -> populateTitle(title, title.getPoLineId(), requestContext))
-      .compose(v -> {
+      .compose(shadowInstance -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
         return restClient.post(requestEntry, title, Title.class, requestContext);
       });
@@ -105,40 +93,6 @@ public class TitlesService {
       .toList())
       .map(lists -> StreamEx.of(lists)
         .toFlatList(Function.identity()).stream().collect(groupingBy(Title::getPoLineId)));
-  }
-
-  private Future<Void> populateTitle(Title title, String poLineId, RequestContext requestContext) {
-    Promise<Void> promise = Promise.promise();
-    purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-      .map(poLine -> {
-        if(Boolean.TRUE.equals(poLine.getIsPackage())) {
-          populateTitleByPoLine(title, poLine);
-          promise.complete();
-        }
-        else {
-          getTitlesByPoLineIds(singletonList(poLineId), requestContext)
-            .onSuccess(titles -> {
-              if (titles.isEmpty()) {
-                populateTitleByPoLine(title, poLine);
-                promise.complete();
-              } else {
-                promise.fail(new HttpException(422, ErrorCodes.TITLE_EXIST));
-              }
-            });
-        }
-        return null;
-      })
-      .onFailure(promise::fail);
-    return promise.future();
-  }
-
-  private void populateTitleByPoLine(Title title, PoLine poLine) {
-    title.setPackageName(poLine.getTitleOrPackage());
-    title.setExpectedReceiptDate(Objects.nonNull(poLine.getPhysical()) ? poLine.getPhysical().getExpectedReceiptDate() : null);
-    title.setPoLineNumber(poLine.getPoLineNumber());
-    if(poLine.getDetails() != null) {
-      title.setReceivingNote(poLine.getDetails().getReceivingNote());
-    }
   }
 
   private Future<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
