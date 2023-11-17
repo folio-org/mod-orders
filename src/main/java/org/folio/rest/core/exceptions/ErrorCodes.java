@@ -63,7 +63,6 @@ public enum ErrorCodes {
   CURRENT_FISCAL_YEAR_NOT_FOUND("currentFYearNotFound", "Current fiscal year not found for ledger"),
   CURRENT_FISCAL_YEAR_ID_NOT_FOUND("currentFYearIdNotFound", "Current fiscal year id not found for POLine"),
   TITLE_NOT_FOUND("titleNotFound", "Associated title not found for PO Line"),
-  TITLE_EXIST("titleExist", "The title for poLine already exist"),
   MULTIPLE_NONPACKAGE_TITLES("multipleNonPackageTitles", "Non package PO Line must contain only one title."),
   BUDGET_NOT_FOUND_FOR_TRANSACTION("budgetNotFoundForTransaction", "Budget not found for transaction"),
   LEDGER_NOT_FOUND_FOR_TRANSACTION("ledgerNotFoundForTransaction", "Ledger not found for transaction"),
