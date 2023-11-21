@@ -555,8 +555,8 @@ public class ApplicationConfig {
   }
 
 
-  @Bean BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService) {
-      return new BasePieceFlowHolderBuilder(purchaseOrderStorageService, purchaseOrderLineService);
+  @Bean BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService) {
+      return new BasePieceFlowHolderBuilder(purchaseOrderStorageService, purchaseOrderLineService, titlesService);
   }
 
   @Bean PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
