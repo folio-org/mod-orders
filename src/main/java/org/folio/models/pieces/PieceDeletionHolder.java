@@ -37,6 +37,4 @@ public class PieceDeletionHolder extends BasePieceFlowHolder {
   public String getTitleId() {
     return pieceToDelete.getTitleId();
   }
-
-
 }
