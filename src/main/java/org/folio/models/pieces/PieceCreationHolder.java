@@ -33,6 +33,4 @@ public class PieceCreationHolder extends BasePieceFlowHolder {
   public String getTitleId() {
     return pieceToCreate.getTitleId();
   }
-
-
 }
