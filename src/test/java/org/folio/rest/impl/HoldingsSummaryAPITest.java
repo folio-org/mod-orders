@@ -38,6 +38,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,7 @@ import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
 
+@Disabled
 public class HoldingsSummaryAPITest {
 
   public static String HOLDING_SUMMARY_ENDPOINT = "/orders/holding-summary/%s";

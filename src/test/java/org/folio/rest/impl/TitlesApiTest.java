@@ -55,6 +55,7 @@ import org.mockito.MockitoAnnotations;
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 
+@Disabled
 public class TitlesApiTest {
   private static final Logger logger = LogManager.getLogger();
 

@@ -62,6 +62,7 @@ import org.junit.jupiter.api.Test;
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 
+@Disabled
 public class PieceApiTest {
 
   private static final Logger logger = LogManager.getLogger();

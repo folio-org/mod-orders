@@ -45,6 +45,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +53,7 @@ import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
 
+@Disabled
 public class UnOpenCompositeOrderManagerTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";

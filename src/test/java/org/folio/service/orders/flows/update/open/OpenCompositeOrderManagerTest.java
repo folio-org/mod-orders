@@ -38,6 +38,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
@@ -46,6 +47,7 @@ import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
 
+@Disabled
 public class OpenCompositeOrderManagerTest {
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";

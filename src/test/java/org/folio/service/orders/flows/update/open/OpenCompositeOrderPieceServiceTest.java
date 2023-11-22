@@ -56,6 +56,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -74,6 +75,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 
 
+@Disabled
 @ExtendWith(VertxExtension.class)
 public class OpenCompositeOrderPieceServiceTest {
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";

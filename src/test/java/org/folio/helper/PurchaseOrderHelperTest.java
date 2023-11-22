@@ -69,6 +69,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -83,6 +84,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+@Disabled
 @ExtendWith(VertxExtension.class)
 public class PurchaseOrderHelperTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";

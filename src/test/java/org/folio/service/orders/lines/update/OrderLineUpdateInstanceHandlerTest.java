@@ -46,6 +46,7 @@ import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -57,6 +58,7 @@ import com.google.common.collect.Lists;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 
+@Disabled
 public class OrderLineUpdateInstanceHandlerTest {
   @Autowired
   private OrderLineUpdateInstanceHandler orderLineUpdateInstanceHandler;

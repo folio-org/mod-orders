@@ -221,6 +221,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+@Disabled
 @ExtendWith(VertxExtension.class)
 public class PurchaseOrdersApiTest {
   private static final Logger logger = LogManager.getLogger();

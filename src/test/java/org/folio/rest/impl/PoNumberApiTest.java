@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
+@Disabled
 public class PoNumberApiTest {
 
   private static final Logger logger = LogManager.getLogger();

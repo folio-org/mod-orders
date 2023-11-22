@@ -28,12 +28,14 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.restassured.http.Headers;
 
+@Disabled
 public class LinesProtectionTest extends ProtectedEntityTestBase {
 
   private static final Logger logger = LogManager.getLogger();

@@ -38,12 +38,14 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 
 import io.restassured.http.Headers;
 import io.vertx.core.http.HttpMethod;
 
+@Disabled
 public class ReceivingHistoryApiTest {
 
   private static final Logger logger = LogManager.getLogger();

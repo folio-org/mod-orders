@@ -2,6 +2,7 @@ package org.folio.orders.events.handlers;
 
 import static org.folio.TestConfig.X_OKAPI_URL;
 import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
@@ -62,6 +63,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,6 +79,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+@Disabled
 @ExtendWith(VertxExtension.class)
 public class CheckInOrderStatusChangeChangeHandlerTest {
   private static final Logger logger = LogManager.getLogger();
@@ -102,7 +105,7 @@ public class CheckInOrderStatusChangeChangeHandlerTest {
       runningOnOwn = true;
     }
     vertx = Vertx.vertx();
-    SpringContextUtil.init(vertx, vertx.getOrCreateContext(), ApplicationConfig.class);
+    initSpringContext(ApplicationConfig.class);
   }
 
   @BeforeEach

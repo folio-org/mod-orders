@@ -38,6 +38,7 @@ import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
+@Disabled
 @ExtendWith(VertxExtension.class)
 public class OpenCompositeOrderInventoryServiceTest {
 

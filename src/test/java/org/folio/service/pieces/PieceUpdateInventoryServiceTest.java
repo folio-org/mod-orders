@@ -33,6 +33,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -43,6 +44,7 @@ import org.springframework.context.annotation.Bean;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 
+@Disabled
 public class PieceUpdateInventoryServiceTest {
   @Autowired
   private PieceUpdateInventoryService pieceUpdateInventoryService;

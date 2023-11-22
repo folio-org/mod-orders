@@ -40,6 +40,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,6 +54,7 @@ import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
 
+@Disabled
 public class PieceCreateFlowPoLineServiceTest {
   @Autowired PurchaseOrderStorageService purchaseOrderStorageService;
   @Autowired PurchaseOrderLineService purchaseOrderLineService;

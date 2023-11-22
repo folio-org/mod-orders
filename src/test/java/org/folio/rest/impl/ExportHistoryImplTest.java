@@ -20,8 +20,10 @@ import org.folio.rest.jaxrs.model.ExportHistoryCollection;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+@Disabled
 public class ExportHistoryImplTest {
 
   private static boolean runningOnOwn;

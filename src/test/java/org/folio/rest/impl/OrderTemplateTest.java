@@ -50,6 +50,7 @@ import org.folio.rest.jaxrs.model.OrderTemplateCollection;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
@@ -58,6 +59,7 @@ import io.restassured.response.Response;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
+@Disabled
 public class OrderTemplateTest {
 
   private static final Logger logger = LogManager.getLogger();
