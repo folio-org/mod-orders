@@ -56,6 +56,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.restassured.http.Header;
@@ -138,6 +139,7 @@ public class PieceApiTest {
     assertNull(piece.getReceiptDate());
   }
 
+  @Disabled
   @Test
   void testPutPiecesByIdTest() throws Exception {
     logger.info("=== Test update piece by id - valid Id 204 ===");

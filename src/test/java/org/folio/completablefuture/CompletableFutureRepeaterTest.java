@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Supplier;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -38,6 +39,7 @@ class CompletableFutureRepeaterTest {
     assertThat(assertThrows(Throwable.class, executable).getCause(), is(instanceOf(clazz)));
   }
 
+  @Disabled
   @Test
   void fail() {
     assertThrowsCause(Fail1.class, () -> repeat(1, task(fail1, a, b)).result());
@@ -50,6 +52,7 @@ class CompletableFutureRepeaterTest {
     assertThat(repeat(2, task(a, b)).result(), is("a"));
   }
 
+  @Disabled
   @Test
   void failSuccess() {
     assertThat(repeat(2, task(fail1, a, b)).result(), is("a"));

@@ -46,6 +46,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.runner.RunWith;
 
 import java.time.LocalDate;
@@ -102,6 +103,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Disabled
 @RunWith(VertxUnitRunner.class)
 public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 

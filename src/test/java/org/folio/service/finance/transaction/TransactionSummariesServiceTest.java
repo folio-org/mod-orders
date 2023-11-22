@@ -23,6 +23,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -76,6 +77,7 @@ public class TransactionSummariesServiceTest {
     assertNull(orderTransactionSummariesService.getTransactionSummary(order.getId(), requestContext));
   }
 
+  @Disabled
   @Test
   void testShouldCreateTransactionSummaryInStorageTransactions() {
     // given

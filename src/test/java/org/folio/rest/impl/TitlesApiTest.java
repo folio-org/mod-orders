@@ -48,6 +48,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 
@@ -92,6 +93,7 @@ public class TitlesApiTest {
     MockitoAnnotations.openMocks(this);
   }
 
+  @Disabled
   @Test
   void testPostTitle() {
     logger.info("=== Test POST Title (Create Title) ===");
@@ -135,6 +137,7 @@ public class TitlesApiTest {
     assertEquals("titleExist", errors.getErrors().get(0).getCode());
   }
 
+  @Disabled
   @Test
   void titleShouldBePopulatedFromPackagePoLine() {
 

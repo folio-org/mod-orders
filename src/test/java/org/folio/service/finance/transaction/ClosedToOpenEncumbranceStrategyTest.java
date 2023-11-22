@@ -31,14 +31,17 @@ import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+@ExtendWith(VertxExtension.class)
 public class ClosedToOpenEncumbranceStrategyTest {
   @InjectMocks
   private ClosedToOpenEncumbranceStrategy closedToOpenEncumbranceStrategy;

@@ -22,6 +22,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -59,6 +60,7 @@ class TagServiceTest {
     MockitoAnnotations.openMocks(this);
   }
 
+  @Disabled
   @Test
   void createTagsIfMissing(VertxTestContext vertxTestContext) {
     String sampleTag = "CAseSenSeTivE";

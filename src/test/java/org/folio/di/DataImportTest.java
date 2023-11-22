@@ -13,8 +13,8 @@ import org.folio.rest.jaxrs.model.Event;
 import org.folio.verticle.consumers.DataImportKafkaHandler;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.json.Json;
@@ -24,7 +24,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import net.mguenther.kafka.junit.SendKeyValues;
 
 // TODO: tests will be enabled in scope of the https://issues.folio.org/browse/MODORDERS-773
-@Ignore()
+@Disabled
 @RunWith(VertxUnitRunner.class)
 public class DataImportTest extends DiAbstractRestTest {
 

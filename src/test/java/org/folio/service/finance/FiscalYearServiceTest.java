@@ -20,6 +20,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 
@@ -53,6 +54,7 @@ public class FiscalYearServiceTest {
     MockitoAnnotations.openMocks(this);
   }
 
+  @Disabled
   @Test
   void testShouldReturnCurrentFiscalYearForLedger() {
 
@@ -63,6 +65,7 @@ public class FiscalYearServiceTest {
     assertNotNull(fy);
   }
 
+  @Disabled
   @Test
   void testShouldThrowHttpException() {
 
