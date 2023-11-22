@@ -116,26 +116,24 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
     HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent, requestContext);
   }
 
-  private Future<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine,
-      List<org.folio.rest.acq.model.Piece> pieces) {
+  private Future<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
 
     if (pieces.isEmpty()) {
+      // no successfully pieces processed - receipt status unchanged
       return Future.succeededFuture(poLine.getReceiptStatus());
-    } else {
-      return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.EXPECTED, pieces)
-        .compose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, pieces))
-        .onFailure(e -> logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e));
     }
+
+    return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.EXPECTED, pieces)
+      .compose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, pieces))
+      .onFailure(e -> logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e));
   }
 
-  private Future<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity,
-      List<org.folio.rest.acq.model.Piece> pieces) {
+  private Future<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, List<Piece> pieces) {
 
     if (expectedPiecesQuantity == 0) {
       return Future.succeededFuture(FULLY_RECEIVED);
     }
-    // Partially Received: In case there is at least one successfully received
-    // piece
+    // Partially Received: In case there is at least one successfully received piece
     if (StreamEx.of(pieces)
       .anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
       return Future.succeededFuture(PARTIALLY_RECEIVED);
