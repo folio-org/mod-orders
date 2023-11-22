@@ -394,8 +394,8 @@ public class ApiTestSuite {
 
   @Nested
   class BasePieceFlowHolderBuilderTestNested extends BasePieceFlowHolderBuilderTest {
-
   }
+
   @Nested
   class PieceCreateFlowPoLineServiceTestNested extends PieceCreateFlowPoLineServiceTest {
 
