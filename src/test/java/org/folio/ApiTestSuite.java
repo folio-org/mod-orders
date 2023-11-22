@@ -82,6 +82,7 @@ import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpd
 import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
+import org.folio.service.pieces.flows.BasePieceFlowHolderBuilderTest;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidatorTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManagerTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineServiceTest;
@@ -391,6 +392,10 @@ public class ApiTestSuite {
 
   }
 
+  @Nested
+  class BasePieceFlowHolderBuilderTestNested extends BasePieceFlowHolderBuilderTest {
+
+  }
   @Nested
   class PieceCreateFlowPoLineServiceTestNested extends PieceCreateFlowPoLineServiceTest {
 
