@@ -37,7 +37,7 @@ public class PieceCreateFlowManager {
   public Future<Piece> createPiece(Piece pieceToCreate, boolean createItem, RequestContext requestContext) {
     logger.info("manual createPiece start");
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(createItem);
-    return basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
+    return basePieceFlowHolderBuilder.updateHolderWithOrderLineInformation(holder, requestContext)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .map(v -> {defaultPieceFlowsValidator.isPieceRequestValid(pieceToCreate, holder.getOriginPoLine(), createItem); return null;})
       .compose(order ->

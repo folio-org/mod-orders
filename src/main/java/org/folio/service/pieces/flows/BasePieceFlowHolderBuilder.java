@@ -28,6 +28,14 @@ public class BasePieceFlowHolderBuilder {
         }));
   }
 
+  public Future<Void> updateHolderWithOrderLineInformation(BasePieceFlowHolder holder, RequestContext requestContext) {
+    return purchaseOrderLineService.getOrderLineById(holder.getOrderLineId(), requestContext)
+      .map(poLine -> {
+        holder.withOrderLineInformation(poLine);
+        return null;
+      });
+  }
+
   public Future<Void> updateHolderWithTitleInformation(BasePieceFlowHolder holder, RequestContext requestContext) {
     return titlesService.getTitleById(holder.getTitleId(), requestContext)
       .map(title -> {

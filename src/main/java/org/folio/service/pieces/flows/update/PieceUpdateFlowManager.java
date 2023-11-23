@@ -53,10 +53,10 @@ public class PieceUpdateFlowManager {
     Promise<Void> promise = Promise.promise();
     pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
       .onSuccess(holder::withPieceFromStorage)
-      .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
+      .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderLineInformation(holder, requestContext))
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .map(v -> {
-        defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPoLine(), createItem);
+        defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginalCompPoLie(), createItem);
         return null;
       })
       .compose(title -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), UPDATE, requestContext))
