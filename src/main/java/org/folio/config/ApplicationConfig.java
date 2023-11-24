@@ -517,9 +517,9 @@ public class ApplicationConfig {
                                       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
                                       InventoryManager inventoryManager, PieceStorageService pieceStorageService,
                                       PurchaseOrderStorageService purchaseOrderStorageService,
-                                      ProtectionService protectionService) {
+                                      ProtectionService protectionService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
     return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
-                                          pieceStorageService, purchaseOrderStorageService, protectionService);
+                                          pieceStorageService, purchaseOrderStorageService, protectionService, basePieceFlowHolderBuilder);
   }
 
   @Bean
