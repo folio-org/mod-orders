@@ -49,7 +49,6 @@ import org.folio.service.pieces.PieceStorageService;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 
 public class UnOpenCompositeOrderManager {
   private static final Logger logger = LogManager.getLogger(UnOpenCompositeOrderManager.class);
@@ -60,20 +59,18 @@ public class UnOpenCompositeOrderManager {
   private final InventoryManager inventoryManager;
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
-  private final BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
 
   public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
-                                     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                     InventoryManager inventoryManager, PieceStorageService pieceStorageService,
-                                     PurchaseOrderStorageService purchaseOrderStorageService,
-                                     ProtectionService protectionService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+                                      EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+                                      InventoryManager inventoryManager, PieceStorageService pieceStorageService,
+                                      PurchaseOrderStorageService purchaseOrderStorageService,
+                                      ProtectionService protectionService) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryManager = inventoryManager;
     this.pieceStorageService = pieceStorageService;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.protectionService = protectionService;
-    this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
   }
 
 
@@ -366,8 +363,13 @@ public class UnOpenCompositeOrderManager {
     PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(true);
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .onSuccess(holder::setPieceToDelete)
-      .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
-      .compose(purchaseOrder -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext))
+      .compose(aVoid -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext)
+        .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
+          .map(purchaseOrder -> {
+            holder.withOrderInformation(purchaseOrder, poLine);
+            return null;
+          })))
+      .compose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .compose(vVoid -> canDeletePieceWithItem(holder.getPieceToDelete(), requestContext))
       .compose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
       .compose(aVoid -> deletePieceConnectedItem(holder.getPieceToDelete(), requestContext));
