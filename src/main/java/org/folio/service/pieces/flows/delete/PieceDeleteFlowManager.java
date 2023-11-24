@@ -58,7 +58,7 @@ public class PieceDeleteFlowManager {
       .map(pieceToDelete -> {
         holder.withPieceToDelete(pieceToDelete); return null;
       })
-      .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderLineInformation(holder, requestContext))
+      .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .compose(aVoid -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext))
       .compose(aVoid -> isDeletePieceRequestValid(holder, requestContext))

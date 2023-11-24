@@ -3,7 +3,6 @@ package org.folio.models.pieces;
 import java.util.List;
 
 import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -14,7 +13,6 @@ public abstract class BasePieceFlowHolder {
   private CompositePurchaseOrder originPurchaseOrder;
   private CompositePurchaseOrder purchaseOrderToSave;
   private Title title;
-  private CompositePoLine originPoLine;
 
   public BasePieceFlowHolder() {
 
@@ -32,11 +30,6 @@ public abstract class BasePieceFlowHolder {
     return this;
   }
 
-  public BasePieceFlowHolder withOrderLineInformation(PoLine originPoLine) {
-    this.originPoLine = PoLineCommonUtil.convertToCompositePoLine(originPoLine);
-    return this;
-  }
-
   public void withTitleInformation(Title title) {
     this.title = title;
   }
@@ -50,12 +43,9 @@ public abstract class BasePieceFlowHolder {
   }
 
   public CompositePoLine getOriginPoLine() {
-    return originPoLine;
+    return originPurchaseOrder.getCompositePoLines().get(0);
   }
 
-  public CompositePoLine getOriginalCompPoLie(){
-    return originPoLine;
-  }
   public CompositePoLine getPoLineToSave() {
     return purchaseOrderToSave.getCompositePoLines().get(0);
   }
