@@ -41,8 +41,11 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -285,36 +288,43 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                                          RequestContext requestContext,
                                                                          Consumer<List<PoLine>> updateOrderStatus) {
-    if (piecesGroupedByPoLine.isEmpty()) {
+    if (MapUtils.isEmpty(piecesGroupedByPoLine)) {
       return Future.succeededFuture(piecesGroupedByPoLine);
     }
     List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
     // Once all PO Lines are retrieved from storage check if receipt status
     // requires update and persist in storage
     return getPoLines(poLineIdsForUpdatedPieces, requestContext).compose(poLines -> {
-        // Calculate expected status for each PO Line and update with new one if required
-        // Skip status update if PO line status is Ongoing
-        List<Future<String>> futures = new ArrayList<>();
-        for (PoLine poLine : poLines) {
-          if (poLine.getReceiptStatus() != ONGOING) {
-            List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
-            futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces, requestContext)
-              .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext)));
-          }
+      // Calculate expected status for each PO Line and update with new one if required
+      // Skip status update if PO line status is Ongoing
+      List<Future<String>> futures = new ArrayList<>();
+      for (PoLine poLine : poLines) {
+        if (poLine.getReceiptStatus() != ONGOING) {
+          List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
+          futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces, requestContext)
+            .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext)));
         }
+      }
 
-        return collectResultsOnSuccess(futures).map(updatedPoLines -> {
-          logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
+      return collectResultsOnSuccess(futures).map(updatedPoLines -> {
+        logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
 
-          // Send event to check order status for successfully processed PO Lines
-          List<PoLine> successPoLines = StreamEx.of(poLines)
-            .filter(line -> updatedPoLines.contains(line.getId()))
-            .toList();
-          updateOrderStatus.accept(successPoLines);
-          return null;
-        });
-      })
-      .map(ok -> piecesGroupedByPoLine);
+        // Send event to check order status for successfully processed PO Lines
+        List<PoLine> successPoLines = StreamEx.of(poLines)
+          .filter(line -> updatedPoLines.contains(line.getId()))
+          .toList();
+        updateOrderStatus.accept(successPoLines);
+        return null;
+      });
+    })
+    .map(ok -> piecesGroupedByPoLine);
+  }
+
+  protected void sendMessage(MessageAddress messageAddress, Object value, RequestContext requestContext) {
+    JsonObject messageContent = new JsonObject();
+    messageContent.put(OKAPI_HEADERS, okapiHeaders);
+    messageContent.put(EVENT_PAYLOAD, value);
+    HelperUtils.sendEvent(messageAddress, messageContent, requestContext);
   }
 
   /**
@@ -534,8 +544,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    */
   protected Future<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces, RequestContext requestContext) {
 
-    if (pieces.isEmpty()) {
-      // no successfully pieces processed - receipt status unchanged
+    if (CollectionUtils.isEmpty(pieces)) {
+      logger.info("No pieces processed - receipt status unchanged for PO Line '{}'", poLine.getId());
       return Future.succeededFuture(poLine.getReceiptStatus());
     }
 

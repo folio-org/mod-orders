@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.completablefuture.AsyncUtil;
 import org.folio.helper.BaseHelper;
 import org.folio.orders.utils.HelperUtils;
@@ -118,8 +119,8 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
 
   private Future<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
 
-    if (pieces.isEmpty()) {
-      // no successfully pieces processed - receipt status unchanged
+    if (CollectionUtils.isEmpty(pieces)) {
+      logger.info("No pieces processed - receipt status unchanged for PO Line '{}'", poLine.getId());
       return Future.succeededFuture(poLine.getReceiptStatus());
     }
 
@@ -129,17 +130,17 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
   }
 
   private Future<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, List<Piece> pieces) {
-
     if (expectedPiecesQuantity == 0) {
+      logger.info("calculatePoLineReceiptStatus:: Fully received");
       return Future.succeededFuture(FULLY_RECEIVED);
     }
-    // Partially Received: In case there is at least one successfully received piece
-    if (StreamEx.of(pieces)
-      .anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
+
+    if (StreamEx.of(pieces).anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
+      logger.info("calculatePoLineReceiptStatus:: Partially Received - In case there is at least one successfully received piece");
       return Future.succeededFuture(PARTIALLY_RECEIVED);
     }
-    // Pieces were rolled-back to Expected. In this case we have to check if
-    // there is any Received piece in the storage
+
+    logger.info("calculatePoLineReceiptStatus::Pieces were rolled-back to Expected, checking if there is any Received piece in the storage");
     return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.RECEIVED, pieces)
       .map(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
   }

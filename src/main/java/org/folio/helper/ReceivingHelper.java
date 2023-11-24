@@ -23,11 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -113,24 +113,22 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   private void updateOrderStatus(List<PoLine> poLines, RequestContext requestContext) {
-    if (!poLines.isEmpty()) {
-      logger.debug("Sending event to verify order status");
-
-      // Collect order ids which should be processed
-      List<JsonObject> poIds = StreamEx
-        .of(poLines)
-        .map(PoLine::getPurchaseOrderId)
-        .distinct()
-        .map(orderId -> new JsonObject().put(ORDER_ID, orderId))
-        .toList();
-
-      JsonObject messageContent = new JsonObject();
-      messageContent.put(OKAPI_HEADERS, okapiHeaders);
-      messageContent.put(EVENT_PAYLOAD, new JsonArray(poIds));
-      HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent, requestContext);
-
-      logger.debug("Event to verify order status - sent");
+    if (CollectionUtils.isEmpty(poLines)) {
+      logger.info("updateOrderStatus::poLines empty, returning");
     }
+    logger.debug("updateOrderStatus::Sending event to verify order status");
+
+    // Collect order ids which should be processed
+    List<JsonObject> poIds = StreamEx
+      .of(poLines)
+      .map(PoLine::getPurchaseOrderId)
+      .distinct()
+      .map(orderId -> new JsonObject().put(ORDER_ID, orderId))
+      .toList();
+
+    sendMessage(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, new JsonArray(poIds), requestContext);
+
+    logger.debug("updateOrderStatus::Event to verify order status - sent");
   }
 
   private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {

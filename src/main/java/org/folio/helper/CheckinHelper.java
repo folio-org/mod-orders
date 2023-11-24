@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
@@ -294,22 +294,22 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private void updateOrderStatus(List<PoLine> poLines, CheckinCollection checkinCollection, RequestContext requestContext) {
-    if (poLines.isEmpty()) {
+    if (CollectionUtils.isEmpty(poLines)) {
+      logger.info("updateOrderStatus::poLines empty, returning");
       return;
     }
-    logger.debug("Sending event to verify order status");
+    logger.debug("updateOrderStatus::sending event to verify order status");
 
     Map<String, Boolean> orderClosedStatusesMap = groupCheckinPiecesByPoLineId(checkinCollection, poLines);
     List<JsonObject> orderClosedStatusesJsonList = orderClosedStatusesMap.entrySet().stream()
-      .map(entry -> new JsonObject().put(ORDER_ID, entry.getKey())
+      .map(entry -> new JsonObject()
+        .put(ORDER_ID, entry.getKey())
         .put(IS_ITEM_ORDER_CLOSED_PRESENT, entry.getValue()))
       .collect(toList());
 
-    JsonObject messageContent = new JsonObject();
-    messageContent.put(OKAPI_HEADERS, okapiHeaders);
-    messageContent.put(EVENT_PAYLOAD, new JsonArray(orderClosedStatusesJsonList));
-    HelperUtils.sendEvent(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE, messageContent, requestContext);
-    logger.debug("Event to verify order status - sent");
+    sendMessage(MessageAddress.CHECKIN_ORDER_STATUS_UPDATE, new JsonArray(orderClosedStatusesJsonList), requestContext);
+
+    logger.debug("updateOrderStatus::Event to verify order status - sent");
   }
 
   private Map<String, Boolean> groupCheckinPiecesByPoLineId(CheckinCollection checkinCollection, List<PoLine> poLines) {
