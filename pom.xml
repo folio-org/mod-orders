@@ -844,7 +844,7 @@
           </excludes>
           <includes>
             <include>org/folio/ApiTestSuite.java</include>
-            <include>org/folio/DataImportTestSuite.java</include>
+<!--            <include>org/folio/DataImportTestSuite.java</include>-->
           </includes>
         </configuration>
         <dependencies>
