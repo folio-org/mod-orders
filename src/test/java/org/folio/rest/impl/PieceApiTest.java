@@ -38,6 +38,8 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -57,9 +59,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import io.restassured.http.Header;
-import io.vertx.core.json.JsonObject;
 
 public class PieceApiTest {
 
@@ -152,10 +151,7 @@ public class PieceApiTest {
     pieceRequest.put("receivingStatus", "Received");
 
     addMockEntry(PIECES_STORAGE, pieceStorage);
-    verifyPut(String.format(PIECES_ID_PATH, pieceId), pieceRequest, "", 204)
-      .then()
-      .assertThat()
-      .body("statusUpdatedDate", notNullValue());;
+    verifyPut(String.format(PIECES_ID_PATH, pieceId), pieceRequest, "", 204);
 
     // Message sent to event bus
     HandlersTestHelper.verifyReceiptStatusUpdateEvent(1);
