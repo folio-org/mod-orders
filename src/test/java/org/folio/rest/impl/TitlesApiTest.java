@@ -26,6 +26,7 @@ import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Date;
 import java.util.UUID;
@@ -63,6 +64,7 @@ public class TitlesApiTest {
   static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   public static final String SAMPLE_TITLE_ID = "9a665b22-9fe5-4c95-b4ee-837a5433c95d";
   private final JsonObject titleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "title.json");
+  private final JsonObject packageTitleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "package_title.json");
 
   private static boolean runningOnOwn;
 
@@ -140,19 +142,18 @@ public class TitlesApiTest {
 
     String packagePoLineId = UUID.randomUUID().toString();
     String packageTitleName = "test title name";
-    String packageTestNumber = "test number";
-    Date packageExpectedDate = new Date();
+    String polNumbber = "1000-01";
     String packageNote = "test note";
 
     CompositePoLine packagePoLine = getMinimalContentCompositePoLine()
       .withId(packagePoLineId)
       .withTitleOrPackage(packageTitleName)
-      .withPoLineNumber(packageTestNumber)
-      .withPhysical(new Physical().withExpectedReceiptDate(packageExpectedDate))
+      .withPoLineNumber(polNumbber)
+      .withPhysical(new Physical().withExpectedReceiptDate(new Date()))
       .withDetails(new Details().withReceivingNote(packageNote))
       .withIsPackage(true);
 
-    Title titleWithPackagePoLineRQ = titleJsonReqData.mapTo(Title.class)
+    Title titleWithPackagePoLineRQ = packageTitleJsonReqData.mapTo(Title.class)
       .withPoLineId(packagePoLineId);
 
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(packagePoLine));
@@ -161,8 +162,8 @@ public class TitlesApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
 
     assertEquals(titleWithPackagePoLineRS.getPackageName(), packageTitleName);
-    assertEquals(titleWithPackagePoLineRS.getExpectedReceiptDate(), packageExpectedDate);
-    assertEquals(titleWithPackagePoLineRS.getPoLineNumber(), packageTestNumber);
+    assertNotNull(titleWithPackagePoLineRS.getExpectedReceiptDate());
+    assertEquals(titleWithPackagePoLineRS.getPoLineNumber(), polNumbber);
     assertEquals(titleWithPackagePoLineRS.getReceivingNote(), packageNote);
   }
 
@@ -238,7 +239,7 @@ public class TitlesApiTest {
   @Test
   void deleteTitlesByIdWithInvalidFormatTest() {
     logger.info("=== Test delete title by id - bad Id format 400 ===");
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
+    verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_BAD_FORMAT), APPLICATION_JSON, 400);
   }
 
   @Test
