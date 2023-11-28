@@ -847,6 +847,7 @@
             <include>org/folio/DataImportTestSuite.java</include>
           </includes>
         </configuration>
+        <!--org.apache.maven.surefire.junitplatform.JUnitPlatformProvider configured to run Junit5 and Junit4 tests-->
         <dependencies>
           <dependency>
             <groupId>org.apache.maven.surefire</groupId>
