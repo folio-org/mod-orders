@@ -1,7 +1,6 @@
 package org.folio.service.orders.flows.update.open;
 
 import static io.vertx.core.Future.succeededFuture;
-import static java.util.stream.Collectors.toList;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
@@ -18,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -34,6 +34,10 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 import org.folio.ApiTestSuite;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -67,11 +71,6 @@ import org.mockito.Spy;
 import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
 
 
 @ExtendWith(VertxExtension.class)
@@ -154,16 +153,20 @@ public class OpenCompositeOrderPieceServiceTest {
   @Test
   void testShouldUpdatePieceByInvokingMethodAndSentEventToUpdatePoLineIfReceivingStatusInStorageAndFromRequestAreNotTheSame() {
     //given
+    String titleId = UUID.randomUUID().toString();
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     Piece pieceFromStorage = JsonObject.mapFrom(piece).mapTo(Piece.class);
     pieceFromStorage.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    Title title = new Title().withId(titleId).withTitle("test title");
 
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), eq(ProtectedOperationType.UPDATE), eq(requestContext));
     doReturn(succeededFuture(null)).when(inventoryManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
     doReturn(succeededFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(anyString(), eq(requestContext));
+
     //When
     openCompositeOrderPieceService.updatePieceRecord(piece, requestContext).result();
     //Then
@@ -171,7 +174,7 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @Test
-  void testUpdateInventoryPositiveCaseIfPOLIsTitle() throws ExecutionException, InterruptedException {
+  void testUpdateInventoryPositiveCaseIfPOLIsTitle() {
     //given
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
@@ -186,7 +189,7 @@ public class OpenCompositeOrderPieceServiceTest {
 
 
   @Test
-  void testUpdateInventoryPositiveCaseIfPOLIsPackage() throws ExecutionException, InterruptedException {
+  void testUpdateInventoryPositiveCaseIfPOLIsPackage() {
     //given
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setIsPackage(true);
@@ -215,7 +218,7 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   @Test
-  void testShouldUpdateInventoryPositiveCaseIfLineIsPackageAndPieceContainsHoldingId() throws ExecutionException, InterruptedException {
+  void testShouldUpdateInventoryPositiveCaseIfLineIsPackageAndPieceContainsHoldingId() {
     //given
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     String holdingId = UUID.randomUUID().toString();
@@ -256,13 +259,15 @@ public class OpenCompositeOrderPieceServiceTest {
                                   .withIsPackage(false).withPhysical(physical)
                                   .withOrderFormat(CompositePoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
-
+    Title title = new Title().withId(titleId).withTitle("test title");
 
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
     doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
     doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
@@ -273,7 +278,7 @@ public class OpenCompositeOrderPieceServiceTest {
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
-                                          .collect(toList());
+                                          .toList();
     assertEquals(qty1, piecesLoc1.size());
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -283,7 +288,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(Piece.Format.fromValue(pieceFormat), piece.getFormat());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId2))
-                                          .collect(toList());
+                                          .toList();
     assertEquals(qty2, piecesLoc2.size());
     piecesLoc2.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -312,6 +317,7 @@ public class OpenCompositeOrderPieceServiceTest {
       .withIsPackage(false).withEresource(eresource)
       .withOrderFormat(CompositePoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
+    Title title = new Title().withId(titleId).withTitle("test title");
 
 
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
@@ -319,6 +325,8 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
     doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
@@ -329,7 +337,7 @@ public class OpenCompositeOrderPieceServiceTest {
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
-      .collect(toList());
+      .toList();
     assertEquals(qty1, piecesLoc1.size());
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -339,7 +347,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(Piece.Format.fromValue(pieceFormat), piece.getFormat());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId2))
-      .collect(toList());
+      .toList();
     assertEquals(qty2, piecesLoc2.size());
     piecesLoc2.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -370,13 +378,15 @@ public class OpenCompositeOrderPieceServiceTest {
       .withIsPackage(false).withEresource(eresource).withPhysical(physical)
       .withOrderFormat(CompositePoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
-
+    Title title = new Title().withId(titleId).withTitle("test title");
 
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
     doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
     doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
@@ -387,7 +397,7 @@ public class OpenCompositeOrderPieceServiceTest {
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId1))
-      .collect(toList());
+      .toList();
     assertEquals(elecQty1, piecesLoc1.size());
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -397,7 +407,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(Piece.Format.ELECTRONIC, piece.getFormat());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> piece.getLocationId().equals(locationId2))
-      .collect(toList());
+      .toList();
     assertEquals(physQty2, piecesLoc2.size());
     piecesLoc2.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -427,13 +437,15 @@ public class OpenCompositeOrderPieceServiceTest {
       .withIsPackage(false).withEresource(eresource).withPhysical(physical)
       .withOrderFormat(CompositePoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
-
+    Title title = new Title().withId(titleId).withTitle("test title");
 
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
     doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
     doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
@@ -444,7 +456,7 @@ public class OpenCompositeOrderPieceServiceTest {
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, Collections.emptyList(), false, requestContext).result();
     //Then
     List<Piece> piecesLoc1 = createdPieces.stream().filter(piece -> locationId1.equals(piece.getLocationId()))
-      .collect(toList());
+      .toList();
     assertEquals(elecQty1, piecesLoc1.size());
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
@@ -454,7 +466,7 @@ public class OpenCompositeOrderPieceServiceTest {
       assertEquals(Piece.Format.ELECTRONIC, piece.getFormat());
     });
     List<Piece> piecesLoc2 =  createdPieces.stream().filter(piece -> holdingId.equals(piece.getHoldingId()))
-      .collect(toList());
+      .toList();
     assertEquals(physQty2, piecesLoc2.size());
     piecesLoc2.forEach(piece -> {
       assertNull(piece.getLocationId());
@@ -476,6 +488,7 @@ public class OpenCompositeOrderPieceServiceTest {
     String titleId = UUID.randomUUID().toString();
     List<Piece> expectedPiecesWithItem = new ArrayList<>();
     Location elecLocation = new Location().withQuantityElectronic(elecQty1).withQuantity(elecQty1);
+
     if (Eresource.CreateInventory.INSTANCE_HOLDING_ITEM == Eresource.CreateInventory.fromValue(elecCreateInventory)) {
       elecLocation.withHoldingId(holdingId);
       expectedPiecesWithItem.addAll(createElecPiecesWithHoldingId(lineId, titleId, true, elecLocation));
@@ -499,12 +512,15 @@ public class OpenCompositeOrderPieceServiceTest {
       .withIsPackage(false).withEresource(eresource).withPhysical(physical)
       .withOrderFormat(CompositePoLine.OrderFormat.fromValue(lineType));
     CompositePurchaseOrder compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
+    Title title = new Title().withId(titleId).withTitle("test title");
 
     doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
     doReturn(succeededFuture(new Piece())).when(pieceStorageService).insertPiece(any(Piece.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+
     final ArgumentCaptor<Piece> pieceArgumentCaptor = ArgumentCaptor.forClass(Piece.class);
     doAnswer((Answer<Future<Piece>>) invocation -> {
       Piece piece = invocation.getArgument(0);
@@ -515,7 +531,7 @@ public class OpenCompositeOrderPieceServiceTest {
     List<Piece> createdPieces = openCompositeOrderPieceService.handlePieces(line, titleId, expectedPiecesWithItem, false, requestContext).result();
     //Then
     List<Piece> piecesLocElec = createdPieces.stream().filter(piece -> Piece.Format.ELECTRONIC.equals(piece.getFormat()))
-      .collect(toList());
+      .toList();
     assertEquals(elecQty1, piecesLocElec.size());
     piecesLocElec.forEach(piece -> {
       assertEquals(lineId, piece.getPoLineId());
@@ -529,7 +545,7 @@ public class OpenCompositeOrderPieceServiceTest {
       }
     });
     List<Piece> piecesLocPhys =  createdPieces.stream().filter(piece -> Piece.Format.PHYSICAL.equals(piece.getFormat()))
-      .collect(toList());
+      .toList();
     assertEquals(physQty2, piecesLocPhys.size());
     piecesLocPhys.forEach(piece -> {
       assertEquals(lineId, piece.getPoLineId());
