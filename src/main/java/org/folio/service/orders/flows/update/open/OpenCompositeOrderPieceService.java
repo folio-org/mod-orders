@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,10 +31,6 @@ import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
 
 public class OpenCompositeOrderPieceService {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderPieceService.class);
@@ -109,8 +108,10 @@ public class OpenCompositeOrderPieceService {
   public Future<Piece> createPiece(Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPiece start");
     return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
-        .map(v -> order))
+      .compose(order ->
+        protectionService.isOperationRestricted(getAcqUnitIdsFromTitle(piece.getTitleId(), requestContext),
+            ProtectedOperationType.CREATE, requestContext)
+          .map(v -> order))
       .compose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
       .compose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
@@ -118,7 +119,9 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> updatePieceRecord(Piece piece, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
     purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
+      .compose(order ->
+        protectionService.isOperationRestricted(getAcqUnitIdsFromTitle(piece.getTitleId(), requestContext),
+          ProtectedOperationType.UPDATE, requestContext))
       .compose(v -> inventoryManager.updateItemWithPieceFields(piece, requestContext))
       .onSuccess(vVoid ->
         pieceStorageService.getPieceById(piece.getId(), requestContext).onSuccess(pieceStorage -> {
@@ -197,6 +200,9 @@ public class OpenCompositeOrderPieceService {
     }
   }
 
+  private List<String> getAcqUnitIdsFromTitle(String titleId, RequestContext requestContext) {
+    return titlesService.getTitleById(titleId, requestContext).result().getAcqUnitIds();
+  }
 
   private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
