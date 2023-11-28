@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -52,7 +53,7 @@ public class TitlesService {
   }
 
   public Future<TitleCollection> getTitles(int limit, int offset, String query, RequestContext requestContext) {
-    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords("purchaseOrder.", requestContext)
+    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
       .compose(acqUnitsCqlExpr -> {
         String resultQuery = acqUnitsCqlExpr;
         if (!isEmpty(query)) {
