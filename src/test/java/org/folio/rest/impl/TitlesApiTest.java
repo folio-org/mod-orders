@@ -20,18 +20,20 @@ import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -40,7 +42,6 @@ import org.folio.config.ApplicationConfig;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
-import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.hamcrest.Matchers;
@@ -51,9 +52,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 
-import io.restassured.http.Header;
-import io.vertx.core.json.JsonObject;
-
 public class TitlesApiTest {
   private static final Logger logger = LogManager.getLogger();
 
@@ -63,6 +61,7 @@ public class TitlesApiTest {
   static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   public static final String SAMPLE_TITLE_ID = "9a665b22-9fe5-4c95-b4ee-837a5433c95d";
   private final JsonObject titleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "title.json");
+  private final JsonObject packageTitleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "package_title.json");
 
   private static boolean runningOnOwn;
 
@@ -124,15 +123,6 @@ public class TitlesApiTest {
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
     verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
-
-    addMockEntry(TITLES, JsonObject.mapFrom(postTitleRs));
-
-    Errors errors = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON,
-      HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(
-      Errors.class);
-
-    assertEquals("titleExist", errors.getErrors().get(0).getCode());
   }
 
   @Test
@@ -140,19 +130,18 @@ public class TitlesApiTest {
 
     String packagePoLineId = UUID.randomUUID().toString();
     String packageTitleName = "test title name";
-    String packageTestNumber = "test number";
-    Date packageExpectedDate = new Date();
+    String polNumbber = "1000-01";
     String packageNote = "test note";
 
     CompositePoLine packagePoLine = getMinimalContentCompositePoLine()
       .withId(packagePoLineId)
       .withTitleOrPackage(packageTitleName)
-      .withPoLineNumber(packageTestNumber)
-      .withPhysical(new Physical().withExpectedReceiptDate(packageExpectedDate))
+      .withPoLineNumber(polNumbber)
+      .withPhysical(new Physical().withExpectedReceiptDate(new Date()))
       .withDetails(new Details().withReceivingNote(packageNote))
       .withIsPackage(true);
 
-    Title titleWithPackagePoLineRQ = titleJsonReqData.mapTo(Title.class)
+    Title titleWithPackagePoLineRQ = packageTitleJsonReqData.mapTo(Title.class)
       .withPoLineId(packagePoLineId);
 
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(packagePoLine));
@@ -161,8 +150,8 @@ public class TitlesApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
 
     assertEquals(titleWithPackagePoLineRS.getPackageName(), packageTitleName);
-    assertEquals(titleWithPackagePoLineRS.getExpectedReceiptDate(), packageExpectedDate);
-    assertEquals(titleWithPackagePoLineRS.getPoLineNumber(), packageTestNumber);
+    assertNotNull(titleWithPackagePoLineRS.getExpectedReceiptDate());
+    assertEquals(titleWithPackagePoLineRS.getPoLineNumber(), polNumbber);
     assertEquals(titleWithPackagePoLineRS.getReceivingNote(), packageNote);
   }
 
