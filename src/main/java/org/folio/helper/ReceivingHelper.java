@@ -3,18 +3,17 @@ package org.folio.helper;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
 import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
 import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
-import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,11 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -100,72 +99,37 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       // 5. Update received piece records in the storage
       .compose(piecesByPoLineIds -> storeUpdatedPieceRecords(piecesByPoLineIds, requestContext))
       // 6. Update PO Line status
-      .compose(piecesByPoLineIds -> updatePoLinesStatus(piecesByPoLineIds, requestContext))
+      .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(piecesByPoLineIds, requestContext))
       // 7. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
 
-  /**
-   * Stores updated piece records with receiving/check-in details into storage.
-   *
-   * @param piecesGroupedByPoLine
-   *          map with PO line id as key and list of corresponding pieces as
-   *          value
-   * @return map passed as a parameter
-   */
-  protected Future<Map<String, List<Piece>>> updatePoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
-    if (piecesGroupedByPoLine.isEmpty()) {
-      return Future.succeededFuture(piecesGroupedByPoLine);
-    } else {
-      List<String> poLineIdsForUpdatedPieces = getPoLineIdsForUpdatedPieces(piecesGroupedByPoLine);
-      // Once all PO Lines are retrieved from storage check if receipt status
-      // requires update and persist in storage
-      return getPoLines(poLineIdsForUpdatedPieces, requestContext).compose(poLines -> {
-        // Calculate expected status for each PO Line and update with new one if required
-        // Skip status update if PO line status is Ongoing
-        List<Future<String>> futures = new ArrayList<>();
-        for (PoLine poLine : poLines) {
-          if (!poLine.getPaymentStatus().equals(PoLine.PaymentStatus.ONGOING)) {
-            List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
-            futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces, requestContext)
-              .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext)));
-          }
-        }
-
-        return collectResultsOnSuccess(futures).map(updatedPoLines -> {
-          logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
-
-          // Send event to check order status for successfully processed PO Lines
-          updateOrderStatus(StreamEx.of(poLines)
-            // Leave only successfully updated PO Lines
-            .filter(line -> updatedPoLines.contains(line.getId()))
-            .toList(), requestContext);
-          return null;
-        });
-      })
-        .map(ok -> piecesGroupedByPoLine);
-    }
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
+    return updateOrderAndPoLinesStatus(
+      piecesGroupedByPoLine,
+      requestContext,
+      poLines -> updateOrderStatus(poLines, requestContext)
+    );
   }
 
   private void updateOrderStatus(List<PoLine> poLines, RequestContext requestContext) {
-    if (!poLines.isEmpty()) {
-      logger.debug("Sending event to verify order status");
-
-      // Collect order ids which should be processed
-      List<JsonObject> poIds = StreamEx
-        .of(poLines)
-        .map(PoLine::getPurchaseOrderId)
-        .distinct()
-        .map(orderId -> new JsonObject().put(ORDER_ID, orderId))
-        .toList();
-
-      JsonObject messageContent = new JsonObject();
-      messageContent.put(OKAPI_HEADERS, okapiHeaders);
-      messageContent.put(EVENT_PAYLOAD, new JsonArray(poIds));
-      HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent, requestContext);
-
-      logger.debug("Event to verify order status - sent");
+    if (CollectionUtils.isEmpty(poLines)) {
+      logger.info("updateOrderStatus::poLines empty, returning");
+      return;
     }
+    logger.debug("updateOrderStatus::Sending event to verify order status");
+
+    // Collect order ids which should be processed
+    List<JsonObject> poIds = StreamEx
+      .of(poLines)
+      .map(PoLine::getPurchaseOrderId)
+      .distinct()
+      .map(orderId -> new JsonObject().put(ORDER_ID, orderId))
+      .toList();
+
+    sendMessage(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, new JsonArray(poIds), requestContext);
+
+    logger.debug("updateOrderStatus::Event to verify order status - sent");
   }
 
   private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
