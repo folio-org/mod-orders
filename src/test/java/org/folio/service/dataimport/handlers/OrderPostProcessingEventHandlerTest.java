@@ -963,6 +963,15 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
   }
 
+  private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
+    assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getId());
+    assertNotNull(poLine.getTitleOrPackage());
+    assertNotNull(poLine.getPurchaseOrderId());
+    return poLine;
+  }
+
   private void createMockTitle(CompositePoLine line) {
     Title title = new Title().withId(SAMPLE_TITLE_ID).withTitle(line.getTitleOrPackage()).withPoLineId(line.getId());
     addMockEntry(TITLES, JsonObject.mapFrom(title));
@@ -981,14 +990,5 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
             .withTitleId(title.getId()));
       }
     }));
-  }
-
-  private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
-    assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
-    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
-    assertNotNull(poLine.getId());
-    assertNotNull(poLine.getTitleOrPackage());
-    assertNotNull(poLine.getPurchaseOrderId());
-    return poLine;
   }
 }
