@@ -122,6 +122,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 
@@ -193,6 +195,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.TransactionService;
+import org.folio.service.titles.TitlesService;
 import org.hamcrest.beans.HasPropertyWithValue;
 import org.hamcrest.core.Every;
 import org.hamcrest.core.Is;
@@ -302,6 +305,8 @@ public class PurchaseOrdersApiTest {
   private TransactionService transactionService;
   @Mock
   private RestClient restClient;
+  @Mock
+  private TitlesService titlesService;
 
   private RequestContext requestContext;
   @Mock
@@ -342,7 +347,7 @@ public class PurchaseOrdersApiTest {
   @Test
   void testValidFundDistributionTotalPercentage() throws Exception {
     logger.info("=== Test fund distribution total must add upto totalEstimatedPrice - valid total percentage ===");
-
+    Title title = new Title().withId(UUID.randomUUID().toString());
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(reqData);
@@ -360,6 +365,8 @@ public class PurchaseOrdersApiTest {
     // Calculate remaining Percentage for fundDistribution2 = 23.99 - 23.99(50%) = 0.0
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(50d);
+
+    doReturn(succeededFuture(null)).when(titlesService).getTitleById(anyString(), any());
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);

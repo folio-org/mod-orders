@@ -108,10 +108,11 @@ public class OpenCompositeOrderPieceService {
   public Future<Piece> createPiece(Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPiece start");
     return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .compose(order ->
-        protectionService.isOperationRestricted(getAcqUnitIdsFromTitle(piece.getTitleId(), requestContext),
-            ProtectedOperationType.CREATE, requestContext)
-          .map(v -> order))
+      .compose(vVoid ->
+        titlesService.getTitleById(piece.getTitleId(), requestContext)
+          .compose(title ->
+            protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
+              .map(v -> vVoid)))
       .compose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
       .compose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
@@ -119,9 +120,11 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> updatePieceRecord(Piece piece, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
     purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .compose(order ->
-        protectionService.isOperationRestricted(getAcqUnitIdsFromTitle(piece.getTitleId(), requestContext),
-          ProtectedOperationType.UPDATE, requestContext))
+      .compose(vVoid ->
+        titlesService.getTitleById(piece.getTitleId(), requestContext)
+          .compose(title ->
+            protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)
+              .map(v -> vVoid)))
       .compose(v -> inventoryManager.updateItemWithPieceFields(piece, requestContext))
       .onSuccess(vVoid ->
         pieceStorageService.getPieceById(piece.getId(), requestContext).onSuccess(pieceStorage -> {
@@ -198,10 +201,6 @@ public class OpenCompositeOrderPieceService {
     {
       return inventoryManager.updateItemWithPieceFields(piece, requestContext);
     }
-  }
-
-  private List<String> getAcqUnitIdsFromTitle(String titleId, RequestContext requestContext) {
-    return titlesService.getTitleById(titleId, requestContext).result().getAcqUnitIds();
   }
 
   private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
