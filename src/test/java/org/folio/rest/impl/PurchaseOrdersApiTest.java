@@ -254,6 +254,7 @@ public class PurchaseOrdersApiTest {
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
   static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
   static final String FUND_ENCUMBRANCE_ERROR =  "f1654bbe-dd76-4bfe-a96a-e764141e6aac";
+  static final String SAMPLE_TITLE_ID = "5489d159-cbbd-417e-a4e3-c6b0f7627f4f";
 
   public static final String ORDER_WITHOUT_MATERIAL_TYPES_ID =  "0cb6741d-4a00-47e5-a902-5678eb24478d";
 
@@ -347,7 +348,6 @@ public class PurchaseOrdersApiTest {
   @Test
   void testValidFundDistributionTotalPercentage() throws Exception {
     logger.info("=== Test fund distribution total must add upto totalEstimatedPrice - valid total percentage ===");
-    Title title = new Title().withId(UUID.randomUUID().toString());
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(reqData);
@@ -2234,6 +2234,7 @@ public class PurchaseOrdersApiTest {
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     preparePiecesForCompositePo(reqData);
+
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     List<JsonObject> createdPieces = getCreatedPieces();
@@ -2241,8 +2242,8 @@ public class PurchaseOrdersApiTest {
   }
 
   private void createMockTitle(CompositePoLine line) {
-    Title title = new Title().withTitle(line.getTitleOrPackage()).withPoLineId(line.getId());
-    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
+    Title title = new Title().withId(SAMPLE_TITLE_ID).withTitle(line.getTitleOrPackage()).withPoLineId(line.getId());
+    addMockEntry(TITLES, JsonObject.mapFrom(title));
   }
 
   @Test
@@ -4324,11 +4325,18 @@ public class PurchaseOrdersApiTest {
 
     return order;
   }
+
   private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
     reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().forEach(location -> {
       for (int i = 0; i < location.getQuantity(); i++) {
-        addMockEntry(
-            PIECES_STORAGE, new Piece().withPoLineId(poLine.getId()).withLocationId(location.getLocationId()).withFormat(OTHER).withReceivingStatus(Piece.ReceivingStatus.EXPECTED));
+        Title title = new Title().withId(SAMPLE_TITLE_ID)
+          .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId());
+        addMockEntry(TITLES, JsonObject.mapFrom(title));
+        addMockEntry(PIECES_STORAGE,
+          new Piece().withPoLineId(poLine.getId())
+            .withLocationId(location.getLocationId()).withFormat(OTHER)
+            .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+            .withTitleId(title.getId()));
       }
     }));
   }
