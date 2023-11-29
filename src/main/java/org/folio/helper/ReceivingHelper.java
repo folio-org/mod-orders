@@ -115,6 +115,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private void updateOrderStatus(List<PoLine> poLines, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(poLines)) {
       logger.info("updateOrderStatus::poLines empty, returning");
+      return;
     }
     logger.debug("updateOrderStatus::Sending event to verify order status");
 
