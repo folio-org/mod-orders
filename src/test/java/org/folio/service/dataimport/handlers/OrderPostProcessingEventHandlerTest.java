@@ -981,7 +981,8 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().forEach(location -> {
       for (int i = 0; i < location.getQuantity(); i++) {
         Title title = new Title().withId(SAMPLE_TITLE_ID)
-          .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId());
+          .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId())
+          .withAcqUnitIds(reqData.getAcqUnitIds());
         addMockEntry(TITLES, JsonObject.mapFrom(title));
         addMockEntry(PIECES_STORAGE,
           new Piece().withPoLineId(poLine.getId())
