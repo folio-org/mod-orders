@@ -55,6 +55,7 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
@@ -72,6 +73,7 @@ import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
+import static org.folio.rest.jaxrs.model.Piece.Format.OTHER;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -178,6 +180,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(PO_LINES_STORAGE, mockPoLine);
     addMockEntry(ITEM_RECORDS, itemJson);
     createMockTitle(mockPoLine);
+    preparePiecesForCompositePo(order);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
@@ -963,6 +966,21 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   private void createMockTitle(CompositePoLine line) {
     Title title = new Title().withId(SAMPLE_TITLE_ID).withTitle(line.getTitleOrPackage()).withPoLineId(line.getId());
     addMockEntry(TITLES, JsonObject.mapFrom(title));
+  }
+
+  private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
+    reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().forEach(location -> {
+      for (int i = 0; i < location.getQuantity(); i++) {
+        Title title = new Title().withId(SAMPLE_TITLE_ID)
+          .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId());
+        addMockEntry(TITLES, JsonObject.mapFrom(title));
+        addMockEntry(PIECES_STORAGE,
+          new Piece().withPoLineId(poLine.getId())
+            .withLocationId(location.getLocationId()).withFormat(OTHER)
+            .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+            .withTitleId(title.getId()));
+      }
+    }));
   }
 
   private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
