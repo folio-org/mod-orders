@@ -337,8 +337,14 @@ public class CheckinReceivingApiTest {
     assertThat(pieceUpdates, hasSize(receivingRq.getTotalRecords()));
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
 
-    // check no status updates were performed
+    // check no status updates were performed and POL remained ongoing
     assertThat(polUpdates, nullValue());
+    polSearches.forEach(pol -> {
+      PoLine poLine = pol.mapTo(PoLineCollection.class).getPoLines().get(0);
+      assertThat(poLine.getCheckinItems(), is(false));
+      assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.ONGOING));
+      assertThat(poLine.getReceiptDate(), is(notNullValue()));
+    });
 
     // Verify no status updated for ongoing order
     verifyOrderStatusUpdateEvent(0);
