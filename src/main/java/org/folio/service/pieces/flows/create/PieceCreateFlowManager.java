@@ -40,10 +40,8 @@ public class PieceCreateFlowManager {
     return basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .map(v -> {defaultPieceFlowsValidator.isPieceRequestValid(pieceToCreate, holder.getOriginPoLine(), createItem); return null;})
-      .compose(order ->
-        protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
-      .compose(v ->
-        pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(), holder.isCreateItem(), requestContext))
+      .compose(order -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
+      .compose(v -> pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(), holder.isCreateItem(), requestContext))
       .compose(compPoLine -> updatePoLine(holder, requestContext))
       .compose(v -> pieceStorageService.insertPiece(pieceToCreate, requestContext));
   }

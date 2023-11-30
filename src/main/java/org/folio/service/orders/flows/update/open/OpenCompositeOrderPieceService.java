@@ -108,11 +108,9 @@ public class OpenCompositeOrderPieceService {
   public Future<Piece> createPiece(Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPiece start");
     return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .compose(vVoid ->
-        titlesService.getTitleById(piece.getTitleId(), requestContext)
-          .compose(title ->
-            protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
-              .map(v -> vVoid)))
+      .compose(order -> titlesService.getTitleById(piece.getTitleId(), requestContext)
+          .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
+              .map(v -> order)))
       .compose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
       .compose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
@@ -120,11 +118,9 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> updatePieceRecord(Piece piece, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
     purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .compose(vVoid ->
-        titlesService.getTitleById(piece.getTitleId(), requestContext)
-          .compose(title ->
-            protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)
-              .map(v -> vVoid)))
+      .compose(order -> titlesService.getTitleById(piece.getTitleId(), requestContext)
+          .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)
+              .map(v -> order)))
       .compose(v -> inventoryManager.updateItemWithPieceFields(piece, requestContext))
       .onSuccess(vVoid ->
         pieceStorageService.getPieceById(piece.getId(), requestContext).onSuccess(pieceStorage -> {
