@@ -179,8 +179,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, mockPoLine);
     addMockEntry(ITEM_RECORDS, itemJson);
-    createMockTitle(mockPoLine);
-    preparePiecesForCompositePo(order);
+    createPieceAndTitle(mockPoLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
@@ -726,7 +725,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, mockPoLine);
-    createMockTitle(poLine);
+    createPieceAndTitle(poLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
@@ -786,7 +785,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, mockPoLine);
-    createMockTitle(mockPoLine);
+    createPieceAndTitle(mockPoLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
@@ -963,33 +962,23 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
   }
 
-  private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
+  private void verifyPoLine(DataImportEventPayload eventPayload) {
     assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
     CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
     assertNotNull(poLine.getId());
     assertNotNull(poLine.getTitleOrPackage());
     assertNotNull(poLine.getPurchaseOrderId());
-    return poLine;
   }
 
-  private void createMockTitle(CompositePoLine line) {
-    Title title = new Title().withId(SAMPLE_TITLE_ID).withTitle(line.getTitleOrPackage()).withPoLineId(line.getId());
+  private void createPieceAndTitle(CompositePoLine poLine) {
+    Title title = new Title().withId(SAMPLE_TITLE_ID)
+      .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId())
+      .withPoLineNumber(poLine.getPoLineNumber())
+      .withInstanceId(poLine.getInstanceId());
     addMockEntry(TITLES, JsonObject.mapFrom(title));
-  }
-
-  private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
-    reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().forEach(location -> {
-      for (int i = 0; i < location.getQuantity(); i++) {
-        Title title = new Title().withId(SAMPLE_TITLE_ID)
-          .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId())
-          .withAcqUnitIds(reqData.getAcqUnitIds());
-        addMockEntry(TITLES, JsonObject.mapFrom(title));
-        addMockEntry(PIECES_STORAGE,
-          new Piece().withPoLineId(poLine.getId())
-            .withLocationId(location.getLocationId()).withFormat(OTHER)
-            .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
-            .withTitleId(title.getId()));
-      }
-    }));
+    addMockEntry(PIECES_STORAGE,
+      new Piece().withPoLineId(poLine.getId()).withFormat(OTHER)
+        .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+        .withTitleId(title.getId()));
   }
 }
