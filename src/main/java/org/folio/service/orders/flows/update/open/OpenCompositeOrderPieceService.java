@@ -119,8 +119,7 @@ public class OpenCompositeOrderPieceService {
     Promise<Void> promise = Promise.promise();
     purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
       .compose(order -> titlesService.getTitleById(piece.getTitleId(), requestContext)
-          .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)
-              .map(v -> order)))
+          .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)))
       .compose(v -> inventoryManager.updateItemWithPieceFields(piece, requestContext))
       .onSuccess(vVoid ->
         pieceStorageService.getPieceById(piece.getId(), requestContext).onSuccess(pieceStorage -> {
