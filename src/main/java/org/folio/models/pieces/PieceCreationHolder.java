@@ -28,4 +28,9 @@ public class PieceCreationHolder extends BasePieceFlowHolder {
   public String getOrderLineId() {
     return pieceToCreate.getPoLineId();
   }
+
+  @Override
+  public String getTitleId() {
+    return pieceToCreate.getTitleId();
+  }
 }

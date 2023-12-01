@@ -2,6 +2,11 @@ package org.folio.service.pieces.flows.update;
 
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 
+import java.util.Date;
+
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceUpdateHolder;
@@ -12,12 +17,6 @@ import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
-
-import java.util.Date;
 
 public class PieceUpdateFlowManager {
   private static final Logger logger = LogManager.getLogger(PieceUpdateFlowManager.class);
@@ -55,11 +54,12 @@ public class PieceUpdateFlowManager {
     pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
       .onSuccess(holder::withPieceFromStorage)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
+      .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .map(v -> {
         defaultPieceFlowsValidator.isPieceRequestValid(pieceToUpdate, holder.getOriginPoLine(), createItem);
         return null;
       })
-      .compose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), UPDATE, requestContext))
+      .compose(title -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), UPDATE, requestContext))
       .compose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
       .compose(vVoid -> updatePoLine(holder, requestContext))
       .map(afterUpdate -> {

@@ -175,6 +175,10 @@ public final class TestUtils {
       .withPurchaseOrderId(orderId);
   }
 
+  public static Title getMinimalContentTitle() {
+    return new Title().withTitle("Test title").withId(SAMPLE_TITLE_ID);
+  }
+
   public static CompositePoLine getMinimalPackageCompositePoLine(String orderId) {
     return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
       .withId(MIN_PO_LINE_ID)

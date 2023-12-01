@@ -31,6 +31,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.dataimport.PoLineImportProgressService;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -54,8 +55,10 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
@@ -64,11 +67,13 @@ import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
+import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
+import static org.folio.rest.jaxrs.model.Piece.Format.OTHER;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -174,6 +179,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, mockPoLine);
     addMockEntry(ITEM_RECORDS, itemJson);
+    createPieceAndTitle(mockPoLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
@@ -719,6 +725,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, mockPoLine);
+    createPieceAndTitle(poLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
@@ -778,6 +785,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, mockPoLine);
+    createPieceAndTitle(mockPoLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
@@ -954,12 +962,23 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
   }
 
-  private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
+  private void verifyPoLine(DataImportEventPayload eventPayload) {
     assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
     CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
     assertNotNull(poLine.getId());
     assertNotNull(poLine.getTitleOrPackage());
     assertNotNull(poLine.getPurchaseOrderId());
-    return poLine;
+  }
+
+  private void createPieceAndTitle(CompositePoLine poLine) {
+    Title title = new Title().withId(SAMPLE_TITLE_ID)
+      .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId())
+      .withPoLineNumber(poLine.getPoLineNumber())
+      .withInstanceId(poLine.getInstanceId());
+    addMockEntry(TITLES, JsonObject.mapFrom(title));
+    addMockEntry(PIECES_STORAGE,
+      new Piece().withPoLineId(poLine.getId()).withFormat(OTHER)
+        .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+        .withTitleId(title.getId()));
   }
 }

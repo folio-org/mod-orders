@@ -137,6 +137,7 @@ public class PieceCreateFlowInventoryManagerTest {
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
+    holder.withTitleInformation(title);
 
     pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
       holder.isCreateItem(), requestContext).result();
@@ -176,6 +177,7 @@ public class PieceCreateFlowInventoryManagerTest {
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
+    holder.withTitleInformation(title);
 
     pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
       holder.isCreateItem(), requestContext).result();
@@ -216,6 +218,7 @@ public class PieceCreateFlowInventoryManagerTest {
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
+    holder.withTitleInformation(title);
 
     pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
       holder.isCreateItem(), requestContext).result();

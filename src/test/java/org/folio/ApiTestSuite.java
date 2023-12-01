@@ -82,6 +82,7 @@ import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpd
 import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
+import org.folio.service.pieces.flows.BasePieceFlowHolderBuilderTest;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidatorTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManagerTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineServiceTest;
@@ -315,115 +316,98 @@ public class ApiTestSuite {
 
   @Nested
   class PoLineCommonUtilTestNested extends PoLineCommonUtilTest {
-
   }
 
   @Nested
   class CompositePoLineValidationServiceTestNested extends CompositePoLineValidationServiceTest {
-
   }
 
   @Nested
   class LocationsAndPiecesConsistencyValidatorTestNested extends LocationsAndPiecesConsistencyValidatorTest {
-
   }
 
   @Nested
   class PieceStorageServiceTestNested extends PieceStorageServiceTest {
-
   }
 
   @Nested
   class PieceUpdateInventoryServiceTestNested extends PieceUpdateInventoryServiceTest {
-
   }
 
   @Nested
   class OrderInvoiceRelationServiceTestNested extends OrderInvoiceRelationServiceTest {
-
   }
 
   @Nested
   class PieceFlowUpdatePoLineStrategiesTestNested {
-
   }
 
   @Nested
   class ExceptionUtilTestNested extends ExceptionUtilTest {
-
   }
 
   @Nested
   class ResponseUtilTestNested extends ResponseUtilTest {
-
   }
 
   @Nested
   class PieceValidatorUtilTestNested extends PieceValidatorUtilTest {
-
   }
+
   @Nested
   class PieceDeleteFlowManagerTestNested extends PieceDeleteFlowManagerTest {
-
   }
 
   @Nested
   class PieceCreateFlowInventoryManagerTestNested extends PieceCreateFlowInventoryManagerTest {
-
   }
 
   @Nested
   class DefaultPieceFlowsValidatorTestNested extends DefaultPieceFlowsValidatorTest {
-
   }
 
   @Nested
   class CheckinHelperTestNested extends CheckinHelperTest {
-
   }
+
   @Nested
   class PieceUpdateFlowManagerTestNested extends PieceUpdateFlowManagerTest {
-
   }
 
   @Nested
   class PieceUpdateFlowInventoryManagerTestNested extends PieceUpdateFlowInventoryManagerTest {
+  }
 
+  @Nested
+  class BasePieceFlowHolderBuilderTestNested extends BasePieceFlowHolderBuilderTest {
   }
 
   @Nested
   class PieceCreateFlowPoLineServiceTestNested extends PieceCreateFlowPoLineServiceTest {
-
   }
 
   @Nested
   class PieceDeleteFlowPoLineServiceTestNested extends PieceDeleteFlowPoLineServiceTest {
-
   }
 
   @Nested
   class PieceUpdateFlowPoLineServiceTestNested extends PieceUpdateFlowPoLineServiceTest {
-
   }
 
   @Nested
   class OpenCompositeOrderInventoryServiceTestNested extends OpenCompositeOrderInventoryServiceTest {
-
   }
 
   @Nested
   class OpenCompositeOrderManagerTestNested extends OpenCompositeOrderManagerTest {
-
   }
 
   @Nested
   class OpenCompositeOrderPieceServiceTestNested extends OpenCompositeOrderPieceServiceTest {
-
   }
 
   @Nested
   class OpenCompositeOrderHolderBuilderTestNested extends OpenCompositeOrderHolderBuilderTest {
-
   }
 
   @Nested
@@ -432,12 +416,10 @@ public class ApiTestSuite {
 
   @Nested
   class ReOpenCompositeOrderManagerTestNested extends ReOpenCompositeOrderManagerTest {
-
   }
 
   @Nested
   class OrderLineUpdateInstanceHandlerTestNested extends OrderLineUpdateInstanceHandlerTest {
-
   }
 
   @Nested

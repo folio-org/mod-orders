@@ -21,6 +21,7 @@ import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.REQUEST_FOUND;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
@@ -55,6 +56,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.Title;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -199,6 +201,7 @@ public class PieceApiTest {
     String lineId = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
@@ -208,13 +211,16 @@ public class PieceApiTest {
       .withLocations(List.of(loc)).withCost(cost)
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
     order.setCompositePoLines(Collections.singletonList(poLine));
+    Title title = new Title().withId(titleId).withTitle("title name");
     Piece piece = new Piece().withFormat(Piece.Format.PHYSICAL).withId(UUID.randomUUID().toString())
       .withHoldingId(holdingId)
-       .withItemId(ID_DOES_NOT_EXIST).withPoLineId(poLine.getId());
+      .withItemId(ID_DOES_NOT_EXIST).withPoLineId(poLine.getId())
+      .withTitleId(titleId);
 
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 204);
     assertNull(MockServer.getItemDeletions());
@@ -247,6 +253,7 @@ public class PieceApiTest {
     String lineId = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
@@ -256,12 +263,13 @@ public class PieceApiTest {
       .withLocations(List.of(loc)).withCost(cost)
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.NONE));
     order.setCompositePoLines(Collections.singletonList(poLine));
-
-    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(poLine.getId());
+    Title title = new Title().withId(titleId).withTitle("title name");
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(poLine.getId()).withTitleId(titleId);
 
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 204);
     assertThat(MockServer.getItemDeletions(), nullValue());
@@ -276,6 +284,8 @@ public class PieceApiTest {
     String lineId = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
@@ -285,13 +295,16 @@ public class PieceApiTest {
       .withLocations(List.of(loc)).withCost(cost)
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
     order.setCompositePoLines(Collections.singletonList(poLine));
+    Title title = new Title().withId(titleId).withTitle("title name");
 
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withFormat(Piece.Format.PHYSICAL)
-      .withHoldingId(holdingId).withItemId(itemId).withPoLineId(poLine.getId());
+      .withHoldingId(holdingId).withItemId(itemId).withPoLineId(poLine.getId())
+      .withTitleId(titleId);
 
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
     MockServer.addMockEntry(ITEM_RECORDS, item);
 
     verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 204);
@@ -305,11 +318,16 @@ public class PieceApiTest {
 
     PurchaseOrder order = new PurchaseOrder().withId(UUID.randomUUID().toString());
     CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId());
-    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98").withPoLineId(poLine.getId());
+    Title title = new Title().withId(UUID.randomUUID().toString()).withTitle("title name");
+    Piece piece = new Piece().withId(UUID.randomUUID().toString())
+      .withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98")
+      .withPoLineId(poLine.getId())
+      .withTitleId(title.getId());
 
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
     MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
 
     Errors response = verifyDeleteResponse(String.format(PIECES_ID_PATH, piece.getId()), "", 422).as(Errors.class);
     List<Error> errors = response.getErrors();

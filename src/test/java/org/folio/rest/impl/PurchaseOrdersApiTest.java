@@ -122,6 +122,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 
@@ -193,6 +195,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.TransactionService;
+import org.folio.service.titles.TitlesService;
 import org.hamcrest.beans.HasPropertyWithValue;
 import org.hamcrest.core.Every;
 import org.hamcrest.core.Is;
@@ -251,6 +254,7 @@ public class PurchaseOrdersApiTest {
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
   static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
   static final String FUND_ENCUMBRANCE_ERROR =  "f1654bbe-dd76-4bfe-a96a-e764141e6aac";
+  static final String SAMPLE_TITLE_ID = "5489d159-cbbd-417e-a4e3-c6b0f7627f4f";
 
   public static final String ORDER_WITHOUT_MATERIAL_TYPES_ID =  "0cb6741d-4a00-47e5-a902-5678eb24478d";
 
@@ -302,6 +306,8 @@ public class PurchaseOrdersApiTest {
   private TransactionService transactionService;
   @Mock
   private RestClient restClient;
+  @Mock
+  private TitlesService titlesService;
 
   private RequestContext requestContext;
   @Mock
@@ -342,7 +348,6 @@ public class PurchaseOrdersApiTest {
   @Test
   void testValidFundDistributionTotalPercentage() throws Exception {
     logger.info("=== Test fund distribution total must add upto totalEstimatedPrice - valid total percentage ===");
-
     JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(reqData);
@@ -360,6 +365,8 @@ public class PurchaseOrdersApiTest {
     // Calculate remaining Percentage for fundDistribution2 = 23.99 - 23.99(50%) = 0.0
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
     reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(50d);
+
+    doReturn(succeededFuture(null)).when(titlesService).getTitleById(anyString(), any());
 
     final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
@@ -2227,6 +2234,7 @@ public class PurchaseOrdersApiTest {
 
     reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     preparePiecesForCompositePo(reqData);
+
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
     List<JsonObject> createdPieces = getCreatedPieces();
@@ -2234,8 +2242,8 @@ public class PurchaseOrdersApiTest {
   }
 
   private void createMockTitle(CompositePoLine line) {
-    Title title = new Title().withTitle(line.getTitleOrPackage()).withPoLineId(line.getId());
-    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
+    Title title = new Title().withId(SAMPLE_TITLE_ID).withTitle(line.getTitleOrPackage()).withPoLineId(line.getId());
+    addMockEntry(TITLES, JsonObject.mapFrom(title));
   }
 
   @Test
@@ -4317,11 +4325,18 @@ public class PurchaseOrdersApiTest {
 
     return order;
   }
+
   private void preparePiecesForCompositePo(CompositePurchaseOrder reqData) {
     reqData.getCompositePoLines().forEach(poLine -> poLine.getLocations().forEach(location -> {
       for (int i = 0; i < location.getQuantity(); i++) {
-        addMockEntry(
-            PIECES_STORAGE, new Piece().withPoLineId(poLine.getId()).withLocationId(location.getLocationId()).withFormat(OTHER).withReceivingStatus(Piece.ReceivingStatus.EXPECTED));
+        Title title = new Title().withId(SAMPLE_TITLE_ID)
+          .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId());
+        addMockEntry(TITLES, JsonObject.mapFrom(title));
+        addMockEntry(PIECES_STORAGE,
+          new Piece().withPoLineId(poLine.getId())
+            .withLocationId(location.getLocationId()).withFormat(OTHER)
+            .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+            .withTitleId(title.getId()));
       }
     }));
   }
