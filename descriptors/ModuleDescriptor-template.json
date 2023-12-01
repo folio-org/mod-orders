@@ -590,6 +590,7 @@
             "orders-storage.alerts.item.get",
             "orders-storage.reporting-codes.item.get",
             "orders-storage.order-invoice-relationships.collection.get",
+            "orders-storage.titles.item.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put"
           ]
