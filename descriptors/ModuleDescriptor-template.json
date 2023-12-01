@@ -36,6 +36,7 @@
           ],
           "modulePermissions": [
             "modperms.orders.item.post",
+            "orders-storage.titles.item.get",
             "orders-storage.configuration.prefixes.collection.get",
             "orders-storage.configuration.suffixes.collection.get"
           ]
@@ -83,6 +84,7 @@
           ],
           "modulePermissions": [
             "modperms.orders.item.put",
+            "orders-storage.titles.item.get",
             "orders-storage.configuration.prefixes.collection.get",
             "orders-storage.configuration.suffixes.collection.get"
           ]
