@@ -15,26 +15,30 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 
+import io.restassured.http.Header;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import io.restassured.http.Header;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 
 public class FiscalYearServiceTest {
 
   public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
 
+  @InjectMocks
   private FiscalYearService fiscalYearService;
-
+  @Mock
+  private RestClient restClient;
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
   private HttpClientInterface httpClient;
