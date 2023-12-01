@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import io.vertx.junit5.VertxExtension;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -31,6 +32,7 @@ import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -39,6 +41,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxTestContext;
 
+@ExtendWith(VertxExtension.class)
 public class ClosedToOpenEncumbranceStrategyTest {
   @InjectMocks
   private ClosedToOpenEncumbranceStrategy closedToOpenEncumbranceStrategy;
@@ -52,7 +55,6 @@ public class ClosedToOpenEncumbranceStrategyTest {
   BudgetRestrictionService budgetRestrictionService;
   @Mock
   private RequestContext requestContext;
-
 
   @BeforeEach
   public void initMocks() {

@@ -50,6 +50,7 @@ import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
 import org.folio.service.finance.rollover.LedgerRolloverErrorServiceTest;
 import org.folio.service.finance.rollover.LedgerRolloverProgressServiceTest;
 import org.folio.service.finance.rollover.LedgerRolloverServiceTest;
+import org.folio.service.finance.transaction.ClosedToOpenEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategyTest;
@@ -212,6 +213,10 @@ public class ApiTestSuite {
 
   @Nested
   class EncumbranceServiceTestNested extends EncumbranceServiceTest {
+  }
+
+  @Nested
+  class ClosedToOpenEncumbranceStrategyTestNested extends ClosedToOpenEncumbranceStrategyTest {
   }
 
   @Nested
