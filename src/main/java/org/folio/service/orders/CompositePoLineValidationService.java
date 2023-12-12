@@ -242,7 +242,7 @@ public class CompositePoLineValidationService {
     List<ErrorCodes> errors = new ArrayList<>();
     var claimingActive = compPOL.getClaimingActive();
     var claimingInterval = compPOL.getClaimingInterval();
-    if (claimingActive && (Objects.isNull(claimingInterval) || claimingInterval <= 0)) {
+    if (Boolean.TRUE.equals(claimingActive) && (Objects.isNull(claimingInterval) || claimingInterval <= 0)) {
       errors.add(ErrorCodes.CLAIMING_CONFIG_INVALID);
     }
     return convertErrorCodesToErrors(compPOL, errors);
