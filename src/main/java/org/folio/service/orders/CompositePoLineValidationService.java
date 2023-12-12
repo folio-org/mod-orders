@@ -44,8 +44,8 @@ public class CompositePoLineValidationService {
   }
 
   public Future<List<Error>> validatePoLine(CompositePoLine compPOL, RequestContext requestContext) {
-    List<Error> errors = new ArrayList<>();
-    errors.addAll(validatePackagePoLine(compPOL));
+    List<Error> errors = new ArrayList<>(validatePackagePoLine(compPOL));
+    errors.addAll(validateClaimingConfig(compPOL));
 
     if (getPhysicalCostQuantity(compPOL) == 0 && getElectronicCostQuantity(compPOL) == 0
       && CollectionUtils.isEmpty(compPOL.getLocations())) {
@@ -230,6 +230,22 @@ public class CompositePoLineValidationService {
     }
 
     return convertErrorCodesToErrors(compLine, errors);
+  }
+
+  /**
+   * Checks if claiming interval is greater than 0 if claiming is active.
+   *
+   * @param compPOL poline to check
+   * @return list of error codes
+   */
+  protected List<Error> validateClaimingConfig(CompositePoLine compPOL) {
+    List<ErrorCodes> errors = new ArrayList<>();
+    var claimingActive = compPOL.getClaimingActive();
+    var claimingInterval = compPOL.getClaimingInterval();
+    if (claimingActive && (Objects.isNull(claimingInterval) || claimingInterval <= 0)) {
+      errors.add(ErrorCodes.CLAIMING_CONFIG_INVALID);
+    }
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
   /**
