@@ -302,13 +302,8 @@ public class PurchaseOrderHelper {
                 compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
               }
               compPO.getCompositePoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
-              return openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext);
-            }
-            return Future.succeededFuture();
-          })
-          .compose(v -> {
-            if (isTransitionToOpen) {
-              return openCompositeOrderFlowValidator.checkFundLocationRestrictions(compPO.getCompositePoLines(), requestContext);
+              return openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext)
+                .compose(ok -> openCompositeOrderFlowValidator.checkFundLocationRestrictions(compPO.getCompositePoLines(), requestContext));
             }
             return Future.succeededFuture();
           })

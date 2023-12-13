@@ -117,12 +117,13 @@ public class OpenCompositeOrderFlowValidator {
     List<Future<Void>> checkFunds = poLines
       .stream()
       .filter(poLine -> CollectionUtils.isNotEmpty(poLine.getLocations()))
+      .filter(poLine -> CollectionUtils.isNotEmpty(poLine.getFundDistribution()))
       .map(poLine -> {
         List<String> fundIdList = poLine.getFundDistribution().stream()
           .map(FundDistribution::getFundId)
           .toList();
-        Future<List<Fund>> future = fundService.getFunds(fundIdList, requestContext);
-        return future.compose(funds -> validateLocationRestrictions(poLine, funds));
+        return fundService.getFunds(fundIdList, requestContext)
+          .compose(funds -> validateLocationRestrictions(poLine, funds));
       }).toList();
     return GenericCompositeFuture.join(checkFunds).mapEmpty();
   }
