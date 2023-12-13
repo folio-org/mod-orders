@@ -599,10 +599,11 @@ public class ApplicationConfig {
     return new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver, restClient) ;
   }
 
-  @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(ExpenseClassValidationService expenseClassValidationService,
+  @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(FundService fundService,
+    ExpenseClassValidationService expenseClassValidationService,
     PieceStorageService pieceStorageService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
     CompositePoLineValidationService compositePoLineValidationService) {
-    return new OpenCompositeOrderFlowValidator(expenseClassValidationService, pieceStorageService,
+    return new OpenCompositeOrderFlowValidator(fundService, expenseClassValidationService, pieceStorageService,
       encumbranceWorkflowStrategyFactory, compositePoLineValidationService);
   }
 

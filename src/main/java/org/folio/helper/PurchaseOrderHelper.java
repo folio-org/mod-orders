@@ -303,9 +303,14 @@ public class PurchaseOrderHelper {
               }
               compPO.getCompositePoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
               return openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext);
-            } else {
-              return Future.succeededFuture();
             }
+            return Future.succeededFuture();
+          })
+          .compose(v -> {
+            if (isTransitionToOpen) {
+              return openCompositeOrderFlowValidator.checkFundLocationRestrictions(compPO.getCompositePoLines(), requestContext);
+            }
+            return Future.succeededFuture();
           })
           .compose(ok -> {
             if (isTransitionToReopen(poFromStorage, compPO)) {
