@@ -20,14 +20,17 @@ import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.rest.core.exceptions.ErrorCodes.CLAIMING_CONFIG_INVALID;
 import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -42,6 +45,8 @@ import org.folio.config.ApplicationConfig;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.hamcrest.Matchers;
@@ -131,7 +136,11 @@ public class TitlesApiTest {
 
     String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_invalid_claiming_config.json");
 
-    verifyPut(String.format(TITLES_ID_PATH, VALID_UUID), reqData, APPLICATION_JSON, 422);
+    List<Error> errors = verifyPostResponse(TITLES_ENDPOINT, reqData, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(CLAIMING_CONFIG_INVALID.getDescription()));
   }
 
   @Test
@@ -232,7 +241,11 @@ public class TitlesApiTest {
 
     String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_invalid_claiming_config.json");
 
-    verifyPut(String.format(TITLES_ID_PATH, VALID_UUID), reqData, APPLICATION_JSON, 422);
+    List<Error> errors = verifyPut(String.format(TITLES_ID_PATH, VALID_UUID), reqData, APPLICATION_JSON, 422)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(CLAIMING_CONFIG_INVALID.getDescription()));
   }
 
   @Test
