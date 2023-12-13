@@ -6,7 +6,6 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.orders.BaseValidationService;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class TitleValidationService extends BaseValidationService {
   /**
