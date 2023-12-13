@@ -1,6 +1,5 @@
 package org.folio.service.orders.flows.update.open;
 
-import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidator.verifyLocationsAndPiecesConsistency;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
@@ -95,7 +94,7 @@ public class OpenCompositeOrderFlowValidator {
     List<CompositePoLine> linesWithIdWithoutManualPieceReceived = poLines.stream().filter(
         compositePoLine -> StringUtils.isNotEmpty(compositePoLine.getId()) && Boolean.FALSE.equals(compositePoLine.getCheckinItems()))
       .collect(Collectors.toList());
-    List<String> lineIds = linesWithIdWithoutManualPieceReceived.stream().map(CompositePoLine::getId).collect(toList());
+    List<String> lineIds = linesWithIdWithoutManualPieceReceived.stream().map(CompositePoLine::getId).toList();
     return pieceStorageService.getPiecesByLineIdsByChunks(lineIds, requestContext)
       .map(pieces -> new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size()))
       .map(pieces -> {
@@ -121,10 +120,10 @@ public class OpenCompositeOrderFlowValidator {
       .map(poLine -> {
         List<String> fundIdList = poLine.getFundDistribution().stream()
           .map(FundDistribution::getFundId)
-          .collect(toList());
+          .toList();
         Future<List<Fund>> future = fundService.getFunds(fundIdList, requestContext);
         return future.compose(funds -> validateLocationRestrictions(poLine, funds));
-      }).collect(Collectors.toList());
+      }).toList();
     return GenericCompositeFuture.join(checkFunds).mapEmpty();
   }
 
