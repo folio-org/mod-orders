@@ -21,6 +21,7 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.rest.core.exceptions.ErrorCodes.CLAIMING_CONFIG_INVALID;
+import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -246,6 +247,20 @@ public class TitlesApiTest {
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(CLAIMING_CONFIG_INVALID.getDescription()));
+  }
+
+  @Test
+  void putTitleWithMismatchIdBetweenParamAndBody() throws Exception {
+    logger.info("=== Test update title by id - id is mismatched between param and body 422 ===");
+
+    String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_invalid_claiming_config.json");
+    String randomId = UUID.randomUUID().toString();
+
+    List<Error> errors = verifyPut(String.format(TITLES_ID_PATH, randomId), reqData, APPLICATION_JSON, 422)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.getDescription()));
   }
 
   @Test

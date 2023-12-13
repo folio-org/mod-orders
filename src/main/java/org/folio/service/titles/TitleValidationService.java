@@ -21,6 +21,6 @@ public class TitleValidationService extends BaseValidationService {
   }
 
   private List<Error> convertErrorCodesToErrors(List<ErrorCodes> errorCodes) {
-    return errorCodes.stream().map(ErrorCodes::toError).collect(Collectors.toList());
+    return errorCodes.stream().map(ErrorCodes::toError).toList();
   }
 }
