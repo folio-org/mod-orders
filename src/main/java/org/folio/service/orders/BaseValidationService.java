@@ -14,7 +14,7 @@ public abstract class BaseValidationService {
    * @param claimingInterval claiming interval
    * @return list of error codes
    */
-  public List<ErrorCodes> checkClaimingConfig(Boolean claimingActive, Integer claimingInterval) {
+  protected List<ErrorCodes> checkClaimingConfig(Boolean claimingActive, Integer claimingInterval) {
     List<ErrorCodes> errors = new ArrayList<>();
     if (Boolean.TRUE.equals(claimingActive) && (Objects.isNull(claimingInterval) || claimingInterval <= 0)) {
       errors.add(ErrorCodes.CLAIMING_CONFIG_INVALID);
