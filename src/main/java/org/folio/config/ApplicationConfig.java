@@ -113,6 +113,7 @@ import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolve
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
+import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -645,6 +646,10 @@ public class ApplicationConfig {
 
   @Bean CompositePoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService) {
     return new CompositePoLineValidationService(expenseClassValidationService);
+  }
+
+  @Bean TitleValidationService titleValidationService() {
+    return new TitleValidationService();
   }
 
   @Bean ReOpenCompositeOrderManager reOpenCompositeOrderManager(EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,

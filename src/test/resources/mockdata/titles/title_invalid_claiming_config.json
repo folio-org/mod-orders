@@ -1,0 +1,15 @@
+{
+  "id": "c3e26c0e-d6a6-46fb-9309-d494cd0c82de",
+  "title": "Sample Title",
+  "poLineId": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+  "instanceId": "f1b57aeb-23c9-4386-bcb8-efda56878267",
+  "claimingActive": true,
+  "claimingInterval": -1,
+  "productIds": [
+    {
+      "productId": "9780764354113",
+      "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422",
+      "qualifier": "(paperback)"
+    }
+  ]
+}

@@ -126,6 +126,15 @@ public class TitlesApiTest {
   }
 
   @Test
+  void postTitleWithInvalidClaimingConfig() throws Exception {
+    logger.info("=== Test update title by id - claiming config is not valid 422 ===");
+
+    String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_invalid_claiming_config.json");
+
+    verifyPut(String.format(TITLES_ID_PATH, VALID_UUID), reqData, APPLICATION_JSON, 422);
+  }
+
+  @Test
   void titleShouldBePopulatedFromPackagePoLine() {
 
     String packagePoLineId = UUID.randomUUID().toString();
@@ -215,6 +224,15 @@ public class TitlesApiTest {
     String jsonBody = JsonObject.mapFrom(reqData).encode();
 
     verifyPut(String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), jsonBody, APPLICATION_JSON, 500);
+  }
+
+  @Test
+  void putTitleWithInvalidClaimingConfig() throws Exception {
+    logger.info("=== Test update title by id - claiming config is not valid 422 ===");
+
+    String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_invalid_claiming_config.json");
+
+    verifyPut(String.format(TITLES_ID_PATH, VALID_UUID), reqData, APPLICATION_JSON, 422);
   }
 
   @Test

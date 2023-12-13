@@ -35,7 +35,7 @@ import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import io.vertx.core.Future;
 
 
-public class CompositePoLineValidationService {
+public class CompositePoLineValidationService extends BaseValidationService {
 
   private final ExpenseClassValidationService expenseClassValidationService;
 
@@ -232,19 +232,8 @@ public class CompositePoLineValidationService {
     return convertErrorCodesToErrors(compLine, errors);
   }
 
-  /**
-   * Checks if claiming interval is greater than 0 if claiming is active.
-   *
-   * @param compPOL poline to check
-   * @return list of error codes
-   */
   protected List<Error> validateClaimingConfig(CompositePoLine compPOL) {
-    List<ErrorCodes> errors = new ArrayList<>();
-    var claimingActive = compPOL.getClaimingActive();
-    var claimingInterval = compPOL.getClaimingInterval();
-    if (Boolean.TRUE.equals(claimingActive) && (Objects.isNull(claimingInterval) || claimingInterval <= 0)) {
-      errors.add(ErrorCodes.CLAIMING_CONFIG_INVALID);
-    }
+    List<ErrorCodes> errors = checkClaimingConfig(compPOL.getClaimingActive(), compPOL.getClaimingInterval());
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
