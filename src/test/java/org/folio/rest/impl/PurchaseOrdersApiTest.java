@@ -47,6 +47,7 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
+import static org.folio.rest.core.exceptions.ErrorCodes.CLAIMING_CONFIG_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
@@ -234,6 +235,7 @@ public class PurchaseOrdersApiTest {
   public static final String ORDER_WITH_PO_LINES_JSON = "put_order_with_po_lines.json";
   private static final String ORDER_WITH_MISMATCH_ID_INT_PO_LINES_JSON = "put_order_with_mismatch_id_in_po_lines.json";
   private static final String ORDER_WITHOUT_MATERIAL_TYPE_JSON = "order_po_line_without_material_type.json";
+  private static final String ORDER_WITH_NOT_VALID_CLAIMING_CONFIG = "order_with_invalid_claiming_config.json";
 
   static final String ACTIVE_VENDOR_ID = "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1";
   static final String INACTIVE_VENDOR_ID = "b1ef7e96-98f3-4f0d-9820-98c322c989d2";
@@ -4216,6 +4218,19 @@ public class PurchaseOrdersApiTest {
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(MISSING_MATERIAL_TYPE.getDescription()));
+  }
+
+  @Test
+  void testPostShouldFailIfClaimingConfigNotValid() {
+    logger.info("===Test Post Failed if claiming active but claiming interval is negative ===");
+    CompositePurchaseOrder reqData = getMockAsJson(ORDER_WITH_NOT_VALID_CLAIMING_CONFIG).mapTo(CompositePurchaseOrder.class);
+
+    List<Error> errors = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData)
+      .encodePrettily(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(CLAIMING_CONFIG_INVALID.getDescription()));
   }
 
   @Test

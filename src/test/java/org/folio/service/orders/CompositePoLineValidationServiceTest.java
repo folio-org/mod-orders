@@ -1,6 +1,7 @@
 package org.folio.service.orders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
@@ -60,5 +61,55 @@ public class CompositePoLineValidationServiceTest {
     errors.forEach(error -> {
       assertEquals(ErrorCodes.MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR.getCode(), error.getCode());
     });
+  }
+
+  @Test
+  void shouldReturnSuccessIfClaimingConfigValid() {
+    CompositePoLine compositePoLine = new CompositePoLine()
+      .withClaimingActive(true)
+      .withClaimingInterval(5);
+    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+
+    assertTrue(errors.isEmpty());
+  }
+
+  @Test
+  void shouldReturnSuccessIfClaimingConfigNotSet() {
+    CompositePoLine compositePoLine = new CompositePoLine();
+    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+
+    assertTrue(errors.isEmpty());
+  }
+
+  @Test
+  void shouldReturnErrorIfClaimingIntervalNotSetWhenClaimingActive() {
+    CompositePoLine compositePoLine = new CompositePoLine()
+      .withClaimingActive(true);
+    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+
+    assertEquals(1, errors.size());
+    assertEquals(ErrorCodes.CLAIMING_CONFIG_INVALID.getCode(), errors.get(0).getCode());
+  }
+
+  @Test
+  void shouldReturnErrorIfClaimingIntervalIsZeroWhenClaimingActive() {
+    CompositePoLine compositePoLine = new CompositePoLine()
+      .withClaimingActive(true)
+      .withClaimingInterval(0);
+    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+
+    assertEquals(1, errors.size());
+    assertEquals(ErrorCodes.CLAIMING_CONFIG_INVALID.getCode(), errors.get(0).getCode());
+  }
+
+  @Test
+  void shouldReturnErrorIfClaimingIntervalIsNegativeWhenClaimingActive() {
+    CompositePoLine compositePoLine = new CompositePoLine()
+      .withClaimingActive(true)
+      .withClaimingInterval(-1);
+    List<Error> errors = compositePoLineValidationService.validateClaimingConfig(compositePoLine);
+
+    assertEquals(1, errors.size());
+    assertEquals(ErrorCodes.CLAIMING_CONFIG_INVALID.getCode(), errors.get(0).getCode());
   }
 }

@@ -35,7 +35,7 @@ import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import io.vertx.core.Future;
 
 
-public class CompositePoLineValidationService {
+public class CompositePoLineValidationService extends BaseValidationService {
 
   private final ExpenseClassValidationService expenseClassValidationService;
 
@@ -44,8 +44,8 @@ public class CompositePoLineValidationService {
   }
 
   public Future<List<Error>> validatePoLine(CompositePoLine compPOL, RequestContext requestContext) {
-    List<Error> errors = new ArrayList<>();
-    errors.addAll(validatePackagePoLine(compPOL));
+    List<Error> errors = new ArrayList<>(validatePackagePoLine(compPOL));
+    errors.addAll(validateClaimingConfig(compPOL));
 
     if (getPhysicalCostQuantity(compPOL) == 0 && getElectronicCostQuantity(compPOL) == 0
       && CollectionUtils.isEmpty(compPOL.getLocations())) {
@@ -230,6 +230,11 @@ public class CompositePoLineValidationService {
     }
 
     return convertErrorCodesToErrors(compLine, errors);
+  }
+
+  protected List<Error> validateClaimingConfig(CompositePoLine compPOL) {
+    List<ErrorCodes> errors = checkClaimingConfig(compPOL.getClaimingActive(), compPOL.getClaimingInterval());
+    return convertErrorCodesToErrors(compPOL, errors);
   }
 
   /**

@@ -7,14 +7,18 @@ import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 
+import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.resource.OrdersTitles;
+import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +31,8 @@ import io.vertx.core.Vertx;
 public class TitlesApi extends BaseApi implements OrdersTitles {
   @Autowired
   private TitlesService titlesService;
+  @Autowired
+  private TitleValidationService titleValidationService;
 
   public TitlesApi() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -47,6 +53,12 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
   @Validate
   public void postOrdersTitles(Title entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    List<Error> errors = titleValidationService.validateTitle(entity);
+    if (CollectionUtils.isNotEmpty(errors)) {
+      errors.forEach(this::addProcessingError);
+      asyncResultHandler.handle(succeededFuture(buildErrorResponse(422)));
+      return;
+    }
     titlesService.createTitle(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(title -> asyncResultHandler.handle(
         succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(TITLES, title.getId()), title))))
@@ -80,6 +92,12 @@ public class TitlesApi extends BaseApi implements OrdersTitles {
       entity.setId(id);
     } else if (!id.equals(entity.getId())) {
       addProcessingError(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
+      asyncResultHandler.handle(succeededFuture(buildErrorResponse(422)));
+      return;
+    }
+    List<Error> errors = titleValidationService.validateTitle(entity);
+    if (CollectionUtils.isNotEmpty(errors)) {
+      errors.forEach(this::addProcessingError);
       asyncResultHandler.handle(succeededFuture(buildErrorResponse(422)));
       return;
     }
