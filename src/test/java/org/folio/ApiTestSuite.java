@@ -71,6 +71,7 @@ import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderStorageServiceTest;
 import org.folio.service.orders.ReEncumbranceHoldersBuilderTest;
 import org.folio.service.orders.TransactionsTotalFieldsPopulateServiceTest;
+import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidatorTest;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderHolderBuilderTest;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryServiceTest;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManagerTest;
@@ -396,6 +397,10 @@ public class ApiTestSuite {
 
   @Nested
   class OpenCompositeOrderInventoryServiceTestNested extends OpenCompositeOrderInventoryServiceTest {
+  }
+
+  @Nested
+  class OpenCompositeOrderFlowValidatorTestNested extends OpenCompositeOrderFlowValidatorTest {
   }
 
   @Nested
