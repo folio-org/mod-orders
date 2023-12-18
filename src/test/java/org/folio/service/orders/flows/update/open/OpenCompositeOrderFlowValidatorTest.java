@@ -59,8 +59,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L4")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2", "L3"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L2", "L3", "L4")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
       ))
     );
 
@@ -78,7 +78,7 @@ public class OpenCompositeOrderFlowValidatorTest {
           new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
           new Parameter().withKey("fundId").withValue("F2"),
           new Parameter().withKey("fundCode").withValue("FC"),
-          new Parameter().withKey("restrictedLocations").withValue("[L2, L3]")
+          new Parameter().withKey("restrictedLocations").withValue("[L1, L3]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
