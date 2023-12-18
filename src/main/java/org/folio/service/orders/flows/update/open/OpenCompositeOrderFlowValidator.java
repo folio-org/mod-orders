@@ -131,10 +131,10 @@ public class OpenCompositeOrderFlowValidator {
   private Future<Void> validateLocationRestrictions(CompositePoLine poLine, List<Fund> funds) {
     List<String> polLocationIds = poLine.getLocations().stream().map(Location::getLocationId).toList();
     for (Fund fund : funds) {
-      if (Boolean.TRUE.equals(fund.getRestrictByLocations()) && CollectionUtils.containsAny(fund.getLocationIds(), polLocationIds)) {
+      if (Boolean.TRUE.equals(fund.getRestrictByLocations()) && !CollectionUtils.containsAll(fund.getLocationIds(), polLocationIds)) {
         String poLineId = poLine.getId();
         String fundId = fund.getId();
-        Collection<String> restrictedLocations = CollectionUtils.intersection(fund.getLocationIds(), polLocationIds);
+        Collection<String> restrictedLocations = CollectionUtils.subtract(polLocationIds, fund.getLocationIds());
         logger.error("For POL {} fund {} is restricted to be used for locations {}", poLineId, fundId, restrictedLocations);
         List<Parameter> parameters = List.of(
           new Parameter().withKey("poLineId").withValue(poLineId),
