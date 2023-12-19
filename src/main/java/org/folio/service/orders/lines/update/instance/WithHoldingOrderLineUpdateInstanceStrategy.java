@@ -35,6 +35,9 @@ import one.util.streamex.StreamEx;
 
 public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
 
+  private static final String HOLDINGS_ITEMS = "holdingsItems";
+  private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
+  private static final String PERMANENT_LOCATION_ID = "permanentLocationId";
   private final PieceStorageService pieceStorageService;
 
   public WithHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager, PieceStorageService pieceStorageService) {
@@ -70,7 +73,19 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       .compose(holdingIds -> {
         holdingIds.forEach(holdingId -> holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, holdingId));
         return inventoryManager.getHoldingsByIds(holdingIds, requestContext);
-      }).compose(holdings -> inventoryManager.updateInstanceForHoldingRecords(holdings, newInstanceId, requestContext));
+      })
+      .compose(holdings -> {
+        removeHoldingUnrecognizedFields(holdings);
+        return inventoryManager.updateInstanceForHoldingRecords(holdings, newInstanceId, requestContext);
+      });
+  }
+
+  private void removeHoldingUnrecognizedFields(List<JsonObject> holdings) {
+    holdings.forEach(holding -> {
+      holding.remove(HOLDINGS_ITEMS);
+      holding.remove(BARE_HOLDINGS_ITEMS);
+      holding.remove(PERMANENT_LOCATION_ID);
+    });
   }
 
   private Future<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
