@@ -37,7 +37,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private static final String HOLDINGS_ITEMS = "holdingsItems";
   private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
-  private static final String PERMANENT_LOCATION_ID = "permanentLocationId";
   private final PieceStorageService pieceStorageService;
 
   public WithHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager, PieceStorageService pieceStorageService) {
@@ -84,7 +83,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     holdings.forEach(holding -> {
       holding.remove(HOLDINGS_ITEMS);
       holding.remove(BARE_HOLDINGS_ITEMS);
-      holding.remove(PERMANENT_LOCATION_ID);
     });
   }
 
