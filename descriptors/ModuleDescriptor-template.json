@@ -306,6 +306,7 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.holdings.item.post",
             "inventory-storage.holdings.item.delete",
+            "inventory-storage.holdings.item.put",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.items.collection.get",
             "inventory-storage.holdings-sources.collection.get",
