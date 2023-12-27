@@ -19,6 +19,7 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.orders.utils.PermissionsUtil.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.rest.core.exceptions.ErrorCodes.CLAIMING_CONFIG_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
@@ -37,12 +38,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import io.restassured.http.Header;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
+import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
@@ -68,6 +71,7 @@ public class TitlesApiTest {
   public static final String SAMPLE_TITLE_ID = "9a665b22-9fe5-4c95-b4ee-837a5433c95d";
   private final JsonObject titleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "title.json");
   private final JsonObject packageTitleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "package_title.json");
+  public static final Header ALL_DESIRED_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValues()).encode());
 
   private static boolean runningOnOwn;
 
@@ -114,7 +118,7 @@ public class TitlesApiTest {
     assertThat(postTitleRq.getId(), nullValue());
 
     Title postTitleRs = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_PERMISSIONS_HEADER), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
 
     // Title id not null
     assertThat(postTitleRs.getId(), Matchers.notNullValue());
@@ -122,12 +126,12 @@ public class TitlesApiTest {
     // Negative cases
     // Unable to create title test
     int status400 = HttpStatus.HTTP_BAD_REQUEST.toInt();
-    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
+    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_PERMISSIONS_HEADER,
       new Header(X_ECHO_STATUS, String.valueOf(status400))), APPLICATION_JSON, status400);
 
     // Internal error on mod-orders-storage test
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
-    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
+    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_PERMISSIONS_HEADER,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
   }
 
@@ -137,7 +141,7 @@ public class TitlesApiTest {
 
     String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title_invalid_claiming_config.json");
 
-    List<Error> errors = verifyPostResponse(TITLES_ENDPOINT, reqData, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
+    List<Error> errors = verifyPostResponse(TITLES_ENDPOINT, reqData, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_PERMISSIONS_HEADER), APPLICATION_JSON, 422)
       .as(Errors.class)
       .getErrors();
 
@@ -166,7 +170,7 @@ public class TitlesApiTest {
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(packagePoLine));
 
     Title titleWithPackagePoLineRS = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(titleWithPackagePoLineRQ).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_PERMISSIONS_HEADER), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
 
     assertEquals(titleWithPackagePoLineRS.getPackageName(), packageTitleName);
     assertNotNull(titleWithPackagePoLineRS.getExpectedReceiptDate());

@@ -24,6 +24,7 @@ import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToPen
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToReopen;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
+import static org.folio.orders.utils.PermissionsUtil.*;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyOngoingFieldsChanged;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
@@ -67,7 +68,6 @@ import org.folio.HttpStatus;
 import org.folio.completablefuture.VertxFutureRepeater;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
@@ -112,20 +112,12 @@ import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderHelper.class);
-
-  private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
-  private static final String PERMISSION_ORDER_UNOPEN = "orders.item.unopen";
-  private static final String PERMISSION_ORDER_REOPEN = "orders.item.reopen";
   public static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER_STORAGE) + SEARCH_PARAMS;
-  public static final String EMPTY_ARRAY = "[]";
-  public static final String OKAPI_HEADER_PERMISSIONS = "X-Okapi-Permissions";
-
 
   private final PurchaseOrderLineHelper purchaseOrderLineHelper;
   private final CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService;
@@ -892,32 +884,6 @@ public class PurchaseOrderHelper {
 
   private List<CompositePoLine> getNonPackageLines(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
-  }
-
-  private boolean isUserDoesNotHaveDesiredPermission(AcqDesiredPermissions acqPerm, RequestContext requestContext) {
-    return !getProvidedPermissions(requestContext).contains(acqPerm.getPermission());
-  }
-
-  private boolean isManagePermissionRequired(Set<String> newAcqUnits, Set<String> acqUnitsFromStorage) {
-    return !CollectionUtils.isEqualCollection(newAcqUnits, acqUnitsFromStorage);
-  }
-
-  private static List<String> getProvidedPermissions(RequestContext requestContext) {
-    return new JsonArray(requestContext.getHeaders().getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_ARRAY)).stream().
-      map(Object::toString)
-      .collect(Collectors.toList());
-  }
-
-  public static boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
-    return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_APPROVE);
-  }
-
-  private boolean isUserNotHaveUnopenPermission(RequestContext requestContext) {
-    return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_UNOPEN);
-  }
-
-  private boolean isUserNotHaveReopenPermission(RequestContext requestContext) {
-    return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_REOPEN);
   }
 
   private List<JsonObject> updateStatusName(List<JsonObject> items, String status) {

@@ -37,10 +37,10 @@ import static org.folio.helper.InventoryInteractionTestHelper.verifyItemsCreated
 import static org.folio.helper.InventoryInteractionTestHelper.verifyOpenOrderPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesCreated;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyPiecesQuantityForSuccessCase;
-import static org.folio.helper.PurchaseOrderHelper.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.calculateTotalQuantity;
+import static org.folio.orders.utils.PermissionsUtil.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.orders.utils.ResourcePathResolver.*;
 import static org.folio.rest.RestConstants.ERROR_CAUSE;
 import static org.folio.rest.RestConstants.OKAPI_URL;

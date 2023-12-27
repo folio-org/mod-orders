@@ -2,20 +2,30 @@ package org.folio.service.titles;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.AcqDesiredPermissions.*;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
+import static org.folio.orders.utils.PermissionsUtil.isManagePermissionRequired;
+import static org.folio.orders.utils.PermissionsUtil.isUserDoesNotHaveDesiredPermission;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.HttpStatus;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -45,11 +55,19 @@ public class TitlesService {
   }
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
-    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext)
+    return validateTitleAcqUnitOnCreate(title.getAcqUnitIds(), requestContext)
+      .compose(v -> inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext))
       .compose(shadowInstance -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
         return restClient.post(requestEntry, title, Title.class, requestContext);
       });
+  }
+
+  private Future<Void> validateTitleAcqUnitOnCreate(List<String> acqUnitIds, RequestContext requestContext) {
+    if (isNotEmpty(acqUnitIds) && isUserDoesNotHaveDesiredPermission(TITLES_ASSIGN, requestContext)) {
+      return Future.failedFuture(new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS));
+    }
+    return Future.succeededFuture();
   }
 
   public Future<TitleCollection> getTitles(int limit, int offset, String query, RequestContext requestContext) {
@@ -73,10 +91,28 @@ public class TitlesService {
   }
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
-    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext).compose(shadowInstance -> {
-      RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
-      return restClient.put(requestEntry, title, requestContext);
-    });
+    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext)
+      .compose(shadowInstance -> {
+        RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
+        return restClient.put(requestEntry, title, requestContext);
+      });
+  }
+
+  public Future<Void> updateTitle(Title entity, RequestContext requestContext) {
+    return getTitleById(entity.getId(), requestContext)
+      .compose(titleFromStorage -> validateTitleAcqUnitOnUpdate(entity, titleFromStorage, requestContext))
+      .compose(v -> saveTitle(entity, requestContext));
+  }
+
+  private Future<Void> validateTitleAcqUnitOnUpdate(Title updatedTitle, Title titleFromStorage,
+                                                    RequestContext requestContext) {
+    Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(updatedTitle.getAcqUnitIds()));
+    Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(titleFromStorage.getAcqUnitIds()));
+
+    if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && isUserDoesNotHaveDesiredPermission(TITLES_MANAGE, requestContext)) {
+      return Future.failedFuture(new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS));
+    }
+    return Future.succeededFuture();
   }
 
   public Future<Void> deleteTitle(String id, RequestContext requestContext) {
