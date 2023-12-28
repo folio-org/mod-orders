@@ -201,12 +201,14 @@ public class TitlesApiTest {
   }
 
   @Test
-  void testPutTitlesByIdTest() throws Exception {
+  void testPutTitlesByIdTest() {
     logger.info("=== Test update title by id - valid Id 204 ===");
+    Title reqData = titleJsonReqData.mapTo(Title.class);
+    reqData.setId(SAMPLE_TITLE_ID);
+    reqData.setTitle("new title");
 
-    String reqData = getMockData(TITLES_MOCK_DATA_PATH + "title.json");
-
-    verifyPut(String.format(TITLES_ID_PATH, VALID_UUID), reqData, "", 204);
+     verifyPut(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER), "", 204);
   }
 
   @Test
