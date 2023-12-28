@@ -21,8 +21,7 @@ import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.PermissionsUtil.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
-import static org.folio.rest.core.exceptions.ErrorCodes.CLAIMING_CONFIG_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.core.exceptions.ErrorCodes.*;
 import static org.folio.rest.impl.MockServer.TITLES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -66,8 +65,9 @@ public class TitlesApiTest {
 
   public static final String TITLES_ENDPOINT = "/orders/titles";
   private static final String TITLES_ID_PATH = TITLES_ENDPOINT + "/%s";
-  static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
-  static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
+  private static final String VALID_UUID = "c3e26c0e-d6a6-46fb-9309-d494cd0c82de";
+  private static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
+  private static final String ACQ_UNIT_ID = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
   public static final String SAMPLE_TITLE_ID = "9a665b22-9fe5-4c95-b4ee-837a5433c95d";
   private final JsonObject titleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "title.json");
   private final JsonObject packageTitleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "package_title.json");
@@ -111,7 +111,9 @@ public class TitlesApiTest {
 
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    Title postTitleRq = titleJsonReqData.mapTo(Title.class).withPoLineId(poLineId);
+    Title postTitleRq = titleJsonReqData.mapTo(Title.class)
+      .withPoLineId(poLineId)
+      .withAcqUnitIds(List.of(ACQ_UNIT_ID));
 
     // Positive cases
     // Title id is null initially
@@ -133,6 +135,25 @@ public class TitlesApiTest {
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
     verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_PERMISSIONS_HEADER,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
+  }
+
+  @Test
+  void testPostTitleShouldFail() {
+    logger.info("=== Test POST Title should fail because it does not have permission ===");
+
+    Title postTitleRq = titleJsonReqData.mapTo(Title.class);
+    postTitleRq.setAcqUnitIds(List.of(ACQ_UNIT_ID));
+
+    // Positive cases
+    // Title id is null initially
+    assertThat(postTitleRq.getId(), nullValue());
+
+    List<Error> errors = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 403)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(USER_HAS_NO_ACQ_PERMISSIONS.getDescription()));
   }
 
   @Test
@@ -203,12 +224,29 @@ public class TitlesApiTest {
   @Test
   void testPutTitlesByIdTest() {
     logger.info("=== Test update title by id - valid Id 204 ===");
-    Title reqData = titleJsonReqData.mapTo(Title.class);
-    reqData.setId(SAMPLE_TITLE_ID);
-    reqData.setTitle("new title");
+    Title reqData = titleJsonReqData.mapTo(Title.class)
+      .withId(SAMPLE_TITLE_ID)
+      .withTitle("new title")
+      .withAcqUnitIds(List.of(ACQ_UNIT_ID));
 
      verifyPut(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_PERMISSIONS_HEADER), "", 204);
+  }
+
+  @Test
+  void testPutTitlesByIdTestShouldFail() {
+    logger.info("=== Test update Title by id should fail because it does not have permission ===");
+    Title reqData = titleJsonReqData.mapTo(Title.class)
+      .withId(SAMPLE_TITLE_ID)
+      .withTitle("new title")
+      .withAcqUnitIds(List.of(ACQ_UNIT_ID));
+
+    List<Error> errors = verifyPut(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 403)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(USER_HAS_NO_ACQ_PERMISSIONS.getDescription()));
   }
 
   @Test
