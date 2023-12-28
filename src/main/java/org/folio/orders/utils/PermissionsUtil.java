@@ -6,7 +6,8 @@ import org.folio.rest.core.models.RequestContext;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 public class PermissionsUtil {
 
@@ -16,6 +17,8 @@ public class PermissionsUtil {
   private static final String EMPTY_ARRAY = "[]";
 
   public static final String OKAPI_HEADER_PERMISSIONS = "X-Okapi-Permissions";
+
+  private PermissionsUtil() {}
 
   public static boolean isUserDoesNotHaveDesiredPermission(AcqDesiredPermissions acqPerm, RequestContext requestContext) {
     return !getProvidedPermissions(requestContext).contains(acqPerm.getPermission());
@@ -28,7 +31,7 @@ public class PermissionsUtil {
   private static List<String> getProvidedPermissions(RequestContext requestContext) {
     return new JsonArray(requestContext.getHeaders().getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_ARRAY)).stream().
       map(Object::toString)
-      .collect(Collectors.toList());
+      .collect(toList());
   }
 
   public static boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
