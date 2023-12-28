@@ -31,7 +31,7 @@ public class PermissionsUtil {
   private static List<String> getProvidedPermissions(RequestContext requestContext) {
     return new JsonArray(requestContext.getHeaders().getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_ARRAY)).stream().
       map(Object::toString)
-      .collect(toList());
+      .toList();
   }
 
   public static boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
