@@ -7,8 +7,6 @@ import org.folio.rest.core.models.RequestContext;
 import java.util.List;
 import java.util.Set;
 
-import static java.util.stream.Collectors.toList;
-
 public class PermissionsUtil {
 
   private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
