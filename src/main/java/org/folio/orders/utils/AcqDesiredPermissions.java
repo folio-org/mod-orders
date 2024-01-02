@@ -15,7 +15,7 @@ public enum AcqDesiredPermissions {
   static {
     values = Arrays.stream(AcqDesiredPermissions.values())
       .map(AcqDesiredPermissions::getPermission)
-      .collect(Collectors.toUnmodifiableList());
+      .toList();
   }
 
   AcqDesiredPermissions(String permission) {

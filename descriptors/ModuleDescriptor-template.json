@@ -1444,13 +1444,13 @@
     },
     {
       "permissionName": "titles.acquisitions-units-assignments.assign",
-      "displayName": "Acquisitions units assignment - create title",
-      "description": "Create a new title"
+      "displayName": "Acquisitions units assignment - create title unit assignments",
+      "description": "Assign new title to acquisition units"
     },
     {
       "permissionName": "titles.acquisitions-units-assignments.manage",
-      "displayName": "Acquisitions units assignment - edit title",
-      "description": "Edit the title"
+      "displayName": "Acquisitions units assignment - manage title unit assignments",
+      "description": "Manage acq unit assignments during title update"
     },
     {
       "permissionName": "titles.acquisitions-units-assignments.all",
