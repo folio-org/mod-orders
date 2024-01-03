@@ -40,6 +40,7 @@
   </licenses>
 
   <properties>
+
     <!--Configurations-->
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
@@ -55,12 +56,16 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <!--Dependencies-->
+    <!--Dependency Management Properties-->
+    <vertx.version>4.4.5</vertx.version>
+    <jackson-bom.version>2.13.4</jackson-bom.version>
+    <log4j.version>2.20.0</log4j.version>
+    <testcontainers-bom.version>1.19.1</testcontainers-bom.version>
+
+    <!--Dependency Properties-->
     <mod-configuration-client.version>5.9.1</mod-configuration-client.version>
     <folio-di-support.version>2.0.1</folio-di-support.version>
     <spring.version>6.0.2</spring.version>
-    <vertx.version>4.4.5</vertx.version>
-    <log4j.version>2.20.0</log4j.version>
     <aspectj.version>1.9.20.1</aspectj.version>
     <rest-assured.version>5.3.2</rest-assured.version>
     <build-helper-maven-plugin.version>3.4.0</build-helper-maven-plugin.version>
@@ -79,7 +84,6 @@
 
     <!--Test dependencies-->
     <junit-jupiter.version>5.10.0</junit-jupiter.version>
-    <testcontainers-bom.version>1.19.1</testcontainers-bom.version>
     <junit-bom.version>5.10.0</junit-bom.version>
     <jmockit.version>1.49</jmockit.version>
 
@@ -87,6 +91,7 @@
     <sonar.exclusions>**/models/**.java,**/unopen/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <argLine />
+
   </properties>
 
   <repositories>
@@ -127,7 +132,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson</groupId>
         <artifactId>jackson-bom</artifactId>
-        <version>2.13.4</version>
+        <version>${jackson-bom.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
