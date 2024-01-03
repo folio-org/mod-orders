@@ -104,6 +104,7 @@ public class ProtectionService {
     }
     return Future.succeededFuture()
       .map(v -> verifyUserHasAssignPermission(acqUnitIds, permission, requestContext))
+      .compose(ok -> verifyIfUnitsAreActive(acqUnitIds, requestContext))
       .compose(ok -> isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE, requestContext));
   }
 

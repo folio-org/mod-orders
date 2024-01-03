@@ -2,7 +2,6 @@ package org.folio.orders.utils;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public enum AcqDesiredPermissions {
   ASSIGN("orders.acquisitions-units-assignments.assign"),
