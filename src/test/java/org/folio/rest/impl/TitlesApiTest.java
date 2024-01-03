@@ -16,6 +16,7 @@ import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestConstants.X_OKAPI_USER_ID_WITH_ACQ_UNITS;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
@@ -120,7 +121,7 @@ public class TitlesApiTest {
     assertThat(postTitleRq.getId(), nullValue());
 
     Title postTitleRs = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_PERMISSIONS_HEADER), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID_WITH_ACQ_UNITS, ALL_DESIRED_PERMISSIONS_HEADER), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
 
     // Title id not null
     assertThat(postTitleRs.getId(), Matchers.notNullValue());
@@ -128,12 +129,12 @@ public class TitlesApiTest {
     // Negative cases
     // Unable to create title test
     int status400 = HttpStatus.HTTP_BAD_REQUEST.toInt();
-    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_PERMISSIONS_HEADER,
+    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID_WITH_ACQ_UNITS, ALL_DESIRED_PERMISSIONS_HEADER,
       new Header(X_ECHO_STATUS, String.valueOf(status400))), APPLICATION_JSON, status400);
 
     // Internal error on mod-orders-storage test
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
-    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_PERMISSIONS_HEADER,
+    verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(postTitleRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID_WITH_ACQ_UNITS, ALL_DESIRED_PERMISSIONS_HEADER,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
   }
 
