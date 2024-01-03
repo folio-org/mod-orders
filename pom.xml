@@ -40,6 +40,7 @@
   </licenses>
 
   <properties>
+
     <!--Configurations-->
     <module_name>mod-orders</module_name>
     <http.port>8081</http.port>
@@ -90,6 +91,7 @@
     <sonar.exclusions>**/models/**.java,**/unopen/**.java</sonar.exclusions>
     <sonar.test.exclusions>**/*Test.java</sonar.test.exclusions>
     <argLine />
+
   </properties>
 
   <repositories>
