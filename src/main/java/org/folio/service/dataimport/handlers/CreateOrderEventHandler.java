@@ -15,9 +15,11 @@ import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
+import static org.folio.helper.PurchaseOrderHelper.isApprovalRequiredConfiguration;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.orders.utils.PermissionsUtil.isUserNotHaveApprovePermission;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
@@ -276,8 +278,8 @@ public class CreateOrderEventHandler implements EventHandler {
                                                                          RequestContext requestContext) {
     CompositePurchaseOrder order = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     Boolean isApproved = order.getApproved();
-    boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
-    boolean isUserNotHaveApprovalPermission = PurchaseOrderHelper.isUserNotHaveApprovePermission(requestContext);
+    boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
+    boolean isUserNotHaveApprovalPermission = isUserNotHaveApprovePermission(requestContext);
 
     if (isApprovalRequired && Boolean.TRUE.equals(isApproved) && isUserNotHaveApprovalPermission) {
       order.setApproved(false);
@@ -299,8 +301,8 @@ public class CreateOrderEventHandler implements EventHandler {
       return Future.succeededFuture();
     }
 
-    boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
-    boolean isUserNotHaveApprovalPermission = PurchaseOrderHelper.isUserNotHaveApprovePermission(requestContext);
+    boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
+    boolean isUserNotHaveApprovalPermission = isUserNotHaveApprovePermission(requestContext);
 
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
       if (isApprovalRequired && isUserNotHaveApprovalPermission) {

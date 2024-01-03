@@ -771,6 +771,7 @@
           "methods": ["POST"],
           "pathPattern": "/orders/titles",
           "permissionsRequired": ["orders.titles.item.post"],
+          "permissionsDesired": ["titles.acquisitions-units-assignments.assign"],
           "modulePermissions": [
             "orders-storage.titles.collection.get",
             "orders-storage.titles.item.post",
@@ -790,6 +791,7 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/titles/{id}",
           "permissionsRequired": ["orders.titles.item.put"],
+          "permissionsDesired": ["titles.acquisitions-units-assignments.manage"],
           "modulePermissions": [
             "orders-storage.titles.item.put",
             "inventory.instances.item.get",
@@ -1438,6 +1440,25 @@
       "subPermissions": [
         "orders.acquisitions-units-assignments.assign",
         "orders.acquisitions-units-assignments.manage"
+      ]
+    },
+    {
+      "permissionName": "titles.acquisitions-units-assignments.assign",
+      "displayName": "Acquisitions units assignment - create title unit assignments",
+      "description": "Assign new title to acquisition units"
+    },
+    {
+      "permissionName": "titles.acquisitions-units-assignments.manage",
+      "displayName": "Acquisitions units assignment - manage title unit assignments",
+      "description": "Manage acq unit assignments during title update"
+    },
+    {
+      "permissionName": "titles.acquisitions-units-assignments.all",
+      "displayName": "All titles acquisitions-unit-assignments permissions",
+      "description": "All permissions for the title acquisitions-unit-assignments",
+      "subPermissions": [
+        "titles.acquisitions-units-assignments.assign",
+        "titles.acquisitions-units-assignments.manage"
       ]
     },
     {

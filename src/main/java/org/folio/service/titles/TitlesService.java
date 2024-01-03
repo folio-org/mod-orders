@@ -3,6 +3,7 @@ package org.folio.service.titles;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.AcqDesiredPermissions.*;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
@@ -13,8 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -23,6 +26,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryManager;
 
 import io.vertx.core.Future;
@@ -36,16 +40,19 @@ public class TitlesService {
   private final RestClient restClient;
 
   private final AcquisitionsUnitsService acquisitionsUnitsService;
+  private final ProtectionService protectionService;
   private final InventoryManager inventoryManager;
 
-  public TitlesService(RestClient restClient, AcquisitionsUnitsService acquisitionsUnitsService, InventoryManager inventoryManager) {
+  public TitlesService(RestClient restClient, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager) {
     this.restClient = restClient;
     this.acquisitionsUnitsService = acquisitionsUnitsService;
+    this.protectionService = protectionService;
     this.inventoryManager = inventoryManager;
   }
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
-    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext)
+    return protectionService.validateAcqUnitsOnCreate(title.getAcqUnitIds(), TITLES_ASSIGN, requestContext)
+      .compose(v -> inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext))
       .compose(shadowInstance -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
         return restClient.post(requestEntry, title, Title.class, requestContext);
@@ -73,10 +80,18 @@ public class TitlesService {
   }
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
-    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext).compose(shadowInstance -> {
-      RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
-      return restClient.put(requestEntry, title, requestContext);
-    });
+    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext)
+      .compose(shadowInstance -> {
+        RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
+        return restClient.put(requestEntry, title, requestContext);
+      });
+  }
+
+  public Future<Void> saveTitleWithAcqUnitsCheck(Title entity, RequestContext requestContext) {
+    return getTitleById(entity.getId(), requestContext)
+      .compose(titleFromStorage -> protectionService.validateAcqUnitsOnUpdate(entity.getAcqUnitIds(), titleFromStorage.getAcqUnitIds(),
+        TITLES_MANAGE, Sets.newHashSet(ProtectedOperationType.UPDATE), requestContext))
+      .compose(v -> saveTitle(entity, requestContext));
   }
 
   public Future<Void> deleteTitle(String id, RequestContext requestContext) {

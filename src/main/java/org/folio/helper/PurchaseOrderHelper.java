@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.helper.BaseHelper.MAX_REPEAT_ON_FAILURE;
-import static org.folio.orders.utils.AcqDesiredPermissions.ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
@@ -24,6 +23,7 @@ import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToPen
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToReopen;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
+import static org.folio.orders.utils.PermissionsUtil.*;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyOngoingFieldsChanged;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.CREATE;
@@ -37,7 +37,6 @@ import static org.folio.rest.RestConstants.SEARCH_PARAMS;
 import static org.folio.rest.core.exceptions.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
 import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_REOPEN_PERMISSIONS;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS;
@@ -59,7 +58,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -112,20 +110,12 @@ import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderHelper.class);
-
-  private static final String PERMISSION_ORDER_APPROVE = "orders.item.approve";
-  private static final String PERMISSION_ORDER_UNOPEN = "orders.item.unopen";
-  private static final String PERMISSION_ORDER_REOPEN = "orders.item.reopen";
   public static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER_STORAGE) + SEARCH_PARAMS;
-  public static final String EMPTY_ARRAY = "[]";
-  public static final String OKAPI_HEADER_PERMISSIONS = "X-Okapi-Permissions";
-
 
   private final PurchaseOrderLineHelper purchaseOrderLineHelper;
   private final CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService;
@@ -246,7 +236,7 @@ public class PurchaseOrderHelper {
     logger.info("validateNewPurchaseOrders :: orderId: {}", compPO.getId());
     List<Future<Void>> futures = new ArrayList<>();
 
-    futures.add(validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), requestContext));
+    futures.add(protectionService.validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), AcqDesiredPermissions.ASSIGN, requestContext));
     futures.add(checkOrderApprovalPermissions(compPO, requestContext));
     futures.add(prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(), requestContext));
     futures.add(suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(), requestContext));
@@ -733,20 +723,6 @@ public class PurchaseOrderHelper {
   }
 
   /**
-   * The method checks if the order is assigned to acquisition unit, if yes,
-   * then check that if the user has desired permission to assign the record to acquisition unit
-   *
-   * @throws HttpException if user does not have assign permission
-   * @param acqUnitIds acquisitions units assigned to purchase order from request
-   */
-  private Void verifyUserHasAssignPermission(List<String> acqUnitIds, RequestContext requestContext) {
-    if (isNotEmpty(acqUnitIds) && isUserDoesNotHaveDesiredPermission(ASSIGN, requestContext)){
-      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
-    }
-    return null;
-  }
-
-  /**
    * @param updatedOrder purchase order from request
    * @param poFromStorage purchase order from storage
    * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
@@ -754,36 +730,12 @@ public class PurchaseOrderHelper {
    */
   private Future<Void> validateAcqUnitsOnUpdate(CompositePurchaseOrder updatedOrder, CompositePurchaseOrder poFromStorage,
                                                             RequestContext requestContext) {
-    List<String> updatedAcqUnitIds = updatedOrder.getAcqUnitIds();
-    List<String> currentAcqUnitIds = poFromStorage.getAcqUnitIds();
+    List<String> newAcqUnitIds = updatedOrder.getAcqUnitIds();
+    List<String> acqUnitUdsFromStorage = poFromStorage.getAcqUnitIds();
 
     return Future.succeededFuture()
-      .map(v -> {
-        verifyUserHasManagePermission(updatedAcqUnitIds, currentAcqUnitIds, requestContext);
-        return null;
-      })
-      // Check that all newly assigned units are active/exist
-      .compose(ok -> protectionService.verifyIfUnitsAreActive(ListUtils.subtract(updatedAcqUnitIds, currentAcqUnitIds), requestContext))
       .map(ok -> getInvolvedOperations(updatedOrder, poFromStorage))
-      // The check should be done against currently assigned (persisted in storage) units
-      .compose(protectedOperationTypes -> protectionService.isOperationRestricted(currentAcqUnitIds, protectedOperationTypes, requestContext));
-  }
-
-  /**
-   * The method checks if list of acquisition units to which the order is assigned is changed, if yes,
-   * then check that if the user has desired permission to manage acquisition units assignments
-   *
-   * @throws HttpException if user does not have manage permission
-   * @param newAcqUnitIds acquisitions units assigned to purchase order from request
-   * @param currentAcqUnitIds acquisitions units assigned to purchase order from storage
-   */
-  private void verifyUserHasManagePermission(List<String> newAcqUnitIds, List<String> currentAcqUnitIds, RequestContext requestContext) {
-    Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newAcqUnitIds));
-    Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(currentAcqUnitIds));
-
-    if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && isUserDoesNotHaveDesiredPermission(MANAGE, requestContext)){
-      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
-    }
+      .compose(involvedOperations -> protectionService.validateAcqUnitsOnUpdate(newAcqUnitIds, acqUnitUdsFromStorage, MANAGE, involvedOperations, requestContext));
   }
 
   private Future<Void> processPoLineTags(CompositePurchaseOrder compPO, RequestContext requestContext) {
@@ -810,21 +762,6 @@ public class PurchaseOrderHelper {
       return Future.succeededFuture();
     }
     return tagService.createTagsIfMissing(tagLabels, requestContext);
-  }
-
-  /**
-   * @param acqUnitIds acquisitions units assigned to purchase order from request
-   * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
-   *         caused by acquisitions units
-   */
-  private Future<Void> validateAcqUnitsOnCreate(List<String> acqUnitIds, RequestContext requestContext) {
-    if (acqUnitIds.isEmpty()) {
-      return Future.succeededFuture();
-    }
-    return Future.succeededFuture()
-      .map(v -> verifyUserHasAssignPermission(acqUnitIds, requestContext))
-      .compose(ok -> protectionService.verifyIfUnitsAreActive(acqUnitIds, requestContext))
-      .compose(ok -> protectionService.isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE, requestContext));
   }
 
   private Future<Void> closeOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
@@ -892,32 +829,6 @@ public class PurchaseOrderHelper {
 
   private List<CompositePoLine> getNonPackageLines(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
-  }
-
-  private boolean isUserDoesNotHaveDesiredPermission(AcqDesiredPermissions acqPerm, RequestContext requestContext) {
-    return !getProvidedPermissions(requestContext).contains(acqPerm.getPermission());
-  }
-
-  private boolean isManagePermissionRequired(Set<String> newAcqUnits, Set<String> acqUnitsFromStorage) {
-    return !CollectionUtils.isEqualCollection(newAcqUnits, acqUnitsFromStorage);
-  }
-
-  private static List<String> getProvidedPermissions(RequestContext requestContext) {
-    return new JsonArray(requestContext.getHeaders().getOrDefault(OKAPI_HEADER_PERMISSIONS, EMPTY_ARRAY)).stream().
-      map(Object::toString)
-      .collect(Collectors.toList());
-  }
-
-  public static boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
-    return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_APPROVE);
-  }
-
-  private boolean isUserNotHaveUnopenPermission(RequestContext requestContext) {
-    return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_UNOPEN);
-  }
-
-  private boolean isUserNotHaveReopenPermission(RequestContext requestContext) {
-    return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_REOPEN);
   }
 
   private List<JsonObject> updateStatusName(List<JsonObject> items, String status) {

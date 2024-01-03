@@ -1,14 +1,19 @@
 package org.folio.service;
 
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.PermissionsUtil.isManagePermissionRequired;
+import static org.folio.orders.utils.PermissionsUtil.isUserDoesNotHaveDesiredPermission;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_NOT_A_MEMBER_OF_THE_ACQ;
 import static org.folio.service.AcquisitionsUnitsService.ACQUISITIONS_UNIT_IDS;
 import static org.folio.service.AcquisitionsUnitsService.ENDPOINT_ACQ_UNITS;
 import static org.folio.service.UserService.getCurrentUserId;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,6 +23,7 @@ import org.apache.commons.collections4.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
+import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.HttpException;
@@ -83,12 +89,95 @@ public class ProtectionService {
   }
 
   /**
+   * This method validates acq units during entity CREATE operation.
+   *
+   * @param acqUnitIds acquisitions units assigned to purchase order from request
+   * @param permission the acq desired permission to check
+   * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
+   * caused by acquisitions units
+   */
+  public Future<Void> validateAcqUnitsOnCreate(List<String> acqUnitIds,
+                                               AcqDesiredPermissions permission,
+                                               RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(acqUnitIds)) {
+      return Future.succeededFuture();
+    }
+    return Future.succeededFuture()
+      .map(v -> verifyUserHasAssignPermission(acqUnitIds, permission, requestContext))
+      .compose(ok -> verifyIfUnitsAreActive(acqUnitIds, requestContext))
+      .compose(ok -> isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE, requestContext));
+  }
+
+  /**
+   * The method checks if the order is assigned to acquisition unit, if yes,
+   * then check that if the user has desired permission to assign the record to acquisition unit
+   *
+   * @param acqUnitIds acquisitions units assigned to purchase order from request
+   * @param permission the desired permission to check
+   * @throws HttpException if user does not have assign permission
+   */
+  private Void verifyUserHasAssignPermission(List<String> acqUnitIds,
+                                             AcqDesiredPermissions permission,
+                                             RequestContext requestContext) {
+    if (isNotEmpty(acqUnitIds) && isUserDoesNotHaveDesiredPermission(permission, requestContext)){
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
+    }
+    return null;
+  }
+
+  /**
+   * This method validates acq units during entity UPDATE operation.
+   *
+   * @param newAcqUnitIds         purchase order from request
+   * @param acqUnitIdsFromStorage purchase order from storage
+   * @param permission            the acq desired permission to check
+   * @param protectedOperations   list of protected operations like CREATE, UPDATE, DELETE to check
+   * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
+   * caused by acquisitions units
+   */
+  public Future<Void> validateAcqUnitsOnUpdate(List<String> newAcqUnitIds,
+                                               List<String> acqUnitIdsFromStorage,
+                                               AcqDesiredPermissions permission,
+                                               Set<ProtectedOperationType> protectedOperations,
+                                               RequestContext requestContext) {
+    return Future.succeededFuture()
+      .map(v -> {
+        verifyUserHasManagePermission(newAcqUnitIds, acqUnitIdsFromStorage, permission, requestContext);
+        return null;
+      })
+      .compose(ok -> verifyIfUnitsAreActive(ListUtils.subtract(newAcqUnitIds, acqUnitIdsFromStorage), requestContext))
+      // The check should be done against currently assigned (persisted in storage) units
+      .compose(ok -> isOperationRestricted(acqUnitIdsFromStorage, protectedOperations, requestContext));
+  }
+
+  /**
+   * The method checks if list of acquisition units to which the order is assigned is changed, if yes,
+   * then check that if the user has desired permission to manage acquisition units assignments
+   *
+   * @param newAcqUnitIds         acquisitions units assigned to purchase order from request
+   * @param acqUnitIdsFromStorage acquisitions units assigned to purchase order from storage
+   * @param permission the acq desired permission to check
+   * @throws HttpException if user does not have manage permission
+   */
+  private void verifyUserHasManagePermission(List<String> newAcqUnitIds,
+                                             List<String> acqUnitIdsFromStorage,
+                                             AcqDesiredPermissions permission,
+                                             RequestContext requestContext) {
+    Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newAcqUnitIds));
+    Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(acqUnitIdsFromStorage));
+
+    if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && isUserDoesNotHaveDesiredPermission(permission, requestContext)){
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
+    }
+  }
+
+  /**
    * Verifies if all acquisition units exist and active based on passed ids
    *
    * @param acqUnitIds list of unit IDs.
    * @return completable future completed successfully if all units exist and active or exceptionally otherwise
    */
-  public Future<Void> verifyIfUnitsAreActive(List<String> acqUnitIds, RequestContext requestContext) {
+  private Future<Void> verifyIfUnitsAreActive(List<String> acqUnitIds, RequestContext requestContext) {
     if (acqUnitIds.isEmpty()) {
       return Future.succeededFuture();
     }
