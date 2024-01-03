@@ -130,7 +130,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson</groupId>
         <artifactId>jackson-bom</artifactId>
-        <version>${j}</version>
+        <version>${jackson-bom.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
