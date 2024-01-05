@@ -793,6 +793,7 @@
           "permissionsRequired": ["orders.titles.item.put"],
           "permissionsDesired": ["titles.acquisitions-units-assignments.manage"],
           "modulePermissions": [
+            "orders-storage.titles.item.get",
             "orders-storage.titles.item.put",
             "inventory.instances.item.get",
             "user-tenants.collection.get",
