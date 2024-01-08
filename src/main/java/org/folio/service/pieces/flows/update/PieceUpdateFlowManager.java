@@ -76,7 +76,7 @@ public class PieceUpdateFlowManager {
       .compose(verifyReceiptStatus -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext)
         .map(verifyReceiptStatus))
       .map(verifyReceiptStatus -> {
-        if (verifyReceiptStatus) {
+        if (Boolean.TRUE.equals(verifyReceiptStatus)) {
           JsonObject messageToEventBus = new JsonObject();
           messageToEventBus.put("poLineIdUpdate", holder.getPieceToUpdate().getPoLineId());
           pieceService.receiptConsistencyPiecePoLine(messageToEventBus, requestContext);
