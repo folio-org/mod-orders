@@ -61,22 +61,29 @@ public class PieceUpdateFlowManager {
       })
       .compose(title -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), UPDATE, requestContext))
       .compose(v -> pieceUpdateFlowInventoryManager.processInventory(holder, requestContext))
-      .compose(vVoid -> updatePoLine(holder, requestContext))
-      .map(afterUpdate -> {
-        JsonObject messageToEventBus = new JsonObject();
-        messageToEventBus.put("poLineIdUpdate", holder.getPieceToUpdate().getPoLineId());
+      .compose(v -> updatePoLine(holder, requestContext))
+      .map(v -> {
         Piece.ReceivingStatus receivingStatusStorage = holder.getPieceFromStorage().getReceivingStatus();
         Piece.ReceivingStatus receivingStatusUpdate = holder.getPieceToUpdate().getReceivingStatus();
         logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
         logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
         if (receivingStatusStorage.compareTo(receivingStatusUpdate) != 0) {
           holder.getPieceToUpdate().setStatusUpdatedDate(new Date());
+          return true;
+        }
+        return false;
+      })
+      .compose(verifyReceiptStatus -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext)
+        .map(verifyReceiptStatus))
+      .map(verifyReceiptStatus -> {
+        if (Boolean.TRUE.equals(verifyReceiptStatus)) {
+          JsonObject messageToEventBus = new JsonObject();
+          messageToEventBus.put("poLineIdUpdate", holder.getPieceToUpdate().getPoLineId());
           pieceService.receiptConsistencyPiecePoLine(messageToEventBus, requestContext);
         }
         return null;
       })
-      .compose(aVoid -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext))
-      .onSuccess(promise::complete)
+      .onSuccess(v -> promise.complete())
       .onFailure(t -> {
         logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause());
         promise.fail(t);
