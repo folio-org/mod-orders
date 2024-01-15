@@ -111,11 +111,11 @@ public class PieceUpdateFlowInventoryManager {
     }
     return inventoryManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext)
       .compose(jsonItem -> {
-        boolean noJsonItem = jsonItem == null || jsonItem.isEmpty();
-        if (holder.isCreateItem() && noJsonItem && pieceToUpdate.getHoldingId() != null) {
+        boolean jsonItemFound = jsonItem != null && !jsonItem.isEmpty();
+        if (holder.isCreateItem() && !jsonItemFound && pieceToUpdate.getHoldingId() != null) {
           return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);
         }
-        if (!noJsonItem) {
+        if (jsonItemFound) {
           return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate)
             .compose(ignored -> inventoryManager.updateItem(jsonItem, requestContext).map(item -> jsonItem.getString(ID)));
         }
