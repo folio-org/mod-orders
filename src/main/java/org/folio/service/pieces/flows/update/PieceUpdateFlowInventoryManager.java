@@ -45,9 +45,7 @@ public class PieceUpdateFlowInventoryManager {
       .compose(aVoid -> {
         if (Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage())) {
           return packagePoLineUpdateInventory(holder, requestContext);
-        }
-        else
-        {
+        } else {
           return nonPackagePoLineUpdateInventory(holder, requestContext);
         }
       });
@@ -93,15 +91,15 @@ public class PieceUpdateFlowInventoryManager {
     if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(pieceToUpdate, poLineToSave)) {
       Location location = new Location().withLocationId(pieceToUpdate.getLocationId());
       return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
-                      .map(holdingId -> {
-                          Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
-                            pieceToUpdate.setLocationId(null);
-                            pieceToUpdate.setHoldingId(holdingId);
-                            location.setLocationId(null);
-                            location.setHoldingId(holdingId);
-                          });
-                          return location;
-                        });
+        .map(holdingId -> {
+          Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
+            pieceToUpdate.setLocationId(null);
+            pieceToUpdate.setHoldingId(holdingId);
+            location.setLocationId(null);
+            location.setHoldingId(holdingId);
+          });
+          return location;
+        });
     }
     return Future.succeededFuture(new Location().withLocationId(pieceToUpdate.getLocationId()));
   }
@@ -109,20 +107,21 @@ public class PieceUpdateFlowInventoryManager {
   private Future<String> handleItem(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
-    if (DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
-      return inventoryManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext)
-        .compose(jsonItem -> {
-        if (holder.isCreateItem() && (jsonItem == null || jsonItem.isEmpty()) && pieceToUpdate.getHoldingId() != null) {
-          return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);
-        } else if (jsonItem != null && !jsonItem.isEmpty()) {
-          return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate).compose(
-            aVoid -> inventoryManager.updateItem(jsonItem, requestContext).map(item -> jsonItem.getString(ID)));
-        } else {
-          return Future.succeededFuture();
-        }
-      });
+    if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
+        return Future.succeededFuture();
     }
-    return Future.succeededFuture();
+    return inventoryManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext)
+      .compose(jsonItem -> {
+        boolean noJsonItem = jsonItem == null || jsonItem.isEmpty();
+        if (holder.isCreateItem() && noJsonItem && pieceToUpdate.getHoldingId() != null) {
+          return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);
+        }
+        if (!noJsonItem) {
+          return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate)
+            .compose(ignored -> inventoryManager.updateItem(jsonItem, requestContext).map(item -> jsonItem.getString(ID)));
+        }
+        return Future.succeededFuture();
+      });
   }
 
   private Future<Void> updateItemWithFields(JsonObject item, CompositePoLine compPOL, Piece piece) {
@@ -137,28 +136,27 @@ public class PieceUpdateFlowInventoryManager {
   private Future<String> nonPackageUpdateTitleWithInstance(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
-    if (poLineToSave.getInstanceId() == null && !PoLineCommonUtil.isInventoryUpdateNotRequired(poLineToSave)) {
-      return titlesService.getTitleById(pieceToUpdate.getTitleId(), requestContext)
-        .compose(title -> {
-          if (title.getInstanceId() == null) {
-            return createTitleInstance(title, requestContext);
-          }
-          return Future.succeededFuture(title.getInstanceId());
-        })
-        .map(instanceId -> poLineToSave.withInstanceId(instanceId).getInstanceId());
+    if (poLineToSave.getInstanceId() != null || PoLineCommonUtil.isInventoryUpdateNotRequired(poLineToSave)) {
+      return Future.succeededFuture(poLineToSave.getInstanceId());
     }
-    return Future.succeededFuture(poLineToSave.getInstanceId());
+    return titlesService.getTitleById(pieceToUpdate.getTitleId(), requestContext)
+      .compose(title -> {
+        if (title.getInstanceId() == null) {
+          return createTitleInstance(title, requestContext);
+        }
+        return Future.succeededFuture(title.getInstanceId());
+      })
+      .map(instanceId -> poLineToSave.withInstanceId(instanceId).getInstanceId());
   }
 
   private Future<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
     if (title.getInstanceId() != null) {
       return Future.succeededFuture(title);
-    } else {
-      return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
-        .map(title::withInstanceId)
-        .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext))
-        .map(v -> title);
     }
+    return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
+      .map(title::withInstanceId)
+      .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext))
+      .map(v -> title);
   }
 
   private Future<String> createTitleInstance(Title title, RequestContext requestContext) {
