@@ -1268,7 +1268,7 @@ public class InventoryManager {
       });
   }
 
-  private void updateItemWithPieceFields(Piece piece, JsonObject item) {
+  void updateItemWithPieceFields(Piece piece, JsonObject item) {
     if (StringUtils.isNotEmpty(piece.getEnumeration())) {
       item.put(ITEM_ENUMERATION, piece.getEnumeration());
     }
