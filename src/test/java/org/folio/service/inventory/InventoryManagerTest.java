@@ -29,16 +29,24 @@ import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
+import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
 import static org.folio.service.inventory.InventoryManager.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryManager.HOLDINGS_SOURCES;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEMS;
+import static org.folio.service.inventory.InventoryManager.ITEM_ACCESSION_NUMBER;
+import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
+import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
+import static org.folio.service.inventory.InventoryManager.ITEM_DISCOVERY_SUPPRESS;
+import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
+import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -490,6 +498,71 @@ public class InventoryManagerTest {
     verify(title, times(1)).getPublishedDate();
     verify(title, times(2)).getPublisher();
     verify(title).getProductIds();
+  }
+
+  @Test
+  void testUpdateItemWithPieceFields() {
+    // given
+    Piece piece = new Piece();
+    piece.setEnumeration("enumeration");
+    piece.setCopyNumber("copy number");
+    piece.setChronology("chronology");
+    piece.setBarcode("barcode");
+    piece.setAccessionNumber("accession number");
+    piece.setCallNumber("call number");
+    piece.setDiscoverySuppress(true);
+
+    String oldValue = "old value";
+    JsonObject item = new JsonObject(new HashMap<>(Map.of(
+      ITEM_ENUMERATION, oldValue,
+      COPY_NUMBER, oldValue,
+      ITEM_CHRONOLOGY, oldValue,
+      ITEM_BARCODE, oldValue,
+      ITEM_ACCESSION_NUMBER, oldValue,
+      ITEM_LEVEL_CALL_NUMBER, oldValue,
+      ITEM_DISCOVERY_SUPPRESS, false
+    )));
+
+    // when
+    inventoryManager.updateItemWithPieceFields(piece, item);
+
+    // then
+    assertEquals(piece.getEnumeration(), item.getString(ITEM_ENUMERATION));
+    assertEquals(piece.getCopyNumber(), item.getString(COPY_NUMBER));
+    assertEquals(piece.getChronology(), item.getString(ITEM_CHRONOLOGY));
+    assertEquals(piece.getBarcode(), item.getString(ITEM_BARCODE));
+    assertEquals(piece.getAccessionNumber(), item.getString(ITEM_ACCESSION_NUMBER));
+    assertEquals(piece.getCallNumber(), item.getString(ITEM_LEVEL_CALL_NUMBER));
+    assertEquals(piece.getDiscoverySuppress(), item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
+  }
+
+  @Test
+  void testUpdateItemWithPieceFields_notOverwrite() {
+    // given
+    Piece piece = new Piece();
+
+    String oldValue = "old value";
+    JsonObject item = new JsonObject(new HashMap<>(Map.of(
+      ITEM_ENUMERATION, oldValue,
+      COPY_NUMBER, oldValue,
+      ITEM_CHRONOLOGY, oldValue,
+      ITEM_BARCODE, oldValue,
+      ITEM_ACCESSION_NUMBER, oldValue,
+      ITEM_LEVEL_CALL_NUMBER, oldValue,
+      ITEM_DISCOVERY_SUPPRESS, false
+    )));
+
+    // when
+    inventoryManager.updateItemWithPieceFields(piece, item);
+
+    // then
+    assertEquals(oldValue, item.getString(ITEM_ENUMERATION));
+    assertEquals(oldValue, item.getString(COPY_NUMBER));
+    assertEquals(oldValue, item.getString(ITEM_CHRONOLOGY));
+    assertEquals(oldValue, item.getString(ITEM_BARCODE));
+    assertEquals(oldValue, item.getString(ITEM_ACCESSION_NUMBER));
+    assertEquals(oldValue, item.getString(ITEM_LEVEL_CALL_NUMBER));
+    assertFalse(item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
   }
 
   @Test

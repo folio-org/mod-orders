@@ -155,7 +155,7 @@ public class HelperUtils {
    */
   public static int calculateTotalQuantity(CompositePoLine compPOL) {
     Cost cost = compPOL.getCost();
-  	int eQuantity = ObjectUtils.defaultIfNull(cost.getQuantityElectronic(), 0);
+    int eQuantity = ObjectUtils.defaultIfNull(cost.getQuantityElectronic(), 0);
     int physicalQuantity = ObjectUtils.defaultIfNull(cost.getQuantityPhysical(), 0);
     return eQuantity + physicalQuantity;
   }
@@ -177,7 +177,7 @@ public class HelperUtils {
   /**
    * Calculates items quantity for specified locations.
    *
-   * @param compPOL composite PO Line
+   * @param compPOL   composite PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of items expected in the inventory for PO Line
    * @see #calculateInventoryItemsQuantity(CompositePoLine)
@@ -297,27 +297,25 @@ public class HelperUtils {
   }
 
   public static int getPhysicalLocationsQuantity(List<Location> locations) {
-    if (CollectionUtils.isNotEmpty(locations)) {
-      return locations.stream()
-                      .map(Location::getQuantityPhysical)
-                      .filter(Objects::nonNull)
-                      .mapToInt(Integer::intValue)
-                      .sum();
-    } else {
+    if (CollectionUtils.isEmpty(locations)) {
       return 0;
     }
+    return locations.stream()
+      .map(Location::getQuantityPhysical)
+      .filter(Objects::nonNull)
+      .mapToInt(Integer::intValue)
+      .sum();
   }
 
   public static int getElectronicLocationsQuantity(List<Location> locations) {
-    if (CollectionUtils.isNotEmpty(locations)) {
-      return locations.stream()
-                      .map(Location::getQuantityElectronic)
-                      .filter(Objects::nonNull)
-                      .mapToInt(Integer::intValue)
-                      .sum();
-    } else {
+    if (CollectionUtils.isEmpty(locations)) {
       return 0;
     }
+    return locations.stream()
+      .map(Location::getQuantityElectronic)
+      .filter(Objects::nonNull)
+      .mapToInt(Integer::intValue)
+      .sum();
   }
 
   /**
@@ -375,8 +373,6 @@ public class HelperUtils {
   }
 
   public static boolean changeOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    boolean isUpdateRequired = false;
-
     if (toBeCancelled(purchaseOrder, poLines)) {
       purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
       purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_CANCELLED));
@@ -384,14 +380,17 @@ public class HelperUtils {
     }
 
     if (toBeClosed(purchaseOrder, poLines)) {
-      isUpdateRequired = true;
       purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
       purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_COMPLETE));
-    } else if (toBeReopened(purchaseOrder, poLines)) {
-      isUpdateRequired = true;
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+      return true;
     }
-    return isUpdateRequired;
+
+    if (toBeReopened(purchaseOrder, poLines)) {
+      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+      return true;
+    }
+
+    return false;
   }
 
   public static String convertTagListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
@@ -468,8 +467,7 @@ public class HelperUtils {
 
   private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> titles,
       Map<String, CompositePoLine> poLineById) {
-    if (titles.keySet().stream().anyMatch(lineId -> titles.get(lineId).size() > 1 &&
-        !poLineById.get(lineId).getIsPackage())) {
+    if (titles.keySet().stream().anyMatch(lineId -> titles.get(lineId).size() > 1 && !poLineById.get(lineId).getIsPackage())) {
       throw new HttpException(400, MULTIPLE_NONPACKAGE_TITLES);
     }
   }
@@ -498,17 +496,17 @@ public class HelperUtils {
   }
 
   public static void makePoLinePending(CompositePoLine poLine) {
-      if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {
-        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
-      }
-      if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.AWAITING_RECEIPT) {
-        poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
-      }
+    if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {
+      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
+    }
+    if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.AWAITING_RECEIPT) {
+      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
+    }
   }
 
   public static ConversionQuery buildConversionQuery(PoLine poLine, String systemCurrency) {
     Cost cost = poLine.getCost();
-    if (cost.getExchangeRate() != null){
+    if (cost.getExchangeRate() != null) {
       return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency())
         .setTermCurrency(systemCurrency)
         .set(RATE_KEY, cost.getExchangeRate()).build();
