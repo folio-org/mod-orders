@@ -3,7 +3,6 @@ package org.folio.service.pieces.flows.update;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
-import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
 
 import java.util.Optional;
 
@@ -127,8 +126,6 @@ public class PieceUpdateFlowInventoryManager {
   private Future<Void> updateItemWithFields(JsonObject item, CompositePoLine compPOL, Piece piece) {
     Optional.ofNullable(piece.getHoldingId())
       .ifPresent(pieceHoldingId -> item.put(ITEM_HOLDINGS_RECORD_ID, piece.getHoldingId()));
-    Optional.ofNullable(piece.getCopyNumber())
-      .ifPresentOrElse(copyNumber -> item.put(COPY_NUMBER, copyNumber), () -> item.remove(COPY_NUMBER));
     item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
     return Future.succeededFuture();
   }
