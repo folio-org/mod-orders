@@ -3,12 +3,14 @@ package org.folio.rest.impl;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.orders.utils.HelperUtils.handleErrorResponse;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.core.exceptions.ErrorCodes.TEMPLATE_NAME_ALREADY_EXISTS;
 
 import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.OrderTemplatesHelper;
@@ -25,6 +27,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
 
   private static final Logger logger = LogManager.getLogger();
   private static final String ORDER_TEMPLATE_LOCATION_PREFIX = "/orders/order-templates/%s";
+  private static final String TEMPLATE_NAME_ALREADY_EXIST_ERROR = "lower(f_unaccent(jsonb ->> 'templateName'::text)) value already exists in table order_templates";
 
   @Override
   @Validate
@@ -40,7 +43,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
         asyncResultHandler.handle(succeededFuture(
           orderTemplatesHelper.buildResponseWithLocation(String.format(ORDER_TEMPLATE_LOCATION_PREFIX, template.getId()), template)));
       })
-      .onFailure(t -> handleErrorResponse(asyncResultHandler, orderTemplatesHelper, t));
+      .onFailure(t -> handlePostPutErrorResponse(asyncResultHandler, t, orderTemplatesHelper));
   }
 
   @Override
@@ -69,8 +72,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
       entity.setId(id);
     }
 
-    if (!entity.getId()
-      .equals(id)) {
+    if (!entity.getId().equals(id)) {
       helper.addProcessingError(MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
       asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(422)));
     } else {
@@ -79,7 +81,16 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
           logger.info("Successfully updated order template with id={}", id);
           asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
         })
-        .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
+        .onFailure(t -> handlePostPutErrorResponse(asyncResultHandler, t, helper));
+    }
+  }
+
+  private static void handlePostPutErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, Throwable t, OrderTemplatesHelper helper) {
+    if (StringUtils.isNotEmpty(t.getMessage()) && t.getMessage().contains(TEMPLATE_NAME_ALREADY_EXIST_ERROR)) {
+      handleErrorResponse(asyncResultHandler, helper,
+        new org.folio.rest.core.exceptions.HttpException(422, TEMPLATE_NAME_ALREADY_EXISTS.toError()));
+    } else {
+      handleErrorResponse(asyncResultHandler, helper, t);
     }
   }
 

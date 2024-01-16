@@ -113,7 +113,8 @@ public enum ErrorCodes {
   INSTANCE_INVALID_PRODUCT_ID_ERROR("instanceInvalidProductIdError", "Instance connection could not be changed, the chosen instance contains an invalid Product ID."),
   FUND_LOCATION_RESTRICTION_VIOLATION("fundLocationRestrictionViolation", "One of the funds is restricted to be used for one of the locations."),
   ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND("encumbrancesForReEncumberNotFound", "The encumbrances were correctly created during the rollover or have already been updated."),
-  CLAIMING_CONFIG_INVALID("claimingConfigInvalid", "Claiming interval should be set and greater than 0 if claiming is active");
+  CLAIMING_CONFIG_INVALID("claimingConfigInvalid", "Claiming interval should be set and greater than 0 if claiming is active"),
+  TEMPLATE_NAME_ALREADY_EXISTS("templateNameNotUnique", "Template name already exists");
 
 
   private final String code;
