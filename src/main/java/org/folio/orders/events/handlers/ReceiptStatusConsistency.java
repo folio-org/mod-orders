@@ -67,12 +67,13 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
     // 1. Get all pieces for poLineId
     getPieces(query, requestContext)
       .onSuccess(listOfPieces ->
-      // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
-      purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
-        .map(poLine -> {
-          if (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.ONGOING)) {
-            promise.complete();
-          } else {
+        // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
+        purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
+          .map(poLine -> {
+            if (poLine.getReceiptStatus() == ReceiptStatus.CANCELLED || poLine.getReceiptStatus() == ReceiptStatus.ONGOING) {
+              promise.complete();
+              return null;
+            }
             calculatePoLineReceiptStatus(poLine, listOfPieces)
               .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
               .map(updatedPoLineId -> {
@@ -87,13 +88,12 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
                 logger.error("The error updating poLine by id {}", poLineIdUpdate, e);
                 promise.fail(e);
               });
-          }
-          return null;
-        })
-        .onFailure(e -> {
-          logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
-          promise.fail(e);
-        }))
+            return null;
+          })
+          .onFailure(e -> {
+            logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
+            promise.fail(e);
+          }))
       .onFailure(e -> {
         logger.error("The error happened getting all pieces by poLine {}", poLineIdUpdate, e);
         promise.fail(e);
