@@ -14,10 +14,12 @@ import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.BAD_QUERY;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
+import static org.folio.TestConstants.ID_FOR_TEMPLATE_NAME_ALREADY_EXISTS;
 import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
+import static org.folio.rest.core.exceptions.ErrorCodes.TEMPLATE_NAME_ALREADY_EXISTS;
 import static org.folio.rest.impl.MockServer.ORDER_TEMPLATES_COLLECTION;
 import static org.folio.rest.impl.MockServer.getQueryParams;
 import static org.folio.rest.impl.MockServer.getRqRsEntries;
@@ -47,6 +49,8 @@ import org.folio.config.ApplicationConfig;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.model.OrderTemplateCollection;
+import org.hamcrest.collection.IsCollectionWithSize;
+import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -101,6 +105,22 @@ public class OrderTemplateTest {
     final OrderTemplate template = response.as(OrderTemplate.class);
     assertThat(template.getId(), not(is(emptyOrNullString())));
     assertThat(response.header(HttpHeaders.LOCATION), containsString(template.getId()));
+  }
+
+  @Test
+  void testPostOrderTemplateAlreadyExists() {
+    logger.info("=== Test POST Order Template - failed case ===");
+    OrderTemplate entity = new OrderTemplate()
+      .withId(ID_FOR_TEMPLATE_NAME_ALREADY_EXISTS)
+      .withTemplateName("Testing order template");
+    String body = JsonObject.mapFrom(entity).encode();
+
+    Errors errors = verifyPostResponse(ORDER_TEMPLATES_ENDPOINT, body, prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),
+      APPLICATION_JSON, HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt()).as(Errors.class);
+
+    assertThat(errors.getErrors(), IsCollectionWithSize.hasSize(1));
+    assertThat(errors.getErrors().get(0).getCode(), IsEqual.equalTo(TEMPLATE_NAME_ALREADY_EXISTS.getCode()));
+    assertThat(errors.getErrors().get(0).getMessage(), IsEqual.equalTo(TEMPLATE_NAME_ALREADY_EXISTS.getDescription()));
   }
 
   @Test
