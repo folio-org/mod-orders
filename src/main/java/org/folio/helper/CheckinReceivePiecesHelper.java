@@ -191,7 +191,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     // request
     if (piecesByLineId.containsKey(poLineId) && piecesByLineId.get(poLineId).containsKey(pieceId)) {
       // Validate if the piece is not yet received
-      if (piece.getReceivingStatus() == ReceivingStatus.EXPECTED || isRevertToOnOrder(piece)) {
+      if (piece.getReceivingStatus() != ReceivingStatus.RECEIVED || isRevertToOnOrder(piece)) {
         piecesByPoLine.computeIfAbsent(poLineId, v -> new ArrayList<>())
           .add(piece);
       } else {
