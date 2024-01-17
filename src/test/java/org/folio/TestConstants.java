@@ -82,4 +82,5 @@ public final class TestConstants {
 
   public static final String PIECE_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   public static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
+  public static final String ID_FOR_TEMPLATE_NAME_ALREADY_EXISTS = "cd0619fb-a628-4d90-be41-df8943e97768";
 }
