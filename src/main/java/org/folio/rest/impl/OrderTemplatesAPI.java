@@ -10,11 +10,11 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.OrderTemplatesHelper;
 import org.folio.rest.annotations.Validate;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.OrderTemplate;
 import org.folio.rest.jaxrs.resource.OrdersOrderTemplates;
 
@@ -88,7 +88,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
   private static void handlePostPutErrorResponse(Handler<AsyncResult<Response>> asyncResultHandler, Throwable t, OrderTemplatesHelper helper) {
     if (StringUtils.isNotEmpty(t.getMessage()) && t.getMessage().contains(TEMPLATE_NAME_ALREADY_EXIST_ERROR)) {
       handleErrorResponse(asyncResultHandler, helper,
-        new org.folio.rest.core.exceptions.HttpException(422, TEMPLATE_NAME_ALREADY_EXISTS.toError()));
+        new HttpException(422, TEMPLATE_NAME_ALREADY_EXISTS.toError()));
     } else {
       handleErrorResponse(asyncResultHandler, helper, t);
     }
