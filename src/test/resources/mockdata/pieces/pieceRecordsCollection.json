@@ -485,6 +485,14 @@
       "receivedDate": "2019-03-05T08:06:58.473+0000"
     },
     {
+      "id": "06a95f03-eb00-4248-9f2e-2bd05957ff05",
+      "poLineId": "1196fcd9-7607-447d-ae85-6e91883d7e4f",
+      "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
+      "receivingStatus": "Expected",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
+      "receivedDate": "2019-03-05T08:06:58.473+0000"
+    },
+    {
       "id": "bf3c14fe-6eac-450a-90ca-391d0788a8a4",
       "itemId": "86481a22-633e-4b97-8061-0dc9fdaaeaca",
       "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
@@ -494,5 +502,5 @@
       "receivingStatus": "Received"
     }
   ],
-  "totalRecords": 60
+  "totalRecords": 61
 }

@@ -21,6 +21,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.CANCELLED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.ONGOING;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
@@ -299,11 +300,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       // Skip status update if PO line status is Ongoing
       List<Future<String>> futures = new ArrayList<>();
       for (PoLine poLine : poLines) {
-        if (poLine.getReceiptStatus() != ONGOING) {
-          List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
-          futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces, requestContext)
-            .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext)));
+        if (poLine.getReceiptStatus() == CANCELLED || poLine.getReceiptStatus() == ONGOING) {
+            continue;
         }
+        List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
+        futures.add(calculatePoLineReceiptStatus(poLine, successfullyProcessedPieces, requestContext)
+          .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext)));
       }
 
       return collectResultsOnSuccess(futures).map(updatedPoLines -> {
