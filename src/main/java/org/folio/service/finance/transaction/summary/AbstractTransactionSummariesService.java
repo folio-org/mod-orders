@@ -19,9 +19,8 @@ public abstract class AbstractTransactionSummariesService<T> {
 
   public Future<T> createTransactionSummary(T summary, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(getEndpoint());
-    Future<T> result = restClient.post(requestEntry, summary, getClassT(), requestContext);
-    return result;
-    // restClient.post(requestEntry, summary, getClassT(), requestContext);
+    return restClient.post(requestEntry, summary, getClassT(), requestContext);
+
   }
 
   public Future<T> getTransactionSummary(String id, RequestContext requestContext) {
