@@ -96,10 +96,6 @@ public class TransactionSummariesServiceTest {
     OrderTransactionSummary expectedSummary = new OrderTransactionSummary().withId(uuid).withNumTransactions(2);
     // Create an instance of your service
     OrderTransactionSummariesService orderTransactionSummariesService2 = new OrderTransactionSummariesService(restClient);
-    // Use reflection to set the RestClient field
-    Field restClientField = AbstractTransactionSummariesService.class.getDeclaredField("restClient");
-    restClientField.setAccessible(true);
-    restClientField.set(orderTransactionSummariesService2, restClient);
     // When
     Future<OrderTransactionSummary> result = orderTransactionSummariesService2.createTransactionSummary(expectedSummary, requestContext);
     // Then

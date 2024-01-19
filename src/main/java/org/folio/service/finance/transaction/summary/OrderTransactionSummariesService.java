@@ -91,9 +91,4 @@ public class OrderTransactionSummariesService extends AbstractTransactionSummari
   protected Class<OrderTransactionSummary> getClassT() {
     return OrderTransactionSummary.class;
   }
-  public void setRestClient(RestClient restClient) {
-    this.restClient = restClient;
-  }
-
-
 }

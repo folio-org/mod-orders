@@ -59,8 +59,5 @@ public class FiscalYearService {
     RequestEntry requestEntry = new RequestEntry(FISCAL_YEAR).withId(fiscalYearId);
     return restClient.get(requestEntry, FiscalYear.class, requestContext);
   }
-  public void setRestClient(RestClient restClient) {
-    this.restClient = restClient;
-  }
 
 }

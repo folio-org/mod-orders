@@ -64,8 +64,4 @@ public class TagService {
     return restClient.post(requestEntry, tag, Tag.class, requestContext);
   }
 
-  public void setRestClient(RestClient restClient) {
-    this.restClient = restClient;
-  }
-
 }

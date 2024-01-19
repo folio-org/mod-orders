@@ -48,7 +48,7 @@ public class FiscalYearServiceTest {
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
   private HttpClientInterface httpClient;
-  private RequestContext requestContextMock;
+
 
 
   @InjectMocks
@@ -61,6 +61,9 @@ public class FiscalYearServiceTest {
   private RequestEntry requestEntry;
   @Mock
   private FundService fundServiceMock;
+
+  @Mock
+  private RequestContext requestContextMock;
 
   @BeforeEach
   public void initMocks() {
@@ -90,9 +93,6 @@ public class FiscalYearServiceTest {
   void testShouldThrowHttpException() throws IllegalAccessException, NoSuchFieldException {
     FiscalYear sampleFiscalYear = new FiscalYear();
     FiscalYearService fiscalYearService = new FiscalYearService(restClientMock, fundServiceMock);
-    Field restClientField = FiscalYearService.class.getDeclaredField("restClient");
-    restClientField.setAccessible(true);
-    restClientField.set(fiscalYearService, restClientMock);
     Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
     CompletionException expectedException2 = assertThrows(CompletionException.class, result::result);
     HttpException httpException = (HttpException) expectedException2.getCause();

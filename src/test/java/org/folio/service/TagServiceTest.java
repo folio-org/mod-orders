@@ -85,9 +85,6 @@ class TagServiceTest {
     doReturn(succeededFuture(emptyTagCollection)).when(restClient2).get(anyString(), any(),  any());
     doReturn(succeededFuture(postTagResponse)).when(restClient2).post(anyString(), any(),  any(), any());
     Field restClientField = TagService.class.getDeclaredField("restClient");
-    restClientField.setAccessible(true);
-    restClientField.set(tagService1, restClient2);
-    requestContextMock = new RequestContext(ctxMock, okapiHeadersMock);
     Future<Void> future = tagService1.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {

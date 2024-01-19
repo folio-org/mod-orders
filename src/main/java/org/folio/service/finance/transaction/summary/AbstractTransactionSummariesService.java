@@ -57,8 +57,4 @@ public abstract class AbstractTransactionSummariesService<T> {
   protected abstract String getSummaryName();
 
   protected abstract Class<T> getClassT();
-  protected RestClient getRestClient() {
-    return restClient;
-  }
-
 }
