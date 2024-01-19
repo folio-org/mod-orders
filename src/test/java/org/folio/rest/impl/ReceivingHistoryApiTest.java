@@ -156,7 +156,6 @@ public class ReceivingHistoryApiTest {
   @Test
   void testGetReceivingHistoryBadRequest() {
     logger.info("=== Test Get Receiving History - With Bad Request");
-
     verifyGet(ORDERS_RECEIVING_HISTORY_ENDPOINT+"?query=" + BAD_QUERY, APPLICATION_JSON, 400);
 
   }
