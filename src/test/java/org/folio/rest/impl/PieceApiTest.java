@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.RestTestUtils.*;
 import static org.folio.TestConfig.*;
 import static org.folio.TestConstants.*;
@@ -314,7 +315,7 @@ public class PieceApiTest {
   @Test
   void deletePiecesByIdWithInvalidFormatTest() {
     logger.info("=== Test delete piece by id - bad Id format 400 ===");
-    verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_BAD_FORMAT), APPLICATION_JSON, 404);
+    verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
   }
 
   @Test

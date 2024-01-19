@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.RestTestUtils.*;
 import static org.folio.TestConfig.*;
 import static org.folio.TestConstants.*;
@@ -115,7 +116,7 @@ public class ConfigurationCrudTest {
   @EnumSource(value = CrudTestEntities.class)
   void testGetByIdCrudBadRequest(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET by id : %s (bad request) ===", entity.name()));
-    verifyGet(entity.getEndpoint() + "/" + ID_BAD_FORMAT, APPLICATION_JSON, 400);
+    verifyGet(entity.getEndpoint() + "/" + ID_BAD_FORMAT, TEXT_PLAIN, 400);
   }
 
   @ParameterizedTest
@@ -192,7 +193,7 @@ public class ConfigurationCrudTest {
   @EnumSource(value = CrudTestEntities.class)
   void testDeleteCrudBadId(CrudTestEntities entity) {
     logger.info(String.format("=== Test DELETE : %s (bad id) ===", entity.name()));
-    verifyDeleteResponse(entity.getEndpoint() + "/" + ID_BAD_FORMAT, APPLICATION_JSON, 400);
+    verifyDeleteResponse(entity.getEndpoint() + "/" + ID_BAD_FORMAT, TEXT_PLAIN, 400);
   }
 
   @ParameterizedTest

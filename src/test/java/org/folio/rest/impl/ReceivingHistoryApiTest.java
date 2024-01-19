@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.folio.RestTestUtils.prepareHeaders;
 import static org.folio.RestTestUtils.verifyGet;
@@ -156,7 +157,7 @@ public class ReceivingHistoryApiTest {
   void testGetReceivingHistoryBadRequest() {
     logger.info("=== Test Get Receiving History - With Bad Request");
 
-    verifyGet(ORDERS_RECEIVING_HISTORY_ENDPOINT+"?query=" + BAD_QUERY, APPLICATION_JSON, 400);
+    verifyGet(ORDERS_RECEIVING_HISTORY_ENDPOINT+"?query=" + BAD_QUERY, TEXT_PLAIN, 400);
 
   }
 }

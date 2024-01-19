@@ -1743,7 +1743,7 @@ public class PurchaseOrdersApiTest {
     logger.info("=== Test Get Order By Id - Incorrect Id format - 400 ===");
 
     String id = ID_BAD_FORMAT;
-    final Response resp = verifyGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), APPLICATION_JSON, 404);
+    final Response resp = verifyGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), TEXT_PLAIN, 400);
 
     String actual = resp.getBody().asString();
     logger.info(actual);
