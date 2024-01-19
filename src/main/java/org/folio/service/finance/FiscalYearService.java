@@ -21,8 +21,9 @@ public class FiscalYearService {
   private static final String FISCAL_YEAR = "/finance/fiscal-years/{id}";
   private static final String CURRENT_FISCAL_YEAR = "/finance/ledgers/{id}/current-fiscal-year";
 
-  private final RestClient restClient;
+  private RestClient restClient;
   private final FundService fundService;
+
 
 
   public FiscalYearService(RestClient restClient, FundService fundService) {
@@ -31,7 +32,10 @@ public class FiscalYearService {
   }
 
   public Future<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
+
+    System.out.println("hello this is the debug print "+restClient.toString());
     RequestEntry requestEntry = new RequestEntry(CURRENT_FISCAL_YEAR).withId(ledgerId);
+    System.out.println("hello this is the debug print " +  restClient.get(requestEntry, FiscalYear.class, requestContext).toString());
     return restClient.get(requestEntry, FiscalYear.class, requestContext)
       .recover(t -> {
         Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
@@ -58,4 +62,8 @@ public class FiscalYearService {
     RequestEntry requestEntry = new RequestEntry(FISCAL_YEAR).withId(fiscalYearId);
     return restClient.get(requestEntry, FiscalYear.class, requestContext);
   }
+  public void setRestClient(RestClient restClient) {
+    this.restClient = restClient;
+  }
+
 }

@@ -1,30 +1,8 @@
 package org.folio.rest.impl.crud;
 
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.RestTestUtils.prepareHeaders;
-import static org.folio.RestTestUtils.verifyDeleteResponse;
-import static org.folio.RestTestUtils.verifyGet;
-import static org.folio.RestTestUtils.verifyPostResponse;
-import static org.folio.RestTestUtils.verifyPut;
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestConstants.EXISTED_ID;
-import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
-import static org.folio.TestConstants.ID;
-import static org.folio.TestConstants.ID_BAD_FORMAT;
-import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
-import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
-import static org.folio.TestConstants.X_ECHO_STATUS;
-import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
-
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
+import io.restassured.http.Header;
+import io.restassured.response.Response;
+import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -36,9 +14,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import io.restassured.http.Header;
-import io.restassured.response.Response;
-import io.vertx.core.json.JsonObject;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.RestTestUtils.*;
+import static org.folio.TestConfig.*;
+import static org.folio.TestConstants.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class ConfigurationCrudTest {
 
@@ -130,7 +115,7 @@ public class ConfigurationCrudTest {
   @EnumSource(value = CrudTestEntities.class)
   void testGetByIdCrudBadRequest(CrudTestEntities entity) {
     logger.info(String.format("=== Test GET by id : %s (bad request) ===", entity.name()));
-    verifyGet(entity.getEndpoint() + "/" + ID_BAD_FORMAT, TEXT_PLAIN, 400);
+    verifyGet(entity.getEndpoint() + "/" + ID_BAD_FORMAT, APPLICATION_JSON, 400);
   }
 
   @ParameterizedTest
@@ -207,7 +192,7 @@ public class ConfigurationCrudTest {
   @EnumSource(value = CrudTestEntities.class)
   void testDeleteCrudBadId(CrudTestEntities entity) {
     logger.info(String.format("=== Test DELETE : %s (bad id) ===", entity.name()));
-    verifyDeleteResponse(entity.getEndpoint() + "/" + ID_BAD_FORMAT, TEXT_PLAIN, 400);
+    verifyDeleteResponse(entity.getEndpoint() + "/" + ID_BAD_FORMAT, APPLICATION_JSON, 400);
   }
 
   @ParameterizedTest

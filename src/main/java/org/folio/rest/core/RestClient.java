@@ -1,22 +1,5 @@
 package org.folio.rest.core;
 
-import static javax.ws.rs.core.HttpHeaders.LOCATION;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.rest.RestConstants.ID;
-import static org.folio.rest.RestConstants.OKAPI_URL;
-import static org.folio.rest.core.exceptions.ExceptionUtil.isErrorsMessageJson;
-import static org.folio.rest.core.exceptions.ExceptionUtil.mapToErrors;
-
-import java.util.Map;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.WebClientFactory;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.core.models.RequestEntry;
-
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -29,6 +12,22 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.predicate.ErrorConverter;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.okapi.common.WebClientFactory;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
+
+import java.util.Map;
+
+import static javax.ws.rs.core.HttpHeaders.LOCATION;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.folio.rest.RestConstants.ID;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.core.exceptions.ExceptionUtil.isErrorsMessageJson;
+import static org.folio.rest.core.exceptions.ExceptionUtil.mapToErrors;
 
 public class RestClient {
 
@@ -138,7 +137,7 @@ public class RestClient {
       .onSuccess(f -> promise.complete())
       .onFailure(t -> handleErrorResponse(promise, t, skipError404));
 
-      return promise.future();
+    return promise.future();
   }
 
   private <T>void handleGetMethodErrorResponse(Promise<T> promise, Throwable t, boolean skipError404) {
@@ -169,15 +168,18 @@ public class RestClient {
   }
 
   public <T> Future<T> get(String endpoint, Class<T> responseType, RequestContext requestContext) {
+    System.out.println(requestContext);
     return get(endpoint, false, responseType, requestContext);
   }
 
   public <T> Future<T> get(RequestEntry requestEntry, Class<T> responseType, RequestContext requestContext) {
+    System.out.println(requestContext);
     return get(requestEntry.buildEndpoint(), false, responseType, requestContext);
   }
 
   public <T> Future<T> get(String endpoint, boolean skipError404, Class<T> responseType,  RequestContext requestContext) {
     log.debug("Calling GET {}", endpoint);
+    System.out.println(requestContext);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
     Promise<T> promise = Promise.promise();
@@ -226,7 +228,7 @@ public class RestClient {
   }
 
   public Future<JsonObject> getAsJsonObject(RequestEntry requestEntry, RequestContext requestContext) {
-   return getAsJsonObject(requestEntry.buildEndpoint(), false, requestContext);
+    return getAsJsonObject(requestEntry.buildEndpoint(), false, requestContext);
   }
 
   public String extractRecordId(HttpResponse<Buffer> response) {
@@ -242,11 +244,11 @@ public class RestClient {
   }
 
   private WebClient getVertxWebClient(Context context) {
-     WebClientOptions options = new WebClientOptions();
-     options.setLogActivity(true);
-     options.setKeepAlive(true);
-     options.setConnectTimeout(2000);
-     options.setIdleTimeout(5000);
+    WebClientOptions options = new WebClientOptions();
+    options.setLogActivity(true);
+    options.setKeepAlive(true);
+    options.setConnectTimeout(2000);
+    options.setIdleTimeout(5000);
 
     return WebClientFactory.getWebClient(context.owner(), options);
   }

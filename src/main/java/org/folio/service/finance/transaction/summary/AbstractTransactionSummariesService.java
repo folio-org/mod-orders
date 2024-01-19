@@ -11,15 +11,23 @@ public abstract class AbstractTransactionSummariesService<T> {
 
   private static final String GET_BY_ID_STORAGE_ENDPOINT = "/finance-storage/%s-transaction-summaries/{id}";
 
-  private final RestClient restClient;
+  protected RestClient restClient;
 
   protected AbstractTransactionSummariesService(RestClient restClient) {
     this.restClient = restClient;
   }
 
   public Future<T> createTransactionSummary(T summary, RequestContext requestContext) {
+    System.out.println("Entering createTransactionSummary method");
     RequestEntry requestEntry = new RequestEntry(getEndpoint());
-    return restClient.post(requestEntry, summary, getClassT(), requestContext);
+    System.out.println(requestEntry);
+    System.out.println(summary);
+    System.out.println(getClassT());
+    System.out.println(requestContext);
+    Future<T> result = restClient.post(requestEntry, summary, getClassT(), requestContext);
+    System.out.println("Exiting createTransactionSummary method");
+    return result;
+    // restClient.post(requestEntry, summary, getClassT(), requestContext);
   }
 
   public Future<T> getTransactionSummary(String id, RequestContext requestContext) {
@@ -56,5 +64,8 @@ public abstract class AbstractTransactionSummariesService<T> {
   protected abstract String getSummaryName();
 
   protected abstract Class<T> getClassT();
+  protected RestClient getRestClient() {
+    return restClient;
+  }
 
 }

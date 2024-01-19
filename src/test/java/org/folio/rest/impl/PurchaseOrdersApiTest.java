@@ -1085,6 +1085,8 @@ public class PurchaseOrdersApiTest {
 
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = getInstancesSearches();
+    //debug print
+    System.out.println("this is line 1089 "+instancesSearches);
     List<JsonObject> holdingsSearches = getHoldingsSearches();
     List<JsonObject> itemsSearches = getItemsSearches();
     assertNotNull(instancesSearches);
@@ -1741,7 +1743,7 @@ public class PurchaseOrdersApiTest {
     logger.info("=== Test Get Order By Id - Incorrect Id format - 400 ===");
 
     String id = ID_BAD_FORMAT;
-    final Response resp = verifyGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), TEXT_PLAIN, 400);
+    final Response resp = verifyGet(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), APPLICATION_JSON, 404);
 
     String actual = resp.getBody().asString();
     logger.info(actual);

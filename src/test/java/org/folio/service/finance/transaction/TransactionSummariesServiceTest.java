@@ -4,32 +4,40 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.helper.PurchaseOrderHelperTest.ORDER_PATH;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Field;
 import java.util.UUID;
 
+import io.restassured.internal.RestAssuredResponseOptionsImpl;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.service.finance.transaction.summary.AbstractTransactionSummariesService;
 import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import io.vertx.core.json.JsonObject;
-
+@ExtendWith(VertxExtension.class)
 public class TransactionSummariesServiceTest {
 
   @InjectMocks
@@ -45,6 +53,8 @@ public class TransactionSummariesServiceTest {
   public void initMocks() {
     MockitoAnnotations.openMocks(this);
   }
+
+
 
   @Test
   void testShouldNotUpdateTransactionsSummariesWhenNoEncumbrances() {
@@ -77,17 +87,27 @@ public class TransactionSummariesServiceTest {
   }
 
   @Test
-  void testShouldCreateTransactionSummaryInStorageTransactions() {
-    // given
-
+  void testShouldCreateTransactionSummaryInStorageTransactions() throws NoSuchFieldException, IllegalAccessException {
+    // Given
     String uuid = UUID.randomUUID().toString();
-    var response = new JsonObject("{\"id\": \"" + uuid + "\"}");
-    doReturn(succeededFuture(response)).when(restClient).post(anyString(), any(), any(), any());
+    JsonObject response = new JsonObject().put("id", uuid);
+    when(restClient.post(any(RequestEntry.class), any(), any(), any(RequestContext.class)))
+      .thenReturn(succeededFuture(response));
+    OrderTransactionSummary expectedSummary = new OrderTransactionSummary().withId(uuid).withNumTransactions(2);
+    // Create an instance of your service
+    OrderTransactionSummariesService orderTransactionSummariesService2 = new OrderTransactionSummariesService(restClient);
+    // Use reflection to set the RestClient field
+    Field restClientField = AbstractTransactionSummariesService.class.getDeclaredField("restClient");
+    restClientField.setAccessible(true);
+    restClientField.set(orderTransactionSummariesService2, restClient);
     // When
-    OrderTransactionSummary summary = orderTransactionSummariesService.createTransactionSummary(new OrderTransactionSummary().withId(uuid).withNumTransactions(2), requestContext)
-      .result();
+    Future<OrderTransactionSummary> result = orderTransactionSummariesService2.createTransactionSummary(expectedSummary, requestContext);
     // Then
-    assertEquals(uuid, summary.getId());
-    verify(restClient).post(anyString(), any(), any(), any());
+    verify(restClient).post(any(RequestEntry.class), any(), any(), any(RequestContext.class));
+    JsonObject Jresult = JsonObject.mapFrom(result.result());
+    String ResultID = Jresult.getString("id");
+    assertEquals(uuid,  ResultID);
   }
+
 }
+

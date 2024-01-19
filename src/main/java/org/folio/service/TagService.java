@@ -23,7 +23,7 @@ public class TagService {
 
   private static final String TAG_ENDPOINT = resourcesPath(TAGS);
 
-  private final RestClient restClient;
+  private  RestClient restClient;
 
   public TagService(RestClient restClient) {
     this.restClient = restClient;
@@ -32,13 +32,11 @@ public class TagService {
   public Future<Void> createTagsIfMissing(Set<String> tagLabels, RequestContext requestContext) {
     List<String> tagList = new ArrayList<>(tagLabels);
     String query = HelperUtils.convertTagListToCqlQuery(tagList, "label", true);
-
     return getTags(query, 0, Integer.MAX_VALUE, requestContext)
       .map(existingTagsCollection -> {
         List<String> existingTags = existingTagsCollection.getTags().stream()
           .map(Tag::getLabel)
           .collect(Collectors.toList());
-
         if (!existingTags.isEmpty()) {
           return CollectionUtils.removeAll(tagList, existingTags);
         }
@@ -57,6 +55,7 @@ public class TagService {
     RequestEntry requestEntry = new RequestEntry(TAG_ENDPOINT).withQuery(query)
       .withLimit(limit)
       .withOffset(offset);
+    System.out.println("before call the get"+ requestContext);
     return restClient.get(requestEntry, TagCollection.class, requestContext);
   }
 
@@ -64,6 +63,10 @@ public class TagService {
     Tag tag = new Tag().withLabel(tagName);
     RequestEntry requestEntry = new RequestEntry(TAG_ENDPOINT);
     return restClient.post(requestEntry, tag, Tag.class, requestContext);
+  }
+
+  public void setRestClient(RestClient restClient) {
+    this.restClient = restClient;
   }
 
 }

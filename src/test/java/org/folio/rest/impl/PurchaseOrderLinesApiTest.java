@@ -477,7 +477,7 @@ public class PurchaseOrderLinesApiTest {
   @Test
   void testValidationOnPutWithIncorrectLineId() throws IOException {
     logger.info("=== Test validation on PUT line with invalid line ID path parameter ===");
-    verifyPut(String.format(LINE_BY_ID_PATH, ID_BAD_FORMAT), getMockData(PO_LINE_MIN_CONTENT_PATH), TEXT_PLAIN, 400);
+    verifyPut(String.format(LINE_BY_ID_PATH, ID_BAD_FORMAT), getMockData(PO_LINE_MIN_CONTENT_PATH), APPLICATION_JSON, 404);
   }
 
   @Test

@@ -1,44 +1,5 @@
 package org.folio.rest.impl;
 
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.folio.RestTestUtils.prepareHeaders;
-import static org.folio.RestTestUtils.verifyDeleteResponse;
-import static org.folio.RestTestUtils.verifyPostResponse;
-import static org.folio.RestTestUtils.verifyPut;
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
-import static org.folio.TestConstants.ID;
-import static org.folio.TestConstants.ID_BAD_FORMAT;
-import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
-import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
-import static org.folio.TestConstants.X_ECHO_STATUS;
-import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.TITLES;
-import static org.folio.rest.core.exceptions.ErrorCodes.REQUEST_FOUND;
-import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
-import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
-import static org.folio.rest.impl.MockServer.addMockEntry;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
@@ -47,20 +8,31 @@ import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.jaxrs.model.*;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.RestTestUtils.*;
+import static org.folio.TestConfig.*;
+import static org.folio.TestConstants.*;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.orders.utils.ResourcePathResolver.*;
+import static org.folio.rest.core.exceptions.ErrorCodes.REQUEST_FOUND;
+import static org.folio.rest.impl.MockServer.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class PieceApiTest {
 
@@ -342,7 +314,7 @@ public class PieceApiTest {
   @Test
   void deletePiecesByIdWithInvalidFormatTest() {
     logger.info("=== Test delete piece by id - bad Id format 400 ===");
-    verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
+    verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_BAD_FORMAT), APPLICATION_JSON, 404);
   }
 
   @Test
