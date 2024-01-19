@@ -32,10 +32,7 @@ public class FiscalYearService {
   }
 
   public Future<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
-
-    System.out.println("hello this is the debug print "+restClient.toString());
     RequestEntry requestEntry = new RequestEntry(CURRENT_FISCAL_YEAR).withId(ledgerId);
-    System.out.println("hello this is the debug print " +  restClient.get(requestEntry, FiscalYear.class, requestContext).toString());
     return restClient.get(requestEntry, FiscalYear.class, requestContext)
       .recover(t -> {
         Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;

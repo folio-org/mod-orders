@@ -18,14 +18,8 @@ public abstract class AbstractTransactionSummariesService<T> {
   }
 
   public Future<T> createTransactionSummary(T summary, RequestContext requestContext) {
-    System.out.println("Entering createTransactionSummary method");
     RequestEntry requestEntry = new RequestEntry(getEndpoint());
-    System.out.println(requestEntry);
-    System.out.println(summary);
-    System.out.println(getClassT());
-    System.out.println(requestContext);
     Future<T> result = restClient.post(requestEntry, summary, getClassT(), requestContext);
-    System.out.println("Exiting createTransactionSummary method");
     return result;
     // restClient.post(requestEntry, summary, getClassT(), requestContext);
   }

@@ -55,7 +55,6 @@ public class TagService {
     RequestEntry requestEntry = new RequestEntry(TAG_ENDPOINT).withQuery(query)
       .withLimit(limit)
       .withOffset(offset);
-    System.out.println("before call the get"+ requestContext);
     return restClient.get(requestEntry, TagCollection.class, requestContext);
   }
 

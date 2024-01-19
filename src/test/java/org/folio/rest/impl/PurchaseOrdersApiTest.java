@@ -1085,8 +1085,6 @@ public class PurchaseOrdersApiTest {
 
     // Check that search of the existing instances and items was done for first PO line only
     List<JsonObject> instancesSearches = getInstancesSearches();
-    //debug print
-    System.out.println("this is line 1089 "+instancesSearches);
     List<JsonObject> holdingsSearches = getHoldingsSearches();
     List<JsonObject> itemsSearches = getItemsSearches();
     assertNotNull(instancesSearches);

@@ -168,18 +168,15 @@ public class RestClient {
   }
 
   public <T> Future<T> get(String endpoint, Class<T> responseType, RequestContext requestContext) {
-    System.out.println(requestContext);
     return get(endpoint, false, responseType, requestContext);
   }
 
   public <T> Future<T> get(RequestEntry requestEntry, Class<T> responseType, RequestContext requestContext) {
-    System.out.println(requestContext);
     return get(requestEntry.buildEndpoint(), false, responseType, requestContext);
   }
 
   public <T> Future<T> get(String endpoint, boolean skipError404, Class<T> responseType,  RequestContext requestContext) {
     log.debug("Calling GET {}", endpoint);
-    System.out.println(requestContext);
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
     Promise<T> promise = Promise.promise();
