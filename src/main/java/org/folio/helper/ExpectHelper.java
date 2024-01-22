@@ -5,6 +5,8 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ExpectCollection;
 import org.folio.rest.jaxrs.model.ExpectPiece;
@@ -25,7 +27,11 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
-
+  private static final Logger logger = LogManager.getLogger(ExpectHelper.class);
+  /**
+   * Map with PO line id as a key and value is map with piece id as a key and
+   * {@link ExpectPiece} as a value
+   */
   private final Map<String, Map<String, ExpectPiece>> expectPieces;
 
   public ExpectHelper(ExpectCollection expectCollection, Map<String, String> okapiHeaders, Context ctx) {
