@@ -10,12 +10,15 @@ import javax.ws.rs.core.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.helper.CheckinHelper;
+import org.folio.helper.ExpectHelper;
 import org.folio.helper.ReceivingHelper;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.ExpectCollection;
 import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.resource.OrdersCheckIn;
+import org.folio.rest.jaxrs.resource.OrdersExpect;
 import org.folio.rest.jaxrs.resource.OrdersReceive;
 import org.folio.rest.jaxrs.resource.OrdersReceivingHistory;
 
@@ -24,7 +27,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
-public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivingHistory {
+public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect, OrdersReceivingHistory {
 
   private static final Logger logger = LogManager.getLogger();
 
@@ -46,6 +49,15 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersReceivi
     logger.info("Checkin {} items", entity.getTotalRecords());
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext);
     helper.checkinPieces(entity, new RequestContext(vertxContext, okapiHeaders))
+      .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
+  }
+
+  @Override
+  public void postOrdersExpect(ExpectCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    logger.info("Expect {} pieces", entity.getTotalRecords());
+    ExpectHelper helper = new ExpectHelper(entity, okapiHeaders, vertxContext);
+    helper.expectPieces(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
