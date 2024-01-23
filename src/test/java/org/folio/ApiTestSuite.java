@@ -458,7 +458,6 @@ public class ApiTestSuite {
   class TransactionSummariesServiceTestNested extends TransactionSummariesServiceTest {
   }
 
-  
   @Nested
   class ClosedToOpenEncumbranceStrategyTestNested extends ClosedToOpenEncumbranceStrategyTest {
   }
