@@ -8,6 +8,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
+import static org.folio.TestConstants.ORDERS_EXPECT_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
 import static org.folio.TestUtils.getInstanceId;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
@@ -87,6 +88,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.ExpectCollection;
+import org.folio.rest.jaxrs.model.ExpectPiece;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -98,6 +101,7 @@ import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.rest.jaxrs.model.ToBeExpected;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -834,6 +838,53 @@ public class CheckinReceivingApiTest {
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
+  }
+
+  @Test
+  void testMovePieceStatusFromUnreceivableToExpected() {
+    logger.info("=== Test POST Expect");
+
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    poLine.setIsPackage(true);
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    poLine.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
+
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(UUID.randomUUID().toString())
+      .withItemId(UUID.randomUUID().toString());
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
+
+    List<ToBeExpected> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeExpected()
+      .withExpected(1)
+      .withPoLineId(poLine.getId())
+      .withExpectPieces(Collections.singletonList(new ExpectPiece().withId(electronicPiece.getId()).withComment("test"))));
+
+    ExpectCollection request = new ExpectCollection()
+      .withToBeExpected(toBeCheckedInList)
+      .withTotalRecords(1);
+
+    Response response = verifyPostResponse(ORDERS_EXPECT_ENDPOINT, JsonObject.mapFrom(request).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
+    assertThat(response.as(ReceivingResults.class).getReceivingResults().get(0).getProcessedSuccessfully(), is(1));
+
+    List<JsonObject> pieceUpdates = getPieceUpdates();
+
+    assertThat(pieceUpdates, not(nullValue()));
+    assertThat(pieceUpdates, hasSize(request.getTotalRecords()));
+
+    pieceUpdates.forEach(pol -> {
+      Piece piece = pol.mapTo(Piece.class);
+      assertThat(piece.getId(), is(electronicPiece.getId()));
+      assertThat(piece.getReceivingStatus(), is(Piece.ReceivingStatus.EXPECTED));
+      assertThat(piece.getComment(), is("test"));
+    });
   }
 
   private void verifyProperQuantityOfHoldingsCreated(ReceivingCollection receivingRq) throws IOException {
