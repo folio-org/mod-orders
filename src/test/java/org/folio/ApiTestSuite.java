@@ -453,9 +453,11 @@ public class ApiTestSuite {
   @Nested
   class LedgerRolloverProgressServiceTestNested extends LedgerRolloverProgressServiceTest {
   }
+
   @Nested
   class TransactionSummariesServiceTestNested extends TransactionSummariesServiceTest {
   }
+
   @Nested
   class ClosedToOpenEncumbranceStrategyTestNested extends ClosedToOpenEncumbranceStrategyTest {
   }
