@@ -54,8 +54,6 @@ public class TransactionSummariesServiceTest {
     MockitoAnnotations.openMocks(this);
   }
 
-
-
   @Test
   void testShouldNotUpdateTransactionsSummariesWhenNoEncumbrances() {
     // When
@@ -68,7 +66,6 @@ public class TransactionSummariesServiceTest {
   @Test
   void testShouldTransactionsCreatedForEncumbrances() {
     // Given
-
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine line = order.getCompositePoLines()
       .get(0);
@@ -79,7 +76,6 @@ public class TransactionSummariesServiceTest {
       .get(0)
       .getFundDistribution()
       .get(0);
-
     // When
     orderTransactionSummariesService.updateTransactionSummary(order.getId(), 1, requestContext);
     // Then
@@ -102,6 +98,5 @@ public class TransactionSummariesServiceTest {
     String ResultID = Jresult.getString("id");
     assertEquals(uuid, ResultID);
   }
-
 }
 
