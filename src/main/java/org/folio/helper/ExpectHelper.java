@@ -5,8 +5,6 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ExpectCollection;
 import org.folio.rest.jaxrs.model.ExpectPiece;
