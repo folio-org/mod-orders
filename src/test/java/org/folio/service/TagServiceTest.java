@@ -1,5 +1,15 @@
 package org.folio.service;
 
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 
 import io.restassured.http.Header;
 import io.vertx.core.Context;
@@ -27,28 +37,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.TestConfig.mockPort;
-import static org.folio.TestConstants.X_OKAPI_TOKEN;
-import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.rest.RestConstants.OKAPI_URL;
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
-import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-
-
 @ExtendWith(VertxExtension.class)
 class TagServiceTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
   public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
-
-  public Collections collections;
-  public RequestContext requestContext;
-
+  private Collections collections;
+  private RequestContext requestContext;
   public Context ctxMock = Vertx.vertx().getOrCreateContext();
 
   Map<String, String> okapiHeadersMock = new HashMap<>();
@@ -60,7 +56,6 @@ class TagServiceTest {
   private RequestContext requestContextMock;
   @Mock
   private Context ctxMocks = Vertx.vertx().getOrCreateContext();
-
 
   @BeforeEach
   public void initMocks(){
@@ -90,5 +85,4 @@ class TagServiceTest {
         vertxTestContext.completeNow();
       });
   }
-
 }
