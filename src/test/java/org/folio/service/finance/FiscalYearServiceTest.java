@@ -84,11 +84,10 @@ public class FiscalYearServiceTest {
 
   @Test
   void testShouldThrowHttpException() throws IllegalAccessException, NoSuchFieldException {
-    FiscalYear sampleFiscalYear = new FiscalYear();
     FiscalYearService fiscalYearService = new FiscalYearService(restClientMock, fundServiceMock);
     Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
-    CompletionException expectedException2 = assertThrows(CompletionException.class, result::result);
-    HttpException httpException = (HttpException) expectedException2.getCause();
+    CompletionException expectedException = assertThrows(CompletionException.class, result::result);
+    HttpException httpException = (HttpException) expectedException.getCause();
     assertEquals(404, httpException.getCode());
   }
 }

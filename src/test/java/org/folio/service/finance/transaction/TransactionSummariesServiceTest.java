@@ -94,10 +94,8 @@ public class TransactionSummariesServiceTest {
     when(restClient.post(any(RequestEntry.class), any(), any(), any(RequestContext.class)))
       .thenReturn(succeededFuture(response));
     OrderTransactionSummary expectedSummary = new OrderTransactionSummary().withId(uuid).withNumTransactions(2);
-    // Create an instance of your service
-    OrderTransactionSummariesService orderTransactionSummariesService2 = new OrderTransactionSummariesService(restClient);
     // When
-    Future<OrderTransactionSummary> result = orderTransactionSummariesService2.createTransactionSummary(expectedSummary, requestContext);
+    Future<OrderTransactionSummary> result = orderTransactionSummariesService.createTransactionSummary(expectedSummary, requestContext);
     // Then
     verify(restClient).post(any(RequestEntry.class), any(), any(), any(RequestContext.class));
     JsonObject Jresult = JsonObject.mapFrom(result.result());

@@ -46,13 +46,12 @@ class TagServiceTest {
   public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
 
-  public static Collections collections;
-  public static RequestContext requestContext;
+  public Collections collections;
+  public RequestContext requestContext;
 
   public Context ctxMock = Vertx.vertx().getOrCreateContext();
 
   Map<String, String> okapiHeadersMock = new HashMap<>();
-
   @InjectMocks
   TagService tagService1 ;
   @Spy
