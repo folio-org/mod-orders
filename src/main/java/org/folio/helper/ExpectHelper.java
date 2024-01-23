@@ -27,7 +27,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
-  private static final Logger logger = LogManager.getLogger(ExpectHelper.class);
+
   /**
    * Map with PO line id as a key and value is map with piece id as a key and
    * {@link ExpectPiece} as a value
