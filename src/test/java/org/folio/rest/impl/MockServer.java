@@ -21,6 +21,7 @@ import static org.folio.TestConstants.ID_BAD_FORMAT;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestConstants.ID_FOR_PIECES_INTERNAL_SERVER_ERROR;
+import static org.folio.TestConstants.ID_FOR_TEMPLATE_NAME_ALREADY_EXISTS;
 import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
 import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_B;
 import static org.folio.TestConstants.INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT;
@@ -2163,6 +2164,18 @@ public class MockServer {
       case 400 -> respBody = "Unable to add -- malformed JSON at 13:3";
       case 403 -> respBody = "Access requires permission: foo.bar.baz";
       case 500 -> respBody = INTERNAL_SERVER_ERROR.getReasonPhrase();
+    }
+
+    if (Objects.nonNull(body) && ID_FOR_TEMPLATE_NAME_ALREADY_EXISTS.equals(body.getString(ID))) {
+      Errors errors = new Errors();
+      List<Error> errorList = new ArrayList<>();
+
+      errorList.add(new Error()
+        .withCode("422")
+        .withMessage("lower(f_unaccent(jsonb ->> 'templateName'::text)) value already exists in table order_templates: " + body.getString("templateName")));
+      errors.withErrors(errorList);
+
+      serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
     }
 
     addServerRqRsData(HttpMethod.POST, subObj, body);

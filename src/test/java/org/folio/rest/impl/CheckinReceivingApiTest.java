@@ -8,6 +8,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
+import static org.folio.TestConstants.ORDERS_EXPECT_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
 import static org.folio.TestUtils.getInstanceId;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
@@ -87,6 +88,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.ExpectCollection;
+import org.folio.rest.jaxrs.model.ExpectPiece;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -98,6 +101,7 @@ import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.rest.jaxrs.model.ToBeExpected;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -117,6 +121,7 @@ public class CheckinReceivingApiTest {
   private static final String ITEM_STATUS_NAME = "name";
   private static final String ITEM_STATUS = "status";
   private static final String COMPOSITE_POLINE_ONGOING_ID = "6e2b169a-ebeb-4c3c-a2f2-6233ff9c59ae";
+  private static final String COMPOSITE_POLINE_CANCELED_ID = "1196fcd9-7607-447d-ae85-6e91883d7e4f";
 
   private static boolean runningOnOwn;
 
@@ -343,6 +348,53 @@ public class CheckinReceivingApiTest {
       PoLine poLine = pol.mapTo(PoLineCollection.class).getPoLines().get(0);
       assertThat(poLine.getCheckinItems(), is(false));
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.ONGOING));
+      assertThat(poLine.getReceiptDate(), is(notNullValue()));
+    });
+
+    // Verify no status updated for ongoing order
+    verifyOrderStatusUpdateEvent(0);
+  }
+
+  @Test
+  void testReceiveCanceledOrder() {
+    logger.info("=== Test POST Receive - Ongoing PO Lines");
+
+    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(10).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(poLines));
+
+    ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-cancelled.json").mapTo(ReceivingCollection.class);
+    receivingRq.getToBeReceived().get(0).setPoLineId(COMPOSITE_POLINE_CANCELED_ID);
+
+    ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
+
+    assertThat(results.getTotalRecords(), equalTo(receivingRq.getTotalRecords()));
+
+    Map<String, Set<String>> pieceIdsByPol = verifyReceivingSuccessRs(results);
+
+    List<JsonObject> pieceSearches = getPieceSearches();
+    List<JsonObject> pieceUpdates = getPieceUpdates();
+    List<JsonObject> polSearches = getPoLineSearches();
+    List<JsonObject> polUpdates = getPoLineUpdates();
+
+    assertThat(pieceSearches, not(nullValue()));
+    assertThat(pieceUpdates, not(nullValue()));
+
+    assertThat(polSearches, not(nullValue()));
+
+    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
+
+    // The piece searches should be made 1 time: 1st time to get all required piece records
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
+    assertThat(pieceUpdates, hasSize(receivingRq.getTotalRecords()));
+    assertThat(polSearches, hasSize(pieceIdsByPol.size()));
+
+    // check no status updates were performed and POL remained canceled
+    assertThat(polUpdates, nullValue());
+    polSearches.forEach(pol -> {
+      PoLine poLine = pol.mapTo(PoLineCollection.class).getPoLines().get(0);
+      assertThat(poLine.getCheckinItems(), is(false));
+      assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.CANCELLED));
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
     });
 
@@ -786,6 +838,53 @@ public class CheckinReceivingApiTest {
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
+  }
+
+  @Test
+  void testMovePieceStatusFromUnreceivableToExpected() {
+    logger.info("=== Test POST Expect");
+
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    poLine.setIsPackage(true);
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    poLine.setEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM));
+
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(UUID.randomUUID().toString())
+      .withItemId(UUID.randomUUID().toString());
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, electronicPiece);
+
+    List<ToBeExpected> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeExpected()
+      .withExpected(1)
+      .withPoLineId(poLine.getId())
+      .withExpectPieces(Collections.singletonList(new ExpectPiece().withId(electronicPiece.getId()).withComment("test"))));
+
+    ExpectCollection request = new ExpectCollection()
+      .withToBeExpected(toBeCheckedInList)
+      .withTotalRecords(1);
+
+    Response response = verifyPostResponse(ORDERS_EXPECT_ENDPOINT, JsonObject.mapFrom(request).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
+    assertThat(response.as(ReceivingResults.class).getReceivingResults().get(0).getProcessedSuccessfully(), is(1));
+
+    List<JsonObject> pieceUpdates = getPieceUpdates();
+
+    assertThat(pieceUpdates, not(nullValue()));
+    assertThat(pieceUpdates, hasSize(request.getTotalRecords()));
+
+    pieceUpdates.forEach(pol -> {
+      Piece piece = pol.mapTo(Piece.class);
+      assertThat(piece.getId(), is(electronicPiece.getId()));
+      assertThat(piece.getReceivingStatus(), is(Piece.ReceivingStatus.EXPECTED));
+      assertThat(piece.getComment(), is("test"));
+    });
   }
 
   private void verifyProperQuantityOfHoldingsCreated(ReceivingCollection receivingRq) throws IOException {

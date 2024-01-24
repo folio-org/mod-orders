@@ -438,6 +438,26 @@
         },
         {
           "methods": [
+            "POST"
+          ],
+          "pathPattern": "/orders/expect",
+          "permissionsRequired": [
+            "orders.expect.collection.post"
+          ],
+          "modulePermissions": [
+            "orders-storage.pieces.collection.get",
+            "orders-storage.pieces.item.put",
+            "orders-storage.po-lines.collection.get",
+            "orders-storage.po-lines.item.put",
+            "orders-storage.purchase-orders.item.get",
+            "orders-storage.purchase-orders.item.put",
+            "orders-storage.titles.collection.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
+          ]
+        },
+        {
+          "methods": [
             "GET"
           ],
           "pathPattern": "/orders/receiving-history",
@@ -485,6 +505,8 @@
             "inventory-storage.items.item.post",
             "inventory-storage.instance-types.collection.get",
             "inventory-storage.instance-statuses.collection.get",
+            "finance.funds.budget.item.get",
+            "finance.fiscal-years.item.get",
             "finance.order-transaction-summaries.item.get",
             "finance.order-transaction-summaries.item.post",
             "finance.order-transaction-summaries.item.put",
@@ -1276,6 +1298,11 @@
       "description": "Check-in items spanning one or more po-lines in this order"
     },
     {
+      "permissionName": "orders.expect.collection.post",
+      "displayName": "Orders - Expect pieces",
+      "description": "Expect pieces spanning one or more po-lines in this order"
+    },
+    {
       "permissionName": "orders.receiving-history.collection.get",
       "displayName": "Orders - Receiving history",
       "description": "Get receiving history matching the provided criteria"
@@ -1695,6 +1722,7 @@
         "orders.po-number.item.post",
         "orders.receiving.collection.post",
         "orders.check-in.collection.post",
+        "orders.expect.collection.post",
         "orders.receiving-history.collection.get",
         "orders.pieces.all",
         "orders.acquisitions-units-assignments.all",
