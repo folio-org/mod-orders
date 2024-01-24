@@ -9,6 +9,8 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -23,8 +25,6 @@ import io.vertx.junit5.VertxExtension;
 import org.folio.service.finance.FundService;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.service.finance.FiscalYearService;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
