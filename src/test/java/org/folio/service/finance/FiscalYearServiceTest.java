@@ -39,12 +39,11 @@ import io.restassured.http.Header;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+
 @ExtendWith(VertxExtension.class)
 public class FiscalYearServiceTest {
-
   public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
-
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
   private HttpClientInterface httpClient;
@@ -84,7 +83,6 @@ public class FiscalYearServiceTest {
 
   @Test
   void testShouldThrowHttpException() throws IllegalAccessException, NoSuchFieldException {
-    FiscalYearService fiscalYearService = new FiscalYearService(restClientMock, fundServiceMock);
     Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
     CompletionException expectedException = assertThrows(CompletionException.class, result::result);
     HttpException httpException = (HttpException) expectedException.getCause();

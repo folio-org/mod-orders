@@ -43,19 +43,14 @@ class TagServiceTest {
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
   public static final String TENANT_ID = "ordertest";
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
-  private Collections collections;
-  private RequestContext requestContext;
   public Context ctxMock = Vertx.vertx().getOrCreateContext();
-
   Map<String, String> okapiHeadersMock = new HashMap<>();
   @InjectMocks
-  TagService tagService1 ;
+  TagService tagService ;
   @Spy
-  private RestClient restClient2;
+  private RestClient restClient;
   @Mock
   private RequestContext requestContextMock;
-  @Mock
-  private Context ctxMocks = Vertx.vertx().getOrCreateContext();
 
   @BeforeEach
   public void initMocks(){
@@ -67,18 +62,15 @@ class TagServiceTest {
   }
 
   @Test
-  void createTagsIfMissing(VertxTestContext vertxTestContext) throws NoSuchFieldException, IllegalAccessException {
+  void createTagsIfMissing(VertxTestContext vertxTestContext){
     String sampleTag = "CAseSenSeTivE";
     Tag postTagResponse = new Tag().withLabel(sampleTag);
     TagCollection emptyTagCollection = new TagCollection()
       .withTags(new ArrayList<>())
       .withTotalRecords(0);
-    TagService tagService1 = new TagService(restClient2);
-    doReturn(succeededFuture(new TagCollection())).when(restClient2).get(anyString(), any(), (RequestContext) any());
-    doReturn(succeededFuture(emptyTagCollection)).when(restClient2).get(anyString(), any(), any());
-    doReturn(succeededFuture(postTagResponse)).when(restClient2).post(anyString(), any(), any(), any());
-    Field restClientField = TagService.class.getDeclaredField("restClient");
-    Future<Void> future = tagService1.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
+    doReturn(succeededFuture(emptyTagCollection)).when(restClient).get(anyString(), any(), any());
+    doReturn(succeededFuture(postTagResponse)).when(restClient).post(anyString(), any(), any(), any());
+    Future<Void> future = tagService.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         Assertions.assertTrue(result.succeeded());
