@@ -237,7 +237,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     CheckInPiece checkinPiece = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
 
-    piece.setCaption(checkinPiece.getCaption());
+    piece.setDisplaySummary(checkinPiece.getDisplaySummary());
     piece.setComment(checkinPiece.getComment());
 
     if (StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
