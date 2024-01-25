@@ -528,12 +528,9 @@ public class OrderRolloverServiceTest {
         assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
         assertThat(fundDistributionOngoing3.getEncumbrance(), equalTo(currEncumbrId3));
 
-        assertThat(BigDecimal.valueOf(costOneTime.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
-          equalTo(new BigDecimal("24.99").setScale(2, RoundingMode.HALF_EVEN)));
-        assertThat(BigDecimal.valueOf(costOngoing2.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
-          equalTo(new BigDecimal("24.99").setScale(2, RoundingMode.HALF_EVEN)));
-        assertThat(BigDecimal.valueOf(costOngoing3.getPoLineEstimatedPrice()).setScale(2, RoundingMode.HALF_EVEN),
-          equalTo(new BigDecimal("24.99").setScale(2, RoundingMode.HALF_EVEN)));
+        assertThat(BigDecimal.valueOf(costOneTime.getPoLineEstimatedPrice()), equalTo(new BigDecimal("24.99")));
+        assertThat(BigDecimal.valueOf(costOngoing2.getPoLineEstimatedPrice()), equalTo(new BigDecimal("24.99")));
+        assertThat(BigDecimal.valueOf(costOngoing3.getPoLineEstimatedPrice()), equalTo(new BigDecimal("24.99")));
 
         assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(0.0d));
         assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(0.0d));
