@@ -376,7 +376,9 @@ public class OrderRolloverService {
   }
 
   private MonetaryAmount amountWithConversion(BigDecimal totalInitialAmountEncumbered, PoLineEncumbrancesHolder holder) {
-    return Money.of(totalInitialAmountEncumbered, holder.getPoLine().getCost().getCurrency()).with(holder.getCurrencyConversion());
+    return Money.of(totalInitialAmountEncumbered, holder.getPoLine().getCost().getCurrency())
+      .with(holder.getCurrencyConversion())
+      .with(Monetary.getDefaultRounding());
   }
 
   private List<PoLineEncumbrancesHolder> buildPoLineEncumbrancesHolders(String  systemCurrency, List<PoLine> poLines,
