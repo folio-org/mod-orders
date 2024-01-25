@@ -8,17 +8,16 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 
+import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.core.RestClient;
 import io.vertx.junit5.VertxExtension;
@@ -46,16 +45,11 @@ public class FiscalYearServiceTest {
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
-  private HttpClientInterface httpClient;
 
   @InjectMocks
   private FiscalYearService fiscalYearService;
   @Spy
   private RestClient restClientMock;
-  @Mock
-  private RequestEntry requestEntry;
-  @Mock
-  private FundService fundServiceMock;
   @Mock
   private RequestContext requestContextMock;
 
@@ -74,18 +68,27 @@ public class FiscalYearServiceTest {
 
   @Test
   void testShouldReturnCurrentFiscalYearForLedger() {
-    String ledgerId = UUID.randomUUID()
-      .toString();
-    FiscalYear fy = fiscalYearService.getCurrentFiscalYear(ledgerId, requestContextMock)
-      .result();
+    String ledgerId = UUID.randomUUID().toString();
+    doReturn(Future.succeededFuture(new FiscalYear()))
+      .when(restClientMock)
+      .get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+    FiscalYear fy = fiscalYearService.getCurrentFiscalYear(ledgerId, requestContextMock).result();
     assertNotNull(fy);
   }
 
   @Test
-  void testShouldThrowHttpException() throws IllegalAccessException, NoSuchFieldException {
+  void testShouldThrowHttpException(VertxTestContext vertxTestContext) {
+    doReturn(Future.failedFuture(new HttpException(404, "Fiscal year not found")))
+      .when(restClientMock)
+      .get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
     Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
-    CompletionException expectedException = assertThrows(CompletionException.class, result::result);
-    HttpException httpException = (HttpException) expectedException.getCause();
-    assertEquals(404, httpException.getCode());
+    vertxTestContext.assertFailure(result)
+      .onComplete(expectedException -> {
+        HttpException httpException = (HttpException) expectedException.cause();
+        assertEquals(404, httpException.getCode());
+        assertEquals(result.cause().getMessage(), httpException.getMessage());
+        verify(restClientMock).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+        vertxTestContext.completeNow();
+      });
   }
 }

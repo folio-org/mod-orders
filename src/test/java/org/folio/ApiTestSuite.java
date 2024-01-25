@@ -42,6 +42,7 @@ import org.folio.rest.impl.protection.ReceivingCheckinProtectionTest;
 import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
+import org.folio.service.TagServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
@@ -59,6 +60,7 @@ import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTes
 import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
 import org.folio.service.finance.transaction.TransactionSummariesServiceTest;
+import org.folio.service.finance.FiscalYearServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.inventory.InventoryManagerTest;
 import org.folio.service.invoice.InvoiceLineServiceTest;
@@ -99,6 +101,7 @@ import org.folio.service.pieces.validators.PieceValidatorUtilTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
+import org.testcontainers.shaded.org.checkerframework.checker.units.qual.N;
 
 public class ApiTestSuite {
 
@@ -460,5 +463,13 @@ public class ApiTestSuite {
 
   @Nested
   class ClosedToOpenEncumbranceStrategyTestNested extends ClosedToOpenEncumbranceStrategyTest {
+  }
+
+  @Nested
+  class FiscalYearServiceTestNested extends FiscalYearServiceTest {
+  }
+
+  @Nested
+  class TagServiceTestNested extends TagServiceTest {
   }
 }
