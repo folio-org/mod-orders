@@ -39,7 +39,7 @@ public class TagServiceTest {
   Map<String, String> okapiHeadersMock = new HashMap<>();
   @InjectMocks
   TagService tagService;
-  @Spy
+  @Mock
   private RestClient restClient;
   @Mock
   private RequestContext requestContextMock;
