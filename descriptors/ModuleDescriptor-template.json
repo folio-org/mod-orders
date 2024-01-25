@@ -366,7 +366,7 @@
     },
     {
       "id": "receiving",
-      "version": "2.2",
+      "version": "2.0",
       "handlers": [
         {
           "methods": [
@@ -475,7 +475,7 @@
     },
     {
       "id": "pieces",
-      "version": "2.1",
+      "version": "3.0",
       "handlers": [
         {
           "methods": ["GET"],
@@ -1062,11 +1062,11 @@
     },
     {
       "id": "orders-storage.pieces",
-      "version": "4.0"
+      "version": "5.0"
     },
     {
       "id": "orders-storage.receiving-history",
-      "version": "3.2"
+      "version": "4.0"
     },
     {
       "id": "orders-storage.reporting-codes",
