@@ -71,8 +71,8 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ERROR;
+import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
-import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
@@ -235,7 +235,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -300,7 +300,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -330,7 +330,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
@@ -372,7 +372,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -438,7 +438,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -472,7 +472,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -506,7 +506,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
@@ -550,7 +550,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
@@ -624,7 +624,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -661,7 +661,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -737,7 +737,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -773,7 +773,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -809,7 +809,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -853,7 +853,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1083,7 +1083,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1124,7 +1124,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1162,7 +1162,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1200,7 +1200,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1237,7 +1237,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1277,7 +1277,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1325,7 +1325,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       dataImportEventPayload = new DataImportEventPayload()
         .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
         .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-        .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+        .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
         .withTenant(TENANT_ID)
         .withOkapiUrl(OKAPI_URL)
         .withToken(TOKEN)
@@ -1417,7 +1417,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1475,7 +1475,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1511,7 +1511,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -1542,7 +1542,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
