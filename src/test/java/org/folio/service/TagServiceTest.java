@@ -48,7 +48,9 @@ public class TagServiceTest {
 
     doReturn(succeededFuture(emptyTagCollection)).when(restClient).get(any(RequestEntry.class), eq(TagCollection.class), any(RequestContext.class));
     doReturn(succeededFuture(postTagResponse)).when(restClient).post(any(RequestEntry.class), any(),  eq(Tag.class), any());
+
     Future<Void> future = tagService.createTagsIfMissing(Collections.singleton(sampleTag), requestContextMock);
+
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         Assertions.assertTrue(result.succeeded());

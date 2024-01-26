@@ -32,7 +32,6 @@ import org.mockito.Spy;
 
 @ExtendWith(VertxExtension.class)
 public class FiscalYearServiceTest {
-  public static final String TENANT_ID = "ordertest";
 
   @InjectMocks
   private FiscalYearService fiscalYearService;
@@ -49,10 +48,13 @@ public class FiscalYearServiceTest {
   @Test
   void testShouldReturnCurrentFiscalYearForLedger() {
     String ledgerId = UUID.randomUUID().toString();
+
     doReturn(succeededFuture(new FiscalYear()))
       .when(restClientMock)
       .get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+
     FiscalYear fy = fiscalYearService.getCurrentFiscalYear(ledgerId, requestContextMock).result();
+
     assertNotNull(fy);
   }
 
@@ -61,7 +63,9 @@ public class FiscalYearServiceTest {
     doReturn(failedFuture(new HttpException(404, "Fiscal year not found")))
       .when(restClientMock)
       .get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
+
     Future<FiscalYear> result = fiscalYearService.getCurrentFiscalYear(ID_DOES_NOT_EXIST, requestContextMock);
+
     vertxTestContext.assertFailure(result)
       .onComplete(expectedException -> {
         HttpException httpException = (HttpException) expectedException.cause();
