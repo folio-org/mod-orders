@@ -42,20 +42,24 @@ import org.folio.rest.impl.protection.ReceivingCheckinProtectionTest;
 import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
+import org.folio.service.TagServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
+import org.folio.service.finance.FiscalYearServiceTest;
 import org.folio.service.finance.FundServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
 import org.folio.service.finance.rollover.LedgerRolloverErrorServiceTest;
 import org.folio.service.finance.rollover.LedgerRolloverProgressServiceTest;
 import org.folio.service.finance.rollover.LedgerRolloverServiceTest;
+import org.folio.service.finance.transaction.ClosedToOpenEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.EncumbranceRelationsHoldersBuilderTest;
 import org.folio.service.finance.transaction.EncumbranceServiceTest;
 import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
+import org.folio.service.finance.transaction.TransactionSummariesServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.inventory.InventoryManagerTest;
 import org.folio.service.invoice.InvoiceLineServiceTest;
@@ -451,4 +455,19 @@ public class ApiTestSuite {
   class LedgerRolloverProgressServiceTestNested extends LedgerRolloverProgressServiceTest {
   }
 
+  @Nested
+  class TransactionSummariesServiceTestNested extends TransactionSummariesServiceTest {
+  }
+
+  @Nested
+  class ClosedToOpenEncumbranceStrategyTestNested extends ClosedToOpenEncumbranceStrategyTest {
+  }
+
+  @Nested
+  class FiscalYearServiceTestNested extends FiscalYearServiceTest {
+  }
+
+  @Nested
+  class TagServiceTestNested extends TagServiceTest {
+  }
 }

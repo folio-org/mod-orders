@@ -8,28 +8,32 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.UUID;
 
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 import org.folio.rest.acq.model.finance.OrderTransactionSummary;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import io.vertx.core.json.JsonObject;
-
+@ExtendWith(VertxExtension.class)
 public class TransactionSummariesServiceTest {
 
   @InjectMocks
@@ -58,7 +62,6 @@ public class TransactionSummariesServiceTest {
   @Test
   void testShouldTransactionsCreatedForEncumbrances() {
     // Given
-
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine line = order.getCompositePoLines()
       .get(0);
@@ -69,7 +72,6 @@ public class TransactionSummariesServiceTest {
       .get(0)
       .getFundDistribution()
       .get(0);
-
     // When
     orderTransactionSummariesService.updateTransactionSummary(order.getId(), 1, requestContext);
     // Then
@@ -78,16 +80,19 @@ public class TransactionSummariesServiceTest {
 
   @Test
   void testShouldCreateTransactionSummaryInStorageTransactions() {
-    // given
-
+    // Given
     String uuid = UUID.randomUUID().toString();
-    var response = new JsonObject("{\"id\": \"" + uuid + "\"}");
-    doReturn(succeededFuture(response)).when(restClient).post(anyString(), any(), any(), any());
+    JsonObject response = new JsonObject().put("id", uuid);
+    when(restClient.post(any(RequestEntry.class), any(), any(), any(RequestContext.class)))
+      .thenReturn(succeededFuture(response));
+    OrderTransactionSummary expectedSummary = new OrderTransactionSummary().withId(uuid).withNumTransactions(2);
     // When
-    OrderTransactionSummary summary = orderTransactionSummariesService.createTransactionSummary(new OrderTransactionSummary().withId(uuid).withNumTransactions(2), requestContext)
-      .result();
+    Future<OrderTransactionSummary> result = orderTransactionSummariesService.createTransactionSummary(expectedSummary, requestContext);
     // Then
-    assertEquals(uuid, summary.getId());
-    verify(restClient).post(anyString(), any(), any(), any());
+    verify(restClient).post(any(RequestEntry.class), any(), any(), any(RequestContext.class));
+    JsonObject res = JsonObject.mapFrom(result.result());
+    String resultId = res.getString("id");
+    assertEquals(uuid, resultId);
   }
 }
+
