@@ -39,6 +39,7 @@ public final class TestConstants {
   public static final String PO_ID_OPEN_TO_BE_CLOSED = "9d56b621-202d-414b-9e7f-5fefe4422ab3";
   public static final String PO_ID_OPEN_TO_CANCEL = "f56c70bc-8a31-4f56-b606-c6d8e597b7c1";
   public static final String PO_LINE_ID_FOR_SUCCESS_CASE = "fca5fa9e-15cb-4a3d-ab09-eeea99b97a47";
+  public static final String PO_LINE_ID_WITHOUT_DETAILS = "13c4c3c2-90d9-4090-8694-edae7e79e7ac";
   public static final String PO_LINE_ID_WRONG_EXPENSE_CLASS = "bd8f1901-c768-4bb1-b650-8c12c5f42fd8";
   public static final String MIN_PO_ID = UUID.randomUUID().toString();
   public static final String MIN_PO_LINE_ID = UUID.randomUUID().toString();

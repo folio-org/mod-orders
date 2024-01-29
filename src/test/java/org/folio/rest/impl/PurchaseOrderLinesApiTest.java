@@ -28,6 +28,7 @@ import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
 import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
 import static org.folio.TestConstants.PO_LINE_ID_FOR_SUCCESS_CASE;
+import static org.folio.TestConstants.PO_LINE_ID_WITHOUT_DETAILS;
 import static org.folio.TestConstants.PO_LINE_ID_WRONG_EXPENSE_CLASS;
 import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
 import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
@@ -1562,6 +1563,20 @@ public class PurchaseOrderLinesApiTest {
             .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
             .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
             .withDeleteAbandonedHoldings(false));
+
+    verifyPatch(url, JsonObject.mapFrom(body).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+  }
+
+  @Test
+  void testPatchPoLineWithEmptyDetails() {
+    String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_WITHOUT_DETAILS);
+
+    PatchOrderLineRequest body = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(false));
 
     verifyPatch(url, JsonObject.mapFrom(body).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
   }
