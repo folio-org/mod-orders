@@ -37,6 +37,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
@@ -167,6 +168,9 @@ public class OrderLinePatchOperationService {
             return null;
           })
           .onSuccess(v -> {
+            if (Objects.isNull(poLine.getDetails())) {
+              poLine.setDetails(new Details());
+            }
             poLine.getDetails().setProductIds(removeISBNDuplicates(productIds, isbnTypeId));
             promise.complete(poLine);
           })
