@@ -523,7 +523,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     JsonObject holding = new JsonObject().put(ID, holdingId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
     Piece pieceFromStorage = new Piece().withId(pieceId).withTitleId(titleId).withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
-    Piece pieceToUpdate = new Piece().withId(pieceId).withTitleId(titleId).withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL).withCaption(caption);
+    Piece pieceToUpdate = new Piece().withId(pieceId).withTitleId(titleId).withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL).withDisplaySummary(caption);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
 

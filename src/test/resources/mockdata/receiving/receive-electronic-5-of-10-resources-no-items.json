@@ -7,7 +7,7 @@
         {
           "barcode": 21111111112,
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "36840b87-b4b4-48dd-b2fc-a5370df4034a"
@@ -15,7 +15,7 @@
         {
           "barcode": 21111111113,
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "2d10cd5a-8325-4873-a940-2fcf838a54af"
@@ -23,7 +23,7 @@
         {
           "barcode": 21111111114,
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "f8bb5de0-fa1c-49b7-82b3-c2c2dfd0925d"
@@ -31,7 +31,7 @@
         {
           "barcode": 21111111115,
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "73d7c872-ce17-4b6c-9729-309e844fef9b"
@@ -39,7 +39,7 @@
         {
           "barcode": 21111111116,
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "2beff851-d9df-4a8d-a65b-762c9d78340d"

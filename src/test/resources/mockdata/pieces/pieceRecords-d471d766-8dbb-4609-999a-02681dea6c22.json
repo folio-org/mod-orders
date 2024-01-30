@@ -2,7 +2,7 @@
   "pieces": [
     {
       "id": "526bfa1a-5371-415f-998a-ac8ce4425b18",
-      "caption": "Tutorial Volume 6",
+      "displaySummary": "Tutorial Volume 6",
       "comment": "Standard Edition",
       "format": "Physical",
       "itemId": "522a501a-56b5-48d9-b28a-3a8f02482d97",
@@ -16,7 +16,7 @@
     },
     {
       "id": "7802b94d-68b4-41e5-91ff-0cee8cd8f029",
-      "caption": "Tutorial Volume 7",
+      "displaySummary": "Tutorial Volume 7",
       "comment": "Standard Edition II",
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "d471d766-8dbb-4609-999a-02681dea6c22",
