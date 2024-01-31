@@ -115,10 +115,10 @@ public enum ErrorCodes {
   ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND("encumbrancesForReEncumberNotFound", "The encumbrances were correctly created during the rollover or have already been updated."),
   CLAIMING_CONFIG_INVALID("claimingConfigInvalid", "Claiming interval should be set and greater than 0 if claiming is active"),
   TEMPLATE_NAME_ALREADY_EXISTS("templateNameNotUnique", "Template name already exists"),
-  INVALID_PHYSICAL_POL("physicalPOLShouldContainOnlyPhysicalElement", "Physical POL should contain only \"physical\" element"),
-  INVALID_ELECTRONIC_POL("electronicPOLShouldContainOnlyElectronicElement", "Electronic POL should contain only \"electronic\" element"),
-  INVALID_PEMIX_POL("peMixPOLShouldContainPhysicalAndElectronicElement", "P\\E mix POL should contain \"physical\" and \"electronic\" element"),
-  INVALID_OTHER_POL("otherPOLShouldContainPhysicalElement", " Other should contain\"physical\" element");
+  INVALID_PHYSICAL_POL("physicalPOLShouldContainOnlyPhysicalElement", "Physical order format should contain only physical resource"),
+  INVALID_ELECTRONIC_POL("electronicPOLShouldContainOnlyElectronicElement", "Electronic order format should contain only electronic resource"),
+  INVALID_PEMIX_POL("peMixPOLShouldContainPhysicalAndElectronicElement", "PE mix order format should contain both of physical and electronic resource"),
+  INVALID_OTHER_POL("otherPOLShouldContainPhysicalElement", " Other order format should contain only physical resource");
 
 
   private final String code;
