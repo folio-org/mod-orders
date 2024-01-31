@@ -48,6 +48,12 @@ import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.jaxrs.model.ProcessingStatus.Type.SUCCESS;
 import static org.folio.rest.jaxrs.model.ReceivedItem.ItemStatus.ON_ORDER;
+import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
+import static org.folio.service.inventory.InventoryManager.ITEM_ACCESSION_NUMBER;
+import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
+import static org.folio.service.inventory.InventoryManager.ITEM_DISCOVERY_SUPPRESS;
+import static org.folio.service.inventory.InventoryManager.ITEM_DISPLAY_SUMMARY;
+import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.emptyString;
@@ -240,6 +246,19 @@ public class CheckinReceivingApiTest {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(CheckInPiece.ItemStatus.IN_PROCESS.value()));
     });
+
+    for (int i = 0; i < itemUpdates.size(); i++) {
+      JsonObject item = itemUpdates.get(i);
+      CheckInPiece piece = checkInRq.getToBeCheckedIn().get(0).getCheckInPieces().get(i);
+      assertEquals(piece.getDisplaySummary(), item.getString(ITEM_DISPLAY_SUMMARY));
+      assertEquals(piece.getEnumeration(), item.getString(ITEM_ENUMERATION));
+      assertEquals(piece.getCopyNumber(), item.getString(COPY_NUMBER));
+      assertEquals(piece.getChronology(), item.getString(ITEM_CHRONOLOGY));
+      assertEquals(piece.getBarcode(), item.getString(ITEM_BARCODE));
+      assertEquals(piece.getAccessionNumber(), item.getString(ITEM_ACCESSION_NUMBER));
+      assertEquals(piece.getCallNumber(), item.getString(ITEM_LEVEL_CALL_NUMBER));
+      assertEquals(piece.getDiscoverySuppress(), item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
+    }
 
     polUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLine.class);

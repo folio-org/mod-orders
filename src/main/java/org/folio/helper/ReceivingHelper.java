@@ -10,6 +10,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
 import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
+import static org.folio.service.inventory.InventoryManager.ITEM_DISPLAY_SUMMARY;
 import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
@@ -21,7 +22,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -288,18 +288,26 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private Future<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem, RequestContext requestContext) {
     // Update item record with receiving details
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
+
+    if (StringUtils.isNotEmpty(receivedItem.getDisplaySummary())) {
+      itemRecord.put(ITEM_DISPLAY_SUMMARY, receivedItem.getDisplaySummary());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getEnumeration())) {
+      itemRecord.put(ITEM_ENUMERATION, receivedItem.getEnumeration());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getCopyNumber())) {
+      itemRecord.put(COPY_NUMBER, receivedItem.getCopyNumber());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getChronology())) {
+      itemRecord.put(ITEM_CHRONOLOGY, receivedItem.getChronology());
+    }
     if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
     }
     if (StringUtils.isNotEmpty(receivedItem.getCallNumber())) {
       itemRecord.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
     }
-    Optional.ofNullable(receivedItem.getEnumeration())
-      .ifPresentOrElse(enumeration -> itemRecord.put(ITEM_ENUMERATION, enumeration), () -> itemRecord.remove(ITEM_ENUMERATION));
-    Optional.ofNullable(receivedItem.getCopyNumber())
-      .ifPresentOrElse(copyNumber -> itemRecord.put(COPY_NUMBER, copyNumber), () -> itemRecord.remove(COPY_NUMBER));
-    Optional.ofNullable(receivedItem.getChronology())
-      .ifPresentOrElse(chronology -> itemRecord.put(ITEM_CHRONOLOGY, chronology), () -> itemRecord.remove(ITEM_CHRONOLOGY));
+
     return inventoryManager.updateItem(itemRecord, requestContext);
   }
 

@@ -39,6 +39,7 @@ import static org.folio.service.inventory.InventoryManager.ITEM_ACCESSION_NUMBER
 import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
 import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
 import static org.folio.service.inventory.InventoryManager.ITEM_DISCOVERY_SUPPRESS;
+import static org.folio.service.inventory.InventoryManager.ITEM_DISPLAY_SUMMARY;
 import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
@@ -527,6 +528,7 @@ public class InventoryManagerTest {
     inventoryManager.updateItemWithPieceFields(piece, item);
 
     // then
+    assertEquals(piece.getDisplaySummary(), item.getString(ITEM_DISPLAY_SUMMARY));
     assertEquals(piece.getEnumeration(), item.getString(ITEM_ENUMERATION));
     assertEquals(piece.getCopyNumber(), item.getString(COPY_NUMBER));
     assertEquals(piece.getChronology(), item.getString(ITEM_CHRONOLOGY));
