@@ -113,6 +113,7 @@ public class InventoryManager {
   public static final String ITEM_ENUMERATION = "enumeration";
   public static final String ITEM_CHRONOLOGY = "chronology";
   public static final String ITEM_DISCOVERY_SUPPRESS = "discoverySuppress";
+  public static final String ITEM_DISPLAY_SUMMARY = "displaySummary";
   public static final String CONTRIBUTOR_NAME = "name";
   public static final String CONTRIBUTOR_NAME_TYPE_ID = "contributorNameTypeId";
   public static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
@@ -1269,6 +1270,9 @@ public class InventoryManager {
   }
 
   void updateItemWithPieceFields(Piece piece, JsonObject item) {
+    if (StringUtils.isNotEmpty(piece.getDisplaySummary())) {
+      item.put(ITEM_DISPLAY_SUMMARY, piece.getDisplaySummary());
+    }
     if (StringUtils.isNotEmpty(piece.getEnumeration())) {
       item.put(ITEM_ENUMERATION, piece.getEnumeration());
     }
