@@ -8,7 +8,7 @@
           "barcode": 21111111122,
           "callNumber": "PR 8923 W6 L36 1990 c.3",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "eaeb6ddf-38e8-4221-ac9e-b3c0df0ea99d"
@@ -17,7 +17,7 @@
           "barcode": 21111111123,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "43d51a47-d867-4c08-be11-25c925016854"
@@ -26,7 +26,7 @@
           "barcode": 21111111124,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "51686715-5c81-400e-b219-30bb7e9c6139"
@@ -35,7 +35,7 @@
           "barcode": 21111111125,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "6a1a71c9-e53a-4213-b2df-25f35e5a772f"
@@ -44,7 +44,7 @@
           "barcode": 21111111126,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "e1746e80-ac75-4183-a89b-dc764afea8c9"
@@ -53,7 +53,7 @@
           "barcode": 21111111127,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "cd341e06-4579-4a0d-ae73-31475ebc4551"
@@ -62,7 +62,7 @@
           "barcode": 21111111128,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "35a7d8d4-6847-4699-8f76-464c7cecaf47"
@@ -71,7 +71,7 @@
           "barcode": 21111111129,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "8c7c3b2a-dd60-4dd7-bf0b-84844628f2ba"
@@ -80,7 +80,7 @@
           "barcode": 21111111130,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "55c9587a-60fe-424b-8dd0-642ff71e9201"
@@ -89,7 +89,7 @@
           "barcode": 21111111131,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "bb3af75f-cb01-46b6-a84c-8b7d1a470254"
@@ -98,7 +98,7 @@
           "barcode": 21111111132,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "b70bcd05-f63d-43ed-8e05-6b70b53abdd4"
@@ -107,7 +107,7 @@
           "barcode": 21111111133,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "a16b54a3-b6bc-4edb-ad43-113f090eb3f8"
@@ -116,7 +116,7 @@
           "barcode": 21111111134,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "17f1c5d4-77dc-4f73-8484-e20c5cc11499"
@@ -125,7 +125,7 @@
           "barcode": 21111111135,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "57e41ac9-3d59-4380-8be9-c41385f7d646"
@@ -134,7 +134,7 @@
           "barcode": 21111111136,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "23e0c592-1c3c-4b50-a6fd-7c1826ea5b81"
@@ -143,7 +143,7 @@
           "barcode": 21111111137,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "ef29ae20-d9bb-41f6-a10d-148b4784573d"
@@ -152,7 +152,7 @@
           "barcode": 21111111138,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "46992f8a-bcdc-4c05-b002-25b3a2ab819c"
@@ -161,7 +161,7 @@
           "barcode": 21111111139,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "4819f32b-1aed-43a7-814a-1994c3434360"
@@ -170,7 +170,7 @@
           "barcode": 21111111140,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "963a058b-5171-4869-8f8b-4d102ae4dff4"
@@ -179,7 +179,7 @@
           "barcode": 21111111141,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "30972298-8f03-4674-8758-a5ed6ce313b9"
@@ -188,7 +188,7 @@
           "barcode": 21111111142,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "0065b764-c522-4a88-957c-9ecce226515c"
@@ -197,7 +197,7 @@
           "barcode": 21111111143,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "13b79316-58c4-4d4f-bbec-5870c8088021"
@@ -206,7 +206,7 @@
           "barcode": 21111111144,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "a2d37678-3f68-42c2-a997-0f3c81f1948c"
@@ -215,7 +215,7 @@
           "barcode": 21111111145,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "84a6597e-0895-4756-ba32-170a3aac8fae"
@@ -224,7 +224,7 @@
           "barcode": 21111111146,
           "callNumber": "BF2050 .M335 1999",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "cb8dcb28-5631-49e7-9f26-b7f9df0e840e"
