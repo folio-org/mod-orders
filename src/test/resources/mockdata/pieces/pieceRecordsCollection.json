@@ -361,7 +361,7 @@
     },
     {
       "id": "7802b94d-68b4-41e5-91ff-0cee8cd8f029",
-      "caption": "Vol. 1",
+      "displaySummary": "Vol. 1",
       "comment": "Very important note",
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "poLineId": "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56",
@@ -372,7 +372,7 @@
     },
     {
       "id": "4d19a3ff-986f-4150-95a2-2f2da797591c",
-      "caption": "Vol. 1",
+      "displaySummary": "Vol. 1",
       "comment": "Very important note",
       "itemId": "a940a524-ec08-42a4-8e63-2b7f8194371e",
       "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
@@ -384,7 +384,7 @@
     },
     {
       "id": "6a53eb3c-f9dd-46f5-bbf8-5768cf97ec6d",
-      "caption": "Vol. 1",
+      "displaySummary": "Vol. 1",
       "comment": "Very important note",
       "itemId": "fbd41843-569b-4a15-95da-6d543fe489ad",
       "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
@@ -396,7 +396,7 @@
     },
     {
       "id": "61437764-03e4-4c75-a743-d40f71ff9161",
-      "caption": "Vol. 1",
+      "displaySummary": "Vol. 1",
       "comment": "Very important note",
       "itemId": "821559ef-4ee7-4b19-a835-a6787c2bafb9",
       "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",

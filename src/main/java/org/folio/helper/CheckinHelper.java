@@ -10,6 +10,7 @@ import static org.folio.service.inventory.InventoryManager.ITEM_ACCESSION_NUMBER
 import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
 import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
 import static org.folio.service.inventory.InventoryManager.ITEM_DISCOVERY_SUPPRESS;
+import static org.folio.service.inventory.InventoryManager.ITEM_DISPLAY_SUMMARY;
 import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
@@ -23,7 +24,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -237,7 +237,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     CheckInPiece checkinPiece = piecesByLineId.get(piece.getPoLineId())
       .get(piece.getId());
 
-    piece.setCaption(checkinPiece.getCaption());
+    piece.setDisplaySummary(checkinPiece.getDisplaySummary());
     piece.setComment(checkinPiece.getComment());
 
     if (StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
@@ -335,6 +335,19 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
     // Update item record with checkIn details
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
+
+    if (StringUtils.isNotEmpty(checkinPiece.getDisplaySummary())) {
+      itemRecord.put(ITEM_DISPLAY_SUMMARY, checkinPiece.getDisplaySummary());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getEnumeration())) {
+      itemRecord.put(ITEM_ENUMERATION, checkinPiece.getEnumeration());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getCopyNumber())) {
+      itemRecord.put(COPY_NUMBER, checkinPiece.getCopyNumber());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getChronology())) {
+      itemRecord.put(ITEM_CHRONOLOGY, checkinPiece.getChronology());
+    }
     if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
       itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
     }
@@ -344,14 +357,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     if (StringUtils.isNotEmpty(checkinPiece.getCallNumber())) {
       itemRecord.put(ITEM_LEVEL_CALL_NUMBER, checkinPiece.getCallNumber());
     }
-    Optional.ofNullable(checkinPiece.getEnumeration())
-      .ifPresentOrElse(enumeration -> itemRecord.put(ITEM_ENUMERATION, enumeration), () -> itemRecord.remove(ITEM_ENUMERATION));
-    Optional.ofNullable(checkinPiece.getCopyNumber())
-      .ifPresentOrElse(copyNumber -> itemRecord.put(COPY_NUMBER, copyNumber), () -> itemRecord.remove(COPY_NUMBER));
-    Optional.ofNullable(checkinPiece.getChronology())
-      .ifPresentOrElse(chronology -> itemRecord.put(ITEM_CHRONOLOGY, chronology), () -> itemRecord.remove(ITEM_CHRONOLOGY));
-    Optional.ofNullable(checkinPiece.getDiscoverySuppress())
-      .ifPresentOrElse(discSup -> itemRecord.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> itemRecord.remove(ITEM_DISCOVERY_SUPPRESS));
+    if (checkinPiece.getDiscoverySuppress() != null) {
+      itemRecord.put(ITEM_DISCOVERY_SUPPRESS, checkinPiece.getDiscoverySuppress());
+    }
 
     return inventoryManager.updateItem(itemRecord, requestContext);
   }

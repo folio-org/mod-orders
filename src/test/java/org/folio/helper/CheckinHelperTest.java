@@ -95,17 +95,17 @@ public class CheckinHelperTest {
     String poLine2 = UUID.randomUUID().toString();
     CheckinCollection checkinCollection = new CheckinCollection();
     ToBeCheckedIn toBeCheckedIn1 = new ToBeCheckedIn().withPoLineId(poLine1);
-    CheckInPiece checkInPiece1 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("1");
-    CheckInPiece checkInPiece2 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(false).withCaption("2");
+    CheckInPiece checkInPiece1 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withDisplaySummary("1");
+    CheckInPiece checkInPiece2 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(false).withDisplaySummary("2");
     toBeCheckedIn1.withCheckInPieces(List.of(checkInPiece1, checkInPiece2));
 
     ToBeCheckedIn toBeCheckedIn2 = new ToBeCheckedIn().withPoLineId(poLine1);
-    CheckInPiece checkInPiece3 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("3")
+    CheckInPiece checkInPiece3 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withDisplaySummary("3")
                         .withEnumeration("Enum1").withCopyNumber("CN1").withChronology("Ch1").withDiscoverySuppress(true).withDisplayOnHolding(true);
     toBeCheckedIn2.withCheckInPieces(List.of(checkInPiece3));
 
     ToBeCheckedIn toBeCheckedIn3 = new ToBeCheckedIn().withPoLineId(poLine2);
-    CheckInPiece checkInPiece4 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withCaption("4")
+    CheckInPiece checkInPiece4 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withDisplaySummary("4")
                         .withEnumeration("Enum2").withCopyNumber("CN2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);
     toBeCheckedIn3.withCheckInPieces(List.of(checkInPiece4));
 
@@ -120,16 +120,16 @@ public class CheckinHelperTest {
 
     assertEquals(1, map.get(poLine2).size());
     CheckInPiece actCheckInPiece1 = map.get(poLine1).stream()
-                              .filter(checkInPiece -> "3".equals(checkInPiece.getCaption()))
+                              .filter(checkInPiece -> "3".equals(checkInPiece.getDisplaySummary()))
                               .findFirst().get();
-    assertEquals("3", actCheckInPiece1.getCaption());
+    assertEquals("3", actCheckInPiece1.getDisplaySummary());
     assertEquals("Enum1", actCheckInPiece1.getEnumeration());
     assertEquals("CN1", actCheckInPiece1.getCopyNumber());
     assertEquals("Ch1", actCheckInPiece1.getChronology());
     assertEquals(true, actCheckInPiece1.getDiscoverySuppress());
     assertEquals(true, actCheckInPiece1.getDisplayOnHolding());
     CheckInPiece actCheckInPiece2 = map.get(poLine2).get(0);
-    assertEquals("4", actCheckInPiece2.getCaption());
+    assertEquals("4", actCheckInPiece2.getDisplaySummary());
     assertEquals("Enum2", actCheckInPiece2.getEnumeration());
     assertEquals("CN2", actCheckInPiece2.getCopyNumber());
     assertEquals("Ch2", actCheckInPiece2.getChronology());
