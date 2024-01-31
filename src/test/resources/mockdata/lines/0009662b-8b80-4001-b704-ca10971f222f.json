@@ -1,0 +1,93 @@
+{
+  "id" : "0009662b-8b80-4001-b704-ca10971f222f",
+  "acquisitionMethod" : "Purchase At Vendor System",
+  "alerts" : [ ],
+  "cancellationRestriction" : false,
+  "cancellationRestrictionNote" : "ABCDEFGHIJKLMNOPQRSTUVW",
+  "claims" : [ ],
+  "collection" : false,
+  "contributors" : [ {
+    "contributor" : "Ed Mashburn",
+    "contributorNameTypeId" : "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+  } ],
+  "cost": {
+    "currency": "USD",
+    "listUnitPrice": 900.00,
+    "listUnitPriceElectronic": 22.99,
+    "quantityPhysical": 1,
+    "quantityElectronic": 1
+  },
+  "description": "",
+  "details": {
+    "receivingNote": "start with v. 162",
+    "productIds": [
+      {
+        "productId": "0065-3438",
+        "productIdType": "913300b2-03ed-469a-8179-c1092c991227"
+      }
+    ],
+    "subscriptionFrom": "2018-07-01T00:00:00.000Z",
+    "subscriptionInterval": 1095,
+    "subscriptionTo": "2021-06-30T00:00:00.000Z"
+  },
+  "donor": "",
+  "fundDistribution": [
+    {
+      "code": "STATE-SUBN",
+      "fundId": "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
+      "distributionType": "percentage",
+      "value": 100.0,
+      "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08011"
+    }
+  ],
+  "locations": [
+    {
+      "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+      "quantity": 1,
+      "quantityElectronic": 1,
+      "quantityPhysical": 1
+    }
+  ],
+  "orderFormat": "P/E Mix",
+  "paymentStatus": "Pending",
+  "physical": {
+    "createInventory": "Instance, Holding, Item",
+    "materialSupplier": "6828d7cb-d84e-41e5-9db5-fc2e162f9ffb",
+    "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8",
+    "receiptDue": "2018-07-31T00:00:00.000Z",
+    "volumes": []
+  },
+  "eresource": {
+    "activationDue": 0,
+    "createInventory": "Instance",
+    "expectedActivation": "2019-01-01T00:00:00.000Z",
+    "userLimit": 0,
+    "accessProvider": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+  },
+  "poLineDescription": "",
+  "poLineNumber": "1EFC97C6B7-1",
+  "publicationDate": "2018",
+  "publisher": "Plenum Press",
+  "purchaseOrderId": "11111111-dddd-4444-9999-ffffffffffff",
+  "receiptDate": null,
+  "receiptStatus": "Pending",
+  "reportingCodes": [],
+  "requester": "",
+  "rush": false,
+  "selector": "",
+  "source": "User",
+  "tags": {
+    "tagList": []
+  },
+  "titleOrPackage": "Advances in astronautical science",
+  "vendorDetail": {
+    "instructions": "",
+    "noteFromVendor": "",
+    "vendorAccount": ""
+  },
+  "metadata": {
+    "createdDate": "2010-10-08T03:53:00.000",
+    "createdByUserId": "ab18897b-0e40-4f31-896b-9c9adc979a88"
+  }
+}

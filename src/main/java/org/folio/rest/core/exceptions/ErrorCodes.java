@@ -114,7 +114,11 @@ public enum ErrorCodes {
   FUND_LOCATION_RESTRICTION_VIOLATION("fundLocationRestrictionViolation", "One of the funds is restricted to be used for one of the locations."),
   ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND("encumbrancesForReEncumberNotFound", "The encumbrances were correctly created during the rollover or have already been updated."),
   CLAIMING_CONFIG_INVALID("claimingConfigInvalid", "Claiming interval should be set and greater than 0 if claiming is active"),
-  TEMPLATE_NAME_ALREADY_EXISTS("templateNameNotUnique", "Template name already exists");
+  TEMPLATE_NAME_ALREADY_EXISTS("templateNameNotUnique", "Template name already exists"),
+  INVALID_PHYSICAL_POL("physicalPOLShouldContainOnlyPhysicalElement", "Physical POL should contain only \"physical\" element"),
+  INVALID_ELECTRONIC_POL("electronicPOLShouldContainOnlyElectronicElement", "Electronic POL should contain only \"electronic\" element"),
+  INVALID_PEMIX_POL("peMixPOLShouldContainPhysicalAndElectronicElement", "P\\E mix POL should contain \"physical\" and \"electronic\" element"),
+  INVALID_OTHER_POL("otherPOLShouldContainPhysicalElement", " Other should contain\"physical\" element");
 
 
   private final String code;

@@ -55,6 +55,9 @@ import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
+import static org.folio.rest.core.exceptions.ErrorCodes.INVALID_OTHER_POL;
+import static org.folio.rest.core.exceptions.ErrorCodes.INVALID_PEMIX_POL;
+import static org.folio.rest.core.exceptions.ErrorCodes.INVALID_PHYSICAL_POL;
 import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_MATERIAL_TYPE;
@@ -603,7 +606,7 @@ public class PurchaseOrdersApiTest {
 
     final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    assertThat(response.getErrors(), hasSize(10));
+    assertThat(response.getErrors(), hasSize(12));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
@@ -615,7 +618,9 @@ public class PurchaseOrdersApiTest {
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
                                               ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
-                                              COST_UNIT_PRICE_INVALID.getCode()));
+                                              COST_UNIT_PRICE_INVALID.getCode(),
+                                              INVALID_OTHER_POL.getCode(),
+                                              INVALID_PEMIX_POL.getCode()));
   }
 
   @Test
@@ -729,7 +734,7 @@ public class PurchaseOrdersApiTest {
 
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(5));
+    assertThat(response.getErrors(), hasSize(6));
     Set<String> errorCodes = response.getErrors()
                                      .stream()
                                      .map(Error::getCode)
@@ -739,7 +744,8 @@ public class PurchaseOrdersApiTest {
                                               ZERO_COST_PHYSICAL_QTY.getCode(),
                                               ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
                                               PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
-                                              ZERO_LOCATION_QTY.getCode()));
+                                              ZERO_LOCATION_QTY.getCode(),
+                                              INVALID_PEMIX_POL.getCode()));
   }
 
   @Test
@@ -2343,6 +2349,7 @@ public class PurchaseOrdersApiTest {
     reqData.getCompositePoLines().get(0).getCost().setQuantityElectronic(0);
     reqData.getCompositePoLines().get(0).getCost().setListUnitPriceElectronic(0d);
     reqData.getCompositePoLines().get(0).getLocations().get(0).setQuantityElectronic(0);
+
 
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);

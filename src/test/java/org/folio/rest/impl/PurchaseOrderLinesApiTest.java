@@ -59,6 +59,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
+import static org.folio.rest.core.exceptions.ErrorCodes.INVALID_ELECTRONIC_POL;
 import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
@@ -449,7 +450,7 @@ public class PurchaseOrderLinesApiTest {
     final Errors response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData),
       APPLICATION_JSON, 422).as(Errors.class);
 
-    assertThat(response.getErrors(), hasSize(8));
+    assertThat(response.getErrors(), hasSize(9));
     List<String> errorCodes = response.getErrors()
       .stream()
       .map(Error::getCode)
@@ -462,7 +463,8 @@ public class PurchaseOrderLinesApiTest {
       COST_ADDITIONAL_COST_INVALID.getCode(),
       COST_DISCOUNT_INVALID.getCode(),
       ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
-      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode()));
+      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+      INVALID_ELECTRONIC_POL.getCode()));
 
 
     // Check that no any calls made by the business logic to other services
@@ -1681,7 +1683,7 @@ public class PurchaseOrderLinesApiTest {
   void testPutPhysicalOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
-    String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
+    String lineId = "0009662b-8b80-4001-b704-ca10971f222e";
     JsonObject body = getMockAsJson(PO_LINES_MOCK_DATA_PATH, lineId);
     Object[] expected = new Object[]{ POLineFieldNames.ACQUISITION_METHOD.getFieldName()};
     if (CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE == orderFormat) {
@@ -1749,7 +1751,7 @@ public class PurchaseOrderLinesApiTest {
   void testPutMixedOrderLineByIdWhenSpecificElementIsPresentAndProtectedFieldsChanged(CompositePoLine.OrderFormat orderFormat) {
     logger.info("=== Test PUT Order Line By Id - Protected fields changed ===");
 
-    String lineId = "0009662b-8b80-4001-b704-ca10971f222d";
+    String lineId = "0009662b-8b80-4001-b704-ca10971f222f";
     JsonObject body = getMockAsJson(PO_LINES_MOCK_DATA_PATH, lineId);
     Object[] expected = new Object[]{ POLineFieldNames.ACQUISITION_METHOD.getFieldName()};
 
