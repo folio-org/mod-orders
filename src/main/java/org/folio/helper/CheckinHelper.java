@@ -77,8 +77,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   public Future<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
-    return getPoLines(new ArrayList<>(checkinPieces.keySet()), requestContext)
-      .compose(poLines -> removeForbiddenEntities(poLines, checkinPieces, requestContext))
+    return removeForbiddenEntities(checkinPieces, requestContext)
       .compose(vVoid -> processCheckInPieces(checkinCollection, requestContext));
   }
 

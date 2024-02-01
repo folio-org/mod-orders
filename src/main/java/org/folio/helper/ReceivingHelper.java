@@ -16,7 +16,6 @@ import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBE
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -81,8 +80,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   public Future<ReceivingResults>   receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
-    return getPoLines(new ArrayList<>(receivingItems.keySet()), requestContext)
-      .compose(poLines -> removeForbiddenEntities(poLines, receivingItems, requestContext))
+    return removeForbiddenEntities(receivingItems, requestContext)
       .compose(vVoid -> processReceiveItems(receivingCollection, requestContext));
   }
 

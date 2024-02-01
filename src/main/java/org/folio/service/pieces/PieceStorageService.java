@@ -111,6 +111,20 @@ public class PieceStorageService {
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
 
+  public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
+    logger.debug("getPiecesByIds start");
+    String query = convertIdsToCqlQuery(pieceIds);
+    var futures = ofSubLists(new ArrayList<>(pieceIds), MAX_IDS_FOR_GET_RQ_15)
+      .map(ids -> getPieces(Integer.MAX_VALUE, 0, query, requestContext))
+      .toList();
+    return collectResultsOnSuccess(futures)
+      .map(lists -> lists.stream()
+        .map(PieceCollection::getPieces)
+        .flatMap(Collection::stream)
+        .toList())
+      .onSuccess(v -> logger.info("getPiecesByIds end"));
+  }
+
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
     logger.info("getPiecesByLineIdsByChunks start");
     var futures = ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ_15)

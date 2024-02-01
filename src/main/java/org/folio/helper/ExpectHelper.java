@@ -14,7 +14,6 @@ import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeExpected;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -48,8 +47,7 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
   }
 
   public Future<ReceivingResults> expectPieces(ExpectCollection expectCollection, RequestContext requestContext) {
-    return getPoLines(new ArrayList<>(expectPieces.keySet()), requestContext)
-      .compose(poLines -> removeForbiddenEntities(poLines, expectPieces, requestContext))
+    return removeForbiddenEntities(expectPieces, requestContext)
       .compose(vVoid -> processExpectPieces(expectCollection, requestContext));
   }
 

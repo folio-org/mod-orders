@@ -1,15 +1,9 @@
 package org.folio.helper;
 
-import static java.util.stream.Collectors.groupingBy;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.helper.PurchaseOrderHelper.GET_PURCHASE_ORDERS;
-import static org.folio.orders.utils.HelperUtils.buildQuery;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
@@ -63,14 +57,13 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,7 +76,6 @@ import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
-  private static final String PIECES_WITH_QUERY_ENDPOINT = resourcesPath(PIECES_STORAGE) + "?limit=%d&query=%s";
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
 
   protected Map<String, Map<String, T>> piecesByLineId;
@@ -97,6 +89,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected TitlesService titlesService;
   @Autowired
   protected InventoryManager inventoryManager;
+  @Autowired
+  protected PieceStorageService pieceStorageService;
   @Autowired
   protected PurchaseOrderLineService purchaseOrderLineService;
   @Autowired
@@ -157,13 +151,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   }
 
   private Future<Void> getPiecesByIds(List<String> ids, Map<String, List<Piece>> piecesByPoLine, RequestContext requestContext) {
-    // Transform piece id's to CQL query
-    String query = convertIdsToCqlQuery(ids);
-    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, ids.size(), encodeQuery(query));
-    return restClient.get(endpoint, PieceCollection.class, requestContext)
+    return pieceStorageService.getPiecesByIds(ids, requestContext)
       .map(pieces -> {
-        pieces.getPieces().forEach(piece -> addPieceIfValid(piece, piecesByPoLine));
-        checkIfAllPiecesFound(ids, pieces.getPieces());
+        pieces.forEach(piece -> addPieceIfValid(piece, piecesByPoLine));
+        checkIfAllPiecesFound(ids, pieces);
         return null;
       })
        .otherwise(e -> {
@@ -587,10 +578,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
       ReceivingStatus receivingStatus, RequestContext requestContext) {
     String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
-    // Limit to 0 because only total number is important
-    String endpoint = String.format(PIECES_WITH_QUERY_ENDPOINT, 0, encodeQuery(query));
-    // Search for pieces with Expected status
-    return restClient.get(endpoint, PieceCollection.class, requestContext)
+    return pieceStorageService.getPieces(Integer.MAX_VALUE, 0, query, requestContext)
       .map(PieceCollection::getTotalRecords);
   }
 
@@ -784,35 +772,34 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .mapEmpty();
   }
 
-  private List<Future<?>> getListOfRestrictionCheckingFutures(List<PurchaseOrder> orders,
-      Map<String, List<PoLine>> poLinesGroupedByOrderId, Map<String, Map<String, T>> pieces, RequestContext requestContext) {
-    return orders.stream()
-      .map(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)
-        .otherwise(t -> {
-          for (PoLine line : poLinesGroupedByOrderId.get(order.getId())) {
-            for (String pieceId : pieces.remove(line.getId()).keySet()) {
-              addError(line.getId(), pieceId, USER_HAS_NO_PERMISSIONS.toError());
-            }
-          }
-          return null;
+  private List<Future<?>> getListOfRestrictionCheckingFutures(List<Title> titles, Map<String, Map<String, T>> pieces,
+                                                              RequestContext requestContext) {
+    return titles.stream()
+      .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)
+        .recover(t -> {
+          // get map of pieceId and to be processed piece details from multimap
+          Map<String, T> pieceMap = pieces.get(title.getPoLineId());
+          return pieceStorageService.getPiecesByIds(new ArrayList<>(pieceMap.keySet()), requestContext)
+            .map(pieceList -> {
+              pieceList.stream().filter(piece -> Objects.equals(piece.getTitleId(), title.getId()))
+                .forEach(piece -> {
+                  // remove piece which protected by title to exclude from further processing
+                  pieceMap.remove(piece.getId());
+                  addError(piece.getPoLineId(), piece.getId(), USER_HAS_NO_PERMISSIONS.toError());
+                });
+              return null;
+            });
         }))
       .collect(Collectors.toList());
   }
 
-  protected Future<Void> removeForbiddenEntities(List<PoLine> poLines, Map<String, Map<String, T>> pieces,
-                                                            RequestContext requestContext) {
-    if(!poLines.isEmpty()) {
-      Map<String, List<PoLine>> poLinesGroupedByOrderId = poLines.stream().distinct().collect(groupingBy(PoLine::getPurchaseOrderId));
-      String query = buildQuery(convertIdsToCqlQuery(poLinesGroupedByOrderId.keySet()));
-      String url = String.format(GET_PURCHASE_ORDERS, poLinesGroupedByOrderId.size(), 0, query);
-      return restClient.get(url, PurchaseOrderCollection.class, requestContext)
-        .map(PurchaseOrderCollection::getPurchaseOrders)
-        .compose(orders -> GenericCompositeFuture
-          .join(getListOfRestrictionCheckingFutures(orders, poLinesGroupedByOrderId, pieces, requestContext))
-          .mapEmpty());
-    } else {
-      return Future.succeededFuture();
-    }
+  protected Future<Void> removeForbiddenEntities(Map<String, Map<String, T>> pieces, RequestContext requestContext) {
+    this.piecesByLineId = pieces;
+
+    return titlesService.getTitlesByPieceIds(getPieceIds(), requestContext)
+      .compose(titles -> CollectionUtils.isNotEmpty(titles) ? GenericCompositeFuture
+        .join(getListOfRestrictionCheckingFutures(titles, pieces, requestContext))
+        .mapEmpty() : Future.succeededFuture());
   }
 
   private static class PoLineAndTitleById {
