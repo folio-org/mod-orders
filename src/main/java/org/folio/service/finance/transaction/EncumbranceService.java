@@ -157,6 +157,7 @@ public class EncumbranceService {
     return getOrderUnreleasedEncumbrances(compPo.getId(), requestContext).compose(encumbrs -> {
       if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
         syncEncumbrancesOrderStatusAndReleaseIfClosed(compPo.getWorkflowStatus(), encumbrs);
+        // NOTE: we will have to use transactionPatches when it is available (see MODORDERS-1008)
         return transactionService.batchUpdate(encumbrs, requestContext);
       }
       return Future.succeededFuture();
@@ -408,6 +409,7 @@ public class EncumbranceService {
 
   private Future<Void> releaseEncumbrancesAfter(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
     // Get the updated version of the encumbrances before releasing them.
+    // NOTE: this could be done within batchProcess using patches (assuming patches are done after create/update; see MODORDERS-1008)
     List<Transaction> encumbrances = holder.getEncumbrancesToUnreleaseAfter();
     if (encumbrances.isEmpty())
       return Future.succeededFuture();
