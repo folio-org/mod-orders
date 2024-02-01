@@ -5,7 +5,6 @@ import org.apache.http.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.models.PoLineInvoiceLineHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -18,28 +17,27 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 
 import io.vertx.core.Future;
 import org.folio.service.finance.transaction.PendingPaymentService;
-import org.folio.service.finance.transaction.summary.InvoiceTransactionSummariesService;
+import org.folio.service.finance.transaction.TransactionService;
 
 import javax.money.Monetary;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.groupingBy;
-import static org.folio.service.finance.transaction.summary.InvoiceTransactionSummariesService.buildInvoiceTransactionsSummary;
 import static org.folio.service.invoice.PoLineInvoiceLineHolderBuilder.filterInvoiceLinesByStatuses;
 
 public class POLInvoiceLineRelationService {
   private final InvoiceLineService invoiceLineService;
   private final PendingPaymentService pendingPaymentService;
-  private final InvoiceTransactionSummariesService invoiceTransactionSummariesService;
   private final PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder;
+  private final TransactionService transactionService;
 
-  public POLInvoiceLineRelationService(InvoiceLineService invoiceLineService, PendingPaymentService pendingPaymentService, InvoiceTransactionSummariesService invoiceTransactionSummariesService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
+  public POLInvoiceLineRelationService(InvoiceLineService invoiceLineService, PendingPaymentService pendingPaymentService,
+      PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder, TransactionService transactionService) {
     this.invoiceLineService = invoiceLineService;
     this.pendingPaymentService = pendingPaymentService;
-    this.invoiceTransactionSummariesService = invoiceTransactionSummariesService;
     this.poLineInvoiceLineHolderBuilder = poLineInvoiceLineHolderBuilder;
+    this.transactionService = transactionService;
   }
 
   public Future<Void> prepareRelatedInvoiceLines(PoLineInvoiceLineHolder holder, RequestContext requestContext) {
@@ -92,15 +90,14 @@ public class POLInvoiceLineRelationService {
 
   private Future<Void> removeEncumbranceReferenceFromTransactions(List<String> encumbranceIds, RequestContext requestContext) {
     return pendingPaymentService.getTransactionsByEncumbranceIds(encumbranceIds, requestContext)
-      .map(pendingPayments -> pendingPayments.stream().map(transaction -> {
-        transaction.getAwaitingPayment().setEncumbranceId(null);
-        return transaction;
-      }).collect(groupingBy(Transaction::getSourceInvoiceId)))
-      .map(pendingPayments -> pendingPayments.entrySet().stream().map(entry ->
-        invoiceTransactionSummariesService.updateTransactionSummary(buildInvoiceTransactionsSummary(entry.getKey(), entry.getValue().size()), requestContext)
-          .compose(aVoid -> pendingPaymentService.updateTransactions(entry.getValue(),requestContext))).collect(Collectors.toList()))
-      .compose(GenericCompositeFuture::join)
-      .mapEmpty();
+      .compose(pendingPayments -> {
+        if (pendingPayments.isEmpty()) {
+          return Future.succeededFuture();
+        }
+        pendingPayments.forEach(pp -> pp.getAwaitingPayment().setEncumbranceId(null));
+        return transactionService.batchUpdate(pendingPayments, requestContext)
+          .mapEmpty();
+      });
   }
 
   private static org.folio.rest.acq.model.invoice.FundDistribution convertToInvoiceFundDistribution(FundDistribution fundDistribution) {

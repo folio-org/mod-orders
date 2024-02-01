@@ -8,7 +8,6 @@ package org.folio.service.finance.transaction;
   import static org.folio.TestUtils.getMockAsJson;
   import static org.junit.jupiter.api.Assertions.assertEquals;
   import static org.mockito.ArgumentMatchers.any;
-  import static org.mockito.ArgumentMatchers.anyInt;
   import static org.mockito.ArgumentMatchers.anyList;
   import static org.mockito.ArgumentMatchers.anyString;
   import static org.mockito.ArgumentMatchers.argThat;
@@ -30,7 +29,7 @@ package org.folio.service.finance.transaction;
   import org.folio.rest.acq.model.finance.FiscalYear;
   import org.folio.rest.acq.model.finance.Fund;
   import org.folio.rest.acq.model.finance.Ledger;
-  import org.folio.rest.acq.model.finance.OrderTransactionSummary;
+  import org.folio.rest.acq.model.finance.Metadata;
   import org.folio.rest.acq.model.finance.Transaction;
   import org.folio.rest.core.models.RequestContext;
   import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -44,7 +43,6 @@ package org.folio.service.finance.transaction;
   import org.folio.service.finance.LedgerService;
   import org.folio.service.finance.budget.BudgetRestrictionService;
   import org.folio.service.finance.budget.BudgetService;
-  import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
   import org.folio.service.invoice.InvoiceLineService;
   import org.folio.service.invoice.POLInvoiceLineRelationService;
   import org.folio.service.orders.OrderInvoiceRelationService;
@@ -74,8 +72,6 @@ public class PendingToOpenEncumbranceStrategyTest {
   @Mock
   private TransactionService transactionService;
   @Mock
-  private OrderTransactionSummariesService orderTransactionSummariesService;
-  @Mock
   private OrderInvoiceRelationService orderInvoiceRelationService;
   @Mock
   private FundService fundService;
@@ -100,7 +96,7 @@ public class PendingToOpenEncumbranceStrategyTest {
 
   @BeforeEach
   void init() {
-    EncumbranceService encumbranceService = new EncumbranceService(transactionService, orderTransactionSummariesService,
+    EncumbranceService encumbranceService = new EncumbranceService(transactionService,
       invoiceLineService, orderInvoiceRelationService, fiscalYearService);
 
     FundsDistributionService fundsDistributionService = new FundsDistributionService();
@@ -153,7 +149,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       .withAmount(0d)
       .withId(fd1.getEncumbrance())
       .withFromFundId(fd1.getFundId())
-      .withEncumbrance(encumbrance);
+      .withEncumbrance(encumbrance)
+      .withMetadata(new Metadata());
     Transaction unreleased = JsonObject.mapFrom(released).mapTo(Transaction.class);
     unreleased.getEncumbrance().setStatus(Encumbrance.Status.UNRELEASED);
 
@@ -189,22 +186,13 @@ public class PendingToOpenEncumbranceStrategyTest {
       .doThrow(new RuntimeException("Too many invocations of getTransactionsByIds()"))
       .when(transactionService).getTransactionsByIds(argThat(list -> list.size() == 1), eq(requestContext));
     doReturn(succeededFuture(null))
-      .when(transactionService).updateTransactions(anyList(), eq(requestContext));
-    doAnswer(i -> succeededFuture(i.getArguments()[0]))
-      .when(transactionService).createTransaction(any(Transaction.class), eq(requestContext));
-    OrderTransactionSummary orderTransactionSummary = new OrderTransactionSummary()
-      .withId(UUID.randomUUID().toString())
-      .withNumTransactions(123);
-    doReturn(succeededFuture(orderTransactionSummary))
-      .when(orderTransactionSummariesService).getTransactionSummary(anyString(), eq(requestContext));
+      .when(transactionService).batchAllOrNothing(any(), any(), any(), any(), eq(requestContext));
     doCallRealMethod()
-      .when(orderTransactionSummariesService).updateTransactionSummary(anyString(), anyInt(), eq(requestContext));
+      .when(transactionService).batchUpdate(anyList(), eq(requestContext));
     doCallRealMethod()
-      .when(orderTransactionSummariesService).updateOrCreateTransactionSummary(anyString(), anyInt(), eq(requestContext));
+      .when(transactionService).batchRelease(anyList(), eq(requestContext));
     doCallRealMethod()
-      .when(orderTransactionSummariesService).createOrUpdateOrderTransactionSummary(any(), eq(requestContext));
-    doReturn(succeededFuture(null))
-      .when(orderTransactionSummariesService).updateTransactionSummary(any(), eq(requestContext));
+      .when(transactionService).batchUnrelease(anyList(), eq(requestContext));
     getDefaultRounding();
 
     // When
@@ -214,7 +202,7 @@ public class PendingToOpenEncumbranceStrategyTest {
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> vertxTestContext.verify(() -> {
         verify(transactionService, times(3))
-          .updateTransactions(transactionListCaptor.capture(), eq(requestContext));
+          .batchAllOrNothing(any(), transactionListCaptor.capture(), any(), any(), eq(requestContext));
         List<List<Transaction>> transactionLists = transactionListCaptor.getAllValues();
         assertEquals(3, transactionLists.size());
         assertEquals(1, transactionLists.get(0).size());

@@ -15,7 +15,6 @@ import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
@@ -37,7 +36,6 @@ import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,8 +55,6 @@ public class OpenToPendingEncumbranceStrategyTest {
     private OpenToPendingEncumbranceStrategy openToPendingEncumbranceStrategy;
     @Mock
     private EncumbranceService encumbranceService;
-    @Mock
-    private OrderTransactionSummariesService orderTransactionSummariesService;
     @Mock
     private TransactionService transactionService;
     @Mock
@@ -98,7 +94,6 @@ public class OpenToPendingEncumbranceStrategyTest {
 
       doReturn(succeededFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getOrderUnreleasedEncumbrances(any(), any());
 
-      doReturn(succeededFuture(null)).when(orderTransactionSummariesService).updateTransactionSummary(eq(order.getId()), anyInt(), any());
       doReturn(succeededFuture(null)).when(encumbranceService).updateEncumbrances(any(), any());
 
       List<EncumbranceRelationsHolder> encumbranceRelationsHolders = new ArrayList<>();
