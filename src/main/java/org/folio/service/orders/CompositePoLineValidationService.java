@@ -77,65 +77,79 @@ public class CompositePoLineValidationService extends BaseValidationService {
   }
 
   public List<Error> validatePoLineMaterial(CompositePoLine compPOL) {
-
     CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
 
-    if (orderFormat == P_E_MIX) {
-      return P_E_MixCheck(compPOL);
-    } else if (orderFormat == ELECTRONIC_RESOURCE) {
-      return electronicResourceCheck(compPOL);
-    } else if (orderFormat == CompositePoLine.OrderFormat.PHYSICAL_RESOURCE) {
-      return physicalResourceCheck(compPOL);
-    } else if (orderFormat == CompositePoLine.OrderFormat.OTHER) {
-      return otherResourceCheck(compPOL);
+    List<Error> errors;
+
+    switch (orderFormat) {
+      case P_E_MIX:
+        errors = checkP_E_Mix(compPOL);
+        break;
+      case ELECTRONIC_RESOURCE:
+        errors = checkElectronicResource(compPOL);
+        break;
+      case PHYSICAL_RESOURCE:
+        errors = checkPhysicalResource(compPOL);
+        break;
+      case OTHER:
+        errors = checkOtherResource(compPOL);
+        break;
+      default:
+        errors = Collections.emptyList();
+        break;
     }
 
-    return Collections.emptyList();
+    return errors;
   }
 
-  //to check if the P_E_Mix missing either physical or electronic resources
-  private List<Error> P_E_MixCheck (CompositePoLine compPOL ){
+  private List<Error> checkP_E_Mix(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
-    if(compPOL.getPhysical()==null || compPOL.getEresource()==null){
-     errors.add(ErrorCodes.INVALID_PEMIX_POL);
-    }else if (getElectronicCostQuantity(compPOL)==0 || getPhysicalCostQuantity(compPOL)==0){
+
+    if (compPOL.getPhysical() == null || compPOL.getEresource() == null) {
+      errors.add(ErrorCodes.INVALID_PEMIX_POL);
+    } else if (getElectronicCostQuantity(compPOL) == 0 || getPhysicalCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.INVALID_PEMIX_POL);
     }
+
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  // to check if electronic order format contains physical resources
-  private List<Error>  electronicResourceCheck (CompositePoLine compPOL ){
+  private List<Error> checkElectronicResource(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
-    if((compPOL.getPhysical()!=null)) {
+
+    if (compPOL.getPhysical() != null) {
       if (getPhysicalCostQuantity(compPOL) != 0) {
         errors.add(ErrorCodes.INVALID_ELECTRONIC_POL);
       }
     }
+
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  // to check if physical order format contains electronic resources
-  private List<Error> physicalResourceCheck (CompositePoLine compPOL ){
+  private List<Error> checkPhysicalResource(CompositePoLine compPOL ){
     List<ErrorCodes> errors = new ArrayList<>();
-    if(compPOL.getEresource()!=null) {
+
+    if (compPOL.getEresource() != null) {
       if (getElectronicCostQuantity(compPOL) != 0) {
         errors.add(ErrorCodes.INVALID_PHYSICAL_POL);
       }
     }
+
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  // to check if other order format contains electronic resources
-  private List<Error> otherResourceCheck (CompositePoLine compPOL ){
+  private List<Error> checkOtherResource(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
-    if(compPOL.getEresource()!=null) {
+
+    if (compPOL.getEresource() != null) {
       if (getElectronicCostQuantity(compPOL) != 0) {
         errors.add(ErrorCodes.INVALID_OTHER_POL);
       }
     }
+
     return convertErrorCodesToErrors(compPOL, errors);
   }
+
   private List<Error> validatePoLineWithMixedFormat(CompositePoLine compPOL) {
 
     List<ErrorCodes> errors = new ArrayList<>();
