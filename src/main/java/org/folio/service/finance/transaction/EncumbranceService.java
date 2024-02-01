@@ -67,7 +67,6 @@ public class EncumbranceService {
 
 
   public Future<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
-
     if (holder.getAllEncumbrancesQuantity() == 0)
       return Future.succeededFuture();
     return unreleaseEncumbrancesFirst(holder, requestContext)
