@@ -114,10 +114,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return {@link Future} which holds map with PO line id as key
    *         and list of corresponding pieces as value
    */
- protected Future<Map<String, List<Piece>>> retrievePieceRecords(Map<String, Map<String, T>> piecesByLineId,
-                                                                   RequestContext requestContext) {
+ protected Future<Map<String, List<Piece>>> retrievePieceRecords(RequestContext requestContext) {
     Map<String, List<Piece>> piecesByPoLine = new HashMap<>();
-    this.piecesByLineId = piecesByLineId;
     // Split all piece id's by maximum number of id's for get query
     List<Future<Void>> futures = StreamEx
       .ofSubLists(getPieceIds(), MAX_IDS_FOR_GET_RQ_15)
@@ -772,13 +770,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .mapEmpty();
   }
 
-  private List<Future<?>> getListOfRestrictionCheckingFutures(List<Title> titles, Map<String, Map<String, T>> pieces,
-                                                              RequestContext requestContext) {
+  private List<Future<?>> getListOfRestrictionCheckingFutures(List<Title> titles, RequestContext requestContext) {
     return titles.stream()
       .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)
         .recover(t -> {
           // get map of pieceId and to be processed piece details from multimap
-          Map<String, T> pieceMap = pieces.get(title.getPoLineId());
+          Map<String, T> pieceMap = piecesByLineId.get(title.getPoLineId());
           return pieceStorageService.getPiecesByIds(new ArrayList<>(pieceMap.keySet()), requestContext)
             .map(pieceList -> {
               pieceList.stream().filter(piece -> Objects.equals(piece.getTitleId(), title.getId()))
@@ -793,12 +790,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .collect(Collectors.toList());
   }
 
-  protected Future<Void> removeForbiddenEntities(Map<String, Map<String, T>> pieces, RequestContext requestContext) {
-    this.piecesByLineId = pieces;
-
+  protected Future<Void> removeForbiddenEntities(RequestContext requestContext) {
     return titlesService.getTitlesByPieceIds(getPieceIds(), requestContext)
       .compose(titles -> CollectionUtils.isNotEmpty(titles) ? GenericCompositeFuture
-        .join(getListOfRestrictionCheckingFutures(titles, pieces, requestContext))
+        .join(getListOfRestrictionCheckingFutures(titles, requestContext))
         .mapEmpty() : Future.succeededFuture());
   }
 

@@ -25,21 +25,15 @@ import static java.util.stream.Collectors.toList;
 
 public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
 
-  /**
-   * Map with PO line id as a key and value is map with piece id as a key and
-   * {@link ExpectPiece} as a value
-   */
-  private final Map<String, Map<String, ExpectPiece>> expectPieces;
-
   public ExpectHelper(ExpectCollection expectCollection, Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
     // Convert request to map representation
-    expectPieces = groupExpectPieceByPoLineId(expectCollection);
+    piecesByLineId = groupExpectPieceByPoLineId(expectCollection);
 
     // Logging quantity of the piece records to be expected
     if (logger.isDebugEnabled()) {
-      int poLinesQty = expectPieces.size();
-      int piecesQty = StreamEx.ofValues(expectPieces)
+      int poLinesQty = piecesByLineId.size();
+      int piecesQty = StreamEx.ofValues(piecesByLineId)
         .mapToInt(Map::size)
         .sum();
       logger.debug("{} piece record(s) are going to be expected for {} PO line(s)", piecesQty, poLinesQty);
@@ -47,13 +41,13 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
   }
 
   public Future<ReceivingResults> expectPieces(ExpectCollection expectCollection, RequestContext requestContext) {
-    return removeForbiddenEntities(expectPieces, requestContext)
+    return removeForbiddenEntities(requestContext)
       .compose(vVoid -> processExpectPieces(expectCollection, requestContext));
   }
 
   private Future<ReceivingResults> processExpectPieces(ExpectCollection expectCollection, RequestContext requestContext) {
     // 1. Get piece records from storage
-    return retrievePieceRecords(expectPieces, requestContext)
+    return retrievePieceRecords(requestContext)
       // 2. Update piece status to Expected
       .map(this::updatePieceRecords)
       // 3. Update received piece records in the storage
