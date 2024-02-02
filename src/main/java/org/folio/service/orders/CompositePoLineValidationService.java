@@ -101,11 +101,9 @@ public class CompositePoLineValidationService extends BaseValidationService {
   private List<Error> checkElectronicResource(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
-    if (compPOL.getPhysical() != null) {
-      if (getPhysicalCostQuantity(compPOL) != 0) {
+    if (compPOL.getPhysical() != null && getPhysicalCostQuantity(compPOL) != 0) {
         errors.add(ErrorCodes.INVALID_ELECTRONIC_POL);
       }
-    }
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
@@ -113,11 +111,9 @@ public class CompositePoLineValidationService extends BaseValidationService {
   private List<Error> checkPhysicalResource(CompositePoLine compPOL ){
     List<ErrorCodes> errors = new ArrayList<>();
 
-    if (compPOL.getEresource() != null) {
-      if (getElectronicCostQuantity(compPOL) != 0) {
+    if (compPOL.getEresource() != null && getElectronicCostQuantity(compPOL) != 0) {
         errors.add(ErrorCodes.INVALID_PHYSICAL_POL);
       }
-    }
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
@@ -125,11 +121,9 @@ public class CompositePoLineValidationService extends BaseValidationService {
   private List<Error> checkOtherResource(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
-    if (compPOL.getEresource() != null) {
-      if (getElectronicCostQuantity(compPOL) != 0) {
+    if (compPOL.getEresource() != null && getElectronicCostQuantity(compPOL) != 0) {
         errors.add(ErrorCodes.INVALID_OTHER_POL);
       }
-    }
 
     return convertErrorCodesToErrors(compPOL, errors);
   }
