@@ -117,15 +117,25 @@ public class CompositePoLineValidationServiceTest {
   }
 
   @Test
+  @DisplayName("Should return error if physical order format contains Electronic resources.")
+  void shouldReturnErrorIfPhysicalContainsElectronicSource() {
+    Eresource eresource = new Eresource();
+    CompositePoLine.OrderFormat format = CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
+    Cost cost = new Cost().withQuantityElectronic(1);
+    CompositePoLine compositePoLine = new CompositePoLine().withOrderFormat(format).withEresource(eresource).withCost(cost);
+    List<Error> errors = compositePoLineValidationService.validatePoLineMaterial(compositePoLine);
+
+    assertEquals(1, errors.size());
+    assertEquals(ErrorCodes.INVALID_PHYSICAL_POL.getCode(), errors.get(0).getCode());
+  }
+
+  @Test
   @DisplayName("Should return error if electronic order format contains physical resources.")
   void shouldReturnErrorIfElectronicContainsPhysicalSource() {
     Physical physical = new Physical();
     CompositePoLine.OrderFormat format = CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
     Cost cost = new Cost().withQuantityPhysical(1);
-    CompositePoLine compositePoLine = new CompositePoLine()
-      .withOrderFormat(format)
-      .withPhysical(physical)
-      .withCost(cost);
+    CompositePoLine compositePoLine = new CompositePoLine().withOrderFormat(format).withPhysical(physical).withCost(cost);
     List<Error> errors = compositePoLineValidationService.validatePoLineMaterial(compositePoLine);
 
     assertEquals(1, errors.size());
@@ -133,19 +143,40 @@ public class CompositePoLineValidationServiceTest {
   }
 
   @Test
-  @DisplayName("Should return error if p/e mix order format does not contains electronic resources.")
-  void shouldReturnErrorIfMixedDoesNotContainsESource() {
-    Physical physical = new Physical();
+  @DisplayName("Should return error if p/e mix order format does not contains physical resources.")
+  void shouldReturnErrorIfMixedDoesNotContainsPhysicalSource() {
+    Eresource eresource = new Eresource();
     CompositePoLine.OrderFormat format = CompositePoLine.OrderFormat.P_E_MIX;
-    CompositePoLine compositePoLine = new CompositePoLine()
-      .withOrderFormat(format)
-      .withPhysical(physical);
+    CompositePoLine compositePoLine = new CompositePoLine().withOrderFormat(format).withEresource(eresource);
     List<Error> errors = compositePoLineValidationService.validatePoLineMaterial(compositePoLine);
 
     assertEquals(1, errors.size());
     assertEquals(ErrorCodes.INVALID_PEMIX_POL.getCode(), errors.get(0).getCode());
   }
 
+  @Test
+  @DisplayName("Should return error if p/e mix order format does not contains electronic resources.")
+  void shouldReturnErrorIfMixedDoesNotContainsESource() {
+    Physical physical = new Physical();
+    CompositePoLine.OrderFormat format = CompositePoLine.OrderFormat.P_E_MIX;
+    CompositePoLine compositePoLine = new CompositePoLine().withOrderFormat(format).withPhysical(physical);
+    List<Error> errors = compositePoLineValidationService.validatePoLineMaterial(compositePoLine);
 
+    assertEquals(1, errors.size());
+    assertEquals(ErrorCodes.INVALID_PEMIX_POL.getCode(), errors.get(0).getCode());
+  }
+
+  @Test
+  @DisplayName("Should return error if other order format contains Electronic resources.")
+  void shouldReturnErrorIfOtherContainsElectronicSource() {
+    Eresource eresource = new Eresource();
+    CompositePoLine.OrderFormat format = CompositePoLine.OrderFormat.OTHER;
+    Cost cost = new Cost().withQuantityElectronic(1);
+    CompositePoLine compositePoLine = new CompositePoLine().withOrderFormat(format).withEresource(eresource).withCost(cost);
+    List<Error> errors = compositePoLineValidationService.validatePoLineMaterial(compositePoLine);
+
+    assertEquals(1, errors.size());
+    assertEquals(ErrorCodes.INVALID_OTHER_POL.getCode(), errors.get(0).getCode());
+  }
 
 }
