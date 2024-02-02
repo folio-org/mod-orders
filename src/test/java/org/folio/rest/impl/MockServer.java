@@ -1581,11 +1581,7 @@ public class MockServer {
         poId = matcher.find() ? matcher.group(1) : EMPTY;
       } else {
         poId = EMPTY;
-        if (queryParam.startsWith("id==")) {
-          polIds = extractIdsFromQuery(queryParam);
-        } else {
-          polIds = Collections.emptyList();
-        }
+        polIds = queryParam.startsWith("id==") ? extractIdsFromQuery(queryParam) : Collections.emptyList();
       }
 
       List<JsonObject> postedPoLines = getRqRsEntries(HttpMethod.SEARCH, type);
