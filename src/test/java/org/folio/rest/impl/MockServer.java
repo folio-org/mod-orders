@@ -1621,7 +1621,7 @@ public class MockServer {
           poLineCollection.getPoLines().addAll(postedPoLines.stream()
             .map(jsonObj -> jsonObj.mapTo(PoLine.class))
             .collect(Collectors.toList()));
-          poLineCollection.getPoLines().removeIf(poLine -> polIds.isEmpty() ? !poId.equals(poLine.getPurchaseOrderId()) : !polIds.contains(poLine.getId()));
+          poLineCollection.getPoLines().removeIf(poLine -> !polIds.isEmpty() && !polIds.contains(poLine.getId()));
         }
 
         poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
