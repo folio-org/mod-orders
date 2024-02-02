@@ -79,27 +79,13 @@ public class CompositePoLineValidationService extends BaseValidationService {
   public List<Error> validatePoLineMaterial(CompositePoLine compPOL) {
     CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
 
-    List<Error> errors;
-
-    switch (orderFormat) {
-      case P_E_MIX:
-        errors = checkP_E_Mix(compPOL);
-        break;
-      case ELECTRONIC_RESOURCE:
-        errors = checkElectronicResource(compPOL);
-        break;
-      case PHYSICAL_RESOURCE:
-        errors = checkPhysicalResource(compPOL);
-        break;
-      case OTHER:
-        errors = checkOtherResource(compPOL);
-        break;
-      default:
-        errors = Collections.emptyList();
-        break;
-    }
-
-    return errors;
+    return switch (orderFormat) {
+      case P_E_MIX -> P_E_MixCheck(compPOL);
+      case ELECTRONIC_RESOURCE -> electronicResourceCheck(compPOL);
+      case PHYSICAL_RESOURCE -> physicalResourceCheck(compPOL);
+      case OTHER -> otherResourceCheck(compPOL);
+      default -> Collections.emptyList();
+    };
   }
 
   private List<Error> checkP_E_Mix(CompositePoLine compPOL) {
