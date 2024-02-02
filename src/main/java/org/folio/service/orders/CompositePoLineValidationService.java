@@ -80,10 +80,10 @@ public class CompositePoLineValidationService extends BaseValidationService {
     CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
 
     return switch (orderFormat) {
-      case P_E_MIX -> P_E_MixCheck(compPOL);
-      case ELECTRONIC_RESOURCE -> electronicResourceCheck(compPOL);
-      case PHYSICAL_RESOURCE -> physicalResourceCheck(compPOL);
-      case OTHER -> otherResourceCheck(compPOL);
+      case P_E_MIX -> checkP_E_Mix(compPOL);
+      case ELECTRONIC_RESOURCE -> checkElectronicResource(compPOL);
+      case PHYSICAL_RESOURCE -> checkPhysicalResource(compPOL);
+      case OTHER -> checkOtherResource(compPOL);
       default -> Collections.emptyList();
     };
   }
