@@ -32,6 +32,7 @@ import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
@@ -153,6 +154,10 @@ public class CheckinHelperTest {
     @Bean
     TitlesService titlesService() {
       return mock(TitlesService.class);
+    }
+    @Bean
+    PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
     }
     @Bean
     InventoryManager inventoryManager() {

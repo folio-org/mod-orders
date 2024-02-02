@@ -13,10 +13,12 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getRandomId;
+import static org.folio.TestUtils.getTitle;
 import static org.folio.TestUtils.getToBeCheckedIn;
 import static org.folio.TestUtils.getToBeReceived;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
@@ -31,7 +33,6 @@ import static org.hamcrest.core.Every.everyItem;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
@@ -43,7 +44,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
-import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -52,6 +52,7 @@ import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.junit.jupiter.api.AfterAll;
@@ -73,7 +74,9 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
   private static final String ORDER_WITH_NOT_PROTECTED_UNITS_ID = getRandomId();
 
   private static final String RANDOM_PO_LINE_ID_1 = getRandomId();
-  private static final String RANDOM_PO_LINE_ID_2 = getRandomId();
+  private static final String RANDOM_PO_LINE_ID_2 = "84fedaa4-ae4d-4d9b-9a93-7cf9058c67e5";
+  private static final String RANDOM_TITLE_ID_2 = "bc763ccc-6f2f-4868-9349-2e8066bebe46";
+  private static final String RANDOM_PIECE_ID_2 = "f3316376-2ed8-4285-9ec3-6a1169083b8f";
   private static final String PROCESSED_SUCCESSFULLY = "processedSuccessfully";
   private static final String PROCESSED_WITH_ERROR = "processedWithError";
   private static final String EXPECTED_FLOW_PO_LINE_ID = "9b68e7c2-8818-4387-a405-6567232c1c6f";
@@ -103,6 +106,8 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     }
   }
 
+  // After changing the check for acq-units from orders to titles, we now use the TitlesService#getTitlesByPieceIds method,
+  // which calls AcquisitionsUnitsService#buildAcqUnitsCqlExprToSearchRecords. As a result, our search for acq-units has increased.
   private enum Entities {
     RECEIVING(ORDERS_RECEIVING_ENDPOINT) {
       @Override
@@ -139,7 +144,7 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
 
     verifyRestrictedCase(results);
-    validateNumberOfRequests(1, 0);
+    validateNumberOfRequests(2, 1);
   }
 
   @ParameterizedTest
@@ -151,7 +156,7 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
 
     verifyAllowedCase(results);
-    validateNumberOfRequests(2, 1);
+    validateNumberOfRequests(3, 2);
   }
 
   @ParameterizedTest
@@ -163,7 +168,7 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_ASSIGNED_TO_ORDER), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
 
     verifyAllowedCase(results);
-    validateNumberOfRequests(2, 2);
+    validateNumberOfRequests(3, 3);
   }
 
   @ParameterizedTest
@@ -175,29 +180,27 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_WITH_UNITS_NOT_ASSIGNED_TO_ORDER), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt()).as(ReceivingResults.class);
 
     verifyRestrictedCase(results);
-    validateNumberOfRequests(1, 1);
+    validateNumberOfRequests(2, 2);
   }
 
   @Test
   void testReceivingCompositeFlow() {
+    CompositePoLine expectedFlowPoLine = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID);
+    CompositePoLine randomPoLine1 = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1);
+    CompositePoLine randomPoLine2 = getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
+    List.of(expectedFlowPoLine, randomPoLine1, randomPoLine2).forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line)));
 
-    addMockEntry(
-        PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(NOT_PROTECTED_UNITS).withId(ORDER_WITH_NOT_PROTECTED_UNITS_ID)));
-    addMockEntry(
-        PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(PROTECTED_UNITS).withId(ORDER_WITH_PROTECTED_UNITS_ID)));
-    List<CompositePoLine> poLines = new ArrayList<>();
-    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID));
-    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1));
-    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2));
-    poLines.forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line)));
+    Title expectedFlowTitle = getTitle(expectedFlowPoLine).withAcqUnitIds(NOT_PROTECTED_UNITS);
+    Title randomTitle1 = getTitle(randomPoLine1).withAcqUnitIds(NOT_PROTECTED_UNITS);
+    Title randomTitle2 = getTitle(randomPoLine2).withId(RANDOM_TITLE_ID_2).withAcqUnitIds(PROTECTED_UNITS);
+    List.of(expectedFlowTitle, randomTitle1, randomTitle2).forEach(title -> addMockEntry(TITLES, title));
 
-    MockServer.addMockTitles(poLines);
     ReceivingCollection toBeReceivedRq = new ReceivingCollection();
 
     List<ToBeReceived> toBeReceivedList = new ArrayList<>();
     toBeReceivedList.add(getToBeReceived(EXPECTED_FLOW_PO_LINE_ID, EXPECTED_FLOW_PIECE_ID_1));
     toBeReceivedList.add(getToBeReceived(RANDOM_PO_LINE_ID_1, getRandomId()));
-    toBeReceivedList.add(getToBeReceived(RANDOM_PO_LINE_ID_2, getRandomId()));
+    toBeReceivedList.add(getToBeReceived(RANDOM_PO_LINE_ID_2, RANDOM_PIECE_ID_2));
     toBeReceivedList.add(getToBeReceived(EXPECTED_FLOW_PO_LINE_ID, getRandomId()));
 
     toBeReceivedRq.setToBeReceived(toBeReceivedList);
@@ -227,26 +230,22 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
 
   @Test
   void testCheckInCompositeFlow() {
+    CompositePoLine expectedFlowPoLine = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID);
+    CompositePoLine randomPoLine1 = getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1);
+    CompositePoLine randomPoLine2 = getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2);
+    List.of(expectedFlowPoLine, randomPoLine1, randomPoLine2).forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line)));
 
-    addMockEntry(
-        PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(NOT_PROTECTED_UNITS).withId(ORDER_WITH_NOT_PROTECTED_UNITS_ID)));
-    addMockEntry(
-        PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(getMinimalContentCompositePurchaseOrder().withAcqUnitIds(PROTECTED_UNITS).withId(ORDER_WITH_PROTECTED_UNITS_ID)));
-
-    List<CompositePoLine> poLines = new ArrayList<>();
-    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(EXPECTED_FLOW_PO_LINE_ID));
-    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_NOT_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_1));
-    poLines.add(getMinimalContentCompositePoLine(ORDER_WITH_PROTECTED_UNITS_ID).withId(RANDOM_PO_LINE_ID_2));
-    poLines.forEach(line -> addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(line)));
-
-    MockServer.addMockTitles(poLines);
+    Title expectedFlowTitle = getTitle(expectedFlowPoLine).withAcqUnitIds(NOT_PROTECTED_UNITS);
+    Title randomTitle1 = getTitle(randomPoLine1).withAcqUnitIds(NOT_PROTECTED_UNITS);
+    Title randomTitle2 = getTitle(randomPoLine2).withId(RANDOM_TITLE_ID_2).withAcqUnitIds(PROTECTED_UNITS);
+    List.of(expectedFlowTitle, randomTitle1, randomTitle2).forEach(title -> addMockEntry(TITLES, title));
 
     CheckinCollection toBeCheckedInRq = new CheckinCollection();
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
     toBeCheckedInList.add(getToBeCheckedIn(EXPECTED_FLOW_PO_LINE_ID, EXPECTED_FLOW_PIECE_ID_1));
     toBeCheckedInList.add(getToBeCheckedIn(RANDOM_PO_LINE_ID_1, getRandomId()));
-    toBeCheckedInList.add(getToBeCheckedIn(RANDOM_PO_LINE_ID_2, getRandomId()));
+    toBeCheckedInList.add(getToBeCheckedIn(RANDOM_PO_LINE_ID_2, RANDOM_PIECE_ID_2));
     toBeCheckedInList.add(getToBeCheckedIn(EXPECTED_FLOW_PO_LINE_ID, getRandomId()));
 
     toBeCheckedInRq.setToBeCheckedIn(toBeCheckedInList);
@@ -282,7 +281,8 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    MockServer.addMockTitles(Collections.singletonList(poLine));
+    Title title = getTitle(poLine).withAcqUnitIds(units);
+    addMockEntry(TITLES, title);
 
     CheckinCollection toBeCheckedInRq = new CheckinCollection();
 
@@ -304,7 +304,9 @@ public class ReceivingCheckinProtectionTest extends ProtectedEntityTestBase {
     CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId()).withId(EXPECTED_FLOW_PO_LINE_ID);
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    MockServer.addMockTitles(Collections.singletonList(poLine));
+    Title title = getTitle(poLine).withAcqUnitIds(units);
+    addMockEntry(TITLES, title);
+
     ReceivingCollection toBeReceivedRq = new ReceivingCollection();
 
     List<ToBeReceived> toBeReceivedList

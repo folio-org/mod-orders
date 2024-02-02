@@ -426,6 +426,15 @@
       "receivingStatus": "Expected"
     },
     {
+      "id": "f3316376-2ed8-4285-9ec3-6a1169083b8f",
+      "itemId": "",
+      "titleId": "bc763ccc-6f2f-4868-9349-2e8066bebe46",
+      "locationId": "2a00b0be-1447-42a1-a112-124450991899",
+      "poLineId": "84fedaa4-ae4d-4d9b-9a93-7cf9058c67e5",
+      "receiptDate": "2018-10-09T00:00:00.000Z",
+      "receivingStatus": "Expected"
+    },
+    {
       "id": "71d9322b-5cdd-45d8-ad45-c7f3044802e7",
       "itemId": "",
       "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",

@@ -28,8 +28,6 @@ import java.util.Map;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -51,25 +49,20 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
-  private static final Logger logger = LogManager.getLogger(CheckinHelper.class);
+
   public static final String IS_ITEM_ORDER_CLOSED_PRESENT = "isItemOrderClosedPresent";
-  /**
-   * Map with PO line id as a key and value is map with piece id as a key and
-   * {@link CheckInPiece} as a value
-   */
-  private final Map<String, Map<String, CheckInPiece>> checkinPieces;
 
   public CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders,
                 Context ctx) {
     super(okapiHeaders, ctx);
     // Convert request to map representation
     CheckinCollection checkinCollectionClone = JsonObject.mapFrom(checkinCollection).mapTo(CheckinCollection.class);
-    checkinPieces = groupCheckinPiecesByPoLineId(checkinCollectionClone);
+    piecesByLineId = groupCheckinPiecesByPoLineId(checkinCollectionClone);
     updateCheckInPiecesStatus();
     // Logging quantity of the piece records to be checked in
     if (logger.isDebugEnabled()) {
-      int poLinesQty = checkinPieces.size();
-      int piecesQty = StreamEx.ofValues(checkinPieces)
+      int poLinesQty = piecesByLineId.size();
+      int piecesQty = StreamEx.ofValues(piecesByLineId)
         .mapToInt(Map::size)
         .sum();
       logger.debug("{} piece record(s) are going to be checkedIn for {} PO line(s)", piecesQty, poLinesQty);
@@ -77,8 +70,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   public Future<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
-    return getPoLines(new ArrayList<>(checkinPieces.keySet()), requestContext)
-      .compose(poLines -> removeForbiddenEntities(poLines, checkinPieces, requestContext))
+    return removeForbiddenEntities(requestContext)
       .compose(vVoid -> processCheckInPieces(checkinCollection, requestContext));
   }
 
@@ -104,7 +96,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   private Future<Map<String, List<Piece>>> createItemsWithPieceUpdate(CheckinCollection checkinCollection, RequestContext requestContext) {
     Map<String, List<CheckInPiece>> poLineIdVsCheckInPiece = getItemCreateNeededCheckinPieces(checkinCollection);
     List<Future<Pair<String, Piece>>> futures = new ArrayList<>();
-    return retrievePieceRecords(checkinPieces, requestContext)
+    return retrievePieceRecords(requestContext)
       .map(piecesGroupedByPoLine -> { piecesGroupedByPoLine.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
         .forEach(checkInPiece -> pieces.forEach(piece -> {
           if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
@@ -273,7 +265,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private void updateCheckInPiecesStatus() {
-    checkinPieces.values()
+    piecesByLineId.values()
       .stream()
       .map(Map::values)
       .flatMap(Collection::stream)
@@ -366,11 +358,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   @Override
   protected String getLocationId(Piece piece) {
-    return checkinPieces.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
+    return piecesByLineId.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
   }
 
   @Override
   protected String getHoldingId(Piece piece) {
-    return checkinPieces.get(piece.getPoLineId()).get(piece.getId()).getHoldingId();
+    return piecesByLineId.get(piece.getPoLineId()).get(piece.getId()).getHoldingId();
   }
 }

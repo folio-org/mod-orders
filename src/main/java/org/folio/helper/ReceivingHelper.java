@@ -16,7 +16,6 @@ import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBE
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -25,8 +24,6 @@ import java.util.Map;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -51,24 +48,21 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
-  private static final Logger logger = LogManager.getLogger(ReceivingHelper.class);
+
   private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY);
-  /**
-   * Map with PO line id as a key and value is map with piece id as a key and {@link ReceivedItem} as a value
-   */
-  private final Map<String, Map<String, ReceivedItem>> receivingItems;
+
   @Autowired
   private AcquisitionsUnitsService acquisitionsUnitsService;
 
   public ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
     // Convert request to map representation
-    receivingItems = groupReceivedItemsByPoLineId(receivingCollection);
+    piecesByLineId = groupReceivedItemsByPoLineId(receivingCollection);
 
     // Logging quantity of the piece records to be received
     if (logger.isDebugEnabled()) {
-      int poLinesQty = receivingItems.size();
-      int piecesQty = StreamEx.ofValues(receivingItems)
+      int poLinesQty = piecesByLineId.size();
+      int piecesQty = StreamEx.ofValues(piecesByLineId)
                                .mapToInt(Map::size)
                                .sum();
       logger.debug("{} piece record(s) are going to be received for {} PO line(s)", piecesQty, poLinesQty);
@@ -77,19 +71,18 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   public ReceivingHelper(Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
-    receivingItems = null;
+    piecesByLineId = null;
   }
 
   public Future<ReceivingResults>   receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
-    return getPoLines(new ArrayList<>(receivingItems.keySet()), requestContext)
-      .compose(poLines -> removeForbiddenEntities(poLines, receivingItems, requestContext))
+    return removeForbiddenEntities(requestContext)
       .compose(vVoid -> processReceiveItems(receivingCollection, requestContext));
   }
 
   private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnReceiving(receivingCollection);
     // 1. Get piece records from storage
-    return this.retrievePieceRecords(receivingItems, requestContext)
+    return this.retrievePieceRecords(requestContext)
       // 2. Filter locationId
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
@@ -313,11 +306,11 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   @Override
   protected String getLocationId(Piece piece) {
-    return receivingItems.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
+    return piecesByLineId.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
   }
 
   @Override
   protected String getHoldingId(Piece piece) {
-    return receivingItems.get(piece.getPoLineId()).get(piece.getId()).getHoldingId();
+    return piecesByLineId.get(piece.getPoLineId()).get(piece.getId()).getHoldingId();
   }
 }

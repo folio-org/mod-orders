@@ -989,7 +989,7 @@ public class CheckinReceivingApiTest {
     assertThat(getPieceUpdates(), is(nullValue()));
     assertThat(getItemsSearches(), is(nullValue()));
     assertThat(getItemUpdates(), is(nullValue()));
-    assertThat(getPoLineSearches(), hasSize(1));
+    assertThat(getPoLineSearches(), is(nullValue()));
     assertThat(getPoLineUpdates(), is(nullValue()));
 
     // Verify messages sent via event bus
