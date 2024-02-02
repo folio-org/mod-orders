@@ -91,9 +91,7 @@ public class CompositePoLineValidationService extends BaseValidationService {
   private List<Error> checkP_E_Mix(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
-    if (compPOL.getPhysical() == null || compPOL.getEresource() == null) {
-      errors.add(ErrorCodes.INVALID_PEMIX_POL);
-    } else if (getElectronicCostQuantity(compPOL) == 0 || getPhysicalCostQuantity(compPOL) == 0) {
+    if (compPOL.getPhysical() == null || compPOL.getEresource() == null || getElectronicCostQuantity(compPOL) == 0 || getPhysicalCostQuantity(compPOL) == 0) {
       errors.add(ErrorCodes.INVALID_PEMIX_POL);
     }
 

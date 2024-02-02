@@ -118,7 +118,7 @@ public enum ErrorCodes {
   INVALID_PHYSICAL_POL("physicalPOLShouldContainOnlyPhysicalElement", "Physical order format should contain only physical resource"),
   INVALID_ELECTRONIC_POL("electronicPOLShouldContainOnlyElectronicElement", "Electronic order format should contain only electronic resource"),
   INVALID_PEMIX_POL("peMixPOLShouldContainPhysicalAndElectronicElement", "PE mix order format should contain both of physical and electronic resource"),
-  INVALID_OTHER_POL("otherPOLShouldContainPhysicalElement", " Other order format should contain only physical resource");
+  INVALID_OTHER_POL("otherPOLShouldContainPhysicalElement", "Other order format should contain only physical resource");
 
 
   private final String code;
