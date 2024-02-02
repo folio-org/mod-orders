@@ -80,7 +80,7 @@ public class CompositePoLineValidationService extends BaseValidationService {
     CompositePoLine.OrderFormat orderFormat = compPOL.getOrderFormat();
 
     return switch (orderFormat) {
-      case P_E_MIX -> checkP_E_Mix(compPOL);
+      case P_E_MIX -> checkPEMix(compPOL);
       case ELECTRONIC_RESOURCE -> checkElectronicResource(compPOL);
       case PHYSICAL_RESOURCE -> checkPhysicalResource(compPOL);
       case OTHER -> checkOtherResource(compPOL);
@@ -88,7 +88,7 @@ public class CompositePoLineValidationService extends BaseValidationService {
     };
   }
 
-  private List<Error> checkP_E_Mix(CompositePoLine compPOL) {
+  private List<Error> checkPEMix(CompositePoLine compPOL) {
     List<ErrorCodes> errors = new ArrayList<>();
 
     if (compPOL.getPhysical() == null || compPOL.getEresource() == null || getElectronicCostQuantity(compPOL) == 0 || getPhysicalCostQuantity(compPOL) == 0) {
