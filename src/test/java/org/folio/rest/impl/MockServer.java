@@ -1571,15 +1571,17 @@ public class MockServer {
     } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR) || queryParam.contains(PO_ID_GET_LINES_INTERNAL_SERVER_ERROR)) {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
-      String poId = EMPTY;
+      String poId;
       String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
-      List<String> polIds = Collections.emptyList();
+      List<String> polIds;
 
       if (queryParam.contains(PURCHASE_ORDER_ID)) {
+        polIds = Collections.emptyList();
         Matcher matcher = Pattern.compile(".*" + PURCHASE_ORDER_ID + "==(\\S[^)]+).*").matcher(queryParam);
         poId = matcher.find() ? matcher.group(1) : EMPTY;
-      } else if (queryParam.startsWith("id==")) {
-        polIds = extractIdsFromQuery(queryParam);
+      } else {
+        poId = EMPTY;
+        polIds = queryParam.startsWith("id==") ? extractIdsFromQuery(queryParam) : Collections.emptyList();
       }
 
       List<JsonObject> postedPoLines = getRqRsEntries(HttpMethod.SEARCH, type);
@@ -1615,6 +1617,7 @@ public class MockServer {
           poLineCollection.getPoLines().addAll(postedPoLines.stream()
             .map(jsonObj -> jsonObj.mapTo(PoLine.class))
             .collect(Collectors.toList()));
+          poLineCollection.getPoLines().removeIf(poLine -> !polIds.isEmpty() && !polIds.contains(poLine.getId()));
         }
 
         poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());

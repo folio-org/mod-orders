@@ -3,7 +3,8 @@ package org.folio.service.titles;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.AcqDesiredPermissions.*;
+import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_ASSIGN;
+import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_MANAGE;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
@@ -109,6 +110,17 @@ public class TitlesService {
       .toList())
       .map(lists -> StreamEx.of(lists)
         .toFlatList(Function.identity()).stream().collect(groupingBy(Title::getPoLineId)));
+  }
+
+  public Future<List<Title>> getTitlesByPieceIds(List<String> pieceIds, RequestContext requestContext) {
+    return collectResultsOnSuccess(StreamEx
+      .ofSubLists(pieceIds, MAX_IDS_FOR_GET_RQ_15)
+      // Transform piece id's to CQL query
+      .map(ids -> HelperUtils.convertIdsToCqlQuery(ids, "pieces.id"))
+      // Send get request for each CQL query
+      .map(query -> getTitlesByQuery(query, requestContext))
+      .toList())
+      .map(lists -> StreamEx.of(lists).toFlatList(Function.identity()).stream().toList());
   }
 
   private Future<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
