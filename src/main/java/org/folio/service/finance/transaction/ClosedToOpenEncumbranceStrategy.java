@@ -82,7 +82,6 @@ public class ClosedToOpenEncumbranceStrategy implements EncumbranceWorkflowStrat
                 .filter(h -> h.getOldEncumbrance() == null)
                 .collect(toList());
               holder.withEncumbrancesForCreate(toBeCreatedHolders);
-              holder.withEncumbrancesFromStorage(transactions);
               holder.withEncumbrancesForUnrelease(transactions);
               return encumbranceService.createOrUpdateEncumbrances(holder, requestContext);
             });

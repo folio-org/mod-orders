@@ -280,7 +280,8 @@ public class OrderRolloverService {
         if (transactions.isEmpty()) {
           return Future.succeededFuture();
         } else {
-          return transactionService.deleteTransactions(transactions, requestContext);
+          List<String> idsOfTransactionsToDelete =  transactions.stream().map(Transaction::getId).toList();
+          return transactionService.batchDelete(idsOfTransactionsToDelete, requestContext);
         }
       })
       .map(v -> removeEncumbranceLinks(poLines));

@@ -46,7 +46,6 @@ import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
@@ -63,7 +62,6 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   private final LedgerRolloverProgressService ledgerRolloverProgressService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TransactionService transactionService;
-  private final OrderTransactionSummariesService orderTransactionSummariesService;
   private final BudgetRestrictionService budgetRestrictionService;
 
   public OrderReEncumberService(PurchaseOrderStorageService purchaseOrderStorageService,
@@ -71,7 +69,6 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
                                 LedgerRolloverErrorService ledgerRolloverErrorService,
                                 LedgerRolloverProgressService ledgerRolloverProgressService, PurchaseOrderLineService purchaseOrderLineService,
                                 TransactionService transactionService,
-                                OrderTransactionSummariesService orderTransactionSummariesService,
                                 BudgetRestrictionService budgetRestrictionService) {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.reEncumbranceHoldersBuilder = reEncumbranceHoldersBuilder;
@@ -79,7 +76,6 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
     this.ledgerRolloverProgressService = ledgerRolloverProgressService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.transactionService = transactionService;
-    this.orderTransactionSummariesService = orderTransactionSummariesService;
     this.budgetRestrictionService = budgetRestrictionService;
   }
 
@@ -284,21 +280,12 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
       .toList();
 
     budgetRestrictionService.checkEncumbranceRestrictions(holderForCreateEncumbrances);
-    return holders.stream()
-      .findFirst()
-      .map(ReEncumbranceHolder::getPurchaseOrder)
-      .map(purchaseOrder -> {
-
-        String orderId = purchaseOrder.getId();
-        return orderTransactionSummariesService.updateTransactionSummary(orderId, holderForCreateEncumbrances.size(), requestContext)
-          .compose(aVoid -> GenericCompositeFuture.join(holderForCreateEncumbrances.stream()
-            .map(holder -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
-              .onSuccess(holder::withNewEncumbrance))
-            .toList()))
-          .map(aVoid -> holders);
-      })
-      .orElseGet(() ->  Future.succeededFuture(holders));
-
+    List<Transaction> encumbrances = holderForCreateEncumbrances.stream().map(ReEncumbranceHolder::getNewEncumbrance).toList();
+    if (encumbrances.isEmpty()) {
+      return Future.succeededFuture(holders);
+    }
+    return transactionService.batchCreate(encumbrances, requestContext)
+      .map(aVoid -> holders);
   }
 
 }

@@ -44,10 +44,6 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
 
   private EncumbrancesProcessingHolder distributeHoldersByOperation(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
-    holder.withEncumbrancesFromStorage(encumbranceRelationsHolders.stream()
-      .map(EncumbranceRelationsHolder::getOldEncumbrance)
-      .filter(Objects::nonNull)
-      .collect(toList()));
     List<EncumbranceRelationsHolder> toDelete = getTransactionsToDelete(encumbranceRelationsHolders);
     List<Transaction> toRelease = toDelete.stream().map(EncumbranceRelationsHolder::getOldEncumbrance).collect(toList());
     holder.withEncumbrancesForRelease(toRelease);
