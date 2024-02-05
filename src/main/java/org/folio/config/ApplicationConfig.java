@@ -57,8 +57,6 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.finance.transaction.summary.InvoiceTransactionSummariesService;
-import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.inventory.InventoryService;
 import org.folio.service.invoice.InvoiceLineService;
@@ -235,11 +233,10 @@ public class ApplicationConfig {
 
   @Bean
   EncumbranceService encumbranceService(TransactionService transactionService,
-      OrderTransactionSummariesService orderTransactionSummariesService,
       InvoiceLineService invoiceLineService,
       OrderInvoiceRelationService orderInvoiceRelationService,
       FiscalYearService fiscalYearService) {
-    return new EncumbranceService(transactionService, orderTransactionSummariesService, invoiceLineService, orderInvoiceRelationService, fiscalYearService);
+    return new EncumbranceService(transactionService, invoiceLineService, orderInvoiceRelationService, fiscalYearService);
   }
 
   @Bean
@@ -272,21 +269,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  OrderTransactionSummariesService transactionSummariesService(RestClient restClient) {
-    return new OrderTransactionSummariesService(restClient);
-  }
-
-  @Bean
-  InvoiceTransactionSummariesService invoiceTransactionSummariesService(RestClient restClient) {
-    return new InvoiceTransactionSummariesService(restClient);
-  }
-
-  @Bean
   EncumbranceWorkflowStrategy openToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
-      OrderTransactionSummariesService orderTransactionSummariesService,
       EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
-    return new OpenToPendingEncumbranceStrategy(encumbranceService, orderTransactionSummariesService,
-        encumbranceRelationsHoldersBuilder);
+    return new OpenToPendingEncumbranceStrategy(encumbranceService, encumbranceRelationsHoldersBuilder);
   }
 
   @Bean
@@ -326,10 +311,8 @@ public class ApplicationConfig {
 
   @Bean
   EncumbranceWorkflowStrategy openToClosedEncumbranceStrategy(EncumbranceService encumbranceService,
-      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder,
-      OrderTransactionSummariesService orderTransactionSummariesService) {
-    return new OpenToClosedEncumbranceStrategy(encumbranceService, encumbranceRelationsHoldersBuilder,
-      orderTransactionSummariesService);
+      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    return new OpenToClosedEncumbranceStrategy(encumbranceService, encumbranceRelationsHoldersBuilder);
   }
 
   @Bean
@@ -372,11 +355,9 @@ public class ApplicationConfig {
                                                 LedgerRolloverProgressService ledgerRolloverProgressService,
                                                 PurchaseOrderLineService purchaseOrderLineService,
                                                 TransactionService transactionService,
-                                                OrderTransactionSummariesService orderTransactionSummariesService,
                                                 BudgetRestrictionService budgetRestrictionService) {
     return new OrderReEncumberService(purchaseOrderStorageService, reEncumbranceHoldersBuilder, ledgerRolloverErrorService,
-      ledgerRolloverProgressService, purchaseOrderLineService, transactionService,
-                                      orderTransactionSummariesService, budgetRestrictionService);
+      ledgerRolloverProgressService, purchaseOrderLineService, transactionService, budgetRestrictionService);
   }
 
   @Bean
@@ -739,8 +720,11 @@ public class ApplicationConfig {
     return new PoLineInvoiceLineHolderBuilder(invoiceLineService);
   }
 
-  @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(InvoiceLineService invoiceLineService, PendingPaymentService pendingPaymentService, InvoiceTransactionSummariesService invoiceTransactionSummariesService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
-    return new POLInvoiceLineRelationService(invoiceLineService, pendingPaymentService, invoiceTransactionSummariesService, poLineInvoiceLineHolderBuilder);
+  @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(InvoiceLineService invoiceLineService,
+      PendingPaymentService pendingPaymentService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder,
+      TransactionService transactionService) {
+    return new POLInvoiceLineRelationService(invoiceLineService, pendingPaymentService, poLineInvoiceLineHolderBuilder,
+      transactionService);
   }
 
   @Bean

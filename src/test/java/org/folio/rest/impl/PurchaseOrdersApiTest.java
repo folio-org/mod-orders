@@ -82,14 +82,13 @@ import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT;
 import static org.folio.rest.impl.MockServer.PO_LINES_EMPTY_COLLECTION_ID;
 import static org.folio.rest.impl.MockServer.addMockEntry;
+import static org.folio.rest.impl.MockServer.getBatchCalls;
 import static org.folio.rest.impl.MockServer.getContributorNameTypesSearches;
 import static org.folio.rest.impl.MockServer.getCreatedEncumbrances;
 import static org.folio.rest.impl.MockServer.getCreatedHoldings;
 import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
-import static org.folio.rest.impl.MockServer.getCreatedOrderSummaries;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
-import static org.folio.rest.impl.MockServer.getExistingOrderSummaries;
 import static org.folio.rest.impl.MockServer.getHoldingsSearches;
 import static org.folio.rest.impl.MockServer.getInstanceStatusesSearches;
 import static org.folio.rest.impl.MockServer.getInstanceTypesSearches;
@@ -100,6 +99,7 @@ import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.MockServer.getQueryParams;
+import static org.folio.rest.impl.MockServer.getUpdatedTransactions;
 import static org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC;
 import static org.folio.rest.jaxrs.model.Piece.Format.OTHER;
 import static org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL;
@@ -125,7 +125,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
@@ -210,8 +210,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import io.restassured.http.Header;
 import io.restassured.http.Headers;
@@ -255,7 +253,6 @@ public class PurchaseOrdersApiTest {
   private static final String ORDER_WITHOUT_WORKFLOW_STATUS = "41d56e59-46db-4d5e-a1ad-a178228913e5";
   static final String ORDER_WIT_PO_LINES_FOR_SORTING =  "9a952cd0-842b-4e71-bddd-014eb128dc8e";
   static final String VALID_FUND_ID =  "fb7b70f1-b898-4924-a991-0e4b6312bb5f";
-  static final String FUND_ENCUMBRANCE_ERROR =  "f1654bbe-dd76-4bfe-a96a-e764141e6aac";
   static final String SAMPLE_TITLE_ID = "5489d159-cbbd-417e-a4e3-c6b0f7627f4f";
 
   public static final String ORDER_WITHOUT_MATERIAL_TYPES_ID =  "0cb6741d-4a00-47e5-a902-5678eb24478d";
@@ -863,7 +860,7 @@ public class PurchaseOrdersApiTest {
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces, 0);
 
     verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getExistingOrderSummaries(), hasSize(0));
+    assertThat(getUpdatedTransactions(), hasSize(0));
     verifyCalculatedData(resp);
     verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
     verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
@@ -959,7 +956,7 @@ public class PurchaseOrdersApiTest {
     });
 
     verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getExistingOrderSummaries(), hasSize(0));
+    assertThat(getBatchCalls(), hasSize(0));
     verifyCalculatedData(resp);
 
     // MODORDERS-459 - check status changed to ONGOING
@@ -1283,7 +1280,7 @@ public class PurchaseOrdersApiTest {
 
     verifyOpenOrderPiecesCreated(createdItems, compPo.getCompositePoLines(), createdPieces, 0);
     verifyEncumbrancesOnPoUpdate(compPo);
-    assertTrue(getExistingOrderSummaries().size() > 0);
+    assertFalse(getBatchCalls().isEmpty());
   }
 
   @Test
@@ -1382,7 +1379,6 @@ public class PurchaseOrdersApiTest {
     preparePiecesForCompositePo(reqData);
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), "", 204);
 
-    assertThat(getCreatedOrderSummaries(), hasSize(0));
     assertThat(getCreatedEncumbrances(), hasSize(0));
   }
 
@@ -4281,16 +4277,17 @@ public class PurchaseOrdersApiTest {
     PurchaseOrder po = getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class);
     assertThat(po.getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.OPEN));
 
-    List<Transaction> transactions = Arrays.asList(transaction);
-    TransactionCollection transactionCollection = new TransactionCollection().withTransactions(Arrays.asList(transaction)).withTotalRecords(1);
-    doAnswer(new Answer<Void>() {
-      public Void answer(InvocationOnMock invocation) {
-        Object[] args = invocation.getArguments();
-        return null;
-      }
-    }).when(transactionService).updateTransactions(transactions, requestContext);
-    doReturn(succeededFuture(transactionCollection)).when(restClient).get(requestEntry, TransactionCollection.class, requestContext);
-    doReturn(succeededFuture(transactions)).when(transactionService).getTransactionsByIds(transactionIds, requestContext);
+    List<Transaction> transactions = List.of(transaction);
+    TransactionCollection transactionCollection = new TransactionCollection()
+      .withTransactions(List.of(transaction))
+      .withTotalRecords(1);
+    doReturn(succeededFuture())
+      .when(transactionService).batchUpdate(eq(transactions), eq(requestContext));
+    doReturn(succeededFuture(transactionCollection))
+      .when(restClient).get(eq(requestEntry), eq(TransactionCollection.class), eq(requestContext));
+    doReturn(succeededFuture(transactions))
+      .when(transactionService).getTransactionsByIds(eq(transactionIds), eq(requestContext));
+
     Future<List<Transaction>> future = encumbranceService.getEncumbrancesByIds(transactionIds, requestContext);
 
     vertxTestContext.assertComplete(future)

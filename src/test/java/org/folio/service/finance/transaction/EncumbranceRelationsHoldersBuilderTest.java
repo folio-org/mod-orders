@@ -41,6 +41,7 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
+import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -276,7 +277,8 @@ public class EncumbranceRelationsHoldersBuilderTest {
                              .withInitialAmountEncumbered(68d)
                              .withAmountExpended(10d)
                              .withAmountAwaitingPayment(20d)
-            );
+            )
+      .withMetadata(new Metadata());
 
     List<EncumbranceRelationsHolder> holders = new ArrayList<>();
     holders.add(holder1);

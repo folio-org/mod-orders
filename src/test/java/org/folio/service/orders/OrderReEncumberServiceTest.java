@@ -19,16 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -63,13 +60,10 @@ import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
 import org.folio.service.finance.rollover.LedgerRolloverService;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.AdditionalMatchers;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -104,15 +98,10 @@ public class OrderReEncumberServiceTest {
   @Mock
   private TransactionService transactionService;
   @Mock
-  private OrderTransactionSummariesService orderTransactionSummariesService;
-  @Mock
   private ReEncumbranceHoldersBuilder spyReEncumbranceHoldersBuilder;
 
   @Mock
   private RequestContext requestContext;
-
-  @Captor
-  ArgumentCaptor<ArrayList<ReEncumbranceHolder>> argumentCaptorForList;
 
   private LedgerFiscalYearRolloverProgress notStarted;
   private LedgerFiscalYearRolloverProgress inProgress;
@@ -470,8 +459,8 @@ public class OrderReEncumberServiceTest {
     List<Transaction> toTransactionList = Collections.emptyList();
     when(transactionService.getTransactions(anyString(), eq(requestContext)))
         .thenReturn(succeededFuture(toTransactionList));
-    when(orderTransactionSummariesService.updateTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
-    when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(succeededFuture(new Transaction()));
+    when(transactionService.batchCreate(anyList(), eq(requestContext)))
+      .thenReturn(succeededFuture());
 
     Future<Void> future = orderReEncumberService.reEncumber(orderId, requestContext);
 
@@ -639,8 +628,8 @@ public class OrderReEncumberServiceTest {
     when(exchangeRateProviderResolver.resolve(conversionFyToPoLineQuery, requestContext)).thenReturn(exchangeRateProvider);
     when(transactionService.getTransactions(anyString(), eq(requestContext)))
         .thenReturn(succeededFuture(toTransactionList));
-    when(orderTransactionSummariesService.updateTransactionSummary(eq(orderId), anyInt(), eq(requestContext))).thenReturn(succeededFuture(null));
-    when(transactionService.createTransaction(any(), eq(requestContext))).thenReturn(succeededFuture(new Transaction()));
+    when(transactionService.batchCreate(anyList(), eq(requestContext)))
+      .thenReturn(succeededFuture());
 
     //When
     Future<Void> future = orderReEncumberService.reEncumber(UUID.randomUUID().toString(), requestContext);

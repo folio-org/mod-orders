@@ -2,7 +2,6 @@ package org.folio.service.finance.transaction;
 
 import static java.util.Objects.requireNonNullElse;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
@@ -15,10 +14,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletionException;
-
-import javax.money.MonetaryAmount;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
@@ -26,10 +23,9 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.acq.model.finance.TransactionPatch;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -40,13 +36,10 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.finance.FiscalYearService;
-import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.OrderInvoiceRelationService;
-import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Future;
-import io.vertxconcurrent.Semaphore;
 
 public class EncumbranceService {
 
@@ -57,19 +50,16 @@ public class EncumbranceService {
   private static final Logger logger = LogManager.getLogger();
 
   private final TransactionService transactionService;
-  private final OrderTransactionSummariesService orderTransactionSummariesService;
   private final InvoiceLineService invoiceLineService;
   private final OrderInvoiceRelationService orderInvoiceRelationService;
   private final FiscalYearService fiscalYearService;
 
 
   public EncumbranceService(TransactionService transactionService,
-                            OrderTransactionSummariesService orderTransactionSummariesService,
                             InvoiceLineService invoiceLineService,
                             OrderInvoiceRelationService orderInvoiceRelationService,
                             FiscalYearService fiscalYearService) {
     this.transactionService = transactionService;
-    this.orderTransactionSummariesService = orderTransactionSummariesService;
     this.invoiceLineService = invoiceLineService;
     this.orderInvoiceRelationService = orderInvoiceRelationService;
     this.fiscalYearService = fiscalYearService;
@@ -77,71 +67,100 @@ public class EncumbranceService {
 
 
   public Future<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
-
     if (holder.getAllEncumbrancesQuantity() == 0)
       return Future.succeededFuture();
     return unreleaseEncumbrancesFirst(holder, requestContext)
-        .compose(v -> orderTransactionSummariesService.createOrUpdateOrderTransactionSummary(holder, requestContext))
-        .compose(v -> createEncumbrances(holder.getEncumbrancesForCreate(), requestContext))
-        .compose(v -> releaseEncumbrances(holder.getEncumbrancesForRelease(), requestContext))
-        .compose(v -> unreleaseEncumbrances(holder.getEncumbrancesForUnrelease(), requestContext))
-        .compose(v -> updateEncumbrances(holder, requestContext))
-        .compose(v -> deleteEncumbrances(holder.getEncumbrancesForDelete(), requestContext))
-        .compose(v -> releaseEncumbrancesAfter(holder, requestContext));
+      .compose(v -> batchProcess(holder, requestContext))
+      .compose(v -> releaseEncumbrancesAfter(holder, requestContext));
   }
 
-  public Future<Void> createEncumbrances(List<EncumbranceRelationsHolder> relationsHolders, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(relationsHolders))
-      return Future.succeededFuture();
-
-    Semaphore semaphore = new Semaphore(1, requestContext.getContext().owner());
-
-    return requestContext.getContext().owner()
-      .<List<Future<Transaction>>>executeBlocking(promise -> {
-        List<Future<Transaction>> futures = new ArrayList<>();
-        for (EncumbranceRelationsHolder holder : relationsHolders) {
-          semaphore.acquire(() -> {
-            Future<Transaction> createTransactionFuture = transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
-              .map(transaction -> {
-                holder.getFundDistribution().setEncumbrance(transaction.getId());
-                return null;
-              });
-            var future = createTransactionFuture.otherwise(fail -> {
-              checkCustomTransactionError(fail);
-              return null;
-            })
-            .onComplete(asyncResult -> semaphore.release());
-
-            futures.add(future);
-            if (futures.size() == relationsHolders.size()) {
-              promise.complete(futures);
-            }
-          });
-
+  public Future<Void> batchProcess(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
+    List<Transaction> transactionsToCreate = prepareTransactionsToCreate(holder.getEncumbrancesForCreate());
+    List<Transaction> transactionsToUpdate = prepareTransactionsToUpdate(holder);
+    List<Transaction> transactionsToDelete = prepareTransactionsToDelete(holder.getEncumbrancesForDelete());
+    List<String> idsOfTransactionsToDelete =  transactionsToDelete.stream().map(Transaction::getId).toList();
+    List<TransactionPatch> transactionPatches = Collections.emptyList();
+    return transactionService.batchAllOrNothing(transactionsToCreate, transactionsToUpdate, idsOfTransactionsToDelete,
+        transactionPatches, requestContext)
+      .recover(t -> {
+        try {
+          checkCustomTransactionError(t);
+        } catch(Exception ex) {
+          return Future.failedFuture(ex);
         }
+        return Future.failedFuture(t);
       })
-      .compose(futures -> GenericCompositeFuture.all(new ArrayList<>(futures))
-        .mapEmpty());
+      .compose(v -> {
+        if (transactionsToDelete.isEmpty()) {
+          return Future.succeededFuture();
+        }
+        return deleteEncumbranceLinksInInvoiceLines(transactionsToDelete, requestContext);
+      });
   }
 
+  private List<Transaction> prepareTransactionsToCreate(List<EncumbranceRelationsHolder> relationsHolders) {
+    if (CollectionUtils.isEmpty(relationsHolders)) {
+      return Collections.emptyList();
+    }
+    relationsHolders.forEach(holder -> {
+      Transaction encumbrance = holder.getNewEncumbrance();
+      if (encumbrance.getId() == null) {
+        encumbrance.setId(UUID.randomUUID().toString());
+      }
+      holder.getFundDistribution().setEncumbrance(encumbrance.getId());
+    });
+    return relationsHolders.stream().map(EncumbranceRelationsHolder::getNewEncumbrance).toList();
+  }
+
+  private List<Transaction> prepareTransactionsToUpdate(EncumbrancesProcessingHolder holder) {
+    ArrayList<Transaction> encumbrances = new ArrayList<>(
+      holder.getEncumbrancesForUpdate().stream()
+        .map(EncumbranceRelationsHolder::getNewEncumbrance)
+        .toList());
+    holder.getEncumbrancesForRelease().forEach(encToRelease -> {
+      if (encumbrances.stream().noneMatch(enc -> enc.getId().equals(encToRelease.getId()))) {
+        encToRelease.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
+        encumbrances.add(encToRelease);
+      } else {
+        encumbrances.stream()
+          .filter(enc -> enc.getId().equals(encToRelease.getId()))
+          .forEach(enc -> enc.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
+      }
+    });
+    holder.getEncumbrancesForUnrelease().forEach(encToUnrelease -> {
+      if (encumbrances.stream().noneMatch(enc -> enc.getId().equals(encToUnrelease.getId()))) {
+        encToUnrelease.getEncumbrance().setStatus(Encumbrance.Status.UNRELEASED);
+        encumbrances.add(encToUnrelease);
+      } else {
+        encumbrances.stream()
+          .filter(enc -> enc.getId().equals(encToUnrelease.getId()))
+          .forEach(enc -> enc.getEncumbrance().setStatus(Encumbrance.Status.UNRELEASED));
+      }
+    });
+    return encumbrances;
+  }
+
+  private List<Transaction> prepareTransactionsToDelete(List<EncumbranceRelationsHolder> holders) {
+    // before deleting encumbrances, set the fund distribution encumbrance to null if a new encumbrance has not been created
+    // (as with pending->pending)
+    holders.stream()
+      .filter(erh -> erh.getFundDistribution() != null && erh.getOldEncumbrance().getId().equals(erh.getFundDistribution().getEncumbrance()))
+      .forEach(erh -> erh.getFundDistribution().setEncumbrance(null));
+    return holders.stream()
+      .map(EncumbranceRelationsHolder::getOldEncumbrance)
+      .toList();
+  }
 
   public Future<Void> updateEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder compPo, RequestContext requestContext) {
     logger.info("updateEncumbrancesOrderStatusAndReleaseIfClosed:: orderId {}  ", compPo.getId());
     return getOrderUnreleasedEncumbrances(compPo.getId(), requestContext).compose(encumbrs -> {
       if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
-        return orderTransactionSummariesService.updateTransactionSummary(compPo.getId(), encumbrs.size(), requestContext)
-          .map(v -> {
-            syncEncumbrancesOrderStatusAndReleaseIfClosed(compPo.getWorkflowStatus(), encumbrs);
-            return encumbrs;
-          })
-          .compose(transactions -> transactionService.updateTransactions(transactions, requestContext));
+        syncEncumbrancesOrderStatusAndReleaseIfClosed(compPo.getWorkflowStatus(), encumbrs);
+        // NOTE: we will have to use transactionPatches when it is available (see MODORDERS-1008)
+        return transactionService.batchUpdate(encumbrs, requestContext);
       }
       return Future.succeededFuture();
     });
-  }
-
-  public Future<Void> updateOrderTransactionSummary(CompositePoLine compOrderLine, List<Transaction> encumbrs, RequestContext requestContext) {
-    return orderTransactionSummariesService.updateTransactionSummary(compOrderLine.getPurchaseOrderId(), encumbrs.size(), requestContext);
   }
 
   private void syncEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder.WorkflowStatus workflowStatus,
@@ -159,16 +178,6 @@ public class EncumbranceService {
     return !CollectionUtils.isEmpty(encumbrs) && !orderStatus.value().equals(encumbrs.get(0).getEncumbrance().getOrderStatus().value());
   }
 
-
-  private Future<Void> updateEncumbrances(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
-    if (holder.getEncumbrancesForUpdate().isEmpty())
-      return Future.succeededFuture();
-
-    List<Transaction> encumbrances = holder.getEncumbrancesForUpdate().stream()
-            .map(EncumbranceRelationsHolder::getNewEncumbrance)
-            .collect(toList());
-    return updateEncumbrances(encumbrances, requestContext);
-  }
 
   public Future<List<Transaction>> getOrderEncumbrances(String orderId, RequestContext requestContext) {
     return transactionService.getTransactions(buildEncumbrancesByOrderQuery(orderId), requestContext);
@@ -229,80 +238,45 @@ public class EncumbranceService {
       .map(encumbrances -> encumbrances.stream().flatMap(Collection::stream).collect(toList()));
   }
 
-  public void updateEncumbrance(FundDistribution fundDistribution, CompositePoLine poLine, Transaction trEncumbrance) {
-    MonetaryAmount estimatedPrice = calculateEstimatedPrice(poLine.getCost());
-    trEncumbrance.setAmount(calculateAmountEncumbered(fundDistribution, estimatedPrice));
-    trEncumbrance.setExpenseClassId(fundDistribution.getExpenseClassId());
-    if (Objects.nonNull(poLine.getTags())) {
-      trEncumbrance.setTags(new Tags().withTagList(poLine.getTags().getTagList()));
-    }
-    Encumbrance encumbrance = trEncumbrance.getEncumbrance();
-    encumbrance.setStatus(Encumbrance.Status.UNRELEASED);
-    encumbrance.setInitialAmountEncumbered(trEncumbrance.getAmount());
-  }
-
   public Future<Void> releaseEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
-    if (encumbrances.isEmpty())
+    if (encumbrances.isEmpty()) {
       return Future.succeededFuture();
-
-    encumbrances.forEach(transaction -> transaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
-    return transactionService.updateTransactions(encumbrances, requestContext);
+    }
+    return transactionService.batchRelease(encumbrances, requestContext);
   }
 
   public Future<Void> unreleaseEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
-    if (encumbrances.isEmpty())
+    if (encumbrances.isEmpty()) {
       return Future.succeededFuture();
-
-    encumbrances.forEach(transaction -> transaction.getEncumbrance().setStatus(Encumbrance.Status.UNRELEASED));
-    return transactionService.updateTransactions(encumbrances, requestContext);
-  }
-
-  public Future<Void> updateEncumbrances(List<Transaction> transactions, RequestContext requestContext) {
-    return transactionService.updateTransactions(transactions, requestContext);
-  }
-
-  public Future<Void> deleteEncumbrances(List<EncumbranceRelationsHolder> holders, RequestContext requestContext) {
-    if (holders.isEmpty())
-      return Future.succeededFuture();
-
-    // before deleting encumbrances, set the fund distribution encumbrance to null if a new encumbrance has not been created
-    // (as with pending->pending)
-    holders.stream()
-      .filter(erh -> erh.getFundDistribution() != null && erh.getOldEncumbrance().getId().equals(erh.getFundDistribution().getEncumbrance()))
-      .forEach(erh -> erh.getFundDistribution().setEncumbrance(null));
-    List<Transaction> transactions = holders.stream()
-      .map(EncumbranceRelationsHolder::getOldEncumbrance)
-      .collect(toList());
-    if (transactions.isEmpty()) {
-      return Future.succeededFuture();
-    } else {
-      return transactionService.deleteTransactions(transactions, requestContext)
-        .compose(v -> deleteEncumbranceLinksInInvoiceLines(transactions, requestContext));
     }
+    return transactionService.batchUnrelease(encumbrances, requestContext);
+  }
+
+  public Future<Void> updateEncumbrances(List<Transaction> encumbrances, RequestContext requestContext) {
+    if (encumbrances.isEmpty()) {
+      return Future.succeededFuture();
+    }
+    return transactionService.batchUpdate(encumbrances, requestContext);
   }
 
   public Future<Void> deletePoLineEncumbrances(PoLine poline, RequestContext requestContext) {
     return getPoLineEncumbrances(poline.getId(), requestContext)
-      .compose(encumbrances -> orderTransactionSummariesService.updateTransactionSummary(poline.getPurchaseOrderId(), encumbrances.size(), requestContext)
-        .compose(v -> releaseEncumbrances(encumbrances, requestContext))
-        .compose(ok -> transactionService.deleteTransactions(encumbrances, requestContext)));
+      .compose(encumbrances -> {
+        if (encumbrances.isEmpty()) {
+          return Future.succeededFuture();
+        }
+        return transactionService.batchReleaseAndDelete(encumbrances, requestContext);
+      });
   }
 
   public Future<Void> deleteOrderEncumbrances(String orderId, RequestContext requestContext) {
     return getOrderEncumbrances(orderId, requestContext)
-      .compose(encumbrances -> orderTransactionSummariesService.updateTransactionSummary(orderId, encumbrances.size(), requestContext)
-        .compose(v -> releaseEncumbrances(encumbrances, requestContext))
-        .compose(v -> transactionService.deleteTransactions(encumbrances, requestContext)));
-  }
-
-  public static double calculateAmountEncumbered(FundDistribution distribution, MonetaryAmount estimatedPrice) {
-    if (distribution.getDistributionType() == FundDistribution.DistributionType.PERCENTAGE) {
-      return estimatedPrice.with(MonetaryOperators.percent(distribution.getValue()))
-        .with(MonetaryOperators.rounding())
-        .getNumber()
-        .doubleValue();
-    }
-    return distribution.getValue();
+      .compose(encumbrances -> {
+        if (encumbrances.isEmpty()) {
+          return Future.succeededFuture();
+        }
+        return transactionService.batchReleaseAndDelete(encumbrances, requestContext);
+      });
   }
 
   public Future<Void> deleteEncumbranceLinksInInvoiceLines(List<Transaction> transactions, RequestContext requestContext) {
@@ -415,10 +389,8 @@ public class EncumbranceService {
     List<Transaction> encumbrances = holder.getEncumbrancesToUnreleaseBefore();
     if (encumbrances.isEmpty())
       return Future.succeededFuture();
-    String orderId = encumbrances.get(0).getEncumbrance().getSourcePurchaseOrderId();
     List<String> encumbranceIds = encumbrances.stream().map(Transaction::getId).collect(toList());
-    return orderTransactionSummariesService.updateOrCreateTransactionSummary(orderId, encumbrances.size(), requestContext)
-      .compose(v -> unreleaseEncumbrances(encumbrances, requestContext))
+    return unreleaseEncumbrances(encumbrances, requestContext)
       .compose(v -> transactionService.getTransactionsByIds(encumbranceIds, requestContext))
       .map(newEncumbrances -> {
         holder.getEncumbrancesForUpdate().forEach(h -> {
@@ -436,16 +408,12 @@ public class EncumbranceService {
 
   private Future<Void> releaseEncumbrancesAfter(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
     // Get the updated version of the encumbrances before releasing them.
+    // NOTE: this could be done within batchProcess using patches (assuming patches are done after create/update; see MODORDERS-1008)
     List<Transaction> encumbrances = holder.getEncumbrancesToUnreleaseAfter();
     if (encumbrances.isEmpty())
       return Future.succeededFuture();
-    String orderId = encumbrances.get(0).getEncumbrance().getSourcePurchaseOrderId();
     List<String> encumbranceIds = encumbrances.stream().map(Transaction::getId).collect(toList());
     return transactionService.getTransactionsByIds(encumbranceIds, requestContext)
-      .compose(updatedEncumbrances ->
-        orderTransactionSummariesService.updateOrCreateTransactionSummary(orderId, updatedEncumbrances.size(),
-            requestContext)
-          .compose(v -> releaseEncumbrances(updatedEncumbrances, requestContext))
-      );
+      .compose(updatedEncumbrances -> releaseEncumbrances(updatedEncumbrances, requestContext));
   }
 }

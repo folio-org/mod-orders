@@ -69,6 +69,18 @@ public class RestClient {
       .onFailure(log::error);
   }
 
+  public <T> Future<Void> postEmptyResponse(String endpoint, T entity, RequestContext requestContext) {
+    log.debug(SENDING_POST_WITH_BODY_MSG, () -> endpoint, () -> JsonObject.mapFrom(entity).encodePrettily());
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
+    return getVertxWebClient(requestContext.getContext())
+      .postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJson(entity)
+      .onFailure(log::error)
+      .mapEmpty();
+  }
+
   private MultiMap convertToCaseInsensitiveMap(Map<String, String> okapiHeaders) {
     return MultiMap.caseInsensitiveMultiMap()
       .addAll(okapiHeaders)

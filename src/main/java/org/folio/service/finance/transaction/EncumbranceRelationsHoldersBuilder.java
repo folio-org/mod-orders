@@ -18,11 +18,13 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
 
+import io.vertx.core.json.JsonObject;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
+import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Tags;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
@@ -291,6 +293,7 @@ public class EncumbranceRelationsHoldersBuilder {
         Transaction newTransaction = holder.getNewEncumbrance();
         newTransaction.setId(existingTransaction.getId());
         newTransaction.setVersion(existingTransaction.getVersion());
+        newTransaction.setMetadata(JsonObject.mapFrom(existingTransaction.getMetadata()).mapTo(Metadata.class));
         newTransaction.getEncumbrance()
           .withAmountExpended(existingTransaction.getEncumbrance().getAmountExpended())
           .withAmountAwaitingPayment(existingTransaction.getEncumbrance().getAmountAwaitingPayment());

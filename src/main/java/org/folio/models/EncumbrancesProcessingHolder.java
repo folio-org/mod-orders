@@ -5,10 +5,7 @@ import java.util.List;
 
 import org.folio.rest.acq.model.finance.Transaction;
 
-import com.google.common.collect.ImmutableList;
-
 public class EncumbrancesProcessingHolder {
-  private List<Transaction> encumbrancesFromStorage;
   private List<Transaction> encumbrancesForRelease;
   private List<EncumbranceRelationsHolder> encumbrancesForCreate;
   private List<EncumbranceRelationsHolder> encumbrancesForDelete;
@@ -18,7 +15,6 @@ public class EncumbrancesProcessingHolder {
   private List<Transaction> encumbrancesToReleaseAfter;
 
   public EncumbrancesProcessingHolder() {
-    this.encumbrancesFromStorage = new ArrayList<>();
     this.encumbrancesForCreate = new ArrayList<>();
     this.encumbrancesForDelete = new ArrayList<>();
     this.encumbrancesForUpdate = new ArrayList<>();
@@ -60,11 +56,6 @@ public class EncumbrancesProcessingHolder {
 
   public EncumbrancesProcessingHolder withEncumbrancesForRelease(List<Transaction> encumbrancesForRelease) {
     this.encumbrancesForRelease = new ArrayList<>(encumbrancesForRelease);
-    return this;
-  }
-
-  public EncumbrancesProcessingHolder withEncumbrancesFromStorage(List<Transaction> encumbrancesFromStorage) {
-    this.encumbrancesFromStorage = new ArrayList<>(encumbrancesFromStorage);
     return this;
   }
 
@@ -113,10 +104,7 @@ public class EncumbrancesProcessingHolder {
 
   public int getAllEncumbrancesQuantity() {
     return encumbrancesForCreate.size() + encumbrancesForUpdate.size()
-        + encumbrancesForRelease.size() + encumbrancesForUnrelease.size();
-  }
-
-  public List<Transaction> getEncumbrancesFromStorage() {
-    return ImmutableList.copyOf(encumbrancesFromStorage);
+        + encumbrancesForRelease.size() + encumbrancesForUnrelease.size()
+        + encumbrancesForDelete.size();
   }
 }
