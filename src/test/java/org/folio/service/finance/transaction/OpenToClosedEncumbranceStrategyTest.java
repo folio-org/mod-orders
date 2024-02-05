@@ -7,7 +7,6 @@ import static org.folio.TestConstants.PO_WFD_ID_OPEN_STATUS;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -26,7 +25,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -44,8 +42,6 @@ public class OpenToClosedEncumbranceStrategyTest {
   private OpenToClosedEncumbranceStrategy openToClosedEncumbranceStrategy;
   @Mock
   private EncumbranceService encumbranceService;
-  @Mock
-  private OrderTransactionSummariesService orderTransactionSummariesService;
   @Mock
   EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
   @Mock
@@ -79,7 +75,6 @@ public class OpenToClosedEncumbranceStrategyTest {
       .withEncumbrance(encumbrance);
     List<Transaction> encumbrances = singletonList(transaction);
     doReturn(succeededFuture(encumbrances)).when(encumbranceService).getEncumbrancesByPoLinesFromCurrentFy(any(), any());
-    doReturn(succeededFuture(null)).when(orderTransactionSummariesService).updateTransactionSummary(eq(order.getId()), anyInt(), any());
     doReturn(succeededFuture(null)).when(encumbranceService).updateEncumbrances(any(), any());
 
     // When

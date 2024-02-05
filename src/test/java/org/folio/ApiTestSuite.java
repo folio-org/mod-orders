@@ -59,7 +59,6 @@ import org.folio.service.finance.transaction.OpenToClosedEncumbranceStrategyTest
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
-import org.folio.service.finance.transaction.TransactionSummariesServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
 import org.folio.service.inventory.InventoryManagerTest;
 import org.folio.service.invoice.InvoiceLineServiceTest;
@@ -453,10 +452,6 @@ public class ApiTestSuite {
 
   @Nested
   class LedgerRolloverProgressServiceTestNested extends LedgerRolloverProgressServiceTest {
-  }
-
-  @Nested
-  class TransactionSummariesServiceTestNested extends TransactionSummariesServiceTest {
   }
 
   @Nested

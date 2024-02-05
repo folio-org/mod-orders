@@ -57,11 +57,10 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
-import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
 import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
 import static org.folio.orders.utils.ResourcePathResolver.EXPORT_HISTORY;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_BATCH_TRANSACTIONS;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
-import static org.folio.orders.utils.ResourcePathResolver.FINANCE_RELEASE_ENCUMBRANCE;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
 import static org.folio.orders.utils.ResourcePathResolver.USER_TENANTS_ENDPOINT;
@@ -69,7 +68,6 @@ import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
@@ -93,7 +91,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.LEDGER_NOT_FOUND_FOR_TRA
 import static org.folio.rest.impl.PoNumberApiTest.EXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PoNumberApiTest.NONEXISTING_PO_NUMBER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ACTIVE_VENDOR_ID;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.FUND_ENCUMBRANCE_ERROR;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ID_FOR_PRINT_MONOGRAPH_ORDER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.INACTIVE_VENDOR_ID;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ITEMS_NOT_FOUND;
@@ -123,6 +120,7 @@ import java.nio.file.NoSuchFileException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -160,6 +158,7 @@ import org.folio.rest.acq.model.SequenceNumber;
 import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.acq.model.Title;
 import org.folio.rest.acq.model.TitleCollection;
+import org.folio.rest.acq.model.finance.Batch;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.BudgetCollection;
 import org.folio.rest.acq.model.finance.BudgetExpenseClassCollection;
@@ -171,7 +170,7 @@ import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.FundCollection;
 import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.LedgerCollection;
-import org.folio.rest.acq.model.finance.OrderTransactionSummary;
+import org.folio.rest.acq.model.finance.Metadata;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
 import org.folio.rest.acq.model.invoice.FundDistribution;
@@ -459,27 +458,28 @@ public class MockServer {
   }
 
   public static List<Transaction> getCreatedEncumbrances() {
-    List<JsonObject> jsonObjects = serverRqRs.get(ENCUMBRANCES, HttpMethod.POST);
+    List<JsonObject> jsonObjects = serverRqRs.get(FINANCE_BATCH_TRANSACTIONS, HttpMethod.POST);
     return jsonObjects == null ? Collections.emptyList()
       : jsonObjects.stream()
-      .map(json -> json.mapTo(Transaction.class))
-      .collect(Collectors.toList());
+      .map(json -> json.mapTo(Batch.class))
+      .map(Batch::getTransactionsToCreate)
+      .flatMap(Collection::stream)
+      .toList();
   }
 
   public static List<Transaction> getUpdatedTransactions() {
-    List<JsonObject> jsonObjects = serverRqRs.get(ENCUMBRANCES, HttpMethod.PUT);
+    List<JsonObject> jsonObjects = serverRqRs.get(FINANCE_BATCH_TRANSACTIONS, HttpMethod.POST);
     return jsonObjects == null ? Collections.emptyList()
       : jsonObjects.stream()
-      .map(json -> json.mapTo(Transaction.class))
-      .collect(Collectors.toList());
+      .map(json -> json.mapTo(Batch.class))
+      .map(Batch::getTransactionsToUpdate)
+      .flatMap(Collection::stream)
+      .toList();
   }
 
-  static List<JsonObject> getCreatedOrderSummaries() {
-    return Optional.ofNullable(serverRqRs.get(ORDER_TRANSACTION_SUMMARIES, HttpMethod.POST)).orElse(Collections.emptyList());
-  }
-
-  static List<JsonObject> getExistingOrderSummaries() {
-    return Optional.ofNullable(serverRqRs.get(ORDER_TRANSACTION_SUMMARIES, HttpMethod.PUT)).orElse(Collections.emptyList());
+  static List<JsonObject> getBatchCalls() {
+    return Optional.ofNullable(serverRqRs.get(FINANCE_BATCH_TRANSACTIONS, HttpMethod.POST))
+      .orElse(Collections.emptyList());
   }
 
   private static List<JsonObject> getCollectionRecords(List<JsonObject> entries) {
@@ -542,10 +542,8 @@ public class MockServer {
     router.post(resourcesPath(REPORTING_CODES)).handler(ctx -> handlePostGenericSubObj(ctx, REPORTING_CODES));
     router.post(resourcesPath(PIECES_STORAGE)).handler(ctx -> handlePostGenericSubObj(ctx, PIECES_STORAGE));
     router.post(resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
-    router.post(resourcesPath(ENCUMBRANCES)).handler(this::handleTransactionPostEntry);
+    router.post(resourcesPath(FINANCE_BATCH_TRANSACTIONS)).handler(this::handleBatchTransactions);
     router.post(resourcesPath(TITLES)).handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
-    router.post(resourcesPath(ORDER_TRANSACTION_SUMMARIES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
-    router.post("/finance/release-encumbrance/:id").handler(ctx -> handlePostGenericSubObj(ctx, FINANCE_RELEASE_ENCUMBRANCE));
 
     router.post(resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.post(resourcesPath(ACQUISITION_METHODS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITION_METHODS));
@@ -636,8 +634,6 @@ public class MockServer {
     router.put(resourcePath(REASONS_FOR_CLOSURE)).handler(ctx -> handlePutGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.put(resourcePath(PREFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, PREFIXES));
     router.put(resourcePath(SUFFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, SUFFIXES));
-    router.put("/finance/order-transaction-summaries/:id").handler(ctx -> handlePutGenericSubObj(ctx, ORDER_TRANSACTION_SUMMARIES));
-    router.put(resourcePath(ENCUMBRANCES)).handler(ctx -> handlePutGenericSubObj(ctx, ENCUMBRANCES));
     router.put(resourcePath(ACQUISITION_METHODS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITION_METHODS));
 
 
@@ -650,7 +646,6 @@ public class MockServer {
     router.delete(resourcePath(ACQUISITION_METHODS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITION_METHODS));
     router.delete(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
     router.delete(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ORDER_TEMPLATES));
-    router.delete(resourcePath(ENCUMBRANCES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ENCUMBRANCES));
     router.delete(resourcePath(TITLES)).handler(ctx -> handleDeleteGenericSubObj(ctx, TITLES));
     router.delete(resourcePath(REASONS_FOR_CLOSURE)).handler(ctx -> handleDeleteGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.delete(resourcePath(PREFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PREFIXES));
@@ -2185,75 +2180,45 @@ public class MockServer {
     serverResponse(ctx, status, contentType, respBody);
   }
 
-  private void handleTransactionPostEntry(RoutingContext ctx) {
-    logger.info("got: " + ctx.body().asString());
-
-    String echoStatus = ctx.request().getHeader(X_ECHO_STATUS);
-
-    if (echoStatus != null && !echoStatus.equals("201")){
-      int status;
-      String respBody = "";
-      try {
-        status = Integer.parseInt(echoStatus);
-        switch (status) {
-          case 400 -> respBody = "Unable to add -- malformed JSON at 13:3";
-          case 403 -> respBody = "Access requires permission: foo.bar.baz";
-          case 500 -> respBody = INTERNAL_SERVER_ERROR.getReasonPhrase();
-        }
-        serverResponse(ctx, status, APPLICATION_JSON, respBody);
-        return;
-
-      } catch (NumberFormatException e) {
-        logger.error("Exception parsing " + X_ECHO_STATUS, e);
-      }
-
-    }
+  private void handleBatchTransactions(RoutingContext ctx) {
+    logger.info("handleBatchTransactions got: " + ctx.request().path());
 
     String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
 
     if (INTERNAL_SERVER_ERROR.getReasonPhrase().equals(tenant)) {
       serverResponse(ctx, 500, TEXT_PLAIN, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
-    } else if (FUND_CANNOT_BE_PAID_TENANT.equals(tenant)){
+
+    } else if (FUND_CANNOT_BE_PAID_TENANT.equals(tenant)) {
       Errors errors = new Errors();
       List<Error> errorList = new ArrayList<>();
       errorList.add(new Error().withCode(FUND_CANNOT_BE_PAID.getCode()).withMessage(FUND_CANNOT_BE_PAID.getDescription()));
       errors.withErrors(errorList);
-
       serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
 
-    } else if (BUDGET_IS_INACTIVE_TENANT.equals(tenant) || ctx.body().asJsonObject().getString("fromFundId").equals(FUND_ENCUMBRANCE_ERROR)){
+    } else if (BUDGET_IS_INACTIVE_TENANT.equals(tenant)) {
       Errors errors = new Errors();
       List<Error> errorList = new ArrayList<>();
       errorList.add(new Error().withCode(BUDGET_IS_INACTIVE.getCode()).withMessage(BUDGET_IS_INACTIVE.getDescription()));
       errors.withErrors(errorList);
-
       serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
 
-    } else if (LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT.equals(tenant)){
+    } else if (LEDGER_NOT_FOUND_FOR_TRANSACTION_TENANT.equals(tenant)) {
       Errors errors = new Errors();
       List<Error> errorList = new ArrayList<>();
       errorList.add(new Error().withCode(LEDGER_NOT_FOUND_FOR_TRANSACTION.getCode()).withMessage(LEDGER_NOT_FOUND_FOR_TRANSACTION.getDescription()));
       errors.withErrors(errorList);
-
       serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
 
-    } else if (BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT.equals(tenant)){
+    } else if (BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT.equals(tenant)) {
       Errors errors = new Errors();
       List<Error> errorList = new ArrayList<>();
       errorList.add(new Error().withCode(BUDGET_NOT_FOUND_FOR_TRANSACTION.getCode()).withMessage(BUDGET_NOT_FOUND_FOR_TRANSACTION.getDescription()));
       errors.withErrors(errorList);
-
       serverResponse(ctx, 422, APPLICATION_JSON, JsonObject.mapFrom(errors).encodePrettily());
 
     } else {
-      JsonObject body = ctx.body().asJsonObject();
-      if (body.getString(ID) == null) {
-        body.put(ID, UUID.randomUUID().toString());
-      }
-
-      addServerRqRsData(HttpMethod.POST, ENCUMBRANCES, body);
-      serverResponse(ctx, 201, APPLICATION_JSON, JsonObject.mapFrom(body)
-        .encodePrettily());
+      addServerRqRsData(HttpMethod.POST, FINANCE_BATCH_TRANSACTIONS, ctx.body().asJsonObject());
+      serverResponse(ctx, 204, TEXT_PLAIN, "");
     }
   }
 
@@ -2272,14 +2237,16 @@ public class MockServer {
           .withEncumbrance(new Encumbrance()
             .withSourcePurchaseOrderId("d6966317-96c7-492f-8df6-dc6c19554452")
             .withSourcePoLineId("a6edc906-2f9f-5fb2-a373-efac406f0ef2")
-            .withStatus(Encumbrance.Status.UNRELEASED));
+            .withStatus(Encumbrance.Status.UNRELEASED))
+          .withMetadata(new Metadata());
         Transaction transaction2 = new Transaction()
           .withId(UUID.randomUUID().toString())
           .withFromFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
           .withEncumbrance(new Encumbrance()
             .withSourcePurchaseOrderId("d6966317-96c7-492f-8df6-dc6c19554452")
             .withSourcePoLineId("a6edc906-2f9f-5fb2-a373-efac406f0ef2")
-            .withStatus(Encumbrance.Status.UNRELEASED));
+            .withStatus(Encumbrance.Status.UNRELEASED))
+          .withMetadata(new Metadata());
         List<Transaction> transactions = List.of(transaction1);
         TransactionCollection transactionCollection = new TransactionCollection().withTransactions(List.of(transaction1, transaction2)).withTotalRecords(2);
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
@@ -2291,7 +2258,8 @@ public class MockServer {
           .withEncumbrance(new Encumbrance()
             .withSourcePurchaseOrderId("477f9ca8-b295-11eb-8529-0242ac130003")
             .withSourcePoLineId("50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")
-            .withStatus(Encumbrance.Status.RELEASED));
+            .withStatus(Encumbrance.Status.RELEASED))
+          .withMetadata(new Metadata());
         List<Transaction> transactions = List.of(transaction1);
         TransactionCollection transactionCollection = new TransactionCollection().withTransactions(transactions).withTotalRecords(1);
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
@@ -2327,8 +2295,6 @@ public class MockServer {
       case ACQUISITION_METHODS -> AcquisitionMethod.class;
       case ACQUISITIONS_MEMBERSHIPS -> AcquisitionsUnitMembership.class;
       case ORDER_TEMPLATES -> OrderTemplate.class;
-      case ORDER_TRANSACTION_SUMMARIES -> OrderTransactionSummary.class;
-      case ENCUMBRANCES -> Transaction.class;
       case TITLES -> Title.class;
       case REASONS_FOR_CLOSURE -> ReasonForClosure.class;
       case PREFIXES -> Prefix.class;

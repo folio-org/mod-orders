@@ -23,10 +23,6 @@ public class EncumbrancesProcessingHolderBuilder {
     // also release transaction before delete
     List<Transaction> toRelease = toDelete.stream().map(EncumbranceRelationsHolder::getOldEncumbrance).collect(toList());
     holder.withEncumbrancesForRelease(toRelease);
-    holder.withEncumbrancesFromStorage(encumbranceRelationsHolders.stream()
-      .map(EncumbranceRelationsHolder::getOldEncumbrance)
-      .filter(Objects::nonNull)
-      .collect(toList()));
     updateHolderToUpdateReleasedEncumbrances(holder);
     return holder;
   }

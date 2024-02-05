@@ -3,6 +3,8 @@ package org.folio.service.finance.transaction;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_BATCH_TRANSACTIONS;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.ERROR_RETRIEVING_TRANSACTION;
 
@@ -11,11 +13,17 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.folio.okapi.common.GenericCompositeFuture;
+import io.vertx.core.json.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.rest.acq.model.finance.Batch;
+import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionCollection;
+import org.folio.rest.acq.model.finance.TransactionPatch;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -26,9 +34,8 @@ import io.vertx.core.Future;
 import one.util.streamex.StreamEx;
 
 public class TransactionService {
+  private static final Logger log = LogManager.getLogger();
   private static final String ENDPOINT = "/finance/transactions";
-  private static final String ENCUMBRANCE_ENDPOINT = "/finance/encumbrances";
-  private static final String ENCUMBRANCE_BY_ID_ENDPOINT = "/finance/encumbrances/{id}";
 
   private final RestClient restClient;
 
@@ -80,33 +87,60 @@ public class TransactionService {
     return getTransactions(query, requestContext);
   }
 
-  public Future<Transaction> createTransaction(Transaction transaction, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENCUMBRANCE_ENDPOINT);
-    return restClient.post(requestEntry, transaction, Transaction.class, requestContext);
+  public Future<Void> batchAllOrNothing(List<Transaction> transactionsToCreate, List<Transaction> transactionsToUpdate,
+    List<String> idsOfTransactionsToDelete, List<TransactionPatch> transactionPatches, RequestContext requestContext) {
+    Batch batch = new Batch();
+    if (transactionsToCreate != null) {
+      transactionsToCreate.forEach(tr -> {
+        if (tr.getId() == null) {
+          tr.setId(UUID.randomUUID().toString());
+        }
+      });
+      batch.setTransactionsToCreate(transactionsToCreate);
+    }
+    if (transactionsToUpdate != null) {
+      batch.setTransactionsToUpdate(transactionsToUpdate);
+    }
+    if (idsOfTransactionsToDelete != null) {
+      batch.setIdsOfTransactionsToDelete(idsOfTransactionsToDelete);
+    }
+    if (transactionPatches != null) {
+      batch.setTransactionPatches(transactionPatches);
+    }
+    return restClient.postEmptyResponse(resourcesPath(FINANCE_BATCH_TRANSACTIONS), batch, requestContext)
+      .onSuccess(v -> log.info("batchAllOrNothing completed successfully"))
+      .onFailure(t -> log.error("batchAllOrNothing failed, batch={}", JsonObject.mapFrom(batch), t));
   }
 
-  public Future<Void> updateTransaction(Transaction transaction, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENCUMBRANCE_BY_ID_ENDPOINT).withId(transaction.getId());
-    return restClient.put(requestEntry, transaction, requestContext);
+  public Future<Void> batchCreate(List<Transaction> transactions, RequestContext requestContext) {
+    return batchAllOrNothing(transactions, null, null, null, requestContext);
   }
 
-  public Future<Void> updateTransactions(List<Transaction> transactions, RequestContext requestContext) {
-    return GenericCompositeFuture.join(transactions.stream()
-      .map(transaction -> updateTransaction(transaction, requestContext))
-      .collect(Collectors.toList()))
-      .mapEmpty();
+  public Future<Void> batchUpdate(List<Transaction> transactions, RequestContext requestContext) {
+    return batchAllOrNothing(null, transactions, null, null, requestContext);
   }
 
-  public Future<Void> deleteTransactions(List<Transaction> transactions, RequestContext requestContext) {
-    // TODO: add semaphores
-    return GenericCompositeFuture.join(transactions.stream()
-      .map(transaction -> deleteTransactionById(transaction.getId(), requestContext))
-        .collect(Collectors.toList()))
-      .mapEmpty();
+  public Future<Void> batchRelease(List<Transaction> transactions, RequestContext requestContext) {
+    // NOTE: we will have to use transactionPatches when it is available (see MODORDERS-1008)
+    transactions.forEach(tr -> tr.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
+    return batchUpdate(transactions, requestContext);
   }
 
-  private Future<Void> deleteTransactionById(String transactionId, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENCUMBRANCE_BY_ID_ENDPOINT).withId(transactionId);
-    return restClient.delete(requestEntry, requestContext);
+  public Future<Void> batchUnrelease(List<Transaction> transactions, RequestContext requestContext) {
+    // NOTE: we will have to use transactionPatches when it is available (see MODORDERS-1008)
+    transactions.forEach(tr -> tr.getEncumbrance().setStatus(Encumbrance.Status.UNRELEASED));
+    return batchUpdate(transactions, requestContext);
   }
+
+  public Future<Void> batchDelete(List<String> transactionIds, RequestContext requestContext) {
+    return batchAllOrNothing(null, null, transactionIds, null, requestContext);
+  }
+
+  public Future<Void> batchReleaseAndDelete(List<Transaction> transactions, RequestContext requestContext) {
+    // NOTE: we will have to use transactionPatches when it is available (see MODORDERS-1008)
+    transactions.forEach(tr -> tr.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
+    List<String> ids = transactions.stream().map(Transaction::getId).toList();
+    return batchAllOrNothing(null, transactions, ids, null, requestContext);
+  }
+
 }

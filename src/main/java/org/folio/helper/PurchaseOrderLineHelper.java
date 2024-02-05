@@ -314,16 +314,14 @@ public class PurchaseOrderLineHelper {
   private Future<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, JsonObject lineFromStorage,
     RequestContext requestContext) {
     PoLine poLine = lineFromStorage.mapTo(PoLine.class);
-        if(isReleaseEncumbrances(compOrderLine, poLine)) {
+        if (isReleaseEncumbrances(compOrderLine, poLine)) {
           logger.info("Encumbrances releasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
           return encumbranceService.getPoLineUnreleasedEncumbrances(compOrderLine.getId(), requestContext)
-            .compose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
-              .compose(v -> encumbranceService.releaseEncumbrances(transactionList, requestContext)));
+            .compose(transactionList -> encumbranceService.releaseEncumbrances(transactionList, requestContext));
         } else if (isUnreleasedEncumbrances(compOrderLine, poLine)) {
           logger.info("Encumbrances unreleasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
           return encumbranceService.getPoLineReleasedEncumbrances(compOrderLine, requestContext)
-            .compose(transactionList -> encumbranceService.updateOrderTransactionSummary(compOrderLine, transactionList, requestContext)
-              .compose(v -> encumbranceService.unreleaseEncumbrances(transactionList, requestContext)));
+            .compose(transactionList -> encumbranceService.unreleaseEncumbrances(transactionList, requestContext));
         }
         return Future.succeededFuture();
   }

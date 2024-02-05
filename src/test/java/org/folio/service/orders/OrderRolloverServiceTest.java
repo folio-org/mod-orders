@@ -25,7 +25,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -626,14 +625,14 @@ public class OrderRolloverServiceTest {
     List<Transaction> encumbrances = singletonList(transaction);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    doReturn(succeededFuture(null)).when(transactionService).deleteTransactions(anyList(), any());
+    doReturn(succeededFuture(null)).when(transactionService).batchDelete(anyList(), any());
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     sleep(3000);
     vertxTestContext.assertComplete(future)
       .onSuccess(result -> {
-        verify(transactionService, times(1)).deleteTransactions(
-          argThat(transactions -> transactions.size() == 1 && currEncumbrId.equals(transactions.get(0).getId())), any());
+        verify(transactionService, times(1)).batchDelete(
+          argThat(transactionIds -> transactionIds.size() == 1 && currEncumbrId.equals(transactionIds.get(0))), any());
 
         verify(purchaseOrderLineService).saveOrderLines(argumentCaptor.capture(), any(RequestContext.class));
         assertThat(argumentCaptor.getAllValues().get(0).get(0).getFundDistribution().get(0).getEncumbrance(), equalTo(null));
