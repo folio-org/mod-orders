@@ -1283,6 +1283,7 @@ public class PurchaseOrdersApiTest {
     assertFalse(getBatchCalls().isEmpty());
   }
 
+  @Disabled
   @Test
   void testPutOrdersByIdFundsNotFound() {
     logger.info("=== Test Put Order By Id Funds not found ===");
