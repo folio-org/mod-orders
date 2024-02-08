@@ -13,9 +13,14 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +32,7 @@ import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
@@ -136,6 +142,54 @@ public class CheckinHelperTest {
     assertEquals("Ch2", actCheckInPiece2.getChronology());
     assertEquals(false, actCheckInPiece2.getDiscoverySuppress());
     assertEquals(false, actCheckInPiece2.getDisplayOnHolding());
+  }
+
+  @Test
+  void allCheckingPieceFieldsShouldBePopulated() {
+    String poLineId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    CheckinCollection checkinCollection = new CheckinCollection();
+    checkinCollection.withToBeCheckedIn(Collections.singletonList(new ToBeCheckedIn()
+      .withPoLineId(poLineId)
+      .withCheckInPieces(Collections.singletonList(new CheckInPiece()
+        .withId(pieceId)
+        .withDisplaySummary("displaySummary")
+        .withComment("comment")
+        .withEnumeration("enumeration")
+        .withChronology("chronology")
+        .withCopyNumber("copyNumber")
+        .withAccessionNumber("accessionNumber")
+        .withDisplayOnHolding(true)
+        .withDiscoverySuppress(true)
+        .withSupplement(true)
+        .withBarcode("barcode")
+        .withReceiptDate(new Date())
+        .withCallNumber("callNumber")
+      ))));
+    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
+    Map<String, List<Piece>> map = new HashMap<>();
+    List<Piece> pieces = new ArrayList<>();
+    pieces.add(new Piece()
+      .withId(pieceId)
+      .withPoLineId(poLineId));
+    map.put(poLineId, pieces);
+    Map<String, List<Piece>> res = checkinHelper.updatePieceRecordsWithoutItems(map);
+
+    Piece piece = res.get(poLineId).get(0);
+    assertEquals("displaySummary", piece.getDisplaySummary());
+    assertEquals("comment", piece.getComment());
+    assertEquals("enumeration", piece.getEnumeration());
+    assertEquals("chronology", piece.getChronology());
+    assertEquals("copyNumber", piece.getCopyNumber());
+    assertEquals("accessionNumber", piece.getAccessionNumber());
+    assertTrue(piece.getDisplayOnHolding());
+    assertTrue(piece.getDiscoverySuppress());
+    assertTrue(piece.getSupplement());
+    assertEquals("barcode", piece.getBarcode());
+    assertNotNull(piece.getReceiptDate());
+    assertEquals("callNumber", piece.getCallNumber());
+    assertNotNull(piece.getReceivedDate());
+    assertEquals(Piece.ReceivingStatus.RECEIVED, piece.getReceivingStatus());
   }
 
   private static class ContextConfiguration {
