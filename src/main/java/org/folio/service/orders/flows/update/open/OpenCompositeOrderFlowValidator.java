@@ -4,7 +4,6 @@ import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyVal
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -129,24 +128,37 @@ public class OpenCompositeOrderFlowValidator {
   }
 
   private Future<Void> validateLocationRestrictions(CompositePoLine poLine, List<Fund> funds) {
-    List<String> polLocationIds = poLine.getLocations().stream().map(Location::getLocationId).toList();
-    for (Fund fund : funds) {
-      if (Boolean.TRUE.equals(fund.getRestrictByLocations()) && !CollectionUtils.containsAll(fund.getLocationIds(), polLocationIds)) {
-        String poLineId = poLine.getId();
-        String fundId = fund.getId();
-        Collection<String> restrictedLocations = CollectionUtils.subtract(polLocationIds, fund.getLocationIds());
-        logger.error("For POL {} fund {} is restricted to be used for locations {}", poLineId, fundId, restrictedLocations);
-        List<Parameter> parameters = List.of(
-          new Parameter().withKey("poLineId").withValue(poLineId),
-          new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-          new Parameter().withKey("fundId").withValue(fundId),
-          new Parameter().withKey("fundCode").withValue(fund.getCode()),
-          new Parameter().withKey("restrictedLocations").withValue(restrictedLocations.toString())
-        );
-        return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
-      }
+    // TODO: will be removed in scope of https://folio-org.atlassian.net/browse/MODORDERS-981
+    // as we'll obtain funds once before the processing and check on emptiness
+    if (CollectionUtils.isEmpty(funds)) {
+      logger.info("No funds found for PO Line {}, skipping fund-location restrictions check.", poLine.getId());
+      return Future.succeededFuture();
     }
-    return Future.succeededFuture();
+
+    List<String> restrictedLocations = poLine.getLocations()
+      .stream()
+      .map(Location::getLocationId)
+      .filter(locId -> isRestrictedByAllFunds(funds, locId))
+      .toList();
+
+    if (restrictedLocations.isEmpty()) {
+      return Future.succeededFuture();
+    }
+
+    String poLineId = poLine.getId();
+    logger.error("For POL {} locations {} are restricted to be used by all funds", poLineId, restrictedLocations);
+    List<Parameter> parameters = List.of(
+      new Parameter().withKey("poLineId").withValue(poLineId),
+      new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
+      new Parameter().withKey("restrictedLocations").withValue(restrictedLocations.toString())
+    );
+    return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
+  }
+
+  private boolean isRestrictedByAllFunds(List<Fund> funds, String locationId) {
+    return funds
+      .stream()
+      .allMatch(fund -> Boolean.TRUE.equals(fund.getRestrictByLocations()) && !fund.getLocationIds().contains(locationId));
   }
 
 }
