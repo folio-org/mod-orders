@@ -111,7 +111,7 @@ public enum ErrorCodes {
   PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR("poLineHasRelatedApprovedInvoice", "Composite POL related invoice lines contains lines which has status APPROVED for the current fiscal year, invoice line ids: %s"),
   MULTIPLE_FISCAL_YEARS("multipleFiscalYears", "Order line fund distributions have active budgets in multiple fiscal years."),
   INSTANCE_INVALID_PRODUCT_ID_ERROR("instanceInvalidProductIdError", "Instance connection could not be changed, the chosen instance contains an invalid Product ID."),
-  FUND_LOCATION_RESTRICTION_VIOLATION("fundLocationRestrictionViolation", "One of the funds is restricted to be used for one of the locations."),
+  FUND_LOCATION_RESTRICTION_VIOLATION("fundLocationRestrictionViolation", "One of the locations is restricted to be used by all funds."),
   ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND("encumbrancesForReEncumberNotFound", "The encumbrances were correctly created during the rollover or have already been updated."),
   CLAIMING_CONFIG_INVALID("claimingConfigInvalid", "Claiming interval should be set and greater than 0 if claiming is active"),
   TEMPLATE_NAME_ALREADY_EXISTS("templateNameNotUnique", "Template name already exists");
