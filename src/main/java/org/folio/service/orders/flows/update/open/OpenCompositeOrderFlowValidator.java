@@ -128,6 +128,13 @@ public class OpenCompositeOrderFlowValidator {
   }
 
   private Future<Void> validateLocationRestrictions(CompositePoLine poLine, List<Fund> funds) {
+    // TODO: will be removed in scope of https://folio-org.atlassian.net/browse/MODORDERS-981
+    // as we'll obtain funds once before the processing and check on emptiness
+    if (CollectionUtils.isEmpty(funds)) {
+      logger.info("No funds found for PO Line {}, skipping fund-location restrictions check.", poLine.getId());
+      return Future.succeededFuture();
+    }
+
     List<String> restrictedLocations = poLine.getLocations()
       .stream()
       .map(Location::getLocationId)
