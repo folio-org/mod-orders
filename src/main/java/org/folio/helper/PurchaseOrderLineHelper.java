@@ -8,7 +8,6 @@ import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.helper.PoNumberHelper.buildPoLineNumber;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
@@ -155,14 +154,10 @@ public class PurchaseOrderLineHelper {
    * @return Completable future which holds {@link PoLineCollection} on success or an exception on any error
    */
   public Future<PoLineCollection> getOrderLines(int limit, int offset, String query, RequestContext requestContext) {
-    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords("purchaseOrder.", requestContext)
-      .compose(acqUnitsCqlExpr -> {
-        String finalQuery = acqUnitsCqlExpr;
-        if (!isEmpty(query)) {
-          finalQuery = combineCqlExpressions("and", acqUnitsCqlExpr, query);
-        }
+    return protectionService.getQueryWithAcqUnitsCheck("purchaseOrder.", query, requestContext)
+      .compose(finalQuery -> {
         RequestEntry requestEntry = new RequestEntry(resourcesPath(PO_LINES_STORAGE))
-                                              .withQuery(finalQuery).withLimit(limit).withOffset(offset);
+          .withQuery(finalQuery).withLimit(limit).withOffset(offset);
         return restClient.get(requestEntry, PoLineCollection.class, requestContext);
       })
       .onFailure(t -> logger.error("Error getting orderLines", t));

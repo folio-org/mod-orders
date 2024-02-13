@@ -11,7 +11,6 @@ import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderClosing;
@@ -33,7 +32,6 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
-import static org.folio.rest.RestConstants.SEARCH_PARAMS;
 import static org.folio.rest.core.exceptions.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
 import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
@@ -115,7 +113,6 @@ import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderHelper.class);
-  public static final String GET_PURCHASE_ORDERS = resourcesPath(PURCHASE_ORDER_STORAGE) + SEARCH_PARAMS;
 
   private final PurchaseOrderLineHelper purchaseOrderLineHelper;
   private final CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService;
@@ -190,12 +187,8 @@ public class PurchaseOrderHelper {
    * @return completable future with {@link PurchaseOrderCollection} object on success or an exception if processing fails
    */
   public Future<PurchaseOrderCollection> getPurchaseOrders(int limit, int offset, String query, RequestContext requestContext) {
-    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
-      .compose(acqUnitsCqlExpr -> {
-        String finalQuery = acqUnitsCqlExpr;
-        if (StringUtils.isNotEmpty(query)) {
-          finalQuery = combineCqlExpressions("and", acqUnitsCqlExpr, query);
-        }
+    return protectionService.getQueryWithAcqUnitsCheck(StringUtils.EMPTY, query, requestContext)
+      .compose(finalQuery -> {
         RequestEntry requestEntry = new RequestEntry(resourcesPath(PURCHASE_ORDER_STORAGE))
           .withQuery(finalQuery)
           .withLimit(limit)

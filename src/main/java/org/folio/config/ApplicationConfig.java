@@ -470,8 +470,8 @@ public class ApplicationConfig {
     return new PieceChangeReceiptStatusPublisher();
   }
 
-  @Bean PieceStorageService pieceStorageService(RestClient restClient) {
-    return new PieceStorageService(restClient);
+  @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
+    return new PieceStorageService(restClient, protectionService);
   }
 
   @Bean PieceService piecesService(PieceChangeReceiptStatusPublisher receiptStatusPublisher) {

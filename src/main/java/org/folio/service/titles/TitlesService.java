@@ -2,11 +2,10 @@ package org.folio.service.titles;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_ASSIGN;
 import static org.folio.orders.utils.AcqDesiredPermissions.TITLES_MANAGE;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
+import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
@@ -61,18 +60,13 @@ public class TitlesService {
   }
 
   public Future<TitleCollection> getTitles(int limit, int offset, String query, RequestContext requestContext) {
-    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
-      .compose(acqUnitsCqlExpr -> {
-        String resultQuery = acqUnitsCqlExpr;
-        if (!isEmpty(query)) {
-          resultQuery = combineCqlExpressions("and", acqUnitsCqlExpr, query);
-        }
-        RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(resultQuery)
+    return protectionService.getQueryWithAcqUnitsCheck(StringUtils.EMPTY, query, requestContext)
+      .compose(finalQuery -> {
+        RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(finalQuery)
           .withOffset(offset)
           .withLimit(limit);
         return restClient.get(requestEntry, TitleCollection.class, requestContext);
       });
-
   }
 
   public Future<Title> getTitleById(String titleId, RequestContext requestContext) {
@@ -96,8 +90,13 @@ public class TitlesService {
   }
 
   public Future<Void> deleteTitle(String id, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
-    return restClient.delete(requestEntry, requestContext);
+    return getTitleById(id, requestContext)
+      .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), DELETE, requestContext))
+      .compose(v -> {
+        RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(id);
+        return restClient.delete(requestEntry, requestContext);
+      })
+      .mapEmpty();
   }
 
   public Future<Map<String, List<Title>>> getTitlesByPoLineIds(List<String> poLineIds, RequestContext requestContext) {
