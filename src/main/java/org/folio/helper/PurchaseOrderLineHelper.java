@@ -71,7 +71,6 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -111,7 +110,6 @@ public class PurchaseOrderLineHelper {
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final OrderInvoiceRelationService orderInvoiceRelationService;
   private final TitlesService titlesService;
-  private final AcquisitionsUnitsService acquisitionsUnitsService;
   private final ProtectionService protectionService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
@@ -123,17 +121,17 @@ public class PurchaseOrderLineHelper {
   public PurchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
     ExpenseClassValidationService expenseClassValidationService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
-    TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
+    TitlesService titlesService, ProtectionService protectionService,
     PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
     RestClient restClient, CompositePoLineValidationService compositePoLineValidationService,
     POLInvoiceLineRelationService polInvoiceLineRelationService, OrganizationService organizationService) {
+
     this.inventoryManager = inventoryManager;
     this.encumbranceService = encumbranceService;
     this.expenseClassValidationService = expenseClassValidationService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.orderInvoiceRelationService = orderInvoiceRelationService;
     this.titlesService = titlesService;
-    this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.protectionService = protectionService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.purchaseOrderStorageService = purchaseOrderStorageService;

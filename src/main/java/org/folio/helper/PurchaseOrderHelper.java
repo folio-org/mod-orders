@@ -83,7 +83,6 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.PrefixService;
 import org.folio.service.ProtectionService;
 import org.folio.service.SuffixService;
@@ -123,7 +122,6 @@ public class PurchaseOrderHelper {
   private final TagService tagService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TitlesService titlesService;
-  private final AcquisitionsUnitsService acquisitionsUnitsService;
   private final ProtectionService protectionService;
   private final PrefixService prefixService;
   private final SuffixService suffixService;
@@ -145,7 +143,7 @@ public class PurchaseOrderHelper {
       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
       OrderInvoiceRelationService orderInvoiceRelationService, TagService tagService,
       PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-      AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, PrefixService prefixService,
+      ProtectionService protectionService, PrefixService prefixService,
       SuffixService suffixService, InventoryManager inventoryManager, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
       OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
       ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
@@ -161,7 +159,6 @@ public class PurchaseOrderHelper {
     this.tagService = tagService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.titlesService = titlesService;
-    this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.protectionService = protectionService;
     this.prefixService = prefixService;
     this.suffixService = suffixService;

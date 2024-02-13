@@ -434,8 +434,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  TitlesService titlesService(RestClient restClient, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager) {
-    return new TitlesService(restClient, acquisitionsUnitsService, protectionService, inventoryManager);
+  TitlesService titlesService(RestClient restClient, ProtectionService protectionService, InventoryManager inventoryManager) {
+    return new TitlesService(restClient, protectionService, inventoryManager);
   }
 
   @Bean
@@ -598,7 +598,7 @@ public class ApplicationConfig {
     CompositeOrderDynamicDataPopulateService combinedPopulateService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-    AcquisitionsUnitsService acquisitionsUnitsService, PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
+    PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
     UnOpenCompositeOrderManager unOpenCompositeOrderManager,
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
@@ -607,7 +607,7 @@ public class ApplicationConfig {
     RestClient restClient) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-      purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
+      purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, inventoryManager,
       unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
       poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager,
       organizationService, restClient);
@@ -616,12 +616,12 @@ public class ApplicationConfig {
   @Bean PurchaseOrderLineHelper purchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
         ExpenseClassValidationService expenseClassValidationService,
         EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
-        TitlesService titlesService, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService,
+        TitlesService titlesService, ProtectionService protectionService,
         PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
         RestClient restClient, CompositePoLineValidationService compositePoLineValidationService,
         POLInvoiceLineRelationService polInvoiceLineRelationService, OrganizationService organizationService) {
     return new PurchaseOrderLineHelper(inventoryManager, encumbranceService, expenseClassValidationService,
-      encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, acquisitionsUnitsService, protectionService,
+      encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
       purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService, polInvoiceLineRelationService,
       organizationService);
   }

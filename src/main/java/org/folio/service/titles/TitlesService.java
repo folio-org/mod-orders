@@ -25,7 +25,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
-import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryManager;
 
@@ -38,14 +37,11 @@ public class TitlesService {
   private static final String ENDPOINT = resourcesPath(TITLES);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private final RestClient restClient;
-
-  private final AcquisitionsUnitsService acquisitionsUnitsService;
   private final ProtectionService protectionService;
   private final InventoryManager inventoryManager;
 
-  public TitlesService(RestClient restClient, AcquisitionsUnitsService acquisitionsUnitsService, ProtectionService protectionService, InventoryManager inventoryManager) {
+  public TitlesService(RestClient restClient, ProtectionService protectionService, InventoryManager inventoryManager) {
     this.restClient = restClient;
-    this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.protectionService = protectionService;
     this.inventoryManager = inventoryManager;
   }
