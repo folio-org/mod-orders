@@ -312,7 +312,7 @@ public class TitlesApiTest {
   void deleteTitleByIdTest() {
     logger.info("=== Test delete title by id ===");
 
-    verifyDeleteResponse(String.format(TITLES_ID_PATH, VALID_UUID), "", 204);
+    verifyDeleteResponse(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), "", 204);
   }
 
   @Test

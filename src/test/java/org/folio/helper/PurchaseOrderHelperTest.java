@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.ApiTestSuite;
-import org.folio.okapi.common.WebClientFactory;
 import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.RestClient;
@@ -78,8 +77,6 @@ import org.springframework.context.annotation.Bean;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -313,7 +310,7 @@ public class PurchaseOrderHelperTest {
               CompositeOrderDynamicDataPopulateService combinedPopulateService,
               EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
               TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-              AcquisitionsUnitsService acquisitionsUnitsService, PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
+              PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
               UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
               PurchaseOrderStorageService purchaseOrderStorageService,
               ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
@@ -322,7 +319,7 @@ public class PurchaseOrderHelperTest {
               ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService, RestClient restClient) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-        purchaseOrderLineService, titlesService, acquisitionsUnitsService, protectionService, prefixService, suffixService, inventoryManager,
+        purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, inventoryManager,
         unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
         poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager, organizationService, restClient);
     }

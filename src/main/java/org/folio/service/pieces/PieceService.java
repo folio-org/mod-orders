@@ -12,10 +12,7 @@ public class PieceService {
 
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
 
-  public PieceService(
- PieceChangeReceiptStatusPublisher receiptStatusPublisher
-                      ) {
-
+  public PieceService(PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
     this.receiptStatusPublisher = receiptStatusPublisher;
   }
 
