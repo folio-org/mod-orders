@@ -139,7 +139,7 @@ public class PieceStorageServiceTest {
     }
 
     @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
-      return spy(new PieceStorageService(restClient, protectionService));
+      return spy(new PieceStorageService(restClient));
     }
   }
 }

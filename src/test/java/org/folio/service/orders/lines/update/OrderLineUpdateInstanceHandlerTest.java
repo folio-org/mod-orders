@@ -218,7 +218,7 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
 
     @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
-      return new PieceStorageService(restClient, protectionService);
+      return new PieceStorageService(restClient);
     }
     @Bean InventoryService inventoryService (RestClient restClient) {
       return new InventoryService(restClient);
