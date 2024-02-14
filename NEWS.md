@@ -1,4 +1,5 @@
 ## 12.8.0 - Unreleased
+* [MODORDERS-1031](https://folio-org.atlassian.net/browse/MODORDERS-1031) - Create Kafka topics instead of relying on auto create in mod-orders
 
 ## 12.7.0 - Released (Poppy R2 2023)
 
