@@ -460,6 +460,8 @@
           "pathPattern": "/orders/pieces",
           "permissionsRequired": ["orders.pieces.collection.get"],
           "modulePermissions": [
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.pieces.collection.get"
           ]
         },
@@ -796,7 +798,11 @@
           "methods": ["DELETE"],
           "pathPattern": "/orders/titles/{id}",
           "permissionsRequired": ["orders.titles.item.delete"],
-          "modulePermissions": ["orders-storage.titles.item.delete"]
+          "modulePermissions": [
+            "orders-storage.titles.item.delete",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
+          ]
         }
       ]
     },
