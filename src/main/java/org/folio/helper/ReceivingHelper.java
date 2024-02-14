@@ -3,7 +3,6 @@ package org.folio.helper;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
@@ -38,7 +37,7 @@ import org.folio.rest.jaxrs.model.ReceivingHistoryCollection;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeReceived;
-import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.ProtectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
@@ -52,7 +51,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private static final String GET_RECEIVING_HISTORY_BY_QUERY = resourcesPath(RECEIVING_HISTORY);
 
   @Autowired
-  private AcquisitionsUnitsService acquisitionsUnitsService;
+  private ProtectionService protectionService;
 
   public ReceivingHelper(ReceivingCollection receivingCollection, Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
@@ -141,13 +140,12 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   public Future<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query,
       RequestContext requestContext) {
-    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(StringUtils.EMPTY, requestContext)
-      .compose(acqUnitsCqlExpr -> {
-        String cql = StringUtils.isEmpty(query) ? acqUnitsCqlExpr : combineCqlExpressions("and", acqUnitsCqlExpr, query);
+    return protectionService.getQueryWithAcqUnitsCheck(StringUtils.EMPTY, query, requestContext)
+      .compose(finalQuery -> {
         RequestEntry rq = new RequestEntry(GET_RECEIVING_HISTORY_BY_QUERY)
           .withLimit(limit)
           .withOffset(offset)
-          .withQuery(cql);
+          .withQuery(finalQuery);
         return new RestClient().get(rq, ReceivingHistoryCollection.class, requestContext);
       })
       .onFailure(t -> logger.error("Error happened retrieving receiving history", t));

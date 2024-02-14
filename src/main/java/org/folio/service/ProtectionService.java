@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
@@ -148,6 +149,24 @@ public class ProtectionService {
       .compose(ok -> verifyIfUnitsAreActive(ListUtils.subtract(newAcqUnitIds, acqUnitIdsFromStorage), requestContext))
       // The check should be done against currently assigned (persisted in storage) units
       .compose(ok -> isOperationRestricted(acqUnitIdsFromStorage, protectedOperations, requestContext));
+  }
+
+  /**
+   * This method wraps existing cql query with acq units check.
+   *
+   * @param tablePrefix    table prefix in format tableName + '.' or just empty string if acq units will be checked from the same table
+   * @param query          original cql string
+   * @param requestContext request context
+   * @return new string with acq check
+   */
+  public Future<String> getQueryWithAcqUnitsCheck(String tablePrefix, String query, RequestContext requestContext) {
+    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(tablePrefix, requestContext)
+      .map(acqUnitsCqlExpr -> {
+        if (StringUtils.isNotEmpty(query)) {
+          return combineCqlExpressions("and", acqUnitsCqlExpr, query);
+        }
+        return acqUnitsCqlExpr;
+      });
   }
 
   /**

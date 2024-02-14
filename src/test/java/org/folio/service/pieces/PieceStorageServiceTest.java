@@ -31,6 +31,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
+import org.folio.service.ProtectionService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -129,13 +130,16 @@ public class PieceStorageServiceTest {
 
   private static class ContextConfiguration {
 
-    @Bean
-    RestClient restClient() {
+    @Bean RestClient restClient() {
       return mock(RestClient.class);
     }
 
-    @Bean PieceStorageService pieceStorageService(RestClient restClient) {
-      return spy(new PieceStorageService(restClient));
+    @Bean ProtectionService protectionService() {
+      return mock(ProtectionService.class);
+    }
+
+    @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
+      return spy(new PieceStorageService(restClient, protectionService));
     }
   }
 }
