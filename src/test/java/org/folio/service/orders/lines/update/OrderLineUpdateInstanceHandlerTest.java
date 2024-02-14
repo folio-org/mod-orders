@@ -13,7 +13,6 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.RestClientTest.X_OKAPI_TENANT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +32,8 @@ import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
+import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.ProtectionService;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
@@ -208,8 +209,16 @@ public class OrderLineUpdateInstanceHandlerTest {
       return new RestClient();
     }
 
-    @Bean PieceStorageService pieceStorageService(RestClient restClient) {
-      return new PieceStorageService(restClient);
+    @Bean AcquisitionsUnitsService acquisitionsUnitsService(RestClient restClient) {
+      return new AcquisitionsUnitsService(restClient);
+    }
+
+    @Bean ProtectionService protectionService(AcquisitionsUnitsService acquisitionsUnitsService) {
+      return new ProtectionService(acquisitionsUnitsService);
+    }
+
+    @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
+      return new PieceStorageService(restClient, protectionService);
     }
     @Bean InventoryService inventoryService (RestClient restClient) {
       return new InventoryService(restClient);
