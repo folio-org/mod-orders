@@ -24,7 +24,6 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 
 import io.vertx.core.Future;
-import org.folio.service.ProtectionService;
 
 public class PieceStorageService {
   private static final Logger logger = LogManager.getLogger(PieceStorageService.class);
@@ -35,11 +34,9 @@ public class PieceStorageService {
   private static final String PIECE_STORAGE_BY_ID_ENDPOINT = PIECE_STORAGE_ENDPOINT + "/{id}";
 
   private final RestClient restClient;
-  private final ProtectionService protectionService;
 
-  public PieceStorageService(RestClient restClient, ProtectionService protectionService) {
+  public PieceStorageService(RestClient restClient) {
     this.restClient = restClient;
-    this.protectionService = protectionService;
   }
 
   /**
@@ -106,11 +103,6 @@ public class PieceStorageService {
       return getPieces(Integer.MAX_VALUE, 0, query, requestContext).map(PieceCollection::getPieces);
     }
     return Future.succeededFuture(Collections.emptyList());
-  }
-
-  public Future<PieceCollection> getPiecesWithAcqUnitCheck(int limit, int offset, String query, RequestContext requestContext) {
-    return protectionService.getQueryWithAcqUnitsCheck("titles.", query, requestContext)
-      .compose(finalQuery -> getPieces(limit, offset, finalQuery, requestContext));
   }
 
   public Future<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {

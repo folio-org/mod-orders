@@ -46,7 +46,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   @Validate
   public void getOrdersPieces(String totalRecords, int offset, int limit, String query, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceStorageService.getPiecesWithAcqUnitCheck(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
+    pieceStorageService.getPieces(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(pieces -> asyncResultHandler.handle(succeededFuture(buildOkResponse(pieces))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }

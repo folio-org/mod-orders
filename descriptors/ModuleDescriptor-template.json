@@ -460,8 +460,6 @@
           "pathPattern": "/orders/pieces",
           "permissionsRequired": ["orders.pieces.collection.get"],
           "modulePermissions": [
-            "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.pieces.collection.get"
           ]
         },

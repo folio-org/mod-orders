@@ -471,7 +471,7 @@ public class ApplicationConfig {
   }
 
   @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
-    return new PieceStorageService(restClient, protectionService);
+    return new PieceStorageService(restClient);
   }
 
   @Bean PieceService piecesService(PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
