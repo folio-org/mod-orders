@@ -41,7 +41,7 @@ public class OpenCompositeOrderFlowValidatorTest {
     MockitoAnnotations.openMocks(this);
   }
 
-  /* Positive cases */
+  /* Wrote tests based on the table in the ticket https://folio-org.atlassian.net/browse/MODORDERS-1020 */
   @Test
   public void testCheckFundLocationRestrictions1(VertxTestContext vertxTestContext) {
     // given
@@ -108,167 +108,6 @@ public class OpenCompositeOrderFlowValidatorTest {
   public void testCheckFundLocationRestrictions3(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
-    List<String> locationIds = List.of("L7");
-    CompositePoLine poLine = new CompositePoLine()
-      .withId("ID")
-      .withPoLineNumber("number")
-      .withFundDistribution(
-        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
-      )
-      .withLocations(
-        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
-      );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
-      Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1"))
-      ))
-    );
-
-    // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
-
-    // then
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  public void testCheckFundLocationRestrictions4(VertxTestContext vertxTestContext) {
-    // given
-    List<String> fundIds = List.of("F1", "F2");
-    List<String> locationIds = List.of("L1");
-    CompositePoLine poLine = new CompositePoLine()
-      .withId("ID")
-      .withPoLineNumber("number")
-      .withFundDistribution(
-        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
-      )
-      .withLocations(
-        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
-      );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
-      Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L2")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
-      ))
-    );
-
-    // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
-
-    // then
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  public void testCheckFundLocationRestrictions5(VertxTestContext vertxTestContext) {
-    // given
-    List<String> fundIds = List.of("F1", "F2");
-    List<String> locationIds = List.of("L1", "L2");
-    CompositePoLine poLine = new CompositePoLine()
-      .withId("ID")
-      .withPoLineNumber("number")
-      .withFundDistribution(
-        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
-      )
-      .withLocations(
-        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
-      );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
-      Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
-      ))
-    );
-
-    // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
-
-    // then
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  public void testCheckFundLocationRestrictions6(VertxTestContext vertxTestContext) {
-    // given
-    List<String> fundIds = List.of("F1", "F2");
-    List<String> locationIds = List.of("L1", "L2", "L3");
-    CompositePoLine poLine = new CompositePoLine()
-      .withId("ID")
-      .withPoLineNumber("number")
-      .withFundDistribution(
-        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
-      )
-      .withLocations(
-        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
-      );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
-      Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L3")),
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
-      ))
-    );
-
-    // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
-
-    // then
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        vertxTestContext.completeNow();
-      });
-  }
-
-  @Test
-  public void testCheckFundLocationRestrictions7(VertxTestContext vertxTestContext) {
-    // given
-    List<String> fundIds = List.of("F1", "F2");
-    List<String> locationIds = List.of("L2", "L3");
-    CompositePoLine poLine = new CompositePoLine()
-      .withId("ID")
-      .withPoLineNumber("number")
-      .withFundDistribution(
-        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
-      )
-      .withLocations(
-        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
-      );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
-      Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of()),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
-      ))
-    );
-
-    // when
-    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
-
-    // then
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
-        assertTrue(result.succeeded());
-        vertxTestContext.completeNow();
-      });
-  }
-
-  /* Error cases */
-  @Test
-  public void testCheckFundLocationRestrictions8(VertxTestContext vertxTestContext) {
-    // given
-    List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L2");
     CompositePoLine poLine = new CompositePoLine()
       .withId("ID")
@@ -305,7 +144,71 @@ public class OpenCompositeOrderFlowValidatorTest {
   }
 
   @Test
-  public void testCheckFundLocationRestrictions9(VertxTestContext vertxTestContext) {
+  public void testCheckFundLocationRestrictions4(VertxTestContext vertxTestContext) {
+    // given
+    List<String> fundIds = List.of("F1", "F2");
+    List<String> locationIds = List.of("L7");
+    CompositePoLine poLine = new CompositePoLine()
+      .withId("ID")
+      .withPoLineNumber("number")
+      .withFundDistribution(
+        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
+      )
+      .withLocations(
+        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
+      );
+    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+      Future.succeededFuture(List.of(
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1"))
+      ))
+    );
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  public void testCheckFundLocationRestrictions5(VertxTestContext vertxTestContext) {
+    // given
+    List<String> fundIds = List.of("F1", "F2");
+    List<String> locationIds = List.of("L1");
+    CompositePoLine poLine = new CompositePoLine()
+      .withId("ID")
+      .withPoLineNumber("number")
+      .withFundDistribution(
+        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
+      )
+      .withLocations(
+        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
+      );
+    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+      Future.succeededFuture(List.of(
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L2")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
+      ))
+    );
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  public void testCheckFundLocationRestrictions6(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L2");
@@ -345,7 +248,7 @@ public class OpenCompositeOrderFlowValidatorTest {
   }
 
   @Test
-  public void testCheckFundLocationRestrictions10(VertxTestContext vertxTestContext) {
+  public void testCheckFundLocationRestrictions7(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L2");
@@ -385,7 +288,7 @@ public class OpenCompositeOrderFlowValidatorTest {
   }
 
   @Test
-  public void testCheckFundLocationRestrictions11(VertxTestContext vertxTestContext) {
+  public void testCheckFundLocationRestrictions8(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L3");
@@ -425,7 +328,7 @@ public class OpenCompositeOrderFlowValidatorTest {
   }
 
   @Test
-  public void testCheckFundLocationRestrictions12(VertxTestContext vertxTestContext) {
+  public void testCheckFundLocationRestrictions9(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L3");
@@ -465,7 +368,71 @@ public class OpenCompositeOrderFlowValidatorTest {
   }
 
   @Test
-  public void testCheckFundLocationRestrictions13(VertxTestContext vertxTestContext) {
+  public void testCheckFundLocationRestrictions10(VertxTestContext vertxTestContext) {
+    // given
+    List<String> fundIds = List.of("F1", "F2");
+    List<String> locationIds = List.of("L1", "L2");
+    CompositePoLine poLine = new CompositePoLine()
+      .withId("ID")
+      .withPoLineNumber("number")
+      .withFundDistribution(
+        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
+      )
+      .withLocations(
+        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
+      );
+    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+      Future.succeededFuture(List.of(
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+      ))
+    );
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  public void testCheckFundLocationRestrictions11(VertxTestContext vertxTestContext) {
+    // given
+    List<String> fundIds = List.of("F1", "F2");
+    List<String> locationIds = List.of("L2", "L3");
+    CompositePoLine poLine = new CompositePoLine()
+      .withId("ID")
+      .withPoLineNumber("number")
+      .withFundDistribution(
+        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
+      )
+      .withLocations(
+        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
+      );
+    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+      Future.succeededFuture(List.of(
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of()),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+      ))
+    );
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  public void testCheckFundLocationRestrictions12(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
     List<String> locationIds = List.of("L1", "L3");
@@ -500,6 +467,38 @@ public class OpenCompositeOrderFlowValidatorTest {
           new Parameter().withKey("restrictedLocations").withValue("[L2]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  public void testCheckFundLocationRestrictions13(VertxTestContext vertxTestContext) {
+    // given
+    List<String> fundIds = List.of("F1", "F2");
+    List<String> locationIds = List.of("L1", "L2", "L3");
+    CompositePoLine poLine = new CompositePoLine()
+      .withId("ID")
+      .withPoLineNumber("number")
+      .withFundDistribution(
+        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
+      )
+      .withLocations(
+        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
+      );
+    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+      Future.succeededFuture(List.of(
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L3")),
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+      ))
+    );
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
         vertxTestContext.completeNow();
       });
   }
