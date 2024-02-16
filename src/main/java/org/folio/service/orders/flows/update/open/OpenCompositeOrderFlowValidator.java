@@ -5,8 +5,10 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.vertx.core.Future;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -30,8 +32,6 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.pieces.PieceStorageService;
-
-import io.vertx.core.Future;
 
 public class OpenCompositeOrderFlowValidator {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderFlowValidator.class);
@@ -135,11 +135,15 @@ public class OpenCompositeOrderFlowValidator {
       return Future.succeededFuture();
     }
 
-    List<String> restrictedLocations = poLine.getLocations()
-      .stream()
-      .map(Location::getLocationId)
-      .filter(locId -> isRestrictedByAllFunds(funds, locId))
-      .toList();
+    Set<String> validLocations = poLine.getLocations().stream().map(Location::getLocationId).collect(Collectors.toSet());
+
+    // Checking fund location against validLocations in POL to identify restricted locations
+    // if there is one, will be stored to put in error as parameter
+    Set<String> restrictedLocations = funds.stream()
+      .filter(Fund::getRestrictByLocations)
+      .flatMap(fund -> fund.getLocationIds().stream())
+      .filter(locationId -> !validLocations.contains(locationId))
+      .collect(Collectors.toSet());
 
     if (restrictedLocations.isEmpty()) {
       return Future.succeededFuture();
@@ -153,12 +157,6 @@ public class OpenCompositeOrderFlowValidator {
       new Parameter().withKey("restrictedLocations").withValue(restrictedLocations.toString())
     );
     return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
-  }
-
-  private boolean isRestrictedByAllFunds(List<Fund> funds, String locationId) {
-    return funds
-      .stream()
-      .allMatch(fund -> Boolean.TRUE.equals(fund.getRestrictByLocations()) && !fund.getLocationIds().contains(locationId));
   }
 
 }
