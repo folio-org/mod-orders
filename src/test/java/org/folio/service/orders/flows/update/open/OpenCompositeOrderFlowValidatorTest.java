@@ -251,7 +251,7 @@ public class OpenCompositeOrderFlowValidatorTest {
   public void testCheckFundLocationRestrictions7(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
-    List<String> locationIds = List.of("L2");
+    List<String> locationIds = List.of("L1");
     CompositePoLine poLine = new CompositePoLine()
       .withId("ID")
       .withPoLineNumber("number")
@@ -280,7 +280,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         List<Parameter> expectedParameters = List.of(
           new Parameter().withKey("poLineId").withValue(poLine.getId()),
           new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-          new Parameter().withKey("restrictedLocations").withValue("[L1]")
+          new Parameter().withKey("restrictedLocations").withValue("[L2]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
