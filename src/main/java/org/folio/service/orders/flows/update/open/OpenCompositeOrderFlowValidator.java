@@ -2,6 +2,7 @@ package org.folio.service.orders.flows.update.open;
 
 import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidator.verifyLocationsAndPiecesConsistency;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.pieces.PieceStorageService;
@@ -41,17 +43,19 @@ public class OpenCompositeOrderFlowValidator {
   private final PieceStorageService pieceStorageService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final CompositePoLineValidationService compositePoLineValidationService;
+  private final InventoryManager inventoryManager;
 
   public OpenCompositeOrderFlowValidator(FundService fundService,
                                          ExpenseClassValidationService expenseClassValidationService,
                                          PieceStorageService pieceStorageService,
                                          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                         CompositePoLineValidationService compositePoLineValidationService) {
+                                         CompositePoLineValidationService compositePoLineValidationService, InventoryManager inventoryManager) {
     this.fundService = fundService;
     this.expenseClassValidationService = expenseClassValidationService;
     this.pieceStorageService = pieceStorageService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.compositePoLineValidationService = compositePoLineValidationService;
+      this.inventoryManager = inventoryManager;
   }
 
   public Future<Void> validate(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
@@ -122,12 +126,12 @@ public class OpenCompositeOrderFlowValidator {
           .map(FundDistribution::getFundId)
           .toList();
         return fundService.getFunds(fundIdList, requestContext)
-          .compose(funds -> validateLocationRestrictions(poLine, funds));
+          .compose(funds -> validateLocationRestrictions(poLine, funds, requestContext));
       }).toList();
     return GenericCompositeFuture.join(checkFunds).mapEmpty();
   }
 
-  private Future<Void> validateLocationRestrictions(CompositePoLine poLine, List<Fund> funds) {
+  private Future<Void> validateLocationRestrictions(CompositePoLine poLine, List<Fund> funds, RequestContext requestContext) {
     // TODO: will be removed in scope of https://folio-org.atlassian.net/browse/MODORDERS-981
     // as we'll obtain funds once before the processing and check on emptiness
     if (CollectionUtils.isEmpty(funds)) {
@@ -136,6 +140,9 @@ public class OpenCompositeOrderFlowValidator {
     }
 
     Set<String> validLocations = poLine.getLocations().stream().map(Location::getLocationId).collect(Collectors.toSet());
+    List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).collect(Collectors.toList());
+    List<String> permanentLocationIdFromHoldings = getPermanentLocationIdFromHoldings(holdingIds, requestContext);
+    validLocations.addAll(permanentLocationIdFromHoldings);
 
     // Checking fund location against validLocations in POL to identify restricted locations
     // if there is one, will be stored to put in error as parameter
@@ -157,6 +164,18 @@ public class OpenCompositeOrderFlowValidator {
       new Parameter().withKey("restrictedLocations").withValue(restrictedLocations.toString())
     );
     return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
+  }
+
+  private List<String> getPermanentLocationIdFromHoldings(List<String> holdingIds, RequestContext requestContext) {
+    List<String> permanentLocationIds = new ArrayList<>();
+
+    inventoryManager.getHoldingsByIds(holdingIds, requestContext)
+      .onSuccess(holdings -> permanentLocationIds.addAll(holdings.stream()
+        .map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
+        .toList()))
+      .onFailure(failure -> logger.warn("getPermanentLocationIdFromHoldings:: Couldn't retrieve holdings"));
+
+    return permanentLocationIds;
   }
 
 }

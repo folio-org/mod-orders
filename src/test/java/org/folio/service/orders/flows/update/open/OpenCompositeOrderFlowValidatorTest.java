@@ -17,6 +17,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.service.finance.FundService;
+import org.folio.service.inventory.InventoryManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,8 @@ public class OpenCompositeOrderFlowValidatorTest {
   private RequestContext requestContext;
   @Mock
   private FundService fundService;
+  @Mock
+  private InventoryManager inventoryManager;
 
   @InjectMocks
   private OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
