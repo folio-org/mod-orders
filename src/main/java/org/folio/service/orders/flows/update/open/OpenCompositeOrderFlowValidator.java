@@ -147,7 +147,8 @@ public class OpenCompositeOrderFlowValidator {
       return Future.succeededFuture();
     }
 
-    Set<String> restrictedLocations = extractRestrictedLocations(poLine, funds, requestContext);
+    Set<String> restrictedLocations = extractRestrictedLocations(poLine, fundsWithRestrictedLocations, requestContext);
+
     if (restrictedLocations.isEmpty()) {
       return Future.succeededFuture();
     }
@@ -162,7 +163,7 @@ public class OpenCompositeOrderFlowValidator {
     return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
   }
 
-  private Set<String> extractRestrictedLocations(CompositePoLine poLine, List<Fund> fundsWithRestrictedLocations, RequestContext requestContext) {
+  private Set<String> extractRestrictedLocations(CompositePoLine poLine, Set<Fund> fundsWithRestrictedLocations, RequestContext requestContext) {
     Set<String> validLocations = poLine.getLocations().stream().map(Location::getLocationId).collect(Collectors.toSet());
     List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).filter(Objects::nonNull).collect(Collectors.toList());
     List<String> permanentLocationIdFromHoldings = getPermanentLocationIdFromHoldings(holdingIds, requestContext);
