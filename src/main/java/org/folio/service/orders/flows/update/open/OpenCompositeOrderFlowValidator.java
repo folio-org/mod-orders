@@ -1,11 +1,13 @@
 package org.folio.service.orders.flows.update.open;
 
 import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidator.verifyLocationsAndPiecesConsistency;
+import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -55,7 +57,7 @@ public class OpenCompositeOrderFlowValidator {
     this.pieceStorageService = pieceStorageService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.compositePoLineValidationService = compositePoLineValidationService;
-      this.inventoryManager = inventoryManager;
+    this.inventoryManager = inventoryManager;
   }
 
   public Future<Void> validate(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
@@ -139,19 +141,13 @@ public class OpenCompositeOrderFlowValidator {
       return Future.succeededFuture();
     }
 
-    Set<String> validLocations = poLine.getLocations().stream().map(Location::getLocationId).collect(Collectors.toSet());
-    List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).collect(Collectors.toList());
-    List<String> permanentLocationIdFromHoldings = getPermanentLocationIdFromHoldings(holdingIds, requestContext);
-    validLocations.addAll(permanentLocationIdFromHoldings);
+    Set<Fund> fundsWithRestrictedLocations = funds.stream().filter(Fund::getRestrictByLocations).collect(Collectors.toSet());
 
-    // Checking fund location against validLocations in POL to identify restricted locations
-    // if there is one, will be stored to put in error as parameter
-    Set<String> restrictedLocations = funds.stream()
-      .filter(Fund::getRestrictByLocations)
-      .flatMap(fund -> fund.getLocationIds().stream())
-      .filter(locationId -> !validLocations.contains(locationId))
-      .collect(Collectors.toSet());
+    if (fundsWithRestrictedLocations.isEmpty()) {
+      return Future.succeededFuture();
+    }
 
+    Set<String> restrictedLocations = extractRestrictedLocations(poLine, funds, requestContext);
     if (restrictedLocations.isEmpty()) {
       return Future.succeededFuture();
     }
@@ -166,14 +162,37 @@ public class OpenCompositeOrderFlowValidator {
     return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
   }
 
+  private Set<String> extractRestrictedLocations(CompositePoLine poLine, List<Fund> fundsWithRestrictedLocations, RequestContext requestContext) {
+    Set<String> validLocations = poLine.getLocations().stream().map(Location::getLocationId).collect(Collectors.toSet());
+    List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).filter(Objects::nonNull).collect(Collectors.toList());
+    List<String> permanentLocationIdFromHoldings = getPermanentLocationIdFromHoldings(holdingIds, requestContext);
+    validLocations.addAll(permanentLocationIdFromHoldings);
+
+    // Checking fund location against validLocations in POL to identify restricted locations
+    // if there is one, will be stored to put in error as parameter
+    return fundsWithRestrictedLocations.stream()
+      .flatMap(fund -> fund.getLocationIds().stream())
+      .filter(locationId -> !validLocations.contains(locationId))
+      .collect(Collectors.toSet());
+  }
+
   private List<String> getPermanentLocationIdFromHoldings(List<String> holdingIds, RequestContext requestContext) {
     List<String> permanentLocationIds = new ArrayList<>();
+
+    if (holdingIds.isEmpty()) {
+      return permanentLocationIds;
+    }
 
     inventoryManager.getHoldingsByIds(holdingIds, requestContext)
       .onSuccess(holdings -> permanentLocationIds.addAll(holdings.stream()
         .map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         .toList()))
-      .onFailure(failure -> logger.warn("getPermanentLocationIdFromHoldings:: Couldn't retrieve holdings"));
+      .onFailure(failure -> {
+        logger.error("Couldn't retrieve holdings", failure);
+        var param = new Parameter().withKey("holdingIds").withValue(holdingIds.toString());
+        var cause = new Parameter().withKey("cause").withValue(failure.getMessage());
+        throw new HttpException(404, HOLDINGS_BY_ID_NOT_FOUND, List.of(param, cause));
+      });
 
     return permanentLocationIds;
   }
