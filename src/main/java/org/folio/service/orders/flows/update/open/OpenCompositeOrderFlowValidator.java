@@ -164,7 +164,7 @@ public class OpenCompositeOrderFlowValidator {
   }
 
   private Set<String> extractRestrictedLocations(CompositePoLine poLine, Set<Fund> fundsWithRestrictedLocations, RequestContext requestContext) {
-    Set<String> validLocations = poLine.getLocations().stream().map(Location::getLocationId).collect(Collectors.toSet());
+    Set<String> validLocations = poLine.getLocations().stream().map(Location::getLocationId).filter(Objects::nonNull).collect(Collectors.toSet());
     List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).filter(Objects::nonNull).collect(Collectors.toList());
     List<String> permanentLocationIdFromHoldings = getPermanentLocationIdFromHoldings(holdingIds, requestContext);
     validLocations.addAll(permanentLocationIdFromHoldings);

@@ -3,10 +3,12 @@ package org.folio.service.orders.flows.update.open;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.acq.model.finance.Fund;
@@ -23,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 @ExtendWith(VertxExtension.class)
@@ -59,7 +60,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1"))
       ))
@@ -90,7 +91,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
       ))
@@ -121,7 +122,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
       ))
@@ -160,7 +161,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1"))
@@ -192,7 +193,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L2")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
@@ -224,7 +225,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L2")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
@@ -264,7 +265,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
@@ -304,7 +305,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
@@ -344,7 +345,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L3")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
@@ -384,7 +385,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1")),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
@@ -416,7 +417,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of()),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
@@ -448,7 +449,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of()),
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
@@ -488,11 +489,52 @@ public class OpenCompositeOrderFlowValidatorTest {
       .withLocations(
         locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
-    Mockito.when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L3")),
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
       ))
+    );
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  public void testCheckFundLocationRestrictions14(VertxTestContext vertxTestContext) {
+    // given
+    List<String> fundIds = List.of("F1", "F2");
+    String locationId = "L1";
+    String holdingId = "297d5fbe-7994-43ae-b51d-65be761dff8b";
+    JsonObject holding = JsonObject.of("permanentLocationId", "L2");
+
+    CompositePoLine poLine = new CompositePoLine()
+      .withId("ID")
+      .withPoLineNumber("number")
+      .withFundDistribution(
+        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
+      )
+      .withLocations(List.of(
+          new Location().withLocationId(locationId),
+          new Location().withHoldingId(holdingId)
+        )
+      );
+
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+      Future.succeededFuture(List.of(
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
+      ))
+    );
+    when(inventoryManager.getHoldingsByIds(List.of(holdingId), requestContext)).thenReturn(
+      Future.succeededFuture(List.of(holding))
     );
 
     // when
