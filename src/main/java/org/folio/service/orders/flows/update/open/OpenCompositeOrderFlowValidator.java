@@ -164,20 +164,20 @@ public class OpenCompositeOrderFlowValidator {
   }
 
   private Set<String> extractRestrictedLocations(CompositePoLine poLine, Set<Fund> fundsWithRestrictedLocations, RequestContext requestContext) {
-    Set<String> validLocations = poLine.getLocations().stream().map(Location::getLocationId).filter(Objects::nonNull).collect(Collectors.toSet());
-    List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).filter(Objects::nonNull).collect(Collectors.toList());
-    List<String> permanentLocationIdFromHoldings = getPermanentLocationIdFromHoldings(holdingIds, requestContext);
-    validLocations.addAll(permanentLocationIdFromHoldings);
+    Set<String> validLocationIds = poLine.getLocations().stream().map(Location::getLocationId).filter(Objects::nonNull).collect(Collectors.toSet());
+    List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).filter(Objects::nonNull).toList();
+    List<String> permanentLocationIdsFromHoldings = getPermanentLocationIdsFromHoldings(holdingIds, requestContext);
+    validLocationIds.addAll(permanentLocationIdsFromHoldings);
 
     // Checking fund location against validLocations in POL to identify restricted locations
     // if there is one, will be stored to put in error as parameter
     return fundsWithRestrictedLocations.stream()
       .flatMap(fund -> fund.getLocationIds().stream())
-      .filter(locationId -> !validLocations.contains(locationId))
+      .filter(locationId -> !validLocationIds.contains(locationId))
       .collect(Collectors.toSet());
   }
 
-  private List<String> getPermanentLocationIdFromHoldings(List<String> holdingIds, RequestContext requestContext) {
+  private List<String> getPermanentLocationIdsFromHoldings(List<String> holdingIds, RequestContext requestContext) {
     List<String> permanentLocationIds = new ArrayList<>();
 
     if (holdingIds.isEmpty()) {

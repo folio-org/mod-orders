@@ -508,7 +508,7 @@ public class OpenCompositeOrderFlowValidatorTest {
   }
 
   @Test
-  public void testCheckFundLocationRestrictions14(VertxTestContext vertxTestContext) {
+  public void testCheckFundLocationRestrictionsWithLocationAndHoldings(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
     String locationId = "L1";
@@ -544,6 +544,48 @@ public class OpenCompositeOrderFlowValidatorTest {
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  public void testCheckFundLocationRestrictionsThrowErrorWhenHoldingNotFound(VertxTestContext vertxTestContext) {
+    // given
+    List<String> fundIds = List.of("F1", "F2");
+    String locationId = "L1";
+    String holdingId = "297d5fbe-7994-43ae-b51d-65be761dff8b";
+
+    CompositePoLine poLine = new CompositePoLine()
+      .withId("ID")
+      .withPoLineNumber("number")
+      .withFundDistribution(
+        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
+      )
+      .withLocations(List.of(
+          new Location().withLocationId(locationId),
+          new Location().withHoldingId(holdingId)
+        )
+      );
+
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+      Future.succeededFuture(List.of(
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
+      ))
+    );
+    when(inventoryManager.getHoldingsByIds(List.of(holdingId), requestContext)).thenReturn(
+      Future.failedFuture(new HttpException(401, "Not found"))
+    );
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        HttpException exception = (HttpException) result.cause();
+        assertEquals(404, exception.getCode());
         vertxTestContext.completeNow();
       });
   }
