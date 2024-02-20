@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import io.vertx.core.Future;
@@ -184,10 +185,13 @@ public class OpenCompositeOrderFlowValidator {
       return permanentLocationIds;
     }
 
+    CompletableFuture<List<String>> future = new CompletableFuture<>();
+
     inventoryManager.getHoldingsByIds(holdingIds, requestContext)
-      .onSuccess(holdings -> permanentLocationIds.addAll(holdings.stream()
+      .map(holdings -> holdings.stream()
         .map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
-        .toList()))
+        .toList())
+      .onSuccess(future::complete)
       .onFailure(failure -> {
         logger.error("Couldn't retrieve holdings", failure);
         var param = new Parameter().withKey("holdingIds").withValue(holdingIds.toString());
@@ -195,7 +199,11 @@ public class OpenCompositeOrderFlowValidator {
         throw new HttpException(404, HOLDINGS_BY_ID_NOT_FOUND, List.of(param, cause));
       });
 
-    return permanentLocationIds;
+    try {
+      return future.get();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }
