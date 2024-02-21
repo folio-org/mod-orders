@@ -173,7 +173,7 @@ public class OpenCompositeOrderFlowValidator {
 
     return getPermanentLocationIdsFromHoldings(holdingIds, requestContext)
       .map(permanentLocationIds -> {
-        logger.info("extractRestrictedLocations:: fundsWithRestrictedLocations: {} is being checked against permanentLocationIds: {} and validLocations: {}", fundsWithRestrictedLocations.toString(), permanentLocationIds.toString(), validLocationIds.toString());
+        logger.info("extractRestrictedLocations:: fundsWithRestrictedLocations: {} is being checked against permanentLocationIds: {} and validLocations: {}", fundsWithRestrictedLocations, permanentLocationIds, validLocationIds);
         validLocationIds.addAll(permanentLocationIds);
         // Checking fund location against validLocations in POL to identify restricted locations
         // if there is one, will be stored to put in error as parameter, otherwise it will be green light to open order
