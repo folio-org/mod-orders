@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import io.vertx.core.Future;
@@ -135,6 +134,7 @@ public class OpenCompositeOrderFlowValidator {
   }
 
   private Future<Void> validateLocationRestrictions(CompositePoLine poLine, List<Fund> funds, RequestContext requestContext) {
+    logger.debug("validateLocationRestrictions:: Validating location restrictions for poLine '{}' that has '{}' fund(s)", poLine.getId(), funds.size());
     // TODO: will be removed in scope of https://folio-org.atlassian.net/browse/MODORDERS-981
     // as we'll obtain funds once before the processing and check on emptiness
     if (CollectionUtils.isEmpty(funds)) {
@@ -145,14 +145,17 @@ public class OpenCompositeOrderFlowValidator {
     Set<Fund> fundsWithRestrictedLocations = funds.stream().filter(Fund::getRestrictByLocations).collect(Collectors.toSet());
 
     if (fundsWithRestrictedLocations.isEmpty()) {
+      logger.info("validateLocationRestrictions:: Funds is not restricted by locations");
       return Future.succeededFuture();
     }
 
     return extractRestrictedLocations(poLine, fundsWithRestrictedLocations, requestContext)
       .compose(restrictedLocations -> {
         if (restrictedLocations.isEmpty()) {
+          logger.info("validateLocationRestrictions:: restricted locations is not found for poLineId '{}'", poLine.getId());
           return Future.succeededFuture();
         }
+
         String poLineId = poLine.getId();
         logger.error("For POL {} locations {} are restricted to be used by all funds", poLineId, restrictedLocations);
         List<Parameter> parameters = List.of(
@@ -167,11 +170,13 @@ public class OpenCompositeOrderFlowValidator {
   private Future<Set<String>> extractRestrictedLocations(CompositePoLine poLine, Set<Fund> fundsWithRestrictedLocations, RequestContext requestContext) {
     Set<String> validLocationIds = poLine.getLocations().stream().map(Location::getLocationId).filter(Objects::nonNull).collect(Collectors.toSet());
     List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).filter(Objects::nonNull).toList();
+
     return getPermanentLocationIdsFromHoldings(holdingIds, requestContext)
       .map(permanentLocationIds -> {
-        // Checking fund location against validLocations in POL to identify restricted locations
-        // if there is one, will be stored to put in error as parameter
+        logger.info("extractRestrictedLocations:: fundsWithRestrictedLocations: {} is being checked against permanentLocationIds: {} and validLocations: {}", fundsWithRestrictedLocations.toString(), permanentLocationIds.toString(), validLocationIds.toString());
         validLocationIds.addAll(permanentLocationIds);
+        // Checking fund location against validLocations in POL to identify restricted locations
+        // if there is one, will be stored to put in error as parameter, otherwise it will be green light to open order
         return fundsWithRestrictedLocations.stream()
           .flatMap(fund -> fund.getLocationIds().stream())
           .filter(locationId -> !validLocationIds.contains(locationId))
