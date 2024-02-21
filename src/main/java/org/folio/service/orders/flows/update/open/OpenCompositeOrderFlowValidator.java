@@ -1,10 +1,14 @@
 package org.folio.service.orders.flows.update.open;
 
 import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidator.verifyLocationsAndPiecesConsistency;
+import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -29,6 +33,7 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.pieces.PieceStorageService;
@@ -41,17 +46,19 @@ public class OpenCompositeOrderFlowValidator {
   private final PieceStorageService pieceStorageService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final CompositePoLineValidationService compositePoLineValidationService;
+  private final InventoryManager inventoryManager;
 
   public OpenCompositeOrderFlowValidator(FundService fundService,
                                          ExpenseClassValidationService expenseClassValidationService,
                                          PieceStorageService pieceStorageService,
                                          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                         CompositePoLineValidationService compositePoLineValidationService) {
+                                         CompositePoLineValidationService compositePoLineValidationService, InventoryManager inventoryManager) {
     this.fundService = fundService;
     this.expenseClassValidationService = expenseClassValidationService;
     this.pieceStorageService = pieceStorageService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.compositePoLineValidationService = compositePoLineValidationService;
+    this.inventoryManager = inventoryManager;
   }
 
   public Future<Void> validate(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
@@ -122,12 +129,13 @@ public class OpenCompositeOrderFlowValidator {
           .map(FundDistribution::getFundId)
           .toList();
         return fundService.getFunds(fundIdList, requestContext)
-          .compose(funds -> validateLocationRestrictions(poLine, funds));
+          .compose(funds -> validateLocationRestrictions(poLine, funds, requestContext));
       }).toList();
     return GenericCompositeFuture.join(checkFunds).mapEmpty();
   }
 
-  private Future<Void> validateLocationRestrictions(CompositePoLine poLine, List<Fund> funds) {
+  private Future<Void> validateLocationRestrictions(CompositePoLine poLine, List<Fund> funds, RequestContext requestContext) {
+    logger.debug("validateLocationRestrictions:: Validating location restrictions for poLine '{}' that has '{}' fund(s)", poLine.getId(), funds.size());
     // TODO: will be removed in scope of https://folio-org.atlassian.net/browse/MODORDERS-981
     // as we'll obtain funds once before the processing and check on emptiness
     if (CollectionUtils.isEmpty(funds)) {
@@ -135,28 +143,80 @@ public class OpenCompositeOrderFlowValidator {
       return Future.succeededFuture();
     }
 
-    Set<String> validLocations = poLine.getLocations().stream().map(Location::getLocationId).collect(Collectors.toSet());
+    Set<Fund> restrictedFunds = funds.stream().filter(Fund::getRestrictByLocations).collect(Collectors.toSet());
 
-    // Checking fund location against validLocations in POL to identify restricted locations
-    // if there is one, will be stored to put in error as parameter
-    Set<String> restrictedLocations = funds.stream()
-      .filter(Fund::getRestrictByLocations)
-      .flatMap(fund -> fund.getLocationIds().stream())
-      .filter(locationId -> !validLocations.contains(locationId))
-      .collect(Collectors.toSet());
-
-    if (restrictedLocations.isEmpty()) {
+    if (restrictedFunds.isEmpty()) {
+      logger.info("validateLocationRestrictions:: Funds is not restricted by locations");
       return Future.succeededFuture();
     }
 
-    String poLineId = poLine.getId();
-    logger.error("For POL {} locations {} are restricted to be used by all funds", poLineId, restrictedLocations);
-    List<Parameter> parameters = List.of(
-      new Parameter().withKey("poLineId").withValue(poLineId),
-      new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-      new Parameter().withKey("restrictedLocations").withValue(restrictedLocations.toString())
-    );
-    return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
+    return extractRestrictedLocationIds(poLine, restrictedFunds, requestContext)
+      .compose(restrictedLocations -> {
+        if (restrictedLocations.isEmpty()) {
+          logger.info("validateLocationRestrictions:: restricted locations is not found for poLineId '{}'", poLine.getId());
+          return Future.succeededFuture();
+        }
+
+        String poLineId = poLine.getId();
+        logger.error("For POL {} locations {} are restricted to be used by all funds", poLineId, restrictedLocations);
+        List<Parameter> parameters = List.of(
+          new Parameter().withKey("poLineId").withValue(poLineId),
+          new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
+          new Parameter().withKey("restrictedLocations").withValue(restrictedLocations.toString())
+        );
+        return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
+      });
+  }
+
+
+  /**
+   * The method checking fund location against valid locations and holding locations in POL to identify restricted locations
+   * <br> if there is one, will be stored to put in error as parameter.
+   * <br> otherwise, order can be opened
+   * @param poLine poLine of order that requested to be open
+   * @param restrictedFunds restricted funds of poLine
+   * @param requestContext requestContext
+   * @return Restricted locations
+   */
+  private Future<Set<String>> extractRestrictedLocationIds(CompositePoLine poLine, Set<Fund> restrictedFunds, RequestContext requestContext) {
+    Set<String> validLocationIds = poLine.getLocations().stream().map(Location::getLocationId).filter(Objects::nonNull).collect(Collectors.toSet());
+    List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).filter(Objects::nonNull).toList();
+
+    return getPermanentLocationIdsFromHoldings(holdingIds, requestContext)
+      .map(permanentLocationIds -> {
+        logger.info("extractRestrictedLocations:: '{}' restrictedFund(s) is being checked against permanentLocationIds: {} and validLocations: {}",
+          restrictedFunds.size(), permanentLocationIds, validLocationIds);
+        validLocationIds.addAll(permanentLocationIds);
+        Set<String> restrictedLocationsIds = new HashSet<>();
+        for (var fund : restrictedFunds) {
+          List<String> restrictedFundLocationIds = fund.getLocationIds().stream().filter(locationId -> !validLocationIds.contains(locationId)).toList();
+          if (restrictedFundLocationIds.size() == fund.getLocationIds().size()) {
+            logger.info("extractRestrictedLocationIds:: restrictedFundLocationIds: {} for fund: {}", restrictedLocationsIds, fund.getId());
+            restrictedLocationsIds.addAll(restrictedFundLocationIds);
+          }
+          logger.info("extractRestrictedLocationIds:: Fund '{}' has valid location (at leas one)", fund.getId());
+        }
+        return restrictedLocationsIds;
+      });
+  }
+
+  private Future<List<String>> getPermanentLocationIdsFromHoldings(List<String> holdingIds, RequestContext requestContext) {
+    List<String> permanentLocationIds = new ArrayList<>();
+
+    if (holdingIds.isEmpty()) {
+      return Future.succeededFuture(permanentLocationIds);
+    }
+
+    return inventoryManager.getHoldingsByIds(holdingIds, requestContext)
+      .map(holdings -> holdings.stream()
+        .map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
+        .toList())
+      .onFailure(failure -> {
+        logger.error("Couldn't retrieve holdings", failure);
+        var param = new Parameter().withKey("holdingIds").withValue(holdingIds.toString());
+        var cause = new Parameter().withKey("cause").withValue(failure.getMessage());
+        throw new HttpException(404, HOLDINGS_BY_ID_NOT_FOUND, List.of(param, cause));
+      });
   }
 
 }

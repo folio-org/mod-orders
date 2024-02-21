@@ -583,9 +583,9 @@ public class ApplicationConfig {
   @Bean OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator(FundService fundService,
     ExpenseClassValidationService expenseClassValidationService,
     PieceStorageService pieceStorageService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-    CompositePoLineValidationService compositePoLineValidationService) {
+    CompositePoLineValidationService compositePoLineValidationService, InventoryManager inventoryManager) {
     return new OpenCompositeOrderFlowValidator(fundService, expenseClassValidationService, pieceStorageService,
-      encumbranceWorkflowStrategyFactory, compositePoLineValidationService);
+      encumbranceWorkflowStrategyFactory, compositePoLineValidationService, inventoryManager);
   }
 
   @Bean PoNumberHelper poNumberHelper(RestClient restClient, PurchaseOrderStorageService purchaseOrderStorageService) {
