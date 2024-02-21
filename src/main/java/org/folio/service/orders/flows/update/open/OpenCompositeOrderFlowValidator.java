@@ -148,62 +148,54 @@ public class OpenCompositeOrderFlowValidator {
       return Future.succeededFuture();
     }
 
-    Set<String> restrictedLocations = extractRestrictedLocations(poLine, fundsWithRestrictedLocations, requestContext);
-
-    if (restrictedLocations.isEmpty()) {
-      return Future.succeededFuture();
-    }
-
-    String poLineId = poLine.getId();
-    logger.error("For POL {} locations {} are restricted to be used by all funds", poLineId, restrictedLocations);
-    List<Parameter> parameters = List.of(
-      new Parameter().withKey("poLineId").withValue(poLineId),
-      new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-      new Parameter().withKey("restrictedLocations").withValue(restrictedLocations.toString())
-    );
-    return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
+    return extractRestrictedLocations(poLine, fundsWithRestrictedLocations, requestContext)
+      .compose(restrictedLocations -> {
+        if (restrictedLocations.isEmpty()) {
+          return Future.succeededFuture();
+        }
+        String poLineId = poLine.getId();
+        logger.error("For POL {} locations {} are restricted to be used by all funds", poLineId, restrictedLocations);
+        List<Parameter> parameters = List.of(
+          new Parameter().withKey("poLineId").withValue(poLineId),
+          new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
+          new Parameter().withKey("restrictedLocations").withValue(restrictedLocations.toString())
+        );
+        return Future.failedFuture(new HttpException(422, ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION, parameters));
+      });
   }
 
-  private Set<String> extractRestrictedLocations(CompositePoLine poLine, Set<Fund> fundsWithRestrictedLocations, RequestContext requestContext) {
+  private Future<Set<String>> extractRestrictedLocations(CompositePoLine poLine, Set<Fund> fundsWithRestrictedLocations, RequestContext requestContext) {
     Set<String> validLocationIds = poLine.getLocations().stream().map(Location::getLocationId).filter(Objects::nonNull).collect(Collectors.toSet());
     List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).filter(Objects::nonNull).toList();
-    List<String> permanentLocationIdsFromHoldings = getPermanentLocationIdsFromHoldings(holdingIds, requestContext);
-    validLocationIds.addAll(permanentLocationIdsFromHoldings);
-
-    // Checking fund location against validLocations in POL to identify restricted locations
-    // if there is one, will be stored to put in error as parameter
-    return fundsWithRestrictedLocations.stream()
-      .flatMap(fund -> fund.getLocationIds().stream())
-      .filter(locationId -> !validLocationIds.contains(locationId))
-      .collect(Collectors.toSet());
+    return getPermanentLocationIdsFromHoldings(holdingIds, requestContext)
+      .map(permanentLocationIds -> {
+        // Checking fund location against validLocations in POL to identify restricted locations
+        // if there is one, will be stored to put in error as parameter
+        validLocationIds.addAll(permanentLocationIds);
+        return fundsWithRestrictedLocations.stream()
+          .flatMap(fund -> fund.getLocationIds().stream())
+          .filter(locationId -> !validLocationIds.contains(locationId))
+          .collect(Collectors.toSet());
+      });
   }
 
-  private List<String> getPermanentLocationIdsFromHoldings(List<String> holdingIds, RequestContext requestContext) {
+  private Future<List<String>> getPermanentLocationIdsFromHoldings(List<String> holdingIds, RequestContext requestContext) {
     List<String> permanentLocationIds = new ArrayList<>();
 
     if (holdingIds.isEmpty()) {
-      return permanentLocationIds;
+      return Future.succeededFuture(permanentLocationIds);
     }
 
-    CompletableFuture<List<String>> future = new CompletableFuture<>();
-
-    inventoryManager.getHoldingsByIds(holdingIds, requestContext)
+    return inventoryManager.getHoldingsByIds(holdingIds, requestContext)
       .map(holdings -> holdings.stream()
         .map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         .toList())
-      .onSuccess(future::complete)
       .onFailure(failure -> {
         logger.error("Couldn't retrieve holdings", failure);
         var param = new Parameter().withKey("holdingIds").withValue(holdingIds.toString());
         var cause = new Parameter().withKey("cause").withValue(failure.getMessage());
         throw new HttpException(404, HOLDINGS_BY_ID_NOT_FOUND, List.of(param, cause));
       });
-
-    try {
-      return future.get();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
 }
