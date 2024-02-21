@@ -137,10 +137,15 @@ public class TransactionService {
   }
 
   public Future<Void> batchReleaseAndDelete(List<Transaction> transactions, RequestContext requestContext) {
+    // Transactions are not automatically released in mod-finance-storage before they are deleted.
+    // They need to be released for the budgets to be updated correctly.
     // NOTE: we will have to use transactionPatches when it is available (see MODORDERS-1008)
-    transactions.forEach(tr -> tr.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
-    List<String> ids = transactions.stream().map(Transaction::getId).toList();
-    return batchAllOrNothing(null, transactions, ids, null, requestContext);
+    List<String> allIds = transactions.stream().map(Transaction::getId).toList();
+    List<Transaction> transactionsToRelease = transactions.stream()
+      .filter(tr -> tr.getEncumbrance().getStatus() != Encumbrance.Status.RELEASED)
+      .toList();
+    transactionsToRelease.forEach(tr -> tr.getEncumbrance().setStatus(Encumbrance.Status.RELEASED));
+    return batchAllOrNothing(null, transactionsToRelease, allIds, null, requestContext);
   }
 
 }
