@@ -6,6 +6,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -142,14 +143,14 @@ public class OpenCompositeOrderFlowValidator {
       return Future.succeededFuture();
     }
 
-    Set<Fund> fundsWithRestrictedLocations = funds.stream().filter(Fund::getRestrictByLocations).collect(Collectors.toSet());
+    Set<Fund> restrictedFunds = funds.stream().filter(Fund::getRestrictByLocations).collect(Collectors.toSet());
 
-    if (fundsWithRestrictedLocations.isEmpty()) {
+    if (restrictedFunds.isEmpty()) {
       logger.info("validateLocationRestrictions:: Funds is not restricted by locations");
       return Future.succeededFuture();
     }
 
-    return extractRestrictedLocations(poLine, fundsWithRestrictedLocations, requestContext)
+    return extractRestrictedLocationIds(poLine, restrictedFunds, requestContext)
       .compose(restrictedLocations -> {
         if (restrictedLocations.isEmpty()) {
           logger.info("validateLocationRestrictions:: restricted locations is not found for poLineId '{}'", poLine.getId());
@@ -167,21 +168,35 @@ public class OpenCompositeOrderFlowValidator {
       });
   }
 
-  private Future<Set<String>> extractRestrictedLocations(CompositePoLine poLine, Set<Fund> fundsWithRestrictedLocations, RequestContext requestContext) {
+
+  /**
+   * The method checking fund location against valid locations and holding locations in POL to identify restricted locations
+   * <br> if there is one, will be stored to put in error as parameter.
+   * <br> otherwise, order can be opened
+   * @param poLine poLine of order that requested to be open
+   * @param restrictedFunds restricted funds of poLine
+   * @param requestContext requestContext
+   * @return Restricted locations
+   */
+  private Future<Set<String>> extractRestrictedLocationIds(CompositePoLine poLine, Set<Fund> restrictedFunds, RequestContext requestContext) {
     Set<String> validLocationIds = poLine.getLocations().stream().map(Location::getLocationId).filter(Objects::nonNull).collect(Collectors.toSet());
     List<String> holdingIds = poLine.getLocations().stream().map(Location::getHoldingId).filter(Objects::nonNull).toList();
 
     return getPermanentLocationIdsFromHoldings(holdingIds, requestContext)
       .map(permanentLocationIds -> {
-        logger.info("extractRestrictedLocations:: '{}' fund(s) is being checked against permanentLocationIds: {} and validLocations: {}",
-          fundsWithRestrictedLocations.size(), permanentLocationIds, validLocationIds);
+        logger.info("extractRestrictedLocations:: '{}' restrictedFund(s) is being checked against permanentLocationIds: {} and validLocations: {}",
+          restrictedFunds.size(), permanentLocationIds, validLocationIds);
         validLocationIds.addAll(permanentLocationIds);
-        // Checking fund location against validLocations in POL to identify restricted locations
-        // if there is one, will be stored to put in error as parameter, otherwise it will be green light to open order
-        return fundsWithRestrictedLocations.stream()
-          .flatMap(fund -> fund.getLocationIds().stream())
-          .filter(locationId -> !validLocationIds.contains(locationId))
-          .collect(Collectors.toSet());
+        Set<String> restrictedLocationsIds = new HashSet<>();
+        for (var fund : restrictedFunds) {
+          List<String> restrictedFundLocationIds = fund.getLocationIds().stream().filter(locationId -> !validLocationIds.contains(locationId)).toList();
+          if (restrictedFundLocationIds.size() == fund.getLocationIds().size()) {
+            logger.info("extractRestrictedLocationIds:: restrictedFundLocationIds: {} for fund: {}", restrictedLocationsIds, fund.getId());
+            restrictedLocationsIds.addAll(restrictedFundLocationIds);
+          }
+          logger.info("extractRestrictedLocationIds:: Fund '{}' has valid location (at leas one)", fund.getId());
+        }
+        return restrictedLocationsIds;
       });
   }
 

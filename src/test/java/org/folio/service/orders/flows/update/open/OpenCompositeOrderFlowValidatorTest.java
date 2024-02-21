@@ -50,16 +50,13 @@ public class OpenCompositeOrderFlowValidatorTest {
   public void testCheckFundLocationRestrictions1(VertxTestContext vertxTestContext) {
     // given
     List<String> fundIds = List.of("F1", "F2");
-    List<String> locationIds = List.of("L7");
     CompositePoLine poLine = new CompositePoLine()
       .withId("ID")
       .withPoLineNumber("number")
       .withFundDistribution(
         fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
-      )
-      .withLocations(
-        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
       );
+
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1"))
@@ -364,7 +361,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         List<Parameter> expectedParameters = List.of(
           new Parameter().withKey("poLineId").withValue(poLine.getId()),
           new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-          new Parameter().withKey("restrictedLocations").withValue("[L1, L2]")
+          new Parameter().withKey("restrictedLocations").withValue("[L2]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
@@ -493,6 +490,37 @@ public class OpenCompositeOrderFlowValidatorTest {
       Future.succeededFuture(List.of(
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L3")),
         new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+      ))
+    );
+
+    // when
+    Future<Void> future = openCompositeOrderFlowValidator.checkFundLocationRestrictions(List.of(poLine), requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  public void testCheckFundLocationRestrictionsWhenFundHasAtLeastOneValidLocation(VertxTestContext vertxTestContext) {
+    // given
+    List<String> fundIds = List.of("F1", "F2");
+    List<String> locationIds = List.of("L3");
+    CompositePoLine poLine = new CompositePoLine()
+      .withId("ID")
+      .withPoLineNumber("number")
+      .withFundDistribution(
+        fundIds.stream().map(id -> new FundDistribution().withFundId(id)).toList()
+      )
+      .withLocations(
+        locationIds.stream().map(id -> new Location().withLocationId(id)).toList()
+      );
+    when(fundService.getFunds(fundIds, requestContext)).thenReturn(
+      Future.succeededFuture(List.of(
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L3"))
       ))
     );
 
