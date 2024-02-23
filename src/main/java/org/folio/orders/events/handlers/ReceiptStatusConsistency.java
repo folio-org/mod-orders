@@ -2,6 +2,7 @@ package org.folio.orders.events.handlers;
 
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.acq.model.Piece.ReceivingStatus.*;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
@@ -11,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.folio.completablefuture.AsyncUtil;
 import org.folio.helper.BaseHelper;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.acq.model.Piece;
@@ -74,8 +74,8 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
               promise.complete();
               return null;
             }
-            calculatePoLineReceiptStatus(poLine, listOfPieces)
-              .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
+            ReceiptStatus receivingStatus = calculatePoLineReceiptStatus(poLine, listOfPieces);
+            purchaseOrderLineService.updatePoLineReceiptStatus(poLine, receivingStatus, requestContext)
               .map(updatedPoLineId -> {
                 if (updatedPoLineId != null) {
                   // send event to update order status
@@ -117,38 +117,37 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
     HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent, requestContext);
   }
 
-  private Future<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
+  private ReceiptStatus calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
 
     if (CollectionUtils.isEmpty(pieces)) {
       logger.info("No pieces processed - receipt status unchanged for PO Line '{}'", poLine.getId());
-      return Future.succeededFuture(poLine.getReceiptStatus());
+      return poLine.getReceiptStatus();
     }
 
-    return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.EXPECTED, pieces)
-      .compose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, pieces))
-      .onFailure(e -> logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e));
+    long expectedQty = getPiecesQuantityByPoLineAndStatus(List.of(EXPECTED, CLAIM_DELAYED, CLAIM_SENT), pieces);
+    return calculatePoLineReceiptStatus(expectedQty, pieces);
   }
 
-  private Future<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, List<Piece> pieces) {
+  private ReceiptStatus calculatePoLineReceiptStatus(long expectedPiecesQuantity, List<Piece> pieces) {
     if (expectedPiecesQuantity == 0) {
       logger.info("calculatePoLineReceiptStatus:: Fully received");
-      return Future.succeededFuture(FULLY_RECEIVED);
+      return FULLY_RECEIVED;
     }
 
     if (StreamEx.of(pieces).anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
       logger.info("calculatePoLineReceiptStatus:: Partially Received - In case there is at least one successfully received piece");
-      return Future.succeededFuture(PARTIALLY_RECEIVED);
+      return PARTIALLY_RECEIVED;
     }
 
     logger.info("calculatePoLineReceiptStatus::Pieces were rolled-back to Expected, checking if there is any Received piece in the storage");
-    return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.RECEIVED, pieces)
-      .map(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
+    long receivedQty = getPiecesQuantityByPoLineAndStatus(List.of(ReceivingStatus.RECEIVED), pieces);
+    return receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED;
   }
 
-  private Future<Integer> getPiecesQuantityByPoLineAndStatus(ReceivingStatus receivingStatus, List<Piece> pieces) {
-    return AsyncUtil.executeBlocking(ctx, false, () -> (int) pieces.stream()
-      .filter(piece -> piece.getReceivingStatus() == receivingStatus)
-      .count());
+  private long getPiecesQuantityByPoLineAndStatus(List<ReceivingStatus> receivingStatuses, List<Piece> pieces) {
+    return pieces.stream()
+      .filter(piece -> receivingStatuses.contains(piece.getReceivingStatus()))
+      .count();
   }
 
   Future<List<Piece>> getPieces(String endpoint, RequestContext requestContext) {

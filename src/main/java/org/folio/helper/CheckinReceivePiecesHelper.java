@@ -14,6 +14,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.*;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.CANCELLED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
@@ -76,8 +77,6 @@ import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
-  private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
-
   protected Map<String, Map<String, T>> piecesByLineId;
   private final Map<String, Map<String, Error>> processingErrors;
   private final Set<String> processedHoldingsParams;
@@ -114,7 +113,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return {@link Future} which holds map with PO line id as key
    *         and list of corresponding pieces as value
    */
- protected Future<Map<String, List<Piece>>> retrievePieceRecords(RequestContext requestContext) {
+  protected Future<Map<String, List<Piece>>> retrievePieceRecords(RequestContext requestContext) {
     Map<String, List<Piece>> piecesByPoLine = new HashMap<>();
     // Split all piece id's by maximum number of id's for get query
     List<Future<Void>> futures = StreamEx
@@ -540,8 +539,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       return Future.succeededFuture(poLine.getReceiptStatus());
     }
 
-    return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.EXPECTED, requestContext)
-      .compose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, poLine, pieces, requestContext))
+    return getPiecesByPoLine(poLine.getId(), requestContext)
+      .compose(byPoLine -> calculatePoLineReceiptStatus(byPoLine, poLine, pieces))
       .onFailure(e -> logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e));
   }
 
@@ -551,14 +550,17 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * piece records is zero, returns "Awaiting Receipt" status, otherwise -
    * "Partially Received"
    *
-   * @param expectedPiecesQuantity
-   *          expected piece records quantity
+   * @param byPoLine
+   *          all piece records obtained by PO line id
    * @param poLine
    *          PO Line record representation from storage
    * @return completable future holding calculated PO Line's receipt status
    */
-  private Future<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity, PoLine poLine,
-      List<Piece> pieces, RequestContext requestContext) {
+  private Future<ReceiptStatus> calculatePoLineReceiptStatus(List<Piece> byPoLine, PoLine poLine, List<Piece> pieces) {
+    List<ReceivingStatus> receivingStatuses = List.of(EXPECTED, CLAIM_DELAYED, CLAIM_SENT);
+    long expectedPiecesQuantity = byPoLine.stream()
+      .filter(piece -> receivingStatuses.contains(piece.getReceivingStatus()))
+      .count();
     // Fully Received: If receiving and there is no expected piece remaining
     if (!poLine.getCheckinItems().equals(Boolean.TRUE) && expectedPiecesQuantity == 0) {
       return Future.succeededFuture(FULLY_RECEIVED);
@@ -569,15 +571,16 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     }
     // Pieces were rolled-back to Expected. In this case we have to check if
     // there is any Received piece in the storage
-    return getPiecesQuantityByPoLineAndStatus(poLine.getId(), ReceivingStatus.RECEIVED, requestContext)
-      .map(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
+    long receivedQty = byPoLine.stream()
+      .filter(piece -> piece.getReceivingStatus() == RECEIVED)
+      .count();
+    return Future.succeededFuture(receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
   }
 
-  private Future<Integer> getPiecesQuantityByPoLineAndStatus(String poLineId,
-      ReceivingStatus receivingStatus, RequestContext requestContext) {
-    String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, receivingStatus.value());
+  private Future<List<Piece>> getPiecesByPoLine(String poLineId, RequestContext requestContext) {
+    String query = String.format("poLineId==%s", poLineId);
     return pieceStorageService.getPieces(Integer.MAX_VALUE, 0, query, requestContext)
-      .map(PieceCollection::getTotalRecords);
+      .map(PieceCollection::getPieces);
   }
 
   /**
