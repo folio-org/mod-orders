@@ -623,13 +623,13 @@ public class CheckinReceivingApiTest {
     String titleIdForElectronic = UUID.randomUUID().toString();
     MockServer.addMockTitleWithId(poLine, titleIdForElectronic);
 
-    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
       .withLocationId(locationForPhysical)
       .withId(UUID.randomUUID().toString())
       .withTitleId(titleIdForPhysical)
       .withItemId(UUID.randomUUID().toString());
-    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_SENT)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
       .withId(UUID.randomUUID().toString())
       .withTitleId(titleIdForElectronic)
@@ -677,13 +677,13 @@ public class CheckinReceivingApiTest {
     String titleIdForElectronic = UUID.randomUUID().toString();
     MockServer.addMockTitleWithId(poLine, titleIdForElectronic);
 
-    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
       .withLocationId(locationForPhysical)
       .withId(UUID.randomUUID().toString())
       .withTitleId(titleIdForPhysical)
       .withItemId(UUID.randomUUID().toString());
-    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_SENT)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
       .withId(UUID.randomUUID().toString())
       .withTitleId(titleIdForElectronic)
