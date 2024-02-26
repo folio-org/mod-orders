@@ -304,7 +304,7 @@ public class CheckinReceivingApiTest {
 
     // The piece searches should be made 2 times: 1st time to get piece record,
     // 2nd time to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(3));
+    assertThat(pieceSearches, hasSize(2));
     assertThat(pieceUpdates, hasSize(1));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
@@ -623,13 +623,13 @@ public class CheckinReceivingApiTest {
     String titleIdForElectronic = UUID.randomUUID().toString();
     MockServer.addMockTitleWithId(poLine, titleIdForElectronic);
 
-    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
       .withLocationId(locationForPhysical)
       .withId(UUID.randomUUID().toString())
       .withTitleId(titleIdForPhysical)
       .withItemId(UUID.randomUUID().toString());
-    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_SENT)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
       .withId(UUID.randomUUID().toString())
       .withTitleId(titleIdForElectronic)
@@ -677,13 +677,13 @@ public class CheckinReceivingApiTest {
     String titleIdForElectronic = UUID.randomUUID().toString();
     MockServer.addMockTitleWithId(poLine, titleIdForElectronic);
 
-    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
       .withLocationId(locationForPhysical)
       .withId(UUID.randomUUID().toString())
       .withTitleId(titleIdForPhysical)
       .withItemId(UUID.randomUUID().toString());
-    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+    Piece electronicPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_SENT)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
       .withId(UUID.randomUUID().toString())
       .withTitleId(titleIdForElectronic)
@@ -1065,8 +1065,8 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    // The piece searches should be made 3 times: 1st time to get all required piece records, 2nd and 3rd times to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(3));
+    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd times to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(2));
     // In total 4 pieces required update
     assertThat(pieceUpdates, hasSize(4));
     assertThat(itemsSearches, hasSize(1));
@@ -1120,8 +1120,8 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    // The piece searches should be made 3 times: 1st time to get piece record, 2nd and 3rd times to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(3));
+    // The piece searches should be made 2 times: 1st time to get piece record, 2nd times to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(2));
     assertThat(pieceUpdates, hasSize(1));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
