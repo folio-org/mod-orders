@@ -77,6 +77,8 @@ import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
+  public static final List<ReceivingStatus> EXPECTED_STATUSES = List.of(EXPECTED, CLAIM_DELAYED, CLAIM_SENT);
+
   protected Map<String, Map<String, T>> piecesByLineId;
   private final Map<String, Map<String, Error>> processingErrors;
   private final Set<String> processedHoldingsParams;
@@ -557,9 +559,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return completable future holding calculated PO Line's receipt status
    */
   private Future<ReceiptStatus> calculatePoLineReceiptStatus(List<Piece> byPoLine, PoLine poLine, List<Piece> pieces) {
-    List<ReceivingStatus> receivingStatuses = List.of(EXPECTED, CLAIM_DELAYED, CLAIM_SENT);
     long expectedPiecesQuantity = byPoLine.stream()
-      .filter(piece -> receivingStatuses.contains(piece.getReceivingStatus()))
+      .filter(piece -> EXPECTED_STATUSES.contains(piece.getReceivingStatus()))
       .count();
     // Fully Received: If receiving and there is no expected piece remaining
     if (!poLine.getCheckinItems().equals(Boolean.TRUE) && expectedPiecesQuantity == 0) {

@@ -2,7 +2,6 @@ package org.folio.orders.events.handlers;
 
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.acq.model.Piece.ReceivingStatus.*;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
@@ -13,12 +12,13 @@ import java.util.Map;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.helper.BaseHelper;
+import org.folio.helper.CheckinReceivePiecesHelper;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.Piece.ReceivingStatus;
-import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -124,7 +124,7 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
       return poLine.getReceiptStatus();
     }
 
-    long expectedQty = getPiecesQuantityByPoLineAndStatus(List.of(EXPECTED, CLAIM_DELAYED, CLAIM_SENT), pieces);
+    long expectedQty = getPiecesQuantityByPoLineAndStatus(CheckinReceivePiecesHelper.EXPECTED_STATUSES, pieces);
     return calculatePoLineReceiptStatus(expectedQty, pieces);
   }
 
