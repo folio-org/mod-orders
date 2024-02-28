@@ -643,9 +643,9 @@ public class ApplicationConfig {
   @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
     TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
     return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-      titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator);
+      titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, unOpenCompositeOrderManager);
   }
 
   @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {

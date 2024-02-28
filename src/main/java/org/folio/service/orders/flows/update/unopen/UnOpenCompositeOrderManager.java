@@ -87,6 +87,10 @@ public class UnOpenCompositeOrderManager {
 
   }
 
+  public Future<Void> rollbackInventory(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    return processInventory(compPO.getCompositePoLines(), true, requestContext);
+  }
+
   public Future<Void> updatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
     return GenericCompositeFuture.join(compositePoLines.stream()
       .map(HelperUtils::convertToPoLine)
