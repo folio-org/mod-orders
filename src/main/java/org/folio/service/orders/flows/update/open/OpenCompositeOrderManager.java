@@ -162,14 +162,14 @@ public class OpenCompositeOrderManager {
       CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
     return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
-      .onSuccess(v -> logger.info("Finished processing encumbrances to open the order"))
+      .onSuccess(v -> logger.info("Finished processing encumbrances to open the order, order id={}", compPO.getId()))
       .recover(t -> {
-        logger.error("Error when processing encumbrances to open the order", t);
+        logger.error("Error when processing encumbrances to open the order, order id={}", compPO.getId(), t);
         // There was an error when processing the encumbrances despite the previous validations.
         // Try to rollback inventory changes
         return unOpenCompositeOrderManager.rollbackInventory(compPO, requestContext)
-          .onSuccess(v -> logger.info("Successfully rolled back inventory changes"))
-          .onFailure(t2 -> logger.error("Error when trying to rollback inventory changes", t2))
+          .onSuccess(v -> logger.info("Successfully rolled back inventory changes, order id={}", compPO.getId()))
+          .onFailure(t2 -> logger.error("Error when trying to rollback inventory changes, order id={}", compPO.getId(), t2))
           .transform(v -> Future.failedFuture(t));
       });
   }
