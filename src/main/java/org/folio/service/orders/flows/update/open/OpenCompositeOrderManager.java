@@ -26,10 +26,10 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 public class OpenCompositeOrderManager {
@@ -43,15 +43,19 @@ public class OpenCompositeOrderManager {
   private final TitlesService titlesService;
   private final OpenCompositeOrderInventoryService openCompositeOrderInventoryService;
   private final OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
+  private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
 
-  public OpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService, EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                    TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-                    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator) {
+  public OpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
+      EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+      TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
+      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
+      UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.titlesService = titlesService;
     this.openCompositeOrderInventoryService = openCompositeOrderInventoryService;
     this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
+    this.unOpenCompositeOrderManager = unOpenCompositeOrderManager;
   }
 
   /**
@@ -154,20 +158,20 @@ public class OpenCompositeOrderManager {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
   }
 
-  private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
-                            RequestContext requestContext) {
+  private Future<Void> finishProcessingEncumbrancesForOpenOrder(CompositePurchaseOrder compPO,
+      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     EncumbranceWorkflowStrategy strategy = encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.PENDING_TO_OPEN);
-    Promise<Void> promise = Promise.promise();
-    strategy.processEncumbrances(compPO, poFromStorage, requestContext)
-      .onSuccess(result -> promise.complete())
-      .onFailure(t -> {
-        logger.error(t);
+    return strategy.processEncumbrances(compPO, poFromStorage, requestContext)
+      .onSuccess(v -> logger.info("Finished processing encumbrances to open the order, order id={}", compPO.getId()))
+      .recover(t -> {
+        logger.error("Error when processing encumbrances to open the order, order id={}", compPO.getId(), t);
         // There was an error when processing the encumbrances despite the previous validations.
-        // Order lines should be saved to avoid leaving an open order with locationId instead of holdingId.
-        openOrderUpdatePoLinesSummary(compPO.getCompositePoLines(), requestContext)
-          .onComplete(asyncResult -> promise.fail(t));
+        // Try to rollback inventory changes
+        return unOpenCompositeOrderManager.rollbackInventory(compPO, requestContext)
+          .onSuccess(v -> logger.info("Successfully rolled back inventory changes, order id={}", compPO.getId()))
+          .onFailure(t2 -> logger.error("Error when trying to rollback inventory changes, order id={}", compPO.getId(), t2))
+          .transform(v -> Future.failedFuture(t));
       });
-    return promise.future();
   }
 
   private void updateIncomingOrder(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
