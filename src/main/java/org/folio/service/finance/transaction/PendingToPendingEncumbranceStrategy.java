@@ -7,6 +7,7 @@ import java.util.Objects;
 
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -72,7 +73,12 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
       newEncumbrance.withFiscalYearId(oldEncumbrance.getFiscalYearId())
         .withCurrency(oldEncumbrance.getCurrency())
         .withAmount(oldEncumbrance.getAmount())
-        .getEncumbrance().withInitialAmountEncumbered(oldEncumbrance.getEncumbrance().getInitialAmountEncumbered());
+        .getEncumbrance()
+          .withInitialAmountEncumbered(oldEncumbrance.getEncumbrance().getInitialAmountEncumbered())
+          .withOrderStatus(Encumbrance.OrderStatus.PENDING)
+          .withStatus(oldEncumbrance.getEncumbrance().getStatus())
+          .withSubscription(oldEncumbrance.getEncumbrance().getSubscription())
+          .withReEncumber(oldEncumbrance.getEncumbrance().getReEncumber());
     });
     return toUpdate;
   }
