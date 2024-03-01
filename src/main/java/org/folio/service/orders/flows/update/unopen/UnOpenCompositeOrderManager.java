@@ -87,6 +87,10 @@ public class UnOpenCompositeOrderManager {
 
   }
 
+  public Future<Void> rollbackInventory(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    return processInventory(compPO.getCompositePoLines(), true, requestContext);
+  }
+
   public Future<Void> updatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
     return GenericCompositeFuture.join(compositePoLines.stream()
       .map(HelperUtils::convertToPoLine)
@@ -199,38 +203,38 @@ public class UnOpenCompositeOrderManager {
 
   private Future<Void> processInventoryHoldingWithItems(CompositePoLine compPOL, RequestContext requestContext) {
     return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compPOL.getId()), ItemStatus.ON_ORDER.value(), requestContext)
-                          .compose(onOrderItems -> {
-                            if (isNotEmpty(onOrderItems)) {
-                              List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).collect(toList());
-                              if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
-                                return inventoryManager.deleteItems(itemIds,  false, requestContext)
-                                              .compose(deletedItemIds -> deleteHoldingsByItems(onOrderItems, requestContext))
-                                  .map(deletedHoldingVsLocationIds -> {
-                                    updateLocations(compPOL, deletedHoldingVsLocationIds);
-                                    return null;
-                                  })
-                                  .onSuccess(v -> logger.debug("Items and holdings deleted after UnOpen order"))
-                                  .mapEmpty();
-                              }
-                              return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
-                                .compose(pieceCollection -> {
-                                  if (isNotEmpty(pieceCollection.getPieces())) {
-                                    return inventoryManager.getItemRecordsByIds(itemIds, requestContext)
-                                      .map(items -> getItemsByStatus(items, ItemStatus.ON_ORDER.value()))
-                                      .compose(onOrderItemsP -> deletePiecesAndItems(onOrderItemsP, pieceCollection.getPieces(), requestContext))
-                                      .compose(deletedItems -> deleteHoldingsByItems(deletedItems, requestContext))
-                                      .map(deletedHoldingVsLocationIds -> {
-                                        updateLocations(compPOL, deletedHoldingVsLocationIds);
-                                        return null;
-                                      })
-                                      .onSuccess(v -> logger.debug("Pieces, Items, Holdings deleted after UnOpen order"))
-                                      .mapEmpty();
-                                  }
-                                  return Future.succeededFuture();
-                                });
-                            }
-                            return Future.succeededFuture();
-                          });
+      .compose(onOrderItems -> {
+        if (isNotEmpty(onOrderItems)) {
+          List<String> itemIds = onOrderItems.stream().map(item -> item.getString(ID)).collect(toList());
+          if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
+            return inventoryManager.deleteItems(itemIds,  false, requestContext)
+              .compose(deletedItemIds -> deleteHoldingsByItems(onOrderItems, requestContext))
+              .map(deletedHoldingVsLocationIds -> {
+                updateLocations(compPOL, deletedHoldingVsLocationIds);
+                return null;
+              })
+              .onSuccess(v -> logger.debug("Items and holdings deleted after UnOpen order"))
+              .mapEmpty();
+          }
+          return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
+            .compose(pieceCollection -> {
+              if (isNotEmpty(pieceCollection.getPieces())) {
+                return inventoryManager.getItemRecordsByIds(itemIds, requestContext)
+                  .map(items -> getItemsByStatus(items, ItemStatus.ON_ORDER.value()))
+                  .compose(onOrderItemsP -> deletePiecesAndItems(onOrderItemsP, pieceCollection.getPieces(), requestContext))
+                  .compose(deletedItems -> deleteHoldingsByItems(deletedItems, requestContext))
+                  .map(deletedHoldingVsLocationIds -> {
+                    updateLocations(compPOL, deletedHoldingVsLocationIds);
+                    return null;
+                  })
+                  .onSuccess(v -> logger.debug("Pieces, Items, Holdings deleted after UnOpen order"))
+                  .mapEmpty();
+              }
+              return Future.succeededFuture();
+            });
+        }
+        return Future.succeededFuture();
+      });
   }
 
   private void updateLocations(CompositePoLine compPOL, List<Pair<String, String>> deletedHoldingVsLocationIds) {
