@@ -46,7 +46,7 @@ public class EncumbrancesProcessingHolderBuilder {
     String oldExpenseClassId = holder.getOldEncumbrance().getExpenseClassId();
 
     return Double.compare(amountBeforeUpdate, updatedAmount) != 0
-      || (Double.compare(initialAmountBeforeUpdate, updatedInitialAmount) != 0)
+      || Double.compare(initialAmountBeforeUpdate, updatedInitialAmount) != 0
       || !Objects.equals(oldExpenseClassId, newExpenseClassId);
   }
 
