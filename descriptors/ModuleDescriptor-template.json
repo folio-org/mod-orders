@@ -1019,6 +1019,10 @@
       "version": "1.0"
     },
     {
+      "id": "orders-storage.acquisition-methods",
+      "version": "1.0"
+    },
+    {
       "id": "configuration",
       "version": "2.0"
     },
@@ -1057,6 +1061,14 @@
     {
       "id": "orders-storage.po-number",
       "version": "2.0"
+    },
+    {
+      "id": "orders-storage.po-line-number",
+      "version": "2.0"
+    },
+    {
+      "id": "orders-storage.order-invoice-relationships",
+      "version": "1.0"
     },
     {
       "id": "inventory",
@@ -1103,8 +1115,16 @@
       "version": "5.1"
     },
     {
+      "id": "finance.fiscal-years",
+      "version": "2.0"
+    },
+    {
       "id": "finance.ledgers",
       "version": "2.0"
+    },
+    {
+      "id": "finance-storage.ledgers",
+      "version": "4.0"
     },
     {
       "id": "finance.budgets",
