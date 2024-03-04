@@ -7,3 +7,4 @@
 /.vertx/
 .gradle
 /.resourceCache/
+/src/main/resources/postgres-conf.json

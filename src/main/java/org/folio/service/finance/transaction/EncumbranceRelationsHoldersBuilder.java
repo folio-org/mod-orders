@@ -254,19 +254,33 @@ public class EncumbranceRelationsHoldersBuilder {
       List<Transaction> transactionsFromStorage) {
 
     List<EncumbranceRelationsHolder> toBeReleasedHolders = transactionsFromStorage.stream()
-      .filter(transaction -> encumbranceHolders.stream().noneMatch(holder -> encumbranceHolderMatch(transaction, holder)))
+      .filter(transaction -> encumbranceHolders.stream()
+        .noneMatch(holder -> holder.getOldEncumbrance() != null && transaction.getId().equals(holder.getOldEncumbrance().getId())))
       .map(tr -> buildToBeReleasedHolder(tr, encumbranceHolders))
-      .collect(toList());
+      .toList();
     encumbranceHolders.addAll(toBeReleasedHolders);
     return encumbranceHolders;
   }
 
-  private boolean encumbranceHolderMatch(Transaction encumbrance, EncumbranceRelationsHolder holder) {
-    if (encumbrance.getId().equals(holder.getFundDistribution().getEncumbrance()))
-      return true;
+  private boolean encumbranceHolderMatchWithoutId(Transaction encumbrance, EncumbranceRelationsHolder holder) {
     return encumbrance.getEncumbrance().getSourcePoLineId().equals(holder.getPoLineId())
       && encumbrance.getFromFundId().equals(holder.getFundId())
       && Objects.equals(encumbrance.getExpenseClassId(), holder.getFundDistribution().getExpenseClassId());
+  }
+
+  private Optional<Transaction> findBestMatch(EncumbranceRelationsHolder holder, List<Transaction> transactions) {
+    // Match by fundId/expenseClassId first and by encumbrance id last
+    // (to avoid a conflict if 2 expense classes are switched between fund distributions of the same amount)
+    Optional<Transaction> fundEcMatch = transactions.stream().filter(tr -> encumbranceHolderMatchWithoutId(tr, holder)).findFirst();
+    if (fundEcMatch.isPresent()) {
+      if (holder.getFundDistribution().getEncumbrance() != null) {
+        // update the encumbrance id in the po line fund distribution
+        holder.getFundDistribution().setEncumbrance(fundEcMatch.get().getId());
+      }
+      return fundEcMatch;
+    }
+    String id = holder.getFundDistribution().getEncumbrance();
+    return transactions.stream().filter(tr -> tr.getId().equals(id)).findAny();
   }
 
   private EncumbranceRelationsHolder buildToBeReleasedHolder(Transaction transaction,
@@ -285,9 +299,7 @@ public class EncumbranceRelationsHoldersBuilder {
 
   private void mapHoldersToTransactions(List<EncumbranceRelationsHolder> encumbranceHolders,
       List<Transaction> existingTransactions) {
-    encumbranceHolders.forEach(holder -> existingTransactions.stream()
-      .filter(encumbrance -> encumbranceHolderMatch(encumbrance, holder))
-      .findAny()
+    encumbranceHolders.forEach(holder -> findBestMatch(holder, existingTransactions)
       .ifPresent(existingTransaction -> {
         holder.withOldEncumbrance(existingTransaction);
         Transaction newTransaction = holder.getNewEncumbrance();

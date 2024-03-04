@@ -1,0 +1,84 @@
+{
+  "id": "22f0d3dd-267d-405c-9917-29395b8507d8",
+  "approved": true,
+  "assignedTo": "",
+  "manualPo": false,
+  "poNumber": "1",
+  "orderType": "One-Time",
+  "reEncumber": false,
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflowStatus": "Pending",
+  "metadata": {
+    "createdDate": "2018-06-29T00:00:00.000",
+    "createdByUserId": "28d0f99c-d137-11e8-a8d5-f2801f1b9fd1"
+  },
+  "compositePoLines": [
+    {
+      "id": "bb8b9683-70d6-4eff-94c8-175ac297d2f8",
+      "checkinItems": false,
+      "acquisitionMethod": "796596c4-62b5-4b64-a2ce-524c747afaa2",
+      "contributors": [],
+      "cost": {
+        "listUnitPrice": 1.0,
+        "currency": "USD",
+        "discountType": "percentage",
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 1.0
+      },
+      "details": {
+        "productIds": [],
+        "subscriptionInterval": 0
+      },
+      "eresource": {
+        "activated": false,
+        "createInventory": "None",
+        "trial": false,
+        "accessProvider": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "fundDistribution": [
+        {
+          "code": "AFRICAHIST",
+          "encumbrance": "9e609d2b-de47-4f60-bb56-8a778289e6e0",
+          "fundId": "e9285a1c-1dfc-4380-868c-e74073003f43",
+          "expenseClassId": "61e68a14-8091-42fc-8c23-e1b0064aa811",
+          "distributionType": "percentage",
+          "value": 50.0
+        },
+        {
+          "code": "AFRICAHIST",
+          "encumbrance": "82ed2077-1ae4-4c7e-a850-c1497fce7e09",
+          "fundId": "e9285a1c-1dfc-4380-868c-e74073003f43",
+          "expenseClassId": "75a9ecf4-1d1d-4cc1-bb7c-a4f14714a17b",
+          "distributionType": "percentage",
+          "value": 50.0
+        }
+      ],
+      "isPackage": false,
+      "locations": [
+        {
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "quantity": 2,
+          "quantityPhysical": 2
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Pending",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "materialSupplier": "50fb6ae0-cdf1-11e8-a8d5-f2801f1b9fd1",
+        "volumes": []
+      },
+      "poLineNumber": "10001-1",
+      "purchaseOrderId": "22f0d3dd-267d-405c-9917-29395b8507d8",
+      "receiptStatus": "Pending",
+      "reportingCodes": [],
+      "source": "User",
+      "titleOrPackage": "test",
+      "vendorDetail": {
+        "instructions": "",
+        "vendorAccount": "1324"
+      }
+    }
+  ]
+}
