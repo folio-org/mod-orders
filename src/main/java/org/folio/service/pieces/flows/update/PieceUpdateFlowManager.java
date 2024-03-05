@@ -23,6 +23,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.ProtectionService;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
@@ -42,10 +43,12 @@ public class PieceUpdateFlowManager {
   private final PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager;
   private final BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
   private final DefaultPieceFlowsValidator defaultPieceFlowsValidator;
+  private final PurchaseOrderLineService purchaseOrderLineService;
 
   public PieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
     PieceUpdateFlowPoLineService updatePoLineService, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager,
-    BasePieceFlowHolderBuilder basePieceFlowHolderBuilder, DefaultPieceFlowsValidator defaultPieceFlowsValidator) {
+    BasePieceFlowHolderBuilder basePieceFlowHolderBuilder, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
+    PurchaseOrderLineService purchaseOrderLineService) {
     this.pieceStorageService = pieceStorageService;
     this.pieceService = pieceService;
     this.protectionService = protectionService;
@@ -53,6 +56,7 @@ public class PieceUpdateFlowManager {
     this.pieceUpdateFlowInventoryManager = pieceUpdateFlowInventoryManager;
     this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
     this.defaultPieceFlowsValidator = defaultPieceFlowsValidator;
+    this.purchaseOrderLineService = purchaseOrderLineService;
   }
 
   // Flow to update piece
@@ -110,14 +114,15 @@ public class PieceUpdateFlowManager {
     CompositePoLine originPoLine = holder.getOriginPoLine();
 
     return getPiecesByPoLine(originPoLine.getId(), requestContext)
-      .compose(pieces -> {
+      .map(pieces -> {
         CompositePurchaseOrder order = holder.getOriginPurchaseOrder();
         if (order.getOrderType() != OrderType.ONE_TIME || order.getWorkflowStatus() != WorkflowStatus.OPEN) {
           return Future.succeededFuture();
         }
         List<Piece> piecesToUpdate = List.of(holder.getPieceToUpdate());
-        originPoLine.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
-        return updatePoLineService.updatePoLine(holder, requestContext);
+        CompositePoLine poLineToSave = holder.getPoLineToSave();
+        poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
+        return purchaseOrderLineService.saveOrderLine(poLineToSave, requestContext);
       }).compose(t -> {
         if (!Boolean.TRUE.equals(originPoLine.getIsPackage()) &&
           !Boolean.TRUE.equals(originPoLine.getCheckinItems())) {

@@ -38,6 +38,7 @@ import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
@@ -49,6 +50,8 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
+import org.folio.service.caches.InventoryCache;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
@@ -146,7 +149,8 @@ public class PieceUpdateFlowManagerTest {
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId)
+      .withOrderType(PurchaseOrder.OrderType.ONE_TIME).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
     Title title = new Title().withId(titleId);
 
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
@@ -400,14 +404,26 @@ public class PieceUpdateFlowManagerTest {
       return spy(new DefaultPieceFlowsValidator());
     }
 
+    @Bean RestClient restClient() {
+      return mock(RestClient.class);
+    }
+
+    @Bean InventoryCache inventoryCache() {
+      return mock(InventoryCache.class);
+    }
+
+    @Bean PurchaseOrderLineService defaultPurchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache) {
+      return spy(new PurchaseOrderLineService(restClient, inventoryCache));
+    }
+
     @Bean
     PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,
                                                   ProtectionService protectionService, PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService,
                                                   PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
-                                                  DefaultPieceFlowsValidator defaultPieceFlowsValidator) {
+                                                  DefaultPieceFlowsValidator defaultPieceFlowsValidator, PurchaseOrderLineService purchaseOrderLineService) {
       return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService,
         pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder,
-        defaultPieceFlowsValidator);
+        defaultPieceFlowsValidator, purchaseOrderLineService);
     }
   }
 
