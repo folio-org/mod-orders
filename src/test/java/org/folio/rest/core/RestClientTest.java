@@ -8,20 +8,20 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.vertx.core.Context;
 import org.folio.rest.core.models.RequestContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import io.restassured.http.Header;
-import io.vertx.core.impl.EventLoopContext;
 import io.vertx.ext.web.client.WebClient;
 
 public class RestClientTest {
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invoiceimpltest");
 
   @Mock
-  private EventLoopContext ctxMock;
+  private Context ctxMock;
   @Mock
   private WebClient httpClient;
 
