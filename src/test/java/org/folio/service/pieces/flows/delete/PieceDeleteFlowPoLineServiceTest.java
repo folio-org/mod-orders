@@ -48,7 +48,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
@@ -62,8 +61,7 @@ public class PieceDeleteFlowPoLineServiceTest {
   @Autowired ReceivingEncumbranceStrategy receivingEncumbranceStrategy;
   @Autowired PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
 
-  @Spy
-  private Context ctxMock = getFirstContextFromVertx(getVertx());
+  private final Context ctx = getFirstContextFromVertx(getVertx());
   @Mock
   private Map<String, String> okapiHeadersMock;
 
@@ -75,7 +73,7 @@ public class PieceDeleteFlowPoLineServiceTest {
   void initMocks(){
     mockitoMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    requestContext = new RequestContext(ctx, okapiHeadersMock);
   }
 
   @BeforeAll
