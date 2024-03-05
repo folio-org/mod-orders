@@ -117,7 +117,6 @@ public enum ErrorCodes {
   TEMPLATE_NAME_ALREADY_EXISTS("templateNameNotUnique", "Template name already exists"),
   BARCODE_IS_NOT_UNIQUE("barcodeIsNotUnique", "Barcode must be unique, this barcode already exists");
 
-
   private final String code;
   private final String description;
 
