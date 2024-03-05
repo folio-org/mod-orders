@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
+import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
 import static org.folio.service.inventory.InventoryManager.ITEM_ACCESSION_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
 import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
@@ -217,11 +218,21 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       })
       // Add processing error if item failed to be updated
       .onFailure(e -> {
-        logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
-        addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+        produceErrorMessage(piece, e.toString());
         promise.complete(false);
       });
     return promise.future();
+  }
+
+  // This function produces error message based the error it receives from the checkinItem()
+  protected void produceErrorMessage(Piece piece, String error) {
+    if (error.contains("Barcode must be unique")) {
+      logger.error("The barcode associate with item '{}' is not unique, it cannot be updated", piece.getId());
+      addError(piece.getPoLineId(), piece.getId(), BARCODE_IS_NOT_UNIQUE.toError());
+    } else if (error != null) {
+      logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
+      addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+    }
   }
 
   private void updatePieceWithCheckinInfo(Piece piece) {

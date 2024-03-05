@@ -192,8 +192,33 @@ public class CheckinHelperTest {
     assertEquals(Piece.ReceivingStatus.RECEIVED, piece.getReceivingStatus());
   }
 
+  @Test
+  void testOnNonUniqueBarcodeCheckIn() {
+    String poLine1 = UUID.randomUUID().toString();
+    CheckinCollection checkinCollection = new CheckinCollection();
+    ToBeCheckedIn toBeCheckedIn1 = new ToBeCheckedIn().withPoLineId(poLine1);
+    CheckInPiece checkInPiece1 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withDisplaySummary("1").withBarcode("12345");
+    toBeCheckedIn1.withCheckInPieces(List.of(checkInPiece1));
+
+    ToBeCheckedIn toBeCheckedIn2 = new ToBeCheckedIn().withPoLineId(poLine1);
+    CheckInPiece checkInPiece3 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withDisplaySummary("3").withBarcode("12345");
+    toBeCheckedIn2.withCheckInPieces(List.of(checkInPiece3));
+
+    checkinCollection.withToBeCheckedIn(List.of(toBeCheckedIn1, toBeCheckedIn2));
+    checkinCollection.setTotalRecords(2);
+    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
+    //When
+    Map<String, List<CheckInPiece>> map = checkinHelper.getItemCreateNeededCheckinPieces(checkinCollection);
+    CheckInPiece actCheckInPiece1 = map.get(poLine1).stream()
+      .filter(checkInPiece -> "3".equals(checkInPiece.getDisplaySummary()))
+      .findFirst().get();
+    //the item should not be open since it can not be recived due to duplicate barcode
+    assertEquals("In process", actCheckInPiece1.getItemStatus().toString());
+  }
+
   private static class ContextConfiguration {
-    @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager() {
+    @Bean
+    PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager() {
       return mock(PieceCreateFlowInventoryManager.class);
     }
 
