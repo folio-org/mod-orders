@@ -318,7 +318,7 @@ public class PieceUpdateFlowManagerTest {
     var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
 
     // then
-    assertEquals(PoLine.ReceiptStatus.FULLY_RECEIVED, receiptStatus);
+    assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, receiptStatus);
   }
 
   @Test
@@ -332,7 +332,7 @@ public class PieceUpdateFlowManagerTest {
     var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
 
     // then
-    assertEquals(PoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+    assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
   }
 
   @Test
@@ -346,7 +346,7 @@ public class PieceUpdateFlowManagerTest {
     var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
 
     // then
-    assertEquals(PoLine.ReceiptStatus.AWAITING_RECEIPT, receiptStatus);
+    assertEquals(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT, receiptStatus);
   }
 
   @Test
@@ -360,7 +360,7 @@ public class PieceUpdateFlowManagerTest {
     var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
 
     // then
-    assertEquals(PoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+    assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
   }
 
   private static List<Piece> givenPieces(Piece.ReceivingStatus... statuses) {

@@ -3,9 +3,9 @@ package org.folio.service.pieces.flows.update;
 import static org.folio.helper.CheckinReceivePiecesHelper.EXPECTED_STATUSES;
 import static org.folio.helper.CheckinReceivePiecesHelper.RECEIVED_STATUSES;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
+import static org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus.AWAITING_RECEIPT;
+import static org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -22,7 +22,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
-import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
@@ -116,10 +115,9 @@ public class PieceUpdateFlowManager {
         if (order.getOrderType() != OrderType.ONE_TIME || order.getWorkflowStatus() != WorkflowStatus.OPEN) {
           return Future.succeededFuture();
         }
-        logger.info(">>> " + pieces);
         List<Piece> piecesToUpdate = List.of(holder.getPieceToUpdate());
-        logger.info(">>> " + calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
-        return Future.succeededFuture();
+        originPoLine.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
+        return updatePoLineService.updatePoLine(holder, requestContext);
       }).compose(t -> {
         if (!Boolean.TRUE.equals(originPoLine.getIsPackage()) &&
           !Boolean.TRUE.equals(originPoLine.getCheckinItems())) {
@@ -129,7 +127,7 @@ public class PieceUpdateFlowManager {
       });
   }
 
-  PoLine.ReceiptStatus calculatePoLineReceiptStatus(CompositePoLine poLine, List<Piece> fromStorage, List<Piece> toUpdate) {
+  CompositePoLine.ReceiptStatus calculatePoLineReceiptStatus(CompositePoLine poLine, List<Piece> fromStorage, List<Piece> toUpdate) {
 
     // 1. collect all piece statuses
     Map<String, Piece.ReceivingStatus> map = new HashMap<>();
