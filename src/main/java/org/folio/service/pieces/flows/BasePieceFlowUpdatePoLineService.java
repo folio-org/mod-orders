@@ -27,8 +27,8 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
   }
 
   public Future<Void> updatePoLine(T holder, RequestContext requestContext) {
-    Boolean isLineUpdated = poLineUpdateQuantity(holder);
-    if (Boolean.TRUE.equals(isLineUpdated)) {
+    boolean isLineUpdated = poLineUpdateQuantity(holder);
+    if (isLineUpdated) {
       return receivingEncumbranceStrategy
         .processEncumbrances(holder.getPurchaseOrderToSave(), holder.getPurchaseOrderToSave(), requestContext)
         .map(aVoid -> {

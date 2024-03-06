@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.folio.helper.CheckinReceivePiecesHelper;
 import org.folio.models.orders.flows.update.reopen.ReOpenCompositeOrderHolder;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
@@ -154,7 +155,8 @@ public class ReOpenCompositeOrderManager {
   }
 
   private boolean isReceivedPiecePresent(List<Piece> pieces) {
-    return pieces.stream().anyMatch(piece -> Piece.ReceivingStatus.RECEIVED.equals(piece.getReceivingStatus()));
+    return pieces.stream().anyMatch(piece ->
+      CheckinReceivePiecesHelper.RECEIVED_STATUSES.contains(piece.getReceivingStatus()));
   }
 
   private Map<String, List<Piece>> groupPiecesByOrderId(List<Piece> pieces) {

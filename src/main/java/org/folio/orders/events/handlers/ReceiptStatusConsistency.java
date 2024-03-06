@@ -1,5 +1,7 @@
 package org.folio.orders.events.handlers;
 
+import static org.folio.helper.CheckinReceivePiecesHelper.EXPECTED_STATUSES;
+import static org.folio.helper.CheckinReceivePiecesHelper.RECEIVED_STATUSES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
@@ -12,7 +14,6 @@ import java.util.Map;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.helper.BaseHelper;
-import org.folio.helper.CheckinReceivePiecesHelper;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -124,7 +125,7 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
       return poLine.getReceiptStatus();
     }
 
-    long expectedQty = getPiecesQuantityByPoLineAndStatus(CheckinReceivePiecesHelper.EXPECTED_STATUSES, pieces);
+    long expectedQty = getPiecesQuantityByPoLineAndStatus(EXPECTED_STATUSES, pieces);
     return calculatePoLineReceiptStatus(expectedQty, pieces);
   }
 
@@ -134,13 +135,13 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
       return FULLY_RECEIVED;
     }
 
-    if (StreamEx.of(pieces).anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
+    if (StreamEx.of(pieces).anyMatch(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus()))) {
       logger.info("calculatePoLineReceiptStatus:: Partially Received - In case there is at least one successfully received piece");
       return PARTIALLY_RECEIVED;
     }
 
     logger.info("calculatePoLineReceiptStatus::Pieces were rolled-back to Expected, checking if there is any Received piece in the storage");
-    long receivedQty = getPiecesQuantityByPoLineAndStatus(List.of(ReceivingStatus.RECEIVED), pieces);
+    long receivedQty = getPiecesQuantityByPoLineAndStatus(RECEIVED_STATUSES, pieces);
     return receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED;
   }
 

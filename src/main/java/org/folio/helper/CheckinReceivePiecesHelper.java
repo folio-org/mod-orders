@@ -77,7 +77,8 @@ import one.util.streamex.StreamEx;
 
 public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
-  public static final List<ReceivingStatus> EXPECTED_STATUSES = List.of(EXPECTED, CLAIM_DELAYED, CLAIM_SENT);
+  public static final List<ReceivingStatus> RECEIVED_STATUSES = List.of(RECEIVED, UNRECEIVABLE);
+  public static final List<ReceivingStatus> EXPECTED_STATUSES = List.of(EXPECTED, CLAIM_DELAYED, CLAIM_SENT, LATE);
 
   protected Map<String, Map<String, T>> piecesByLineId;
   private final Map<String, Map<String, Error>> processingErrors;
@@ -567,13 +568,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       return Future.succeededFuture(FULLY_RECEIVED);
     }
     // Partially Received: In case there is at least one successfully received piece
-    if (StreamEx.of(pieces).anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
+    if (StreamEx.of(pieces).anyMatch(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus()))) {
       return Future.succeededFuture(PARTIALLY_RECEIVED);
     }
     // Pieces were rolled-back to Expected. In this case we have to check if
     // there is any Received piece in the storage
     long receivedQty = byPoLine.stream()
-      .filter(piece -> piece.getReceivingStatus() == RECEIVED)
+      .filter(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus()))
       .count();
     return Future.succeededFuture(receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
   }
