@@ -39,13 +39,17 @@ public class PieceStorageService {
     this.restClient = restClient;
   }
 
+  public Future<List<Piece>> getPiecesByPoLineId(CompositePoLine compPOL, RequestContext requestContext) {
+    return getPiecesByLineId(compPOL.getId(), requestContext);
+  }
+
   /**
    * Search for pieces which might be already created for the PO line
-   * @param compPOL PO line to retrieve Piece Records for
+   * @param lineId PO line id to retrieve Piece Records for
    * @return future with list of Pieces
    */
-  public Future<List<Piece>> getPiecesByPoLineId(CompositePoLine compPOL, RequestContext requestContext) {
-    String query = String.format("poLineId==%s", compPOL.getId());
+  public Future<List<Piece>> getPiecesByLineId(String lineId, RequestContext requestContext) {
+    String query = String.format("poLineId==%s", lineId);
     RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES_STORAGE)).withQuery(query)
       .withLimit(Integer.MAX_VALUE)
       .withOffset(0);

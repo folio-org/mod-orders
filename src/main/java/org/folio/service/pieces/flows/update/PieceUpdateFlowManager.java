@@ -21,7 +21,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.ProtectionService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceService;
@@ -113,7 +112,7 @@ public class PieceUpdateFlowManager {
   protected Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine originPoLine = holder.getOriginPoLine();
 
-    return getPiecesByPoLine(originPoLine.getId(), requestContext)
+    return pieceStorageService.getPiecesByLineId(originPoLine.getId(), requestContext)
       .map(pieces -> {
         CompositePurchaseOrder order = holder.getOriginPurchaseOrder();
         if (order.getOrderType() != OrderType.ONE_TIME || order.getWorkflowStatus() != WorkflowStatus.OPEN) {
@@ -148,12 +147,6 @@ public class PieceUpdateFlowManager {
 
     return expectedQuantity == 0 ? FULLY_RECEIVED :
       receivedQuantity > 0 ? PARTIALLY_RECEIVED : AWAITING_RECEIPT;
-  }
-
-  private Future<List<Piece>> getPiecesByPoLine(String poLineId, RequestContext requestContext) {
-    String query = String.format("poLineId==%s", poLineId);
-    return pieceStorageService.getPieces(Integer.MAX_VALUE, 0, query, requestContext)
-      .map(PieceCollection::getPieces);
   }
 
 }

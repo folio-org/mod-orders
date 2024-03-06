@@ -37,6 +37,7 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceUpdateHolder;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -45,7 +46,6 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
@@ -374,11 +374,9 @@ public class PieceUpdateFlowManagerTest {
   }
 
   private void givenPoLineHasPieces(String lineId, List<Piece> pieces) {
-    PieceCollection result = new PieceCollection();
-    result.setPieces(pieces);
-    doReturn(succeededFuture(result))
+    doReturn(succeededFuture(pieces))
       .when(pieceStorageService)
-      .getPieces(eq(Integer.MAX_VALUE), eq(0), eq("poLineId==" + lineId), eq(requestContext));
+      .getPiecesByLineId(eq(lineId), eq(requestContext));
   }
 
   private static class ContextConfiguration {
