@@ -811,7 +811,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     if (error.contains(BARCODE_NOT_UNIQUE_MESSAGE)) {
       logger.error("The barcode associate with item '{}' is not unique, it cannot be updated", piece.getId());
       addError(piece.getPoLineId(), piece.getId(), BARCODE_IS_NOT_UNIQUE.toError());
-    } else if (error != null) {
+    } else {
       logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
       addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
     }
