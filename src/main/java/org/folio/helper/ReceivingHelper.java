@@ -206,7 +206,6 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
           .isOnOrderItemStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
   }
 
-
   @Override
   protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
     ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
@@ -219,9 +218,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
         return true;
       })
       // Add processing error if item failed to be updated
-       .otherwise(e -> {
-        logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
-        addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+      .otherwise(e -> {
+        addErrorForUpdatingItem(piece, e.toString());
         return false;
       });
   }

@@ -5,6 +5,7 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
+import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOC_NOT_PROVIDED;
@@ -83,7 +84,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private final Map<String, Map<String, Error>> processingErrors;
   private final Set<String> processedHoldingsParams;
   private final Map<String, String> processedHoldings;
-
+  private static final String BARCODE_NOT_UNIQUE_MESSAGE = "Barcode must be unique";
   @Autowired
   private  ProtectionService protectionService;
   @Autowired
@@ -804,5 +805,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private static class PoLineAndTitleById {
     Map<String, CompositePoLine> poLineById;
     Map<String, Title> titleById;
+  }
+
+  protected void addErrorForUpdatingItem(Piece piece, String error) {
+    if (error.contains(BARCODE_NOT_UNIQUE_MESSAGE)) {
+      logger.error("The barcode associate with item '{}' is not unique, it cannot be updated", piece.getId());
+      addError(piece.getPoLineId(), piece.getId(), BARCODE_IS_NOT_UNIQUE.toError());
+    } else if (error != null) {
+      logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
+      addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+    }
   }
 }

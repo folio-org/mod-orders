@@ -218,21 +218,10 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       })
       // Add processing error if item failed to be updated
       .onFailure(e -> {
-        produceErrorMessage(piece, e.toString());
+        addErrorForUpdatingItem(piece, e.toString());
         promise.complete(false);
       });
     return promise.future();
-  }
-
-  // This function produces error message based on the error it receives from the checkinItem()
-  protected void produceErrorMessage(Piece piece, String error) {
-    if (error.contains("Barcode must be unique")) {
-      logger.error("The barcode associate with item '{}' is not unique, it cannot be updated", piece.getId());
-      addError(piece.getPoLineId(), piece.getId(), BARCODE_IS_NOT_UNIQUE.toError());
-    } else {
-      logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
-      addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
-    }
   }
 
   private void updatePieceWithCheckinInfo(Piece piece) {
