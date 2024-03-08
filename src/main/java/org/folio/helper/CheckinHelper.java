@@ -216,7 +216,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       })
       // Add processing error if item failed to be updated
       .onFailure(e -> {
-        addErrorForUpdatingItem(piece, e.toString());
+        addErrorForUpdatingItem(piece, e);
         promise.complete(false);
       });
     return promise.future();

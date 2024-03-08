@@ -11,17 +11,14 @@ import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
-import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,15 +29,19 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.ErrorManager;
 
 
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.ApiTestSuite;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.service.ProtectionService;
@@ -55,12 +56,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
+@ExtendWith(VertxExtension.class)
 public class CheckinHelperTest {
 
+  @Autowired
+  InventoryManager inventoryManager;
   @Autowired
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
 
@@ -202,9 +207,67 @@ public class CheckinHelperTest {
   }
 
   @Test
-  void testProduceOnErrorWithBarcodeIsUnique() {
+  void testShouldSuccessfullyUpdateItem(VertxTestContext vertxTestContext) {
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
+    CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
+    when(inventoryManager.updateItem(any(JsonObject.class), any(RequestContext.class))).thenReturn(Future.succeededFuture());
+
+    Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
+    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
+    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(new JsonObject(), piece, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void testShouldFailToUpdateItemWhenBarcodeIsExists(VertxTestContext vertxTestContext) {
+    String poLineId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
+    when(inventoryManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
+      .thenReturn(Future.failedFuture(new HttpException(500, "Barcode must be unique, 555 is already assigned to another item")));
+
+    Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
+    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
+    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(new JsonObject(), piece, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        Error error = checkinHelper.getError(poLineId, pieceId);
+        assertEquals(error.getCode(), ErrorCodes.BARCODE_IS_NOT_UNIQUE.getCode());
+        assertEquals(error.getMessage(), ErrorCodes.BARCODE_IS_NOT_UNIQUE.toError().getMessage());
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void testShouldFailToUpdateItemWhenUnexpectedErrorThrown(VertxTestContext vertxTestContext) {
+    String poLineId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
+    when(inventoryManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
+      .thenReturn(Future.failedFuture(new HttpException(500, "Service failure")));
+
+    Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
+    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
+    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(new JsonObject(), piece, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        Error error = checkinHelper.getError(poLineId, pieceId);
+        assertEquals(error.getCode(), ErrorCodes.ITEM_UPDATE_FAILED.getCode());
+        assertEquals(error.getMessage(), ErrorCodes.ITEM_UPDATE_FAILED.toError().getMessage());
+        assertEquals(error.getParameters().get(0).getKey(), "cause");
+        assertEquals(error.getParameters().get(0).getValue(), "Service failure");
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  private CheckinCollection getCheckinCollection(String poLineId, String pieceId) {
     CheckinCollection checkinCollection = new CheckinCollection();
     checkinCollection.withToBeCheckedIn(Collections.singletonList(new ToBeCheckedIn()
       .withPoLineId(poLineId)
@@ -217,54 +280,7 @@ public class CheckinHelperTest {
         .withBarcode("12345")
         .withReceiptDate(new Date())
         .withCallNumber("callNumber")))));
-    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
-    Map<String, List<Piece>> map = new HashMap<>();
-    List<Piece> pieces = new ArrayList<>();
-    pieces.add(new Piece().withId(pieceId).withPoLineId(poLineId));
-    map.put(poLineId, pieces);
-    Map<String, List<Piece>> res = checkinHelper.updatePieceRecordsWithoutItems(map);
-    Piece piece = res.get(poLineId).get(0);
-
-    assertNotNull(piece.getReceivedDate());
-    assertEquals(Piece.ReceivingStatus.RECEIVED, piece.getReceivingStatus());
-  }
-
-  @Test
-  void testItemShouldNotBeReceivedWhenBarcodeIsNotUnique(){
-    String poLineId = UUID.randomUUID().toString();
-    String pieceId = UUID.randomUUID().toString();
-    String poLineId2 = UUID.randomUUID().toString();
-    String pieceId2 = UUID.randomUUID().toString();
-    CheckinCollection checkinCollection = new CheckinCollection();
-    checkinCollection.withToBeCheckedIn(Collections.singletonList(new ToBeCheckedIn()
-      .withPoLineId(poLineId)
-      .withCheckInPieces(Collections.singletonList(new CheckInPiece()
-        .withId(pieceId)
-        .withSupplement(true)
-        .withBarcode("12345")
-        .withCallNumber("callNumber")))));
-    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
-    Map<String, List<Piece>> map = new HashMap<>();
-    List<Piece> pieces = new ArrayList<>();
-    pieces.add(new Piece().withId(pieceId).withPoLineId(poLineId));
-    map.put(poLineId, pieces);
-    Map<String, List<Piece>> res = checkinHelper.updatePieceRecordsWithoutItems(map);
-    Piece piece = res.get(poLineId).get(0);
-    CheckinCollection checkinCollection2 = new CheckinCollection(); // Change variable name to checkinCollection2
-    checkinCollection2.withToBeCheckedIn(Collections.singletonList(new ToBeCheckedIn() // Change variable name to checkinCollection2
-      .withPoLineId(poLineId2)
-      .withCheckInPieces(Collections.singletonList(new CheckInPiece()
-        .withId(pieceId2)
-        .withSupplement(true)
-        .withBarcode("12345")
-        .withCallNumber("callNumber")))));
-    CheckinHelper checkinHelper2 = spy(new CheckinHelper(checkinCollection2, okapiHeadersMock, requestContext.getContext()));
-    pieces.add(new Piece().withId(pieceId2).withPoLineId(poLineId2));
-    map.put(poLineId2, pieces);
-    Piece piece2 = res.get(poLineId).get(1);
-
-    assertEquals(Piece.ReceivingStatus.EXPECTED, piece2.getReceivingStatus());
-    assertNotEquals(Piece.ReceivingStatus.RECEIVED, piece2.getReceivingStatus());
+    return checkinCollection;
   }
 
   private static class ContextConfiguration {

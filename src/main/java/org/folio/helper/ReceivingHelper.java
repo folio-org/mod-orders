@@ -218,7 +218,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       })
       // Add processing error if item failed to be updated
       .otherwise(e -> {
-        addErrorForUpdatingItem(piece, e.toString());
+        addErrorForUpdatingItem(piece, e);
         return false;
       });
   }
