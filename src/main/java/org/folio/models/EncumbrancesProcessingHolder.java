@@ -91,9 +91,9 @@ public class EncumbrancesProcessingHolder {
     return pendingPaymentsToUpdate;
   }
 
-  public int getAllEncumbrancesQuantity() {
+  public boolean isEmpty() {
     return encumbrancesForCreate.size() + encumbrancesForUpdate.size()
         + encumbrancesForRelease.size() + encumbrancesForUnrelease.size()
-        + encumbrancesForDelete.size();
+        + encumbrancesForDelete.size() + pendingPaymentsToUpdate.size() == 0;
   }
 }

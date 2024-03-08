@@ -67,12 +67,9 @@ public class EncumbranceService {
 
 
   public Future<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
-    if (holder.getAllEncumbrancesQuantity() == 0)
+    if (holder.isEmpty()) {
       return Future.succeededFuture();
-    return batchProcess(holder, requestContext);
-  }
-
-  public Future<Void> batchProcess(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
+    }
     List<Transaction> transactionsToCreate = prepareTransactionsToCreate(holder.getEncumbrancesForCreate());
     List<Transaction> transactionsToUpdate = prepareTransactionsToUpdate(holder);
     transactionsToUpdate.addAll(holder.getPendingPaymentsToUpdate());
