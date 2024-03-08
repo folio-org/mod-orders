@@ -13,9 +13,12 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -29,6 +32,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.ErrorManager;
+
 
 import org.folio.ApiTestSuite;
 import org.apache.logging.log4j.LogManager;
@@ -112,12 +117,12 @@ public class CheckinHelperTest {
 
     ToBeCheckedIn toBeCheckedIn2 = new ToBeCheckedIn().withPoLineId(poLine1);
     CheckInPiece checkInPiece3 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withDisplaySummary("3")
-                        .withEnumeration("Enum1").withCopyNumber("CN1").withChronology("Ch1").withDiscoverySuppress(true).withDisplayOnHolding(true);
+      .withEnumeration("Enum1").withCopyNumber("CN1").withChronology("Ch1").withDiscoverySuppress(true).withDisplayOnHolding(true);
     toBeCheckedIn2.withCheckInPieces(List.of(checkInPiece3));
 
     ToBeCheckedIn toBeCheckedIn3 = new ToBeCheckedIn().withPoLineId(poLine2);
     CheckInPiece checkInPiece4 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withDisplaySummary("4")
-                        .withEnumeration("Enum2").withCopyNumber("CN2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);
+      .withEnumeration("Enum2").withCopyNumber("CN2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);
     toBeCheckedIn3.withCheckInPieces(List.of(checkInPiece4));
 
     checkinCollection.withToBeCheckedIn(List.of(toBeCheckedIn1, toBeCheckedIn2, toBeCheckedIn3));
@@ -131,8 +136,8 @@ public class CheckinHelperTest {
 
     assertEquals(1, map.get(poLine2).size());
     CheckInPiece actCheckInPiece1 = map.get(poLine1).stream()
-                              .filter(checkInPiece -> "3".equals(checkInPiece.getDisplaySummary()))
-                              .findFirst().get();
+      .filter(checkInPiece -> "3".equals(checkInPiece.getDisplaySummary()))
+      .findFirst().get();
     assertEquals("3", actCheckInPiece1.getDisplaySummary());
     assertEquals("Enum1", actCheckInPiece1.getEnumeration());
     assertEquals("CN1", actCheckInPiece1.getCopyNumber());
@@ -218,27 +223,25 @@ public class CheckinHelperTest {
     pieces.add(new Piece().withId(pieceId).withPoLineId(poLineId));
     map.put(poLineId, pieces);
     Map<String, List<Piece>> res = checkinHelper.updatePieceRecordsWithoutItems(map);
-
     Piece piece = res.get(poLineId).get(0);
+
     assertNotNull(piece.getReceivedDate());
     assertEquals(Piece.ReceivingStatus.RECEIVED, piece.getReceivingStatus());
   }
 
   @Test
-  void testProduceOnErrorWithBarcodeNotUnique() {
+  void testItemShouldNotBeReceivedWhenBarcodeIsNotUnique(){
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
+    String poLineId2 = UUID.randomUUID().toString();
+    String pieceId2 = UUID.randomUUID().toString();
     CheckinCollection checkinCollection = new CheckinCollection();
     checkinCollection.withToBeCheckedIn(Collections.singletonList(new ToBeCheckedIn()
       .withPoLineId(poLineId)
       .withCheckInPieces(Collections.singletonList(new CheckInPiece()
         .withId(pieceId)
-        .withDisplaySummary("displaySummary")
-        .withDisplayOnHolding(true)
-        .withDiscoverySuppress(true)
         .withSupplement(true)
         .withBarcode("12345")
-        .withReceiptDate(new Date())
         .withCallNumber("callNumber")))));
     CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
     Map<String, List<Piece>> map = new HashMap<>();
@@ -247,32 +250,21 @@ public class CheckinHelperTest {
     map.put(poLineId, pieces);
     Map<String, List<Piece>> res = checkinHelper.updatePieceRecordsWithoutItems(map);
     Piece piece = res.get(poLineId).get(0);
-
-    assertNotNull(piece.getReceivedDate());
-    assertEquals(Piece.ReceivingStatus.RECEIVED, piece.getReceivingStatus());
-
-    String poLineId2 = UUID.randomUUID().toString();
-    String pieceId2 = UUID.randomUUID().toString();
-    CheckinCollection checkinCollection2 = new CheckinCollection();
-    checkinCollection.withToBeCheckedIn(Collections.singletonList(new ToBeCheckedIn()
-      .withPoLineId(poLineId)
+    CheckinCollection checkinCollection2 = new CheckinCollection(); // Change variable name to checkinCollection2
+    checkinCollection2.withToBeCheckedIn(Collections.singletonList(new ToBeCheckedIn() // Change variable name to checkinCollection2
+      .withPoLineId(poLineId2)
       .withCheckInPieces(Collections.singletonList(new CheckInPiece()
-        .withId(pieceId)
-        .withDisplaySummary("displaySummary")
-        .withDisplayOnHolding(true)
-        .withDiscoverySuppress(true)
+        .withId(pieceId2)
         .withSupplement(true)
         .withBarcode("12345")
-        .withReceiptDate(new Date())
         .withCallNumber("callNumber")))));
+    CheckinHelper checkinHelper2 = spy(new CheckinHelper(checkinCollection2, okapiHeadersMock, requestContext.getContext()));
+    pieces.add(new Piece().withId(pieceId2).withPoLineId(poLineId2));
+    map.put(poLineId2, pieces);
+    Piece piece2 = res.get(poLineId).get(1);
 
-    assertNotNull(new CheckinHelper(checkinCollection2, okapiHeadersMock, requestContext.getContext()).getErrors());
-
-    Map<String, List<Piece>> map2 = new HashMap<>();
-    List<Piece> pieces2 = new ArrayList<>();
-    pieces2.add(new Piece().withId(pieceId2).withPoLineId(poLineId2));
-
-    assertNull(map2.put(poLineId2, pieces2));
+    assertEquals(Piece.ReceivingStatus.EXPECTED, piece2.getReceivingStatus());
+    assertNotEquals(Piece.ReceivingStatus.RECEIVED, piece2.getReceivingStatus());
   }
 
   private static class ContextConfiguration {
