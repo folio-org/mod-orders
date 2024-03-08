@@ -114,8 +114,8 @@ public enum ErrorCodes {
   FUND_LOCATION_RESTRICTION_VIOLATION("fundLocationRestrictionViolation", "One of the locations is restricted to be used by all funds."),
   ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND("encumbrancesForReEncumberNotFound", "The encumbrances were correctly created during the rollover or have already been updated."),
   CLAIMING_CONFIG_INVALID("claimingConfigInvalid", "Claiming interval should be set and greater than 0 if claiming is active"),
-  TEMPLATE_NAME_ALREADY_EXISTS("templateNameNotUnique", "Template name already exists");
-
+  TEMPLATE_NAME_ALREADY_EXISTS("templateNameNotUnique", "Template name already exists"),
+  BARCODE_IS_NOT_UNIQUE("barcodeIsNotUnique", "The barcode already exists. The barcode must be unique");
 
   private final String code;
   private final String description;
