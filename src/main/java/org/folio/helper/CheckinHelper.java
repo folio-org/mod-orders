@@ -5,7 +5,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.service.inventory.InventoryManager.ITEM_ACCESSION_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
 import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
@@ -217,8 +216,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       })
       // Add processing error if item failed to be updated
       .onFailure(e -> {
-        logger.error("Item associated with piece '{}' cannot be updated", piece.getId());
-        addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
+        addErrorForUpdatingItem(piece, e);
         promise.complete(false);
       });
     return promise.future();

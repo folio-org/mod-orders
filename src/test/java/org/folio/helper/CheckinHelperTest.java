@@ -15,8 +15,10 @@ import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,10 +30,18 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.ApiTestSuite;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.service.ProtectionService;
@@ -46,12 +56,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
+@ExtendWith(VertxExtension.class)
 public class CheckinHelperTest {
 
+  @Autowired
+  InventoryManager inventoryManager;
   @Autowired
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
 
@@ -108,12 +122,12 @@ public class CheckinHelperTest {
 
     ToBeCheckedIn toBeCheckedIn2 = new ToBeCheckedIn().withPoLineId(poLine1);
     CheckInPiece checkInPiece3 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withDisplaySummary("3")
-                        .withEnumeration("Enum1").withCopyNumber("CN1").withChronology("Ch1").withDiscoverySuppress(true).withDisplayOnHolding(true);
+      .withEnumeration("Enum1").withCopyNumber("CN1").withChronology("Ch1").withDiscoverySuppress(true).withDisplayOnHolding(true);
     toBeCheckedIn2.withCheckInPieces(List.of(checkInPiece3));
 
     ToBeCheckedIn toBeCheckedIn3 = new ToBeCheckedIn().withPoLineId(poLine2);
     CheckInPiece checkInPiece4 = new CheckInPiece().withId(UUID.randomUUID().toString()).withCreateItem(true).withDisplaySummary("4")
-                        .withEnumeration("Enum2").withCopyNumber("CN2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);
+      .withEnumeration("Enum2").withCopyNumber("CN2").withChronology("Ch2").withDiscoverySuppress(false).withDisplayOnHolding(false);
     toBeCheckedIn3.withCheckInPieces(List.of(checkInPiece4));
 
     checkinCollection.withToBeCheckedIn(List.of(toBeCheckedIn1, toBeCheckedIn2, toBeCheckedIn3));
@@ -127,8 +141,8 @@ public class CheckinHelperTest {
 
     assertEquals(1, map.get(poLine2).size());
     CheckInPiece actCheckInPiece1 = map.get(poLine1).stream()
-                              .filter(checkInPiece -> "3".equals(checkInPiece.getDisplaySummary()))
-                              .findFirst().get();
+      .filter(checkInPiece -> "3".equals(checkInPiece.getDisplaySummary()))
+      .findFirst().get();
     assertEquals("3", actCheckInPiece1.getDisplaySummary());
     assertEquals("Enum1", actCheckInPiece1.getEnumeration());
     assertEquals("CN1", actCheckInPiece1.getCopyNumber());
@@ -192,8 +206,86 @@ public class CheckinHelperTest {
     assertEquals(Piece.ReceivingStatus.RECEIVED, piece.getReceivingStatus());
   }
 
+  @Test
+  void testShouldSuccessfullyUpdateItem(VertxTestContext vertxTestContext) {
+    String poLineId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
+    when(inventoryManager.updateItem(any(JsonObject.class), any(RequestContext.class))).thenReturn(Future.succeededFuture());
+
+    Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
+    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
+    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(new JsonObject(), piece, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void testShouldFailToUpdateItemWhenBarcodeIsExists(VertxTestContext vertxTestContext) {
+    String poLineId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
+    when(inventoryManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
+      .thenReturn(Future.failedFuture(new HttpException(500, "Barcode must be unique, 555 is already assigned to another item")));
+
+    Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
+    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
+    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(new JsonObject(), piece, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        Error error = checkinHelper.getError(poLineId, pieceId);
+        assertEquals(error.getCode(), ErrorCodes.BARCODE_IS_NOT_UNIQUE.getCode());
+        assertEquals(error.getMessage(), ErrorCodes.BARCODE_IS_NOT_UNIQUE.toError().getMessage());
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void testShouldFailToUpdateItemWhenUnexpectedErrorThrown(VertxTestContext vertxTestContext) {
+    String poLineId = UUID.randomUUID().toString();
+    String pieceId = UUID.randomUUID().toString();
+    CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
+    when(inventoryManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
+      .thenReturn(Future.failedFuture(new HttpException(500, "Service failure")));
+
+    Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
+    CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
+    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(new JsonObject(), piece, requestContext);
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        Error error = checkinHelper.getError(poLineId, pieceId);
+        assertEquals(error.getCode(), ErrorCodes.ITEM_UPDATE_FAILED.getCode());
+        assertEquals(error.getMessage(), ErrorCodes.ITEM_UPDATE_FAILED.toError().getMessage());
+        assertEquals(error.getParameters().get(0).getKey(), "cause");
+        assertEquals(error.getParameters().get(0).getValue(), "Service failure");
+        assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  private CheckinCollection getCheckinCollection(String poLineId, String pieceId) {
+    CheckinCollection checkinCollection = new CheckinCollection();
+    checkinCollection.withToBeCheckedIn(Collections.singletonList(new ToBeCheckedIn()
+      .withPoLineId(poLineId)
+      .withCheckInPieces(Collections.singletonList(new CheckInPiece()
+        .withId(pieceId)
+        .withDisplaySummary("displaySummary")
+        .withDisplayOnHolding(true)
+        .withDiscoverySuppress(true)
+        .withSupplement(true)
+        .withBarcode("12345")
+        .withReceiptDate(new Date())
+        .withCallNumber("callNumber")))));
+    return checkinCollection;
+  }
+
   private static class ContextConfiguration {
-    @Bean PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager() {
+    @Bean
+    PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager() {
       return mock(PieceCreateFlowInventoryManager.class);
     }
 
