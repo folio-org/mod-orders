@@ -23,7 +23,7 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
-  public Boolean poLineUpdateQuantity(PieceCreationHolder holder) {
+  public boolean poLineUpdateQuantity(PieceCreationHolder holder) {
     CompositePoLine lineToSave = holder.getPoLineToSave();
     Piece piece = holder.getPieceToCreate();
     final int qty = 1;
@@ -69,6 +69,6 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
         cost.setQuantityPhysical(prevQty + qty);
       }
     }
-    return Boolean.TRUE;
+    return true;
   }
 }

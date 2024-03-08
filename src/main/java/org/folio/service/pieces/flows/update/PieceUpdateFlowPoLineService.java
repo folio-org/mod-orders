@@ -34,8 +34,8 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
 
   @Override
   public Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
-    Boolean isLineUpdated = poLineUpdateQuantity(holder);
-    if (Boolean.TRUE.equals(isLineUpdated)) {
+    boolean isLineUpdated = poLineUpdateQuantity(holder);
+    if (isLineUpdated) {
       updateEstimatedPrice(holder.getPoLineToSave());
       return purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext);
     } else {
@@ -44,7 +44,7 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
-  public Boolean poLineUpdateQuantity(PieceUpdateHolder pieceUpdateHolder) {
+  public boolean poLineUpdateQuantity(PieceUpdateHolder pieceUpdateHolder) {
     CompositePoLine lineToSave = pieceUpdateHolder.getPoLineToSave();
     Piece pieceToUpdate = pieceUpdateHolder.getPieceToUpdate();
     Piece pieceFromStorage = pieceUpdateHolder.getPieceFromStorage();
@@ -58,9 +58,9 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
         pieceCreationHolder.withOrderInformation(pieceDeletionHolder.getPurchaseOrderToSave());
         pieceCreateFlowPoLineService.poLineUpdateQuantity(pieceCreationHolder);
         pieceUpdateHolder.withOrderInformation(pieceCreationHolder.getPurchaseOrderToSave());
-        return Boolean.TRUE;
+        return true;
       }
     }
-    return Boolean.FALSE;
+    return false;
   }
 }

@@ -10,6 +10,9 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.ID;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING_ITEM;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.EXPECTED;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.RECEIVED;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.UNRECEIVABLE;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
@@ -24,6 +27,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,8 +37,11 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceUpdateHolder;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
@@ -43,6 +50,8 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
+import org.folio.service.caches.InventoryCache;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
@@ -140,11 +149,13 @@ public class PieceUpdateFlowManagerTest {
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId)
+      .withOrderType(PurchaseOrder.OrderType.ONE_TIME).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
     Title title = new Title().withId(titleId);
 
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
+    givenPoLineHasPieces(lineId, List.of());
 
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
     doAnswer((Answer<Future<Void>>) invocation -> {
@@ -206,6 +217,7 @@ public class PieceUpdateFlowManagerTest {
 
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
+    givenPoLineHasPieces(lineId, List.of());
 
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
     doAnswer((Answer<Future<Void>>) invocation -> {
@@ -267,6 +279,7 @@ public class PieceUpdateFlowManagerTest {
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(incomingPieceToUpdate.getId(), requestContext);
     final ArgumentCaptor<Piece> pieceToUpdateCapture = ArgumentCaptor.forClass(Piece.class);
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdateCapture.capture(), eq(requestContext));
+    givenPoLineHasPieces(lineId, List.of());
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
 
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
@@ -298,6 +311,74 @@ public class PieceUpdateFlowManagerTest {
     verify(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
   }
 
+  @Test
+  void poLineStatusWhenReceiveLast() {
+    // given
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    List<Piece> fromStorage = givenPieces(EXPECTED, RECEIVED, UNRECEIVABLE);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(RECEIVED));
+
+    // when
+    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+
+    // then
+    assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, receiptStatus);
+  }
+
+  @Test
+  void poLineStatusWhenExpectLast() {
+    // given
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    List<Piece> fromStorage = givenPieces(RECEIVED, RECEIVED, UNRECEIVABLE);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
+
+    // when
+    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+
+    // then
+    assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+  }
+
+  @Test
+  void poLineStatusWhenExpectAll() {
+    // given
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    List<Piece> fromStorage = givenPieces(RECEIVED);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
+
+    // when
+    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+
+    // then
+    assertEquals(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT, receiptStatus);
+  }
+
+  @Test
+  void poLineStatusWhenReceivePart() {
+    // given
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    List<Piece> fromStorage = givenPieces(EXPECTED, EXPECTED);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(UNRECEIVABLE));
+
+    // when
+    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+
+    // then
+    assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+  }
+
+  private static List<Piece> givenPieces(Piece.ReceivingStatus... statuses) {
+    return Arrays.stream(statuses).map(status ->
+      new Piece().withId(UUID.randomUUID().toString()).withReceivingStatus(status)
+    ).toList();
+  }
+
+  private void givenPoLineHasPieces(String lineId, List<Piece> pieces) {
+    doReturn(succeededFuture(pieces))
+      .when(pieceStorageService)
+      .getPiecesByLineId(eq(lineId), eq(requestContext));
+  }
+
   private static class ContextConfiguration {
     @Bean PieceStorageService pieceStorageService() {
       return mock(PieceStorageService.class);
@@ -321,14 +402,27 @@ public class PieceUpdateFlowManagerTest {
       return spy(new DefaultPieceFlowsValidator());
     }
 
+    @Bean RestClient restClient() {
+      return mock(RestClient.class);
+    }
+
+    @Bean InventoryCache inventoryCache() {
+      return mock(InventoryCache.class);
+    }
+
+    @Bean PurchaseOrderLineService defaultPurchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache) {
+      return spy(new PurchaseOrderLineService(restClient, inventoryCache));
+    }
+
     @Bean
     PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,
                                                   ProtectionService protectionService, PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService,
                                                   PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
-                                                  DefaultPieceFlowsValidator defaultPieceFlowsValidator) {
+                                                  DefaultPieceFlowsValidator defaultPieceFlowsValidator, PurchaseOrderLineService purchaseOrderLineService) {
       return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService,
         pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder,
-        defaultPieceFlowsValidator);
+        defaultPieceFlowsValidator, purchaseOrderLineService);
     }
   }
+
 }
