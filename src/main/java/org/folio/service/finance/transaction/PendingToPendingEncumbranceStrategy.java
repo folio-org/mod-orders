@@ -1,16 +1,22 @@
 package org.folio.service.finance.transaction;
 
+import static java.lang.Boolean.TRUE;
 import static org.folio.orders.utils.FundDistributionUtils.validateFundDistributionTotal;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
+import org.apache.http.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.service.orders.OrderWorkflowType;
 
 import io.vertx.core.Future;
@@ -19,11 +25,13 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
 
   private final EncumbranceService encumbranceService;
   private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
+  private final PendingPaymentService pendingPaymentService;
 
   public PendingToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
-    EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder, PendingPaymentService pendingPaymentService) {
     this.encumbranceService = encumbranceService;
     this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
+    this.pendingPaymentService = pendingPaymentService;
   }
 
   @Override
@@ -33,7 +41,7 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
     validateFundDistributionTotal(compPO.getCompositePoLines());
     List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
     return encumbranceRelationsHoldersBuilder.withExistingTransactions(encumbranceRelationsHolders, poAndLinesFromStorage, requestContext)
-      .map(aVoid -> distributeHoldersByOperation(encumbranceRelationsHolders))
+      .compose(v -> distributeHoldersByOperation(encumbranceRelationsHolders, requestContext))
       .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext));
   }
 
@@ -42,7 +50,8 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
     return OrderWorkflowType.PENDING_TO_PENDING;
   }
 
-  private EncumbrancesProcessingHolder distributeHoldersByOperation(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
+  private Future<EncumbrancesProcessingHolder> distributeHoldersByOperation(List<EncumbranceRelationsHolder> encumbranceRelationsHolders,
+      RequestContext requestContext) {
     EncumbrancesProcessingHolder holder = new EncumbrancesProcessingHolder();
     List<EncumbranceRelationsHolder> toUpdate = getTransactionsToUpdate(encumbranceRelationsHolders);
     List<EncumbranceRelationsHolder> toDelete = getTransactionsToDelete(encumbranceRelationsHolders);
@@ -50,7 +59,7 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
     holder.withEncumbrancesForUpdate(toUpdate);
     holder.withEncumbrancesForRelease(toRelease);
     holder.withEncumbrancesForDelete(toDelete);
-    return holder;
+    return addPendingPaymentsToUpdate(holder, requestContext);
   }
 
   private List<EncumbranceRelationsHolder> getTransactionsToDelete(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
@@ -83,4 +92,35 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
     return toUpdate;
   }
 
+  public Future<EncumbrancesProcessingHolder> addPendingPaymentsToUpdate(EncumbrancesProcessingHolder holder,
+      RequestContext requestContext) {
+    if (holder.getEncumbrancesForDelete().isEmpty()) {
+      return Future.succeededFuture(holder);
+    }
+    List<String> idsOfEncumbrancesToDelete = holder.getEncumbrancesForDelete().stream()
+      .map(EncumbranceRelationsHolder::getOldEncumbrance)
+      .map(Transaction::getId)
+      .toList();
+
+    return pendingPaymentService.getTransactionsByEncumbranceIds(idsOfEncumbrancesToDelete, requestContext)
+      .map(pendingPayments -> {
+        if (pendingPayments.isEmpty()) {
+          return holder;
+        }
+        if (pendingPayments.stream().anyMatch(pp -> !TRUE.equals(pp.getInvoiceCancelled()))) {
+          // Do not allow removing encumbrances if they are linked to an invoice that is not cancelled
+          String invoiceLineIds = pendingPayments.stream()
+            .filter(pp -> !TRUE.equals(pp.getInvoiceCancelled()))
+            .map(Transaction::getSourceInvoiceLineId)
+            .collect(Collectors.joining(", "));
+          String message = String.format(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getDescription(), invoiceLineIds);
+          throw new HttpException(HttpStatus.SC_FORBIDDEN, new Error()
+            .withCode(ErrorCodes.PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR.getCode())
+            .withMessage(message));
+        }
+        pendingPayments.forEach(pp -> pp.getAwaitingPayment().setEncumbranceId(null));
+        holder.withPendingPaymentsToUpdate(pendingPayments);
+        return holder;
+      });
+  }
 }
