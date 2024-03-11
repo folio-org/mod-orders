@@ -1267,15 +1267,19 @@ public class InventoryManager {
       });
   }
 
-  private void updateItemWithPieceFields(Piece piece, JsonObject item) {
-    Optional.ofNullable(piece.getEnumeration())
-      .ifPresentOrElse(enumeration -> item.put(ITEM_ENUMERATION, enumeration), () -> item.remove(ITEM_ENUMERATION));
-    Optional.ofNullable(piece.getCopyNumber())
-      .ifPresentOrElse(copyNumber -> item.put(COPY_NUMBER, copyNumber), () -> item.remove(COPY_NUMBER));
-    Optional.ofNullable(piece.getChronology())
-      .ifPresentOrElse(chronology -> item.put(ITEM_CHRONOLOGY, chronology), () -> item.remove(ITEM_CHRONOLOGY));
-    Optional.ofNullable(piece.getDiscoverySuppress())
-      .ifPresentOrElse(discSup -> item.put(ITEM_DISCOVERY_SUPPRESS, discSup), () -> item.remove(ITEM_DISCOVERY_SUPPRESS));
+  void updateItemWithPieceFields(Piece piece, JsonObject item) {
+    if (StringUtils.isNotEmpty(piece.getEnumeration())) {
+      item.put(ITEM_ENUMERATION, piece.getEnumeration());
+    }
+    if (StringUtils.isNotEmpty(piece.getCopyNumber())) {
+      item.put(COPY_NUMBER, piece.getCopyNumber());
+    }
+    if (StringUtils.isNotEmpty(piece.getChronology())) {
+      item.put(ITEM_CHRONOLOGY, piece.getChronology());
+    }
+    if (piece.getDiscoverySuppress() != null) {
+      item.put(ITEM_DISCOVERY_SUPPRESS, piece.getDiscoverySuppress());
+    }
   }
 
   public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
