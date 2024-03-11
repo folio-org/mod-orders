@@ -1270,6 +1270,9 @@ public class InventoryManager {
   }
 
   void updateItemWithPieceFields(Piece piece, JsonObject item) {
+    if (StringUtils.isNotEmpty(piece.getDisplaySummary())) {
+      item.put(ITEM_DISPLAY_SUMMARY, piece.getDisplaySummary());
+    }
     if (StringUtils.isNotEmpty(piece.getEnumeration())) {
       item.put(ITEM_ENUMERATION, piece.getEnumeration());
     }
@@ -1278,6 +1281,15 @@ public class InventoryManager {
     }
     if (StringUtils.isNotEmpty(piece.getChronology())) {
       item.put(ITEM_CHRONOLOGY, piece.getChronology());
+    }
+    if (StringUtils.isNotEmpty(piece.getBarcode())) {
+      item.put(ITEM_BARCODE, piece.getBarcode());
+    }
+    if (StringUtils.isNotEmpty(piece.getAccessionNumber())) {
+      item.put(ITEM_ACCESSION_NUMBER, piece.getAccessionNumber());
+    }
+    if (StringUtils.isNotEmpty(piece.getCallNumber())) {
+      item.put(ITEM_LEVEL_CALL_NUMBER, piece.getCallNumber());
     }
     if (piece.getDiscoverySuppress() != null) {
       item.put(ITEM_DISCOVERY_SUPPRESS, piece.getDiscoverySuppress());
