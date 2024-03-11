@@ -3,6 +3,8 @@ package org.folio.service.pieces.flows.update;
 import static org.folio.helper.CheckinReceivePiecesHelper.EXPECTED_STATUSES;
 import static org.folio.helper.CheckinReceivePiecesHelper.RECEIVED_STATUSES;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
+import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus.AWAITING_RECEIPT;
 import static org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED;
@@ -12,14 +14,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceUpdateHolder;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -27,10 +34,6 @@ import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
 
 public class PieceUpdateFlowManager {
   private static final Logger logger = LogManager.getLogger(PieceUpdateFlowManager.class);
@@ -68,8 +71,7 @@ public class PieceUpdateFlowManager {
       .withCreateItem(createItem)
       .withDeleteHolding(deleteHolding);
 
-    Promise<Void> promise = Promise.promise();
-    pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
+    return pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
       .onSuccess(holder::withPieceFromStorage)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
@@ -101,12 +103,20 @@ public class PieceUpdateFlowManager {
         }
         return null;
       })
-      .onSuccess(v -> promise.complete())
       .onFailure(t -> {
         logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause());
-        promise.fail(t);
-      });
-    return promise.future();
+        var param1 = new Parameter().withKey("pieceId").withValue(pieceToUpdate.getId());
+        var param2 = new Parameter().withKey("poLineId").withValue(pieceToUpdate.getPoLineId());
+        var causeParam = new Parameter().withKey("cause").withValue(t.getMessage());
+        if (StringUtils.isNotBlank(t.getMessage()) && t.getMessage().contains("Barcode must be unique")) {
+          logger.error("The barcode associate with item '{}' is not unique, it cannot be updated", param1.getValue(), t);
+          throw new HttpException(500, BARCODE_IS_NOT_UNIQUE, List.of(param1, param2, causeParam));
+        } else {
+          logger.error("Item associated with piece '{}' cannot be updated", param1.getValue(), t);
+          throw new HttpException(500, ITEM_UPDATE_FAILED, List.of(param1, param2, causeParam));
+        }
+      })
+      .mapEmpty();
   }
 
   protected Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
