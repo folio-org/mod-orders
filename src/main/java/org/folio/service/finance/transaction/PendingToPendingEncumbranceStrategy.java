@@ -64,7 +64,7 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
 
   private List<EncumbranceRelationsHolder> getTransactionsToDelete(List<EncumbranceRelationsHolder> encumbranceRelationsHolders) {
     return encumbranceRelationsHolders.stream()
-      .filter(holder -> Objects.isNull(holder.getNewEncumbrance()))
+      .filter(holder -> holder.getOldEncumbrance() != null && holder.getNewEncumbrance() == null)
       .toList();
   }
 
