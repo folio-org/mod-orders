@@ -240,8 +240,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PendingPaymentService pendingPaymentService(TransactionService transactionService, RestClient restClient) {
-    return new PendingPaymentService(transactionService, restClient);
+  PendingPaymentService pendingPaymentService(TransactionService transactionService) {
+    return new PendingPaymentService(transactionService);
   }
 
   @Bean
@@ -326,8 +326,8 @@ public class ApplicationConfig {
 
   @Bean
   EncumbranceWorkflowStrategy pendingToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
-      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
-    return new PendingToPendingEncumbranceStrategy(encumbranceService,  encumbranceRelationsHoldersBuilder);
+      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder, PendingPaymentService pendingPaymentService) {
+    return new PendingToPendingEncumbranceStrategy(encumbranceService,  encumbranceRelationsHoldersBuilder, pendingPaymentService);
   }
 
   @Bean
@@ -723,10 +723,8 @@ public class ApplicationConfig {
   }
 
   @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(InvoiceLineService invoiceLineService,
-      PendingPaymentService pendingPaymentService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder,
-      TransactionService transactionService) {
-    return new POLInvoiceLineRelationService(invoiceLineService, pendingPaymentService, poLineInvoiceLineHolderBuilder,
-      transactionService);
+      PendingPaymentService pendingPaymentService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
+    return new POLInvoiceLineRelationService(invoiceLineService, pendingPaymentService, poLineInvoiceLineHolderBuilder);
   }
 
   @Bean

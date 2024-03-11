@@ -2,7 +2,6 @@ package org.folio.service.finance.transaction;
 
 import io.vertx.core.Future;
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 
 import java.util.ArrayList;
@@ -18,11 +17,9 @@ import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 public abstract class AbstractTransactionManagingService {
 
   protected final TransactionService transactionService;
-  protected final RestClient restClient;
 
-  protected AbstractTransactionManagingService(TransactionService transactionService, RestClient restClient) {
+  protected AbstractTransactionManagingService(TransactionService transactionService) {
     this.transactionService = transactionService;
-    this.restClient = restClient;
   }
 
   public Future<List<Transaction>> getTransactionsByEncumbranceIds(List<String> trIds, RequestContext requestContext) {

@@ -67,16 +67,12 @@ public class EncumbranceService {
 
 
   public Future<Void> createOrUpdateEncumbrances(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
-    if (holder.getAllEncumbrancesQuantity() == 0)
+    if (holder.isEmpty()) {
       return Future.succeededFuture();
-    return unreleaseEncumbrancesFirst(holder, requestContext)
-      .compose(v -> batchProcess(holder, requestContext))
-      .compose(v -> releaseEncumbrancesAfter(holder, requestContext));
-  }
-
-  public Future<Void> batchProcess(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
+    }
     List<Transaction> transactionsToCreate = prepareTransactionsToCreate(holder.getEncumbrancesForCreate());
     List<Transaction> transactionsToUpdate = prepareTransactionsToUpdate(holder);
+    transactionsToUpdate.addAll(holder.getPendingPaymentsToUpdate());
     List<Transaction> transactionsToDelete = prepareTransactionsToDelete(holder.getEncumbrancesForDelete());
     List<String> idsOfTransactionsToDelete =  transactionsToDelete.stream().map(Transaction::getId).toList();
     List<TransactionPatch> transactionPatches = Collections.emptyList();
@@ -384,36 +380,4 @@ public class EncumbranceService {
     }
   }
 
-  private Future<Void> unreleaseEncumbrancesFirst(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
-    // Update the encumbrances to be updated after unreleasing them
-    List<Transaction> encumbrances = holder.getEncumbrancesToUnreleaseBefore();
-    if (encumbrances.isEmpty())
-      return Future.succeededFuture();
-    List<String> encumbranceIds = encumbrances.stream().map(Transaction::getId).collect(toList());
-    return unreleaseEncumbrances(encumbrances, requestContext)
-      .compose(v -> transactionService.getTransactionsByIds(encumbranceIds, requestContext))
-      .map(newEncumbrances -> {
-        holder.getEncumbrancesForUpdate().forEach(h -> {
-          String id = h.getOldEncumbrance().getId();
-          Transaction newT = h.getNewEncumbrance();
-          newEncumbrances.stream().filter(tr -> tr.getId().equals(id)).findFirst().ifPresent(matching -> {
-            h.withOldEncumbrance(matching);
-            newT.setVersion(matching.getVersion());
-            newT.getEncumbrance().setStatus(matching.getEncumbrance().getStatus());
-          });
-        });
-        return null;
-      });
-  }
-
-  private Future<Void> releaseEncumbrancesAfter(EncumbrancesProcessingHolder holder, RequestContext requestContext) {
-    // Get the updated version of the encumbrances before releasing them.
-    // NOTE: this could be done within batchProcess using patches (assuming patches are done after create/update; see MODORDERS-1008)
-    List<Transaction> encumbrances = holder.getEncumbrancesToUnreleaseAfter();
-    if (encumbrances.isEmpty())
-      return Future.succeededFuture();
-    List<String> encumbranceIds = encumbrances.stream().map(Transaction::getId).collect(toList());
-    return transactionService.getTransactionsByIds(encumbranceIds, requestContext)
-      .compose(updatedEncumbrances -> releaseEncumbrances(updatedEncumbrances, requestContext));
-  }
 }
