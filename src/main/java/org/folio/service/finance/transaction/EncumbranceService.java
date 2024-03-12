@@ -75,14 +75,14 @@ public class EncumbranceService {
     List<Transaction> transactionsToUpdate = prepareTransactionsToUpdate(holder);
     transactionsToUpdate.addAll(holder.getPendingPaymentsToUpdate());
     List<Transaction> transactionsToDelete = prepareTransactionsToDelete(holder.getEncumbrancesForDelete());
-    List<String> idsOfTransactionsToDelete =  transactionsToDelete.stream().map(Transaction::getId).toList();
+    List<String> idsOfTransactionsToDelete = transactionsToDelete.stream().map(Transaction::getId).toList();
     List<TransactionPatch> transactionPatches = Collections.emptyList();
     return transactionService.batchAllOrNothing(transactionsToCreate, transactionsToUpdate, idsOfTransactionsToDelete,
         transactionPatches, requestContext)
       .recover(t -> {
         try {
           checkCustomTransactionError(t);
-        } catch(Exception ex) {
+        } catch (Exception ex) {
           return Future.failedFuture(ex);
         }
         return Future.failedFuture(t);
@@ -151,25 +151,30 @@ public class EncumbranceService {
   public Future<Void> updateEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder compPo, RequestContext requestContext) {
     logger.info("updateEncumbrancesOrderStatusAndReleaseIfClosed:: orderId {}  ", compPo.getId());
     return getOrderUnreleasedEncumbrances(compPo, requestContext).compose(encumbrs -> {
-
-      var workflowStatus = compPo.getWorkflowStatus().value();
-      var updateNotNeeded = CollectionUtils.isEmpty(encumbrs) ||
-        workflowStatus.equals(encumbrs.get(0).getEncumbrance().getOrderStatus().value());
-      if (updateNotNeeded) {
-        return Future.succeededFuture();
+      if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
+        syncEncumbrancesOrderStatusAndReleaseIfClosed(compPo.getWorkflowStatus(), encumbrs);
+        // NOTE: we will have to use transactionPatches when it is available (see MODORDERS-1008)
+        return transactionService.batchUpdate(encumbrs, requestContext);
       }
-
-      var orderStatus = Encumbrance.OrderStatus.fromValue(workflowStatus);
-      encumbrs.forEach(encumbrance -> {
-        encumbrance.getEncumbrance().setOrderStatus(orderStatus);
-        if (orderStatus == Encumbrance.OrderStatus.CLOSED) {
-          encumbrance.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
-        }
-      });
-      // NOTE: we will have to use transactionPatches when it is available (see MODORDERS-1008)
-      return transactionService.batchUpdate(encumbrs, requestContext);
+      return Future.succeededFuture();
     });
   }
+
+  private void syncEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder.WorkflowStatus workflowStatus,
+      List<Transaction> encumbrances) {
+    Encumbrance.OrderStatus orderStatus = Encumbrance.OrderStatus.fromValue(workflowStatus.value());
+    encumbrances.forEach(encumbrance -> {
+      encumbrance.getEncumbrance().setOrderStatus(orderStatus);
+      if (orderStatus == Encumbrance.OrderStatus.CLOSED)
+        encumbrance.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
+    });
+  }
+
+
+  private boolean isEncumbrancesOrderStatusUpdateNeeded(CompositePurchaseOrder.WorkflowStatus orderStatus, List<Transaction> encumbrs) {
+    return !CollectionUtils.isEmpty(encumbrs) && !orderStatus.value().equals(encumbrs.get(0).getEncumbrance().getOrderStatus().value());
+  }
+
 
   public Future<List<Transaction>> getOrderEncumbrances(String orderId, RequestContext requestContext) {
     return transactionService.getTransactions(buildEncumbrancesByOrderQuery(orderId), requestContext);
@@ -190,8 +195,8 @@ public class EncumbranceService {
     // Check invoice line's releaseEncumbrance value for each order line
     List<Future<List<Transaction>>> futures =
       compPO.getCompositePoLines()
-          .stream()
-          .filter(poLines -> CollectionUtils.isNotEmpty(poLines.getFundDistribution()))
+        .stream()
+        .filter(poLines -> CollectionUtils.isNotEmpty(poLines.getFundDistribution()))
         .map(poLine -> getPoLineEncumbrancesToUnrelease(compPO.getOrderType(), poLine, mapFiscalYearWithCompPOLines, requestContext))
         .collect(toList());
     return collectResultsOnSuccess(futures)
@@ -210,7 +215,7 @@ public class EncumbranceService {
   }
 
   public Future<List<Transaction>> getPoLineReleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
-      return getFiscalYearId(poLine, requestContext)
+    return getFiscalYearId(poLine, requestContext)
       .compose(fiscalYearId -> transactionService.getTransactions(buildReleasedEncumbranceByPoLineQuery(poLine.getId(), fiscalYearId), requestContext));
   }
 
@@ -226,8 +231,8 @@ public class EncumbranceService {
 
   public Future<List<Transaction>> getEncumbrancesByPoLinesFromCurrentFy(Map<String, List<CompositePoLine>> poLinesByFy, RequestContext requestContext) {
     return collectResultsOnSuccess(poLinesByFy.entrySet().stream()
-        .map(entry -> getCurrentPoLinesEncumbrances(entry.getValue(), entry.getKey(), requestContext))
-        .collect(toList()))
+      .map(entry -> getCurrentPoLinesEncumbrances(entry.getValue(), entry.getKey(), requestContext))
+      .collect(toList()))
       .map(encumbrances -> encumbrances.stream().flatMap(Collection::stream).collect(toList()));
   }
 
@@ -286,7 +291,7 @@ public class EncumbranceService {
         return invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext)
           .compose(invoiceLines -> invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContext));
       })
-       .recover(t -> {
+      .recover(t -> {
         Throwable cause = requireNonNullElse(t.getCause(), t);
         String message = String.format(ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES.getDescription(), cause.getMessage());
         logger.error(message);
@@ -337,9 +342,9 @@ public class EncumbranceService {
       }
     }
     if (currentFiscalYearId[0] == null) {
-        Error error = ErrorCodes.CURRENT_FISCAL_YEAR_ID_NOT_FOUND.toError();
-        List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("poLineNumber")
-                                           .withValue(poLine.getPoLineNumber()));
+      Error error = ErrorCodes.CURRENT_FISCAL_YEAR_ID_NOT_FOUND.toError();
+      List<Parameter> parameters = Collections.singletonList(new Parameter().withKey("poLineNumber")
+        .withValue(poLine.getPoLineNumber()));
       throw new HttpException(404, error.withParameters(parameters));
     }
     if (orderType == CompositePurchaseOrder.OrderType.ONE_TIME) {
@@ -358,7 +363,7 @@ public class EncumbranceService {
       .map(invoiceLines -> !invoiceLines.isEmpty())
       .recover(cause -> {
         // ignore 404 errors as mod-invoice may be unavailable
-        if (cause instanceof HttpException && ((HttpException)cause).getCode() == HttpStatus.HTTP_NOT_FOUND.toInt())
+        if (cause instanceof HttpException && ((HttpException) cause).getCode() == HttpStatus.HTTP_NOT_FOUND.toInt())
           return Future.succeededFuture(false);
 
         return Future.failedFuture(cause);
@@ -386,7 +391,7 @@ public class EncumbranceService {
       .map(FundDistribution::getFundId)
       .orElse("");
     return fiscalYearService.getCurrentFiscalYearByFundId(fundId, requestContext)
-        .map(FiscalYear::getId);
+      .map(FiscalYear::getId);
   }
 
 }
