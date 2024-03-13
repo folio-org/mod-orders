@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 
@@ -385,12 +386,14 @@ public class EncumbranceService {
   }
 
   private Future<String> getFiscalYearId(CompositePoLine poLine, RequestContext requestContext) {
-    String fundId = poLine.getFundDistribution()
+    Optional<String> fundId = poLine.getFundDistribution()
       .stream()
       .findFirst()
-      .map(FundDistribution::getFundId)
-      .orElse("");
-    return fiscalYearService.getCurrentFiscalYearByFundId(fundId, requestContext)
+      .map(FundDistribution::getFundId);
+    if (fundId.isEmpty()) {
+      return Future.succeededFuture("");
+    }
+    return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
       .map(FiscalYear::getId);
   }
 
