@@ -314,6 +314,12 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   @Test
   public void shouldOpenOrderAndPoLineShouldContainLocationAndMaterialTypeFromCreatedHoldingsAndItemIfThoseExistForP_E_MIX(TestContext context)
     throws InterruptedException {
+
+    FundDistribution fundDistribution = new FundDistribution()
+      .withFundId("fb7b70f1-b898-4924-a991-0e4b6312bb5f")
+      .withValue(100d)
+      .withDistributionType(FundDistribution.DistributionType.PERCENTAGE);
+
     CompositePoLine P_E_MIX_PoLine = new CompositePoLine()
       .withId(UUID.randomUUID().toString())
       .withTitleOrPackage("poLine for data-import")
@@ -323,6 +329,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
       .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
       .withPhysical(new Physical())
       .withEresource(new Eresource())
+      .withFundDistribution(List.of(fundDistribution))
       .withCost(new Cost().withCurrency("USD").withQuantityElectronic(2));
 
     JsonObject itemJson = new JsonObject()
