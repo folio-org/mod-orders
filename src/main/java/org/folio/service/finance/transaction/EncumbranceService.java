@@ -25,6 +25,7 @@ import org.folio.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
+import org.folio.rest.acq.model.finance.Encumbrance.OrderStatus;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionPatch;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -32,6 +33,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -148,51 +150,59 @@ public class EncumbranceService {
       .toList();
   }
 
-  public Future<Void> updateEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder compPo, RequestContext requestContext) {
+  public Future<Void> updateEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder compPo,
+      RequestContext requestContext) {
     logger.info("updateEncumbrancesOrderStatusAndReleaseIfClosed:: orderId {}  ", compPo.getId());
-    return getOrderUnreleasedEncumbrances(compPo, requestContext).compose(encumbrs -> {
-      if (isEncumbrancesOrderStatusUpdateNeeded(compPo.getWorkflowStatus(), encumbrs)) {
-        syncEncumbrancesOrderStatusAndReleaseIfClosed(compPo.getWorkflowStatus(), encumbrs);
+    return getOrderEncumbrancesForCurrentFiscalYear(compPo, requestContext).compose(encumbrances -> {
+      List<Transaction> toUpdate = encumbrancesToUpdate(compPo.getWorkflowStatus(), encumbrances);
+      if (!toUpdate.isEmpty()) {
         // NOTE: we will have to use transactionPatches when it is available (see MODORDERS-1008)
-        return transactionService.batchUpdate(encumbrs, requestContext);
+        return transactionService.batchUpdate(toUpdate, requestContext);
       }
       return Future.succeededFuture();
     });
   }
 
-  private void syncEncumbrancesOrderStatusAndReleaseIfClosed(CompositePurchaseOrder.WorkflowStatus workflowStatus,
-      List<Transaction> encumbrances) {
-    Encumbrance.OrderStatus orderStatus = Encumbrance.OrderStatus.fromValue(workflowStatus.value());
-    encumbrances.forEach(encumbrance -> {
-      encumbrance.getEncumbrance().setOrderStatus(orderStatus);
-      if (orderStatus == Encumbrance.OrderStatus.CLOSED)
-        encumbrance.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
-    });
+  private List<Transaction> encumbrancesToUpdate(WorkflowStatus workflowStatus, List<Transaction> encumbrances) {
+    List<Transaction> toUpdate = new ArrayList<>();
+    OrderStatus orderStatus = OrderStatus.fromValue(workflowStatus.value());
+    for (Transaction encumbrance : encumbrances) {
+      boolean add = false;
+      if (encumbrance.getEncumbrance().getOrderStatus() != orderStatus) {
+        add = true;
+        encumbrance.getEncumbrance().setOrderStatus(orderStatus);
+      }
+      if (orderStatus == OrderStatus.CLOSED) {
+        if (encumbrance.getEncumbrance().getStatus() != Encumbrance.Status.RELEASED) {
+          add = true;
+          encumbrance.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
+        }
+      }
+      if (add) {
+        toUpdate.add(encumbrance);
+      }
+    }
+    return toUpdate;
   }
-
-
-  private boolean isEncumbrancesOrderStatusUpdateNeeded(CompositePurchaseOrder.WorkflowStatus orderStatus, List<Transaction> encumbrs) {
-    return !CollectionUtils.isEmpty(encumbrs) && !orderStatus.value().equals(encumbrs.get(0).getEncumbrance().getOrderStatus().value());
-  }
-
 
   public Future<List<Transaction>> getOrderEncumbrances(String orderId, RequestContext requestContext) {
     return transactionService.getTransactions(buildEncumbrancesByOrderQuery(orderId), requestContext);
   }
 
-  public Future<List<Transaction>> getOrderUnreleasedEncumbrances(CompositePurchaseOrder order, RequestContext requestContext) {
+  public Future<List<Transaction>> getOrderEncumbrancesForCurrentFiscalYear(CompositePurchaseOrder order,
+      RequestContext requestContext) {
     List<CompositePoLine> poLines = order.getCompositePoLines();
     if (CollectionUtils.isEmpty(poLines)) {
       return Future.succeededFuture(List.of());
     }
     var fundId = getFundId(poLines.get(0));
     if (fundId.isEmpty()) {
-      logger.info("getOrderUnreleasedEncumbrances:: no fundId for poLineId: {}, no transactions", poLines.get(0).getId());
+      logger.info("getOrderEncumbrancesForCurrentFiscalYear:: no fundId for poLineId: {}, no transactions", poLines.get(0).getId());
       return Future.succeededFuture(List.of());
     }
     return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
       .compose(fiscalYear -> transactionService.getTransactions(
-        buildUnreleasedEncumbrancesByOrderQuery(order.getId(), fiscalYear.getId()), requestContext));
+        buildEncumbrancesByOrderForCurrentFiscalYearQuery(order.getId(), fiscalYear.getId()), requestContext));
   }
 
   public Future<List<Transaction>> getOrderEncumbrancesToUnrelease(CompositePurchaseOrder compPO,
@@ -322,9 +332,8 @@ public class EncumbranceService {
       + AND + ENCUMBRANCE_CRITERIA;
   }
 
-  private String buildUnreleasedEncumbrancesByOrderQuery(String orderId, String fiscalYearId) {
+  private String buildEncumbrancesByOrderForCurrentFiscalYearQuery(String orderId, String fiscalYearId) {
     return "encumbrance.sourcePurchaseOrderId==" + orderId
-      + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED
       + AND + "fiscalYearId == " + fiscalYearId
       + AND + ENCUMBRANCE_CRITERIA;
   }
@@ -378,7 +387,9 @@ public class EncumbranceService {
   }
 
   private Future<Boolean> hasNotInvoiceLineWithReleaseEncumbrance(CompositePoLine poLine, RequestContext requestContext) {
-    return invoiceLineService.retrieveInvoiceLines("poLineId == " + poLine.getId() + AND + "releaseEncumbrance == true", requestContext)
+    String query = "poLineId == " + poLine.getId() + AND + "releaseEncumbrance == true" + AND +
+      "invoiceLineStatus == (Approved OR Paid)";
+    return invoiceLineService.retrieveInvoiceLines(query, requestContext)
       .map(invoiceLines -> !invoiceLines.isEmpty())
       .recover(cause -> {
         // ignore 404 errors as mod-invoice may be unavailable
