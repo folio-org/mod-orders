@@ -188,6 +188,7 @@ public class EncumbranceService {
     }
     var fundId = getFundId(poLines.get(0));
     if (fundId.isEmpty()) {
+      logger.info("getOrderUnreleasedEncumbrances:: no fundId for {}, no transactions", poLines.get(0).getId());
       return Future.succeededFuture(List.of());
     }
     return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
@@ -218,6 +219,7 @@ public class EncumbranceService {
   public Future<List<Transaction>> getPoLineUnreleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
     var fundId = getFundId(poLine);
     if (fundId.isEmpty()) {
+      logger.info("getPoLineUnreleasedEncumbrances:: no fundId for {}, no transactions", poLine.getId());
       return Future.succeededFuture(List.of());
     }
     return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
@@ -228,6 +230,7 @@ public class EncumbranceService {
   public Future<List<Transaction>> getPoLineReleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
     var fundId = getFundId(poLine);
     if (fundId.isEmpty()) {
+      logger.info("getPoLineReleasedEncumbrances:: no fundId for {}, no transactions", poLine.getId());
       return Future.succeededFuture(List.of());
     }
     return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
