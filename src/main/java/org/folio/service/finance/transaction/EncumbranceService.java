@@ -25,7 +25,6 @@ import org.folio.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.finance.TransactionPatch;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -188,7 +187,7 @@ public class EncumbranceService {
     }
     var fundId = getFundId(poLines.get(0));
     if (fundId.isEmpty()) {
-      logger.info("getOrderUnreleasedEncumbrances:: no fundId for {}, no transactions", poLines.get(0).getId());
+      logger.info("getOrderUnreleasedEncumbrances:: no fundId for poLineId: {}, no transactions", poLines.get(0).getId());
       return Future.succeededFuture(List.of());
     }
     return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
@@ -219,7 +218,7 @@ public class EncumbranceService {
   public Future<List<Transaction>> getPoLineUnreleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
     var fundId = getFundId(poLine);
     if (fundId.isEmpty()) {
-      logger.info("getPoLineUnreleasedEncumbrances:: no fundId for {}, no transactions", poLine.getId());
+      logger.info("getPoLineUnreleasedEncumbrances:: no fundId for poLineId: {}, no transactions", poLine.getId());
       return Future.succeededFuture(List.of());
     }
     return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
@@ -230,7 +229,7 @@ public class EncumbranceService {
   public Future<List<Transaction>> getPoLineReleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
     var fundId = getFundId(poLine);
     if (fundId.isEmpty()) {
-      logger.info("getPoLineReleasedEncumbrances:: no fundId for {}, no transactions", poLine.getId());
+      logger.info("getPoLineReleasedEncumbrances:: no fundId for poLineId: {}, no transactions", poLine.getId());
       return Future.succeededFuture(List.of());
     }
     return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
