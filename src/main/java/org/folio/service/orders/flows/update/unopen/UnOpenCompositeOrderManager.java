@@ -141,8 +141,10 @@ public class UnOpenCompositeOrderManager {
     } else if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL) && deleteHoldings) {
         if (compPOL.getCheckinItems()) { // independent workflow
           return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) : Future.succeededFuture();
-        } else { // synchronized workflow
+        } else if(deleteHoldings) { // synchronized workflow
           return processInventoryOnlyWithHolding(compPOL, requestContext);
+        } else {
+          deleteExpectedPieces(compPOL, requestContext);
         }
     }
 
