@@ -324,11 +324,18 @@ public class EncumbranceRelationsHoldersBuilder {
       .compose(holders -> withExistingTransactions(holders, poFromStorage, requestContext));
   }
 
-  public Future<Map<String, List<CompositePoLine>>> retrieveMapFiscalYearsWithCompPOLines(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
-                                                                               RequestContext requestContext) {
+  public Future<Map<String, List<CompositePoLine>>> retrieveMapFiscalYearsWithCompPOLines(CompositePurchaseOrder compPO,
+      CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)
-      .map(erhList -> erhList.stream().filter(erh-> Objects.nonNull(erh.getCurrentFiscalYearId())).collect(groupingBy(EncumbranceRelationsHolder::getCurrentFiscalYearId,
-        mapping(EncumbranceRelationsHolder::getPoLine, toList()))));
+      .map(erhList ->
+        erhList
+          .stream()
+          .filter(erh -> Objects.nonNull(erh.getCurrentFiscalYearId()))
+          .collect(groupingBy(
+            EncumbranceRelationsHolder::getCurrentFiscalYearId,
+            mapping(EncumbranceRelationsHolder::getPoLine, toList())
+          ))
+      );
   }
 
 }

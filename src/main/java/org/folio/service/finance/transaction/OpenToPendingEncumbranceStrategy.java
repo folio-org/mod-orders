@@ -16,29 +16,29 @@ public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStra
   private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
 
   public OpenToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
-      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
     this.encumbranceService = encumbranceService;
     this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
   }
 
-    @Override
-    public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
-        RequestContext requestContext) {
+  @Override
+  public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+      RequestContext requestContext) {
 
-      return getOrderEncumbrances(compPO, poAndLinesFromStorage, requestContext)
-        .map(this::makeEncumbrancesPending)
-        .compose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
-    }
+    return getOrderEncumbrances(compPO, poAndLinesFromStorage, requestContext)
+      .map(this::makeEncumbrancesPending)
+      .compose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
+  }
 
-    private List<Transaction> makeEncumbrancesPending(List<Transaction> encumbrances) {
-        encumbrances.forEach(encumbrance -> {
-            encumbrance.setAmount(0d);
-            encumbrance.getEncumbrance().setInitialAmountEncumbered(0d);
-            encumbrance.getEncumbrance().setStatus(Encumbrance.Status.PENDING);
-            encumbrance.getEncumbrance().setOrderStatus(Encumbrance.OrderStatus.PENDING);
-        });
-        return encumbrances;
-    }
+  private List<Transaction> makeEncumbrancesPending(List<Transaction> encumbrances) {
+    encumbrances.forEach(encumbrance -> {
+      encumbrance.setAmount(0d);
+      encumbrance.getEncumbrance().setInitialAmountEncumbered(0d);
+      encumbrance.getEncumbrance().setStatus(Encumbrance.Status.PENDING);
+      encumbrance.getEncumbrance().setOrderStatus(Encumbrance.OrderStatus.PENDING);
+    });
+    return encumbrances;
+  }
 
   @Override
   public OrderWorkflowType getStrategyName() {

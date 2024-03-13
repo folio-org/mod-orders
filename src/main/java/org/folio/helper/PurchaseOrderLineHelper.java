@@ -309,7 +309,7 @@ public class PurchaseOrderLineHelper {
     PoLine poLine = lineFromStorage.mapTo(PoLine.class);
         if (isReleaseEncumbrances(compOrderLine, poLine)) {
           logger.info("Encumbrances releasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
-          return encumbranceService.getPoLineUnreleasedEncumbrances(compOrderLine.getId(), requestContext)
+          return encumbranceService.getPoLineUnreleasedEncumbrances(compOrderLine, requestContext)
             .compose(transactionList -> encumbranceService.releaseEncumbrances(transactionList, requestContext));
         } else if (isUnreleasedEncumbrances(compOrderLine, poLine)) {
           logger.info("Encumbrances unreleasing for poLineId={} where paymentStatus={}", compOrderLine.getId(), compOrderLine.getPaymentStatus());
