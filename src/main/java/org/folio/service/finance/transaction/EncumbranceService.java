@@ -318,33 +318,34 @@ public class EncumbranceService {
   }
 
   private String buildEncumbrancesByOrderQuery(String orderId) {
-    return ENCUMBRANCE_CRITERIA
-      + AND + "encumbrance.sourcePurchaseOrderId==" + orderId;
+    return "encumbrance.sourcePurchaseOrderId==" + orderId
+      + AND + ENCUMBRANCE_CRITERIA;
   }
 
   private String buildUnreleasedEncumbrancesByOrderQuery(String orderId, String fiscalYearId) {
-    return ENCUMBRANCE_CRITERIA
-      + AND + "encumbrance.sourcePurchaseOrderId==" + orderId
+    return "encumbrance.sourcePurchaseOrderId==" + orderId
       + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED
-      + AND + "fiscalYearId == " + fiscalYearId;
+      + AND + "fiscalYearId == " + fiscalYearId
+      + AND + ENCUMBRANCE_CRITERIA;
   }
 
   private String buildEncumbrancesByPoLineQuery(String polineId) {
-    return ENCUMBRANCE_CRITERIA + AND + "encumbrance.sourcePoLineId==" + polineId;
+    return "encumbrance.sourcePoLineId==" + polineId
+      + AND + ENCUMBRANCE_CRITERIA;
   }
 
   private String buildUnreleasedEncumbrancesByPoLineQuery(String polineId, String fiscalYearId) {
-    return ENCUMBRANCE_CRITERIA
-      + AND + "encumbrance.sourcePoLineId==" + polineId
+    return "encumbrance.sourcePoLineId==" + polineId
       + AND + "encumbrance.status <> " + Encumbrance.Status.RELEASED
-      + AND + "fiscalYearId == " + fiscalYearId;
+      + AND + "fiscalYearId == " + fiscalYearId
+      + AND + ENCUMBRANCE_CRITERIA;
   }
 
   private String buildReleasedEncumbranceByPoLineQuery(String poLineId, String fiscalYearId) {
-    return ENCUMBRANCE_CRITERIA
-      + AND + "encumbrance.sourcePoLineId == " + poLineId
+    return "encumbrance.sourcePoLineId == " + poLineId
       + AND + "encumbrance.status == " + Encumbrance.Status.RELEASED
-      + AND + "fiscalYearId == " + fiscalYearId;
+      + AND + "fiscalYearId == " + fiscalYearId
+      + AND + ENCUMBRANCE_CRITERIA;
   }
 
   private Future<List<Transaction>> getPoLineEncumbrancesToUnrelease(CompositePurchaseOrder.OrderType orderType,
