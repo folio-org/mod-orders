@@ -186,8 +186,13 @@ public class EncumbranceService {
     if (CollectionUtils.isEmpty(poLines)) {
       return Future.succeededFuture(List.of());
     }
-    return getFiscalYearId(poLines.get(0), requestContext)
-      .compose(fiscalYearId -> transactionService.getTransactions(buildUnreleasedEncumbrancesByOrderQuery(order.getId(), fiscalYearId), requestContext));
+    var fundId = getFundId(poLines.get(0));
+    if (fundId.isEmpty()) {
+      return Future.succeededFuture(List.of());
+    }
+    return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
+      .compose(fiscalYear -> transactionService.getTransactions(
+        buildUnreleasedEncumbrancesByOrderQuery(order.getId(), fiscalYear.getId()), requestContext));
   }
 
   public Future<List<Transaction>> getOrderEncumbrancesToUnrelease(CompositePurchaseOrder compPO,
@@ -211,13 +216,23 @@ public class EncumbranceService {
   }
 
   public Future<List<Transaction>> getPoLineUnreleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
-    return getFiscalYearId(poLine, requestContext)
-      .compose(fiscalYearId -> transactionService.getTransactions(buildUnreleasedEncumbrancesByPoLineQuery(poLine.getId(), fiscalYearId), requestContext));
+    var fundId = getFundId(poLine);
+    if (fundId.isEmpty()) {
+      return Future.succeededFuture(List.of());
+    }
+    return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
+      .compose(fiscalYear -> transactionService.getTransactions(
+        buildUnreleasedEncumbrancesByPoLineQuery(poLine.getId(), fiscalYear.getId()), requestContext));
   }
 
   public Future<List<Transaction>> getPoLineReleasedEncumbrances(CompositePoLine poLine, RequestContext requestContext) {
-    return getFiscalYearId(poLine, requestContext)
-      .compose(fiscalYearId -> transactionService.getTransactions(buildReleasedEncumbranceByPoLineQuery(poLine.getId(), fiscalYearId), requestContext));
+    var fundId = getFundId(poLine);
+    if (fundId.isEmpty()) {
+      return Future.succeededFuture(List.of());
+    }
+    return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
+      .compose(fiscalYear -> transactionService.getTransactions(
+        buildReleasedEncumbranceByPoLineQuery(poLine.getId(), fiscalYear.getId()), requestContext));
   }
 
   public Future<List<Transaction>> getEncumbrancesByIds(List<String> transactionIds, RequestContext requestContext) {
@@ -385,16 +400,11 @@ public class EncumbranceService {
     }
   }
 
-  private Future<String> getFiscalYearId(CompositePoLine poLine, RequestContext requestContext) {
-    Optional<String> fundId = poLine.getFundDistribution()
+  private static Optional<String> getFundId(CompositePoLine poLine) {
+    return poLine.getFundDistribution()
       .stream()
       .findFirst()
       .map(FundDistribution::getFundId);
-    if (fundId.isEmpty()) {
-      return Future.succeededFuture("");
-    }
-    return fiscalYearService.getCurrentFiscalYearByFundId(fundId.get(), requestContext)
-      .map(FiscalYear::getId);
   }
 
 }
