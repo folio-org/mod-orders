@@ -172,11 +172,9 @@ public class EncumbranceService {
         add = true;
         encumbrance.getEncumbrance().setOrderStatus(orderStatus);
       }
-      if (orderStatus == OrderStatus.CLOSED) {
-        if (encumbrance.getEncumbrance().getStatus() != Encumbrance.Status.RELEASED) {
-          add = true;
-          encumbrance.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
-        }
+      if (orderStatus == OrderStatus.CLOSED && encumbrance.getEncumbrance().getStatus() != Encumbrance.Status.RELEASED) {
+        add = true;
+        encumbrance.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);
       }
       if (add) {
         toUpdate.add(encumbrance);
