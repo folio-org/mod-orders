@@ -92,7 +92,7 @@ public class OpenToPendingEncumbranceStrategyTest {
       CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
       Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
 
-      doReturn(succeededFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getOrderUnreleasedEncumbrances(any(), any());
+      doReturn(succeededFuture(Collections.singletonList(encumbrance))).when(encumbranceService).getOrderEncumbrancesForCurrentFiscalYear(any(), any());
 
       doReturn(succeededFuture(null)).when(encumbranceService).updateEncumbrances(any(), any());
 
