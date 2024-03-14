@@ -52,8 +52,18 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
       .map(this::updatePieceRecords)
       // 3. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 4. Return results to the client
+      // 4. Update PO Line status
+      .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(piecesByPoLineIds, requestContext))
+      // 5. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(expectCollection, piecesGroupedByPoLine));
+  }
+
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
+    return updateOrderAndPoLinesStatus(
+      piecesGroupedByPoLine,
+      requestContext,
+      poLines -> {}
+    );
   }
 
   private Map<String, Map<String, ExpectPiece>> groupExpectPieceByPoLineId(ExpectCollection expectCollection) {
