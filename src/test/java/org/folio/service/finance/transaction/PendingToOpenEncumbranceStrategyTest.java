@@ -9,8 +9,10 @@ package org.folio.service.finance.transaction;
   import static org.folio.TestUtils.getMockAsJson;
   import static org.folio.rest.acq.model.finance.Transaction.TransactionType.ENCUMBRANCE;
   import static org.folio.rest.acq.model.finance.Transaction.TransactionType.PENDING_PAYMENT;
+  import static org.folio.rest.core.exceptions.ErrorCodes.DELETE_WITH_EXPENDED_AMOUNT;
   import static org.junit.jupiter.api.Assertions.assertEquals;
   import static org.junit.jupiter.api.Assertions.assertNull;
+  import static org.junit.jupiter.api.Assertions.assertTrue;
   import static org.mockito.ArgumentMatchers.any;
   import static org.mockito.ArgumentMatchers.anyList;
   import static org.mockito.ArgumentMatchers.anyString;
@@ -36,10 +38,12 @@ package org.folio.service.finance.transaction;
   import org.folio.rest.acq.model.finance.Metadata;
   import org.folio.rest.acq.model.finance.Transaction;
   import org.folio.rest.acq.model.invoice.InvoiceLine;
+  import org.folio.rest.core.exceptions.HttpException;
   import org.folio.rest.core.models.RequestContext;
   import org.folio.rest.jaxrs.model.CompositePoLine;
   import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
   import org.folio.rest.jaxrs.model.FundDistribution;
+  import org.folio.rest.jaxrs.model.Parameter;
   import org.folio.service.FundsDistributionService;
   import org.folio.service.exchange.ExchangeRateProviderResolver;
   import org.folio.service.exchange.ManualCurrencyConversion;
@@ -313,5 +317,55 @@ public class PendingToOpenEncumbranceStrategyTest {
         vertxTestContext.completeNow();
       }))
       .onFailure(vertxTestContext::failNow);
+  }
+
+  @Test
+  void testDeletingAnEncumbranceWithExpendedAmountGreaterThanZero(VertxTestContext vertxTestContext) {
+    // Given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePoLine poLine = order.getCompositePoLines().get(0);
+    FundDistribution fd = poLine.getFundDistribution().get(0);
+    String fundId = fd.getFundId();
+    String encumbranceId = fd.getEncumbrance();
+
+    CompositePurchaseOrder orderFromStorage = JsonObject.mapFrom(order).mapTo(CompositePurchaseOrder.class);
+    poLine.getFundDistribution().remove(0);
+
+    Encumbrance encumbrance = new Encumbrance()
+      .withSourcePurchaseOrderId(order.getId())
+      .withSourcePoLineId(poLine.getId())
+      .withOrderType(Encumbrance.OrderType.fromValue(order.getOrderType().value()))
+      .withInitialAmountEncumbered(10d)
+      .withAmountExpended(10d)
+      .withOrderStatus(Encumbrance.OrderStatus.OPEN)
+      .withStatus(Encumbrance.Status.RELEASED);
+    Transaction released = new Transaction()
+      .withTransactionType(ENCUMBRANCE)
+      .withAmount(0d)
+      .withId(encumbranceId)
+      .withFromFundId(fundId)
+      .withEncumbrance(encumbrance)
+      .withMetadata(new Metadata());
+
+    doReturn(succeededFuture(List.of()))
+      .when(invoiceLineService).getInvoiceLinesByOrderLineIds(anyList(), eq(requestContext));
+    doReturn(succeededFuture(singletonList(released)))
+      .when(transactionService).getTransactionsByIds(argThat(list -> list.size() == 1), eq(requestContext));
+
+    // When
+    Future<Void> future = pendingToOpenEncumbranceStrategy.processEncumbrances(order, orderFromStorage, requestContext);
+
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        HttpException exception = (HttpException) result.cause();
+        assertEquals(422, exception.getCode());
+        List<Parameter> expectedParameters = List.of(
+          new Parameter().withKey("id").withValue(encumbranceId)
+        );
+        assertEquals(DELETE_WITH_EXPENDED_AMOUNT.toError().withParameters(expectedParameters), exception.getError());
+        vertxTestContext.completeNow();
+      });
   }
 }
