@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.apache.http.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
+import org.folio.orders.utils.validators.TransactionValidator;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -59,6 +60,7 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
     holder.withEncumbrancesForUpdate(toUpdate);
     holder.withEncumbrancesForRelease(toRelease);
     holder.withEncumbrancesForDelete(toDelete);
+    validateTransactionsToDelete(toDelete);
     return addPendingPaymentsToUpdate(holder, requestContext);
   }
 
@@ -91,6 +93,13 @@ public class PendingToPendingEncumbranceStrategy implements EncumbranceWorkflowS
     });
     return toUpdate;
   }
+
+  private void validateTransactionsToDelete(List<EncumbranceRelationsHolder> toDelete) {
+    toDelete.stream()
+      .map(EncumbranceRelationsHolder::getOldEncumbrance)
+      .forEach(TransactionValidator::validateEncumbranceForDeletion);
+  }
+
 
   public Future<EncumbrancesProcessingHolder> addPendingPaymentsToUpdate(EncumbrancesProcessingHolder holder,
       RequestContext requestContext) {
