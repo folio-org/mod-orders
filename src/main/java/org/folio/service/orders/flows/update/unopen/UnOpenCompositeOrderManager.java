@@ -142,7 +142,8 @@ public class UnOpenCompositeOrderManager {
         if (compPOL.getCheckinItems()) { // independent workflow
           return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) : Future.succeededFuture();
         } else { // synchronized workflow
-          return processInventoryOnlyWithHolding(compPOL, requestContext);
+          return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) :
+            deleteExpectedPieces(compPOL, requestContext).mapEmpty();
         }
     }
 
