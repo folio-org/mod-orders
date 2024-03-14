@@ -6,6 +6,7 @@ import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.validators.TransactionValidator;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
@@ -67,6 +68,9 @@ public class POLInvoiceLineRelationService {
         }
         if (forDelete.isEmpty()) {
           return Future.succeededFuture(encumbrancesProcessingHolder);
+        }
+        if (forCreate.isEmpty()) {
+          forDelete.forEach(TransactionValidator::validateEncumbranceForDeletion);
         }
         List<String> encumbranceForDeleteIds = forDelete.stream().map(Transaction::getId).distinct().toList();
         return removeEncumbranceReferenceFromTransactions(encumbranceForDeleteIds, encumbrancesProcessingHolder, requestContext);
