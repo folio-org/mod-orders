@@ -63,7 +63,7 @@
     <testcontainers-bom.version>1.19.6</testcontainers-bom.version>
 
     <!--Dependency Properties-->
-    <mod-configuration-client.version>5.9.1</mod-configuration-client.version>
+    <mod-configuration-client.version>5.10.0</mod-configuration-client.version>
     <folio-di-support.version>2.0.1</folio-di-support.version>
     <spring.version>6.0.2</spring.version>
     <aspectj.version>1.9.21.1</aspectj.version>
