@@ -904,6 +904,9 @@ public class CheckinReceivingApiTest {
       assertThat(piece.getReceivingStatus(), is(Piece.ReceivingStatus.EXPECTED));
       assertThat(piece.getComment(), is("test"));
     });
+
+    PoLine updatedPoLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
+    assertEquals(PoLine.ReceiptStatus.FULLY_RECEIVED, updatedPoLine.getReceiptStatus());
   }
 
   private void verifyProperQuantityOfHoldingsCreated(ReceivingCollection receivingRq) throws IOException {
