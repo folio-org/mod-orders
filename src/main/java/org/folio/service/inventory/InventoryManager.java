@@ -15,6 +15,7 @@ import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
 import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
@@ -150,6 +151,7 @@ public class InventoryManager {
   public static final Map<String, String> INVENTORY_LOOKUP_ENDPOINTS;
   public static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   public static final String EFFECTIVE_LOCATION = "effectiveLocation";
+  public static final String BARCODE_ALREADY_EXIST_ERROR = "lower(jsonb ->> 'barcode'::text) value already exists in table item";
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final InventoryCache inventoryCache;
@@ -1163,9 +1165,14 @@ public class InventoryManager {
     restClient.postJsonObjectAndGetId(requestEntry, itemData, requestContext)
       .onSuccess(promise::complete)
       // In case item creation failed, return null instead of id
-      .onFailure(throwable -> {
-        logger.error(ITEM_CREATION_FAILED.getDescription());
-        promise.complete();
+      .onFailure(t -> {
+        if (StringUtils.isNotEmpty(t.getMessage()) && t.getMessage().contains(BARCODE_ALREADY_EXIST_ERROR)) {
+          logger.info("Barcode is already exists, full response message: {}", t.getMessage(), t);
+          promise.fail(new HttpException(409, BARCODE_IS_NOT_UNIQUE));
+        } else {
+          var causeParam = new Parameter().withKey("cause").withValue(t.getMessage());
+          promise.fail(new HttpException(500, ITEM_CREATION_FAILED, List.of(causeParam)));
+        }
       });
     return promise.future();
   }
