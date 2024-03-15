@@ -1,5 +1,16 @@
 ## 12.8.0 - Unreleased
 
+## 12.7.2 - Released (Poppy R2 2023)
+
+This release focused on fixing encumbrance status when changing fund distribution
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.7.1...v12.7.2)
+
+### Bug Fixes
+
+* [MODORDERS-1061](https://issues.folio.org/browse/MODORDERS-1061) - Item creation using Data Import is missing data
+
+
 ## 12.7.1 - Released (Poppy R2 2023)
 
 This release focused on fixing encumbrance status when changing fund distribution
