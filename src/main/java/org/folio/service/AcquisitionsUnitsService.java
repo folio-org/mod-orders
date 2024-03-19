@@ -7,7 +7,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.service.UserService.getCurrentUserId;
 
 import java.util.List;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -39,7 +39,7 @@ public class AcquisitionsUnitsService {
   private static final String ENDPOINT_ACQ_UNITS_BY_ID = ENDPOINT_ACQ_UNITS + "/{id}";
 
   private final RestClient restClient;
-  private Random randomNum = new Random();
+  private SecureRandom randomNum = new SecureRandom();
 
   public AcquisitionsUnitsService(RestClient restClient) {
     this.restClient = restClient;
