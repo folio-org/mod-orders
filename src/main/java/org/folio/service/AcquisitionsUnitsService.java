@@ -81,6 +81,7 @@ public class AcquisitionsUnitsService {
   }
 
   public Future<Void> deleteAcquisitionsUnit(String id, RequestContext requestContext) {
+    // propose actully delete the unit instead of change it's isDelete to true
     RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_BY_ID).withId(id);
     return restClient.delete(requestEntry, requestContext);
   }
