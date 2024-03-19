@@ -39,6 +39,7 @@ public class AcquisitionsUnitsService {
   private static final String ENDPOINT_ACQ_UNITS_BY_ID = ENDPOINT_ACQ_UNITS + "/{id}";
 
   private final RestClient restClient;
+  private Random randomNum = new Random();
 
   public AcquisitionsUnitsService(RestClient restClient) {
     this.restClient = restClient;
@@ -82,7 +83,6 @@ public class AcquisitionsUnitsService {
   }
 
   public Future<Void> deleteAcquisitionsUnit(String id, RequestContext requestContext) {
-    Random randomNum = new Random();
     int max = 999999999, min = 100000000;
     int randomNumber = randomNum.nextInt(max - min + 1) + min;
     String randomNumberName = Integer.toString(randomNumber);
