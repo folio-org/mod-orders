@@ -7,6 +7,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.service.UserService.getCurrentUserId;
 
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -81,9 +82,12 @@ public class AcquisitionsUnitsService {
   }
 
   public Future<Void> deleteAcquisitionsUnit(String id, RequestContext requestContext) {
-    // propose actully delete the unit instead of change it's isDelete to true
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_BY_ID).withId(id);
-    return restClient.delete(requestEntry, requestContext);
+    Random randomNum = new Random();
+    int max = 999999999, min = 100000000;
+    int randomNumber = randomNum.nextInt(max - min + 1) + min;
+    String randomNumberName = Integer.toString(randomNumber);
+    return getAcquisitionsUnit(id, requestContext).map(unit -> unit.withIsDeleted(true).withName(unit.getName()+"_Deleted_"+randomNumberName))
+      .compose(unit -> updateAcquisitionsUnit(unit, requestContext));
   }
 
   public Future<String> buildAcqUnitsCqlExprToSearchRecords(String tableAlias, RequestContext requestContext) {
