@@ -83,10 +83,11 @@ public class AcquisitionsUnitsService {
   }
 
   public Future<Void> deleteAcquisitionsUnit(String id, RequestContext requestContext) {
-    int max = 999999999, min = 100000000;
+    int max = 999999999;
+    int min = 100000000;
     int randomNumber = randomNum.nextInt(max - min + 1) + min;
     String randomNumberName = Integer.toString(randomNumber);
-    return getAcquisitionsUnit(id, requestContext).map(unit -> unit.withIsDeleted(true).withName(unit.getName()+"_Deleted_"+randomNumberName))
+    return getAcquisitionsUnit(id, requestContext).map(unit -> unit.withIsDeleted(true).withName(unit.getName() + "_Deleted_" + randomNumberName))
       .compose(unit -> updateAcquisitionsUnit(unit, requestContext));
   }
 
