@@ -304,13 +304,12 @@ public class AcquisitionsUnitsServiceTest {
     String url = ACQ_UNITS_UNITS_ENDPOINT + "/0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
 
     verifyDeleteResponse(url, "", 204);
-    assertThat(getAcqUnitsRetrievals(), hasSize(1));
+    assertThat(getAcqUnitsRetrievals(), hasSize(0));
 
     List<AcquisitionsUnit> updates = getRqRsEntries(HttpMethod.PUT, ACQUISITIONS_UNITS).stream()
       .map(json -> json.mapTo(AcquisitionsUnit.class))
       .collect(Collectors.toList());
-    assertThat(updates, hasSize(1));
-    assertThat(updates.get(0).getIsDeleted(), is(true));
+    assertThat(updates, hasSize(0));
   }
 
   @Test

@@ -81,8 +81,8 @@ public class AcquisitionsUnitsService {
   }
 
   public Future<Void> deleteAcquisitionsUnit(String id, RequestContext requestContext) {
-    return getAcquisitionsUnit(id, requestContext).map(unit -> unit.withIsDeleted(true))
-      .compose(unit -> updateAcquisitionsUnit(unit, requestContext));
+    RequestEntry requestEntry = new RequestEntry(ENDPOINT_ACQ_UNITS_BY_ID).withId(id);
+    return restClient.delete(requestEntry, requestContext);
   }
 
   public Future<String> buildAcqUnitsCqlExprToSearchRecords(String tableAlias, RequestContext requestContext) {
