@@ -113,6 +113,7 @@ import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -596,8 +597,8 @@ public class ApplicationConfig {
 
   @Bean
   PurchaseOrderHelper purchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
-    CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
-    CompositeOrderDynamicDataPopulateService combinedPopulateService,
+    @Qualifier("orderLinesSummaryPopulateService") CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
+    @Qualifier("combinedPopulateService") CompositeOrderDynamicDataPopulateService combinedPopulateService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
     PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
@@ -706,8 +707,9 @@ public class ApplicationConfig {
 
 
 
-  @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
-      OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
+  @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(
+    @Qualifier("withHoldingOrderLineUpdateInstanceStrategy") OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
+    @Qualifier("withoutHoldingOrderLineUpdateInstanceStrategy") OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
     Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies = new EnumMap<>(CreateInventoryType.class);
 
     strategies.put(CreateInventoryType.INSTANCE_HOLDING_ITEM, withHoldingOrderLineUpdateInstanceStrategy);
