@@ -1,5 +1,64 @@
-## 12.8.0 - Unreleased
+## 12.9.0 - Unreleased
+
+## 12.8.0 - Released (Quesnelia R1 2024)
+This release focused on fixing several bugs as well as implement new features and upgrading dependent libraries
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.7.0...v12.8.0)
+
+### Stories
+
+* [MODORDERS-1052](https://folio-org.atlassian.net/browse/MODORDERS-1052) - Upgrade RAML Module Builder for Quesnelia
+* [MODORDERS-1044](https://folio-org.atlassian.net/browse/MODORDERS-1044) - Do not update orderStatus for past fiscal years
+* [MODORDERS-1043](https://folio-org.atlassian.net/browse/MODORDERS-1043) - Remove pending payment encumbrance links when encumbrances are deleted
+* [MODORDERS-1036](https://folio-org.atlassian.net/browse/MODORDERS-1036) - Include already existing holdings to validation process
+* [MODORDERS-1032](https://folio-org.atlassian.net/browse/MODORDERS-1032) - Protect Holdings Receiving Histrory with Title acq units
 * [MODORDERS-1031](https://folio-org.atlassian.net/browse/MODORDERS-1031) - Create Kafka topics instead of relying on auto create in mod-orders
+* [MODORDERS-1028](https://folio-org.atlassian.net/browse/MODORDERS-1028) - Add specific error code of barcode uniqueness error error during receiving
+* [MODORDERS-1027](https://folio-org.atlassian.net/browse/MODORDERS-1027) - Add logic to update POL receipt status when moving pieces between Unreceivable and Expected
+* [MODORDERS-1022](https://folio-org.atlassian.net/browse/MODORDERS-1022) - Add receipt Date to the CheckIng Piece schema
+* [MODORDERS-1020](https://folio-org.atlassian.net/browse/MODORDERS-1020) - Adjust Restricted Location + Fund validation rules
+* [MODORDERS-1010](https://folio-org.atlassian.net/browse/MODORDERS-1010) - Change "caption" to "Display summary" for checkin and receiving collections
+* [MODORDERS-1005](https://folio-org.atlassian.net/browse/MODORDERS-1005) - Check acq units from Title when receiving/unreceicing pieces
+* [MODORDERS-1000](https://folio-org.atlassian.net/browse/MODORDERS-1000) - Populate Item "Display summary" field with Piece "Display summary" field value
+* [MODORDERS-989](https://folio-org.atlassian.net/browse/MODORDERS-989) - Implement batch endpoint to move multiple pieces to Expected status
+* [MODORDERS-985](https://folio-org.atlassian.net/browse/MODORDERS-985) - Add internal note and external note in Piece schema
+* [MODORDERS-983](https://folio-org.atlassian.net/browse/MODORDERS-983) - Receiving a piece on a closed/cancelled PO will reopen the PO
+* [MODORDERS-980](https://folio-org.atlassian.net/browse/MODORDERS-980) - Update dto schema with recent changes for holdingsItems
+* [MODORDERS-974](https://folio-org.atlassian.net/browse/MODORDERS-974) - Add validation for claimingActive, claimingInterval fields
+* [MODORDERS-972](https://folio-org.atlassian.net/browse/MODORDERS-972) - Protect Title acq units management with permissions
+* [MODORDERS-970](https://folio-org.atlassian.net/browse/MODORDERS-970) - Do not overwrite Item fields when piece fields are null/empty
+* [MODORDERS-969](https://folio-org.atlassian.net/browse/MODORDERS-969) - Opening and editing POs with location-restricted funds
+* [MODORDERS-963](https://folio-org.atlassian.net/browse/MODORDERS-963) - Update PUT piece to check acq unit from title instead of order
+* [MODORDERS-962](https://folio-org.atlassian.net/browse/MODORDERS-962) - Update Get titles query to check acq units from title instead of purchase order
+* [MODORDERS-892](https://folio-org.atlassian.net/browse/MODORDERS-892) - Accumulate all transactions in holder to make only single call to mod-finance
+* [MODORDERS-886](https://folio-org.atlassian.net/browse/MODORDERS-886) - The unclear error message is displayed  when a user is trying to save the order template with already existing name
+* [MODORDERS-846](https://folio-org.atlassian.net/browse/MODORDERS-846) - Add validation back for deleting encumbrance when expended > 0
+* [MODORDSTOR-360](https://folio-org.atlassian.net/browse/MODORDSTOR-360) - Inherit acqUnitIds from Purchase Order when creating new Title
+* [MODDATAIMP-957](https://folio-org.atlassian.net/browse/MODDATAIMP-957) - Test, make adjustments and merge PRs for removing initial saving of records in SRS
+
+### Bug Fixes
+
+* [MODORDERS-1055](https://folio-org.atlassian.net/browse/MODORDERS-1055) - orderStatus is not always updated when reopening an order
+* [MODORDERS-1053](https://folio-org.atlassian.net/browse/MODORDERS-1053) - Missing interface dependencies in module descriptor
+* [MODORDERS-1049](https://folio-org.atlassian.net/browse/MODORDERS-1049) - Rollback inventory if open fails to create encumbrances
+* [MODORDERS-1039](https://folio-org.atlassian.net/browse/MODORDERS-1039) - Encumbrance expense class not updated after a change to the fund distribution
+* [MODORDERS-1030](https://folio-org.atlassian.net/browse/MODORDERS-1030) - "Receipt status" is changed to "Fully received" when all piece statuses for selected title were changed to "Claim delayed" and "Claim sent"
+* [MODORDERS-1024](https://folio-org.atlassian.net/browse/MODORDERS-1024) - Error message appears when open unopened (duplicated) P/E mix order with same location both for physical and electronic resources
+* [MODORDERS-986](https://folio-org.atlassian.net/browse/MODORDERS-986) - Error thrown during change instance connection
+* [MODORDERS-984](https://folio-org.atlassian.net/browse/MODORDERS-984) - Reciept status remains "Fully received" after unreceiving piece
+* [MODORDERS-967](https://folio-org.atlassian.net/browse/MODORDERS-967) - Defect in Order Receipt Status Update for 'Ongoing' Orders
+* [MODORDERS-669](https://folio-org.atlassian.net/browse/MODORDERS-669) - Cannot delete a piece in receiving
+* [MODDICORE-373](https://folio-org.atlassian.net/browse/MODDICORE-373) - The import of file is completed with errors
+
+### Tech debts
+
+* [MODORDERS-852](https://folio-org.atlassian.net/browse/MODORDERS-852) - Some unit tests are not executed
+
+### Dependencies
+
+* Bump `raml` from `35.0.1` to `35.2.0`
+* Bump `vertx` from `4.3.4` to `4.5.4`
+* Bump `data-import-processing-core` from `4.1.0` to `4.2.0`
 
 ## 12.7.0 - Released (Poppy R2 2023)
 
