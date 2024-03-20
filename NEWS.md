@@ -5,6 +5,17 @@ This release focused on fixing several bugs as well as implement new features an
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.7.0...v12.8.0)
 
+### New APIs versions
+
+* Requires `orders-storage.pieces v5.0`
+* Requires `orders-storage.receiving-history v4.0`
+* Requires `orders-storage.po-line-number v2.0`
+* Requires `orders-storage.order-invoice-relationships v1.0`
+* Requires `finance.fiscal-years v2.0`
+* Requires `finance-storage.ledgers v4.0`
+* Provides `orders.receiving v2.0`
+* Provides `orders.pieces v3.0`
+
 ### Stories
 
 * [MODORDERS-1052](https://folio-org.atlassian.net/browse/MODORDERS-1052) - Upgrade RAML Module Builder for Quesnelia
