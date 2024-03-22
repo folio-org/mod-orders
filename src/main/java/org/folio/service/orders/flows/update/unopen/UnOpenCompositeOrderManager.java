@@ -78,12 +78,12 @@ public class UnOpenCompositeOrderManager {
     return updateAndGetOrderWithLines(compPO, requestContext)
       .map(aVoid -> encumbranceWorkflowStrategyFactory.getStrategy(OrderWorkflowType.OPEN_TO_PENDING))
       .compose(strategy -> strategy.processEncumbrances(compPO, poFromStorage, requestContext))
+      .compose(ok -> processInventory(compPO.getCompositePoLines(), deleteHoldings, requestContext))
       .map(ok -> {
         PoLineCommonUtil.makePoLinesPending(compPO.getCompositePoLines());
         return null;
       })
-      .compose(ok -> updatePoLinesSummary(compPO.getCompositePoLines(), requestContext))
-      .compose(ok -> processInventory(compPO.getCompositePoLines(), deleteHoldings, requestContext));
+      .compose(ok -> updatePoLinesSummary(compPO.getCompositePoLines(), requestContext));
 
   }
 
@@ -169,10 +169,6 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<Void> processInventoryOnlyWithItems(CompositePoLine compPOL, RequestContext requestContext) {
-    if (!PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus())) {
-      logger.info("Skip deleting items and pieces for Un-Open order with id: {} because receipt can be required", compPOL.getId());
-      return Future.succeededFuture();
-    }
     return deleteExpectedPieces(compPOL, requestContext)
       .compose(deletedPieces ->
         inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compPOL.getId()), ItemStatus.ON_ORDER.value(), requestContext)
@@ -189,17 +185,18 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<List<Piece>> deleteExpectedPieces(CompositePoLine compPOL, RequestContext requestContext) {
-    if (!PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus()) && Boolean.FALSE.equals(compPOL.getCheckinItems())) {
-      return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
-        .compose(pieceCollection -> {
-          if (isNotEmpty(pieceCollection.getPieces())) {
-            return pieceStorageService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).collect(toList()), requestContext)
-                                .map(v -> pieceCollection.getPieces());
-          }
-          return Future.succeededFuture(Collections.emptyList());
-        });
+    if (!PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
+      logger.info("Skip deleting pieces for Un-Open order line with id: {} because they were not created before", compPOL.getId());
+      return Future.succeededFuture(Collections.emptyList());
     }
-    return Future.succeededFuture(Collections.emptyList());
+    return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
+      .compose(pieceCollection -> {
+        if (isNotEmpty(pieceCollection.getPieces())) {
+          return pieceStorageService.deletePiecesByIds(pieceCollection.getPieces().stream().map(Piece::getId).collect(toList()), requestContext)
+            .map(v -> pieceCollection.getPieces());
+        }
+        return Future.succeededFuture(Collections.emptyList());
+      });
   }
 
   private Future<Void> processInventoryHoldingWithItems(CompositePoLine compPOL, RequestContext requestContext) {
@@ -221,7 +218,7 @@ public class UnOpenCompositeOrderManager {
             .compose(pieceCollection -> {
               if (isNotEmpty(pieceCollection.getPieces())) {
                 return inventoryManager.getItemRecordsByIds(itemIds, requestContext)
-                  .map(items -> getItemsByStatus(items, ItemStatus.ON_ORDER.value()))
+                  .map(items -> filterItemsByStatus(items, ItemStatus.ON_ORDER.value()))
                   .compose(onOrderItemsP -> deletePiecesAndItems(onOrderItemsP, pieceCollection.getPieces(), requestContext))
                   .compose(deletedItems -> deleteHoldingsByItems(deletedItems, requestContext))
                   .map(deletedHoldingVsLocationIds -> {
@@ -345,7 +342,7 @@ public class UnOpenCompositeOrderManager {
     });
   }
 
-  private List<JsonObject> getItemsByStatus(List<JsonObject> items, String status) {
+  private List<JsonObject> filterItemsByStatus(List<JsonObject> items, String status) {
     return items.stream()
       .filter(item -> status.equalsIgnoreCase(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME)))
       .collect(toList());
