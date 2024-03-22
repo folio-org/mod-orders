@@ -26,7 +26,7 @@ public enum AcqDesiredPermissions {
     return permission;
   }
 
-  public static List<String> getValues() {
-    return values;
+  public static List<String> getValuesExceptBypass() {
+    return values.stream().filter(v -> !BYPASS_ACQ_UNITS.getPermission().equals(v)).toList();
   }
 }
