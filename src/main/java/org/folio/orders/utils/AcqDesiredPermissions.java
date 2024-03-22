@@ -7,7 +7,8 @@ public enum AcqDesiredPermissions {
   ASSIGN("orders.acquisitions-units-assignments.assign"),
   MANAGE("orders.acquisitions-units-assignments.manage"),
   TITLES_ASSIGN("titles.acquisitions-units-assignments.assign"),
-  TITLES_MANAGE("titles.acquisitions-units-assignments.manage");
+  TITLES_MANAGE("titles.acquisitions-units-assignments.manage"),
+  BYPASS_ACQ_UNITS("orders.bypass-acquisitions-units");
 
   private final String permission;
   private static final List<String> values;
