@@ -368,15 +368,15 @@ public class UnOpenCompositeOrderManager {
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .map(piece-> {
         holder.setPieceToDelete(piece);
-        return holder;
+        return null;
       })
-      .compose(aHolder -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext))
+      .compose(aVoid -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext))
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
       .map(purchaseOrder -> {
         holder.withOrderInformation(purchaseOrder, poLine);
         return null;
       }))
-      .compose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
+      .compose(aVoid -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .compose(vVoid -> canDeletePieceWithItem(holder.getPieceToDelete(), requestContext))
       .compose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
       .compose(aVoid -> deletePieceConnectedItem(holder.getPieceToDelete(), requestContext));
