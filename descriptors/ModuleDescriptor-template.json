@@ -156,7 +156,7 @@
             "orders.po-lines.collection.get"
           ],
           "permissionsDesired": [
-            "orders.bypass-acquisitions-units"
+            "orders.bypass-acquisition-units"
           ],
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
@@ -199,7 +199,7 @@
             "orders.po-lines.item.get"
           ],
           "permissionsDesired": [
-            "orders.bypass-acquisitions-units"
+            "orders.bypass-acquisition-units"
           ],
           "modulePermissions": [
             "orders-storage.po-lines.item.get",
@@ -221,7 +221,7 @@
             "orders.po-lines.item.put"
           ],
           "permissionsDesired": [
-            "orders.bypass-acquisitions-units"
+            "orders.bypass-acquisition-units"
           ],
           "modulePermissions": [
             "orders-storage.alerts.item.post",
@@ -1460,7 +1460,7 @@
       ]
     },
     {
-      "permissionName": "orders.bypass-acquisitions-units",
+      "permissionName": "orders.bypass-acquisition-units",
       "displayName": "Bypass acquisition units checks",
       "description": "Backend internal permission to bypass acquisition units checks"
     },
