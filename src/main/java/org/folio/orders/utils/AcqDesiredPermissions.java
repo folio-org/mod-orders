@@ -7,7 +7,8 @@ public enum AcqDesiredPermissions {
   ASSIGN("orders.acquisitions-units-assignments.assign"),
   MANAGE("orders.acquisitions-units-assignments.manage"),
   TITLES_ASSIGN("titles.acquisitions-units-assignments.assign"),
-  TITLES_MANAGE("titles.acquisitions-units-assignments.manage");
+  TITLES_MANAGE("titles.acquisitions-units-assignments.manage"),
+  BYPASS_ACQ_UNITS("orders.bypass-acquisition-units");
 
   private final String permission;
   private static final List<String> values;
@@ -25,7 +26,7 @@ public enum AcqDesiredPermissions {
     return permission;
   }
 
-  public static List<String> getValues() {
-    return values;
+  public static List<String> getValuesExceptBypass() {
+    return values.stream().filter(v -> !BYPASS_ACQ_UNITS.getPermission().equals(v)).toList();
   }
 }

@@ -1,10 +1,12 @@
 package org.folio.service;
 
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.orders.utils.AcqDesiredPermissions.BYPASS_ACQ_UNITS;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.PermissionsUtil.isManagePermissionRequired;
-import static org.folio.orders.utils.PermissionsUtil.isUserDoesNotHaveDesiredPermission;
+import static org.folio.orders.utils.PermissionsUtil.userDoesNotHaveDesiredPermission;
+import static org.folio.orders.utils.PermissionsUtil.userHasDesiredPermission;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_NOT_A_MEMBER_OF_THE_ACQ;
@@ -66,6 +68,9 @@ public class ProtectionService {
    *         exist; successfully otherwise
    */
   public Future<Void> isOperationRestricted(List<String> unitIds, Set<ProtectedOperationType> operations, RequestContext requestContext) {
+    if (userHasDesiredPermission(BYPASS_ACQ_UNITS, requestContext)) {
+      return Future.succeededFuture();
+    }
     if (CollectionUtils.isNotEmpty(unitIds)) {
       return getUnitsByIds(unitIds, requestContext)
         .compose(units -> {
@@ -120,7 +125,7 @@ public class ProtectionService {
   private Void verifyUserHasAssignPermission(List<String> acqUnitIds,
                                              AcqDesiredPermissions permission,
                                              RequestContext requestContext) {
-    if (isNotEmpty(acqUnitIds) && isUserDoesNotHaveDesiredPermission(permission, requestContext)){
+    if (isNotEmpty(acqUnitIds) && userDoesNotHaveDesiredPermission(permission, requestContext)){
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
     }
     return null;
@@ -160,6 +165,9 @@ public class ProtectionService {
    * @return new string with acq check
    */
   public Future<String> getQueryWithAcqUnitsCheck(String tablePrefix, String query, RequestContext requestContext) {
+    if (userHasDesiredPermission(BYPASS_ACQ_UNITS, requestContext)) {
+      return Future.succeededFuture(query);
+    }
     return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(tablePrefix, requestContext)
       .map(acqUnitsCqlExpr -> {
         if (StringUtils.isNotEmpty(query)) {
@@ -185,7 +193,7 @@ public class ProtectionService {
     Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newAcqUnitIds));
     Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(acqUnitIdsFromStorage));
 
-    if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && isUserDoesNotHaveDesiredPermission(permission, requestContext)){
+    if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && userDoesNotHaveDesiredPermission(permission, requestContext)){
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
     }
   }

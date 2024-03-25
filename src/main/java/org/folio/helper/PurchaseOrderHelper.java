@@ -614,7 +614,7 @@ public class PurchaseOrderHelper {
         boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
         if (isApprovalRequired && compPO.getApproved()
           .equals(Boolean.TRUE)) {
-          if (isUserNotHaveApprovePermission(requestContext)) {
+          if (userDoesNotHaveApprovePermission(requestContext)) {
             throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_APPROVAL_PERMISSIONS);
           }
           compPO.setApprovalDate(new Date());
@@ -626,13 +626,13 @@ public class PurchaseOrderHelper {
   }
 
   private void checkOrderUnopenPermissions(RequestContext requestContext) {
-    if (isUserNotHaveUnopenPermission(requestContext)) {
+    if (userDoesNotHaveUnopenPermission(requestContext)) {
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_UNOPEN_PERMISSIONS);
     }
   }
 
   private void checkOrderReopenPermissions(RequestContext requestContext) {
-    if (isUserNotHaveReopenPermission(requestContext)) {
+    if (userDoesNotHaveReopenPermission(requestContext)) {
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_REOPEN_PERMISSIONS);
     }
   }
