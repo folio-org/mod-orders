@@ -19,7 +19,7 @@ import static org.folio.helper.PurchaseOrderHelper.isApprovalRequiredConfigurati
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
-import static org.folio.orders.utils.PermissionsUtil.isUserNotHaveApprovePermission;
+import static org.folio.orders.utils.PermissionsUtil.userDoesNotHaveApprovePermission;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
@@ -279,7 +279,7 @@ public class CreateOrderEventHandler implements EventHandler {
     CompositePurchaseOrder order = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     Boolean isApproved = order.getApproved();
     boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
-    boolean isUserNotHaveApprovalPermission = isUserNotHaveApprovePermission(requestContext);
+    boolean isUserNotHaveApprovalPermission = userDoesNotHaveApprovePermission(requestContext);
 
     if (isApprovalRequired && Boolean.TRUE.equals(isApproved) && isUserNotHaveApprovalPermission) {
       order.setApproved(false);
@@ -302,7 +302,7 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
-    boolean isUserNotHaveApprovalPermission = isUserNotHaveApprovePermission(requestContext);
+    boolean isUserNotHaveApprovalPermission = userDoesNotHaveApprovePermission(requestContext);
 
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
       if (isApprovalRequired && isUserNotHaveApprovalPermission) {

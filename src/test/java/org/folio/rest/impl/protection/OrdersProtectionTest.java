@@ -10,6 +10,8 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.encodePrettily;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.orders.utils.AcqDesiredPermissions.BYPASS_ACQ_UNITS;
+import static org.folio.orders.utils.PermissionsUtil.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
@@ -39,6 +41,8 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -364,6 +368,21 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
 
     validateNumberOfRequests(1, 1);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+    "UPDATE",
+    "READ"
+  })
+  void testBypassAcqUnitChecks(ProtectedOperations operation) {
+    Header permissionHeader = new Header(OKAPI_HEADER_PERMISSIONS,
+      new JsonArray(List.of(BYPASS_ACQ_UNITS.getPermission())).encode());
+    final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, permissionHeader, X_OKAPI_USER_ID);
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(PROTECTED_UNITS)) : prepareOrder(PROTECTED_UNITS, PENDING);
+    operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
+
+    validateNumberOfRequests(0, 0);
   }
 
 }
