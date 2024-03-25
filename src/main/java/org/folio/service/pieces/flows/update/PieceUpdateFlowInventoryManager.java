@@ -40,8 +40,10 @@ public class PieceUpdateFlowInventoryManager {
   }
 
   public Future<Void> processInventory(PieceUpdateHolder holder, RequestContext requestContext) {
+    logger.info("processInventory:: Trying to process processInventory: {}", JsonObject.mapFrom(holder).encodePrettily());
     return inventoryManager.updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext)
       .compose(aVoid -> {
+        logger.info("processInventory:: processInventory: {}", JsonObject.mapFrom(holder).encodePrettily());
         if (Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage())) {
           return packagePoLineUpdateInventory(holder, requestContext);
         } else {

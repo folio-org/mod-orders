@@ -111,9 +111,11 @@ public class PieceUpdateFlowManager {
 
   protected Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine originPoLine = holder.getOriginPoLine();
-
+    logger.info("updatePoLine:: 1, Updating poLine with holder: {}", JsonObject.mapFrom(holder).encodePrettily());
     return pieceStorageService.getPiecesByLineId(originPoLine.getId(), requestContext)
-      .map(pieces -> {
+      .compose(pieces -> {
+        logger.info("updatePoLine:: 2, Updating poLine with holder: {}", JsonObject.mapFrom(holder).encodePrettily());
+
         CompositePurchaseOrder order = holder.getOriginPurchaseOrder();
         if (order.getOrderType() != OrderType.ONE_TIME || order.getWorkflowStatus() != WorkflowStatus.OPEN) {
           return Future.succeededFuture();
@@ -123,6 +125,7 @@ public class PieceUpdateFlowManager {
         poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
         return purchaseOrderLineService.saveOrderLine(poLineToSave, requestContext);
       }).compose(t -> {
+        logger.info("updatePoLine:: 3, Updating poLine with holder: {}", JsonObject.mapFrom(holder).encodePrettily());
         if (!Boolean.TRUE.equals(originPoLine.getIsPackage()) &&
           !Boolean.TRUE.equals(originPoLine.getCheckinItems())) {
           return updatePoLineService.updatePoLine(holder, requestContext);
