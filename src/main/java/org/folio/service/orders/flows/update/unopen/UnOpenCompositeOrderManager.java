@@ -269,13 +269,13 @@ public class UnOpenCompositeOrderManager {
               return inventoryManager.deleteHoldingById(holdingId, true, requestContext)
                                      .map(v -> Pair.of(holdingId, effectiveLocationId));
             }
-            return Future.succeededFuture().map(v -> Pair.of(null, null));
+            return Future.succeededFuture();
           }));
       }
     });
     return collectResultsOnSuccess(deletedHoldingIds)
       .map(resultDeletedHoldingVsLocationIds -> resultDeletedHoldingVsLocationIds.stream()
-        .filter(pair -> Objects.nonNull(pair.getKey()))
+        .filter(pair -> Objects.nonNull(pair) && Objects.nonNull(pair.getKey()))
         .collect(toList()))
       .map(resultDeletedHoldingVsLocationIds -> {
         if (logger.isDebugEnabled()) {
@@ -372,10 +372,11 @@ public class UnOpenCompositeOrderManager {
       })
       .compose(aVoid -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext))
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-      .map(purchaseOrder -> {
-        holder.withOrderInformation(purchaseOrder, poLine);
-        return null;
-      }))
+        .map(purchaseOrder -> {
+          holder.withOrderInformation(purchaseOrder, poLine);
+          return null;
+        })
+      )
       .compose(aVoid -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .compose(vVoid -> canDeletePieceWithItem(holder.getPieceToDelete(), requestContext))
       .compose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))

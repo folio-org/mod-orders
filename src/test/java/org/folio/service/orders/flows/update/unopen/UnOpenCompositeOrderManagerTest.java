@@ -219,6 +219,7 @@ public class UnOpenCompositeOrderManagerTest {
 
   @Test
   void testDeletePiecesWhenCreateItemWasNoneAndSynchronizedFlow() {
+    //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine poLine = getPoLine(order);
@@ -236,6 +237,7 @@ public class UnOpenCompositeOrderManagerTest {
 
   @Test
   void testRemainPiecesWhenCreateItemWasNoneAndSynchronizedFlow() {
+    //given
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine poLine = getPoLine(order);
@@ -252,6 +254,105 @@ public class UnOpenCompositeOrderManagerTest {
     // pieces and inventory should not be deleted
     verifyNoInteractions(pieceStorageService);
     verifyNoInteractions(inventoryManager);
+  }
+
+  @Test
+  void testDeleteHoldingsWhenOnlyHoldingWasCreatedAndDeleteHoldingsIsTrue() {
+    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePoLine poLine = getPoLine(order);
+    poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
+    prepareInitialSetup(order, orderFromStorage, poLine);
+    //When
+    unOpenCompositeOrderManager.process(order, orderFromStorage, true, requestContext).result();
+    //Then
+    makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
+    verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
+    verify(inventoryManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+  }
+
+  @Test
+  void testDeleteHoldingsForSynchronizedWorkflowWhenHoldingHasRelatedItems() {
+    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePoLine poLine = getPoLine(order);
+    poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
+    prepareInitialSetup(order, orderFromStorage, poLine);
+    doReturn(succeededFuture(List.of(getItem()))).when(inventoryManager).getItemsByHoldingId(HOLDING_ID, requestContext);
+    //When
+    unOpenCompositeOrderManager.process(order, orderFromStorage, true, requestContext).result();
+    //Then
+    makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
+    verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
+    // holding is not deleted because it has associated items
+    verify(inventoryManager, never()).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+  }
+
+  @Test
+  void testDeleteHoldingForSynchronizedWorkflowWhenDeleteHoldingIsFalse() {
+    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePoLine poLine = getPoLine(order);
+    poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
+    prepareInitialSetup(order, orderFromStorage, poLine);
+    //When
+    unOpenCompositeOrderManager.process(order, orderFromStorage, false, requestContext).result();
+    //Then
+    makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
+    verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
+    verify(inventoryManager, never()).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+  }
+
+  @Test
+  void testDeleteHoldingForIndependentWorkflowWhenDeleteHoldingIsTrue() {
+    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePoLine poLine = getPoLine(order);
+    poLine.setCheckinItems(true);
+    poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
+    prepareInitialSetup(order, orderFromStorage, poLine);
+    //When
+    unOpenCompositeOrderManager.process(order, orderFromStorage, true, requestContext).result();
+    //Then
+    makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
+    verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
+    verify(inventoryManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+  }
+
+  @Test
+  void testDeleteHoldingForIndependentWorkflowWhenDeleteHoldingIsFalse() {
+    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    CompositePoLine poLine = getPoLine(order);
+    poLine.setCheckinItems(true);
+    poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
+    poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
+    prepareInitialSetup(order, orderFromStorage, poLine);
+    //When
+    unOpenCompositeOrderManager.process(order, orderFromStorage, false, requestContext).result();
+    //Then
+    makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
+    verify(pieceStorageService, never()).deletePiecesByIds(List.of(PIECE_ID), requestContext);
+    verify(inventoryManager, never()).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
 
   private void prepareInitialSetup(CompositePurchaseOrder order, CompositePurchaseOrder orderFromStorage, CompositePoLine poLine) {
@@ -277,6 +378,8 @@ public class UnOpenCompositeOrderManagerTest {
     doReturn(succeededFuture()).when(inventoryManager).deleteItem(piece.getItemId(), true, requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(inventoryManager).getItemsByHoldingId(HOLDING_ID, requestContext);
     doReturn(succeededFuture()).when(inventoryManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    JsonObject holding = new JsonObject().put("id", HOLDING_ID).put("permanentLocationId", poLine.getLocations().get(0).getLocationId());
+    doReturn(succeededFuture(List.of(holding))).when(inventoryManager).getHoldingsByIds(List.of(HOLDING_ID), requestContext);
   }
 
   private JsonObject getItem() {
