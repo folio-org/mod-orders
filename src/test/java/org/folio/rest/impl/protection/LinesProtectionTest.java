@@ -8,6 +8,8 @@ import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.encodePrettily;
+import static org.folio.orders.utils.AcqDesiredPermissions.BYPASS_ACQ_UNITS;
+import static org.folio.orders.utils.PermissionsUtil.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_NOT_A_MEMBER_OF_THE_ACQ;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.LINES_PATH;
@@ -16,9 +18,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -126,4 +131,20 @@ public class LinesProtectionTest extends ProtectedEntityTestBase {
 
     validateNumberOfRequests(1, 1);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+    "UPDATE",
+    "READ"
+  })
+  void testBypassAcqUnitChecks(ProtectedOperations operation) {
+    Header permissionHeader = new Header(OKAPI_HEADER_PERMISSIONS,
+      new JsonArray(List.of(BYPASS_ACQ_UNITS.getPermission())).encode());
+    Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, permissionHeader, X_OKAPI_USER_ID);
+    operation.process(LINES_PATH, encodePrettily(preparePoLine(PROTECTED_UNITS, PENDING)),
+      headers, operation.getContentType(), operation.getCode());
+
+    validateNumberOfRequests(0, 0);
+  }
+
 }
