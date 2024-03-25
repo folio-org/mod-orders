@@ -329,7 +329,7 @@ public class UnOpenCompositeOrderManagerTest {
     unOpenCompositeOrderManager.process(order, orderFromStorage, true, requestContext).result();
     //Then
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
-    verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
+    verify(pieceStorageService, never()).deletePiecesByIds(List.of(PIECE_ID), requestContext);
     verify(inventoryManager).deleteHoldingById(HOLDING_ID, true, requestContext);
     verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
     verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));

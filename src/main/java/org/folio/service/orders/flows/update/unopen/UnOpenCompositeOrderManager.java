@@ -185,7 +185,7 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<List<Piece>> deleteExpectedPieces(CompositePoLine compPOL, RequestContext requestContext) {
-    if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus()) && Boolean.TRUE.equals(compPOL.getCheckinItems())) {
+    if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus()) || Boolean.TRUE.equals(compPOL.getCheckinItems())) {
       logger.info("Receipt is not required and independent receiving flow is used, skipping deleting pieces, poLineId: {}", compPOL.getId());
       return Future.succeededFuture(Collections.emptyList());
     }
