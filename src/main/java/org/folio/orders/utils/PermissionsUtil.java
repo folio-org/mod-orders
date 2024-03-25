@@ -18,7 +18,11 @@ public class PermissionsUtil {
 
   private PermissionsUtil() {}
 
-  public static boolean isUserDoesNotHaveDesiredPermission(AcqDesiredPermissions acqPerm, RequestContext requestContext) {
+  public static boolean userHasDesiredPermission(AcqDesiredPermissions acqPerm, RequestContext requestContext) {
+    return getProvidedPermissions(requestContext).contains(acqPerm.getPermission());
+  }
+
+  public static boolean userDoesNotHaveDesiredPermission(AcqDesiredPermissions acqPerm, RequestContext requestContext) {
     return !getProvidedPermissions(requestContext).contains(acqPerm.getPermission());
   }
 
@@ -32,15 +36,15 @@ public class PermissionsUtil {
       .toList();
   }
 
-  public static boolean isUserNotHaveApprovePermission(RequestContext requestContext) {
+  public static boolean userDoesNotHaveApprovePermission(RequestContext requestContext) {
     return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_APPROVE);
   }
 
-  public static boolean isUserNotHaveUnopenPermission(RequestContext requestContext) {
+  public static boolean userDoesNotHaveUnopenPermission(RequestContext requestContext) {
     return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_UNOPEN);
   }
 
-  public static boolean isUserNotHaveReopenPermission(RequestContext requestContext) {
+  public static boolean userDoesNotHaveReopenPermission(RequestContext requestContext) {
     return !getProvidedPermissions(requestContext).contains(PERMISSION_ORDER_REOPEN);
   }
 }
