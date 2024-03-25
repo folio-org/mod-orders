@@ -185,8 +185,8 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<List<Piece>> deleteExpectedPieces(CompositePoLine compPOL, RequestContext requestContext) {
-    if (!PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-      logger.info("Skip deleting pieces for Un-Open order line with id: {} because they were not created before", compPOL.getId());
+    if (PoLineCommonUtil.isReceiptNotRequired(compPOL.getReceiptStatus()) && Boolean.TRUE.equals(compPOL.getCheckinItems())) {
+      logger.info("Receipt is not required and independent receiving flow is used, skipping deleting pieces, poLineId: {}", compPOL.getId());
       return Future.succeededFuture(Collections.emptyList());
     }
     return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
@@ -226,6 +226,8 @@ public class UnOpenCompositeOrderManager {
                     return null;
                   })
                   .onSuccess(v -> logger.debug("Pieces, Items, Holdings deleted after UnOpen order"))
+                  .onFailure(e -> logger.error("Pieces, Items, Holdings failed to be deleted after UnOpen order for order id: {}",
+                    compPOL.getId(), e))
                   .mapEmpty();
               }
               return Future.succeededFuture();
@@ -267,7 +269,7 @@ public class UnOpenCompositeOrderManager {
               return inventoryManager.deleteHoldingById(holdingId, true, requestContext)
                                      .map(v -> Pair.of(holdingId, effectiveLocationId));
             }
-            return Future.succeededFuture();
+            return Future.succeededFuture().map(v -> Pair.of(null, null));
           }));
       }
     });
@@ -364,13 +366,16 @@ public class UnOpenCompositeOrderManager {
   public Future<Void> deletePieceWithItem(String pieceId, RequestContext requestContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(true);
     return pieceStorageService.getPieceById(pieceId, requestContext)
-      .onSuccess(holder::setPieceToDelete)
-      .compose(aVoid -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext)
-        .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-          .map(purchaseOrder -> {
-            holder.withOrderInformation(purchaseOrder, poLine);
-            return null;
-          })))
+      .map(piece-> {
+        holder.setPieceToDelete(piece);
+        return holder;
+      })
+      .compose(aHolder -> purchaseOrderLineService.getOrderLineById(holder.getPieceToDelete().getPoLineId(), requestContext))
+      .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
+      .map(purchaseOrder -> {
+        holder.withOrderInformation(purchaseOrder, poLine);
+        return null;
+      }))
       .compose(purchaseOrder -> protectionService.isOperationRestricted(holder.getOriginPurchaseOrder().getAcqUnitIds(), DELETE, requestContext))
       .compose(vVoid -> canDeletePieceWithItem(holder.getPieceToDelete(), requestContext))
       .compose(aVoid -> pieceStorageService.deletePiece(pieceId, requestContext))
