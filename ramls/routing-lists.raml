@@ -1,0 +1,48 @@
+#%RAML 1.0
+title: "RoutingList"
+baseUri: https://github.com/folio-org/mod-orders
+version: v1.0
+
+documentation:
+  - title: Routing lists
+    content: <b>CRUD API to manage routing lists.</b>
+
+types:
+    title: !include acq-models/mod-orders-storage/schemas/routing_list.json
+    title_collection: !include acq-models/mod-orders-storage/schemas/routing_list_collection.json
+    UUID:
+     type: string
+     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+    pageable:  !include raml-util/traits/pageable.raml
+    searchable: !include raml-util/traits/searchable.raml
+
+resourceTypes:
+    collection: !include raml-util/rtypes/collection.raml
+    collection-item: !include raml-util/rtypes/item-collection.raml
+
+/orders/routing-lists:
+  type:
+    collection:
+      exampleCollection: !include acq-models/mod-orders-storage/examples/routing_list_collection.sample
+      exampleItem: !include acq-models/mod-orders-storage/examples/routing_list_get.sample
+      schemaCollection: routing_list_collection
+      schemaItem: routing_list
+  get:
+    description: Get routing lists
+    is: [
+      searchable: {description: "with valid searchable fields: for example routing list", example: "[\"routing_list\", \"ROUTING_LIST\", \"=\"]"},
+      pageable
+    ]
+  /{id}/process-template:
+    uriParameters:
+      id:
+        description: The UUID of a Title
+        type: UUID
+    type:
+      collection-item:
+        exampleItem: !include acq-models/mod-orders-storage/examples/routing_list_get.sample
+        schema: routing_list
+    post:
+      description: Execute mod-template-engine to process templates with replaced token placeholders [update]
