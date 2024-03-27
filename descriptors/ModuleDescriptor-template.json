@@ -92,7 +92,8 @@
             "orders-storage.configuration.suffixes.collection.get",
             "finance.funds.item.get",
             "finance.transactions.collection.get",
-            "finance.transactions.batch"
+            "finance.transactions.batch",
+            "invoices.bypass-acquisition-units"
           ]
         },
         {
@@ -267,6 +268,7 @@
             "organizations-storage.organizations.collection.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put",
+            "invoices.bypass-acquisition-units",
             "orders-storage.order-invoice-relationships.collection.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
@@ -1462,7 +1464,7 @@
     {
       "permissionName": "orders.bypass-acquisition-units",
       "displayName": "Bypass acquisition units checks",
-      "description": "Backend internal permission to bypass acquisition units checks"
+      "description": "Backend internal permission to bypass order acquisition units checks"
     },
     {
       "permissionName": "orders.acquisitions-units-assignments.assign",
