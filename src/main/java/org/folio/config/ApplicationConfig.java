@@ -442,6 +442,11 @@ public class ApplicationConfig {
   }
 
   @Bean
+  UserService userService(RestClient restClient) {
+    return new UserService(restClient);
+  }
+
+  @Bean
   TitlesService titlesService(RestClient restClient, ProtectionService protectionService, InventoryManager inventoryManager) {
     return new TitlesService(restClient, protectionService, inventoryManager);
   }
