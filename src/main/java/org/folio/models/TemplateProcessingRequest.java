@@ -1,4 +1,4 @@
-package org.folio.models.template;
+package org.folio.models;
 
 import java.util.List;
 import java.util.UUID;

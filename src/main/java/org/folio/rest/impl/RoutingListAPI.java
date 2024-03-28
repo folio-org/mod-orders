@@ -6,17 +6,23 @@ import java.util.Map;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import org.apache.commons.lang.NotImplementedException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.RoutingList;
 import org.folio.rest.jaxrs.resource.OrdersRoutingLists;
 import org.folio.service.routinglist.RoutingListService;
+import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class RoutingListAPI extends BaseApi implements OrdersRoutingLists {
 
   @Autowired
   private RoutingListService routingListService;
+
+  public RoutingListAPI() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
 
   @Override
   public void getOrdersRoutingLists(String query, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders,

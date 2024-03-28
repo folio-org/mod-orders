@@ -10,7 +10,7 @@ import java.util.UUID;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import lombok.extern.log4j.Log4j2;
-import org.folio.models.template.TemplateProcessingRequest;
+import org.folio.models.TemplateProcessingRequest;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
