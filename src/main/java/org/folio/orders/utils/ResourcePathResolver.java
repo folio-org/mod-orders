@@ -28,6 +28,9 @@ public class ResourcePathResolver {
   public static final String PAYMENT_STATUS = "paymentStatus";
   public static final String ORDER_TEMPLATES = "orderTemplates";
   public static final String TITLES = "titles";
+  public static final String ROUTING_LISTS = "routing-lists";
+  public static final String TEMPLATE_REQUEST = "template-request";
+  public static final String USERS = "users";
   public static final String FUNDS = "finance.funds";
   public static final String BUDGETS = "finance.budgets";
   public static final String LEDGERS = "finance.ledgers";
@@ -66,6 +69,8 @@ public class ResourcePathResolver {
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
     apis.put(ORDER_TEMPLATES, "/orders-storage/order-templates");
+    apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
+    apis.put(TEMPLATE_REQUEST, "/template-request");
     apis.put(FUNDS, "/finance/funds");
     apis.put(BUDGETS, "/finance/budgets");
     apis.put(LEDGERS, "/finance-storage/ledgers");
@@ -86,6 +91,7 @@ public class ResourcePathResolver {
     apis.put(ORDER_INVOICE_RELATIONSHIP, "/orders-storage/order-invoice-relns");
     apis.put(EXPORT_HISTORY, "/orders-storage/export-history");
     apis.put(TAGS, "/tags");
+    apis.put(USERS, "/users");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(
