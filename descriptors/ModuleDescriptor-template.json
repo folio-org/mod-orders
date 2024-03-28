@@ -1724,6 +1724,11 @@
       "description" : "Holding summary"
     },
     {
+      "permissionName":  "orders.routing-list.item.post",
+      "displayName" : "orders routing-list item post",
+      "description" : "Orders routing-list item post"
+    },
+    {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
@@ -1757,8 +1762,8 @@
         "orders.rollover.item.post",
         "orders.holding-summary.collection.get",
         "orders.acquisition-methods.all",
-        "orders.export-history.all"
-
+        "orders.export-history.all",
+        "orders.routing-list.item.post"
       ]
     },
     {

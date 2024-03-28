@@ -47,7 +47,7 @@ public class RoutingListService {
   }
 
   private TemplateProcessingRequest createTemplateRequest(RoutingList routingList, JsonObject users) {
-    var templateRequest =createBaseTemplateRequest();
+    var templateRequest = createBaseTemplateRequest();
     var userListForContext = createUserListForContext(users);
     var context = new TemplateProcessingRequest.Context().withUsers(userListForContext);
     templateRequest.withContext(context);
