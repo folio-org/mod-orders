@@ -1004,6 +1004,19 @@
       ]
     },
     {
+      "id": "orders.routing-list",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/routing-lists/{id}/process-template",
+          "permissionsRequired": [
+            "orders.routing-list.item.post"
+          ]
+        }
+      ]
+    },
+    {
       "id": "_jsonSchemas",
       "version": "1.0",
       "interfaceType" : "multiple",

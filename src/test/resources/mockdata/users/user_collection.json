@@ -1,0 +1,41 @@
+{
+  "users": [
+    {
+      "username": "mockuser8",
+      "id": "d926d900-e27d-46d6-bba8-31e9d5c2cf44",
+      "active": true,
+      "type": "staff",
+      "meta": {
+        "creation_date": "2016-11-05T0723",
+        "last_login_date": ""
+      },
+      "personal": {
+        "firstName": "Albert",
+        "lastName": "Einstein",
+        "email": "albert@si.edu",
+        "phone": "927-306-2327"
+      }
+    },
+    {
+      "username": "mockuser9",
+      "id": "077274ad-6b4f-4c28-9779-6d381e7a1ca1",
+      "active": true,
+      "type": "staff",
+      "meta": {
+        "creation_date": "2016-11-05T0723",
+        "last_login_date": ""
+      },
+      "personal": {
+        "lastName": "Mockerson",
+        "middleName": "M.",
+        "firstName": "Mickey",
+        "email": "mock@biglibrary.org",
+        "phone": "2125551212",
+        "mobilePhone": "112233"
+      },
+      "externalSystemId": "123",
+      "barcode": "test123"
+    }
+  ],
+  "totalRecords": 2
+}

@@ -8,8 +8,8 @@ documentation:
     content: <b>CRUD API to manage routing lists.</b>
 
 types:
-    title: !include acq-models/mod-orders-storage/schemas/routing_list.json
-    title_collection: !include acq-models/mod-orders-storage/schemas/routing_list_collection.json
+    routing_list: !include acq-models/mod-orders-storage/schemas/routing_list.json
+    routing_list_collection: !include acq-models/mod-orders-storage/schemas/routing_list_collection.json
     UUID:
      type: string
      pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
@@ -19,8 +19,8 @@ traits:
     searchable: !include raml-util/traits/searchable.raml
 
 resourceTypes:
-    collection: !include raml-util/rtypes/collection.raml
-    collection-item: !include raml-util/rtypes/item-collection.raml
+  collection: !include rtypes/collection-with-json-response.raml
+  collection-item: !include rtypes/item-collection-with-json-response.raml
 
 /orders/routing-lists:
   type:
@@ -40,9 +40,5 @@ resourceTypes:
       id:
         description: The UUID of a Title
         type: UUID
-    type:
-      collection-item:
-        exampleItem: !include acq-models/mod-orders-storage/examples/routing_list_get.sample
-        schema: routing_list
     post:
       description: Execute mod-template-engine to process templates with replaced token placeholders [update]

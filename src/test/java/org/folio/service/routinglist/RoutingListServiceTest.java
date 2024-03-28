@@ -1,0 +1,66 @@
+package org.folio.service.routinglist;
+
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.rest.impl.MockServer.ROUTING_LIST_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.USERS_MOCK_DATA_PATH;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+
+import java.io.IOException;
+
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.RoutingList;
+import org.folio.service.UserService;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+@ExtendWith(VertxExtension.class)
+public class RoutingListServiceTest {
+
+  private static final String ROUTING_LIST_ID = "eee951de-ea49-400a-96e8-705ae5a1e1e8";
+  @InjectMocks
+  RoutingListService routingListService;
+  @Mock
+  private RestClient restClient;
+  @Mock
+  private UserService userService;
+  @Mock
+  private RequestContext requestContextMock;
+
+  @BeforeEach
+  public void initMocks() {
+    MockitoAnnotations.openMocks(this);
+  }
+
+  @Test
+  void processTemplate(VertxTestContext vertxTestContext) throws IOException {
+    var routingList = new JsonObject(getMockData(ROUTING_LIST_MOCK_DATA_PATH + ROUTING_LIST_ID + ".json")).mapTo(RoutingList.class);
+    var users = new JsonObject(getMockData(USERS_MOCK_DATA_PATH + "user_collection.json"));
+
+    doReturn(succeededFuture(routingList)).when(restClient).get(any(RequestEntry.class), eq(RoutingList.class), any(RequestContext.class));
+    doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any(RequestContext.class));
+    doReturn(succeededFuture(new JsonObject())).when(restClient).post(anyString(), any(),  eq(JsonObject.class), any());
+
+    Future<JsonObject> future = routingListService.processTemplateEngine(ROUTING_LIST_ID, requestContextMock);
+
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        Assertions.assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+}
