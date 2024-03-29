@@ -20,8 +20,10 @@ import org.folio.rest.jaxrs.model.RoutingList;
 public class RoutingListsService {
 
   private static final Logger log = LogManager.getLogger();
-  private static final String ENDPOINT = resourcesPath(ROUTING_LISTS);
-  private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
+  private static final String ROUTING_LIST_ENDPOINT = resourcesPath(ROUTING_LISTS);
+  private static final String ROUTING_LIST_BY_ID_ENDPOINT = ROUTING_LIST_ENDPOINT + "/{id}";
+  private static final String TEMPLATE_REQUEST_ENDPOINT = resourcesPath(TEMPLATE_REQUEST);
+
   private final RestClient restClient;
   private final UserService userService;
 
@@ -38,7 +40,7 @@ public class RoutingListsService {
   }
 
   public Future<RoutingList> getRoutingListById(String routingListId, RequestContext requestContext) {
-    var requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(routingListId);
+    var requestEntry = new RequestEntry(ROUTING_LIST_BY_ID_ENDPOINT).withId(routingListId);
     return restClient.get(requestEntry, RoutingList.class, requestContext);
   }
 
@@ -73,6 +75,6 @@ public class RoutingListsService {
   }
 
   private Future<JsonObject> postTemplateRequest(TemplateProcessingRequest templateProcessingRequest, RequestContext requestContext) {
-    return restClient.post(TEMPLATE_REQUEST, JsonObject.mapFrom(templateProcessingRequest), JsonObject.class, requestContext);
+    return restClient.post(TEMPLATE_REQUEST_ENDPOINT, JsonObject.mapFrom(templateProcessingRequest), JsonObject.class, requestContext);
   }
 }
