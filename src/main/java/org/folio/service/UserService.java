@@ -15,7 +15,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 
 public class UserService {
-  private static final String ENDPOINT = resourcesPath(USERS);
+  private static final String USERS_ENDPOINT = resourcesPath(USERS);
   private final RestClient restClient;
 
   public UserService(RestClient restClient) {
@@ -27,10 +27,10 @@ public class UserService {
   }
 
   public Future<JsonObject> getUsersByIds(List<String> userIds, RequestContext requestContext) {
-    var requestEntry = new RequestEntry(USERS)
+    var requestEntry = new RequestEntry(USERS_ENDPOINT)
       .withOffset(0)
       .withLimit(Integer.MAX_VALUE)
-      .withQuery(convertIdsToCqlQuery(userIds, "sourceInvoiceId"));
+      .withQuery(convertIdsToCqlQuery(userIds, "id"));
 
     return restClient.get(requestEntry, JsonObject.class, requestContext);
   }

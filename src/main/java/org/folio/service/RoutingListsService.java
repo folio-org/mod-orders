@@ -1,4 +1,4 @@
-package org.folio.service.routinglist;
+package org.folio.service;
 
 import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
 import static org.folio.orders.utils.ResourcePathResolver.TEMPLATE_REQUEST;
@@ -15,23 +15,23 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.RoutingList;
-import org.folio.service.UserService;
 
 @Log4j2
-public class RoutingListService {
+public class RoutingListsService {
 
   private static final String ENDPOINT = resourcesPath(ROUTING_LISTS);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private final RestClient restClient;
   private final UserService userService;
 
-  public RoutingListService(RestClient restClient, UserService userService) {
+  public RoutingListsService(RestClient restClient, UserService userService) {
     this.restClient = restClient;
     this.userService = userService;
   }
 
-  public Future<JsonObject> processTemplateEngine(String id, RequestContext requestContext) {
-    return getRoutingListById(id, requestContext)
+  public Future<JsonObject> processTemplateRequest(String routingListId, RequestContext requestContext) {
+    log.debug("processTemplateRequest: Tying to process template request for routingListId={}", routingListId);
+    return getRoutingListById(routingListId, requestContext)
       .compose(routingList -> fetchUsersAndCreateTemplate(routingList, requestContext))
       .compose(templateProcessingRequest -> postTemplateRequest(templateProcessingRequest, requestContext));
   }
@@ -51,6 +51,7 @@ public class RoutingListService {
     var userListForContext = createUserListForContext(users);
     var context = new TemplateProcessingRequest.Context().withUsers(userListForContext);
     templateRequest.withContext(context);
+    log.info("createTemplateRequest:: TemplateProcessingRequest object created : {}", JsonObject.mapFrom(templateRequest).encodePrettily());
     return templateRequest;
   }
 

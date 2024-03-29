@@ -1,6 +1,7 @@
-package org.folio.service.routinglist;
+package org.folio.service;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestConstants.ROUTING_LIST_ID;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.rest.impl.MockServer.ROUTING_LIST_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.USERS_MOCK_DATA_PATH;
@@ -19,7 +20,6 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.RoutingList;
-import org.folio.service.UserService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,11 +29,10 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @ExtendWith(VertxExtension.class)
-public class RoutingListServiceTest {
+public class RoutingListsServiceTest {
 
-  private static final String ROUTING_LIST_ID = "eee951de-ea49-400a-96e8-705ae5a1e1e8";
   @InjectMocks
-  RoutingListService routingListService;
+  RoutingListsService routingListsService;
   @Mock
   private RestClient restClient;
   @Mock
@@ -55,7 +54,7 @@ public class RoutingListServiceTest {
     doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any(RequestContext.class));
     doReturn(succeededFuture(new JsonObject())).when(restClient).post(anyString(), any(),  eq(JsonObject.class), any());
 
-    Future<JsonObject> future = routingListService.processTemplateEngine(ROUTING_LIST_ID, requestContextMock);
+    Future<JsonObject> future = routingListsService.processTemplateRequest(ROUTING_LIST_ID, requestContextMock);
 
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {

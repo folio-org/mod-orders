@@ -1,5 +1,6 @@
 package org.folio;
 
+import static org.folio.orders.utils.PermissionsUtil.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
@@ -9,6 +10,8 @@ import static org.folio.service.orders.AcquisitionsUnitsServiceTest.USER_ID_ASSI
 import java.util.UUID;
 
 import io.restassured.http.Header;
+import io.vertx.core.json.JsonArray;
+import org.folio.orders.utils.AcqDesiredPermissions;
 
 public final class TestConstants {
 
@@ -63,6 +66,7 @@ public final class TestConstants {
   public static final Header NON_EXIST_LOAN_TYPE_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_LOAN_TYPE_TENANT);
   public static final Header NON_EXIST_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "ordersimpltest");
   public static final Header X_OKAPI_USER_ID = new Header(OKAPI_USERID_HEADER, "440c89e3-7f6c-578a-9ea8-310dad23605e");
+  public static final Header ALL_DESIRED_ACQ_PERMISSIONS_HEADER = new Header(OKAPI_HEADER_PERMISSIONS, new JsonArray(AcqDesiredPermissions.getValuesExceptBypass()).encode());
   public static final Header X_OKAPI_USER_ID_WITH_ACQ_UNITS = new Header(OKAPI_USERID_HEADER, USER_ID_ASSIGNED_TO_ACQ_UNITS);
   public static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaWt1X2FkbWluIiwidXNlcl9pZCI6ImJmZTI2MjM0LTMzNjktNTdhYS05ZjhhLWU2ZWVhY2M0YTgzYiIsImlhdCI6MTU4MzE1Nzg5OCwidGVuYW50IjoiZGlrdSJ9.Mk7u4KaCywSuYtBgCT44oGcVC0C8jUMY9KjsUnug48I");
   public static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
@@ -85,4 +89,5 @@ public final class TestConstants {
   public static final String PIECE_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   public static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
   public static final String ID_FOR_TEMPLATE_NAME_ALREADY_EXISTS = "cd0619fb-a628-4d90-be41-df8943e97768";
+  public static final String ROUTING_LIST_ID = "eee951de-ea49-400a-96e8-705ae5a1e1e8";
 }
