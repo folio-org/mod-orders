@@ -1,6 +1,7 @@
 package org.folio.models;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import lombok.Getter;
@@ -61,6 +62,21 @@ public class TemplateProcessingRequest {
       this.name = name;
       return this;
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof TemplateProcessingRequest that)) return false;
+    return Objects.equals(templateId, that.templateId)
+        && Objects.equals(lang, that.lang)
+        && Objects.equals(outputFormat, that.outputFormat)
+        && Objects.equals(context, that.context);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(templateId, lang, outputFormat, context);
   }
 }
 
