@@ -32,6 +32,6 @@ public class UserService {
       .withLimit(Integer.MAX_VALUE)
       .withQuery(convertIdsToCqlQuery(userIds, "id"));
 
-    return restClient.get(requestEntry, JsonObject.class, requestContext);
+    return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 }
