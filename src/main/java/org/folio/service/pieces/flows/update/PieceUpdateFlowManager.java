@@ -70,7 +70,7 @@ public class PieceUpdateFlowManager {
 
     Promise<Void> promise = Promise.promise();
     pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
-      .onSuccess(holder::withPieceFromStorage)
+      .map(holder::withPieceFromStorage)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .map(v -> {

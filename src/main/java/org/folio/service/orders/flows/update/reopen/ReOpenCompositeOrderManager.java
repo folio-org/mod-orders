@@ -139,10 +139,10 @@ public class ReOpenCompositeOrderManager {
   private Future<ReOpenCompositeOrderHolder> buildHolder(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
     ReOpenCompositeOrderHolder holder = new ReOpenCompositeOrderHolder(orderId);
     return getPieces(poLines, requestContext)
-              .onSuccess(holder::withPieces)
+              .map(holder::withPieces)
               .map(v -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
               .compose(poLineIds -> invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext))
-              .onSuccess(holder::withInvoiceLines)
+              .map(holder::withInvoiceLines)
               .compose(v -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
               .map(holder::withOrderInvoices)
               .map(v -> holder);
