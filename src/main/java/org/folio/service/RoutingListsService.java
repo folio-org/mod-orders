@@ -9,16 +9,17 @@ import java.util.UUID;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.models.TemplateProcessingRequest;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.RoutingList;
 
-@Log4j2
 public class RoutingListsService {
 
+  private static final Logger log = LogManager.getLogger();
   private static final String ENDPOINT = resourcesPath(ROUTING_LISTS);
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private final RestClient restClient;
