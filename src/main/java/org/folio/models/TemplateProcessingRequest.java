@@ -61,7 +61,9 @@ public class TemplateProcessingRequest {
 
   @Getter
   public static class Context {
+    @JsonProperty
     private List<User> users;
+    @JsonProperty
     private List<Item> items;
 
     public Context withUsers(List<User> users) {
@@ -73,6 +75,7 @@ public class TemplateProcessingRequest {
 
   @Getter
   public static class User {
+    @JsonProperty
     private String name;
     public User withName(String name) {
       this.name = name;
@@ -82,6 +85,7 @@ public class TemplateProcessingRequest {
 
   @Getter
   public static class Item {
+    @JsonProperty
     private String name;
 
     public Item setName(String name) {
