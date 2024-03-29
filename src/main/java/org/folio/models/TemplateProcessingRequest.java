@@ -4,14 +4,40 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Getter;
 
 @Getter
 public class TemplateProcessingRequest {
+  @JsonProperty
   private UUID templateId;
+  @JsonProperty
   private String lang;
+  @JsonProperty
   private String outputFormat;
+  @JsonProperty
   private Context context;
+
+  public TemplateProcessingRequest setTemplateId(UUID templateId) {
+    this.templateId = templateId;
+    return this;
+  }
+
+  public TemplateProcessingRequest setLang(String lang) {
+    this.lang = lang;
+    return this;
+  }
+
+  public TemplateProcessingRequest setOutputFormat(String outputFormat) {
+    this.outputFormat = outputFormat;
+    return this;
+  }
+
+  public TemplateProcessingRequest setContext(Context context) {
+    this.context = context;
+    return this;
+  }
 
   public TemplateProcessingRequest withTemplateId(UUID templateId) {
     this.templateId = templateId;
