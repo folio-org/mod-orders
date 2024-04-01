@@ -1,7 +1,7 @@
 ## 12.9.0 - Unreleased
 
 ## 12.8.1 - Released (Quesnelia R1 2024)
-This release focused on to fix bugs relate to payment status, invoice and item records.
+This release focused on fixing bugs related to payment status, invoice and item records.
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.0...v12.8.1)
 
 ### Bug Fixes
