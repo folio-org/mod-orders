@@ -11,7 +11,6 @@ This release focused on fixing bugs related to payment status, invoice and item 
 * [MODORDERS-1066](https://folio-org.atlassian.net/browse/MODORDERS-1066) - Item records are NOT deleted from Instance when Order is unopened and "Delete items" option is picked
 * [MODINVOICE-516](https://folio-org.atlassian.net/browse/MODINVOICE-516) - Invoice transactions should not be changed when acquisition check was failed
 
-
 ## 12.8.0 - Released (Quesnelia R1 2024)
 This release focused on fixing several bugs as well as implement new features and upgrading dependent libraries
 
