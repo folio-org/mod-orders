@@ -1,5 +1,17 @@
 ## 12.9.0 - Unreleased
 
+## 12.8.1 - Released (Quesnelia R1 2024)
+This release focused on to fix bugs relate to payment status, invoice and item records.
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.0...v12.8.1)
+
+### Bug Fixes
+
+* [MODORDERS-1073](https://folio-org.atlassian.net/browse/MODORDERS-1073) - Invoice encumbrance link not removed because of acquisition unit
+* [MODORDERS-1071](https://folio-org.atlassian.net/browse/MODORDERS-1071) - PaymentStatus can be wrong after reopening an order
+* [MODORDERS-1066](https://folio-org.atlassian.net/browse/MODORDERS-1066) - Item records are NOT deleted from Instance when Order is unopened and "Delete items" option is picked
+* [MODINVOICE-516](https://folio-org.atlassian.net/browse/MODINVOICE-516) - Invoice transactions should not be changed when acquisition check was failed
+
+
 ## 12.8.0 - Released (Quesnelia R1 2024)
 This release focused on fixing several bugs as well as implement new features and upgrading dependent libraries
 
