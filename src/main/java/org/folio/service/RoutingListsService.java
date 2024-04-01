@@ -20,6 +20,7 @@ import org.folio.rest.jaxrs.model.RoutingList;
 public class RoutingListsService {
 
   private static final Logger log = LogManager.getLogger();
+  private static final UUID TEMPLATE_REQUEST_ID = UUID.fromString("9465105a-e8a1-470c-9817-142d33bc4fcd");
   private static final String ROUTING_LIST_ENDPOINT = resourcesPath(ROUTING_LISTS);
   private static final String ROUTING_LIST_BY_ID_ENDPOINT = ROUTING_LIST_ENDPOINT + "/{id}";
   private static final String TEMPLATE_REQUEST_ENDPOINT = resourcesPath(TEMPLATE_REQUEST);
@@ -60,7 +61,7 @@ public class RoutingListsService {
 
   private TemplateProcessingRequest createBaseTemplateRequest() {
     return new TemplateProcessingRequest()
-      .withTemplateId(UUID.randomUUID())
+      .withTemplateId(TEMPLATE_REQUEST_ID)
       .withLang("en")
       .withOutputFormat("text/plain");
   }
@@ -75,6 +76,7 @@ public class RoutingListsService {
   }
 
   private Future<JsonObject> postTemplateRequest(TemplateProcessingRequest templateProcessingRequest, RequestContext requestContext) {
-    return restClient.post(TEMPLATE_REQUEST_ENDPOINT, JsonObject.mapFrom(templateProcessingRequest), JsonObject.class, requestContext);
+    var requestEntry = new RequestEntry(TEMPLATE_REQUEST_ENDPOINT);
+    return restClient.postJsonObject(requestEntry, JsonObject.mapFrom(templateProcessingRequest), requestContext);
   }
 }

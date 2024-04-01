@@ -33,6 +33,7 @@ import org.folio.rest.impl.PoNumberApiTest;
 import org.folio.rest.impl.PurchaseOrderLinesApiTest;
 import org.folio.rest.impl.PurchaseOrdersApiTest;
 import org.folio.rest.impl.ReceivingHistoryApiTest;
+import org.folio.rest.impl.RoutingListsApiTest;
 import org.folio.rest.impl.TitlesApiTest;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
@@ -180,6 +181,10 @@ public class ApiTestSuite {
 
   @Nested
   class TitlesApiTestNested extends TitlesApiTest {
+  }
+
+  @Nested
+  class RoutingListsApiTestNested extends RoutingListsApiTest {
   }
 
   @Nested

@@ -1,41 +1,47 @@
 {
-  "users": [
-    {
-      "username": "mockuser8",
-      "id": "d926d900-e27d-46d6-bba8-31e9d5c2cf44",
-      "active": true,
-      "type": "staff",
-      "meta": {
-        "creation_date": "2016-11-05T0723",
-        "last_login_date": ""
-      },
-      "personal": {
-        "firstName": "Albert",
-        "lastName": "Einstein",
-        "email": "albert@si.edu",
-        "phone": "927-306-2327"
-      }
+  "users" : [ {
+    "username" : "sallie",
+    "id" : "00bc2807-4d5b-4a27-a2b5-b7b1ba431cc4",
+    "barcode" : "133143370961512",
+    "active" : false,
+    "type" : "patron",
+    "patronGroup" : "503a81cd-6c26-400f-b620-14c08943697c",
+    "departments" : [ ],
+    "proxyFor" : [ ],
+    "personal" : {
+      "lastName" : "Denesik",
+      "firstName" : "Maiya",
+      "middleName" : "Noel",
+      "email" : "ahmad@kertzmann-bailey-and-brekke.io",
+      "phone" : "759.693.8557",
+      "mobilePhone" : "(557)093-7575",
+      "dateOfBirth" : "2009-07-21T00:00:00.000+00:00",
+      "addresses" : [ {
+        "countryId" : "US",
+        "addressLine1" : "17691 Rodriguez Divide",
+        "city" : "Birmingham",
+        "region" : "CO",
+        "postalCode" : "85748",
+        "addressTypeId" : "93d3d88d-499b-45d0-9bc7-ac73c3a19880",
+        "primaryAddress" : true
+      } ],
+      "preferredContactTypeId" : "002"
     },
-    {
-      "username": "mockuser9",
-      "id": "077274ad-6b4f-4c28-9779-6d381e7a1ca1",
-      "active": true,
-      "type": "staff",
-      "meta": {
-        "creation_date": "2016-11-05T0723",
-        "last_login_date": ""
-      },
-      "personal": {
-        "lastName": "Mockerson",
-        "middleName": "M.",
-        "firstName": "Mickey",
-        "email": "mock@biglibrary.org",
-        "phone": "2125551212",
-        "mobilePhone": "112233"
-      },
-      "externalSystemId": "123",
-      "barcode": "test123"
+    "enrollmentDate" : "2015-04-13T00:00:00.000+00:00",
+    "expirationDate" : "2019-06-20T00:00:00.000+00:00",
+    "createdDate" : "2024-01-28T16:01:21.650+00:00",
+    "updatedDate" : "2024-01-28T16:01:21.650+00:00",
+    "metadata" : {
+      "createdDate" : "2024-01-28T16:01:21.601+00:00",
+      "createdByUserId" : "631fdcc3-c7c6-48e6-b51c-8a727c5d3dd7",
+      "updatedDate" : "2024-01-28T16:01:21.601+00:00",
+      "updatedByUserId" : "631fdcc3-c7c6-48e6-b51c-8a727c5d3dd7"
     }
-  ],
-  "totalRecords": 2
+  } ],
+  "totalRecords" : 1,
+  "resultInfo" : {
+    "totalRecords" : 1,
+    "facets" : [ ],
+    "diagnostics" : [ ]
+  }
 }
