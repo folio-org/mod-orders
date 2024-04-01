@@ -6,7 +6,6 @@ import static org.folio.TestUtils.getMockData;
 import static org.folio.rest.impl.MockServer.ROUTING_LIST_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.USERS_MOCK_DATA_PATH;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
@@ -52,7 +51,7 @@ public class RoutingListsServiceTest {
 
     doReturn(succeededFuture(routingList)).when(restClient).get(any(RequestEntry.class), eq(RoutingList.class), any(RequestContext.class));
     doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any(RequestContext.class));
-    doReturn(succeededFuture(new JsonObject())).when(restClient).post(anyString(), any(),  eq(JsonObject.class), any());
+    doReturn(succeededFuture(new JsonObject())).when(restClient).postJsonObject(any(RequestEntry.class), any(), any());
 
     Future<JsonObject> future = routingListsService.processTemplateRequest(ROUTING_LIST_ID, requestContextMock);
 
