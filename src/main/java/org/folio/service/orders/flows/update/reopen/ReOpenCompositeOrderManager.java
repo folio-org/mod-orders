@@ -140,10 +140,10 @@ public class ReOpenCompositeOrderManager {
     ReOpenCompositeOrderHolder holder = new ReOpenCompositeOrderHolder(orderId);
     return getPieces(poLines, requestContext)
               .map(holder::withPieces)
-              .map(v -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
+              .map(aHolder -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
               .compose(poLineIds -> invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext))
               .map(holder::withInvoiceLines)
-              .compose(v -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
+              .compose(aHolder -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
               .map(holder::withOrderInvoices)
               .map(v -> holder);
   }

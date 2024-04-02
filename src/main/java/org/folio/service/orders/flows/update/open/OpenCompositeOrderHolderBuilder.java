@@ -44,13 +44,13 @@ public class OpenCompositeOrderHolderBuilder {
     OpenOrderPieceHolder holder = new OpenOrderPieceHolder(titleId);
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
       .map(holder::withExistingPieces)
-      .map(aVoid -> {
+      .map(aHolder -> {
         holder.withPiecesWithLocationToProcess(buildPiecesByLocationId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
         holder.withPiecesWithHoldingToProcess(buildPiecesByHoldingId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
         return null;
       })
       .map(aVoid -> holder.withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces())))
-      .map(aVoid -> {
+      .map(aHolder -> {
         if (CollectionUtils.isEmpty(compPOL.getLocations())) {
           holder.withPiecesWithoutLocationId(createPiecesWithoutLocationId(compPOL, holder.getExistingPieces()));
         }

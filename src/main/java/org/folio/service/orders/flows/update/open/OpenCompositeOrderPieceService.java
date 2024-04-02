@@ -130,7 +130,7 @@ public class OpenCompositeOrderPieceService {
         }
 
         return pieceStorageService.updatePiece(piece, requestContext)
-          .compose(ok -> {
+          .map(ok -> {
             JsonObject messageToEventBus = new JsonObject();
             messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
             logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);

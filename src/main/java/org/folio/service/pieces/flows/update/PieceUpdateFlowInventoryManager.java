@@ -53,7 +53,7 @@ public class PieceUpdateFlowInventoryManager {
   private Future<Void> nonPackagePoLineUpdateInventory(PieceUpdateHolder holder, RequestContext requestContext) {
     return nonPackageUpdateTitleWithInstance(holder, requestContext)
       .map(holder::withInstanceId)
-      .compose(instanceId -> handleHolding(holder, requestContext))
+      .compose(aHolder -> handleHolding(holder, requestContext))
       .compose(holdingId -> handleItem(holder, requestContext))
       .map(itemId -> {
         Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId);
@@ -68,7 +68,7 @@ public class PieceUpdateFlowInventoryManager {
     return titlesService.getTitleById(holder.getPieceToUpdate().getTitleId(), requestContext)
       .compose(title -> packageUpdateTitleWithInstance(title, requestContext))
       .map(title -> holder.withInstanceId(title.getInstanceId()))
-      .compose(title -> handleHolding(holder, requestContext))
+      .compose(aHolder -> handleHolding(holder, requestContext))
       .compose(holdingId -> handleItem(holder, requestContext))
       .map(itemId -> {
         Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId);
