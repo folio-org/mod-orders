@@ -1004,9 +1004,9 @@
       "handlers": [
         {
           "methods": ["POST"],
-          "pathPattern": "/orders/routing-lists/{id}/process-template",
+          "pathPattern": "/orders/routing-lists/{id}/template",
           "permissionsRequired": [
-            "orders.routing-list.item.post"
+            "orders.routing-list-template.item.get"
           ]
         }
       ]
@@ -1719,9 +1719,9 @@
       "description" : "Holding summary"
     },
     {
-      "permissionName":  "orders.routing-list.item.post",
-      "displayName" : "orders routing-list item post",
-      "description" : "Orders routing-list item post"
+      "permissionName":  "orders.routing-list-template.item.get",
+      "displayName" : "orders routing-list-template item get",
+      "description" : "Orders routing-list-template item get"
     },
     {
       "permissionName": "orders.all",
@@ -1758,7 +1758,7 @@
         "orders.holding-summary.collection.get",
         "orders.acquisition-methods.all",
         "orders.export-history.all",
-        "orders.routing-list.item.post"
+        "orders.routing-list-template.item.get"
       ]
     },
     {
