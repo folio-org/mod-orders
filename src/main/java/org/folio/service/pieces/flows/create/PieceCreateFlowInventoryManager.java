@@ -57,7 +57,10 @@ public class PieceCreateFlowInventoryManager {
       .compose(title -> packageUpdateTitleWithInstance(title, requestContext))
       .compose(title -> handleHolding(compPOL, piece, title.getInstanceId(), requestContext))
       .compose(holdingId -> handleItem(compPOL, createItem, piece, requestContext))
-      .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId))
+      .map(itemId -> {
+        Optional.ofNullable(itemId).ifPresent(piece::withItemId);
+        return null;
+      })
       .mapEmpty();
   }
 

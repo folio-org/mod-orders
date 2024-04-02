@@ -461,7 +461,7 @@ public class PurchaseOrderHelper {
       .map(v -> errors.addAll(validatePoLineLimit(compPO, tenantConfig)))
       .compose(v -> purchaseOrderLineService.validateAndNormalizeISBN(compPO.getCompositePoLines(), requestContext))
       .compose(v -> validateVendor(compPO, requestContext))
-      .onSuccess(errors::addAll)
+      .map(errors::addAll)
       .map(v -> {
         errors.addAll(validateRenewalInfo(compPO));
         return errors;
