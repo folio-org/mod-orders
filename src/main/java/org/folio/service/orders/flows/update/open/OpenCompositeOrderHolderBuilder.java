@@ -43,16 +43,18 @@ public class OpenCompositeOrderHolderBuilder {
                 RequestContext requestContext) {
     OpenOrderPieceHolder holder = new OpenOrderPieceHolder(titleId);
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
-      .onSuccess(holder::withExistingPieces)
-      .onSuccess(aVoid -> {
+      .map(holder::withExistingPieces)
+      .map(aHolder -> {
         holder.withPiecesWithLocationToProcess(buildPiecesByLocationId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
         holder.withPiecesWithHoldingToProcess(buildPiecesByHoldingId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
+        return null;
       })
-      .onSuccess(aVoid -> holder.withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces())))
-      .onSuccess(aVoid -> {
+      .map(aVoid -> holder.withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces())))
+      .map(aHolder -> {
         if (CollectionUtils.isEmpty(compPOL.getLocations())) {
           holder.withPiecesWithoutLocationId(createPiecesWithoutLocationId(compPOL, holder.getExistingPieces()));
         }
+        return null;
       })
       .map(aVoid -> holder);
   }
