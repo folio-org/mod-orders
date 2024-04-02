@@ -39,69 +39,74 @@ public class TemplateProcessingRequest {
     return this;
   }
 
-  public TemplateProcessingRequest withTemplateId(UUID templateId) {
-    this.templateId = templateId;
-    return this;
-  }
-
-  public TemplateProcessingRequest withLang(String lang) {
-    this.lang = lang;
-    return this;
-  }
-
-  public TemplateProcessingRequest withOutputFormat(String outputFormat) {
-    this.outputFormat = outputFormat;
-    return this;
-  }
-
-  public TemplateProcessingRequest withContext(Context context) {
-    this.context = context;
-    return this;
-  }
-
   @Getter
   public static class Context {
     @JsonProperty
-    private List<User> users;
+    private RoutingList routingList;
     @JsonProperty
-    private List<Item> items;
+    private List<User> users;
 
-    public Context withUsers(List<User> users) {
-      this.users = users;
+    public Context setRoutingList(RoutingList routingList) {
+      this.routingList = routingList;
       return this;
     }
 
+    public Context setUsers(List<User> users) {
+      this.users = users;
+      return this;
+    }
+  }
+
+  @Getter
+  public static class RoutingList {
+    @JsonProperty
+    private String name;
+    @JsonProperty
+    private String note;
+
+    public RoutingList setName(String name) {
+      this.name = name;
+      return this;
+    }
+
+    public RoutingList setNote(String note) {
+      this.note = note;
+      return this;
+    }
   }
 
   @Getter
   public static class User {
     @JsonProperty
-    private String name;
-    public User withName(String name) {
-      this.name = name;
-      return this;
-    }
-  }
-
-  @Getter
-  public static class Item {
+    private String lastName;
     @JsonProperty
-    private String name;
+    private String firstName;
+    @JsonProperty
+    private String routingAddress;
 
-    public Item setName(String name) {
-      this.name = name;
+    public User setLastName(String lastName) {
+      this.lastName = lastName;
+      return this;
+    }
+
+    public User setFirstName(String firstName) {
+      this.firstName = firstName;
+      return this;
+    }
+
+    public User setRoutingAddress(String routingAddress) {
+      this.routingAddress = routingAddress;
       return this;
     }
   }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof TemplateProcessingRequest that)) return false;
     return Objects.equals(templateId, that.templateId)
-        && Objects.equals(lang, that.lang)
-        && Objects.equals(outputFormat, that.outputFormat)
-        && Objects.equals(context, that.context);
+      && Objects.equals(lang, that.lang)
+      && Objects.equals(outputFormat, that.outputFormat)
+      && Objects.equals(context, that.context);
   }
 
   @Override

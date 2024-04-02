@@ -52,31 +52,48 @@ public class RoutingListsService {
 
   private TemplateProcessingRequest createTemplateRequest(RoutingList routingList, JsonObject users) {
     var templateRequest = createBaseTemplateRequest();
-    var userListForContext = createUserListForContext(users);
-    var context = new TemplateProcessingRequest.Context().withUsers(userListForContext);
-    templateRequest.withContext(context);
-    log.info("createTemplateRequest:: TemplateProcessingRequest object created : {}", JsonObject.mapFrom(templateRequest).encodePrettily());
+    var usersForContext = createUsersForContext(users);
+    var routingListForContext = createRoutingListForContext(routingList);
+    templateRequest.setContext(new TemplateProcessingRequest.Context()
+        .setRoutingList(routingListForContext)
+        .setUsers(usersForContext));
+    log.info("createTemplateRequest:: TemplateProcessingRequest object created for routing list name: {}",
+      templateRequest.getContext().getRoutingList().getName());
+    // troubleshoot purposes, it will be removed because it contains personal information
+    log.info("createTemplateRequest:: TemplateProcessingRequest object created : {}",
+      JsonObject.mapFrom(templateRequest).encodePrettily());
     return templateRequest;
   }
 
   private TemplateProcessingRequest createBaseTemplateRequest() {
     return new TemplateProcessingRequest()
-      .withTemplateId(TEMPLATE_REQUEST_ID)
-      .withLang("en")
-      .withOutputFormat("text/plain");
+      .setTemplateId(TEMPLATE_REQUEST_ID)
+      .setLang("en")
+      .setOutputFormat("text/plain");
   }
 
-  private List<TemplateProcessingRequest.User> createUserListForContext(JsonObject users) {
+  private List<TemplateProcessingRequest.User> createUsersForContext(JsonObject users) {
     return users.getJsonArray("users").stream()
       .map(JsonObject.class::cast)
-      .map(user -> new TemplateProcessingRequest.User()
-        .withName(user.getJsonObject("personal").getString("firstName"))
-      )
-      .toList();
+      .map(user -> user.getJsonObject("personal"))
+      .map(personalData ->
+        new TemplateProcessingRequest.User()
+          .setFirstName(personalData.getString("firstName"))
+          .setLastName(personalData.getString("lastName"))
+          .setRoutingAddress(personalData.getJsonArray("addresses")
+            .getJsonObject(0).getString("addressLine1"))
+      ).toList();
   }
 
-  private Future<JsonObject> postTemplateRequest(TemplateProcessingRequest templateProcessingRequest, RequestContext requestContext) {
+  private TemplateProcessingRequest.RoutingList createRoutingListForContext(RoutingList routingList) {
+    return new TemplateProcessingRequest.RoutingList()
+      .setName(routingList.getName())
+      .setNote(routingList.getNotes());
+  }
+
+  private Future<JsonObject> postTemplateRequest(TemplateProcessingRequest templateRequest, RequestContext requestContext) {
     var requestEntry = new RequestEntry(TEMPLATE_REQUEST_ENDPOINT);
-    return restClient.postJsonObject(requestEntry, JsonObject.mapFrom(templateProcessingRequest), requestContext);
+    log.info("postTemplateRequest:: Sending template request with routing list name={}", templateRequest.getContext().getRoutingList().getName());
+    return restClient.postJsonObject(requestEntry, JsonObject.mapFrom(templateRequest), requestContext);
   }
 }
