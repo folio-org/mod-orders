@@ -108,8 +108,8 @@ public class OrderRolloverService {
 
   public Future<Void> rollover(LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
     return prepareRollover(ledgerFYRollover, requestContext)
-      .compose(v -> ledgerRolloverProgressService.getRolloversProgressByRolloverId(ledgerFYRollover.getId(), requestContext)
-      .compose(progress -> startRollover(ledgerFYRollover, progress, requestContext)));
+      .compose(v -> ledgerRolloverProgressService.getRolloversProgressByRolloverId(ledgerFYRollover.getId(), requestContext))
+      .compose(progress -> startRollover(ledgerFYRollover, progress, requestContext));
   }
 
 
