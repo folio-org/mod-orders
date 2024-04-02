@@ -1003,7 +1003,7 @@
       "version": "1.0",
       "handlers": [
         {
-          "methods": ["POST"],
+          "methods": ["GET"],
           "pathPattern": "/orders/routing-lists/{id}/template",
           "permissionsRequired": [
             "orders.routing-list-template.item.get"
