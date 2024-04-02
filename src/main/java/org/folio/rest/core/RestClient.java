@@ -242,12 +242,14 @@ public class RestClient {
 
   public String extractRecordId(HttpResponse<Buffer> response) {
     JsonObject body = response.bodyAsJsonObject();
-    String id;
+    String id = "";
     if (body != null && !body.isEmpty() && body.containsKey(ID)) {
       id = body.getString(ID);
     } else {
       String location = response.getHeader(LOCATION);
-      id = location.substring(location.lastIndexOf('/') + 1);
+      if (location != null) {
+        id = location.substring(location.lastIndexOf('/') + 1);
+      }
     }
     return id;
   }

@@ -81,14 +81,14 @@ public class TemplateProcessingRequest {
     @JsonProperty
     private String name;
     @JsonProperty
-    private String note;
+    private String notes;
 
     public String getName() {
       return name;
     }
 
-    public String getNote() {
-      return note;
+    public String getNotes() {
+      return notes;
     }
 
     public RoutingList setName(String name) {
@@ -96,8 +96,8 @@ public class TemplateProcessingRequest {
       return this;
     }
 
-    public RoutingList setNote(String note) {
-      this.note = note;
+    public RoutingList setNotes(String notes) {
+      this.notes = notes;
       return this;
     }
   }

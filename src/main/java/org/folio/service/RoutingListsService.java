@@ -21,6 +21,8 @@ public class RoutingListsService {
 
   private static final Logger log = LogManager.getLogger();
   private static final UUID TEMPLATE_REQUEST_ID = UUID.fromString("9465105a-e8a1-470c-9817-142d33bc4fcd");
+  private static final String TEMPLATE_REQUEST_LANG = "en";
+  private static final String TEMPLATE_REQUEST_OUTPUT = "text/html";
   private static final String ROUTING_LIST_ENDPOINT = resourcesPath(ROUTING_LISTS);
   private static final String ROUTING_LIST_BY_ID_ENDPOINT = ROUTING_LIST_ENDPOINT + "/{id}";
   private static final String TEMPLATE_REQUEST_ENDPOINT = resourcesPath(TEMPLATE_REQUEST);
@@ -68,8 +70,8 @@ public class RoutingListsService {
   private TemplateProcessingRequest createBaseTemplateRequest() {
     return new TemplateProcessingRequest()
       .setTemplateId(TEMPLATE_REQUEST_ID)
-      .setLang("en")
-      .setOutputFormat("text/plain");
+      .setLang(TEMPLATE_REQUEST_LANG)
+      .setOutputFormat(TEMPLATE_REQUEST_OUTPUT);
   }
 
   private List<TemplateProcessingRequest.User> createUsersForContext(JsonObject users) {
@@ -88,7 +90,7 @@ public class RoutingListsService {
   private TemplateProcessingRequest.RoutingList createRoutingListForContext(RoutingList routingList) {
     return new TemplateProcessingRequest.RoutingList()
       .setName(routingList.getName())
-      .setNote(routingList.getNotes());
+      .setNotes(routingList.getNotes());
   }
 
   private Future<JsonObject> postTemplateRequest(TemplateProcessingRequest templateRequest, RequestContext requestContext) {
