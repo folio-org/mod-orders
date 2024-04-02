@@ -49,13 +49,15 @@ import org.springframework.context.annotation.Bean;
 public class RoutingListsApiTest {
 
   private static final Logger logger = LogManager.getLogger();
-  private static final String TEMPLATE_PROCESSING_REQUEST_ENDPOINT = "orders/routing-lists/" + ROUTING_LIST_ID + "/process-template";
+  private static final String TEMPLATE_PROCESSING_REQUEST_ENDPOINT = "orders/routing-lists/" + ROUTING_LIST_ID + "/template";
   private static boolean runningOnOwn;
   @Autowired
   private RoutingListsService routingListsService;
   private RequestContext requestContext;
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
+  private AutoCloseable mockitoMocks;
+
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -69,7 +71,7 @@ public class RoutingListsApiTest {
 
   @BeforeEach
   void beforeEach() {
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     ctxMock = getFirstContextFromVertx(getVertx());
     okapiHeadersMock = new HashMap<>();
@@ -81,7 +83,8 @@ public class RoutingListsApiTest {
   }
 
   @AfterEach
-  void afterEach() {
+  void afterEach() throws Exception {
+    mockitoMocks.close();
     clearServiceInteractions();
   }
 
