@@ -86,13 +86,7 @@
             "orders.item.reopen"
           ],
           "modulePermissions": [
-            "modperms.orders.item.put",
-            "orders-storage.titles.item.get",
-            "orders-storage.configuration.prefixes.collection.get",
-            "orders-storage.configuration.suffixes.collection.get",
-            "finance.funds.item.get",
-            "finance.transactions.collection.get",
-            "finance.transactions.batch"
+            "modperms.orders.item.put"
           ]
         },
         {
@@ -267,6 +261,7 @@
             "organizations-storage.organizations.collection.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put",
+            "invoices.bypass-acquisition-units",
             "orders-storage.order-invoice-relationships.collection.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
@@ -1475,7 +1470,7 @@
     {
       "permissionName": "orders.bypass-acquisition-units",
       "displayName": "Bypass acquisition units checks",
-      "description": "Backend internal permission to bypass acquisition units checks"
+      "description": "Backend internal permission to bypass order acquisition units checks"
     },
     {
       "permissionName": "orders.acquisitions-units-assignments.assign",
@@ -1774,6 +1769,8 @@
         "acquisitions-units-storage.units.collection.get",
         "acquisitions-units-storage.memberships.collection.get",
         "circulation.requests.collection.get",
+        "orders-storage.configuration.prefixes.collection.get",
+        "orders-storage.configuration.suffixes.collection.get",
         "orders-storage.purchase-orders.collection.get",
         "orders-storage.purchase-orders.item.put",
         "orders-storage.purchase-orders.item.get",
@@ -1796,10 +1793,12 @@
         "orders-storage.reporting-codes.item.put",
         "orders-storage.reporting-codes.item.delete",
         "orders-storage.titles.collection.get",
+        "orders-storage.titles.item.get",
         "orders-storage.order-invoice-relationships.collection.get",
         "configuration.entries.collection.get",
         "finance.funds.budget.item.get",
         "finance.funds.collection.get",
+        "finance.funds.item.get",
         "finance.budgets.collection.get",
         "finance.transactions.batch",
         "finance.transactions.collection.get",
@@ -1833,6 +1832,7 @@
         "inventory-storage.identifier-types.collection.get",
         "invoice.invoices.collection.get",
         "invoice.invoice-lines.collection.get",
+        "invoices.bypass-acquisition-units",
         "organizations-storage.organizations.collection.get",
         "organizations-storage.organizations.item.get",
         "isbn-utils.convert-to-13.get"
