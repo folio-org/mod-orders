@@ -126,8 +126,8 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
     configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .compose(tenantConfig -> helper.setTenantDefaultCreateInventoryValues(poLine, tenantConfig))
       .compose(v -> compositePoLineValidationService.validatePoLine(poLine, requestContext))
-      .onSuccess(errors::addAll)
-      .onSuccess(empty -> {
+      .map(errors::addAll)
+      .onSuccess(b -> {
         if (!errors.isEmpty()) {
           PutOrdersOrderLinesByIdResponse response = PutOrdersOrderLinesByIdResponse
             .respond422WithApplicationJson(new Errors().withErrors(errors));
