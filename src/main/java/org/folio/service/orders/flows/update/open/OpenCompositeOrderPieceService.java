@@ -141,13 +141,9 @@ public class OpenCompositeOrderPieceService {
             }
             return null;
           })
-          .onFailure(e -> {
-            logger.error("Error updating piece by id to storage {}", piece.getId(), e);
-          });
+          .onFailure(e -> logger.error("Error updating piece by id to storage {}", piece.getId(), e));
       })
-      .onFailure(e -> {
-        logger.error("Error getting piece by id from storage {}", piece.getId(), e);
-      })
+      .onFailure(e -> logger.error("Error getting piece by id from storage {}", piece.getId(), e))
       .mapEmpty();
   }
 

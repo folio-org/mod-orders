@@ -99,9 +99,7 @@ public class PieceUpdateFlowManager {
         }
         return null;
       })
-      .onFailure(t -> {
-        logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause());
-      })
+      .onFailure(t -> logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause()))
       .mapEmpty();
   }
 
