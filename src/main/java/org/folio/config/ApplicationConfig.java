@@ -111,6 +111,7 @@ import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolve
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
+import org.folio.service.routinglists.RoutingListsStorageService;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -738,4 +739,10 @@ public class ApplicationConfig {
   SharingInstanceService sharingInstanceService(RestClient restClient) {
     return new SharingInstanceService(restClient);
   }
+
+  @Bean
+  RoutingListsStorageService routingListsStorageService(PurchaseOrderLineService purchaseOrderLineService, RestClient restClient) {
+    return new RoutingListsStorageService(purchaseOrderLineService, restClient);
+  }
+
 }
