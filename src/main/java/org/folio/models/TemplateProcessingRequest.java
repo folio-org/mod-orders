@@ -6,9 +6,6 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import lombok.Getter;
-
-@Getter
 public class TemplateProcessingRequest {
   @JsonProperty
   private UUID templateId;
@@ -18,6 +15,22 @@ public class TemplateProcessingRequest {
   private String outputFormat;
   @JsonProperty
   private Context context;
+
+  public UUID getTemplateId() {
+    return templateId;
+  }
+
+  public String getLang() {
+    return lang;
+  }
+
+  public String getOutputFormat() {
+    return outputFormat;
+  }
+
+  public Context getContext() {
+    return context;
+  }
 
   public TemplateProcessingRequest setTemplateId(UUID templateId) {
     this.templateId = templateId;
@@ -39,12 +52,19 @@ public class TemplateProcessingRequest {
     return this;
   }
 
-  @Getter
   public static class Context {
     @JsonProperty
     private RoutingList routingList;
     @JsonProperty
     private List<User> users;
+
+    public RoutingList getRoutingList() {
+      return routingList;
+    }
+
+    public List<User> getUsers() {
+      return users;
+    }
 
     public Context setRoutingList(RoutingList routingList) {
       this.routingList = routingList;
@@ -57,12 +77,19 @@ public class TemplateProcessingRequest {
     }
   }
 
-  @Getter
   public static class RoutingList {
     @JsonProperty
     private String name;
     @JsonProperty
     private String note;
+
+    public String getName() {
+      return name;
+    }
+
+    public String getNote() {
+      return note;
+    }
 
     public RoutingList setName(String name) {
       this.name = name;
@@ -75,7 +102,6 @@ public class TemplateProcessingRequest {
     }
   }
 
-  @Getter
   public static class User {
     @JsonProperty
     private String lastName;
@@ -83,6 +109,18 @@ public class TemplateProcessingRequest {
     private String firstName;
     @JsonProperty
     private String routingAddress;
+
+    public String getLastName() {
+      return lastName;
+    }
+
+    public String getFirstName() {
+      return firstName;
+    }
+
+    public String getRoutingAddress() {
+      return routingAddress;
+    }
 
     public User setLastName(String lastName) {
       this.lastName = lastName;
@@ -99,6 +137,7 @@ public class TemplateProcessingRequest {
       return this;
     }
   }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
