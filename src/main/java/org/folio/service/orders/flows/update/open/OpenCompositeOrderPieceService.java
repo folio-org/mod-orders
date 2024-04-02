@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
@@ -116,48 +115,40 @@ public class OpenCompositeOrderPieceService {
   }
 
   public Future<Void> updatePieceRecord(Piece piece, RequestContext requestContext) {
-    Promise<Void> promise = Promise.promise();
-    purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
+    return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
       .compose(order -> titlesService.getTitleById(piece.getTitleId(), requestContext)
         .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)))
       .compose(v -> inventoryManager.updateItemWithPieceFields(piece, requestContext))
-      .onSuccess(vVoid ->
-        pieceStorageService.getPieceById(piece.getId(), requestContext).onSuccess(pieceStorage -> {
-            Piece.ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
-            Piece.ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
-            boolean isReceivingStatusChanged = receivingStatusStorage.compareTo(receivingStatusUpdate) != 0;
+      .compose(vVoid -> pieceStorageService.getPieceById(piece.getId(), requestContext))
+      .compose(pieceStorage -> {
+        Piece.ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
+        Piece.ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
+        boolean isReceivingStatusChanged = receivingStatusStorage.compareTo(receivingStatusUpdate) != 0;
 
-            if(isReceivingStatusChanged) {
-              piece.setStatusUpdatedDate(new Date());
+        if (isReceivingStatusChanged) {
+          piece.setStatusUpdatedDate(new Date());
+        }
+
+        return pieceStorageService.updatePiece(piece, requestContext)
+          .compose(ok -> {
+            JsonObject messageToEventBus = new JsonObject();
+            messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
+            logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
+            logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
+
+            if (isReceivingStatusChanged) {
+              receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, messageToEventBus, requestContext);
             }
-
-            pieceStorageService.updatePiece(piece, requestContext)
-              .onSuccess(ok -> {
-                promise.complete();
-                JsonObject messageToEventBus = new JsonObject();
-                messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
-                logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
-                logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
-
-                if (isReceivingStatusChanged) {
-                  receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, messageToEventBus, requestContext);
-                }
-              })
-              .onFailure(e -> {
-                logger.error("Error updating piece by id to storage {}", piece.getId(), e);
-                promise.fail(e);
-              });
+            return null;
           })
           .onFailure(e -> {
-            logger.error("Error getting piece by id from storage {}", piece.getId(), e);
-            promise.fail(e);
-          })
-      )
-      .onFailure(t -> {
-        logger.error("User to update piece with id={}", piece.getId(), t.getCause());
-         promise.fail(t);
-      });
-    return promise.future();
+            logger.error("Error updating piece by id to storage {}", piece.getId(), e);
+          });
+      })
+      .onFailure(e -> {
+        logger.error("Error getting piece by id from storage {}", piece.getId(), e);
+      })
+      .mapEmpty();
   }
 
   /**
