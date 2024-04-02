@@ -39,8 +39,8 @@ public class RoutingListsAPI extends BaseApi implements OrdersRoutingLists {
   }
 
   @Override
-  public void postOrdersRoutingListsProcessTemplateById(String id, Map<String, String> okapiHeaders,
-                                                        Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOrdersRoutingListsTemplateById(String id, Map<String, String> okapiHeaders,
+                                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     routingListsService.processTemplateRequest(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(jsonObject -> asyncResultHandler.handle(succeededFuture(this.buildOkResponse(jsonObject))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));

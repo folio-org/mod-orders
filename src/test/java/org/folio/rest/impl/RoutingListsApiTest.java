@@ -3,7 +3,7 @@ package org.folio.rest.impl;
 import static io.vertx.core.Future.succeededFuture;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
-import static org.folio.RestTestUtils.verifyPostResponse;
+import static org.folio.RestTestUtils.verifyGet;
 import static org.folio.TestConfig.X_OKAPI_URL;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
@@ -98,8 +98,8 @@ public class RoutingListsApiTest {
 
     doReturn(succeededFuture(new JsonObject())).when(routingListsService).processTemplateRequest(eq(ROUTING_LIST_ID), any(RequestContext.class));
 
-    verifyPostResponse(TEMPLATE_PROCESSING_REQUEST_ENDPOINT, "",
-      prepareHeaders(X_OKAPI_URL, EMPTY_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 200);
+    verifyGet(TEMPLATE_PROCESSING_REQUEST_ENDPOINT, prepareHeaders(X_OKAPI_URL, EMPTY_CONFIG_X_OKAPI_TENANT),
+      APPLICATION_JSON, 200);
 
     verify(routingListsService, times(1)).processTemplateRequest(eq(ROUTING_LIST_ID), any(RequestContext.class));
   }

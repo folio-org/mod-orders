@@ -35,10 +35,13 @@ resourceTypes:
       searchable: {description: "with valid searchable fields: for example routing list", example: "[\"routing_list\", \"ROUTING_LIST\", \"=\"]"},
       pageable
     ]
-  /{id}/process-template:
+  post:
+    description: Create routing lists
+
+  /{id}/template:
     uriParameters:
       id:
         description: The UUID of a Title
         type: UUID
-    post:
+    get:
       description: Execute mod-template-engine to process templates with replaced token placeholders [update]
