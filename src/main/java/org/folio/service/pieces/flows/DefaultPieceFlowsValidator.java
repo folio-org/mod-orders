@@ -28,13 +28,15 @@ public class DefaultPieceFlowsValidator {
   private static final Logger logger = LogManager.getLogger(DefaultPieceFlowsValidator.class);
 
   public void isPieceRequestValid(Piece pieceToCreate, CompositePoLine originPoLine, boolean isCreateItem) {
-    List<Error> combinedErrors = new ArrayList<>(validateDisplayOnHoldingsConsistency(pieceToCreate));
+    List<Error> combinedErrors = new ArrayList<>();
     List<Error> isItemCreateValidError = validateItemCreateFlag(pieceToCreate, originPoLine, isCreateItem);
     combinedErrors.addAll(isItemCreateValidError);
     List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     combinedErrors.addAll(pieceLocationErrors);
     List<Error> pieceFormatErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceFormat(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     combinedErrors.addAll(pieceFormatErrors);
+    List<Error> displayOnHoldingsErrors = validateDisplayOnHoldingsConsistency(pieceToCreate);
+    combinedErrors.addAll(displayOnHoldingsErrors);
     if (CollectionUtils.isNotEmpty(combinedErrors)) {
       Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
       logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());

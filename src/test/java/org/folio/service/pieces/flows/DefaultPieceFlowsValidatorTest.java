@@ -100,11 +100,10 @@ public class DefaultPieceFlowsValidatorTest {
   }
 
   @ParameterizedTest
-  @CsvSource(value = {"valid:true:true",
-                      "valid:true:false",
-                      "valid:false:false",
-                      "invalid:false:true"}, delimiter = ':')
-  void createPieceWithDifferentDisplayFlagsCombinations(String testCase, Boolean displayOnHoldings, Boolean displayToPublic) {
+  @CsvSource(value = {"true:true",
+                      "true:false",
+                      "false:false"}, delimiter = ':')
+  void createPieceWithValidDisplayFlagsCombinations(Boolean displayOnHoldings, Boolean displayToPublic) {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -119,15 +118,30 @@ public class DefaultPieceFlowsValidatorTest {
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
 
-    if ("valid".equals(testCase)) {
+    defaultPieceFlowsValidator.isPieceRequestValid(piece, originPoLine, true);
+  }
+
+  @Test
+  void createPieceWithInvalidDisplayFlagsCombination() {
+    String orderId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    Piece piece = new Piece().withPoLineId(lineId).withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC)
+      .withDisplayOnHolding(false)
+      .withDisplayToPublic(true);
+    Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost = new Cost().withQuantityElectronic(1);
+    Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
+    CompositePoLine originPoLine = new CompositePoLine().withIsPackage(true).withPurchaseOrderId(orderId)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
+      .withEresource(eresource)
+      .withLocations(List.of(loc)).withCost(cost);
+
+    HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
       defaultPieceFlowsValidator.isPieceRequestValid(piece, originPoLine, true);
-    } else {
-      HttpException exception = Assertions.assertThrows(HttpException.class, () -> {
-        defaultPieceFlowsValidator.isPieceRequestValid(piece, originPoLine, true);
-      });
-      boolean isErrorPresent = exception.getErrors().getErrors().stream()
-        .anyMatch(error -> error.getCode().equals(ErrorCodes.PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT.getCode()));
-      assertTrue(isErrorPresent);
-    }
+    });
+    boolean isErrorPresent = exception.getErrors().getErrors().stream()
+      .anyMatch(error -> error.getCode().equals(ErrorCodes.PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT.getCode()));
+    assertTrue(isErrorPresent);
   }
 }
