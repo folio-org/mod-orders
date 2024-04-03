@@ -59,7 +59,7 @@ public class DefaultPieceFlowsValidator {
   }
 
   public static List<Error> isDisplayOnHoldingsNotConsistent(Piece piece) {
-    if (!piece.getDisplayOnHolding() && piece.getDisplayToPublic()) {
+    if (Boolean.FALSE.equals(piece.getDisplayOnHolding()) && Boolean.TRUE.equals(piece.getDisplayToPublic())) {
       ErrorCodes error = PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT;
       return List.of(new Error()
         .withCode(error.getCode())
