@@ -1,6 +1,7 @@
 package org.folio.service.pieces.flows;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,6 +13,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.RestConstants;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -27,7 +29,7 @@ public class DefaultPieceFlowsValidator {
   private static final Logger logger = LogManager.getLogger(DefaultPieceFlowsValidator.class);
 
   public void isPieceRequestValid(Piece pieceToCreate, CompositePoLine originPoLine, boolean isCreateItem) {
-    List<Error> combinedErrors = new ArrayList<>();
+    List<Error> combinedErrors = new ArrayList<>(isDisplayOnHoldingsNotConsistent(pieceToCreate));
     List<Error> isItemCreateValidError = validateItemCreateFlag(pieceToCreate, originPoLine, isCreateItem);
     combinedErrors.addAll(isItemCreateValidError);
     List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
@@ -54,6 +56,16 @@ public class DefaultPieceFlowsValidator {
     return (pieceFormat == Piece.Format.ELECTRONIC && PoLineCommonUtil.isHoldingUpdateRequiredForEresource(originPoLine)) ||
               ((pieceFormat == Piece.Format.PHYSICAL || pieceFormat == Piece.Format.OTHER)
                         && PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(originPoLine));
+  }
+
+  public static List<Error> isDisplayOnHoldingsNotConsistent(Piece piece) {
+    if (!piece.getDisplayOnHolding() && piece.getDisplayToPublic()) {
+      ErrorCodes error = PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT;
+      return List.of(new Error()
+        .withCode(error.getCode())
+        .withMessage(error.getDescription()));
+    }
+    return Collections.emptyList();
   }
 
   public static boolean isCreateItemForPiecePossible(Piece pieceToCreate, CompositePoLine originPoLine) {
