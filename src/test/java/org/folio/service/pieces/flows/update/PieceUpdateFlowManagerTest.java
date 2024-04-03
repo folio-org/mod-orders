@@ -84,6 +84,7 @@ public class PieceUpdateFlowManagerTest {
   @Autowired PieceService pieceService;
   @Autowired BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
   @Autowired PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
+  @Autowired PurchaseOrderLineService purchaseOrderLineService;
 
   private final Context ctx = getFirstContextFromVertx(getVertx());
   @Mock
@@ -119,8 +120,8 @@ public class PieceUpdateFlowManagerTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    Mockito.reset(pieceStorageService, pieceService, protectionService,
-                  pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder);
+    Mockito.reset(pieceStorageService, pieceService, protectionService, pieceUpdateFlowPoLineService,
+      pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder, purchaseOrderLineService);
   }
 
   @Test
@@ -173,6 +174,8 @@ public class PieceUpdateFlowManagerTest {
     doReturn(succeededFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderLineService).saveOrderLine(any(CompositePoLine.class), eq(requestContext));
 
     //When
     pieceUpdateFlowManager.updatePiece(pieceToUpdate, true, true, requestContext).result();
@@ -410,8 +413,8 @@ public class PieceUpdateFlowManagerTest {
       return mock(InventoryCache.class);
     }
 
-    @Bean PurchaseOrderLineService defaultPurchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache) {
-      return spy(new PurchaseOrderLineService(restClient, inventoryCache));
+    @Bean PurchaseOrderLineService purchaseOrderLineService() {
+      return mock(PurchaseOrderLineService.class);
     }
 
     @Bean
