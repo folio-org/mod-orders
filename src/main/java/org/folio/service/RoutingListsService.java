@@ -64,9 +64,6 @@ public class RoutingListsService {
         .withUsers(usersForContext));
     log.info("createTemplateRequest:: TemplateProcessingRequest object created for routing list name: {}",
       templateRequest.getContext().getRoutingList().getName());
-    // troubleshoot purposes, it will be removed because it contains personal information
-    log.info("createTemplateRequest:: TemplateProcessingRequest object created : {}",
-      JsonObject.mapFrom(templateRequest).encodePrettily());
     return templateRequest;
   }
 
