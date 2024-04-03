@@ -70,19 +70,22 @@ public class PieceDeleteFlowManager {
   private Future<Void> isDeletePieceRequestValid(PieceDeletionHolder holder, RequestContext requestContext) {
     List<Error> combinedErrors = new ArrayList<>();
     if (holder.getPieceToDelete().getItemId() != null) {
-      return inventoryManager.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext).onSuccess(numOfRequests -> {
-        if (numOfRequests != null && numOfRequests > 0) {
-          combinedErrors.add(ErrorCodes.REQUEST_FOUND.toError());
-        }
-      }).map(numOfRequests -> {
-        if (CollectionUtils.isNotEmpty(combinedErrors)) {
-          Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
-          logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
-          throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
-        }
-        return null;
-      })
-        .mapEmpty();
+      return inventoryManager.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext)
+        .map(numOfRequests -> {
+          if (numOfRequests != null && numOfRequests > 0) {
+            combinedErrors.add(ErrorCodes.REQUEST_FOUND.toError());
+          }
+          return null;
+        })
+        .map(v -> {
+          if (CollectionUtils.isNotEmpty(combinedErrors)) {
+            Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
+            logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
+            throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
+          }
+          return null;
+        })
+      .mapEmpty();
     }
     return Future.succeededFuture();
   }

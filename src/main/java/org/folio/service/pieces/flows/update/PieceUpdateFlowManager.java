@@ -29,7 +29,6 @@ import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 public class PieceUpdateFlowManager {
@@ -68,9 +67,8 @@ public class PieceUpdateFlowManager {
       .withCreateItem(createItem)
       .withDeleteHolding(deleteHolding);
 
-    Promise<Void> promise = Promise.promise();
-    pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
-      .onSuccess(holder::withPieceFromStorage)
+    return pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
+      .map(holder::withPieceFromStorage)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .map(v -> {
@@ -101,12 +99,8 @@ public class PieceUpdateFlowManager {
         }
         return null;
       })
-      .onSuccess(v -> promise.complete())
-      .onFailure(t -> {
-        logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause());
-        promise.fail(t);
-      });
-    return promise.future();
+      .onFailure(t -> logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause()))
+      .mapEmpty();
   }
 
   protected Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
