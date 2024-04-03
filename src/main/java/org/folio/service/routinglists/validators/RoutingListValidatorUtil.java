@@ -2,6 +2,7 @@ package org.folio.service.routinglists.validators;
 
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.RoutingListCollection;
 
@@ -28,7 +29,11 @@ public class RoutingListValidatorUtil {
   }
 
   private static boolean isRoutingListsLimitReached(RoutingListCollection rListExisting, PoLine poLine) {
-    return poLine.getPhysical().getVolumes().size() >= rListExisting.getTotalRecords();
+    return getQuantityPhysicalTotal(poLine) <= rListExisting.getTotalRecords();
+  }
+
+  private static int getQuantityPhysicalTotal(PoLine poLine) {
+    return poLine.getLocations().stream().mapToInt(Location::getQuantityPhysical).sum();
   }
 
 }

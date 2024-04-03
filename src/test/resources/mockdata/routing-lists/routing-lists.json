@@ -1,0 +1,17 @@
+{
+  "routingLists":
+  [
+    {
+      "id": "c0d13648-347b-4ac9-8c2f-5bc47248b87e",
+      "_version": 1,
+      "name": "List name",
+      "notes": "Some note",
+      "userIds": [
+        "d926d900-e27d-46d6-bba8-31e9d5c2cf44",
+        "077274ad-6b4f-4c28-9779-6d381e7a1ca1"
+      ],
+      "poLineId": "0009662b-8b80-4001-b704-ca10971f222d"
+    }
+  ],
+  "totalRecords": 1
+}

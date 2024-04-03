@@ -44,6 +44,7 @@ public class RoutingListsStorageService {
   }
 
   public Future<Void> updateRoutingList(RoutingList routingList, RequestContext requestContext) {
+    validateRoutingList(routingList, requestContext);
     RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_STORAGE_BY_ID_ENDPOINT).withId(routingList.getId());
     return restClient.put(requestEntry, requestContext, requestContext);
   }
@@ -54,15 +55,7 @@ public class RoutingListsStorageService {
   }
 
   public Future<RoutingList> createRoutingList(RoutingList routingList, RequestContext requestContext) {
-    RoutingListCollection routingLists = getRoutingListsByPoLineId(routingList.getPoLineId(), requestContext).result();
-    PoLine poLine = poLineService.getOrderLineById(routingList.getPoLineId(), requestContext).result();
-    List<Error> combinedErrors = RoutingListValidatorUtil.validateRoutingList(routingLists, poLine);
-    if (CollectionUtils.isNotEmpty(combinedErrors)) {
-      Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
-      logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
-      throw new HttpException(RestConstants.BAD_REQUEST, errors);
-    }
-
+    validateRoutingList(routingList, requestContext);
     RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_STORAGE_ENDPOINT);
     return restClient.post(requestEntry, routingList, RoutingList.class, requestContext);
   }
@@ -78,6 +71,17 @@ public class RoutingListsStorageService {
   private Future<RoutingListCollection> getRoutingListsByPoLineId(String poLineId, RequestContext requestContext) {
     String query = String.format(ROUTING_LIST_BY_POL_ID, poLineId);
     return getRoutingLists(Integer.MAX_VALUE, 0, query, requestContext);
+  }
+
+  private void validateRoutingList(RoutingList routingList, RequestContext requestContext) {
+    RoutingListCollection routingLists = getRoutingListsByPoLineId(routingList.getPoLineId(), requestContext).result();
+    PoLine poLine = poLineService.getOrderLineById(routingList.getPoLineId(), requestContext).result();
+    List<Error> combinedErrors = RoutingListValidatorUtil.validateRoutingList(routingLists, poLine);
+    if (CollectionUtils.isNotEmpty(combinedErrors)) {
+      Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
+      logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
+      throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
+    }
   }
 
 }

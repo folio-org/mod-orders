@@ -175,6 +175,22 @@ public final class TestUtils {
       .withPurchaseOrderId(orderId);
   }
 
+  public static PoLine getMinimalContentPoLine() {
+    return getMinimalContentPoLine(MIN_PO_ID);
+  }
+
+  public static PoLine getMinimalContentPoLine(String orderId) {
+    return new PoLine().withSource(PoLine.Source.EDI)
+      .withId(MIN_PO_LINE_ID)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withAcquisitionMethod(PURCHASE_METHOD)
+      .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
+      .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
+      .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1).withQuantity(1)))
+      .withTitleOrPackage("Title")
+      .withPurchaseOrderId(orderId);
+  }
+
   public static Title getMinimalContentTitle() {
     return new Title().withTitle("Test title").withId(SAMPLE_TITLE_ID);
   }
