@@ -256,4 +256,13 @@ public final class TestUtils {
         poline.mapTo(PoLine.class);
       });
   }
+
+  public static List<Location> getLocationPhysicalCopies(int n) {
+    return List.of(new Location()
+      .withLocationId(UUID.randomUUID().toString())
+      .withQuantityElectronic(0)
+      .withQuantityPhysical(n)
+      .withQuantity(n));
+  }
+
 }

@@ -17,17 +17,9 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.runner.RunWith;
-import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -45,6 +37,7 @@ import static org.folio.TestConstants.ID_BAD_FORMAT;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestConstants.X_OKAPI_USER_ID_WITH_ACQ_UNITS;
+import static org.folio.TestUtils.getLocationPhysicalCopies;
 import static org.folio.TestUtils.getMinimalContentPoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
@@ -55,9 +48,6 @@ import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 
 public class RoutingListsApiTest {
   private static final Logger logger = LogManager.getLogger();
@@ -99,7 +89,7 @@ public class RoutingListsApiTest {
     PoLine poLine = getMinimalContentPoLine()
       .withId(PO_LINE_UUID)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withLocations(getLocation(1));
+      .withLocations(getLocationPhysicalCopies(1));
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     RoutingList rListRq = routingListJsonReqData.mapTo(RoutingList.class)
@@ -136,7 +126,7 @@ public class RoutingListsApiTest {
     PoLine poLine = getMinimalContentPoLine()
       .withId(PO_LINE_UUID)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withLocations(getLocation(0));
+      .withLocations(getLocationPhysicalCopies(0));
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     RoutingList rListRq = routingListJsonReqData.mapTo(RoutingList.class)
@@ -216,14 +206,6 @@ public class RoutingListsApiTest {
   void deleteNotExistentRoutingListTest() {
     logger.info("=== Test delete Routing List by id ===");
     verifyDeleteResponse(String.format(ROUTING_LISTS_ID_PATH, ID_DOES_NOT_EXIST), APPLICATION_JSON, 404);
-  }
-
-  private List<Location> getLocation(int n) {
-    return List.of(new Location()
-      .withLocationId(UUID.randomUUID().toString())
-      .withQuantityElectronic(0)
-      .withQuantityPhysical(n)
-      .withQuantity(n));
   }
 
 }
