@@ -9,8 +9,6 @@ import org.folio.rest.jaxrs.model.RoutingListCollection;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.stream.Collectors.toList;
-
 public class RoutingListValidatorUtil {
 
   public static List<Error> validateRoutingList(RoutingListCollection rListExisting, PoLine poLine) {
@@ -20,7 +18,7 @@ public class RoutingListValidatorUtil {
     } else if (isRoutingListsLimitReached(rListExisting, poLine)) {
       errors.add(ErrorCodes.ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE);
     }
-    return errors.stream().map(ErrorCodes::toError).collect(toList());
+    return errors.stream().map(ErrorCodes::toError).toList();
   }
 
   private static boolean isPoLineFormatValid(PoLine poLine) {

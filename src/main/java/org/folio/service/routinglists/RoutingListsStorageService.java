@@ -79,7 +79,7 @@ public class RoutingListsStorageService {
     List<Error> combinedErrors = RoutingListValidatorUtil.validateRoutingList(routingLists, poLine);
     if (CollectionUtils.isNotEmpty(combinedErrors)) {
       Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
-      logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
+      logger.error("Validation error: {}", JsonObject.mapFrom(errors).encodePrettily());
       throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
     }
   }

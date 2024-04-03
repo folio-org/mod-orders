@@ -1,4 +1,4 @@
-package org.folio.service.routinglists;
+package org.folio.service.routinglists.validators;
 
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoLine;
