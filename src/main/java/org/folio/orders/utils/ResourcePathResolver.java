@@ -30,7 +30,6 @@ public class ResourcePathResolver {
   public static final String TITLES = "titles";
   public static final String ROUTING_LISTS = "routingLists";
   public static final String TEMPLATE_REQUEST = "templateRequest";
-  public static final String PROCESS_TEMPLATE = "processTemplate";
   public static final String USERS = "users";
   public static final String FUNDS = "finance.funds";
   public static final String BUDGETS = "finance.budgets";
@@ -72,7 +71,6 @@ public class ResourcePathResolver {
     apis.put(ORDER_TEMPLATES, "/orders-storage/order-templates");
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
     apis.put(TEMPLATE_REQUEST, "/template-request");
-    apis.put(PROCESS_TEMPLATE, "/process-template");
     apis.put(FUNDS, "/finance/funds");
     apis.put(BUDGETS, "/finance/budgets");
     apis.put(LEDGERS, "/finance-storage/ledgers");

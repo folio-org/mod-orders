@@ -30,7 +30,6 @@ public class UserService {
   public Future<UserCollection> getUsersByIds(List<String> userIds, RequestContext requestContext) {
     var requestEntry = new RequestEntry(USERS_ENDPOINT).withOffset(0).withLimit(Integer.MAX_VALUE)
       .withQuery(convertIdsToCqlQuery(userIds, "id"));
-
     return restClient.get(requestEntry, UserCollection.class, requestContext);
   }
 }
