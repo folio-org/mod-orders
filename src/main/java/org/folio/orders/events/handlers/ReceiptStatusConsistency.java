@@ -67,7 +67,7 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
 
     // 1. Get all pieces for poLineId
     getPieces(query, requestContext)
-      .onSuccess(listOfPieces ->
+      .compose(listOfPieces ->
         // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
         purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
           .map(poLine -> {
