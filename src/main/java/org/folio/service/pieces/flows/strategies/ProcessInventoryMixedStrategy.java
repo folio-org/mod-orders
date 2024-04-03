@@ -2,6 +2,8 @@ package org.folio.service.pieces.flows.strategies;
 
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
+import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
 
@@ -78,31 +80,39 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
   private void updateLocations(CompositePoLine compPOL) {
     List<Location> locations = new ArrayList<>();
     for (Location location : compPOL.getLocations()) {
-      if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
-        Location physicalLocation = new Location();
-        if (PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(compPOL)) {
-          physicalLocation.setHoldingId(location.getHoldingId());
+      boolean physical = location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0;
+      boolean electronic = location.getQuantityElectronic() != null && location.getQuantityElectronic() > 0;
+      boolean physicalUpdate = physical && isHoldingUpdateRequiredForPhysical(compPOL);
+      boolean electronicUpdate = electronic && isHoldingUpdateRequiredForEresource(compPOL);
+      Location newLocation = JsonObject.mapFrom(location).mapTo(Location.class);
+      // Split locations only if one type is getting a holdings update but not the other
+      if (electronicUpdate && physical && !physicalUpdate) {
+        Location newElectronicLocation = JsonObject.mapFrom(location).mapTo(Location.class);
+        newElectronicLocation.setQuantityPhysical(null);
+        newElectronicLocation.setLocationId(null);
+        newElectronicLocation.setQuantity(location.getQuantityElectronic());
+        locations.add(newElectronicLocation);
+        newLocation.setQuantityElectronic(null);
+        newLocation.setHoldingId(null);
+        newLocation.setQuantity(location.getQuantityPhysical());
+      } else if (physicalUpdate && electronic && !electronicUpdate) {
+        Location newPhysicalLocation = JsonObject.mapFrom(location).mapTo(Location.class);
+        newPhysicalLocation.setQuantityElectronic(null);
+        newPhysicalLocation.setLocationId(null);
+        newPhysicalLocation.setQuantity(location.getQuantityPhysical());
+        locations.add(newPhysicalLocation);
+        newLocation.setQuantityPhysical(null);
+        newLocation.setHoldingId(null);
+        newLocation.setQuantity(location.getQuantityElectronic());
+      } else {
+        if (physicalUpdate || electronicUpdate) {
+          newLocation.setLocationId(null);
         } else {
-          physicalLocation.setLocationId(location.getLocationId());
+          newLocation.setHoldingId(null);
         }
-        physicalLocation.setQuantity(location.getQuantityPhysical());
-        physicalLocation.setQuantityPhysical(location.getQuantityPhysical());
-        locations.add(physicalLocation);
       }
-
-      if (location.getQuantityElectronic() != null && location.getQuantityElectronic() > 0) {
-        Location electronicLocation = new Location();
-        if (PoLineCommonUtil.isHoldingUpdateRequiredForEresource(compPOL)) {
-          electronicLocation.setHoldingId(location.getHoldingId());
-        } else {
-          electronicLocation.setLocationId(location.getLocationId());
-        }
-        electronicLocation.setQuantity(location.getQuantityElectronic());
-        electronicLocation.setQuantityElectronic(location.getQuantityElectronic());
-        locations.add(electronicLocation);
-      }
+      locations.add(newLocation);
     }
-    compPOL.setLocations(null);
     compPOL.setLocations(locations);
   }
 }
