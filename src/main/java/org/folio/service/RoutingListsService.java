@@ -107,6 +107,6 @@ public class RoutingListsService {
   private Future<JsonObject> postTemplateRequest(TemplateProcessingRequest templateRequest, RequestContext requestContext) {
     var requestEntry = new RequestEntry(TEMPLATE_REQUEST_ENDPOINT);
     log.info("postTemplateRequest:: Sending template request with routing list name={}", templateRequest.getContext().getRoutingList().getName());
-    return restClient.post(requestEntry, JsonObject.mapFrom(templateRequest), JsonObject.class, requestContext);
+    return restClient.postJsonObject(requestEntry, JsonObject.mapFrom(templateRequest), requestContext);
   }
 }
