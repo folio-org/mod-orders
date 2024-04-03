@@ -28,9 +28,7 @@ public class ResourcePathResolver {
   public static final String PAYMENT_STATUS = "paymentStatus";
   public static final String ORDER_TEMPLATES = "orderTemplates";
   public static final String TITLES = "titles";
-  public static final String ROUTING_LISTS = "routingLists";
   public static final String TEMPLATE_REQUEST = "templateRequest";
-  public static final String USERS = "users";
   public static final String FUNDS = "finance.funds";
   public static final String BUDGETS = "finance.budgets";
   public static final String LEDGERS = "finance.ledgers";
@@ -50,6 +48,9 @@ public class ResourcePathResolver {
   public static final String ORDER_INVOICE_RELATIONSHIP = "order-invoice-relationship";
   public static final String EXPORT_HISTORY = "export-history";
   public static final String TAGS = "tags";
+  public static final String ROUTING_LISTS = "routingLists";
+  public static final String ORDER_SETTINGS = "orderSettings";
+  public static final String USERS = "users";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -69,7 +70,6 @@ public class ResourcePathResolver {
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
     apis.put(ORDER_TEMPLATES, "/orders-storage/order-templates");
-    apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
     apis.put(TEMPLATE_REQUEST, "/template-request");
     apis.put(FUNDS, "/finance/funds");
     apis.put(BUDGETS, "/finance/budgets");
@@ -92,6 +92,8 @@ public class ResourcePathResolver {
     apis.put(EXPORT_HISTORY, "/orders-storage/export-history");
     apis.put(TAGS, "/tags");
     apis.put(USERS, "/users");
+    apis.put(ORDER_SETTINGS, "/order-storage/settings");
+    apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(

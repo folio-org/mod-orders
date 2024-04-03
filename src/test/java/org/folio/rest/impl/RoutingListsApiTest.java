@@ -36,7 +36,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.service.RoutingListsService;
+import org.folio.service.RoutingListService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,7 +52,7 @@ public class RoutingListsApiTest {
   private static final String TEMPLATE_PROCESSING_REQUEST_ENDPOINT = "orders/routing-lists/" + ROUTING_LIST_ID + "/template";
   private static boolean runningOnOwn;
   @Autowired
-  private RoutingListsService routingListsService;
+  private RoutingListService routingListService;
   private RequestContext requestContext;
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
@@ -99,18 +99,18 @@ public class RoutingListsApiTest {
   void testProcessTemplateRequest() {
     logger.info("=== Test Execute template processing request ===");
 
-    doReturn(succeededFuture(new JsonObject())).when(routingListsService).processTemplateRequest(eq(ROUTING_LIST_ID), any(RequestContext.class));
+    doReturn(succeededFuture(new JsonObject())).when(routingListService).processTemplateRequest(eq(ROUTING_LIST_ID), any(RequestContext.class));
 
     verifyGet(TEMPLATE_PROCESSING_REQUEST_ENDPOINT, prepareHeaders(X_OKAPI_URL, EMPTY_CONFIG_X_OKAPI_TENANT),
       APPLICATION_JSON, 200);
 
-    verify(routingListsService, times(1)).processTemplateRequest(eq(ROUTING_LIST_ID), any(RequestContext.class));
+    verify(routingListService, times(1)).processTemplateRequest(eq(ROUTING_LIST_ID), any(RequestContext.class));
   }
 
   static class ContextConfiguration {
     @Bean
-    public RoutingListsService routingListsService() {
-      return mock(RoutingListsService.class);
+    public RoutingListService routingListService() {
+      return mock(RoutingListService.class);
     }
   }
 }

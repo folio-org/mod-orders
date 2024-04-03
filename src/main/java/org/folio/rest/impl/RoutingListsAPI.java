@@ -13,14 +13,14 @@ import org.apache.commons.lang.NotImplementedException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.RoutingList;
 import org.folio.rest.jaxrs.resource.OrdersRoutingLists;
-import org.folio.service.RoutingListsService;
+import org.folio.service.RoutingListService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class RoutingListsAPI extends BaseApi implements OrdersRoutingLists {
 
   @Autowired
-  private RoutingListsService routingListsService;
+  private RoutingListService routingListService;
 
   public RoutingListsAPI() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -41,7 +41,7 @@ public class RoutingListsAPI extends BaseApi implements OrdersRoutingLists {
   @Override
   public void getOrdersRoutingListsTemplateById(String id, Map<String, String> okapiHeaders,
                                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    routingListsService.processTemplateRequest(id, new RequestContext(vertxContext, okapiHeaders))
+    routingListService.processTemplateRequest(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(jsonObject -> asyncResultHandler.handle(succeededFuture(this.buildOkResponse(jsonObject))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }

@@ -22,6 +22,11 @@ public class UserCollection {
     return totalRecords;
   }
 
+  public UserCollection withUsers(List<User> users) {
+    this.users = users;
+    return this;
+  }
+
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class User {
     @JsonProperty

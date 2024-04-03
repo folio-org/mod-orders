@@ -98,7 +98,7 @@ import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManagerTest
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManagerTest;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineServiceTest;
 import org.folio.service.pieces.validators.PieceValidatorUtilTest;
-import org.folio.service.RoutingListsServiceTest;
+import org.folio.service.RoutingListServiceTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -478,6 +478,6 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class RoutingListsServiceTestNested extends RoutingListsServiceTest {
+  class RoutingListServiceTestNested extends RoutingListServiceTest {
   }
 }

@@ -1005,9 +1005,8 @@
         {
           "methods": ["GET"],
           "pathPattern": "/orders/routing-lists/{id}/template",
-          "permissionsRequired": [
-            "orders.routing-list-template.item.get"
-          ]
+          "permissionsRequired": ["orders.routing-list-template.item.get"],
+          "modulePermissions": ["template-request.post"]
         }
       ]
     },
@@ -1211,6 +1210,14 @@
     {
       "id": "user-tenants",
       "version": "1.0"
+    },
+    {
+      "id": "users",
+      "version": "16.0"
+    },
+    {
+      "id": "template-engine",
+      "version": "2.2"
     }
   ],
   "optional": [

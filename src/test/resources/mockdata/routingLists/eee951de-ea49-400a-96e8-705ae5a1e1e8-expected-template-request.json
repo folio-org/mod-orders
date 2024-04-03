@@ -5,7 +5,8 @@
   "context" : {
     "routingList" : {
       "name" : "Mars expedition",
-      "notes" : "Future note"
+      "notes" : "Future note",
+      "userIds": []
     },
     "users" : [ {
       "lastName" : "Denesik",

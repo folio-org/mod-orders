@@ -10,12 +10,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
+import java.util.UUID;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.folio.models.UserCollection;
+import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -30,10 +32,10 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @ExtendWith(VertxExtension.class)
-public class RoutingListsServiceTest {
+public class RoutingListServiceTest {
 
   @InjectMocks
-  RoutingListsService routingListsService;
+  RoutingListService routingListService;
   @Mock
   private RestClient restClient;
   @Mock
@@ -57,11 +59,16 @@ public class RoutingListsServiceTest {
     var routingList = new JsonObject(getMockData(ROUTING_LIST_MOCK_DATA_PATH + ROUTING_LIST_ID + ".json")).mapTo(RoutingList.class);
     var users = new JsonObject(getMockData(USERS_MOCK_DATA_PATH + "user_collection.json")).mapTo(UserCollection.class);
     var expectedTemplateRequest = new JsonObject(getMockData(ROUTING_LIST_MOCK_DATA_PATH + ROUTING_LIST_ID + "-expected-template-request.json"));
-    doReturn(succeededFuture(routingList)).when(restClient).get(any(RequestEntry.class), eq(RoutingList.class), any(RequestContext.class));
-    doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any(RequestContext.class));
+    var setting = new Setting().withId(UUID.randomUUID().toString())
+      .withKey("routing-list")
+      .withValue("93d3d88d-499b-45d0-9bc7-ac73c3a19880");
+
+    doReturn(succeededFuture(routingList)).when(restClient).get(any(RequestEntry.class), eq(RoutingList.class), any());
+    doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any());
+    doReturn(succeededFuture(setting)).when(restClient).get(any(RequestEntry.class), eq(Setting.class), any());
     doReturn(succeededFuture(new JsonObject())).when(restClient).postJsonObject(any(RequestEntry.class), eq(expectedTemplateRequest), any());
 
-    Future<JsonObject> future = routingListsService.processTemplateRequest(ROUTING_LIST_ID, requestContextMock);
+    Future<JsonObject> future = routingListService.processTemplateRequest(ROUTING_LIST_ID, requestContextMock);
 
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {

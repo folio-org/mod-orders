@@ -4,7 +4,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import org.folio.rest.jaxrs.model.RoutingList;
 
 public class TemplateProcessingRequest {
   @JsonProperty
@@ -54,6 +57,7 @@ public class TemplateProcessingRequest {
 
   public static class Context {
     @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private RoutingList routingList;
     @JsonProperty
     private List<User> users;
@@ -73,31 +77,6 @@ public class TemplateProcessingRequest {
 
     public Context withUsers(List<User> users) {
       this.users = users;
-      return this;
-    }
-  }
-
-  public static class RoutingList {
-    @JsonProperty
-    private String name;
-    @JsonProperty
-    private String notes;
-
-    public String getName() {
-      return name;
-    }
-
-    public String getNotes() {
-      return notes;
-    }
-
-    public RoutingList withName(String name) {
-      this.name = name;
-      return this;
-    }
-
-    public RoutingList withNotes(String notes) {
-      this.notes = notes;
       return this;
     }
   }
