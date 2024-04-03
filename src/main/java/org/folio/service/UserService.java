@@ -9,12 +9,13 @@ import java.util.List;
 import java.util.Map;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
+import org.folio.models.UserCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 
 public class UserService {
+
   private static final String USERS_ENDPOINT = resourcesPath(USERS);
   private final RestClient restClient;
 
@@ -26,12 +27,10 @@ public class UserService {
     return okapiHeaders.get(OKAPI_USERID_HEADER);
   }
 
-  public Future<JsonObject> getUsersByIds(List<String> userIds, RequestContext requestContext) {
-    var requestEntry = new RequestEntry(USERS_ENDPOINT)
-      .withOffset(0)
-      .withLimit(Integer.MAX_VALUE)
+  public Future<UserCollection> getUsersByIds(List<String> userIds, RequestContext requestContext) {
+    var requestEntry = new RequestEntry(USERS_ENDPOINT).withOffset(0).withLimit(Integer.MAX_VALUE)
       .withQuery(convertIdsToCqlQuery(userIds, "id"));
 
-    return restClient.getAsJsonObject(requestEntry, requestContext);
+    return restClient.get(requestEntry, UserCollection.class, requestContext);
   }
 }

@@ -4,7 +4,9 @@ import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
 import static org.folio.orders.utils.ResourcePathResolver.TEMPLATE_REQUEST;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import io.vertx.core.Future;
@@ -12,6 +14,7 @@ import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.TemplateProcessingRequest;
+import org.folio.models.UserCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -52,13 +55,13 @@ public class RoutingListsService {
       .map(users -> createTemplateRequest(routingList, users));
   }
 
-  private TemplateProcessingRequest createTemplateRequest(RoutingList routingList, JsonObject users) {
+  private TemplateProcessingRequest createTemplateRequest(RoutingList routingList, UserCollection users) {
     var templateRequest = createBaseTemplateRequest();
     var usersForContext = createUsersForContext(users);
     var routingListForContext = createRoutingListForContext(routingList);
-    templateRequest.setContext(new TemplateProcessingRequest.Context()
-        .setRoutingList(routingListForContext)
-        .setUsers(usersForContext));
+    templateRequest.withContext(new TemplateProcessingRequest.Context()
+        .withRoutingList(routingListForContext)
+        .withUsers(usersForContext));
     log.info("createTemplateRequest:: TemplateProcessingRequest object created for routing list name: {}",
       templateRequest.getContext().getRoutingList().getName());
     // troubleshoot purposes, it will be removed because it contains personal information
@@ -69,33 +72,41 @@ public class RoutingListsService {
 
   private TemplateProcessingRequest createBaseTemplateRequest() {
     return new TemplateProcessingRequest()
-      .setTemplateId(TEMPLATE_REQUEST_ID)
-      .setLang(TEMPLATE_REQUEST_LANG)
-      .setOutputFormat(TEMPLATE_REQUEST_OUTPUT);
+      .withTemplateId(TEMPLATE_REQUEST_ID)
+      .withLang(TEMPLATE_REQUEST_LANG)
+      .withOutputFormat(TEMPLATE_REQUEST_OUTPUT);
   }
 
-  private List<TemplateProcessingRequest.User> createUsersForContext(JsonObject users) {
-    return users.getJsonArray("users").stream()
-      .map(JsonObject.class::cast)
-      .map(user -> user.getJsonObject("personal"))
-      .map(personalData ->
-        new TemplateProcessingRequest.User()
-          .setFirstName(personalData.getString("firstName"))
-          .setLastName(personalData.getString("lastName"))
-          .setRoutingAddress(personalData.getJsonArray("addresses")
-            .getJsonObject(0).getString("addressLine1"))
+  private List<TemplateProcessingRequest.User> createUsersForContext(UserCollection userCollection) {
+    if (userCollection.getUsers().isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    return userCollection.getUsers().stream()
+      .map(UserCollection.User::getPersonal)
+      .filter(Objects::nonNull)
+      .map(personalData -> {
+          var userForContext = new TemplateProcessingRequest.User()
+            .withFirstName(personalData.getFirstName())
+            .withLastName(personalData.getLastName());
+          var addresses = personalData.getAddresses();
+          if (addresses != null && !addresses.isEmpty()){
+            userForContext.withRoutingAddress(addresses.get(0).getAddressLine1());
+          }
+          return userForContext;
+        }
       ).toList();
   }
 
   private TemplateProcessingRequest.RoutingList createRoutingListForContext(RoutingList routingList) {
     return new TemplateProcessingRequest.RoutingList()
-      .setName(routingList.getName())
-      .setNotes(routingList.getNotes());
+      .withName(routingList.getName())
+      .withNotes(routingList.getNotes());
   }
 
   private Future<JsonObject> postTemplateRequest(TemplateProcessingRequest templateRequest, RequestContext requestContext) {
     var requestEntry = new RequestEntry(TEMPLATE_REQUEST_ENDPOINT);
     log.info("postTemplateRequest:: Sending template request with routing list name={}", templateRequest.getContext().getRoutingList().getName());
-    return restClient.postJsonObject(requestEntry, JsonObject.mapFrom(templateRequest), requestContext);
+    return restClient.post(requestEntry, JsonObject.mapFrom(templateRequest), JsonObject.class, requestContext);
   }
 }

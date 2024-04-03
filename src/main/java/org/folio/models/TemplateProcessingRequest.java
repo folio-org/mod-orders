@@ -32,22 +32,22 @@ public class TemplateProcessingRequest {
     return context;
   }
 
-  public TemplateProcessingRequest setTemplateId(UUID templateId) {
+  public TemplateProcessingRequest withTemplateId(UUID templateId) {
     this.templateId = templateId;
     return this;
   }
 
-  public TemplateProcessingRequest setLang(String lang) {
+  public TemplateProcessingRequest withLang(String lang) {
     this.lang = lang;
     return this;
   }
 
-  public TemplateProcessingRequest setOutputFormat(String outputFormat) {
+  public TemplateProcessingRequest withOutputFormat(String outputFormat) {
     this.outputFormat = outputFormat;
     return this;
   }
 
-  public TemplateProcessingRequest setContext(Context context) {
+  public TemplateProcessingRequest withContext(Context context) {
     this.context = context;
     return this;
   }
@@ -66,12 +66,12 @@ public class TemplateProcessingRequest {
       return users;
     }
 
-    public Context setRoutingList(RoutingList routingList) {
+    public Context withRoutingList(RoutingList routingList) {
       this.routingList = routingList;
       return this;
     }
 
-    public Context setUsers(List<User> users) {
+    public Context withUsers(List<User> users) {
       this.users = users;
       return this;
     }
@@ -91,12 +91,12 @@ public class TemplateProcessingRequest {
       return notes;
     }
 
-    public RoutingList setName(String name) {
+    public RoutingList withName(String name) {
       this.name = name;
       return this;
     }
 
-    public RoutingList setNotes(String notes) {
+    public RoutingList withNotes(String notes) {
       this.notes = notes;
       return this;
     }
@@ -122,17 +122,17 @@ public class TemplateProcessingRequest {
       return routingAddress;
     }
 
-    public User setLastName(String lastName) {
+    public User withLastName(String lastName) {
       this.lastName = lastName;
       return this;
     }
 
-    public User setFirstName(String firstName) {
+    public User withFirstName(String firstName) {
       this.firstName = firstName;
       return this;
     }
 
-    public User setRoutingAddress(String routingAddress) {
+    public User withRoutingAddress(String routingAddress) {
       this.routingAddress = routingAddress;
       return this;
     }
