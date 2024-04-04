@@ -7,7 +7,6 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 import io.vertx.core.Future;
@@ -19,7 +18,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.TemplateProcessingRequest;
 import org.folio.models.UserCollection;
-import org.folio.rest.acq.model.Address;
 import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -88,12 +86,12 @@ public class RoutingListService {
     }
     return userCollection.getUsers().stream()
       .map(UserCollection.User::getPersonal)
-      .filter(Objects::nonNull)
+      .filter(ObjectUtils::isNotEmpty)
       .map(personalData -> {
           var userForContext = new TemplateProcessingRequest.User()
             .withFirstName(personalData.getFirstName())
             .withLastName(personalData.getLastName());
-          var addressList = personalData.getAddresses();
+          List<UserCollection.User.Personal.Address> addressList = personalData.getAddresses();
           if (addressList != null && !addressList.isEmpty()) {
             userForContext.withRoutingAddress(getUserAddress(addressList, addressTypeId));
           }
@@ -102,8 +100,12 @@ public class RoutingListService {
       ).toList();
   }
 
-  private String getUserAddress(List<Address> addressList, String addressTypeId) {
-    return addressList.get(0).getAddressLine1();
+  private String getUserAddress(List<UserCollection.User.Personal.Address> addressList, String addressTypeId) {
+    for (UserCollection.User.Personal.Address address : addressList) {
+      if (address.getAddressTypeId().equals(addressTypeId))
+        return address.getAddressLine1();
+    }
+    return "";
   }
 
   private Future<String> getAddressTypeId(RequestContext requestContext) {

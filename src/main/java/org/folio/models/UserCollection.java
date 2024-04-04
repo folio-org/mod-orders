@@ -6,8 +6,6 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import org.folio.rest.acq.model.Address;
-
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class UserCollection {
   @JsonProperty
@@ -48,7 +46,6 @@ public class UserCollection {
       @JsonProperty
       private String lastName;
       @JsonProperty
-      @JsonIgnoreProperties(ignoreUnknown = true)
       private List<Address> addresses;
 
       public String getFirstName() {
@@ -59,6 +56,20 @@ public class UserCollection {
       }
       public List<Address> getAddresses() {
         return addresses;
+      }
+      @JsonIgnoreProperties(ignoreUnknown = true)
+      public static class Address {
+        @JsonProperty
+        private String addressLine1;
+        @JsonProperty
+        private String addressTypeId;
+
+        public String getAddressLine1() {
+          return addressLine1;
+        }
+        public String getAddressTypeId() {
+          return addressTypeId;
+        }
       }
     }
   }

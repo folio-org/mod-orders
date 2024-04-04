@@ -1006,7 +1006,11 @@
           "methods": ["GET"],
           "pathPattern": "/orders/routing-lists/{id}/template",
           "permissionsRequired": ["orders.routing-list-template.item.get"],
-          "modulePermissions": ["template-request.post"]
+          "modulePermissions": [
+            "orders-storage.routing-lists.item.get",
+            "users.collection.get",
+            "template-request.post"
+          ]
         }
       ]
     },
