@@ -62,6 +62,20 @@ public class RoutingListService {
         .map(users -> createTemplateRequest(routingList, users, addressTypId)));
   }
 
+  private Future<String> getAddressTypeId(RequestContext requestContext) {
+    var requestEntry = new RequestEntry(ORDER_SETTINGS_ENDPOINT)
+      .withQuery("key=" + ROUTING_USER_ADDRESS_TYPE_ID);
+    return restClient.get(requestEntry, SettingCollection.class, requestContext)
+      .map(settingCollection -> {
+        var settings = settingCollection.getSettings();
+        if (ObjectUtils.isEmpty(settings) || StringUtils.isBlank(settings.get(0).getValue())) {
+          log.error("getAddressTypeId:: Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
+          throw new ResourceNotFoundException(String.format("Setting is not found with key=%s", ROUTING_USER_ADDRESS_TYPE_ID));
+        }
+        return settings.get(0).getValue();
+      });
+  }
+
   private TemplateProcessingRequest createTemplateRequest(RoutingList routingList, UserCollection users, String addressTypeId) {
     var templateRequest = createBaseTemplateRequest();
     templateRequest.withContext(new TemplateProcessingRequest.Context()
@@ -109,20 +123,6 @@ public class RoutingListService {
     }
     log.warn("getUserAddress:: Required address is not found with addressTypId={}", addressTypeId);
     return "";
-  }
-
-  private Future<String> getAddressTypeId(RequestContext requestContext) {
-    var requestEntry = new RequestEntry(ORDER_SETTINGS_ENDPOINT)
-      .withQuery("key=" + ROUTING_USER_ADDRESS_TYPE_ID);
-    return restClient.get(requestEntry, SettingCollection.class, requestContext)
-      .map(settingCollection -> {
-        var settings = settingCollection.getSettings();
-        if (ObjectUtils.isEmpty(settings) || StringUtils.isBlank(settings.get(0).getValue())) {
-          log.error("getAddressTypeId:: Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
-          throw new ResourceNotFoundException(String.format("Setting is not found with key=%s", ROUTING_USER_ADDRESS_TYPE_ID));
-        }
-        return settings.get(0).getValue();
-      });
   }
 
   private RoutingList fillRoutingListForContext(RoutingList routingList) {
