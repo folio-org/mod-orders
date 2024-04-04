@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -73,9 +74,29 @@ public class RoutingListServiceTest {
 
     Future<JsonObject> future = routingListService.processTemplateRequest(ROUTING_LIST_ID, requestContextMock);
 
-    vertxTestContext.assertComplete(future)
-      .onComplete(result -> {
+    vertxTestContext.assertComplete(future).onComplete(result -> {
         assertTrue(result.succeeded());
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void throwErrorWhenSettingNotFound(VertxTestContext vertxTestContext) throws IOException {
+    var routingList = new JsonObject(getMockData(ROUTING_LIST_MOCK_DATA_PATH + ROUTING_LIST_ID + ".json")).mapTo(RoutingList.class);
+    var users = new JsonObject(getMockData(USERS_MOCK_DATA_PATH + "user_collection.json")).mapTo(UserCollection.class);
+    var expectedTemplateRequest = new JsonObject(getMockData(ROUTING_LIST_MOCK_DATA_PATH + ROUTING_LIST_ID + "-expected-template-request.json"));
+
+    doReturn(succeededFuture(routingList)).when(restClient).get(any(RequestEntry.class), eq(RoutingList.class), any());
+    doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any());
+    doReturn(succeededFuture(new SettingCollection().withSettings(new ArrayList<>())))
+      .when(restClient).get(any(RequestEntry.class), eq(SettingCollection.class), any());
+
+    Future<JsonObject> future = routingListService.processTemplateRequest(ROUTING_LIST_ID, requestContextMock);
+
+    vertxTestContext.assertFailure(future).onComplete(result -> {
+        assertTrue(result.failed());
+        var exception = result.cause().getMessage();
+        assertTrue(exception.contains("Setting is not found with key=ROUTING_USER_ADDRESS_TYPE_ID"));
         vertxTestContext.completeNow();
       });
   }

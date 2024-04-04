@@ -119,7 +119,7 @@ public class RoutingListService {
         var settings = settingCollection.getSettings();
         if (ObjectUtils.isEmpty(settings) || StringUtils.isBlank(settings.get(0).getValue())) {
           log.error("getAddressTypeId:: Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
-          throw new ResourceNotFoundException("Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
+          throw new ResourceNotFoundException(String.format("Setting is not found with key=%s", ROUTING_USER_ADDRESS_TYPE_ID));
         }
         return settings.get(0).getValue();
       });
