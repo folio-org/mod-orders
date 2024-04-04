@@ -92,7 +92,7 @@ public class ResourcePathResolver {
     apis.put(EXPORT_HISTORY, "/orders-storage/export-history");
     apis.put(TAGS, "/tags");
     apis.put(USERS, "/users");
-    apis.put(ORDER_SETTINGS, "/order-storage/settings");
+    apis.put(ORDER_SETTINGS, "/orders-storage/settings");
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
