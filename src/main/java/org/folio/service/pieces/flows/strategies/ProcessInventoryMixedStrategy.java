@@ -80,13 +80,13 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
   private void updateLocations(CompositePoLine compPOL) {
     List<Location> locations = new ArrayList<>();
     for (Location location : compPOL.getLocations()) {
-      boolean physical = location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0;
-      boolean electronic = location.getQuantityElectronic() != null && location.getQuantityElectronic() > 0;
-      boolean physicalUpdate = physical && isHoldingUpdateRequiredForPhysical(compPOL);
-      boolean electronicUpdate = electronic && isHoldingUpdateRequiredForEresource(compPOL);
+      boolean physicalResource = location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0;
+      boolean electronicResource = location.getQuantityElectronic() != null && location.getQuantityElectronic() > 0;
+      boolean physicalHolding = physicalResource && isHoldingUpdateRequiredForPhysical(compPOL);
+      boolean electronicHolding = electronicResource && isHoldingUpdateRequiredForEresource(compPOL);
       Location newLocation = JsonObject.mapFrom(location).mapTo(Location.class);
-      // Split locations only if one type is getting a holdings update but not the other
-      if (electronicUpdate && physical && !physicalUpdate) {
+      // Split locations only if one resource type is getting a holdings update but not the other
+      if (electronicHolding && physicalResource && !physicalHolding) {
         Location newElectronicLocation = JsonObject.mapFrom(location).mapTo(Location.class);
         newElectronicLocation.setQuantityPhysical(null);
         newElectronicLocation.setLocationId(null);
@@ -95,7 +95,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
         newLocation.setQuantityElectronic(null);
         newLocation.setHoldingId(null);
         newLocation.setQuantity(location.getQuantityPhysical());
-      } else if (physicalUpdate && electronic && !electronicUpdate) {
+      } else if (physicalHolding && electronicResource && !electronicHolding) {
         Location newPhysicalLocation = JsonObject.mapFrom(location).mapTo(Location.class);
         newPhysicalLocation.setQuantityElectronic(null);
         newPhysicalLocation.setLocationId(null);
@@ -105,7 +105,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
         newLocation.setHoldingId(null);
         newLocation.setQuantity(location.getQuantityElectronic());
       } else {
-        if (physicalUpdate || electronicUpdate) {
+        if (physicalHolding || electronicHolding) {
           newLocation.setLocationId(null);
         } else {
           newLocation.setHoldingId(null);
