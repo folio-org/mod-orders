@@ -85,7 +85,9 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
       boolean physicalHolding = physicalResource && isHoldingUpdateRequiredForPhysical(compPOL);
       boolean electronicHolding = electronicResource && isHoldingUpdateRequiredForEresource(compPOL);
       Location newLocation = JsonObject.mapFrom(location).mapTo(Location.class);
-      // Split locations only if one resource type is getting a holdings update but not the other
+      // Physical/electronic locations have to be merged when they have the same holdingId or locationId,
+      // but separate otherwise, and they can't have both holdingId and locationId.
+      // This will split locations only if one resource type is getting a holdings update but not the other.
       if (electronicHolding && physicalResource && !physicalHolding) {
         Location newElectronicLocation = JsonObject.mapFrom(location).mapTo(Location.class);
         newElectronicLocation.setQuantityPhysical(null);
