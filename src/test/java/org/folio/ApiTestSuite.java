@@ -33,6 +33,7 @@ import org.folio.rest.impl.PoNumberApiTest;
 import org.folio.rest.impl.PurchaseOrderLinesApiTest;
 import org.folio.rest.impl.PurchaseOrdersApiTest;
 import org.folio.rest.impl.ReceivingHistoryApiTest;
+import org.folio.rest.impl.RoutingListsApiTest;
 import org.folio.rest.impl.TitlesApiTest;
 import org.folio.rest.impl.crud.ConfigurationCrudTest;
 import org.folio.rest.impl.protection.LinesProtectionTest;
@@ -43,6 +44,7 @@ import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.TagServiceTest;
+import org.folio.service.UserServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
@@ -97,6 +99,7 @@ import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManagerTest
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManagerTest;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineServiceTest;
 import org.folio.service.pieces.validators.PieceValidatorUtilTest;
+import org.folio.service.RoutingListServiceTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -179,6 +182,10 @@ public class ApiTestSuite {
 
   @Nested
   class TitlesApiTestNested extends TitlesApiTest {
+  }
+
+  @Nested
+  class RoutingListsApiTestNested extends RoutingListsApiTest {
   }
 
   @Nested
@@ -469,5 +476,13 @@ public class ApiTestSuite {
 
   @Nested
   class TagServiceTestNested extends TagServiceTest {
+  }
+
+  @Nested
+  class RoutingListServiceTestNested extends RoutingListServiceTest {
+  }
+
+  @Nested
+  class UserServiceTestNested extends UserServiceTest {
   }
 }
