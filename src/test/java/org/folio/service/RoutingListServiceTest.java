@@ -84,7 +84,6 @@ public class RoutingListServiceTest {
   void throwErrorWhenSettingNotFound(VertxTestContext vertxTestContext) throws IOException {
     var routingList = new JsonObject(getMockData(ROUTING_LIST_MOCK_DATA_PATH + ROUTING_LIST_ID + ".json")).mapTo(RoutingList.class);
     var users = new JsonObject(getMockData(USERS_MOCK_DATA_PATH + "user_collection.json")).mapTo(UserCollection.class);
-    var expectedTemplateRequest = new JsonObject(getMockData(ROUTING_LIST_MOCK_DATA_PATH + ROUTING_LIST_ID + "-expected-template-request.json"));
 
     doReturn(succeededFuture(routingList)).when(restClient).get(any(RequestEntry.class), eq(RoutingList.class), any());
     doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any());
