@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 import io.vertx.core.Future;
@@ -19,6 +20,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.folio.models.UserCollection;
 import org.folio.rest.acq.model.Setting;
+import org.folio.rest.acq.model.SettingCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -62,10 +64,11 @@ public class RoutingListServiceTest {
     var setting = new Setting().withId(UUID.randomUUID().toString())
       .withKey("routing-list")
       .withValue("1c4b225f-f669-4e9b-afcd-ebc0e273a34e");
+    var settingCollection = new SettingCollection().withSettings(List.of(setting));
 
     doReturn(succeededFuture(routingList)).when(restClient).get(any(RequestEntry.class), eq(RoutingList.class), any());
     doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any());
-    doReturn(succeededFuture(setting)).when(restClient).get(any(RequestEntry.class), eq(Setting.class), any());
+    doReturn(succeededFuture(settingCollection)).when(restClient).get(any(RequestEntry.class), eq(SettingCollection.class), any());
     doReturn(succeededFuture(new JsonObject())).when(restClient).postJsonObject(any(RequestEntry.class), eq(expectedTemplateRequest), any());
 
     Future<JsonObject> future = routingListService.processTemplateRequest(ROUTING_LIST_ID, requestContextMock);

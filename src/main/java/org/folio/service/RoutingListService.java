@@ -18,7 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.TemplateProcessingRequest;
 import org.folio.models.UserCollection;
-import org.folio.rest.acq.model.Setting;
+import org.folio.rest.acq.model.SettingCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -102,21 +102,26 @@ public class RoutingListService {
 
   private String getUserAddress(List<UserCollection.User.Personal.Address> addressList, String addressTypeId) {
     for (UserCollection.User.Personal.Address address : addressList) {
-      if (address.getAddressTypeId().equals(addressTypeId))
+      if (address.getAddressTypeId().equals(addressTypeId)) {
+        log.info("getUserAddress:: Required address with addressTypeId={} is found", addressTypeId);
         return address.getAddressLine1();
+      }
     }
+    log.warn("getUserAddress:: Required address is not found with addressTypId={}", addressTypeId);
     return "";
   }
 
   private Future<String> getAddressTypeId(RequestContext requestContext) {
     var requestEntry = new RequestEntry(ORDER_SETTINGS_ENDPOINT)
       .withQuery("key=" + ROUTING_USER_ADDRESS_TYPE_ID);
-    return restClient.get(requestEntry, Setting.class, requestContext)
-      .map(setting -> {
-        if (ObjectUtils.isEmpty(setting) || StringUtils.isBlank(setting.getValue())) {
-          throw new ResourceNotFoundException("Setting is not found for addressTypeId");
+    return restClient.get(requestEntry, SettingCollection.class, requestContext)
+      .map(settingCollection -> {
+        var settings = settingCollection.getSettings();
+        if (ObjectUtils.isEmpty(settings) || StringUtils.isBlank(settings.get(0).getValue())) {
+          log.error("getAddressTypeId:: Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
+          throw new ResourceNotFoundException("Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
         }
-        return setting.getValue();
+        return settings.get(0).getValue();
       });
   }
 
