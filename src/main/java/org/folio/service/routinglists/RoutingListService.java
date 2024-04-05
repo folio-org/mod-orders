@@ -1,16 +1,8 @@
-package org.folio.service;
-
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
-import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
-import static org.folio.orders.utils.ResourcePathResolver.TEMPLATE_REQUEST;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+package org.folio.service.routinglists;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.common.errors.ResourceNotFoundException;
@@ -18,34 +10,102 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.TemplateProcessingRequest;
 import org.folio.models.UserCollection;
+import org.folio.rest.RestConstants;
 import org.folio.rest.acq.model.SettingCollection;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.RoutingList;
+import org.folio.rest.jaxrs.model.RoutingListCollection;
+import org.folio.service.UserService;
+import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.routinglists.validators.RoutingListValidatorUtil;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
+import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
+import static org.folio.orders.utils.ResourcePathResolver.TEMPLATE_REQUEST;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 public class RoutingListService {
+  private static final Logger logger = LogManager.getLogger(RoutingListService.class);
 
-  private static final Logger log = LogManager.getLogger();
-  private static final UUID TEMPLATE_REQUEST_ID = UUID.fromString("9465105a-e8a1-470c-9817-142d33bc4fcd");
-  private static final String TEMPLATE_REQUEST_LANG = "en";
-  private static final String TEMPLATE_REQUEST_OUTPUT = "text/html";
   private static final String ROUTING_LIST_ENDPOINT = resourcesPath(ROUTING_LISTS);
   private static final String ORDER_SETTINGS_ENDPOINT = resourcesPath(ORDER_SETTINGS);
   private static final String ROUTING_USER_ADDRESS_TYPE_ID = "ROUTING_USER_ADDRESS_TYPE_ID";
   private static final String ROUTING_LIST_BY_ID_ENDPOINT = ROUTING_LIST_ENDPOINT + "/{id}";
+  private static final String ROUTING_LIST_BY_POL_ID = "poLineId==%s";
+
   private static final String TEMPLATE_REQUEST_ENDPOINT = resourcesPath(TEMPLATE_REQUEST);
+  private static final UUID TEMPLATE_REQUEST_ID = UUID.fromString("9465105a-e8a1-470c-9817-142d33bc4fcd");
+  private static final String TEMPLATE_REQUEST_LANG = "en";
+  private static final String TEMPLATE_REQUEST_OUTPUT = "text/html";
 
-  private final RestClient restClient;
+  private final PurchaseOrderLineService poLineService;
   private final UserService userService;
+  private final RestClient restClient;
 
-  public RoutingListService(RestClient restClient, UserService userService) {
+  public RoutingListService(RestClient restClient, PurchaseOrderLineService poLineService, UserService userService) {
     this.restClient = restClient;
+    this.poLineService = poLineService;
     this.userService = userService;
   }
 
+  public Future<RoutingList> getRoutingList(String rListId, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_BY_ID_ENDPOINT).withId(rListId);
+    return restClient.get(requestEntry, RoutingList.class, requestContext);
+  }
+
+  public Future<Void> updateRoutingList(RoutingList routingList, RequestContext requestContext) {
+    validateRoutingList(routingList, requestContext);
+    RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_BY_ID_ENDPOINT).withId(routingList.getId());
+    return restClient.put(requestEntry, requestContext, requestContext);
+  }
+
+  public Future<Void> deleteRoutingList(String rListId, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_BY_ID_ENDPOINT).withId(rListId);
+    return restClient.delete(requestEntry, requestContext);
+  }
+
+  public Future<RoutingList> createRoutingList(RoutingList routingList, RequestContext requestContext) {
+    validateRoutingList(routingList, requestContext);
+    RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_ENDPOINT);
+    return restClient.post(requestEntry, routingList, RoutingList.class, requestContext);
+  }
+
+  public Future<RoutingListCollection> getRoutingLists(int limit, int offset, String query, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_ENDPOINT)
+      .withQuery(query)
+      .withOffset(offset)
+      .withLimit(limit);
+    return restClient.get(requestEntry, RoutingListCollection.class, requestContext);
+  }
+
+  private Future<RoutingListCollection> getRoutingListsByPoLineId(String poLineId, RequestContext requestContext) {
+    String query = String.format(ROUTING_LIST_BY_POL_ID, poLineId);
+    return getRoutingLists(Integer.MAX_VALUE, 0, query, requestContext);
+  }
+
+  private void validateRoutingList(RoutingList routingList, RequestContext requestContext) {
+    RoutingListCollection routingLists = getRoutingListsByPoLineId(routingList.getPoLineId(), requestContext).result();
+    PoLine poLine = poLineService.getOrderLineById(routingList.getPoLineId(), requestContext).result();
+    List<Error> combinedErrors = RoutingListValidatorUtil.validateRoutingList(routingLists, poLine);
+    if (CollectionUtils.isNotEmpty(combinedErrors)) {
+      Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
+      logger.error("Validation error: {}", JsonObject.mapFrom(errors).encodePrettily());
+      throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
+    }
+  }
+
   public Future<JsonObject> processTemplateRequest(String routingListId, RequestContext requestContext) {
-    log.debug("processTemplateRequest: Tying to process template request for routingListId={}", routingListId);
+    logger.debug("processTemplateRequest: Tying to process template request for routingListId={}", routingListId);
     return getRoutingListById(routingListId, requestContext)
       .compose(routingList -> getUsersAndCreateTemplate(routingList, requestContext))
       .compose(templateProcessingRequest -> postTemplateRequest(templateProcessingRequest, requestContext));
@@ -69,7 +129,7 @@ public class RoutingListService {
       .map(settingCollection -> {
         var settings = settingCollection.getSettings();
         if (ObjectUtils.isEmpty(settings) || StringUtils.isBlank(settings.get(0).getValue())) {
-          log.error("getAddressTypeId:: Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
+          logger.error("getAddressTypeId:: Setting is not found with key={}", ROUTING_USER_ADDRESS_TYPE_ID);
           throw new ResourceNotFoundException(String.format("Setting is not found with key=%s", ROUTING_USER_ADDRESS_TYPE_ID));
         }
         return settings.get(0).getValue();
@@ -82,7 +142,7 @@ public class RoutingListService {
       .withRoutingList(fillRoutingListForContext(routingList))
       .withUsers(fillUsersForContext(users, addressTypeId)));
 
-    log.info("createTemplateRequest:: TemplateProcessingRequest object created for routing list name: {}",
+    logger.info("createTemplateRequest:: TemplateProcessingRequest object created for routing list name: {}",
       templateRequest.getContext().getRoutingList().getName());
     return templateRequest;
   }
@@ -117,11 +177,11 @@ public class RoutingListService {
   private String getUserAddress(List<UserCollection.User.Personal.Address> addressList, String addressTypeId) {
     for (UserCollection.User.Personal.Address address : addressList) {
       if (address.getAddressTypeId().equals(addressTypeId)) {
-        log.info("getUserAddress:: Required address with addressTypeId={} is found", addressTypeId);
+        logger.info("getUserAddress:: Required address with addressTypeId={} is found", addressTypeId);
         return address.getAddressLine1();
       }
     }
-    log.warn("getUserAddress:: Required address is not found with addressTypId={}", addressTypeId);
+    logger.warn("getUserAddress:: Required address is not found with addressTypId={}", addressTypeId);
     return "";
   }
 
@@ -133,7 +193,8 @@ public class RoutingListService {
 
   private Future<JsonObject> postTemplateRequest(TemplateProcessingRequest templateRequest, RequestContext requestContext) {
     var requestEntry = new RequestEntry(TEMPLATE_REQUEST_ENDPOINT);
-    log.info("postTemplateRequest:: Sending template request with routing list name={}", templateRequest.getContext().getRoutingList().getName());
+    logger.info("postTemplateRequest:: Sending template request with routing list name={}", templateRequest.getContext().getRoutingList().getName());
     return restClient.postJsonObject(requestEntry, JsonObject.mapFrom(templateRequest), requestContext);
   }
+
 }

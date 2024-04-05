@@ -63,7 +63,7 @@ import static org.folio.orders.utils.ResourcePathResolver.FINANCE_BATCH_TRANSACT
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_EXCHANGE_RATE;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGERS;
-import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LIST_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
 import static org.folio.orders.utils.ResourcePathResolver.USER_TENANTS_ENDPOINT;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
@@ -245,14 +245,13 @@ public class MockServer {
   private static final String HOLDINGS_SOURCE_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "holdingsSources/";
   public static final String PIECE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   public static final String PO_LINES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "lines/";
-  public static final String ROUTING_LIST_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "routingLists/";
+  public static final String ROUTING_LISTS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "routingLists/";
   public static final String USERS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "users/";
   public static final String TITLES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String ACQUISITIONS_UNITS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "acquisitionsUnits/units";
   private static final String ORDER_TEMPLATES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "orderTemplates/";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
-  public static final String ROUTING_LISTS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "routing-lists/";
   public static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
   private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   private static final String ITEM_REQUESTS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemRequests/";
@@ -551,7 +550,7 @@ public class MockServer {
     router.post(resourcesPath(ORDER_TEMPLATES)).handler(ctx -> handlePostGenericSubObj(ctx, ORDER_TEMPLATES));
     router.post(resourcesPath(FINANCE_BATCH_TRANSACTIONS)).handler(this::handleBatchTransactions);
     router.post(resourcesPath(TITLES)).handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
-    router.post(resourcesPath(ROUTING_LIST_STORAGE)).handler(ctx -> handlePostGenericSubObj(ctx, ROUTING_LIST_STORAGE));
+    router.post(resourcesPath(ROUTING_LISTS)).handler(ctx -> handlePostGenericSubObj(ctx, ROUTING_LISTS));
 
     router.post(resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.post(resourcesPath(ACQUISITION_METHODS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITION_METHODS));
@@ -605,8 +604,8 @@ public class MockServer {
     router.get(resourcesPath(LEDGERS)).handler(this::handleGetLedgers);
     router.get(resourcesPath(TITLES)).handler(this::handleGetTitles);
     router.get(resourcePath(TITLES)).handler(this::handleGetOrderTitleById);
-    router.get(resourcesPath(ROUTING_LIST_STORAGE)).handler(this::handleGetRoutingLists);
-    router.get(resourcePath(ROUTING_LIST_STORAGE)).handler(this::handleGetRoutingListById);
+    router.get(resourcesPath(ROUTING_LISTS)).handler(this::handleGetRoutingLists);
+    router.get(resourcePath(ROUTING_LISTS)).handler(this::handleGetRoutingListById);
     router.get(resourcesPath(REASONS_FOR_CLOSURE)).handler(ctx -> handleGetGenericSubObjs(ctx, REASONS_FOR_CLOSURE));
     router.get(resourcesPath(PREFIXES)).handler(ctx -> handleGetGenericSubObjs(ctx, PREFIXES));
     router.get(resourcesPath(SUFFIXES)).handler(ctx -> handleGetGenericSubObjs(ctx, SUFFIXES));
@@ -641,7 +640,7 @@ public class MockServer {
     router.put(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
     router.put(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handlePutGenericSubObj(ctx, ORDER_TEMPLATES));
     router.put(resourcePath(TITLES)).handler(ctx -> handlePutGenericSubObj(ctx, TITLES));
-    router.put(resourcePath(ROUTING_LIST_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, ROUTING_LIST_STORAGE));
+    router.put(resourcePath(ROUTING_LISTS)).handler(ctx -> handlePutGenericSubObj(ctx, ROUTING_LISTS));
     router.put(resourcePath(REASONS_FOR_CLOSURE)).handler(ctx -> handlePutGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.put(resourcePath(PREFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, PREFIXES));
     router.put(resourcePath(SUFFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, SUFFIXES));
@@ -658,7 +657,7 @@ public class MockServer {
     router.delete(resourcePath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
     router.delete(resourcePath(ORDER_TEMPLATES)).handler(ctx -> handleDeleteGenericSubObj(ctx, ORDER_TEMPLATES));
     router.delete(resourcePath(TITLES)).handler(ctx -> handleDeleteGenericSubObj(ctx, TITLES));
-    router.delete(resourcePath(ROUTING_LIST_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, ROUTING_LIST_STORAGE));
+    router.delete(resourcePath(ROUTING_LISTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ROUTING_LISTS));
     router.delete(resourcePath(REASONS_FOR_CLOSURE)).handler(ctx -> handleDeleteGenericSubObj(ctx, REASONS_FOR_CLOSURE));
     router.delete(resourcePath(PREFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PREFIXES));
     router.delete(resourcePath(SUFFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, SUFFIXES));
@@ -731,7 +730,7 @@ public class MockServer {
       }
     };
 
-    List<RoutingList> rLists = getMockEntries(ROUTING_LIST_STORAGE, RoutingList.class).orElseGet(getFromFile);
+    List<RoutingList> rLists = getMockEntries(ROUTING_LISTS, RoutingList.class).orElseGet(getFromFile);
 
     if (!poLineId.isEmpty()) {
       rLists.removeIf(item -> !item.getPoLineId().equals(poLineId.get(0)));
@@ -1976,7 +1975,7 @@ public class MockServer {
     String id = ctx.request().getParam(ID);
     logger.info("id: " + id);
 
-    addServerRqRsData(HttpMethod.GET, ROUTING_LIST_STORAGE, new JsonObject().put(ID, id));
+    addServerRqRsData(HttpMethod.GET, ROUTING_LISTS, new JsonObject().put(ID, id));
 
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
@@ -1984,7 +1983,7 @@ public class MockServer {
       try {
 
         // Attempt to find title in mock server memory
-        JsonObject existantTitle = getMockEntry(ROUTING_LIST_STORAGE, id).orElse(null);
+        JsonObject existantTitle = getMockEntry(ROUTING_LISTS, id).orElse(null);
 
         // If previous step has no result then attempt to find title in stubs
         if (existantTitle == null) {
@@ -2001,7 +2000,7 @@ public class MockServer {
 
   private void handleGetRoutingLists(RoutingContext ctx) {
     String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
-    addServerRqQuery(ROUTING_LIST_STORAGE, query);
+    addServerRqQuery(ROUTING_LISTS, query);
     if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
@@ -2013,7 +2012,7 @@ public class MockServer {
         }
 
         JsonObject collection = getRoutingListsByPoLineId(ids);
-        addServerRqRsData(HttpMethod.GET, ROUTING_LIST_STORAGE, collection);
+        addServerRqRsData(HttpMethod.GET, ROUTING_LISTS, collection);
 
         ctx.response()
           .setStatusCode(200)

@@ -22,7 +22,6 @@ public class ResourcePathResolver {
   public static final String ACQUISITIONS_MEMBERSHIPS = "acquisitionsMemberships";
   public static final String REPORTING_CODES = "reportingCodes";
   public static final String PURCHASE_ORDER_STORAGE = "purchaseOrder";
-  public static final String ROUTING_LIST_STORAGE = "routingLists";
   public static final String PIECES_STORAGE = "pieces";
   public static final String RECEIVING_HISTORY = "receiving-history";
   public static final String RECEIPT_STATUS = "receiptStatus";
@@ -67,7 +66,6 @@ public class ResourcePathResolver {
     apis.put(PO_LINES_BUSINESS, "/orders/order-lines");
     apis.put(PO_NUMBER, "/orders-storage/po-number");
     apis.put(PURCHASE_ORDER_STORAGE, "/orders-storage/purchase-orders");
-    apis.put(ROUTING_LIST_STORAGE, "/orders-storage/routing-lists");
     apis.put(PIECES_STORAGE, "/orders-storage/pieces");
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
