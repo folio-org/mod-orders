@@ -8,7 +8,7 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.RoutingList;
 import org.folio.rest.jaxrs.resource.OrdersRoutingLists;
-import org.folio.service.routinglists.RoutingListsStorageService;
+import org.folio.service.routinglists.RoutingListsService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -20,7 +20,7 @@ import static io.vertx.core.Future.succeededFuture;
 public class RoutingListsAPI extends BaseApi implements OrdersRoutingLists {
 
   @Autowired
-  private RoutingListsStorageService routingListsStorageService;
+  private RoutingListService routingListsService;
 
   public RoutingListsAPI() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -65,5 +65,13 @@ public class RoutingListsAPI extends BaseApi implements OrdersRoutingLists {
     routingListsStorageService.updateRoutingList(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(list -> asyncResultHandler.handle(succeededFuture(buildOkResponse(list))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+  }
+
+  @Override
+  public void getOrdersRoutingListsTemplateById(String id, Map<String, String> okapiHeaders,
+                                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    routingListService.processTemplateRequest(id, new RequestContext(vertxContext, okapiHeaders))
+      .onSuccess(jsonObject -> asyncResultHandler.handle(succeededFuture(this.buildOkResponse(jsonObject))))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 }

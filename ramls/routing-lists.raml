@@ -1,8 +1,7 @@
 #%RAML 1.0
 title: Routing Lists
 baseUri: https://github.com/folio-org/mod-orders
-version: v1
-protocols: [ HTTP, HTTPS ]
+version: v1.0
 
 documentation:
   - title: Routing Lists API
@@ -80,3 +79,10 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/mod-orders-storage/examples/routing_list_get.sample
         schema: routing-list
+  /{id}/template:
+    uriParameters:
+      id:
+        description: The UUID of a Title
+        type: UUID
+    get:
+      description: Execute mod-template-engine to process templates with replaced token placeholders [update]

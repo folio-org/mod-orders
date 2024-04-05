@@ -26,6 +26,7 @@ import org.folio.service.ProtectionService;
 import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
 import org.folio.service.TagService;
+import org.folio.service.UserService;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
@@ -111,7 +112,7 @@ import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolve
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
-import org.folio.service.routinglists.RoutingListsStorageService;
+import org.folio.service.RoutingListService;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -436,6 +437,16 @@ public class ApplicationConfig {
   }
 
   @Bean
+  RoutingListService routingListService(RestClient restClient, UserService userService) {
+    return new RoutingListService(restClient, userService);
+  }
+
+  @Bean
+  UserService userService(RestClient restClient) {
+    return new UserService(restClient);
+  }
+
+  @Bean
   TitlesService titlesService(RestClient restClient, ProtectionService protectionService, InventoryManager inventoryManager) {
     return new TitlesService(restClient, protectionService, inventoryManager);
   }
@@ -739,10 +750,4 @@ public class ApplicationConfig {
   SharingInstanceService sharingInstanceService(RestClient restClient) {
     return new SharingInstanceService(restClient);
   }
-
-  @Bean
-  RoutingListsStorageService routingListsStorageService(PurchaseOrderLineService purchaseOrderLineService, RestClient restClient) {
-    return new RoutingListsStorageService(purchaseOrderLineService, restClient);
-  }
-
 }
