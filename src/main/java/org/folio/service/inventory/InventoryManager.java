@@ -1307,9 +1307,14 @@ public class InventoryManager {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> {
         if (consortiumConfiguration.isPresent()) {
+          if (StringUtils.isBlank(instanceId)) {
+            logger.info("Provided instanceId is blank, skip creating of shadow instance.");
+            return Future.succeededFuture();
+          }
           return getInstanceById(instanceId, true, requestContext)
             .compose(instance -> {
               if (Objects.nonNull(instance) && !instance.isEmpty()) {
+                logger.info("Shadow instance already exists, skipping...");
                 return Future.succeededFuture();
               }
               logger.info("Creating shadow instance with instanceId: {}", instanceId);
