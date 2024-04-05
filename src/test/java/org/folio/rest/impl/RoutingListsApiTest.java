@@ -35,6 +35,7 @@ import java.util.concurrent.TimeoutException;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.RestTestUtils.prepareHeaders;
 import static org.folio.RestTestUtils.verifyDeleteResponse;
 import static org.folio.RestTestUtils.verifyGet;
@@ -259,7 +260,7 @@ public class RoutingListsApiTest {
     logger.info("=== Test delete Routing List by id ===");
     doReturn(failedFuture(new HttpException(BAD_REQUEST, ErrorCodes.GENERIC_ERROR_CODE))).when(routingListService).deleteRoutingList(eq(ID_BAD_FORMAT), any(RequestContext.class));
 
-    verifyDeleteResponse(String.format(ROUTING_LISTS_ID_PATH, ID_BAD_FORMAT), APPLICATION_JSON, 400);
+    verifyDeleteResponse(String.format(ROUTING_LISTS_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
   }
 
   @Test
