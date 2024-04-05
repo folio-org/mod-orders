@@ -1306,22 +1306,23 @@ public class InventoryManager {
   public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> {
-        if (consortiumConfiguration.isPresent()) {
-          if (StringUtils.isBlank(instanceId)) {
-            logger.info("Provided instanceId is blank, skip creating of shadow instance.");
-            return Future.succeededFuture();
-          }
-          return getInstanceById(instanceId, true, requestContext)
-            .compose(instance -> {
-              if (Objects.nonNull(instance) && !instance.isEmpty()) {
-                logger.info("Shadow instance already exists, skipping...");
-                return Future.succeededFuture();
-              }
-              logger.info("Creating shadow instance with instanceId: {}", instanceId);
-              return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration.get(), requestContext);
-            });
+        if (consortiumConfiguration.isEmpty()) {
+          logger.debug("Skipping creating shadow instance for non ECS mode.");
+          return Future.succeededFuture();
         }
-        return Future.succeededFuture();
+        if (StringUtils.isBlank(instanceId)) {
+          logger.info("Provided instanceId is blank, skip creating of shadow instance.");
+          return Future.succeededFuture();
+        }
+        return getInstanceById(instanceId, true, requestContext)
+          .compose(instance -> {
+            if (Objects.nonNull(instance) && !instance.isEmpty()) {
+              logger.info("Shadow instance already exists, skipping...");
+              return Future.succeededFuture();
+            }
+            logger.info("Creating shadow instance with instanceId: {}", instanceId);
+            return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration.get(), requestContext);
+          });
       });
   }
 
