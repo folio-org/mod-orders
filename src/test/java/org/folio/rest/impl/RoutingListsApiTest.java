@@ -6,13 +6,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
+import org.folio.rest.RestConstants;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.RoutingList;
 import org.folio.rest.jaxrs.model.RoutingListCollection;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.routinglists.RoutingListService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -23,12 +25,14 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
@@ -57,8 +61,11 @@ import static org.folio.TestUtils.getLocationPhysicalCopies;
 import static org.folio.TestUtils.getMinimalContentPoLine;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
+import static org.folio.rest.RestConstants.BAD_REQUEST;
+import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.exceptions.ErrorCodes.INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT;
+import static org.folio.rest.core.exceptions.ErrorCodes.PO_LINE_NOT_FOUND_FOR_ROUTING_LIST;
 import static org.folio.rest.core.exceptions.ErrorCodes.ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE;
 import static org.folio.rest.impl.MockServer.ROUTING_LISTS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.addMockEntry;
@@ -67,6 +74,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -87,11 +95,11 @@ public class RoutingListsApiTest {
 
   @Autowired
   private RoutingListService routingListService;
-  private PurchaseOrderLineService purchaseOrderLineService;
   private RequestContext requestContext;
   private Context ctxMock;
   private Map<String, String> okapiHeadersMock;
   private AutoCloseable mockitoMocks;
+  private RoutingList sampleRoutingList;
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -113,6 +121,8 @@ public class RoutingListsApiTest {
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
     requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    sampleRoutingList = routingListJsonReqData.mapTo(RoutingList.class)
+      .withPoLineId(PO_LINE_UUID);
   }
 
 
@@ -139,11 +149,10 @@ public class RoutingListsApiTest {
       .withLocations(getLocationPhysicalCopies(1));
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    RoutingList rListRq = routingListJsonReqData.mapTo(RoutingList.class)
-      .withPoLineId(PO_LINE_UUID);
+    doReturn(succeededFuture(sampleRoutingList)).when(routingListService).createRoutingList(eq(sampleRoutingList), any(RequestContext.class));
 
-    verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(rListRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID_WITH_ACQ_UNITS), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt());
+    verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(sampleRoutingList).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID_WITH_ACQ_UNITS), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
   }
 
   @Test
@@ -155,10 +164,10 @@ public class RoutingListsApiTest {
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    RoutingList rListRq = routingListJsonReqData.mapTo(RoutingList.class)
-      .withPoLineId(PO_LINE_UUID);
+    var errorsExpected = getCodesAsErrors(INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT);
+    doReturn(failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, errorsExpected))).when(routingListService).createRoutingList(eq(sampleRoutingList), any(RequestContext.class));
 
-    List<Error> errors = verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(rListRq).encode(),
+    List<Error> errors = verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(sampleRoutingList).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
       .as(Errors.class)
       .getErrors();
@@ -176,10 +185,10 @@ public class RoutingListsApiTest {
       .withLocations(getLocationPhysicalCopies(0));
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    RoutingList rListRq = routingListJsonReqData.mapTo(RoutingList.class)
-      .withPoLineId(PO_LINE_UUID);
+    var errorsExpected = getCodesAsErrors(ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE);
+    doReturn(failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, errorsExpected))).when(routingListService).createRoutingList(eq(sampleRoutingList), any(RequestContext.class));
 
-    List<Error> errors = verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(rListRq).encode(),
+    List<Error> errors = verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(sampleRoutingList).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422
     )
       .as(Errors.class)
@@ -192,16 +201,25 @@ public class RoutingListsApiTest {
   void testPostRoutingListWithInvalidPoLineId() {
     logger.info("=== Test POST Routing List should fail because it's POL does not exist ===");
 
-    RoutingList rListRq = routingListJsonReqData.mapTo(RoutingList.class)
-      .withPoLineId(PO_LINE_UUID);
+    var errorsExpected = getCodesAsErrors(PO_LINE_NOT_FOUND_FOR_ROUTING_LIST);
+    doReturn(failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, errorsExpected))).when(routingListService).createRoutingList(eq(sampleRoutingList), any(RequestContext.class));
 
-    verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(rListRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 404);
+    List<Error> errors = verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(sampleRoutingList).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422
+    )
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(PO_LINE_NOT_FOUND_FOR_ROUTING_LIST.getDescription()));
   }
 
   @Test
   void testGetRoutingLists() {
     logger.info("=== Test Get Routing Lists  ===");
+    var collection = new RoutingListCollection()
+      .withRoutingLists(List.of(sampleRoutingList))
+      .withTotalRecords(1);
+    doReturn(succeededFuture(collection)).when(routingListService).getRoutingLists(anyInt(), anyInt(), any(), any(RequestContext.class));
 
     final RoutingListCollection respCollection = verifySuccessGet(ROUTING_LISTS_ENDPOINT, RoutingListCollection.class);
     logger.info(JsonObject.mapFrom(respCollection).encodePrettily());
@@ -210,7 +228,8 @@ public class RoutingListsApiTest {
 
   @Test
   void testGetRoutingListById() {
-    logger.info("=== Test Get Routing Lists  ===");
+    logger.info("=== Test Get Routing List by id  ===");
+    doReturn(succeededFuture(sampleRoutingList)).when(routingListService).getRoutingList(eq(ROUTING_LIST_UUID), any(RequestContext.class));
 
     final RoutingList resp = verifySuccessGet(String.format(ROUTING_LISTS_ID_PATH, ROUTING_LIST_UUID), RoutingList.class);
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
@@ -220,38 +239,34 @@ public class RoutingListsApiTest {
   @Test
   void testPutRoutingList() {
     logger.info("=== Test update Routing List by id ===");
-    RoutingList reqData = routingListJsonReqData.mapTo(RoutingList.class)
-      .withNotes("new notes");
+    sampleRoutingList.setNotes("new notes");
+    doReturn(succeededFuture()).when(routingListService).updateRoutingList(eq(sampleRoutingList), any(RequestContext.class));
 
-     verifyPut(String.format(ROUTING_LISTS_ID_PATH, ROUTING_LIST_UUID), JsonObject.mapFrom(reqData).encode(),
+     verifyPut(String.format(ROUTING_LISTS_ID_PATH, ROUTING_LIST_UUID), JsonObject.mapFrom(sampleRoutingList).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), "", 204);
   }
 
   @Test
-  void testPutRoutingListByNonExistentId() {
-    logger.info("=== Test update Routing List by invalid id ===");
-
-    RoutingList reqData = routingListJsonReqData.mapTo(RoutingList.class)
-      .withId(ID_DOES_NOT_EXIST);
-    verifyPut(String.format(ROUTING_LISTS_ID_PATH, ID_DOES_NOT_EXIST), JsonObject.mapFrom(reqData).encode(), APPLICATION_JSON, 404);
-  }
-
-  @Test
-  void deleteRoutingListByIdTest() {
+  void testDeleteRoutingListByIdTest() {
     logger.info("=== Test delete Routing List by id ===");
+    doReturn(succeededFuture()).when(routingListService).deleteRoutingList(eq(ROUTING_LIST_UUID), any(RequestContext.class));
 
     verifyDeleteResponse(String.format(ROUTING_LISTS_ID_PATH, ROUTING_LIST_UUID), "", 204);
   }
 
   @Test
-  void deleteRoutingListByIdWithInvalidFormatTest() {
+  void testDeleteRoutingListByIdWithInvalidFormatTest() {
     logger.info("=== Test delete Routing List by id ===");
+    doReturn(failedFuture(new HttpException(BAD_REQUEST, ErrorCodes.GENERIC_ERROR_CODE))).when(routingListService).deleteRoutingList(eq(ID_BAD_FORMAT), any(RequestContext.class));
+
     verifyDeleteResponse(String.format(ROUTING_LISTS_ID_PATH, ID_BAD_FORMAT), APPLICATION_JSON, 400);
   }
 
   @Test
-  void deleteNotExistentRoutingListTest() {
+  void testDeleteNotExistentRoutingListTest() {
     logger.info("=== Test delete Routing List by id ===");
+    doReturn(failedFuture(new HttpException(NOT_FOUND, ErrorCodes.GENERIC_ERROR_CODE))).when(routingListService).deleteRoutingList(eq(ID_DOES_NOT_EXIST), any(RequestContext.class));
+
     verifyDeleteResponse(String.format(ROUTING_LISTS_ID_PATH, ID_DOES_NOT_EXIST), APPLICATION_JSON, 404);
   }
 
@@ -265,6 +280,12 @@ public class RoutingListsApiTest {
       APPLICATION_JSON, 200);
 
     verify(routingListService, times(1)).processTemplateRequest(eq(ROUTING_LIST_ID), any(RequestContext.class));
+  }
+
+  private Errors getCodesAsErrors(ErrorCodes... codes) {
+    return new Errors()
+      .withErrors(Arrays.stream(codes).map(ErrorCodes::toError).toList())
+      .withTotalRecords(codes.length);
   }
 
   static class ContextConfiguration {

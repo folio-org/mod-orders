@@ -64,9 +64,14 @@ public class RoutingListService {
   }
 
   public Future<Void> updateRoutingList(RoutingList routingList, RequestContext requestContext) {
-    validateRoutingList(routingList, requestContext);
+    try {
+      validateRoutingList(routingList, requestContext);
+    }
+    catch (HttpException e) {
+      return Future.failedFuture(e);
+    }
     RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_BY_ID_ENDPOINT).withId(routingList.getId());
-    return restClient.put(requestEntry, requestContext, requestContext);
+    return restClient.put(requestEntry, routingList, requestContext);
   }
 
   public Future<Void> deleteRoutingList(String rListId, RequestContext requestContext) {
@@ -75,7 +80,11 @@ public class RoutingListService {
   }
 
   public Future<RoutingList> createRoutingList(RoutingList routingList, RequestContext requestContext) {
-    validateRoutingList(routingList, requestContext);
+    try {
+      validateRoutingList(routingList, requestContext);
+    } catch (HttpException e) {
+      return Future.failedFuture(e);
+    }
     RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_ENDPOINT);
     return restClient.post(requestEntry, routingList, RoutingList.class, requestContext);
   }
@@ -93,7 +102,7 @@ public class RoutingListService {
     return getRoutingLists(Integer.MAX_VALUE, 0, query, requestContext);
   }
 
-  private void validateRoutingList(RoutingList routingList, RequestContext requestContext) {
+  private void validateRoutingList(RoutingList routingList, RequestContext requestContext) throws HttpException {
     RoutingListCollection routingLists = getRoutingListsByPoLineId(routingList.getPoLineId(), requestContext).result();
     PoLine poLine = poLineService.getOrderLineById(routingList.getPoLineId(), requestContext).result();
     List<Error> combinedErrors = RoutingListValidatorUtil.validateRoutingList(routingLists, poLine);

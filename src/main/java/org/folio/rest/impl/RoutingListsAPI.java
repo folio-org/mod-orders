@@ -63,7 +63,7 @@ public class RoutingListsAPI extends BaseApi implements OrdersRoutingLists {
   @Validate
   public void putOrdersRoutingListsById(String id, RoutingList entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     routingListService.updateRoutingList(entity, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(list -> asyncResultHandler.handle(succeededFuture(buildOkResponse(list))))
+      .onSuccess(list -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 

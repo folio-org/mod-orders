@@ -119,7 +119,8 @@ public enum ErrorCodes {
   BARCODE_IS_NOT_UNIQUE("barcodeIsNotUnique", "The barcode already exists. The barcode must be unique"),
   DELETE_WITH_EXPENDED_AMOUNT("deleteWithExpendedAmount", "Cannot delete an encumbrance with an expended amount"),
   INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT("invalidRoutingListForPoLineFormat", "Cannot create routing list for POL without 'Physical' or 'P/E Mix' order format"),
-  ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE("routingListLimitReachedForPoLine", "Cannot create routing list for POL as the associated lists' amount is not less than Physical copies");
+  ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE("routingListLimitReachedForPoLine", "Cannot create routing list for POL as the associated lists' amount is not less than Physical copies"),
+  PO_LINE_NOT_FOUND_FOR_ROUTING_LIST("poLineNotFoundForRoutingList", "Cannot find a corresponding PO Line with the provided id");
 
   private final String code;
   private final String description;

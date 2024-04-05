@@ -13,7 +13,9 @@ public class RoutingListValidatorUtil {
 
   public static List<Error> validateRoutingList(RoutingListCollection rListExisting, PoLine poLine) {
     List<ErrorCodes> errors = new ArrayList<>();
-    if (!isPoLineFormatValid(poLine)) {
+    if (poLine == null) {
+      errors.add(ErrorCodes.PO_LINE_NOT_FOUND_FOR_ROUTING_LIST);
+    } else if (!isPoLineFormatValid(poLine)) {
       errors.add(ErrorCodes.INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT);
     } else if (isRoutingListsLimitReached(rListExisting, poLine)) {
       errors.add(ErrorCodes.ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE);
