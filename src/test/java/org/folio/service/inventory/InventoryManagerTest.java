@@ -57,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
@@ -66,6 +67,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -74,6 +76,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -82,8 +85,10 @@ import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
+import org.folio.Instance;
 import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
+import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -111,6 +116,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -202,7 +208,7 @@ public class InventoryManagerTest {
   @AfterEach
   void resetMocks() throws Exception {
     mockitoClosable.close();
-    Mockito.reset(restClient);
+    Mockito.reset(restClient, sharingInstanceService);
     clearServiceInteractions();
   }
 
@@ -1137,6 +1143,51 @@ public class InventoryManagerTest {
         vertxTestContext.completeNow();
       });
 
+  }
+
+  @Test
+  void shouldNotCreateShadowCopyWhenItAlreadyExist() {
+    String instanceId = UUID.randomUUID().toString();
+    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(JsonObject.mapFrom(new Instance()))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
+
+    inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
+
+    verifyNoInteractions(sharingInstanceService);
+  }
+
+  @Test
+  void shouldNotCreateShadowCopyWhenInstanceIdNull() {
+    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(JsonObject.mapFrom(new Instance()))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
+
+    inventoryManager.createShadowInstanceIfNeeded(null, requestContext).result();
+
+    verifyNoInteractions(sharingInstanceService);
+  }
+
+  @Test
+  void shouldNotCreateShadowCopyWhenConsortiumConfigurationIsNull() {
+    String instanceId = UUID.randomUUID().toString();
+    doReturn(succeededFuture(null)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+
+    inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
+
+    verifyNoInteractions(sharingInstanceService);
+  }
+
+  @Test
+  void shouldCreateShadowInstance() {
+    String instanceId = UUID.randomUUID().toString();
+    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(null)).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
+
+    inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
+
+    verify(sharingInstanceService).createShadowInstance(instanceId, configuration.get(), requestContext);
   }
 
   /**
