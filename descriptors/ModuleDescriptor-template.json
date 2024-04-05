@@ -315,7 +315,8 @@
             "orders-storage.po-lines.item.put",
             "orders-storage.pieces.collection.get",
             "user-tenants.collection.get",
-            "consortia.sharing-instances.item.post"
+            "consortia.sharing-instances.item.post",
+            "configuration.entries.collection.get"
           ]
         },
         {
@@ -1008,6 +1009,7 @@
           "permissionsRequired": ["orders.routing-list-template.item.get"],
           "modulePermissions": [
             "orders-storage.routing-lists.item.get",
+            "orders-storage.settings.collection.get",
             "users.collection.get",
             "template-request.post"
           ]
