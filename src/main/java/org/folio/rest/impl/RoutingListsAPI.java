@@ -4,8 +4,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.RoutingList;
@@ -21,7 +19,6 @@ import static io.vertx.core.Future.succeededFuture;
 
 public class RoutingListsAPI extends BaseApi implements OrdersRoutingLists {
 
-  private static final Logger logger = LogManager.getLogger();
   @Autowired
   private RoutingListsStorageService routingListsStorageService;
 
