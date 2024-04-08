@@ -1,16 +1,5 @@
 package org.folio.service.routinglists.validators;
 
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.RoutingList;
-import org.folio.rest.jaxrs.model.RoutingListCollection;
-import org.folio.service.routinglists.validators.RoutingListValidatorUtil;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.folio.TestUtils.getLocationPhysicalCopies;
 import static org.folio.TestUtils.getMinimalContentPoLine;
 import static org.folio.TestUtils.getMockAsJson;
@@ -18,6 +7,16 @@ import static org.folio.rest.core.exceptions.ErrorCodes.INVALID_ROUTING_LIST_FOR
 import static org.folio.rest.core.exceptions.ErrorCodes.ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE;
 import static org.folio.rest.impl.MockServer.ROUTING_LISTS_MOCK_DATA_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.RoutingList;
+import org.folio.rest.jaxrs.model.RoutingListCollection;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class RoutingListValidatorTest {
 

@@ -1,9 +1,10 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
+import static io.vertx.core.Future.succeededFuture;
+
+import javax.ws.rs.core.Response;
+import java.util.Map;
+
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.RoutingList;
@@ -12,10 +13,10 @@ import org.folio.service.routinglists.RoutingListService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.ws.rs.core.Response;
-import java.util.Map;
-
-import static io.vertx.core.Future.succeededFuture;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
 public class RoutingListsAPI extends BaseApi implements OrdersRoutingLists {
 

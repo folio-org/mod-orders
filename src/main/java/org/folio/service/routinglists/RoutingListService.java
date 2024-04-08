@@ -1,7 +1,14 @@
 package org.folio.service.routinglists;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
+import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
+import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
+import static org.folio.orders.utils.ResourcePathResolver.TEMPLATE_REQUEST;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -25,14 +32,8 @@ import org.folio.service.UserService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.routinglists.validators.RoutingListValidatorUtil;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
-import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
-import static org.folio.orders.utils.ResourcePathResolver.TEMPLATE_REQUEST;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 public class RoutingListService {
   private static final Logger logger = LogManager.getLogger(RoutingListService.class);
@@ -66,8 +67,7 @@ public class RoutingListService {
   public Future<Void> updateRoutingList(RoutingList routingList, RequestContext requestContext) {
     try {
       validateRoutingList(routingList, requestContext);
-    }
-    catch (HttpException e) {
+    } catch (HttpException e) {
       return Future.failedFuture(e);
     }
     RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_BY_ID_ENDPOINT).withId(routingList.getId());
@@ -91,9 +91,9 @@ public class RoutingListService {
 
   public Future<RoutingListCollection> getRoutingLists(int limit, int offset, String query, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_ENDPOINT)
-      .withQuery(query)
+      .withLimit(limit)
       .withOffset(offset)
-      .withLimit(limit);
+      .withQuery(query);
     return restClient.get(requestEntry, RoutingListCollection.class, requestContext);
   }
 

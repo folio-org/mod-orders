@@ -1,15 +1,30 @@
 package org.folio.service.routinglists;
 
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestConstants.ROUTING_LIST_ID;
+import static org.folio.TestUtils.getLocationPhysicalCopies;
+import static org.folio.TestUtils.getMinimalContentPoLine;
+import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.rest.core.exceptions.ErrorCodes.INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT;
+import static org.folio.rest.core.exceptions.ErrorCodes.ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE;
+import static org.folio.rest.impl.MockServer.ROUTING_LISTS_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.USERS_MOCK_DATA_PATH;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 import org.folio.models.UserCollection;
 import org.folio.rest.acq.model.Setting;
 import org.folio.rest.acq.model.SettingCollection;
 import org.folio.rest.core.RestClient;
-import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -25,27 +40,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-import static io.vertx.core.Future.succeededFuture;
-import static org.folio.TestConstants.ROUTING_LIST_ID;
-import static org.folio.TestUtils.getLocationPhysicalCopies;
-import static org.folio.TestUtils.getMinimalContentPoLine;
-import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.TestUtils.getMockData;
-import static org.folio.rest.core.exceptions.ErrorCodes.INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT;
-import static org.folio.rest.core.exceptions.ErrorCodes.ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE;
-import static org.folio.rest.impl.MockServer.ROUTING_LISTS_MOCK_DATA_PATH;
-import static org.folio.rest.impl.MockServer.USERS_MOCK_DATA_PATH;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 public class RoutingListServiceTest {

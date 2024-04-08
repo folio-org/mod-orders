@@ -69,13 +69,6 @@ resourceTypes:
         body:
           application/json:
             type: error
-  /{id}/template:
-    uriParameters:
-      id:
-        description: The UUID of a Title
-        type: UUID
-    get:
-      description: Execute mod-template-engine to process templates with replaced token placeholders [update]
   /{id}:
     uriParameters:
       id:
@@ -86,3 +79,11 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/mod-orders-storage/examples/routing_list_get.sample
         schema: routing-list
+  /{id}/template:
+    uriParameters:
+      id:
+        description: The UUID of a Title
+        type: UUID
+    get:
+      description: Execute mod-template-engine to process templates with replaced token placeholders [update]
+

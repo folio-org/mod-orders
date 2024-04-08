@@ -1,13 +1,13 @@
 package org.folio.service.routinglists.validators;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.RoutingListCollection;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class RoutingListValidatorUtil {
 
