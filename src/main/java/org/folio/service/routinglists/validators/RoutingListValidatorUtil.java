@@ -11,6 +11,8 @@ import org.folio.rest.jaxrs.model.RoutingListCollection;
 
 public class RoutingListValidatorUtil {
 
+  private RoutingListValidatorUtil() { }
+
   public static List<Error> validateRoutingList(RoutingListCollection rListExisting, PoLine poLine) {
     List<ErrorCodes> errors = new ArrayList<>();
     if (poLine == null) {

@@ -1005,6 +1005,31 @@
       "handlers": [
         {
           "methods": ["GET"],
+          "pathPattern": "/orders/routing-lists",
+          "permissionsRequired": ["orders-storage.routing-lists.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/routing-lists",
+          "permissionsRequired": ["orders-storage.routing-lists.item.post"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/routing-lists/{id}",
+          "permissionsRequired": ["orders-storage.routing-lists.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/orders/routing-lists/{id}",
+          "permissionsRequired": ["orders-storage.routing-lists.item.put"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/orders/routing-lists/{id}",
+          "permissionsRequired": ["orders-storage.routing-lists.item.delete"]
+        },
+        {
+          "methods": ["GET"],
           "pathPattern": "/orders/routing-lists/{id}/template",
           "permissionsRequired": ["orders.routing-list-template.item.get"],
           "modulePermissions": [
@@ -1737,6 +1762,19 @@
       "description" : "Orders routing-list-template item get"
     },
     {
+      "permissionName" : "orders.routing-lists.all",
+      "displayName" : "All routing list perms",
+      "description" : "All permissions for the routing list",
+      "subPermissions" : [
+        "orders-storage.routing-lists.collection.get",
+        "orders-storage.routing-lists.item.post",
+        "orders-storage.routing-lists.item.get",
+        "orders-storage.routing-lists.item.put",
+        "orders-storage.routing-lists.item.delete",
+        "orders.routing-list-template.item.get"
+      ]
+    },
+    {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
@@ -1771,7 +1809,7 @@
         "orders.holding-summary.collection.get",
         "orders.acquisition-methods.all",
         "orders.export-history.all",
-        "orders.routing-list-template.item.get"
+        "orders.routing-lists.all"
       ]
     },
     {
