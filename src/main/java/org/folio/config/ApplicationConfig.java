@@ -112,7 +112,7 @@ import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolve
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
-import org.folio.service.RoutingListService;
+import org.folio.service.routinglists.RoutingListService;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -437,8 +437,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  RoutingListService routingListService(RestClient restClient, UserService userService) {
-    return new RoutingListService(restClient, userService);
+  RoutingListService routingListService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService, UserService userService) {
+    return new RoutingListService(restClient, purchaseOrderLineService, userService);
   }
 
   @Bean
