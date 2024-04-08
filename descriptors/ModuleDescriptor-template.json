@@ -1006,8 +1006,8 @@
         {
           "methods": ["GET"],
           "pathPattern": "/orders/routing-lists",
-            "permissionsRequired": ["orders.routing-lists.collection.get"],
-            "modulePermissions": ["orders-storage.routing-lists.collection.get"]
+          "permissionsRequired": ["orders.routing-lists.collection.get"],
+          "modulePermissions": ["orders-storage.routing-lists.collection.get"]
         },
         {
           "methods": ["POST"],
