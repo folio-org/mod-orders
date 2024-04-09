@@ -1,5 +1,15 @@
 ## 12.9.0 - Unreleased
 
+## 12.8.2 - Released (Quesnelia R1 2024)
+This release focused on fixing bugs related to receiving title and edit holdings functionality 
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.1...v12.8.2)
+
+### Bug Fixes
+
+* [MODORDERS-1066](https://folio-org.atlassian.net/browse/MODORDERS-1080) - ECS - Receiving: cannot create a new Receiving title from scratch
+* [MODORDERS-1079](https://folio-org.atlassian.net/browse/MODORDERS-1079) - Could not edit holdings for piece created from P/E mix Po Line
+* [MODORDERS-1073](https://folio-org.atlassian.net/browse/MODORDERS-1078) - Avoid onSuccess terminal operators in the middle of executing chain
+
 ## 12.8.1 - Released (Quesnelia R1 2024)
 This release focused on fixing bugs related to payment status, invoice and item records.
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.0...v12.8.1)
