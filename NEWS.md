@@ -6,7 +6,7 @@ This release focused on fixing bugs related to receiving title and edit holdings
 
 ### Bug Fixes
 
-* [MODORDERS-1066](https://folio-org.atlassian.net/browse/MODORDERS-1080) - ECS - Receiving: cannot create a new Receiving title from scratch
+* [MODORDERS-1080](https://folio-org.atlassian.net/browse/MODORDERS-1080) - ECS - Receiving: cannot create a new Receiving title from scratch
 * [MODORDERS-1079](https://folio-org.atlassian.net/browse/MODORDERS-1079) - Could not edit holdings for piece created from P/E mix Po Line
 * [MODORDERS-1073](https://folio-org.atlassian.net/browse/MODORDERS-1078) - Avoid onSuccess terminal operators in the middle of executing chain
 
