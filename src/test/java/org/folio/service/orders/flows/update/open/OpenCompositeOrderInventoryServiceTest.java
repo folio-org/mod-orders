@@ -7,6 +7,7 @@ import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryElectronicStrategy;
@@ -128,12 +129,12 @@ public class OpenCompositeOrderInventoryServiceTest {
       return mock(OpenCompositeOrderPieceService.class);
     }
 
-    @Bean ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy() {
-      return spy(new ProcessInventoryPhysicalStrategy());
+    @Bean ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy(ConsortiumConfigurationService consortiumConfigurationService) {
+      return spy(new ProcessInventoryPhysicalStrategy(consortiumConfigurationService));
     }
 
-    @Bean ProcessInventoryElectronicStrategy processInventoryElectronicStrategy() {
-      return spy(new ProcessInventoryElectronicStrategy());
+    @Bean ProcessInventoryElectronicStrategy processInventoryElectronicStrategy(ConsortiumConfigurationService consortiumConfigurationService) {
+      return spy(new ProcessInventoryElectronicStrategy(consortiumConfigurationService));
     }
 
     @Bean ProcessInventoryStrategyResolver processInventoryStrategyResolver(ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy,

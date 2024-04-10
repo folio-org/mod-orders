@@ -82,6 +82,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -116,7 +117,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -131,7 +131,6 @@ import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 public class InventoryManagerTest {
-  private static final Logger logger = LogManager.getLogger();
 
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
@@ -1152,7 +1151,7 @@ public class InventoryManagerTest {
     doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(JsonObject.mapFrom(new Instance()))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
 
-    inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
+    inventoryManager.createShadowInstanceIfNeeded(instanceId, StringUtils.EMPTY, requestContext).result();
 
     verifyNoInteractions(sharingInstanceService);
   }
@@ -1163,7 +1162,7 @@ public class InventoryManagerTest {
     doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(JsonObject.mapFrom(new Instance()))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
 
-    inventoryManager.createShadowInstanceIfNeeded(null, requestContext).result();
+    inventoryManager.createShadowInstanceIfNeeded(null, StringUtils.EMPTY, requestContext).result();
 
     verifyNoInteractions(sharingInstanceService);
   }
@@ -1173,7 +1172,7 @@ public class InventoryManagerTest {
     String instanceId = UUID.randomUUID().toString();
     doReturn(succeededFuture(null)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
 
-    inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
+    inventoryManager.createShadowInstanceIfNeeded(instanceId, StringUtils.EMPTY, requestContext).result();
 
     verifyNoInteractions(sharingInstanceService);
   }
@@ -1185,9 +1184,9 @@ public class InventoryManagerTest {
     doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(null)).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
 
-    inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
+    inventoryManager.createShadowInstanceIfNeeded(instanceId, StringUtils.EMPTY, requestContext).result();
 
-    verify(sharingInstanceService).createShadowInstance(instanceId, configuration.get(), requestContext);
+    verify(sharingInstanceService).createShadowInstance(instanceId, StringUtils.EMPTY, configuration.get(), requestContext);
   }
 
   /**

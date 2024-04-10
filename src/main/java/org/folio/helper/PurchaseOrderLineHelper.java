@@ -71,6 +71,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -242,7 +243,6 @@ public class PurchaseOrderLineHelper {
       case P_E_MIX -> isEresourceInventoryNotPresent(compPOL) || isPhysicalInventoryNotPresent(compPOL);
       case ELECTRONIC_RESOURCE -> isEresourceInventoryNotPresent(compPOL);
       case OTHER, PHYSICAL_RESOURCE -> isPhysicalInventoryNotPresent(compPOL);
-      default -> false;
     };
   }
 
@@ -882,7 +882,7 @@ public class PurchaseOrderLineHelper {
     if (Boolean.TRUE.equals(compositePoLine.getIsPackage()) || Objects.isNull(instanceId)) {
       return Future.succeededFuture();
     }
-    return inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext)
+    return inventoryManager.createShadowInstanceIfNeeded(instanceId, TenantTool.tenantId(requestContext.getHeaders()), requestContext)
       .mapEmpty();
   }
 
