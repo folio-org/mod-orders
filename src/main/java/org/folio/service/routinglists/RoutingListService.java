@@ -101,8 +101,6 @@ public class RoutingListService {
   private Future<Void> validateRoutingList(RoutingList rList, RequestContext requestContext) throws HttpException {
     var poLineFuture = poLineService.getOrderLineById(rList.getPoLineId(), requestContext);
     var routingListsFuture = getRoutingListsByPoLineId(rList.getPoLineId(), requestContext);
-    logger.error(poLineFuture);
-    logger.error(routingListsFuture);
     return GenericCompositeFuture.all(List.of(poLineFuture, routingListsFuture)).compose(f -> {
       var poLine = poLineFuture.result();
       var routingLists = routingListsFuture.result();
