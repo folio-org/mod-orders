@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -39,14 +40,15 @@ public class RoutingListValidatorTest {
   @Test
   void testValidateRoutingList() {
     RoutingListCollection collection = getRoutingListCollection(0);
-    List<Error> errorList = RoutingListValidatorUtil.validateRoutingList(collection, samplePoLine);
+    List<Error> errorList = RoutingListValidatorUtil.validateRoutingList(sampleRoutingList, collection, samplePoLine);
     assertEquals(errorList.size(), 0);
   }
 
   @Test
   void testValidateRoutingListWithPOLineLimitReached() {
     RoutingListCollection collection = getRoutingListCollection(1);
-    List<Error> errors = RoutingListValidatorUtil.validateRoutingList(collection, samplePoLine);
+    var distinctRoutingList = getMockAsJson(ROUTING_LIST_SAMPLE).mapTo(RoutingList.class).withId(UUID.randomUUID().toString());
+    List<Error> errors = RoutingListValidatorUtil.validateRoutingList(distinctRoutingList, collection, samplePoLine);
     assertEquals(errors.size(), 1);
     assertEquals(errors.get(0).getMessage(), ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE.getDescription());
   }
@@ -55,7 +57,7 @@ public class RoutingListValidatorTest {
   void testValidateRoutingListWithPOLineInvalidOrderFormat() {
     samplePoLine.setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
     RoutingListCollection collection = getRoutingListCollection(1);
-    List<Error> errors = RoutingListValidatorUtil.validateRoutingList(collection, samplePoLine);
+    List<Error> errors = RoutingListValidatorUtil.validateRoutingList(sampleRoutingList, collection, samplePoLine);
     assertEquals(errors.size(), 1);
     assertEquals(errors.get(0).getMessage(), INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT.getDescription());
   }
