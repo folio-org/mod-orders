@@ -42,7 +42,7 @@ public class RoutingListValidatorUtil {
   private static List<RoutingList> extractDifferentRoutingLists(RoutingList routingList, RoutingListCollection routingListCollection) {
     return routingListCollection.getRoutingLists()
       .stream()
-      .filter(l -> !l.getId().equals(routingList.getId()))
+      .filter(lst -> !lst.getId().equals(routingList.getId()))
       .toList();
   }
 
