@@ -261,7 +261,7 @@ public class RoutingListsApiTest {
     logger.info("=== Test delete Routing List by id ===");
     doReturn(failedFuture(new HttpException(BAD_REQUEST, ErrorCodes.GENERIC_ERROR_CODE))).when(routingListService).deleteRoutingList(eq(ID_BAD_FORMAT), any(RequestContext.class));
 
-    verifyDeleteResponse(String.format(ROUTING_LISTS_ID_PATH, ID_BAD_FORMAT), APPLICATION_JSON, 400);
+    verifyDeleteResponse(String.format(ROUTING_LISTS_ID_PATH, ID_BAD_FORMAT), TEXT_PLAIN, 400);
   }
 
   @Test
