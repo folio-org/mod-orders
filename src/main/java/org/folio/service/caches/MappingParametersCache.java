@@ -9,6 +9,7 @@ import io.vertx.core.json.Json;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.Organization;
 import org.folio.OrganizationCollection;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.core.RestClient;
@@ -26,6 +27,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.folio.service.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -61,6 +63,7 @@ public class MappingParametersCache {
 
   /**
    * Retrieves {@link MappingParameters} from cache by tenantId
+   *
    * @param params {@link OkapiConnectionParams} connection params
    * @return CompletableFuture with {@link MappingParameters} object
    */
@@ -75,6 +78,7 @@ public class MappingParametersCache {
 
   /**
    * Generates {@link MappingParameters} with collection of {@link org.folio.Organization}
+   *
    * @param params {@link OkapiConnectionParams} connection params
    * @return CompletableFuture with {@link MappingParameters} object
    */
@@ -97,6 +101,7 @@ public class MappingParametersCache {
             return getRemainingOrganizations(params, orgCollection, mappingParameters);
           }
           mappingParameters.withOrganizations(orgCollection.getOrganizations());
+
           return CompletableFuture.completedFuture(mappingParameters);
         } else {
           String message = format(
@@ -121,6 +126,20 @@ public class MappingParametersCache {
         LOGGER.info("getRemainingOrganizations:: Organizations were loaded for cache, tenantId '{}', organizations '{}'",
           params.getTenantId(), organizations.size());
         organizationCollection.getOrganizations().addAll(organizations);
+        var duplicates = organizationCollection.getOrganizations().stream()
+          .collect(Collectors.groupingBy(Organization::getId))  // assuming getId() is a method in your Organization class
+          .entrySet().stream().filter(e -> e.getValue().size() > 1)
+          .flatMap(e -> e.getValue().stream())
+          .collect(Collectors.toList());
+
+        if (!duplicates.isEmpty()) {
+          var duplicatedIds = duplicates.stream()
+            .map(Organization::getId)   // Assuming getId() is a method in your Organization class
+            .collect(Collectors.joining(", "));
+          LOGGER.info("Duplicates found: count: '{}', ids '{}'", duplicates.size(), duplicatedIds);
+        } else {
+          LOGGER.info("Not found duplicates");
+        }
         return CompletableFuture.completedFuture(mappingParameters.withOrganizations(organizationCollection.getOrganizations()));
       });
   }
