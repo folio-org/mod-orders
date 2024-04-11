@@ -79,9 +79,7 @@ public class RoutingListService {
 
   public Future<RoutingList> createRoutingList(RoutingList routingList, RequestContext requestContext) {
     return validateRoutingList(routingList, requestContext)
-      .compose(
-        f ->
-      {
+      .compose(f -> {
         RequestEntry requestEntry = new RequestEntry(ROUTING_LIST_ENDPOINT).withId(routingList.getId());
         return restClient.post(requestEntry, routingList, RoutingList.class, requestContext);
       });

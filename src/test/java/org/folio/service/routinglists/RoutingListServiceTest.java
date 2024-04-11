@@ -106,7 +106,8 @@ public class RoutingListServiceTest {
     doReturn(succeededFuture(getRoutingListCollection(1))).when(restClient).get(any(RequestEntry.class), eq(RoutingListCollection.class), any());
     doReturn(succeededFuture(samplePoLine)).when(poLineService).getOrderLineById(any(), any());
 
-    Future<RoutingList> future = routingListService.createRoutingList(sampleRoutingList, requestContextMock);
+    var distinctRoutingList = getMockAsJson(ROUTING_LIST_SAMPLE).mapTo(RoutingList.class).withId(UUID.randomUUID().toString());
+    Future<RoutingList> future = routingListService.createRoutingList(distinctRoutingList, requestContextMock);
     vertxTestContext.assertFailure(future).onComplete(result -> {
       assertTrue(result.failed());
       var exception = result.cause().getMessage();

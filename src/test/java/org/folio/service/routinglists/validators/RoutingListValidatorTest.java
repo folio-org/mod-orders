@@ -47,7 +47,7 @@ public class RoutingListValidatorTest {
   @Test
   void testValidateRoutingListWithPOLineLimitReached() {
     RoutingListCollection collection = getRoutingListCollection(1);
-    var distinctRoutingList = sampleRoutingList = getMockAsJson(ROUTING_LIST_SAMPLE).mapTo(RoutingList.class).withId(UUID.randomUUID().toString());
+    var distinctRoutingList = getMockAsJson(ROUTING_LIST_SAMPLE).mapTo(RoutingList.class).withId(UUID.randomUUID().toString());
     List<Error> errors = RoutingListValidatorUtil.validateRoutingList(distinctRoutingList, collection, samplePoLine);
     assertEquals(errors.size(), 1);
     assertEquals(errors.get(0).getMessage(), ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE.getDescription());
