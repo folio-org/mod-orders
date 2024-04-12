@@ -89,7 +89,7 @@ public class MappingParametersCache {
     LOGGER.debug("loadMappingParameters:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
       tenantId, params.getOkapiUrl(), params.getTenantId());
 
-    return RestUtil.doRequest(params, format(getSortedOrganizationsLimitPath(), settingsLimit), HttpMethod.GET, null)
+    return RestUtil.doRequest(params, getSortedOrganizationsLimitPath(), HttpMethod.GET, null)
       .toCompletionStage()
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
@@ -161,6 +161,6 @@ public class MappingParametersCache {
   }
 
   private String getSortedOrganizationsLimitPath() {
-    return String.format("%s?limit=%s?query=%s", ORGANIZATIONS, SORT_BY_ID);
+    return String.format("%s?limit=%s?query=%s", ORGANIZATIONS, settingsLimit, SORT_BY_ID);
   }
 }
