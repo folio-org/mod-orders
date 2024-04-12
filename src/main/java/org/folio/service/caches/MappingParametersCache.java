@@ -41,6 +41,8 @@ public class MappingParametersCache {
 
   private static final String ORGANIZATIONS = "/organizations/organizations";
 
+  private static final String SORT_BY_ID = "sortBy id";
+
   @Value("${orders.cache.mapping.parameters.settings.limit:5000}")
   private int settingsLimit;
 
@@ -87,7 +89,7 @@ public class MappingParametersCache {
     LOGGER.debug("loadMappingParameters:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
       tenantId, params.getOkapiUrl(), params.getTenantId());
 
-    return RestUtil.doRequest(params, format(getOrganizationsLimitPath(), settingsLimit), HttpMethod.GET, null)
+    return RestUtil.doRequest(params, format(getSortedOrganizationsLimitPath(), settingsLimit), HttpMethod.GET, null)
       .toCompletionStage()
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
@@ -127,14 +129,14 @@ public class MappingParametersCache {
           params.getTenantId(), organizations.size());
         organizationCollection.getOrganizations().addAll(organizations);
         var duplicates = organizationCollection.getOrganizations().stream()
-          .collect(Collectors.groupingBy(Organization::getId))  // assuming getId() is a method in your Organization class
+          .collect(Collectors.groupingBy(Organization::getId))
           .entrySet().stream().filter(e -> e.getValue().size() > 1)
           .flatMap(e -> e.getValue().stream())
           .collect(Collectors.toList());
 
         if (!duplicates.isEmpty()) {
           var duplicatedIds = duplicates.stream()
-            .map(Organization::getId)   // Assuming getId() is a method in your Organization class
+            .map(Organization::getId)
             .collect(Collectors.joining(", "));
           LOGGER.info("Duplicates found: count: '{}', ids '{}'", duplicates.size(), duplicatedIds);
         } else {
@@ -148,7 +150,7 @@ public class MappingParametersCache {
     final int maxChunkSize = totalRecords / settingsLimit;
     int offset = settingsLimit;
     List<Future<OrganizationCollection>> organizationCollectionFutures = new ArrayList<>(maxChunkSize);
-    RequestEntry requestEntry = new RequestEntry(ORGANIZATIONS).withLimit(settingsLimit);
+    RequestEntry requestEntry = new RequestEntry(ORGANIZATIONS).withLimit(settingsLimit).withQuery(SORT_BY_ID);
     for (int i = 0; i < maxChunkSize; i++) {
       Future<OrganizationCollection> future = restClient.get(requestEntry.withOffset(offset), OrganizationCollection.class,
         new RequestContext(Vertx.currentContext(), headers));
@@ -158,7 +160,7 @@ public class MappingParametersCache {
     return organizationCollectionFutures;
   }
 
-  private String getOrganizationsLimitPath() {
-    return ORGANIZATIONS + "?limit=%s";
+  private String getSortedOrganizationsLimitPath() {
+    return String.format("%s?limit=%s?query=%s", ORGANIZATIONS, SORT_BY_ID);
   }
 }
