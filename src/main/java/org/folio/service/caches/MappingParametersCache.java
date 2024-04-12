@@ -41,7 +41,7 @@ public class MappingParametersCache {
 
   private static final String ORGANIZATIONS = "/organizations/organizations";
 
-  private static final String SORT_BY_ID = "sortBy id";
+  private static final String SORT_BY_ID_QUERY = "(cql.allRecords=1) sortBy id";
 
   @Value("${orders.cache.mapping.parameters.settings.limit:5000}")
   private int settingsLimit;
@@ -150,7 +150,7 @@ public class MappingParametersCache {
     final int maxChunkSize = totalRecords / settingsLimit;
     int offset = settingsLimit;
     List<Future<OrganizationCollection>> organizationCollectionFutures = new ArrayList<>(maxChunkSize);
-    RequestEntry requestEntry = new RequestEntry(ORGANIZATIONS).withLimit(settingsLimit).withQuery(SORT_BY_ID);
+    RequestEntry requestEntry = new RequestEntry(ORGANIZATIONS).withLimit(settingsLimit).withQuery(SORT_BY_ID_QUERY);
     for (int i = 0; i < maxChunkSize; i++) {
       Future<OrganizationCollection> future = restClient.get(requestEntry.withOffset(offset), OrganizationCollection.class,
         new RequestContext(Vertx.currentContext(), headers));
@@ -161,6 +161,6 @@ public class MappingParametersCache {
   }
 
   private String getSortedOrganizationsLimitPath() {
-    return String.format("%s?limit=%s?query=%s", ORGANIZATIONS, settingsLimit, SORT_BY_ID);
+    return String.format("%s?limit=%s&query=%s", ORGANIZATIONS, settingsLimit, SORT_BY_ID_QUERY);
   }
 }
