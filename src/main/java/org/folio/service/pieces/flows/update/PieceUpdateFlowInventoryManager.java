@@ -52,10 +52,13 @@ public class PieceUpdateFlowInventoryManager {
 
   private Future<Void> nonPackagePoLineUpdateInventory(PieceUpdateHolder holder, RequestContext requestContext) {
     return nonPackageUpdateTitleWithInstance(holder, requestContext)
-      .onSuccess(holder::withInstanceId)
-      .compose(instanceId -> handleHolding(holder, requestContext))
+      .map(holder::withInstanceId)
+      .compose(aHolder -> handleHolding(holder, requestContext))
       .compose(holdingId -> handleItem(holder, requestContext))
-      .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
+      .map(itemId -> {
+        Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId);
+        return null;
+      })
       .compose(aVoid -> deleteHolding(holder, requestContext))
       .onSuccess(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE))
       .mapEmpty();
@@ -64,10 +67,13 @@ public class PieceUpdateFlowInventoryManager {
   private Future<Void> packagePoLineUpdateInventory(PieceUpdateHolder holder, RequestContext requestContext) {
     return titlesService.getTitleById(holder.getPieceToUpdate().getTitleId(), requestContext)
       .compose(title -> packageUpdateTitleWithInstance(title, requestContext))
-      .onSuccess(title -> holder.withInstanceId(title.getInstanceId()))
-      .compose(title -> handleHolding(holder, requestContext))
+      .map(title -> holder.withInstanceId(title.getInstanceId()))
+      .compose(aHolder -> handleHolding(holder, requestContext))
       .compose(holdingId -> handleItem(holder, requestContext))
-      .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId))
+      .map(itemId -> {
+        Optional.ofNullable(itemId).ifPresent(holder.getPieceToUpdate()::withItemId);
+        return null;
+      })
       .compose(aVoid -> deleteHolding(holder, requestContext))
       .onSuccess(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE))
       .mapEmpty();

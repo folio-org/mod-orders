@@ -175,11 +175,13 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
             .map(ReEncumbranceHolder::getRollover)
             .filter(Objects::nonNull)
             .map(rollover -> ledgerRolloverProgressService.getRolloversProgress(rollover.getId(), requestContext)
-                    .onSuccess(progresses -> {
-                      if (isRolloverNotCompleted(progresses)) {
-                        ledgerIds.add(rollover.getLedgerId());
-                      }
-                    }))
+              .map(progresses -> {
+                if (isRolloverNotCompleted(progresses)) {
+                  ledgerIds.add(rollover.getLedgerId());
+                }
+                return null;
+              })
+            )
             .toList())
             .map(aVoid -> ledgerIds);
   }

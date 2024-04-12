@@ -1,6 +1,7 @@
 package org.folio.service.pieces.flows;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,6 +35,8 @@ public class DefaultPieceFlowsValidator {
     combinedErrors.addAll(pieceLocationErrors);
     List<Error> pieceFormatErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceFormat(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     combinedErrors.addAll(pieceFormatErrors);
+    List<Error> displayOnHoldingsErrors = validateDisplayOnHoldingsConsistency(pieceToCreate);
+    combinedErrors.addAll(displayOnHoldingsErrors);
     if (CollectionUtils.isNotEmpty(combinedErrors)) {
       Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
       logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());
@@ -45,6 +48,13 @@ public class DefaultPieceFlowsValidator {
     if (createItem && !isCreateItemForPiecePossible(pieceToCreate, originPoLine)) {
       String msg = String.format(CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getDescription(), pieceToCreate.getFormat(), originPoLine.getId());
       return List.of(new Error().withCode(CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR.getCode()).withMessage(msg));
+    }
+    return Collections.emptyList();
+  }
+
+  public static List<Error> validateDisplayOnHoldingsConsistency(Piece piece) {
+    if (Boolean.FALSE.equals(piece.getDisplayOnHolding()) && Boolean.TRUE.equals(piece.getDisplayToPublic())) {
+      return List.of(PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT.toError());
     }
     return Collections.emptyList();
   }
