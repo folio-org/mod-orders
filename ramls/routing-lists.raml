@@ -1,0 +1,89 @@
+#%RAML 1.0
+title: Routing Lists
+baseUri: https://github.com/folio-org/mod-orders
+version: v1.0
+
+documentation:
+  - title: Routing Lists API
+    content: <b>API for routing lists</b>
+
+types:
+  routing-list: !include acq-models/mod-orders-storage/schemas/routing_list.json
+  routing-list-collection: !include acq-models/mod-orders-storage/schemas/routing_list_collection.json
+  error: !include raml-util/schemas/error.schema
+  errors: !include raml-util/schemas/errors.schema
+  UUID:
+    type: string
+    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+traits:
+  pageable: !include raml-util/traits/pageable.raml
+  searchable: !include raml-util/traits/searchable.raml
+  validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  collection: !include rtypes/collection-with-json-response.raml
+  collection-item: !include rtypes/item-collection-with-json-response.raml
+
+/orders/routing-lists:
+  displayName: Routing Lists
+  type:
+    collection:
+      exampleCollection: !include acq-models/mod-orders-storage/examples/routing_list_collection.sample
+      exampleItem: !include acq-models/mod-orders-storage/examples/routing_list_get.sample
+      schemaCollection: routing-list-collection
+      schemaItem: routing-list
+  get:
+    description: Get a collection of routing lists
+    is: [
+      searchable: { description: "CQL query", example: "name=MyRoutingList" },
+      pageable
+    ]
+  post:
+    description: Create a new routing list record
+    is: [validate]
+    body:
+      application/json:
+        type: routing-list
+        example:
+          strict: false
+          value: !include acq-models/mod-orders-storage/examples/routing_list_get.sample
+    responses:
+      201:
+        description: "Returns a newly created item, with server-controlled fields like 'id' populated"
+        body:
+          application/json:
+            example: !include acq-models/mod-orders-storage/examples/routing_list_get.sample
+      400:
+        description: "Bad request, e.g. malformed request body or query parameter. Details of the error (e.g. name of the parameter or line/character number with malformed data) provided in the response."
+        body:
+          application/json:
+            type: error
+      401:
+        description: "Not authorized to perform requested action"
+        body:
+          application/json:
+            type: error
+      500:
+        description: "Internal server error, e.g. due to misconfiguration"
+        body:
+          application/json:
+            type: error
+  /{id}:
+    uriParameters:
+      id:
+        description: The UUID of a Routing List
+        type: UUID
+    description: Get, Delete or Update a specific routing list
+    type:
+      collection-item:
+        exampleItem: !include acq-models/mod-orders-storage/examples/routing_list_get.sample
+        schema: routing-list
+  /{id}/template:
+    uriParameters:
+      id:
+        description: The UUID of a Title
+        type: UUID
+    get:
+      description: Execute mod-template-engine to process templates with replaced token placeholders [update]
+

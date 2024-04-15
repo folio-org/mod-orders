@@ -10,13 +10,6 @@ import static org.folio.rest.core.exceptions.ExceptionUtil.mapToErrors;
 
 import java.util.Map;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.WebClientFactory;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.core.models.RequestEntry;
-
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -29,6 +22,12 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.predicate.ErrorConverter;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.okapi.common.WebClientFactory;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 
 public class RestClient {
 
@@ -243,12 +242,14 @@ public class RestClient {
 
   public String extractRecordId(HttpResponse<Buffer> response) {
     JsonObject body = response.bodyAsJsonObject();
-    String id;
+    String id = "";
     if (body != null && !body.isEmpty() && body.containsKey(ID)) {
       id = body.getString(ID);
     } else {
       String location = response.getHeader(LOCATION);
-      id = location.substring(location.lastIndexOf('/') + 1);
+      if (location != null) {
+        id = location.substring(location.lastIndexOf('/') + 1);
+      }
     }
     return id;
   }

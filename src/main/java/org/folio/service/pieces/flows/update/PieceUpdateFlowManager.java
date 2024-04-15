@@ -29,7 +29,6 @@ import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 public class PieceUpdateFlowManager {
@@ -68,9 +67,8 @@ public class PieceUpdateFlowManager {
       .withCreateItem(createItem)
       .withDeleteHolding(deleteHolding);
 
-    Promise<Void> promise = Promise.promise();
-    pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
-      .onSuccess(holder::withPieceFromStorage)
+    return pieceStorageService.getPieceById(pieceToUpdate.getId(), requestContext)
+      .map(holder::withPieceFromStorage)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .map(v -> {
@@ -101,19 +99,15 @@ public class PieceUpdateFlowManager {
         }
         return null;
       })
-      .onSuccess(v -> promise.complete())
-      .onFailure(t -> {
-        logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause());
-        promise.fail(t);
-      });
-    return promise.future();
+      .onFailure(t -> logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause()))
+      .mapEmpty();
   }
 
   protected Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine originPoLine = holder.getOriginPoLine();
 
     return pieceStorageService.getPiecesByLineId(originPoLine.getId(), requestContext)
-      .map(pieces -> {
+      .compose(pieces -> {
         CompositePurchaseOrder order = holder.getOriginPurchaseOrder();
         if (order.getOrderType() != OrderType.ONE_TIME || order.getWorkflowStatus() != WorkflowStatus.OPEN) {
           return Future.succeededFuture();
@@ -122,7 +116,7 @@ public class PieceUpdateFlowManager {
         CompositePoLine poLineToSave = holder.getPoLineToSave();
         poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
         return purchaseOrderLineService.saveOrderLine(poLineToSave, requestContext);
-      }).compose(t -> {
+      }).compose(v -> {
         if (!Boolean.TRUE.equals(originPoLine.getIsPackage()) &&
           !Boolean.TRUE.equals(originPoLine.getCheckinItems())) {
           return updatePoLineService.updatePoLine(holder, requestContext);
