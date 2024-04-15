@@ -9,7 +9,6 @@ import io.vertx.core.json.Json;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.Organization;
 import org.folio.OrganizationCollection;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.core.RestClient;
@@ -27,11 +26,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.folio.service.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.service.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 /**
  * The class responsible for caching {@link MappingParameters}
@@ -129,20 +127,6 @@ public class MappingParametersCache {
         LOGGER.info("getRemainingOrganizations:: Organizations were loaded for cache, tenantId '{}', organizations '{}'",
           params.getTenantId(), organizations.size());
         organizationCollection.getOrganizations().addAll(organizations);
-        var duplicates = organizationCollection.getOrganizations().stream()
-          .collect(Collectors.groupingBy(Organization::getId))
-          .entrySet().stream().filter(e -> e.getValue().size() > 1)
-          .flatMap(e -> e.getValue().stream())
-          .collect(Collectors.toList());
-
-        if (!duplicates.isEmpty()) {
-          var duplicatedIds = duplicates.stream()
-            .map(Organization::getId)
-            .collect(Collectors.joining(", "));
-          LOGGER.info("Duplicates found: count: '{}', ids '{}'", duplicates.size(), duplicatedIds);
-        } else {
-          LOGGER.info("Not found duplicates");
-        }
         return CompletableFuture.completedFuture(mappingParameters.withOrganizations(organizationCollection.getOrganizations()));
       });
   }
