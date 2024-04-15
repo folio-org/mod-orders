@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.folio.service.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 
 /**
  * The class responsible for caching {@link MappingParameters}
@@ -89,7 +90,7 @@ public class MappingParametersCache {
     LOGGER.debug("loadMappingParameters:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
       tenantId, params.getOkapiUrl(), params.getTenantId());
 
-    return RestUtil.doRequest(params, getSortedOrganizationsLimitPath(), HttpMethod.GET, null)
+    return RestUtil.doRequest(params, getOrganizationsSortedLimitPath(settingsLimit), HttpMethod.GET, null)
       .toCompletionStage()
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
@@ -160,7 +161,7 @@ public class MappingParametersCache {
     return organizationCollectionFutures;
   }
 
-  private String getSortedOrganizationsLimitPath() {
-    return String.format("%s?limit=%s&query=%s", ORGANIZATIONS, settingsLimit, SORT_BY_ID_QUERY);
+  private String getOrganizationsSortedLimitPath(int limit) {
+    return format("%s?limit=%d&query=", ORGANIZATIONS, limit) + encodeQuery(SORT_BY_ID_QUERY);
   }
 }
