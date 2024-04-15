@@ -1013,7 +1013,11 @@
           "methods": ["POST"],
           "pathPattern": "/orders/routing-lists",
           "permissionsRequired": ["orders.routing-lists.item.post"],
-          "modulePermissions": ["orders-storage.routing-lists.item.post"]
+          "modulePermissions": [
+            "orders-storage.routing-lists.item.post",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.routing-lists.collection.get"
+          ]
         },
         {
           "methods": ["GET"],
@@ -1025,7 +1029,11 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/routing-lists/{id}",
           "permissionsRequired": ["orders.routing-lists.item.put"],
-          "modulePermissions": ["orders-storage.routing-lists.item.put"]
+          "modulePermissions": [
+            "orders-storage.routing-lists.item.put",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.routing-lists.collection.get"
+          ]
         },
         {
           "methods": ["DELETE"],
@@ -1173,7 +1181,7 @@
     },
     {
       "id": "finance.funds",
-      "version": "2.0"
+      "version": "3.0"
     },
     {
       "id": "finance.transactions",

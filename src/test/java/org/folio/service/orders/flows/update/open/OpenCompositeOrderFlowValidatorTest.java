@@ -3,8 +3,10 @@ package org.folio.service.orders.flows.update.open;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
 import java.util.List;
 
 import io.vertx.core.Future;
@@ -59,7 +61,7 @@ public class OpenCompositeOrderFlowValidatorTest {
 
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L1"))
       ))
     );
 
@@ -90,7 +92,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
 
@@ -121,7 +123,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
 
@@ -137,7 +139,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         List<Parameter> expectedParameters = List.of(
           new Parameter().withKey("poLineId").withValue(poLine.getId()),
           new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-          new Parameter().withKey("restrictedLocations").withValue("[L1]")
+          new Parameter().withKey("restrictedLocations").withValue("[folio_shared.L1]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
@@ -160,8 +162,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L1"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L1")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L1"))
       ))
     );
 
@@ -192,8 +194,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L2")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L2")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
 
@@ -224,8 +226,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of("L2")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(createLocations("L2")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
 
@@ -241,7 +243,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         List<Parameter> expectedParameters = List.of(
           new Parameter().withKey("poLineId").withValue(poLine.getId()),
           new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-          new Parameter().withKey("restrictedLocations").withValue("[L1]")
+          new Parameter().withKey("restrictedLocations").withValue("[folio_shared.L1]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
@@ -264,8 +266,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
       ))
     );
 
@@ -281,7 +283,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         List<Parameter> expectedParameters = List.of(
           new Parameter().withKey("poLineId").withValue(poLine.getId()),
           new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-          new Parameter().withKey("restrictedLocations").withValue("[L2]")
+          new Parameter().withKey("restrictedLocations").withValue("[folio_shared.L2]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
@@ -304,8 +306,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
       ))
     );
 
@@ -321,7 +323,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         List<Parameter> expectedParameters = List.of(
           new Parameter().withKey("poLineId").withValue(poLine.getId()),
           new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-          new Parameter().withKey("restrictedLocations").withValue("[L1, L2]")
+          new Parameter().withKey("restrictedLocations").withValue("[folio_shared.L2, folio_shared.L1]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
@@ -344,8 +346,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L3")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1", "L3")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
       ))
     );
 
@@ -361,7 +363,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         List<Parameter> expectedParameters = List.of(
           new Parameter().withKey("poLineId").withValue(poLine.getId()),
           new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-          new Parameter().withKey("restrictedLocations").withValue("[L2]")
+          new Parameter().withKey("restrictedLocations").withValue("[folio_shared.L2]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
@@ -384,8 +386,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
       ))
     );
 
@@ -416,8 +418,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of()),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(List.of()),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
       ))
     );
 
@@ -448,8 +450,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocationIds(List.of()),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(false).withLocations(List.of()),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
       ))
     );
 
@@ -465,7 +467,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         List<Parameter> expectedParameters = List.of(
           new Parameter().withKey("poLineId").withValue(poLine.getId()),
           new Parameter().withKey("poLineNumber").withValue(poLine.getPoLineNumber()),
-          new Parameter().withKey("restrictedLocations").withValue("[L2]")
+          new Parameter().withKey("restrictedLocations").withValue("[folio_shared.L2]")
         );
         assertEquals(FUND_LOCATION_RESTRICTION_VIOLATION.toError().withParameters(expectedParameters), exception.getError());
         vertxTestContext.completeNow();
@@ -488,8 +490,8 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L3")),
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1", "L3")),
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2"))
       ))
     );
 
@@ -520,7 +522,7 @@ public class OpenCompositeOrderFlowValidatorTest {
       );
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1", "L3"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1", "L3"))
       ))
     );
 
@@ -557,11 +559,11 @@ public class OpenCompositeOrderFlowValidatorTest {
 
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
-    when(inventoryManager.getHoldingsByIds(List.of(holdingId), requestContext)).thenReturn(
+    when(inventoryManager.getHoldingsByIds(any(), any())).thenReturn(
       Future.succeededFuture(List.of(holding))
     );
 
@@ -597,11 +599,11 @@ public class OpenCompositeOrderFlowValidatorTest {
 
     when(fundService.getFunds(fundIds, requestContext)).thenReturn(
       Future.succeededFuture(List.of(
-        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L2")),
-        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocationIds(List.of("L1"))
+        new Fund().withId("F1").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L2")),
+        new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
-    when(inventoryManager.getHoldingsByIds(List.of(holdingId), requestContext)).thenReturn(
+    when(inventoryManager.getHoldingsByIds(any(), any())).thenReturn(
       Future.failedFuture(new HttpException(401, "Not found"))
     );
 
@@ -616,6 +618,14 @@ public class OpenCompositeOrderFlowValidatorTest {
         assertEquals(404, exception.getCode());
         vertxTestContext.completeNow();
       });
+  }
+
+  private static List<org.folio.rest.acq.model.finance.Location> createLocations(String... ids) {
+    return Arrays.stream(ids).map(id -> {
+      org.folio.rest.acq.model.finance.Location location = new org.folio.rest.acq.model.finance.Location();
+      location.setLocationId(id);
+      return location;
+    }).toList();
   }
 
 }
