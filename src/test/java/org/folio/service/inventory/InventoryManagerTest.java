@@ -650,25 +650,28 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void shouldThrowExceptionIfHoldingIsNotAlreadyExist() {
+  void shouldThrowExceptionIfHoldingIsNotAlreadyExist(VertxTestContext vertxTestContext) {
     String instanceId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     Location location = new Location().withHoldingId(holdingId).withQuantity(1).withQuantityPhysical(1);
     String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
     Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
 
-    doReturn(succeededFuture(Optional.empty()))
-      .when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
+      .thenReturn(succeededFuture(Optional.empty()));
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
       .thenThrow(new CompletionException(new HttpException(NOT_FOUND, error)));
 
-    CompletionException exception = assertThrows(CompletionException.class,
-      () -> inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).result());
+    Future<String> future = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
+    vertxTestContext.assertFailure(future)
+      .onComplete(completionException -> {
+        assertThat(completionException.cause(), IsInstanceOf.instanceOf(CompletionException.class));
+        HttpException cause = (HttpException) completionException.cause().getCause();
+        assertEquals(NOT_FOUND, cause.getCode());
+        assertEquals(error, cause.getError());
+        vertxTestContext.completeNow();
+      });
 
-    assertThat(exception.getCause(), IsInstanceOf.instanceOf(HttpException.class));
-    HttpException cause = (HttpException) exception.getCause();
-    assertEquals(NOT_FOUND, cause.getCode());
-    assertEquals(error, cause.getError());
   }
 
   @Test
