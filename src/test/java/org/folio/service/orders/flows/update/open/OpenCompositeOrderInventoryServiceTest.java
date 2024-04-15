@@ -25,18 +25,32 @@ import org.springframework.context.annotation.Bean;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.TestConfig.*;
+import static org.folio.TestConfig.autowireDependencies;
+import static org.folio.TestConfig.clearServiceInteractions;
+import static org.folio.TestConfig.clearVertxContext;
+import static org.folio.TestConfig.getFirstContextFromVertx;
+import static org.folio.TestConfig.getVertx;
+import static org.folio.TestConfig.initSpringContext;
+import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(VertxExtension.class)
 public class OpenCompositeOrderInventoryServiceTest {
@@ -52,6 +66,8 @@ public class OpenCompositeOrderInventoryServiceTest {
   private TitlesService titlesService;
   @Autowired
   private  PieceStorageService pieceStorageService;
+  @Autowired
+  private ConsortiumConfigurationService consortiumConfigurationService;
   @Autowired
   private ProcessInventoryStrategyResolver processInventoryStrategyResolver;
   @Autowired
@@ -96,6 +112,7 @@ public class OpenCompositeOrderInventoryServiceTest {
 
     doReturn(succeededFuture(line)).when(inventoryManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), eq(requestContext));
+    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
 
     openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
 
@@ -125,6 +142,9 @@ public class OpenCompositeOrderInventoryServiceTest {
       return mock(RestClient.class);
     }
 
+    @Bean ConsortiumConfigurationService consortiumConfigurationService() {
+      return mock(ConsortiumConfigurationService.class);
+    }
     @Bean OpenCompositeOrderPieceService openCompositeOrderPieceCreateService() {
       return mock(OpenCompositeOrderPieceService.class);
     }

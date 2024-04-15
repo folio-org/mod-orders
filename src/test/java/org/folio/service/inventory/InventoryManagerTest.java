@@ -585,6 +585,7 @@ public class InventoryManagerTest {
     String holdingIdExp = extractId(holdingExp);
     Location location = new Location().withHoldingId(holdingIdExp).withQuantity(1).withQuantityPhysical(1);
 
+    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(holdingExp)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     String holdingIdAct = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).result();
 
@@ -656,6 +657,8 @@ public class InventoryManagerTest {
     String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
     Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
 
+    doReturn(succeededFuture(Optional.empty()))
+      .when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
       .thenThrow(new CompletionException(new HttpException(NOT_FOUND, error)));
 
