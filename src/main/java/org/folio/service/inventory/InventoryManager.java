@@ -322,7 +322,9 @@ public class InventoryManager {
         return null;
       });
     } else {
-      return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
+      return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+        .map(consortiumConfiguration -> cloneRequestContextBasedOnLocation(requestContext, location, consortiumConfiguration))
+        .compose(updatedRequestContext -> createHoldingsRecordId(instanceId, location.getLocationId(), updatedRequestContext));
     }
   }
 
