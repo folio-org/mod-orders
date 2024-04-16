@@ -514,8 +514,8 @@ public class InventoryManager {
             Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
 
             var future = consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-              .map(consortiumConfiguration -> consortiumConfiguration.isPresent() ?
-                cloneRequestContextBasedOnLocation(requestContext, location) : requestContext)
+              .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
+                cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
               .compose(updatedRequestContext -> {
               List<String> existingItemIds;
               if (pieceFormat == Piece.Format.ELECTRONIC) {

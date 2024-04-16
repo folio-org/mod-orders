@@ -84,8 +84,8 @@ public abstract class ProcessInventoryStrategy {
         .compose(aVoid -> {
           // Search for or create a new holdings record and then create items for it if required
           return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-            .map(consortiumConfiguration -> consortiumConfiguration.isPresent() ?
-              cloneRequestContextBasedOnLocation(requestContext, location) : requestContext)
+            .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
+              cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
             .compose(updatedRequestContext -> inventoryManager.getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, updatedRequestContext))
             .compose(holdingId -> {
               // Items are not going to be created when create inventory is "Instance, Holding"
@@ -111,8 +111,8 @@ public abstract class ProcessInventoryStrategy {
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
         .withQuery(query).withOffset(0).withLimit(1);
       return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-        .map(consortiumConfiguration -> consortiumConfiguration.isPresent() ?
-          cloneRequestContextBasedOnLocation(requestContext, location) : requestContext)
+        .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
+          cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
         .compose(updatedRequestContext -> restClient.getAsJsonObject(requestEntry, updatedRequestContext))
         .compose(holdings -> {
           if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {

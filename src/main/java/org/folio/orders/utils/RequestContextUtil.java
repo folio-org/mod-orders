@@ -21,9 +21,9 @@ public class RequestContextUtil {
   }
 
   public static RequestContext cloneRequestContextWithTargetTenantId(RequestContext requestContext, String targetTenantId) {
-    Map<String, String> modifiedHeaders  = new CaseInsensitiveMap<>(requestContext.getHeaders());
+    Map<String, String> modifiedHeaders = new CaseInsensitiveMap<>(requestContext.getHeaders());
     modifiedHeaders.put(XOkapiHeaders.TENANT, targetTenantId);
-    return new RequestContext(requestContext.getContext(), modifiedHeaders );
+    return new RequestContext(requestContext.getContext(), modifiedHeaders);
   }
 
 }
