@@ -63,7 +63,8 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
     compPOL.getLocations().forEach(location -> itemsPerHolding.add(
       findHoldingsId(compPOL, location, restClient, requestContext)
         .compose(aVoid -> consortiumConfigurationService.getConsortiumConfiguration(requestContext))
-        .map(consortiumConfiguration -> cloneRequestContextBasedOnLocation(requestContext, location, consortiumConfiguration))
+        .map(consortiumConfiguration -> consortiumConfiguration.isPresent() ?
+          cloneRequestContextBasedOnLocation(requestContext, location) : requestContext)
         .compose(updatedRequestContext -> inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getEresource(), compPOL.getInstanceId(), location, updatedRequestContext)
           .map(holding -> {
             updateLocationWithHoldingInfo(holding, location);

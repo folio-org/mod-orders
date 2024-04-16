@@ -83,8 +83,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.Instance;
 import org.folio.TestConstants;
@@ -585,7 +583,6 @@ public class InventoryManagerTest {
     String holdingIdExp = extractId(holdingExp);
     Location location = new Location().withHoldingId(holdingIdExp).withQuantity(1).withQuantityPhysical(1);
 
-    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(holdingExp)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     String holdingIdAct = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).result();
 
@@ -605,7 +602,6 @@ public class InventoryManagerTest {
     List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
     Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
 
-    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(new JsonObject().put(ID, holdingIdExp))).when(restClient).postJsonObject(any(RequestEntry.class), any(), any(RequestContext.class));
     doReturn(succeededFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), eq(requestContext));
 
@@ -637,7 +633,6 @@ public class InventoryManagerTest {
     holdingsRecJson.put(InventoryManager.HOLDING_PERMANENT_LOCATION_ID, locationIds.get(0));
     JsonObject emptyHoldingCollection = new JsonObject().put(HOLDINGS_RECORDS, new JsonArray());
 
-    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(emptyHoldingCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), any(RequestContext.class));
     doReturn(succeededFuture(new JsonObject().put(ID, holdingIdExp))).when(restClient).postJsonObject(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(succeededFuture(HOLDINGS_SOURCE_ID_RESPONSE)).when(inventoryManager).getEntryId(eq(HOLDINGS_SOURCES), any(ErrorCodes.class), any(RequestContext.class));
@@ -652,28 +647,23 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void shouldThrowExceptionIfHoldingIsNotAlreadyExist(VertxTestContext vertxTestContext) {
+  void shouldThrowExceptionIfHoldingIsNotAlreadyExist() {
     String instanceId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     Location location = new Location().withHoldingId(holdingId).withQuantity(1).withQuantityPhysical(1);
     String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
     Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
 
-    when(consortiumConfigurationService.getConsortiumConfiguration(requestContext))
-      .thenReturn(succeededFuture(Optional.empty()));
     when(restClient.getAsJsonObject(any(RequestEntry.class), eq(requestContext)))
       .thenThrow(new CompletionException(new HttpException(NOT_FOUND, error)));
 
-    Future<String> future = inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
-    vertxTestContext.assertFailure(future)
-      .onComplete(completionException -> {
-        assertThat(completionException.cause(), IsInstanceOf.instanceOf(CompletionException.class));
-        HttpException cause = (HttpException) completionException.cause().getCause();
-        assertEquals(NOT_FOUND, cause.getCode());
-        assertEquals(error, cause.getError());
-        vertxTestContext.completeNow();
-      });
+    CompletionException exception = assertThrows(CompletionException.class,
+      () -> inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).result());
 
+    assertThat(exception.getCause(), IsInstanceOf.instanceOf(HttpException.class));
+    HttpException cause = (HttpException) exception.getCause();
+    assertEquals(NOT_FOUND, cause.getCode());
+    assertEquals(error, cause.getError());
   }
 
   @Test

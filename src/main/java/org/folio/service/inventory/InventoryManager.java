@@ -306,9 +306,7 @@ public class InventoryManager {
       if (Objects.nonNull(holdingIdCached)) {
         holdingIdFuture =  Future.succeededFuture(holdingIdCached);
       } else {
-        holdingIdFuture = consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-          .map(consortiumConfiguration -> cloneRequestContextBasedOnLocation(requestContext, location, consortiumConfiguration))
-          .compose(updatedRequestContext -> restClient.getAsJsonObject(requestEntry, updatedRequestContext))
+        holdingIdFuture = restClient.getAsJsonObject(requestEntry, requestContext)
           .onSuccess(id -> ctx.put(holdingIdKey, id))
           .map(holdingJson -> {
             var id = HelperUtils.extractId(holdingJson);
@@ -322,9 +320,7 @@ public class InventoryManager {
         return null;
       });
     } else {
-      return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-        .map(consortiumConfiguration -> cloneRequestContextBasedOnLocation(requestContext, location, consortiumConfiguration))
-        .compose(updatedRequestContext -> createHoldingsRecordId(instanceId, location.getLocationId(), updatedRequestContext));
+      return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
     }
   }
 
@@ -518,7 +514,8 @@ public class InventoryManager {
             Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
 
             var future = consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-              .map(consortiumConfiguration -> cloneRequestContextBasedOnLocation(requestContext, location, consortiumConfiguration))
+              .map(consortiumConfiguration -> consortiumConfiguration.isPresent() ?
+                cloneRequestContextBasedOnLocation(requestContext, location) : requestContext)
               .compose(updatedRequestContext -> {
               List<String> existingItemIds;
               if (pieceFormat == Piece.Format.ELECTRONIC) {
