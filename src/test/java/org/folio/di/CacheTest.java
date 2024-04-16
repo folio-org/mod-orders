@@ -4,6 +4,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.serverError;
 import static org.folio.dataimport.util.RestUtil.OKAPI_URL_HEADER;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 
@@ -95,18 +96,19 @@ public class CacheTest {
     Async async = context.async();
     ReflectionTestUtils.setField(mappingParametersCache, "settingsLimit", 5000);
 
+    String queryParam = "&query=" + encodeQuery("(cql.allRecords=1) sortBy id");
     String organizationId = UUID.randomUUID().toString();
     Organization organization = new Organization().withId(organizationId);
 
     WireMock.stubFor(
-      get("/organizations/organizations?limit=5000")
+      get("/organizations/organizations?limit=5000" + queryParam)
         .willReturn(okJson(new JsonObject()
           .put("organizations", JsonArray.of(organization))
           .put("totalRecords", 5001)
           .toString())));
 
     WireMock.stubFor(
-      get("/organizations/organizations?offset=5000&limit=5000")
+      get("/organizations/organizations?offset=5000" + queryParam + "&limit=5000")
         .willReturn(okJson(new JsonObject()
           .put("organizations", JsonArray.of(organization))
           .put("totalRecords", 5001)
@@ -127,9 +129,9 @@ public class CacheTest {
   @Test
   public void getMappingParametersFromCacheWithError(TestContext context) {
     Async async = context.async();
-
+    String queryParam = "&query=" + encodeQuery("(cql.allRecords=1) sortBy id");
     WireMock.stubFor(
-      get("/organizations/organizations?limit=0")
+      get("/organizations/organizations?limit=0" + queryParam)
         .willReturn(serverError()));
 
     mappingParametersCache

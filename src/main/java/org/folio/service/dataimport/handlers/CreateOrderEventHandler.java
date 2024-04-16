@@ -404,7 +404,8 @@ public class CreateOrderEventHandler implements EventHandler {
     // in this handler a purchase order always is created in PENDING status despite the status that is set during mapping
     orderToSave.setWorkflowStatus(WorkflowStatus.PENDING);
     if (orderToSave.getVendor() == null) {
-      LOGGER.info("Vendor for the order '{}' has not been mapped", orderId);
+      LOGGER.warn("saveOrder:: jobExecutionId: '{}', recordId: '{}', orderId: '{}' vendor for the order has not been mapped",
+        dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getContext().get(RECORD_ID_HEADER), orderId);
     }
 
     return purchaseOrderHelper.validateOrder(orderToSave, tenantConfig, requestContext)
