@@ -20,7 +20,14 @@ import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
 import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
@@ -496,15 +503,13 @@ public class PurchaseOrderLineService {
 
   public Future<List<String>> retrieveSearchLocationIds(PoLine poLine, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(poLine.getLocations())) {
-      poLine.setSearchLocationIds(Collections.emptyList());
-      return Future.succeededFuture();
+      return Future.succeededFuture(Collections.emptyList());
     }
 
     var holdingIds = StreamEx.of(poLine.getLocations()).map(Location::getHoldingId).nonNull().toList();
     var locationIds = StreamEx.of(poLine.getLocations()).map(Location::getLocationId).nonNull().toList();
     if (CollectionUtils.isEmpty(holdingIds)) {
-      poLine.setSearchLocationIds(locationIds);
-      return Future.succeededFuture();
+      return Future.succeededFuture(new ArrayList<>(locationIds));
     }
 
     return inventoryManager.getHoldingsByIds(holdingIds, requestContext)
