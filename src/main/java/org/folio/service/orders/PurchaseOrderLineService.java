@@ -1,5 +1,6 @@
 package org.folio.service.orders;
 
+import static com.google.common.collect.Lists.transform;
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.helper.BaseHelper.ID;
@@ -13,6 +14,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
 import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
@@ -32,6 +34,7 @@ import java.util.function.UnaryOperator;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -48,10 +51,11 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.service.caches.InventoryCache;
 
 import io.vertx.core.Future;
@@ -60,6 +64,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertxconcurrent.Semaphore;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.utils.ProductIdUtils;
 
 public class PurchaseOrderLineService {
@@ -70,13 +75,15 @@ public class PurchaseOrderLineService {
   private static final String ORDER_LINES_BY_ORDER_ID_QUERY = "purchaseOrderId == %s";
   private static final String EXCEPTION_CALLING_ENDPOINT_MSG = "Exception calling %s %s - %s";
   private static final int PO_LINE_BATCH_PARTITION_SIZE = 100;
-  private final InventoryCache inventoryCache;
 
   private final RestClient restClient;
+  private final InventoryCache inventoryCache;
+  private final InventoryManager inventoryManager;
 
-  public PurchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache) {
+  public PurchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache, InventoryManager inventoryManager) {
     this.inventoryCache = inventoryCache;
     this.restClient = restClient;
+    this.inventoryManager = inventoryManager;
   }
 
   public Future<PoLineCollection> getOrderLineCollection(String query, int offset, int limit, RequestContext requestContext) {
@@ -107,7 +114,8 @@ public class PurchaseOrderLineService {
 
   public Future<Void> saveOrderLine(PoLine poLine, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(poLine.getId());
-    return restClient.put(requestEntry, poLine, requestContext);
+    return updateSearchLocations(poLine, requestContext)
+      .compose(v -> restClient.put(requestEntry, poLine, requestContext));
   }
 
   public Future<Void> saveOrderLine(CompositePoLine compositePoLine, RequestContext requestContext) {
@@ -117,7 +125,8 @@ public class PurchaseOrderLineService {
 
   public Future<Void> saveOrderLines(PoLineCollection poLineCollection, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BATCH_ENDPOINT);
-    return restClient.put(requestEntry, poLineCollection, requestContext);
+    return collectResultsOnSuccess(transform(poLineCollection.getPoLines(), poLine -> updateSearchLocations(poLine, requestContext)))
+      .compose(v -> restClient.put(requestEntry, poLineCollection, requestContext));
   }
 
 
@@ -489,6 +498,29 @@ public class PurchaseOrderLineService {
           .onSuccess(v -> filteredCompLines.forEach(poLine -> removeISBNDuplicates(poLine, isbnTypeId)))
           .mapEmpty();
       });
+  }
+
+  public Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
+    var locations = poLine.getLocations();
+    if (CollectionUtils.isEmpty(locations)) {
+      return Future.succeededFuture();
+    }
+
+    var holdingIds = StreamEx.of(locations).map(Location::getHoldingId).nonNull().toList();
+    if (CollectionUtils.isEmpty(holdingIds)) {
+      return Future.succeededFuture();
+    }
+
+    var locationIds = StreamEx.of(locations).map(Location::getLocationId).nonNull().toList();
+    var searchLocationIds = new ArrayList<>(locationIds);
+
+    return inventoryManager.getHoldingsByIds(holdingIds, requestContext)
+      .map(holdings -> StreamEx.of(holdings).map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
+        .nonNull().toList())
+      .map(holdingsPermanentLocationIds -> StreamEx.of(searchLocationIds).append(holdingsPermanentLocationIds)
+        .distinct().toList())
+      .map(poLine::withSearchLocationIds)
+      .mapEmpty();
   }
 }
 
