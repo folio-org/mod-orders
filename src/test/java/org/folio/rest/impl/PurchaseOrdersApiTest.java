@@ -2416,7 +2416,7 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNull(getHoldingsSearches());
+    assertNotNull(getHoldingsSearches());
     assertNotNull(getCreatedHoldings());
     assertNull(getItemsSearches());
     assertNotNull(getCreatedPieces());
@@ -2460,7 +2460,7 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNull(getHoldingsSearches());
+    assertNotNull(getHoldingsSearches());
     assertNotNull(getCreatedHoldings());
     assertNotNull(getItemsSearches());
 
@@ -2500,7 +2500,7 @@ public class PurchaseOrdersApiTest {
       prepareHeaders(EMPTY_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
 
     assertNotNull(getInstancesSearches());
-    assertNull(getHoldingsSearches());
+    assertNotNull(getHoldingsSearches());
     assertNotNull(getCreatedHoldings());
     assertNotNull(getItemsSearches());
 
