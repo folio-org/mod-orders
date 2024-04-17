@@ -501,23 +501,21 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
-    var locations = poLine.getLocations();
-    if (CollectionUtils.isEmpty(locations)) {
+    if (CollectionUtils.isEmpty(poLine.getLocations())) {
       return Future.succeededFuture();
     }
 
-    var holdingIds = StreamEx.of(locations).map(Location::getHoldingId).nonNull().toList();
+    var holdingIds = StreamEx.of(poLine.getLocations()).map(Location::getHoldingId).nonNull().toList();
     if (CollectionUtils.isEmpty(holdingIds)) {
       return Future.succeededFuture();
     }
 
-    var locationIds = StreamEx.of(locations).map(Location::getLocationId).nonNull().toList();
-    var searchLocationIds = new ArrayList<>(locationIds);
+    var locationIds = StreamEx.of(poLine.getLocations()).map(Location::getLocationId).nonNull().toList();
 
     return inventoryManager.getHoldingsByIds(holdingIds, requestContext)
       .map(holdings -> StreamEx.of(holdings).map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         .nonNull().toList())
-      .map(holdingsPermanentLocationIds -> StreamEx.of(searchLocationIds).append(holdingsPermanentLocationIds)
+      .map(holdingsPermanentLocationIds -> StreamEx.of(locationIds).append(holdingsPermanentLocationIds)
         .distinct().toList())
       .map(poLine::withSearchLocationIds)
       .mapEmpty();
