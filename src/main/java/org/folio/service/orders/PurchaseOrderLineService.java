@@ -494,7 +494,7 @@ public class PurchaseOrderLineService {
       });
   }
 
-  public Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
+  public Future<List<String>> retrieveSearchLocationIds(PoLine poLine, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(poLine.getLocations())) {
       poLine.setSearchLocationIds(Collections.emptyList());
       return Future.succeededFuture();
@@ -511,7 +511,11 @@ public class PurchaseOrderLineService {
       .map(holdings -> StreamEx.of(holdings).map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         .nonNull().toList())
       .map(holdingsPermanentLocationIds -> StreamEx.of(locationIds).append(holdingsPermanentLocationIds)
-        .distinct().toList())
+        .distinct().toList());
+  }
+
+  private Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
+    return retrieveSearchLocationIds(poLine, requestContext)
       .map(poLine::withSearchLocationIds)
       .mapEmpty();
   }
