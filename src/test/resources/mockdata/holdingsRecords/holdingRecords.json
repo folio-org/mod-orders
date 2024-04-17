@@ -1,0 +1,75 @@
+{
+  "holdingsRecords": [
+    {
+      "id": "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63",
+      "_version": 3,
+      "hrid": "ho00000001",
+      "formerIds": [],
+      "instanceId": "5294d737-a04b-4158-857a-3f3c555bcc60",
+      "permanentLocationId": "758258bc-ecc1-41b8-abca-f7b610822fff",
+      "electronicAccess": [],
+      "callNumber": "PR6056.I4588 B749 2016",
+      "purchaseOrderLineIdentifier": "429aeb00-2942-4be0-85a3-39194de4edcd",
+      "notes": [],
+      "holdingsStatements": [],
+      "holdingsStatementsForIndexes": [],
+      "holdingsStatementsForSupplements": [],
+      "statisticalCodeIds": [],
+      "holdingsItems": [],
+      "metadata": {
+        "createdDate": "2019-01-21T06:26:14.293+0000",
+        "createdByUserId": "15356bca-7b10-58a1-9454-49c9d662450a",
+        "updatedDate": "2019-01-21T06:26:14.293+0000",
+        "updatedByUserId": "15356bca-7b10-58a1-9454-49c9d662450a"
+      },
+      "sourceId" : "f32d531e-df79-46b3-8932-cdd35f7a2264"
+    },
+    {
+      "id": "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d64",
+      "_version": 4,
+      "hrid": "ho00000001",
+      "formerIds": [],
+      "instanceId": "5294d737-a04b-4158-857a-3f3c555bcc60",
+      "permanentLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "electronicAccess": [],
+      "callNumber": "PR6056.I4588 B749 2016",
+      "notes": [],
+      "holdingsStatements": [],
+      "holdingsStatementsForIndexes": [],
+      "holdingsStatementsForSupplements": [],
+      "statisticalCodeIds": [],
+      "holdingsItems": [],
+      "metadata": {
+        "createdDate": "2019-01-21T06:26:14.293+0000",
+        "createdByUserId": "15356bca-7b10-58a1-9454-49c9d662450a",
+        "updatedDate": "2019-01-21T06:26:14.293+0000",
+        "updatedByUserId": "15356bca-7b10-58a1-9454-49c9d662450a"
+      },
+      "sourceId" : "f32d531e-df79-46b3-8932-cdd35f7a2264"
+    },
+    {
+      "id": "4f7a8ab6-8ba4-47f6-bb51-eaead8b0ca8f",
+      "_version": 4,
+      "hrid": "ho00000001",
+      "formerIds": [],
+      "instanceId": "5294d737-a04b-4158-857a-3f3c555bcc60",
+      "permanentLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "electronicAccess": [],
+      "callNumber": "PR6056.I4588 B749 2016",
+      "notes": [],
+      "holdingsStatements": [],
+      "holdingsStatementsForIndexes": [],
+      "holdingsStatementsForSupplements": [],
+      "statisticalCodeIds": [],
+      "holdingsItems": [],
+      "metadata": {
+        "createdDate": "2019-01-21T06:26:14.293+0000",
+        "createdByUserId": "15356bca-7b10-58a1-9454-49c9d662450a",
+        "updatedDate": "2019-01-21T06:26:14.293+0000",
+        "updatedByUserId": "15356bca-7b10-58a1-9454-49c9d662450a"
+      },
+      "sourceId" : "f32d531e-df79-46b3-8932-cdd35f7a2264"
+    }
+  ],
+  "totalRecords": 120
+}
