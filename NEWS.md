@@ -1,5 +1,13 @@
 ## 12.9.0 - Unreleased
 
+## 12.8.3 - Released (Quesnelia R1 2024)
+This release focused on adding ability to search by location and holding in POL  
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.2...v12.8.3)
+
+### Bug Fixes
+* [MODORDERS-1085](https://folio-org.atlassian.net/browse/MODORDERS-1085) - Add ability to search by location and holding in POL 
+
+
 ## 12.8.2 - Released (Quesnelia R1 2024)
 This release focused on fixing bugs related to receiving title and edit holdings functionality 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.1...v12.8.2)
