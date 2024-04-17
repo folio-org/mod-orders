@@ -517,17 +517,17 @@ public class InventoryManager {
               .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
                 cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
               .compose(updatedRequestContext -> {
-              List<String> existingItemIds;
-              if (pieceFormat == Piece.Format.ELECTRONIC) {
-                existingItemIds = getElectronicItemIds(compPOL, existingItems);
-                return createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), updatedRequestContext)
-                      .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
-              } else {
-                existingItemIds = getPhysicalItemIds(compPOL, existingItems);
-                return createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), updatedRequestContext)
-                      .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
-              }
-            });
+                List<String> existingItemIds;
+                if (pieceFormat == Piece.Format.ELECTRONIC) {
+                  existingItemIds = getElectronicItemIds(compPOL, existingItems);
+                  return createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), updatedRequestContext)
+                    .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
+                } else {
+                  existingItemIds = getPhysicalItemIds(compPOL, existingItems);
+                  return createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), updatedRequestContext)
+                    .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
+                }
+              });
             // Build piece records once new existingItemIds are created
             pieces.add(future);
           }
@@ -1070,16 +1070,14 @@ public class InventoryManager {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> {
         if (compPOL.getInstanceId() != null) {
-          return consortiumConfiguration.isEmpty() ? Future.succeededFuture(compPOL)
-            : shareInstanceAmongTenantsIfNeeded(compPOL.getInstanceId(), consortiumConfiguration.get(), compPOL.getLocations(), requestContext)
-              .map(sharingInstances -> compPOL.withInstanceId(compPOL.getInstanceId()));
+          return consortiumConfiguration.isEmpty() ? Future.succeededFuture(compPOL.getInstanceId())
+            : shareInstanceAmongTenantsIfNeeded(compPOL.getInstanceId(), consortiumConfiguration.get(), compPOL.getLocations(), requestContext);
         } else {
           return getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext)
             .compose(instanceId -> consortiumConfiguration.isEmpty() ? Future.succeededFuture(instanceId)
-              : shareInstanceAmongTenantsIfNeeded(instanceId, consortiumConfiguration.get(), compPOL.getLocations(), requestContext))
-            .map(compPOL::withInstanceId);
+              : shareInstanceAmongTenantsIfNeeded(instanceId, consortiumConfiguration.get(), compPOL.getLocations(), requestContext));
         }
-      });
+      }).map(compPOL::withInstanceId);
   }
 
   public Future<Title> openOrderHandlePackageLineInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
@@ -1129,20 +1127,20 @@ public class InventoryManager {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> {
         if (consortiumConfiguration.isEmpty()) {
-          logger.debug("Skipping creating shadow instance for non ECS mode.");
+          logger.debug("createShadowInstanceIfNeeded:: Skipping creating shadow instance for non ECS mode.");
           return Future.succeededFuture();
         }
         if (StringUtils.isBlank(instanceId)) {
-          logger.info("Provided instanceId is blank, skip creating of shadow instance.");
+          logger.info("createShadowInstanceIfNeeded:: Provided instanceId is blank, skip creating of shadow instance.");
           return Future.succeededFuture();
         }
         return getInstanceById(instanceId, true, requestContext)
           .compose(instance -> {
             if (Objects.nonNull(instance) && !instance.isEmpty()) {
-              logger.info("Shadow instance already exists, skipping...");
+              logger.info("createShadowInstanceIfNeeded:: Shadow instance already exists, skipping...");
               return Future.succeededFuture();
             }
-            logger.info("Creating shadow instance with instanceId: {}", instanceId);
+            logger.info("createShadowInstanceIfNeeded:: Creating shadow instance with instanceId: {}", instanceId);
             return sharingInstanceService.createShadowInstance(instanceId, targetTenantId, consortiumConfiguration.get(), requestContext);
           });
       });
