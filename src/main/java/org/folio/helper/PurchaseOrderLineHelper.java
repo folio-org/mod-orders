@@ -66,6 +66,7 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
@@ -344,6 +345,7 @@ public class PurchaseOrderLineHelper {
   public Future<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
 
+    updateSearchLocationIds(compOrderLine);
     purchaseOrderLineService.updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext)
       .compose(poLine -> purchaseOrderLineService.updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
       .onSuccess(json -> promise.complete())
@@ -404,10 +406,18 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<CompositePoLine> createPoLineSummary(CompositePoLine compPOL, JsonObject jsonLine, RequestContext requestContext) {
+    updateSearchLocationIds(compPOL);
     RequestEntry rqEntry = new RequestEntry(resourcesPath(PO_LINES_STORAGE));
     var poLine = jsonLine.mapTo(PoLine.class);
     return restClient.post(rqEntry, poLine, PoLine.class, requestContext)
                     .map(createdLine -> compPOL.withId(createdLine.getId()).withPoLineNumber(createdLine.getPoLineNumber()));
+  }
+
+  private void updateSearchLocationIds(CompositePoLine compPOL) {
+    List<Location> locations = compPOL.getLocations();
+    if (CollectionUtils.isNotEmpty(locations) && locations.stream().anyMatch(location -> location.getLocationId() != null)) {
+      compPOL.setSearchLocationIds(locations.stream().map(Location::getLocationId).toList());
+    }
   }
 
   private Future<Void> createReportingCodes(CompositePoLine compPOL, JsonObject line, RequestContext requestContext) {

@@ -48,6 +48,7 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
@@ -106,6 +107,7 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> saveOrderLine(PoLine poLine, RequestContext requestContext) {
+    updateSearchLocationIds(poLine);
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(poLine.getId());
     return restClient.put(requestEntry, poLine, requestContext);
   }
@@ -116,8 +118,16 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> saveOrderLines(PoLineCollection poLineCollection, RequestContext requestContext) {
+    poLineCollection.getPoLines().forEach(this::updateSearchLocationIds);
     RequestEntry requestEntry = new RequestEntry(BATCH_ENDPOINT);
     return restClient.put(requestEntry, poLineCollection, requestContext);
+  }
+
+  private void updateSearchLocationIds(PoLine poLine) {
+    List<Location> locations = poLine.getLocations();
+    if (CollectionUtils.isNotEmpty(locations) && locations.stream().anyMatch(location -> location.getLocationId() != null)) {
+      poLine.setSearchLocationIds(locations.stream().map(Location::getLocationId).toList());
+    }
   }
 
 

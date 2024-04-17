@@ -71,15 +71,15 @@ public class PieceCreateFlowInventoryManager {
     if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
       Location location = new Location().withLocationId(piece.getLocationId());
       return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
-                    .map(holdingId -> {
-                          Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
-                            piece.setLocationId(null);
-                            piece.setHoldingId(holdingId);
-                            location.setLocationId(null);
-                            location.setHoldingId(holdingId);
-                          });
-                          return location;
-                    });
+        .map(holdingId -> {
+          if (holdingId != null) {
+            piece.setLocationId(null);
+            piece.setHoldingId(holdingId);
+            location.setLocationId(null);
+            location.setHoldingId(holdingId);
+          }
+          return location;
+        });
     }
     return Future.succeededFuture(new Location().withLocationId(piece.getLocationId()));
   }
