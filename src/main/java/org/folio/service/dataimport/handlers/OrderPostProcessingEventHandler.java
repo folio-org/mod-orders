@@ -79,7 +79,6 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
     LOGGER.info("handle:: jobExecutionId {}, poLineId {}, orderId {}", dataImportEventPayload.getJobExecutionId(), poLine.getId(), poLine.getPurchaseOrderId());
     ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext)
-      .compose(adjustedPoLine -> ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext))
       .compose(v -> poLineImportProgressService.trackProcessedPoLine(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
       .compose(poLinesImported -> Boolean.TRUE.equals(poLinesImported)
         ? openOrder(poLine, requestContext, dataImportEventPayload.getJobExecutionId())

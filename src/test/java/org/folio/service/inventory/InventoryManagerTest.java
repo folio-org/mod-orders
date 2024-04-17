@@ -16,11 +16,14 @@ import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
 import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
+import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
@@ -30,6 +33,7 @@ import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_D
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
 import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
+import static org.folio.service.inventory.InventoryManager.DEFAULT_LOAN_TYPE_NAME;
 import static org.folio.service.inventory.InventoryManager.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryManager.HOLDINGS_SOURCES;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
@@ -43,6 +47,7 @@ import static org.folio.service.inventory.InventoryManager.ITEM_DISPLAY_SUMMARY;
 import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryManager.LOAN_TYPES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -52,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
@@ -61,6 +67,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -69,6 +76,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -77,8 +85,10 @@ import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
+import org.folio.Instance;
 import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
+import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -106,6 +116,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -197,7 +208,7 @@ public class InventoryManagerTest {
   @AfterEach
   void resetMocks() throws Exception {
     mockitoClosable.close();
-    Mockito.reset(restClient);
+    Mockito.reset(restClient, sharingInstanceService);
     clearServiceInteractions();
   }
 
@@ -812,6 +823,39 @@ public class InventoryManagerTest {
   }
 
   @Test
+  void testShouldProvideCorrectErrorCodeWhenItemCreatingFailed() {
+    //given
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+    doReturn(Future.failedFuture(new HttpException(500, "Something went wrong!")))
+      .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
+    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
+    //When
+    Future<List<String>> result = inventoryManager.createMissingPhysicalItems(line, piece, 1, requestContext);
+    HttpException cause = (HttpException) result.cause();
+    //Then
+    assertEquals(ITEM_CREATION_FAILED.getCode(), cause.getError().getCode());
+    assertEquals("Something went wrong!", cause.getError().getParameters().get(0).getValue());
+  }
+
+  @Test
+  void testShouldProvideCorrectBarcodeNotUniqueErrorCode() {
+    //given
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+    doReturn(Future.failedFuture(new HttpException(500, InventoryManager.BARCODE_ALREADY_EXIST_ERROR)))
+      .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
+    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
+    //When
+    Future<List<String>> result = inventoryManager.createMissingPhysicalItems(line, piece, 1, requestContext);
+    HttpException cause = (HttpException) result.cause();
+    //Then
+    assertEquals(BARCODE_IS_NOT_UNIQUE.getCode(), cause.getError().getCode());
+  }
+
+  @Test
   void testShouldCreateItemRecordForPhysical()  {
     //given
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
@@ -1099,6 +1143,51 @@ public class InventoryManagerTest {
         vertxTestContext.completeNow();
       });
 
+  }
+
+  @Test
+  void shouldNotCreateShadowCopyWhenItAlreadyExist() {
+    String instanceId = UUID.randomUUID().toString();
+    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(JsonObject.mapFrom(new Instance()))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
+
+    inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
+
+    verifyNoInteractions(sharingInstanceService);
+  }
+
+  @Test
+  void shouldNotCreateShadowCopyWhenInstanceIdNull() {
+    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(JsonObject.mapFrom(new Instance()))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
+
+    inventoryManager.createShadowInstanceIfNeeded(null, requestContext).result();
+
+    verifyNoInteractions(sharingInstanceService);
+  }
+
+  @Test
+  void shouldNotCreateShadowCopyWhenConsortiumConfigurationIsNull() {
+    String instanceId = UUID.randomUUID().toString();
+    doReturn(succeededFuture(null)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+
+    inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
+
+    verifyNoInteractions(sharingInstanceService);
+  }
+
+  @Test
+  void shouldCreateShadowInstance() {
+    String instanceId = UUID.randomUUID().toString();
+    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(null)).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
+
+    inventoryManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
+
+    verify(sharingInstanceService).createShadowInstance(instanceId, configuration.get(), requestContext);
   }
 
   /**

@@ -53,9 +53,9 @@ public class CompositePoLineValidationService extends BaseValidationService {
     }
 
     return expenseClassValidationService.validateExpenseClasses(List.of(compPOL), false, requestContext)
-      .onSuccess(v -> errors.addAll(validatePoLineFormats(compPOL)))
-      .onSuccess(v -> errors.addAll(validateLocations(compPOL)))
-      .map(v -> {
+      .map(v -> errors.addAll(validatePoLineFormats(compPOL)))
+      .map(b -> errors.addAll(validateLocations(compPOL)))
+      .map(b -> {
         errors.addAll(validateCostPrices(compPOL));
         return errors;
       });

@@ -108,6 +108,7 @@ public class OrderRolloverService {
 
   public Future<Void> rollover(LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
     return prepareRollover(ledgerFYRollover, requestContext)
+      // order rollover should be executed asynchronously, because of it .onSuccess is used here
       .onSuccess(v -> ledgerRolloverProgressService.getRolloversProgressByRolloverId(ledgerFYRollover.getId(), requestContext)
         .compose(progress -> startRollover(ledgerFYRollover, progress, requestContext)));
   }

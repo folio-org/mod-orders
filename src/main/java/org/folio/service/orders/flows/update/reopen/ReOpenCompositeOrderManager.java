@@ -106,7 +106,7 @@ public class ReOpenCompositeOrderManager {
     var poLineInvoiceLinesMap = holder.getOrderLineInvoiceLines().stream().collect(groupingBy(InvoiceLine::getPoLineId));
 
     List<Invoice> poLineInvoices = poLineInvoicesMap.get(poLine.getId());
-    if (CollectionUtils.isNotEmpty(poLineInvoices) && isAnyInvoicesApprovedOrPaid(poLineInvoices)) {
+    if (CollectionUtils.isNotEmpty(poLineInvoices) && isAnyInvoicePaid(poLineInvoices)) {
       var invoiceLines = poLineInvoiceLinesMap.get(poLine.getId());
       if (isAnyInvoiceLineReleaseEncumbrance(invoiceLines)) {
         poLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
@@ -122,9 +122,8 @@ public class ReOpenCompositeOrderManager {
     return invoiceLines.stream().anyMatch(InvoiceLine::getReleaseEncumbrance);
   }
 
-  private boolean isAnyInvoicesApprovedOrPaid(List<Invoice> poLineInvoices) {
-    return poLineInvoices.stream().anyMatch(invoice -> Invoice.Status.APPROVED.equals(invoice.getStatus()) ||
-                                                            Invoice.Status.PAID.equals(invoice.getStatus()));
+  private boolean isAnyInvoicePaid(List<Invoice> poLineInvoices) {
+    return poLineInvoices.stream().anyMatch(invoice -> Invoice.Status.PAID.equals(invoice.getStatus()));
   }
 
   private void updatePoLineReceiptStatus(CompositePoLine poLine, ReOpenCompositeOrderHolder holder) {
@@ -140,11 +139,11 @@ public class ReOpenCompositeOrderManager {
   private Future<ReOpenCompositeOrderHolder> buildHolder(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
     ReOpenCompositeOrderHolder holder = new ReOpenCompositeOrderHolder(orderId);
     return getPieces(poLines, requestContext)
-              .onSuccess(holder::withPieces)
-              .map(v -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
+              .map(holder::withPieces)
+              .map(aHolder -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
               .compose(poLineIds -> invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext))
-              .onSuccess(holder::withInvoiceLines)
-              .compose(v -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
+              .map(holder::withInvoiceLines)
+              .compose(aHolder -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
               .map(holder::withOrderInvoices)
               .map(v -> holder);
   }

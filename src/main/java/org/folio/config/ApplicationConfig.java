@@ -26,6 +26,7 @@ import org.folio.service.ProtectionService;
 import org.folio.service.ReasonForClosureService;
 import org.folio.service.SuffixService;
 import org.folio.service.TagService;
+import org.folio.service.UserService;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
@@ -111,8 +112,10 @@ import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolve
 import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
+import org.folio.service.routinglists.RoutingListService;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -434,6 +437,16 @@ public class ApplicationConfig {
   }
 
   @Bean
+  RoutingListService routingListService(RestClient restClient, PurchaseOrderLineService purchaseOrderLineService, UserService userService) {
+    return new RoutingListService(restClient, purchaseOrderLineService, userService);
+  }
+
+  @Bean
+  UserService userService(RestClient restClient) {
+    return new UserService(restClient);
+  }
+
+  @Bean
   TitlesService titlesService(RestClient restClient, ProtectionService protectionService, InventoryManager inventoryManager) {
     return new TitlesService(restClient, protectionService, inventoryManager);
   }
@@ -596,8 +609,8 @@ public class ApplicationConfig {
 
   @Bean
   PurchaseOrderHelper purchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
-    CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
-    CompositeOrderDynamicDataPopulateService combinedPopulateService,
+    @Qualifier("orderLinesSummaryPopulateService") CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
+    @Qualifier("combinedPopulateService") CompositeOrderDynamicDataPopulateService combinedPopulateService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
     PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
@@ -706,8 +719,9 @@ public class ApplicationConfig {
 
 
 
-  @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
-      OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
+  @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(
+    @Qualifier("withHoldingOrderLineUpdateInstanceStrategy") OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,
+    @Qualifier("withoutHoldingOrderLineUpdateInstanceStrategy") OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy) {
     Map<CreateInventoryType, OrderLineUpdateInstanceStrategy> strategies = new EnumMap<>(CreateInventoryType.class);
 
     strategies.put(CreateInventoryType.INSTANCE_HOLDING_ITEM, withHoldingOrderLineUpdateInstanceStrategy);
