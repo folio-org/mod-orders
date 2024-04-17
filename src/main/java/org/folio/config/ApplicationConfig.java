@@ -173,8 +173,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache) {
-    return new PurchaseOrderLineService(restClient, inventoryCache);
+  PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache, InventoryManager inventoryManager) {
+    return new PurchaseOrderLineService(restClient, inventoryCache, inventoryManager);
   }
 
   @Bean
