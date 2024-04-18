@@ -1,22 +1,18 @@
 package org.folio.service.consortium;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
-import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
 import org.folio.models.consortium.SharingStatus;
-import org.folio.okapi.common.XOkapiHeaders;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ConsortiumException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.tools.utils.TenantTool;
 
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -45,11 +41,13 @@ public class SharingInstanceService {
    * @param requestContext          the request context
    * @return a Future that resolves with the created SharingInstance
    */
-  public Future<SharingInstance> createShadowInstance(String instanceId, ConsortiumConfiguration consortiumConfiguration, RequestContext requestContext) {
+  public Future<SharingInstance> createShadowInstance(String instanceId, String targetTenantId,
+                                                      ConsortiumConfiguration consortiumConfiguration,
+                                                      RequestContext requestContext) {
     SharingInstance sharingInstance = new SharingInstance(UUID.fromString(instanceId),
-      consortiumConfiguration.centralTenantId(), TenantTool.tenantId(requestContext.getHeaders()));
-    RequestContext consortiaRequestContext = createRequestContextWithUpdatedTenantId(requestContext.getContext(),
-      requestContext.getHeaders(), consortiumConfiguration.centralTenantId());
+      consortiumConfiguration.centralTenantId(), targetTenantId);
+    RequestContext consortiaRequestContext = RequestContextUtil.cloneRequestContextWithTargetTenantId(requestContext,
+      consortiumConfiguration.centralTenantId());
     return shareInstance(consortiumConfiguration.consortiumId(), sharingInstance, consortiaRequestContext);
   }
 
@@ -66,12 +64,6 @@ public class SharingInstanceService {
           return Future.failedFuture(new ConsortiumException(message));
         }
       });
-  }
-
-  private RequestContext createRequestContextWithUpdatedTenantId(Context context, Map<String, String> headers, String centralTenantId) {
-    Map<String, String> modifiedHeaders  = new CaseInsensitiveMap<>(headers);
-    modifiedHeaders.put(XOkapiHeaders.TENANT, centralTenantId);
-    return new RequestContext(context, modifiedHeaders );
   }
 
 }

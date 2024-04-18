@@ -11,13 +11,15 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryManager;
 
 import io.vertx.core.Future;
 
 public class ProcessInventoryPhysicalStrategy extends ProcessInventoryStrategy {
 
-  public ProcessInventoryPhysicalStrategy() {
+  public ProcessInventoryPhysicalStrategy(ConsortiumConfigurationService consortiumConfigurationService) {
+    super(consortiumConfigurationService);
   }
 
   public Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL,

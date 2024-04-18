@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
+import static org.folio.orders.utils.RequestContextUtil.cloneRequestContextBasedOnLocation;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManager.ID;
 
@@ -17,6 +18,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryManager;
 
 import io.vertx.core.Future;
@@ -24,7 +26,8 @@ import io.vertx.core.json.JsonObject;
 
 public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
 
-  public ProcessInventoryMixedStrategy() {
+  public ProcessInventoryMixedStrategy(ConsortiumConfigurationService consortiumConfigurationService) {
+    super(consortiumConfigurationService);
   }
 
   public Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL,
@@ -59,7 +62,10 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
     List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
     compPOL.getLocations().forEach(location -> itemsPerHolding.add(
       findHoldingsId(compPOL, location, restClient, requestContext)
-        .compose(aVoid -> inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getEresource(), compPOL.getInstanceId(), location, requestContext)
+        .compose(aVoid -> consortiumConfigurationService.getConsortiumConfiguration(requestContext))
+        .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
+          cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
+        .compose(updatedRequestContext -> inventoryManager.getOrCreateHoldingsJsonRecord(compPOL.getEresource(), compPOL.getInstanceId(), location, updatedRequestContext)
           .map(holding -> {
             updateLocationWithHoldingInfo(holding, location);
             return null;

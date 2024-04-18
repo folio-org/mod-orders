@@ -45,7 +45,7 @@ public class SharingInstanceServiceTest {
     Mockito.when(restClient.post(any(RequestEntry.class), any(), any(), any()))
       .thenReturn(Future.succeededFuture(new SharingInstance(UUID.randomUUID(), StringUtils.EMPTY, StringUtils.EMPTY)));
 
-    Future<SharingInstance> future = sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration, requestContext);
+    Future<SharingInstance> future = sharingInstanceService.createShadowInstance(instanceId, "testTenant", consortiumConfiguration, requestContext);
     vertxTestContext.assertComplete(future)
       .onComplete(ar -> {
         Assertions.assertTrue(ar.succeeded());
@@ -63,7 +63,7 @@ public class SharingInstanceServiceTest {
 
     Mockito.when(restClient.post(any(RequestEntry.class), any(), any(), any())).thenReturn(Future.succeededFuture(response));
 
-    Future<SharingInstance> future = service.createShadowInstance(instanceId, consortiumConfiguration, requestContext);
+    Future<SharingInstance> future = service.createShadowInstance(instanceId, "testTenant", consortiumConfiguration, requestContext);
     vertxTestContext.assertFailure(future)
       .onComplete(completionException -> {
         assertEquals(ConsortiumException.class, completionException.cause().getClass());
