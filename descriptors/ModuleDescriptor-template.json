@@ -120,6 +120,7 @@
             "orders.re-encumber.item.post"
           ],
           "modulePermissions": [
+            "inventory-storage.holdings.collection.get",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines-batch.collection.put",
@@ -178,6 +179,7 @@
             "acquisitions-units-storage.memberships.collection.get",
             "inventory.instances.item.get",
             "inventory-storage.identifier-types.collection.get",
+            "inventory-storage.holdings.collection.get",
             "isbn-utils.convert-to-13.get",
             "finance-storage.budget-expense-classes.collection.get",
             "user-tenants.collection.get",
@@ -961,8 +963,8 @@
             "orders-storage.po-lines-batch.collection.put",
             "finance.ledger-rollovers-errors.collection.get",
             "finance.ledger-rollovers-errors.item.post",
-            "finance.ledger-rollovers-progress.item.put"
-
+            "finance.ledger-rollovers-progress.item.put",
+            "inventory-storage.holdings.collection.get"
           ]
         }
       ]
