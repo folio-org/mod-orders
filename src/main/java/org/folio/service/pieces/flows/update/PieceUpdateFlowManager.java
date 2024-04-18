@@ -106,7 +106,13 @@ public class PieceUpdateFlowManager {
   protected Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine originPoLine = holder.getOriginPoLine();
 
-    return pieceStorageService.getPiecesByLineId(originPoLine.getId(), requestContext)
+    Future<Void> f;
+    if (!Boolean.TRUE.equals(originPoLine.getIsPackage()) && !Boolean.TRUE.equals(originPoLine.getCheckinItems())) {
+      f = updatePoLineService.updatePoLine(holder, requestContext);
+    } else {
+      f = Future.succeededFuture(null);
+    }
+    return f.compose(v -> pieceStorageService.getPiecesByLineId(originPoLine.getId(), requestContext))
       .compose(pieces -> {
         CompositePurchaseOrder order = holder.getOriginPurchaseOrder();
         if (order.getOrderType() != OrderType.ONE_TIME || order.getWorkflowStatus() != WorkflowStatus.OPEN) {
@@ -116,12 +122,6 @@ public class PieceUpdateFlowManager {
         CompositePoLine poLineToSave = holder.getPoLineToSave();
         poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
         return purchaseOrderLineService.saveOrderLine(poLineToSave, requestContext);
-      }).compose(v -> {
-        if (!Boolean.TRUE.equals(originPoLine.getIsPackage()) &&
-          !Boolean.TRUE.equals(originPoLine.getCheckinItems())) {
-          return updatePoLineService.updatePoLine(holder, requestContext);
-        }
-        return Future.succeededFuture();
       });
   }
 
