@@ -99,6 +99,7 @@ public class PurchaseOrderLineHelper {
 
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{1,22}-)(\\d{1,3})");
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
+  private static final String SEARCH_LOCATION_IDS = "searchLocationIds";
   private static final String CREATE_INVENTORY = "createInventory";
   public static final String ERESOURCE = "eresource";
   public static final String PHYSICAL = "physical";
@@ -216,6 +217,7 @@ public class PurchaseOrderLineHelper {
       .compose(v -> generateLineNumber(compOrder, requestContext))
       .map(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
       .compose(v -> updateSearchLocations(compPoLine, requestContext))
+      .map(v -> line.put(SEARCH_LOCATION_IDS, compPoLine.getSearchLocationIds()))
       .compose(v -> createPoLineSummary(compPoLine, line, requestContext));
   }
 
