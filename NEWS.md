@@ -6,7 +6,7 @@ This release focused on adding ability to search by location and holding in POL
 
 ### Bug Fixes
 * [MODORDERS-1085](https://folio-org.atlassian.net/browse/MODORDERS-1085) - Add ability to search by location and holding in POL 
-
+* [MODORDERS-1077](https://folio-org.atlassian.net/browse/MODORDERS-1077) - Data Import organisations not mapping in Poppy Test and Dev - Probably cache issue inside mod-orders
 
 ## 12.8.2 - Released (Quesnelia R1 2024)
 This release focused on fixing bugs related to receiving title and edit holdings functionality 
