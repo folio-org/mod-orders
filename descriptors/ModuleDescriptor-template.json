@@ -120,7 +120,6 @@
             "orders.re-encumber.item.post"
           ],
           "modulePermissions": [
-            "inventory-storage.holdings.collection.get",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.collection.get",
             "orders-storage.po-lines-batch.collection.put",
@@ -133,7 +132,8 @@
             "finance.ledger-rollovers-errors.collection.get",
             "finance.ledger-rollovers-errors.item.delete",
             "finance.exchange-rate.item.get",
-            "finance-storage.ledgers.collection.get"
+            "finance-storage.ledgers.collection.get",
+            "inventory-storage.holdings.collection.get"
           ]
         }
       ]
@@ -583,6 +583,7 @@
             "inventory.items.collection.get",
             "inventory-storage.holdings.item.get",
             "inventory-storage.holdings.item.delete",
+            "inventory-storage.holdings.collection.get",
             "finance.funds.collection.get",
             "finance.funds.budget.item.get",
             "finance.fiscal-years.item.get",
