@@ -107,6 +107,7 @@ import static org.folio.rest.impl.crud.CrudTestEntities.PREFIX;
 import static org.folio.rest.impl.crud.CrudTestEntities.REASON_FOR_CLOSURE;
 import static org.folio.rest.impl.crud.CrudTestEntities.SUFFIX;
 import static org.folio.service.ProtectionService.ACQUISITIONS_UNIT_ID;
+import static org.folio.service.inventory.InventoryManager.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryManager.ITEMS;
 import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.service.inventory.InventoryManager.REQUESTS;
@@ -268,6 +269,7 @@ public class MockServer {
   public static final String PATCH_ORDER_LINES_REQUEST_PATCH = BASE_MOCK_DATA_PATH + "patchOrderLines/patch.json";
   public static final String ENCUMBRANCE_PATH = BASE_MOCK_DATA_PATH + "encumbrances/valid_encumbrances.json";
   public static final String ENCUMBRANCE_FOR_TAGS_PATH = BASE_MOCK_DATA_PATH + "encumbrances/encumbrance_for_tags_inheritance.json";
+  public static final String HOLDINGS_PATH = BASE_MOCK_DATA_PATH + "holdingsRecords/holdingRecords.json";
   public static final String HOLDINGS_OLD_NEW_PATH = BASE_MOCK_DATA_PATH + "holdingsRecords/holdingRecords-old-new.json";
   public static final String LISTED_PRINT_MONOGRAPH_ENCUMBRANCES_PATH = BASE_MOCK_DATA_PATH +
     "encumbrances/encumbrance_for_print_monograph.json";
@@ -1101,11 +1103,49 @@ public class MockServer {
         doubleList.addAll(holdingsList);
         holdings = new JsonObject().put("holdingsRecords", new JsonArray(doubleList));
       }
+
+      if (queryParam.startsWith("id==") && holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
+        List<String> ids = extractIdsFromQuery(queryParam);
+        holdings = getHoldingsByIds(ids);
+      }
     } catch (IOException e) {
       holdings = new JsonObject().put("holdingsRecords", new JsonArray());
     }
     addServerRqRsData(HttpMethod.GET, HOLDINGS_RECORD, holdings);
     serverResponse(ctx, 200, APPLICATION_JSON, holdings.encodePrettily());
+  }
+
+  private JsonObject getHoldingsByIds(List<String> holdingIds) {
+    Supplier<List<JsonObject>> getFromFile = () -> {
+      try {
+        return new JsonObject(getMockData(HOLDINGS_PATH)).getJsonArray(HOLDINGS_RECORDS).stream()
+          .map(obj -> (JsonObject) obj)
+          .collect(Collectors.toList());
+      } catch (IOException e) {
+        return Collections.emptyList();
+      }
+    };
+
+    List<JsonObject> holdingRecords = getMockEntries(HOLDINGS_RECORD, JsonObject.class).orElseGet(getFromFile);
+
+    if (!holdingIds.isEmpty()) {
+      holdingRecords.removeIf(item -> !holdingIds.contains(item.getString(ID)));
+    }
+
+    if (holdingRecords.isEmpty() && !holdingIds.isEmpty()) {
+      try {
+        String mockData = getMockData(HOLDINGS_OLD_NEW_PATH);
+        holdingRecords = holdingIds.stream()
+          .map(holdingId -> new JsonObject(mockData).getJsonArray("holdingsRecords").getJsonObject(0).put(ID, holdingId))
+          .toList();
+      } catch (IOException e) {
+          holdingRecords = Collections.emptyList();
+      };
+    }
+
+    Object record = new JsonObject().put("holdingsRecords", new JsonArray(holdingRecords));
+
+    return JsonObject.mapFrom(record);
   }
 
   private void handleGetHolding(RoutingContext ctx) {

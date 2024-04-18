@@ -8,6 +8,7 @@ import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.helper.PoNumberHelper.buildPoLineNumber;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.convertToPoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
@@ -99,6 +100,7 @@ public class PurchaseOrderLineHelper {
 
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{1,22}-)(\\d{1,3})");
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
+  private static final String SEARCH_LOCATION_IDS = "searchLocationIds";
   private static final String CREATE_INVENTORY = "createInventory";
   public static final String ERESOURCE = "eresource";
   public static final String PHYSICAL = "physical";
@@ -215,6 +217,8 @@ public class PurchaseOrderLineHelper {
     return GenericCompositeFuture.join(new ArrayList<>(subObjFuts))
       .compose(v -> generateLineNumber(compOrder, requestContext))
       .map(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
+      .compose(v -> updateSearchLocations(compPoLine, requestContext))
+      .map(v -> line.put(SEARCH_LOCATION_IDS, compPoLine.getSearchLocationIds()))
       .compose(v -> createPoLineSummary(compPoLine, line, requestContext));
   }
 
@@ -344,7 +348,8 @@ public class PurchaseOrderLineHelper {
   public Future<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
 
-    purchaseOrderLineService.updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext)
+    updateSearchLocations(compOrderLine, requestContext)
+      .compose(v -> purchaseOrderLineService.updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext))
       .compose(poLine -> purchaseOrderLineService.updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
       .onSuccess(json -> promise.complete())
       .onFailure(throwable -> {
@@ -354,7 +359,6 @@ public class PurchaseOrderLineHelper {
       });
     return promise.future();
   }
-
 
   public String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {
     String oldPoLineNumber = poLineFromStorage.getPoLineNumber();
@@ -536,6 +540,12 @@ public class PurchaseOrderLineHelper {
       }
     }
     return futures;
+  }
+
+  private Future<Void> updateSearchLocations(CompositePoLine compositePoLine, RequestContext requestContext) {
+    return purchaseOrderLineService.retrieveSearchLocationIds(convertToPoLine(compositePoLine), requestContext)
+      .map(compositePoLine::withSearchLocationIds)
+      .mapEmpty();
   }
 
   private List<Future<CompositePoLine>> processPoLinesCreation(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
