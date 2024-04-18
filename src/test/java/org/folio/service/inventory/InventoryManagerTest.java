@@ -1,5 +1,6 @@
 package org.folio.service.inventory;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.stream.Collectors.toList;
 import static org.folio.TestConfig.autowireDependencies;
@@ -1197,6 +1198,7 @@ public class InventoryManagerTest {
     compositePoLine.setLocations(Collections.singletonList(new Location().withTenantId(RandomStringUtils.random(4))));
     Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
     doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(failedFuture(new HttpException(404, "instance not found"))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
 
     inventoryManager.openOrderHandleInstance(compositePoLine, false, requestContext).result();
 
