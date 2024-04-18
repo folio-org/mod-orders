@@ -82,6 +82,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ApiTestSuite;
 import org.folio.Instance;
@@ -139,6 +140,7 @@ public class InventoryManagerTest {
   public static final String HOLDING_INSTANCE_ID_2_HOLDING = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d48";
   private static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
+  private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instances.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
@@ -1185,6 +1187,20 @@ public class InventoryManagerTest {
     inventoryManager.createShadowInstanceIfNeeded(instanceId, StringUtils.EMPTY, requestContext).result();
 
     verify(sharingInstanceService).createShadowInstance(instanceId, StringUtils.EMPTY, configuration.get(), requestContext);
+  }
+
+  @Test
+  void shouldShareInstanceAmongTenants() {
+    String instanceId = UUID.randomUUID().toString();
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINE_MIN_CONTENT_PATH).mapTo(CompositePoLine.class);
+    compositePoLine.setInstanceId(instanceId);
+    compositePoLine.setLocations(Collections.singletonList(new Location().withTenantId(RandomStringUtils.random(4))));
+    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+
+    inventoryManager.openOrderHandleInstance(compositePoLine, false, requestContext).result();
+
+    verify(inventoryManager, times(1)).getInstanceById(eq(instanceId), eq(false), any(RequestContext.class));
   }
 
   /**
