@@ -512,7 +512,12 @@ public class PurchaseOrderLineService {
       return Future.succeededFuture(new ArrayList<>(locationIds));
     }
 
-    return inventoryManager.getHoldingsByIds(holdingIds, requestContext)
+    /*
+     * Possible scenarios where holding can be removed but the operation is not yet complete, and this would
+     * result in halting the entire flow. To avoid this, we do not compare the number of holdingIds with
+     * the final result from the inventory.
+     */
+    return inventoryManager.getHoldingsByIdsWithoutVerification(holdingIds, requestContext)
       .map(holdings -> StreamEx.of(holdings).map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         .nonNull().toList())
       .map(holdingsPermanentLocationIds -> StreamEx.of(locationIds).append(holdingsPermanentLocationIds)
