@@ -2,10 +2,14 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -96,4 +100,26 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .onSuccess(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
+
+  @Override
+  @Validate
+  public void deleteOrdersPiecesBulk(List<String> ids, boolean deleteHolding, Map<String, String> okapiHeaders,
+                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    List<Future> deleteFutures = ids.stream()
+      .map(id -> pieceDeleteFlowManager.deletePiece(id, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
+        .onFailure(t -> {
+          logger.error("Failed to delete piece with ID: " + id, t);
+        })
+        .mapEmpty())
+      .collect(Collectors.toList());
+
+    CompositeFuture.join(deleteFutures).onComplete(ar -> {
+      if (ar.succeeded()) {
+        asyncResultHandler.handle(Future.succeededFuture(buildNoContentResponse()));
+      } else {
+        handleErrorResponse(asyncResultHandler, new Throwable("Error deleting multiple pieces"));
+      }
+    });
+  }
 }
+
