@@ -175,8 +175,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache) {
-    return new PurchaseOrderLineService(restClient, inventoryCache);
+  PurchaseOrderLineService purchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache, InventoryManager inventoryManager) {
+    return new PurchaseOrderLineService(restClient, inventoryCache, inventoryManager);
   }
 
   @Bean
@@ -483,7 +483,7 @@ public class ApplicationConfig {
     return new PieceChangeReceiptStatusPublisher();
   }
 
-  @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
+  @Bean PieceStorageService pieceStorageService(RestClient restClient) {
     return new PieceStorageService(restClient);
   }
 
@@ -667,12 +667,12 @@ public class ApplicationConfig {
     return new OpenCompositeOrderHolderBuilder(pieceStorageService);
   }
 
-  @Bean ProcessInventoryStrategyResolver resolver() {
+  @Bean ProcessInventoryStrategyResolver resolver(ConsortiumConfigurationService consortiumConfigurationService) {
     Map<String, ProcessInventoryStrategy> strategy = new HashMap<>();
 
-    ProcessInventoryElectronicStrategy processInventoryElectronicStrategy = new ProcessInventoryElectronicStrategy();
-    ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy = new ProcessInventoryPhysicalStrategy();
-    ProcessInventoryMixedStrategy processInventoryMixedStrategy = new ProcessInventoryMixedStrategy();
+    ProcessInventoryElectronicStrategy processInventoryElectronicStrategy = new ProcessInventoryElectronicStrategy(consortiumConfigurationService);
+    ProcessInventoryPhysicalStrategy processInventoryPhysicalStrategy = new ProcessInventoryPhysicalStrategy(consortiumConfigurationService);
+    ProcessInventoryMixedStrategy processInventoryMixedStrategy = new ProcessInventoryMixedStrategy(consortiumConfigurationService);
 
     strategy.put(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), processInventoryElectronicStrategy);
     strategy.put(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE.value(), processInventoryPhysicalStrategy);

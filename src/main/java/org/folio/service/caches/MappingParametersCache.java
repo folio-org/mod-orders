@@ -28,6 +28,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.service.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 /**
@@ -38,6 +39,8 @@ public class MappingParametersCache {
   private static final Logger LOGGER = LogManager.getLogger();
 
   private static final String ORGANIZATIONS = "/organizations/organizations";
+
+  private static final String SORT_BY_ID_QUERY = "(cql.allRecords=1) sortBy id";
 
   @Value("${orders.cache.mapping.parameters.settings.limit:5000}")
   private int settingsLimit;
@@ -61,6 +64,7 @@ public class MappingParametersCache {
 
   /**
    * Retrieves {@link MappingParameters} from cache by tenantId
+   *
    * @param params {@link OkapiConnectionParams} connection params
    * @return CompletableFuture with {@link MappingParameters} object
    */
@@ -75,6 +79,7 @@ public class MappingParametersCache {
 
   /**
    * Generates {@link MappingParameters} with collection of {@link org.folio.Organization}
+   *
    * @param params {@link OkapiConnectionParams} connection params
    * @return CompletableFuture with {@link MappingParameters} object
    */
@@ -83,7 +88,7 @@ public class MappingParametersCache {
     LOGGER.debug("loadMappingParameters:: Trying to load organizations '{}' for cache, okapi url: {}, tenantId: {}",
       tenantId, params.getOkapiUrl(), params.getTenantId());
 
-    return RestUtil.doRequest(params, format(getOrganizationsLimitPath(), settingsLimit), HttpMethod.GET, null)
+    return RestUtil.doRequest(params, getOrganizationsSortedLimitPath(settingsLimit), HttpMethod.GET, null)
       .toCompletionStage()
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
@@ -97,6 +102,7 @@ public class MappingParametersCache {
             return getRemainingOrganizations(params, orgCollection, mappingParameters);
           }
           mappingParameters.withOrganizations(orgCollection.getOrganizations());
+
           return CompletableFuture.completedFuture(mappingParameters);
         } else {
           String message = format(
@@ -129,7 +135,7 @@ public class MappingParametersCache {
     final int maxChunkSize = totalRecords / settingsLimit;
     int offset = settingsLimit;
     List<Future<OrganizationCollection>> organizationCollectionFutures = new ArrayList<>(maxChunkSize);
-    RequestEntry requestEntry = new RequestEntry(ORGANIZATIONS).withLimit(settingsLimit);
+    RequestEntry requestEntry = new RequestEntry(ORGANIZATIONS).withLimit(settingsLimit).withQuery(SORT_BY_ID_QUERY);
     for (int i = 0; i < maxChunkSize; i++) {
       Future<OrganizationCollection> future = restClient.get(requestEntry.withOffset(offset), OrganizationCollection.class,
         new RequestContext(Vertx.currentContext(), headers));
@@ -139,7 +145,7 @@ public class MappingParametersCache {
     return organizationCollectionFutures;
   }
 
-  private String getOrganizationsLimitPath() {
-    return ORGANIZATIONS + "?limit=%s";
+  private String getOrganizationsSortedLimitPath(int limit) {
+    return format("%s?limit=%d&query=", ORGANIZATIONS, limit) + encodeQuery(SORT_BY_ID_QUERY);
   }
 }

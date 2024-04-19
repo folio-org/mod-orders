@@ -25,6 +25,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryManager;
 
@@ -47,8 +48,9 @@ public class TitlesService {
   }
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
+    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
     return protectionService.validateAcqUnitsOnCreate(title.getAcqUnitIds(), TITLES_ASSIGN, requestContext)
-      .compose(v -> inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext))
+      .compose(v -> inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), targetTenantId, requestContext))
       .compose(shadowInstance -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
         return restClient.post(requestEntry, title, Title.class, requestContext);
@@ -71,7 +73,8 @@ public class TitlesService {
   }
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
-    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext)
+    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
+    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), targetTenantId, requestContext)
       .compose(shadowInstance -> {
         RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
         return restClient.put(requestEntry, title, requestContext);

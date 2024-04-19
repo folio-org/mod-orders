@@ -15,11 +15,13 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 
 import io.vertx.core.Future;
 
+import static org.folio.orders.utils.RequestContextUtil.cloneRequestContextBasedOnLocation;
 import static org.folio.service.inventory.InventoryManager.ID;
 import static org.folio.service.inventory.InventoryManager.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryManager.HOLDINGS_LOOKUP_QUERY;
@@ -28,6 +30,12 @@ import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDP
 public abstract class ProcessInventoryStrategy {
 
   private static final Logger logger = LogManager.getLogger(ProcessInventoryStrategy.class);
+
+  protected final ConsortiumConfigurationService consortiumConfigurationService;
+
+  protected ProcessInventoryStrategy(ConsortiumConfigurationService consortiumConfigurationService) {
+    this.consortiumConfigurationService = consortiumConfigurationService;
+  }
 
   /**
    * Returns list of pieces with populated item and location id's corresponding to given PO line.
@@ -75,7 +83,10 @@ public abstract class ProcessInventoryStrategy {
       findHoldingsId(compPOL, location, restClient, requestContext)
         .compose(aVoid -> {
           // Search for or create a new holdings record and then create items for it if required
-          return inventoryManager.getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, requestContext)
+          return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+            .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
+              cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
+            .compose(updatedRequestContext -> inventoryManager.getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, updatedRequestContext))
             .compose(holdingId -> {
               // Items are not going to be created when create inventory is "Instance, Holding"
               exchangeLocationIdWithHoldingId(location, holdingId);
@@ -99,7 +110,10 @@ public abstract class ProcessInventoryStrategy {
       String query = String.format(HOLDINGS_LOOKUP_QUERY, compPOL.getInstanceId(), location.getLocationId());
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
         .withQuery(query).withOffset(0).withLimit(1);
-      return restClient.getAsJsonObject(requestEntry, requestContext)
+      return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+        .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
+          cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
+        .compose(updatedRequestContext -> restClient.getAsJsonObject(requestEntry, updatedRequestContext))
         .compose(holdings -> {
           if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {
             String holdingId = holdings.getJsonArray(HOLDINGS_RECORDS).getJsonObject(0).getString(ID);

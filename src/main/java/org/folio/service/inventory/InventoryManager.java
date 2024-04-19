@@ -13,6 +13,8 @@ import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
+import static org.folio.orders.utils.RequestContextUtil.cloneRequestContextBasedOnLocation;
+import static org.folio.orders.utils.RequestContextUtil.cloneRequestContextWithTargetTenantId;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
@@ -34,6 +36,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -43,6 +46,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.PieceItemPair;
 import org.folio.models.PoLineUpdateHolder;
+import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
@@ -342,7 +346,7 @@ public class InventoryManager {
   }
 
   private static void handleHoldingsError(String holdingId, Throwable throwable) {
-    if (throwable instanceof HttpException && ((HttpException) throwable).getCode() == 404) {
+    if (throwable instanceof HttpException httpException && httpException.getCode() == 404) {
       String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
       Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
       throw new HttpException(NOT_FOUND, error);
@@ -352,8 +356,17 @@ public class InventoryManager {
   }
 
   public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext) {
+    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByHoldingIds);
+  }
+
+  public Future<List<JsonObject>> getHoldingsByIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
+    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByHoldingIdsWithoutVerification);
+  }
+
+  public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext,
+                                                   org.folio.service.orders.utils.HelperUtils.BiFunctionReturningFuture<List<String>, RequestContext, List<JsonObject>> biFunction) {
     return collectResultsOnSuccess(
-      ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> fetchHoldingsByFundIds(ids, requestContext)).toList())
+      ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> biFunction.apply(ids, requestContext)).toList())
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(Collectors.toList()));
@@ -510,18 +523,21 @@ public class InventoryManager {
             // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
             Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
 
-            var future = Future.succeededFuture().compose(v -> {
-              List<String> existingItemIds;
-              if (pieceFormat == Piece.Format.ELECTRONIC) {
-                existingItemIds = getElectronicItemIds(compPOL, existingItems);
-                return createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext)
-                      .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
-              } else {
-                existingItemIds = getPhysicalItemIds(compPOL, existingItems);
-                return createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), requestContext)
-                      .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
-              }
-            });
+            var future = consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+              .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
+                cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
+              .compose(updatedRequestContext -> {
+                List<String> existingItemIds;
+                if (pieceFormat == Piece.Format.ELECTRONIC) {
+                  existingItemIds = getElectronicItemIds(compPOL, existingItems);
+                  return createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), updatedRequestContext)
+                    .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
+                } else {
+                  existingItemIds = getPhysicalItemIds(compPOL, existingItems);
+                  return createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), updatedRequestContext)
+                    .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
+                }
+              });
             // Build piece records once new existingItemIds are created
             pieces.add(future);
           }
@@ -550,12 +566,14 @@ public class InventoryManager {
       return new Piece().withFormat(pieceFormat)
         .withItemId(itemId)
         .withPoLineId(polId)
-        .withHoldingId(location.getHoldingId());
+        .withHoldingId(location.getHoldingId())
+        .withReceivingTenantId(location.getTenantId());
     } else {
       return new Piece().withFormat(pieceFormat)
         .withItemId(itemId)
         .withPoLineId(polId)
-        .withLocationId(location.getLocationId());
+        .withLocationId(location.getLocationId())
+        .withReceivingTenantId(location.getTenantId());
     }
   }
 
@@ -1059,12 +1077,17 @@ public class InventoryManager {
   }
 
   public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (compPOL.getInstanceId() != null) {
-      return Future.succeededFuture(compPOL);
-    } else {
-      return getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext)
-        .map(compPOL::withInstanceId);
-    }
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(consortiumConfiguration -> {
+        if (compPOL.getInstanceId() != null) {
+          return consortiumConfiguration.isEmpty() ? Future.succeededFuture(compPOL.getInstanceId())
+            : shareInstanceAmongTenantsIfNeeded(compPOL.getInstanceId(), consortiumConfiguration.get(), compPOL.getLocations(), requestContext);
+        } else {
+          return getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext)
+            .compose(instanceId -> consortiumConfiguration.isEmpty() ? Future.succeededFuture(instanceId)
+              : shareInstanceAmongTenantsIfNeeded(instanceId, consortiumConfiguration.get(), compPOL.getLocations(), requestContext));
+        }
+      }).map(compPOL::withInstanceId);
   }
 
   public Future<Title> openOrderHandlePackageLineInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
@@ -1110,6 +1133,28 @@ public class InventoryManager {
     }
   }
 
+  public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, String targetTenantId, RequestContext requestContext) {
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(consortiumConfiguration -> {
+        if (consortiumConfiguration.isEmpty()) {
+          logger.debug("createShadowInstanceIfNeeded:: Skipping creating shadow instance for non ECS mode.");
+          return Future.succeededFuture();
+        }
+        if (StringUtils.isBlank(instanceId)) {
+          logger.info("createShadowInstanceIfNeeded:: Provided instanceId is blank, skip creating of shadow instance.");
+          return Future.succeededFuture();
+        }
+        return getInstanceById(instanceId, true, requestContext)
+          .compose(instance -> {
+            if (Objects.nonNull(instance) && !instance.isEmpty()) {
+              logger.info("createShadowInstanceIfNeeded:: Shadow instance already exists, skipping...");
+              return Future.succeededFuture();
+            }
+            logger.info("createShadowInstanceIfNeeded:: Creating shadow instance with instanceId: {}", instanceId);
+            return sharingInstanceService.createShadowInstance(instanceId, targetTenantId, consortiumConfiguration.get(), requestContext);
+          });
+      });
+  }
 
   private void validateItemsCreation(String poLineId, int expectedItemsQuantity, int itemsSize) {
     if (itemsSize != expectedItemsQuantity) {
@@ -1254,7 +1299,26 @@ public class InventoryManager {
       });
   }
 
-  private Future<List<JsonObject>> fetchHoldingsByFundIds(List<String> holdingIds, RequestContext requestContext) {
+  private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext) {
+    return fetchHoldingsByHoldingIds(holdingIds, requestContext, holdings -> {
+      if (holdings.size() == holdingIds.size()) {
+        return holdings;
+      }
+      List<Parameter> parameters = holdingIds.stream()
+        .filter(id -> holdings.stream()
+          .noneMatch(holding -> holding.getString(ID).equals(id)))
+        .map(id -> new Parameter().withValue(id).withKey("holdings"))
+        .collect(Collectors.toList());
+      throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
+    });
+  }
+
+  private Future<List<JsonObject>> fetchHoldingsByHoldingIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
+    return fetchHoldingsByHoldingIds(holdingIds, requestContext, UnaryOperator.identity());
+  }
+
+  private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext,
+                                                          UnaryOperator<List<JsonObject>> unaryOperator) {
     String query = convertIdsToCqlQuery(holdingIds);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
       .withQuery(query).withOffset(0).withLimit(MAX_IDS_FOR_GET_RQ_15);
@@ -1263,17 +1327,7 @@ public class InventoryManager {
         .stream()
         .map(JsonObject.class::cast)
         .collect(toList()))
-      .map(holdings -> {
-        if (holdings.size() == holdingIds.size()) {
-          return holdings;
-        }
-        List<Parameter> parameters = holdingIds.stream()
-          .filter(id -> holdings.stream()
-            .noneMatch(holding -> holding.getString(ID).equals(id)))
-          .map(id -> new Parameter().withValue(id).withKey("holdings"))
-          .collect(Collectors.toList());
-        throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
-      });
+      .map(unaryOperator);
   }
 
   void updateItemWithPieceFields(Piece piece, JsonObject item) {
@@ -1303,27 +1357,27 @@ public class InventoryManager {
     }
   }
 
-  public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
-    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> {
-        if (consortiumConfiguration.isEmpty()) {
-          logger.debug("Skipping creating shadow instance for non ECS mode.");
-          return Future.succeededFuture();
-        }
-        if (StringUtils.isBlank(instanceId)) {
-          logger.info("Provided instanceId is blank, skip creating of shadow instance.");
-          return Future.succeededFuture();
-        }
-        return getInstanceById(instanceId, true, requestContext)
-          .compose(instance -> {
-            if (Objects.nonNull(instance) && !instance.isEmpty()) {
-              logger.info("Shadow instance already exists, skipping...");
-              return Future.succeededFuture();
-            }
-            logger.info("Creating shadow instance with instanceId: {}", instanceId);
-            return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration.get(), requestContext);
-          });
-      });
+  private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration, List<Location> locations, RequestContext requestContext) {
+    return findTenantsWithUnsharedInstance(instanceId, locations, requestContext)
+      .map(tenantIds -> tenantIds.stream().map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId,
+        targetTenantId, consortiumConfiguration, requestContext)).toList())
+      .compose(HelperUtils::collectResultsOnSuccess)
+      .map(sharingInstances -> instanceId);
+  }
+
+  private Future<List<String>> findTenantsWithUnsharedInstance(String instanceId, List<Location> locations, RequestContext requestContext) {
+    List<Future<Optional<String>>> tenantIdFutures = locations.stream()
+      .map(Location::getTenantId)
+      .distinct()
+      .filter(Objects::nonNull)
+      .map(tenantId -> cloneRequestContextWithTargetTenantId(requestContext, tenantId))
+      .map(clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
+        .map(instance -> Optional.<String>empty())
+        .recover(throwable -> throwable instanceof HttpException httpException && httpException.getCode() == 404 ?
+          Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders()))) : Future.failedFuture(throwable)))
+      .toList();
+    return collectResultsOnSuccess(tenantIdFutures)
+      .map(tenantIds -> tenantIds.stream().flatMap(Optional::stream).toList());
   }
 
 }

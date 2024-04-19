@@ -2,8 +2,6 @@ package org.folio.service.pieces.flows.create;
 
 import java.util.Optional;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -18,7 +16,6 @@ import org.folio.service.titles.TitlesService;
 import io.vertx.core.Future;
 
 public class PieceCreateFlowInventoryManager {
-  private static final Logger logger = LogManager.getLogger(PieceCreateFlowInventoryManager.class);
 
   private final TitlesService titlesService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
@@ -71,15 +68,15 @@ public class PieceCreateFlowInventoryManager {
     if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
       Location location = new Location().withLocationId(piece.getLocationId());
       return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
-                    .map(holdingId -> {
-                          Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
-                            piece.setLocationId(null);
-                            piece.setHoldingId(holdingId);
-                            location.setLocationId(null);
-                            location.setHoldingId(holdingId);
-                          });
-                          return location;
-                    });
+        .map(holdingId -> {
+          if(holdingId != null) {
+            piece.setLocationId(null);
+            piece.setHoldingId(holdingId);
+            location.setLocationId(null);
+            location.setHoldingId(holdingId);
+          }
+          return location;
+        });
     }
     return Future.succeededFuture(new Location().withLocationId(piece.getLocationId()));
   }
