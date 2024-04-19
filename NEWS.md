@@ -1,4 +1,9 @@
 ## 12.9.0 - Unreleased
+### Stories
+
+### Bug Fixes
+
+* [MODDATAIMP-1010](https://folio-org.atlassian.net/browse/MODDATAIMP-1010) - Quantity = 0 for electronic format orders
 
 ## 12.8.0 - Released (Quesnelia R1 2024)
 This release focused on fixing several bugs as well as implement new features and upgrading dependent libraries
