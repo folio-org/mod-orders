@@ -1,4 +1,9 @@
 ## 12.9.0 - Unreleased
+### Stories
+
+### Bug Fixes
+
+* [MODORDERS-1090](https://folio-org.atlassian.net/browse/MODORDERS-1090) - Quantity = 0 for electronic format orders
 
 ## 12.8.4 - Released (Quesnelia R1 2024)
 This release focused on adding ability to search by location and holding in POL  
