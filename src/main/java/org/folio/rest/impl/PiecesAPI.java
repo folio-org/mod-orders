@@ -101,18 +101,13 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
-  @Override
-  @Validate
   public void deleteOrdersPiecesBulk(List<String> ids, boolean deleteHolding, Map<String, String> okapiHeaders,
                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     List<Future> deleteFutures = ids.stream()
       .map(id -> pieceDeleteFlowManager.deletePiece(id, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
-        .onFailure(t -> {
-          logger.error("Failed to delete piece with ID: " + id, t);
-        })
+        .onFailure(t -> {logger.error("Failed to delete piece with ID: " + id, t);})
         .mapEmpty())
       .collect(Collectors.toList());
-
     CompositeFuture.join(deleteFutures).onComplete(ar -> {
       if (ar.succeeded()) {
         asyncResultHandler.handle(Future.succeededFuture(buildNoContentResponse()));
