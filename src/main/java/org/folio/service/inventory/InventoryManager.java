@@ -356,11 +356,11 @@ public class InventoryManager {
   }
 
   public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext) {
-    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByFundIds);
+    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByHoldingIds);
   }
 
   public Future<List<JsonObject>> getHoldingsByIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
-    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByFundIdsWithoutVerification);
+    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByHoldingIdsWithoutVerification);
   }
 
   public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext,
@@ -1299,8 +1299,8 @@ public class InventoryManager {
       });
   }
 
-  private Future<List<JsonObject>> fetchHoldingsByFundIds(List<String> holdingIds, RequestContext requestContext) {
-    return fetchHoldingsByFundIds(holdingIds, requestContext, holdings -> {
+  private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext) {
+    return fetchHoldingsByHoldingIds(holdingIds, requestContext, holdings -> {
       if (holdings.size() == holdingIds.size()) {
         return holdings;
       }
@@ -1313,11 +1313,11 @@ public class InventoryManager {
     });
   }
 
-  private Future<List<JsonObject>> fetchHoldingsByFundIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
-    return fetchHoldingsByFundIds(holdingIds, requestContext, UnaryOperator.identity());
+  private Future<List<JsonObject>> fetchHoldingsByHoldingIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
+    return fetchHoldingsByHoldingIds(holdingIds, requestContext, UnaryOperator.identity());
   }
 
-  private Future<List<JsonObject>> fetchHoldingsByFundIds(List<String> holdingIds, RequestContext requestContext,
+  private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext,
                                                           UnaryOperator<List<JsonObject>> unaryOperator) {
     String query = convertIdsToCqlQuery(holdingIds);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
