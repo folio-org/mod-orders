@@ -51,4 +51,8 @@ public class HelperUtils {
   public interface FunctionReturningFuture<I, O> {
     Future<O> apply(I item);
   }
+
+  public interface BiFunctionReturningFuture<T, U, R> {
+    Future<R> apply(T t, U u);
+  }
 }
