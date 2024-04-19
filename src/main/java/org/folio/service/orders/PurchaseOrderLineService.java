@@ -512,7 +512,7 @@ public class PurchaseOrderLineService {
       return Future.succeededFuture(new ArrayList<>(locationIds));
     }
 
-    return inventoryManager.getHoldingsByIds(holdingIds, requestContext)
+    return inventoryManager.getHoldingsByIdsWithoutVerification(holdingIds, requestContext)
       .map(holdings -> StreamEx.of(holdings).map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         .nonNull().toList())
       .map(holdingsPermanentLocationIds -> StreamEx.of(locationIds).append(holdingsPermanentLocationIds)

@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -355,8 +356,17 @@ public class InventoryManager {
   }
 
   public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext) {
+    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByFundIds);
+  }
+
+  public Future<List<JsonObject>> getHoldingsByIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
+    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByFundIdsWithoutVerification);
+  }
+
+  public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext,
+                                                   org.folio.service.orders.utils.HelperUtils.BiFunctionReturningFuture<List<String>, RequestContext, List<JsonObject>> biFunction) {
     return collectResultsOnSuccess(
-      ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> fetchHoldingsByFundIds(ids, requestContext)).toList())
+      ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> biFunction.apply(ids, requestContext)).toList())
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(Collectors.toList()));
@@ -1290,6 +1300,25 @@ public class InventoryManager {
   }
 
   private Future<List<JsonObject>> fetchHoldingsByFundIds(List<String> holdingIds, RequestContext requestContext) {
+    return fetchHoldingsByFundIds(holdingIds, requestContext, holdings -> {
+      if (holdings.size() == holdingIds.size()) {
+        return holdings;
+      }
+      List<Parameter> parameters = holdingIds.stream()
+        .filter(id -> holdings.stream()
+          .noneMatch(holding -> holding.getString(ID).equals(id)))
+        .map(id -> new Parameter().withValue(id).withKey("holdings"))
+        .collect(Collectors.toList());
+      throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
+    });
+  }
+
+  private Future<List<JsonObject>> fetchHoldingsByFundIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
+    return fetchHoldingsByFundIds(holdingIds, requestContext, UnaryOperator.identity());
+  }
+
+  private Future<List<JsonObject>> fetchHoldingsByFundIds(List<String> holdingIds, RequestContext requestContext,
+                                                          UnaryOperator<List<JsonObject>> unaryOperator) {
     String query = convertIdsToCqlQuery(holdingIds);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
       .withQuery(query).withOffset(0).withLimit(MAX_IDS_FOR_GET_RQ_15);
@@ -1298,17 +1327,7 @@ public class InventoryManager {
         .stream()
         .map(JsonObject.class::cast)
         .collect(toList()))
-      .map(holdings -> {
-        if (holdings.size() == holdingIds.size()) {
-          return holdings;
-        }
-        List<Parameter> parameters = holdingIds.stream()
-          .filter(id -> holdings.stream()
-            .noneMatch(holding -> holding.getString(ID).equals(id)))
-          .map(id -> new Parameter().withValue(id).withKey("holdings"))
-          .collect(Collectors.toList());
-        throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
-      });
+      .map(unaryOperator);
   }
 
   void updateItemWithPieceFields(Piece piece, JsonObject item) {
