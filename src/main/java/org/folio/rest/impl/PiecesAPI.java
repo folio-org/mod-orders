@@ -102,7 +102,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   }
 
   public void deleteOrdersPiecesBulk(List<String> ids, boolean deleteHolding, Map<String, String> okapiHeaders,
-                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     List<Future> deleteFutures = ids.stream()
       .map(id -> pieceDeleteFlowManager.deletePiece(id, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
         .onFailure(t -> {logger.error("Failed to delete piece with ID: " + id, t);})
