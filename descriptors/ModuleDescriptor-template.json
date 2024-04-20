@@ -1927,7 +1927,8 @@
         "invoices.bypass-acquisition-units",
         "organizations-storage.organizations.collection.get",
         "organizations-storage.organizations.item.get",
-        "isbn-utils.convert-to-13.get"
+        "isbn-utils.convert-to-13.get",
+        "user-tenants.collection.get"
       ],
       "visible": false
     },
@@ -1991,7 +1992,8 @@
         "inventory-storage.identifier-types.collection.get",
         "isbn-utils.convert-to-13.get",
         "tags.collection.get",
-        "tags.item.post"
+        "tags.item.post",
+        "user-tenants.collection.get"
       ],
       "visible": false
     },
