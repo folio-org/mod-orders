@@ -54,6 +54,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
@@ -121,6 +122,7 @@ public class PurchaseOrderLineService {
 
   public Future<Void> saveOrderLine(CompositePoLine compositePoLine, RequestContext requestContext) {
     PoLine poLine = HelperUtils.convertToPoLine(compositePoLine);
+    validateForBinadryActive(poLine);
     return saveOrderLine(poLine, requestContext);
   }
 
@@ -528,6 +530,20 @@ public class PurchaseOrderLineService {
     return retrieveSearchLocationIds(poLine, requestContext)
       .map(poLine::withSearchLocationIds)
       .mapEmpty();
+  }
+
+  private void validateForBinadryActive(PoLine poLine) {
+    if (poLine.getIsBindaryActive()) {
+      if (!poLine.getOrderFormat().equals(PoLine.OrderFormat.PHYSICAL_RESOURCE) ||
+      poLine.getOrderFormat().equals(PoLine.OrderFormat.P_E_MIX))
+        throw new IllegalArgumentException("When PoLine is bindary active, its format type must be " +
+          PoLine.OrderFormat.PHYSICAL_RESOURCE + " or " + PoLine.OrderFormat.P_E_MIX);
+
+      if (!poLine.getPhysical().getCreateInventory().equals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM)) {
+        throw new IllegalArgumentException("When PoLine is bindary active, only '" +
+          Physical.CreateInventory.INSTANCE_HOLDING_ITEM + "' option can be used");
+      }
+    }
   }
 }
 
