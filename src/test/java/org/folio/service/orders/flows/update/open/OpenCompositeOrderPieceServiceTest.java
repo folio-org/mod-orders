@@ -184,7 +184,7 @@ public class OpenCompositeOrderPieceServiceTest {
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPieceWithLocationId(line, title);
     doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(piece, requestContext);
-    doReturn(succeededFuture(title)).when(inventoryInstanceManager).openOrderHandlePackageLineInstance(title, false, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryInstanceManager).updateItemWithPieceFields(piece, requestContext);
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();
     //Then
@@ -195,19 +195,21 @@ public class OpenCompositeOrderPieceServiceTest {
   @Test
   void testUpdateInventoryPositiveCaseIfPOLIsPackage() {
     //given
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    line.setIsPackage(true);
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    Piece piece = createPieceWithLocationId(line, title);
     String itemId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setIsPackage(true);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class).withInstanceId(instanceId);
+    Piece piece = createPieceWithLocationId(line, title);
     Location location = new Location().withLocationId(piece.getLocationId());
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(null)).when(titlesService).saveTitle(title, requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
 
-    doReturn(succeededFuture(title.withInstanceId(UUID.randomUUID().toString())))
-      .when(inventoryInstanceManager).openOrderHandlePackageLineInstance(any(Title.class), any(Boolean.class), eq(requestContext));
+    doReturn(succeededFuture(title.withInstanceId(instanceId)))
+      .when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
     doReturn(succeededFuture(holdingId))
       .when(inventoryHoldingManager).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
@@ -224,19 +226,20 @@ public class OpenCompositeOrderPieceServiceTest {
   @Test
   void testShouldUpdateInventoryPositiveCaseIfLineIsPackageAndPieceContainsHoldingId() {
     //given
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    String instanceId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String itemId = UUID.randomUUID().toString();
+
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.getLocations().get(0).withLocationId(null).withHoldingId(holdingId);
     line.setIsPackage(true);
-
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class).withInstanceId(instanceId);
     Piece piece = createPieceWithHoldingId(line, title);
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(null)).when(titlesService).saveTitle(title, requestContext);
-    doReturn(succeededFuture(title)).when(inventoryInstanceManager).openOrderHandlePackageLineInstance(title, false, requestContext);
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(line, holdingId, requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
+    doReturn(succeededFuture(instanceId)).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
 
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();
