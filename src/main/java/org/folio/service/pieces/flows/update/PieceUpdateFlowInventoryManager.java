@@ -16,6 +16,8 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.inventory.InventoryManager;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -161,9 +163,21 @@ public class PieceUpdateFlowInventoryManager {
   }
 
   private Future<String> createTitleInstance(Title title, RequestContext requestContext) {
+    return createTitleInventoryInstance(title, requestContext)
+      .compose(instId -> createTitleShadowInstance(instId, requestContext));
+  }
+
+  private Future<String> createTitleInventoryInstance(Title title, RequestContext requestContext) {
     if (title.getInstanceId() != null) {
       return Future.succeededFuture(title.getInstanceId());
     }
     return titlesService.saveTitleWithInstance(title, requestContext);
   }
+
+  private Future<String> createTitleShadowInstance(String instanceId, RequestContext requestContext) {
+    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
+    return inventoryManager.createShadowInstanceIfNeeded(instanceId, targetTenantId, requestContext)
+      .map(sharingInstance -> instanceId);
+  }
+
 }
