@@ -52,7 +52,7 @@ public class TitlesService {
       .compose(v -> inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext))
       .compose(instId -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
-        return restClient.post(requestEntry, title, Title.class, requestContext);
+        return restClient.post(requestEntry, title.withTitle(instId), Title.class, requestContext);
       });
   }
 
@@ -72,11 +72,19 @@ public class TitlesService {
   }
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
-    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
-    return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
+    return saveTitleWithInstance(title, requestContext).mapEmpty();
+  }
+
+  public Future<String> saveTitleWithInstance(Title title, RequestContext requestContext) {
+    return saveTitleWithInstance(title, false, requestContext);
+  }
+
+  public Future<String> saveTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    return inventoryInstanceManager.getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, requestContext)
       .compose(instId -> {
         RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
-        return restClient.put(requestEntry, title, requestContext);
+        restClient.put(requestEntry, title, requestContext);
+        return Future.succeededFuture(instId);
       });
   }
 

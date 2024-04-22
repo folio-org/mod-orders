@@ -114,11 +114,6 @@ public class PieceCreateFlowInventoryManager {
     if (title.getInstanceId() != null) {
       return Future.succeededFuture(title.getInstanceId());
     }
-    return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
-      .map(title::withInstanceId)
-      .compose(titleWithInstanceId ->
-        titlesService.saveTitle(titleWithInstanceId, requestContext)
-          .map(v -> title.getInstanceId())
-      );
+    return titlesService.saveTitleWithInstance(title, requestContext);
   }
 }

@@ -24,6 +24,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
@@ -168,8 +169,7 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> inventoryInstanceManager.openOrderHandlePackageLineInstance(title, isInstanceMatchingDisabled, requestContext))
-        .compose(title -> titlesService.saveTitle(title, requestContext).map(json -> title))
+        .compose(title -> createTitleInstance(title, requestContext).map(title::withInstanceId))
         .compose(title ->
         {
           if (piece.getHoldingId() != null) {
@@ -205,4 +205,12 @@ public class OpenCompositeOrderPieceService {
       throw new InventoryException(message);
     }
   }
+
+  private Future<String> createTitleInstance(Title title, RequestContext requestContext) {
+    if (title.getInstanceId() != null) {
+      return Future.succeededFuture(title.getInstanceId());
+    }
+    return titlesService.saveTitleWithInstance(title, requestContext);
+  }
+
 }
