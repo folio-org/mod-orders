@@ -48,10 +48,9 @@ public class TitlesService {
   }
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
-    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
     return protectionService.validateAcqUnitsOnCreate(title.getAcqUnitIds(), TITLES_ASSIGN, requestContext)
-      .compose(v -> inventoryInstanceManager.createShadowInstanceIfNeeded(title.getInstanceId(), targetTenantId, requestContext))
-      .compose(shadowInstance -> {
+      .compose(v -> inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext))
+      .compose(instId -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
         return restClient.post(requestEntry, title, Title.class, requestContext);
       });
@@ -74,8 +73,8 @@ public class TitlesService {
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
     String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
-    return inventoryInstanceManager.createShadowInstanceIfNeeded(title.getInstanceId(), targetTenantId, requestContext)
-      .compose(shadowInstance -> {
+    return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
+      .compose(instId -> {
         RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
         return restClient.put(requestEntry, title, requestContext);
       });
