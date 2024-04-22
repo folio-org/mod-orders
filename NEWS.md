@@ -1,5 +1,14 @@
 ## 12.8.0 - Unreleased
 
+## 12.7.3 - Released (Poppy R2 2023)
+This release focused on fixing Data Import organization feature and electronic format orders for certain quantity
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.7.2...v12.7.3)
+
+### Bug Fixes
+* [MODORDERS-1090](https://issues.folio.org/browse/MODORDERS-1090) - Quantity = 0 for electronic format orders
+* [MODORDERS-1077](https://issues.folio.org/browse/MODORDERS-1077) - Data Import organisations not mapping in Poppy Test and Dev - Probably cache issue inside mod-orders
+
+
 ## 12.7.2 - Released (Poppy R2 2023)
 
 This release focused on fixing missing data on Item creation using Data Import
