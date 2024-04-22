@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
+import org.folio.models.consortium.SharingInstance;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Cost;
@@ -122,6 +123,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     String itemId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
     String instanceId = UUID.randomUUID().toString();
+
     JsonObject holding = new JsonObject().put(ID, holdingFromStorageId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
     Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(instanceId);
@@ -131,6 +133,7 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
+    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
@@ -150,6 +153,8 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
+    doReturn(succeededFuture(sharingInstance)).when(inventoryManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -179,6 +184,7 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
+    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
@@ -198,6 +204,8 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
+    doReturn(succeededFuture(sharingInstance)).when(inventoryManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -227,6 +235,7 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
+    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
@@ -247,6 +256,8 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
+    doReturn(succeededFuture(sharingInstance)).when(inventoryManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -279,6 +290,7 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
+    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
@@ -299,6 +311,8 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
+    doReturn(succeededFuture(sharingInstance)).when(inventoryManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -323,6 +337,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     String itemId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
     String instanceId = UUID.randomUUID().toString();
+
     JsonObject holding = new JsonObject().put(ID, holdingFromStorageId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
     Title title = new Title().withId(titleId).withPoLineId(lineId).withInstanceId(instanceId);
@@ -332,6 +347,7 @@ public class PieceUpdateFlowInventoryManagerTest {
                                      .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
+    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
@@ -351,6 +367,8 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
+    doReturn(succeededFuture(sharingInstance)).when(inventoryManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -380,6 +398,7 @@ public class PieceUpdateFlowInventoryManagerTest {
                                      .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
+    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
@@ -399,6 +418,8 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
+    doReturn(succeededFuture(sharingInstance)).when(inventoryManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 

@@ -16,6 +16,7 @@ import static org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderM
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -39,6 +40,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import org.folio.ApiTestSuite;
+import org.folio.models.consortium.SharingInstance;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
@@ -68,6 +70,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -204,11 +207,12 @@ public class OpenCompositeOrderPieceServiceTest {
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class).withInstanceId(instanceId);
     Piece piece = createPieceWithLocationId(line, title);
     Location location = new Location().withLocationId(piece.getLocationId());
+    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
 
-    doReturn(succeededFuture(title.withInstanceId(instanceId)))
+    doReturn(succeededFuture(sharingInstance))
       .when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
     doReturn(succeededFuture(holdingId))
       .when(inventoryHoldingManager).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));

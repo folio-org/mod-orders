@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.ApiTestSuite;
+import org.folio.models.consortium.SharingInstance;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -127,11 +128,13 @@ public class PieceCreateFlowInventoryManagerTest {
                                     .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
                                     .withLocations(List.of(loc)).withCost(cost);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
+    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
+
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(piece.getId(), requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, requestContext);
-    doReturn(succeededFuture(instanceId)).when(inventoryManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
+    doReturn(succeededFuture(sharingInstance)).when(inventoryManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
     doReturn(succeededFuture(holdingId)).when(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);

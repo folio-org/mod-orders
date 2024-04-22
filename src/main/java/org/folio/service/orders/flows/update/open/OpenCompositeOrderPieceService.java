@@ -170,9 +170,8 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> createTitleInstance(title, requestContext).map(title::withInstanceId))
-        .compose(title ->
-        {
+        .compose(title -> createTitleInstance(title, isInstanceMatchingDisabled, requestContext).map(title::withInstanceId))
+        .compose(title -> {
           if (piece.getHoldingId() != null) {
             return Future.succeededFuture(piece.getHoldingId());
           }
@@ -207,16 +206,16 @@ public class OpenCompositeOrderPieceService {
     }
   }
 
-  private Future<String> createTitleInstance(Title title, RequestContext requestContext) {
-    return createTitleInventoryInstance(title, requestContext)
+  private Future<String> createTitleInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    return createTitleInventoryInstance(title, isInstanceMatchingDisabled, requestContext)
       .compose(instId -> createTitleShadowInstance(instId, requestContext));
   }
 
-  private Future<String> createTitleInventoryInstance(Title title, RequestContext requestContext) {
+  private Future<String> createTitleInventoryInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (title.getInstanceId() != null) {
       return Future.succeededFuture(title.getInstanceId());
     }
-    return titlesService.saveTitleWithInstance(title, requestContext);
+    return titlesService.saveTitleWithInstance(title, isInstanceMatchingDisabled, requestContext);
   }
 
   private Future<String> createTitleShadowInstance(String instanceId, RequestContext requestContext) {
