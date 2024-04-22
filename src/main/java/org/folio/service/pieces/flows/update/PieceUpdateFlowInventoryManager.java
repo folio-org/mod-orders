@@ -76,7 +76,7 @@ public class PieceUpdateFlowInventoryManager {
   private Future<Void> packagePoLineUpdateInventory(PieceUpdateHolder holder, RequestContext requestContext) {
     return titlesService.getTitleById(holder.getPieceToUpdate().getTitleId(), requestContext)
       .compose(title -> packageUpdateTitleWithInstance(title, requestContext))
-      .map(title -> holder.withInstanceId(title.getInstanceId()))
+      .map(holder::withInstanceId)
       .compose(aHolder -> handleHolding(holder, requestContext))
       .compose(holdingId -> handleItem(holder, requestContext))
       .map(itemId -> {
@@ -152,29 +152,23 @@ public class PieceUpdateFlowInventoryManager {
       return Future.succeededFuture(poLineToSave.getInstanceId());
     }
     return titlesService.getTitleById(pieceToUpdate.getTitleId(), requestContext)
-      .compose(title -> {
-        if (title.getInstanceId() == null) {
-          return createTitleInstance(title, requestContext);
-        }
-        return Future.succeededFuture(title.getInstanceId());
-      })
+      .compose(title -> createTitleInstance(title, requestContext))
       .map(instanceId -> poLineToSave.withInstanceId(instanceId).getInstanceId());
   }
 
-  private Future<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
-    if (title.getInstanceId() != null) {
-      return Future.succeededFuture(title);
-    }
-    return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
-      .map(title::withInstanceId)
-      .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext))
-      .map(v -> title);
+  private Future<String> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
+    return createTitleInstance(title, requestContext);
   }
 
   private Future<String> createTitleInstance(Title title, RequestContext requestContext) {
+    if (title.getInstanceId() != null) {
+      return Future.succeededFuture(title.getInstanceId());
+    }
     return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
       .map(title::withInstanceId)
-      .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext))
-      .map(aVoid -> title.getInstanceId());
+      .compose(titleWithInstanceId ->
+        titlesService.saveTitle(titleWithInstanceId, requestContext)
+          .map(v -> title.getInstanceId())
+      );
   }
 }

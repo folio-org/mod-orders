@@ -98,12 +98,12 @@ public class PieceCreateFlowInventoryManager {
 
 
   private Future<String> nonPackageUpdateTitleWithInstance(CompositePoLine poLine, String titleId, RequestContext requestContext) {
-    if (poLine.getInstanceId() == null && !PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
-      return titlesService.getTitleById(titleId, requestContext)
-        .compose(title -> createTitleInstance(title, requestContext))
-        .map(instanceId -> poLine.withInstanceId(instanceId).getInstanceId());
+    if (poLine.getInstanceId() != null || PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
+      return Future.succeededFuture(poLine.getInstanceId());
     }
-    return Future.succeededFuture(poLine.getInstanceId());
+    return titlesService.getTitleById(titleId, requestContext)
+      .compose(title -> createTitleInstance(title, requestContext))
+      .map(instanceId -> poLine.withInstanceId(instanceId).getInstanceId());
   }
 
   private Future<String> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
