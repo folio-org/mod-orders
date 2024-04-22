@@ -1,9 +1,12 @@
 ## 12.9.0 - Unreleased
-### Stories
+
+## 12.8.5 - Released (Quesnelia R1 2024)
+This release focused on fixing Data Import organization feature and electronic format orders for certain quantity  
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.4...v12.8.5)
 
 ### Bug Fixes
-
 * [MODORDERS-1090](https://folio-org.atlassian.net/browse/MODORDERS-1090) - Quantity = 0 for electronic format orders
+
 
 ## 12.8.4 - Released (Quesnelia R1 2024)
 This release focused on adding ability to search by location and holding in POL  
