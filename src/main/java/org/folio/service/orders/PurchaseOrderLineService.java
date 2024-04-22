@@ -16,8 +16,8 @@ import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
-import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
+import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
 
 import java.util.ArrayList;
@@ -35,6 +35,13 @@ import java.util.function.UnaryOperator;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
+
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertxconcurrent.Semaphore;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
@@ -54,18 +61,10 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
-import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.service.caches.InventoryCache;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertxconcurrent.Semaphore;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.utils.ProductIdUtils;
 
@@ -122,7 +121,6 @@ public class PurchaseOrderLineService {
 
   public Future<Void> saveOrderLine(CompositePoLine compositePoLine, RequestContext requestContext) {
     PoLine poLine = HelperUtils.convertToPoLine(compositePoLine);
-    validateForBinadryActive(poLine);
     return saveOrderLine(poLine, requestContext);
   }
 
@@ -530,20 +528,6 @@ public class PurchaseOrderLineService {
     return retrieveSearchLocationIds(poLine, requestContext)
       .map(poLine::withSearchLocationIds)
       .mapEmpty();
-  }
-
-  private void validateForBinadryActive(PoLine poLine) {
-    if (poLine.getIsBindaryActive()) {
-      if (!poLine.getOrderFormat().equals(PoLine.OrderFormat.PHYSICAL_RESOURCE) ||
-      poLine.getOrderFormat().equals(PoLine.OrderFormat.P_E_MIX))
-        throw new IllegalArgumentException("When PoLine is bindary active, its format type must be " +
-          PoLine.OrderFormat.PHYSICAL_RESOURCE + " or " + PoLine.OrderFormat.P_E_MIX);
-
-      if (!poLine.getPhysical().getCreateInventory().equals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM)) {
-        throw new IllegalArgumentException("When PoLine is bindary active, only '" +
-          Physical.CreateInventory.INSTANCE_HOLDING_ITEM + "' option can be used");
-      }
-    }
   }
 }
 
