@@ -33,6 +33,7 @@ import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.titles.TitlesInstanceService;
 import org.folio.service.titles.TitlesService;
 
 public class OpenCompositeOrderPieceService {
@@ -40,13 +41,13 @@ public class OpenCompositeOrderPieceService {
 
   private final InventoryItemManager inventoryItemManager;
   private final InventoryHoldingManager inventoryHoldingManager;
-  private final InventoryInstanceManager inventoryInstanceManager;
   private final PieceStorageService pieceStorageService;
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final ProtectionService protectionService;
   private final OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder;
   private final TitlesService titlesService;
+  private final TitlesInstanceService titlesInstanceService;
 
   public OpenCompositeOrderPieceService(PurchaseOrderStorageService purchaseOrderStorageService,
                                         PieceStorageService pieceStorageService,
@@ -54,8 +55,8 @@ public class OpenCompositeOrderPieceService {
                                         PieceChangeReceiptStatusPublisher receiptStatusPublisher,
                                         InventoryItemManager inventoryItemManager,
                                         InventoryHoldingManager inventoryHoldingManager,
-                                        InventoryInstanceManager inventoryInstanceManager,
                                         TitlesService titlesService,
+                                        TitlesInstanceService titlesInstanceService,
                                         OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.pieceStorageService = pieceStorageService;
@@ -63,8 +64,8 @@ public class OpenCompositeOrderPieceService {
     this.receiptStatusPublisher = receiptStatusPublisher;
     this.inventoryItemManager = inventoryItemManager;
     this.inventoryHoldingManager = inventoryHoldingManager;
-    this.inventoryInstanceManager = inventoryInstanceManager;
     this.titlesService = titlesService;
+    this.titlesInstanceService = titlesInstanceService;
     this.openCompositeOrderHolderBuilder = openCompositeOrderHolderBuilder;
   }
 
@@ -170,7 +171,7 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> createTitleInstance(title, isInstanceMatchingDisabled, requestContext).map(title::withInstanceId))
+        .compose(title -> titlesInstanceService.createTitleInstance(title, isInstanceMatchingDisabled, requestContext).map(title::withInstanceId))
         .compose(title -> {
           if (piece.getHoldingId() != null) {
             return Future.succeededFuture(piece.getHoldingId());
@@ -205,23 +206,4 @@ public class OpenCompositeOrderPieceService {
       throw new InventoryException(message);
     }
   }
-
-  private Future<String> createTitleInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    return createTitleInventoryInstance(title, isInstanceMatchingDisabled, requestContext)
-      .compose(instId -> createTitleShadowInstance(instId, requestContext));
-  }
-
-  private Future<String> createTitleInventoryInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (title.getInstanceId() != null) {
-      return Future.succeededFuture(title.getInstanceId());
-    }
-    return titlesService.saveTitleWithInstance(title, isInstanceMatchingDisabled, requestContext);
-  }
-
-  private Future<String> createTitleShadowInstance(String instanceId, RequestContext requestContext) {
-    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
-    return inventoryManager.createShadowInstanceIfNeeded(instanceId, targetTenantId, requestContext)
-      .map(sharingInstance -> instanceId);
-  }
-
 }

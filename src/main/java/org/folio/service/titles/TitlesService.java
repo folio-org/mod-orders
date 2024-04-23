@@ -72,11 +72,7 @@ public class TitlesService {
   }
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
-    return saveTitleWithInstance(title, requestContext).mapEmpty();
-  }
-
-  public Future<String> saveTitleWithInstance(Title title, RequestContext requestContext) {
-    return saveTitleWithInstance(title, false, requestContext);
+    return saveTitleWithInstance(title, false, requestContext).mapEmpty();
   }
 
   public Future<String> saveTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
