@@ -25,8 +25,10 @@ public class InventoryCache {
 
   private final AsyncCache<String, String> asyncCache;
   private final AsyncCache<String, JsonObject> asyncJsonCache;
-  private static final String ISBN_PRODUCT_TYPE_NAME = "ISBN";
-  private static final String INVALID_ISBN_PRODUCT_TYPE_NAME = "Invalid ISBN";
+  // https://github.com/folio-org/mod-inventory-storage/blob/v27.1.0/reference-data/identifier-types/isbn.json
+  private static final String ISBN_PRODUCT_TYPE_ID = "8261054f-be78-422d-bd51-4ed9f33c3422";
+  // https://github.com/folio-org/mod-inventory-storage/blob/v27.1.0/reference-data/identifier-types/InvalidIsbn.json
+  private static final String INVALID_ISBN_PRODUCT_TYPE_ID = "fcca2643-406a-482a-b760-7a7f8aec640e";
   private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
   private final InventoryService inventoryService;
 
@@ -46,11 +48,11 @@ public class InventoryCache {
   }
 
   public Future<String> getISBNProductTypeId(RequestContext requestContext) {
-    return getProductTypeUuid(ISBN_PRODUCT_TYPE_NAME, requestContext);
+    return Future.succeededFuture(ISBN_PRODUCT_TYPE_ID);
   }
 
   public Future<String> getInvalidISBNProductTypeId(RequestContext requestContext) {
-    return getProductTypeUuid(INVALID_ISBN_PRODUCT_TYPE_NAME, requestContext);
+    return Future.succeededFuture(INVALID_ISBN_PRODUCT_TYPE_ID);
   }
 
   /**
