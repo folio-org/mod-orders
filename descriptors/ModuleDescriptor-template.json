@@ -549,7 +549,6 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
             "inventory-storage.loan-types.collection.get",
-            "inventory-storage.holdings-sources.collection.get",
             "inventory-storage.items.item.post",
             "inventory-storage.instance-statuses.collection.get",
             "finance.transactions.batch",
@@ -1265,6 +1264,10 @@
     {
       "id": "template-engine",
       "version": "2.2"
+    },
+    {
+      "id": "holdings-sources",
+      "version": "1.0"
     }
   ],
   "optional": [
