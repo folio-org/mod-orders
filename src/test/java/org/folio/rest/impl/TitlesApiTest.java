@@ -61,7 +61,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
 import org.hamcrest.Matchers;
@@ -90,7 +90,7 @@ public class TitlesApiTest {
   private static boolean runningOnOwn;
 
   @Autowired
-  private InventoryManager inventoryManager;
+  private InventoryInstanceManager inventoryManager;
   private AutoCloseable mockitoMocks;
 
   @BeforeAll
@@ -370,8 +370,8 @@ public class TitlesApiTest {
     }
 
     @Bean
-    TitlesService titlesService(RestClient restClient, ProtectionService protectionService, InventoryManager inventoryManager) {
-      return new TitlesService(restClient, protectionService, inventoryManager);
+    TitlesService titlesService(RestClient restClient, ProtectionService protectionService, InventoryInstanceManager inventoryInstanceManager) {
+      return new TitlesService(restClient, protectionService, inventoryInstanceManager);
     }
 
     @Bean
@@ -385,8 +385,8 @@ public class TitlesApiTest {
     }
 
     @Bean
-    InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    InventoryInstanceManager inventoryInstanceManager() {
+      return mock(InventoryInstanceManager.class);
     }
 
   }
