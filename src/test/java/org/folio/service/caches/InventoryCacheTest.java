@@ -25,7 +25,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
-class InventoryCacheTest {
+public class InventoryCacheTest {
 
   Map<String,String> headers = Map.of();
   RequestContext requestContext = when(mock(RequestContext.class).getHeaders()).thenReturn(headers).getMock();
