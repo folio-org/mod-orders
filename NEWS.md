@@ -1,5 +1,13 @@
 ## 12.9.0 - Unreleased
 
+## 12.8.6 - Released (Quesnelia R1 2024)
+The primary focus of this release was to fix issue with missing interfaces dependencies in module descriptor
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.5...v12.8.6)
+
+### Bug Fixes
+* [MODORDERS-1093](https://folio-org.atlassian.net/browse/MODORDERS-1093) - Missing interface dependencies in module descriptor
+
+
 ## 12.8.5 - Released (Quesnelia R1 2024)
 This release focused on fixing Data Import organization feature and electronic format orders for certain quantity  
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.4...v12.8.5)
