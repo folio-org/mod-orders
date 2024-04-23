@@ -96,7 +96,7 @@ public class InventoryInstanceManager {
     this.consortiumConfigurationService = consortiumConfigurationService;
   }
 
-  public Future<JsonObject> searchInstancesByProducts(List<ProductId> productIds, RequestContext requestContext) {
+  Future<JsonObject> searchInstancesByProducts(List<ProductId> productIds, RequestContext requestContext) {
     String query = productIds.stream()
       .map(this::buildProductIdQuery)
       .collect(joining(" or "));
@@ -106,24 +106,7 @@ public class InventoryInstanceManager {
     return restClient.getAsJsonObject(endpoint, false, requestContext);
   }
 
-  public Future<String> createInstanceRecord(Title title, RequestContext requestContext) {
-    JsonObject lookupObj = new JsonObject();
-    Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
-      .onSuccess(lookupObj::mergeIn)
-      .mapEmpty();
-
-    Future<Void> statusFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_STATUSES, MISSING_INSTANCE_STATUS, requestContext)
-      .onSuccess(lookupObj::mergeIn)
-      .mapEmpty();
-
-    Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(title.getContributors(), requestContext);
-
-    return CompositeFuture.join(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
-      .map(cf -> buildInstanceRecordJsonObject(title, lookupObj))
-      .compose(instanceJson -> createInstance(instanceJson, requestContext));
-  }
-
-  public JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
+  JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
     JsonObject instance = new JsonObject();
 
     // MODORDERS-145 The Source and source code are required by schema
@@ -168,6 +151,38 @@ public class InventoryInstanceManager {
       instance.put(INSTANCE_IDENTIFIERS, new JsonArray(identifiers));
     }
     return instance;
+  }
+
+  public Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(instanceId);
+    return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
+  }
+
+  /**
+   * Returns Id of the Instance Record corresponding to given PO line.
+   * Instance record is either retrieved from Inventory or a new one is created if no corresponding Record exists.
+   *
+   * @param compPOL PO line to retrieve Instance Record Id for
+   * @return future with Instance Id
+   */
+  public Future<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    // proceed with new Instance Record creation if no productId is provided
+    if (!isProductIdsExist(compPOL) || isInstanceMatchingDisabled) {
+      return createInstanceRecord(compPOL, requestContext);
+    }
+
+    String query = compPOL.getDetails().getProductIds().stream()
+      .map(this::buildProductIdQuery)
+      .collect(joining(" or "));
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
+      .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
+    return restClient.getAsJsonObject(requestEntry, requestContext)
+      .compose(instances -> {
+        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
+          return Future.succeededFuture(extractId(getFirstObjectFromResponse(instances, INSTANCES)));
+        }
+        return createInstanceRecord(compPOL, requestContext);
+      });
   }
 
   /**
@@ -245,43 +260,6 @@ public class InventoryInstanceManager {
     return instance;
   }
 
-  public Future<String> createInstance(JsonObject instanceRecJson, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
-    return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
-  }
-
-  public Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(instanceId);
-    return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
-  }
-
-  /**
-   * Returns Id of the Instance Record corresponding to given PO line.
-   * Instance record is either retrieved from Inventory or a new one is created if no corresponding Record exists.
-   *
-   * @param compPOL PO line to retrieve Instance Record Id for
-   * @return future with Instance Id
-   */
-  public Future<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    // proceed with new Instance Record creation if no productId is provided
-    if (!isProductIdsExist(compPOL) || isInstanceMatchingDisabled) {
-      return createInstanceRecord(compPOL, requestContext);
-    }
-
-    String query = compPOL.getDetails().getProductIds().stream()
-      .map(this::buildProductIdQuery)
-      .collect(joining(" or "));
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
-      .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
-    return restClient.getAsJsonObject(requestEntry, requestContext)
-      .compose(instances -> {
-        if (!instances.getJsonArray(INSTANCES).isEmpty()) {
-          return Future.succeededFuture(extractId(getFirstObjectFromResponse(instances, INSTANCES)));
-        }
-        return createInstanceRecord(compPOL, requestContext);
-      });
-  }
-
   private String buildProductIdQuery(ProductId productId) {
     return String.format("(identifiers =/@identifierTypeId=\"%s\"/@value \"%s\")",
       productId.getProductIdType(), productId.getProductId());
@@ -357,6 +335,28 @@ public class InventoryInstanceManager {
       });
   }
 
+  public Future<String> createInstanceRecord(Title title, RequestContext requestContext) {
+    JsonObject lookupObj = new JsonObject();
+    Future<Void> instanceTypeFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_TYPES, MISSING_INSTANCE_TYPE, requestContext)
+      .onSuccess(lookupObj::mergeIn)
+      .mapEmpty();
+
+    Future<Void> statusFuture = InventoryUtils.getEntryId(configurationEntriesCache, inventoryCache, INSTANCE_STATUSES, MISSING_INSTANCE_STATUS, requestContext)
+      .onSuccess(lookupObj::mergeIn)
+      .mapEmpty();
+
+    Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(title.getContributors(), requestContext);
+
+    return CompositeFuture.join(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
+      .map(cf -> buildInstanceRecordJsonObject(title, lookupObj))
+      .compose(instanceJson -> createInstance(instanceJson, requestContext));
+  }
+
+  private Future<String> createInstance(JsonObject instanceRecJson, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES));
+    return restClient.postJsonObjectAndGetId(requestEntry, instanceRecJson, requestContext);
+  }
+
   public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> {
@@ -394,7 +394,8 @@ public class InventoryInstanceManager {
       });
   }
 
-  private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration, List<Location> locations, RequestContext requestContext) {
+  private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
+                                                           List<Location> locations, RequestContext requestContext) {
     return findTenantsWithUnsharedInstance(instanceId, locations, requestContext)
       .map(tenantIds -> tenantIds.stream().map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId,
         targetTenantId, consortiumConfiguration, requestContext)).toList())

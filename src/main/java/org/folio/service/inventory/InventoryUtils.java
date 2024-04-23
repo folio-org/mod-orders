@@ -103,9 +103,9 @@ public class InventoryUtils {
     return promise.future();
   }
 
-  public static Future<String> getEntryTypeValue(ConfigurationEntriesCache configurationEntriesCache,
-                                                 String entryType,
-                                                 RequestContext requestContext) {
+  private static Future<String> getEntryTypeValue(ConfigurationEntriesCache configurationEntriesCache,
+                                                  String entryType,
+                                                  RequestContext requestContext) {
     return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
       .map(configs -> switch (entryType) {
         case HOLDINGS_SOURCES -> configs.getString(CONFIG_NAME_HOLDINGS_SOURCE_NAME, DEFAULT_HOLDINGS_SOURCE_NAME);

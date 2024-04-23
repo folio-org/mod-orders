@@ -657,7 +657,7 @@ public class InventoryManagerTest {
     JsonObject holding = new JsonObject();
     holding.put(ID, holdingId);
     doReturn(succeededFuture(holding)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(false), eq(requestContext));
-    JsonObject holdingIdAct = inventoryHoldingManager.getHoldingById(holdingId, requestContext).result();
+    JsonObject holdingIdAct = inventoryHoldingManager.getHoldingById(holdingId, false, requestContext).result();
 
     assertThat(holding, equalTo(holdingIdAct));
     verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(false), eq(requestContext));

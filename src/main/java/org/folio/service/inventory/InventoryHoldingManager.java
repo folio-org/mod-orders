@@ -136,17 +136,48 @@ public class InventoryHoldingManager {
     return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByHoldingIds);
   }
 
+  private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext) {
+    return fetchHoldingsByHoldingIds(holdingIds, requestContext, holdings -> {
+      if (holdings.size() == holdingIds.size()) {
+        return holdings;
+      }
+      List<Parameter> parameters = holdingIds.stream()
+        .filter(id -> holdings.stream()
+          .noneMatch(holding -> holding.getString(ID).equals(id)))
+        .map(id -> new Parameter().withValue(id).withKey("holdings"))
+        .collect(Collectors.toList());
+      throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
+    });
+  }
+
   public Future<List<JsonObject>> getHoldingsByIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
     return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByHoldingIdsWithoutVerification);
   }
 
-  public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext,
-                                                   BiFunctionReturningFuture<List<String>, RequestContext, List<JsonObject>> biFunction) {
+  private Future<List<JsonObject>> fetchHoldingsByHoldingIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
+    return fetchHoldingsByHoldingIds(holdingIds, requestContext, UnaryOperator.identity());
+  }
+
+  private Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext,
+                                                    BiFunctionReturningFuture<List<String>, RequestContext, List<JsonObject>> biFunction) {
     return collectResultsOnSuccess(
       ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> biFunction.apply(ids, requestContext)).toList())
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(Collectors.toList()));
+  }
+
+  private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext,
+                                                             UnaryOperator<List<JsonObject>> unaryOperator) {
+    String query = convertIdsToCqlQuery(holdingIds);
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
+      .withQuery(query).withOffset(0).withLimit(MAX_IDS_FOR_GET_RQ_15);
+    return restClient.getAsJsonObject(requestEntry, requestContext)
+      .map(jsonHoldings -> jsonHoldings.getJsonArray(HOLDINGS_RECORDS)
+        .stream()
+        .map(JsonObject.class::cast)
+        .collect(toList()))
+      .map(unaryOperator);
   }
 
   public Future<JsonObject> getHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
@@ -156,10 +187,6 @@ public class InventoryHoldingManager {
       return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
     }
     return Future.succeededFuture(new JsonObject());
-  }
-
-  public Future<JsonObject> getHoldingById(String holdingId, RequestContext requestContext) {
-    return getHoldingById(holdingId, false, requestContext);
   }
 
   public Future<List<JsonObject>> getHoldingRecords(String instanceId, List<String> locationIds, RequestContext requestContext) {
@@ -288,37 +315,6 @@ public class InventoryHoldingManager {
     } catch (Exception e) {
       return Future.failedFuture(e);
     }
-  }
-
-  private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext) {
-    return fetchHoldingsByHoldingIds(holdingIds, requestContext, holdings -> {
-      if (holdings.size() == holdingIds.size()) {
-        return holdings;
-      }
-      List<Parameter> parameters = holdingIds.stream()
-        .filter(id -> holdings.stream()
-          .noneMatch(holding -> holding.getString(ID).equals(id)))
-        .map(id -> new Parameter().withValue(id).withKey("holdings"))
-        .collect(Collectors.toList());
-      throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
-    });
-  }
-
-  private Future<List<JsonObject>> fetchHoldingsByHoldingIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
-    return fetchHoldingsByHoldingIds(holdingIds, requestContext, UnaryOperator.identity());
-  }
-
-  private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext,
-                                                             UnaryOperator<List<JsonObject>> unaryOperator) {
-    String query = convertIdsToCqlQuery(holdingIds);
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
-      .withQuery(query).withOffset(0).withLimit(MAX_IDS_FOR_GET_RQ_15);
-    return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(jsonHoldings -> jsonHoldings.getJsonArray(HOLDINGS_RECORDS)
-        .stream()
-        .map(JsonObject.class::cast)
-        .collect(toList()))
-      .map(unaryOperator);
   }
 
 }

@@ -124,7 +124,7 @@ public class InventoryItemManager {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
       .withQuery(query).withOffset(0).withLimit(0);
     return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(this::extractTotalRecords);
+      .map(json -> json.getInteger(TOTAL_RECORDS));
   }
 
   /**
@@ -133,7 +133,7 @@ public class InventoryItemManager {
    * @param query item records query
    * @return future with list of item records
    */
-  public Future<List<JsonObject>> getItemRecordsByQuery(String query, RequestContext requestContext) {
+  private Future<List<JsonObject>> getItemRecordsByQuery(String query, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS))
       .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
     return restClient.getAsJsonObject(requestEntry, requestContext)
@@ -143,11 +143,6 @@ public class InventoryItemManager {
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
-  }
-
-  public Future<String> saveItem(JsonObject item, RequestContext requestContext) {
-    return updateItem(item, requestContext)
-      .map(v -> item.getString(ID));
   }
 
   /**
@@ -308,7 +303,7 @@ public class InventoryItemManager {
         List<Piece> pieces = existingPieces.getPieces().stream()
           .filter(piece -> piece.getLocationId().equals(holder.getOldLocationId()))
           .map(piece -> piece.withLocationId(holder.getNewLocationId()))
-          .collect(toList());
+          .toList();
         if (!pieces.isEmpty()) {
           needUpdatePieces.addAll(pieces);
         }
@@ -328,7 +323,7 @@ public class InventoryItemManager {
           JsonObject item = pair.getItem();
           if (isLocationContainsItemLocation(polLocations, item)) {
             item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId());
-            updatedItemIds.add(saveItem(item, requestContext));
+            updatedItemIds.add(updateItem(item, requestContext).map(v -> item.getString(ID)));
           }
         });
         // Wait for all items to be created and corresponding updatedItemIds are built
@@ -340,8 +335,10 @@ public class InventoryItemManager {
       });
   }
 
-  boolean isLocationContainsItemLocation(List<Location> polLocations, JsonObject item) {
-    return item != null && polLocations.stream().noneMatch(location -> location.getLocationId().equals(item.getJsonObject(EFFECTIVE_LOCATION).getString(ID)));
+  private boolean isLocationContainsItemLocation(List<Location> polLocations, JsonObject item) {
+    return item != null && polLocations.stream().noneMatch(
+      location -> location.getLocationId().equals(item.getJsonObject(EFFECTIVE_LOCATION).getString(ID))
+    );
   }
 
   private List<PieceItemPair> buildPieceItemPairList(List<Piece> needUpdatePieces, List<JsonObject> items) {
@@ -467,10 +464,6 @@ public class InventoryItemManager {
     } else {
       return Future.succeededFuture(Collections.emptyList());
     }
-  }
-
-  public Integer extractTotalRecords(JsonObject json) {
-    return json.getInteger(TOTAL_RECORDS);
   }
 
   public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
