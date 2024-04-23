@@ -549,7 +549,6 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
             "inventory-storage.loan-types.collection.get",
-            "inventory-storage.holdings-sources.collection.get",
             "inventory-storage.items.item.post",
             "inventory-storage.instance-statuses.collection.get",
             "finance.transactions.batch",
