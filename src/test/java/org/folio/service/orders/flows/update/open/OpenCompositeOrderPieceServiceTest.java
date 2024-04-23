@@ -16,7 +16,6 @@ import static org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderM
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -72,7 +71,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,6 +100,8 @@ public class OpenCompositeOrderPieceServiceTest {
   private OpenCompositeOrderPieceService openCompositeOrderPieceService;
   @Autowired
   private TitlesService titlesService;
+  @Autowired
+  private TitlesInstanceService titlesInstanceService;
   @Autowired
   private OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder;
 
@@ -211,17 +211,18 @@ public class OpenCompositeOrderPieceServiceTest {
     SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, anyBoolean(), requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesInstanceService).createTitleInstance(eq(title), anyBoolean(), eq(requestContext));
 
     doReturn(succeededFuture(sharingInstance))
       .when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
     doReturn(succeededFuture(holdingId))
       .when(inventoryHoldingManager).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
-
     doReturn(succeededFuture(itemId)).when(inventoryInstanceManager).createInstanceRecord(eq(title), eq(requestContext));
+
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();
+
     //Then
     assertEquals(piece.getItemId(), itemId);
     assertEquals(piece.getPoLineId(), line.getId());
@@ -243,11 +244,12 @@ public class OpenCompositeOrderPieceServiceTest {
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(line, holdingId, requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).saveTitleWithInstance(title, anyBoolean(), requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesInstanceService).createTitleInstance(eq(title), anyBoolean(), eq(requestContext));
     doReturn(succeededFuture(instanceId)).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
 
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();
+
     //Then
     assertEquals(holdingId, piece.getHoldingId());
     assertEquals(title.getId(), piece.getTitleId());
