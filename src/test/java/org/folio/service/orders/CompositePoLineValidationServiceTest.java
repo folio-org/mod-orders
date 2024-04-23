@@ -1,5 +1,8 @@
 package org.folio.service.orders;
 
+import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -116,46 +119,73 @@ public class CompositePoLineValidationServiceTest {
 
   @Test
   void shouldReturnErrorIfIncorrectOrderFormatWhenBindaryActive() {
-    CompositePoLine compositePoLine = new CompositePoLine()
+    var compositePoLine = new CompositePoLine()
       .withDetails(new Details().withIsBindaryActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
-    List<Error> errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withCheckinItems(true);
+    var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
 
     assertEquals(1, errors.size());
-    assertEquals(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE.value(), errors.get(0).getParameters().get(0).getValue());
+    assertEquals(ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE.getCode(), errors.get(0).getCode());
   }
 
 
   @Test
   void shouldReturnErrorIfIncorrectCreateInventoryWhenBindaryActive() {
-    CompositePoLine compositePoLine = new CompositePoLine()
+    var compositePoLine = new CompositePoLine()
       .withDetails(new Details().withIsBindaryActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
-      .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
-    List<Error> errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
+      .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
+      .withCheckinItems(true);
+    var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
 
     assertEquals(1, errors.size());
-    assertEquals(Physical.CreateInventory.INSTANCE_HOLDING.value(), errors.get(0).getParameters().get(0).getValue());
+    assertEquals(CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE.getCode(), errors.get(0).getCode());
   }
 
+  @Test
+  void shouldReturnErrorIfCheckInItemsFalseWhenBindaryActive() {
+    var compositePoLine = new CompositePoLine()
+      .withDetails(new Details().withIsBindaryActive(true))
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
+      .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
+      .withCheckinItems(false);
+    var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
+
+    assertEquals(1, errors.size());
+    assertEquals(RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE.getCode(), errors.get(0).getCode());
+  }
 
   @Test
   void shouldPassWhenBindaryActiveAndCorrectFormat() {
-    CompositePoLine compositePoLineWithPhysical = new CompositePoLine()
+    var compositePoLineWithPhysical = new CompositePoLine()
       .withDetails(new Details().withIsBindaryActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
-    List<Error> errors1 = compositePoLineValidationService.validateForBinadryActive(compositePoLineWithPhysical);
+      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withCheckinItems(true);
+    var errors1 = compositePoLineValidationService.validateForBinadryActive(compositePoLineWithPhysical);
 
     assertEquals(0, errors1.size());
 
-    CompositePoLine compositePoLineWithPEMix = new CompositePoLine()
+    var compositePoLineWithPEMix = new CompositePoLine()
       .withDetails(new Details().withIsBindaryActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
-    List<Error> errors2 = compositePoLineValidationService.validateForBinadryActive(compositePoLineWithPEMix);
+      .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
+      .withCheckinItems(true);
+    var errors2 = compositePoLineValidationService.validateForBinadryActive(compositePoLineWithPEMix);
 
     assertEquals(0, errors2.size());
+  }
+
+  @Test
+  void shouldPassWhenBindaryNotActive() {
+    var compositePoLine = new CompositePoLine()
+      .withDetails(new Details())
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
+
+    assertEquals(0, errors.size());
   }
 }

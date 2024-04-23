@@ -9,6 +9,9 @@ import static org.folio.orders.utils.PoLineCommonUtil.getPhysicalCostQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
@@ -293,33 +296,37 @@ public class CompositePoLineValidationService extends BaseValidationService {
     return convertErrorCodesToErrors(compPOL, errors);
   }
 
-  public List<Error> validateForBinadryActive(CompositePoLine poLine) {
+  protected List<Error> validateForBinadryActive(CompositePoLine poLine) {
     List<Error> errors = new ArrayList<>();
-    if (poLine.getDetails() != null && poLine.getDetails().getIsBindaryActive()) {
+    if (poLine.getDetails() != null && Boolean.TRUE.equals(poLine.getDetails().getIsBindaryActive())) {
       validateOrderFormatForBindaryActive(poLine, errors);
       validateCreateInventoryForBindary(poLine, errors);
+      validateReceivingWorkflowForBindary(poLine, errors);
     }
     return errors;
   }
 
   private void validateOrderFormatForBindaryActive(CompositePoLine poLine, List<Error> errors) {
-    if (!Objects.equals(poLine.getOrderFormat().value(), PoLine.OrderFormat.PHYSICAL_RESOURCE.value())
-      && !Objects.equals(poLine.getOrderFormat().value(), PoLine.OrderFormat.P_E_MIX.value())) {
+    var poLineOrderFormat = poLine.getOrderFormat().value();
+    if (!Objects.equals(poLineOrderFormat, PoLine.OrderFormat.PHYSICAL_RESOURCE.value())
+        && !Objects.equals(poLineOrderFormat, PoLine.OrderFormat.P_E_MIX.value())) {
       var param = new Parameter().withKey("orderFormat").withValue(poLine.getOrderFormat().value());
-      var error = new Error().withMessage("When PoLine is bindary active, its format type must be '" +
-          PoLine.OrderFormat.PHYSICAL_RESOURCE + "' or '" + PoLine.OrderFormat.P_E_MIX + "'")
-        .withParameters(List.of(param));
+      var error = ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE.toError().withParameters(List.of(param));
       errors.add(error);
     }
   }
 
   private void validateCreateInventoryForBindary(CompositePoLine poLine, List<Error> errors) {
-    if (poLine.getPhysical().getCreateInventory() != Physical.CreateInventory.INSTANCE_HOLDING_ITEM) {
+    if (poLine.getPhysical() != null && poLine.getPhysical().getCreateInventory() != Physical.CreateInventory.INSTANCE_HOLDING_ITEM) {
       var param = new Parameter().withKey("createInventory").withValue(poLine.getPhysical().getCreateInventory().value());
-      Error error = new Error()
-        .withMessage("When PoLine is bindery active, only '" + Physical.CreateInventory.INSTANCE_HOLDING_ITEM + "' option can be used")
-        .withParameters(List.of(param));
+      var error = CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE.toError().withParameters(List.of(param));
       errors.add(error);
+    }
+  }
+
+  private void validateReceivingWorkflowForBindary(CompositePoLine poLine, List<Error> errors) {
+    if (Boolean.TRUE.equals(poLine.getCheckinItems())) {
+      errors.add(RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE.toError());
     }
   }
 }
