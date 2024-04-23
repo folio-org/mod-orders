@@ -25,7 +25,9 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
@@ -34,7 +36,9 @@ import org.folio.service.titles.TitlesService;
 public class OpenCompositeOrderPieceService {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderPieceService.class);
 
-  private final InventoryManager inventoryManager;
+  private final InventoryItemManager inventoryItemManager;
+  private final InventoryHoldingManager inventoryHoldingManager;
+  private final InventoryInstanceManager inventoryInstanceManager;
   private final PieceStorageService pieceStorageService;
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
@@ -43,13 +47,21 @@ public class OpenCompositeOrderPieceService {
   private final TitlesService titlesService;
 
   public OpenCompositeOrderPieceService(PurchaseOrderStorageService purchaseOrderStorageService,
-        PieceStorageService pieceStorageService, ProtectionService protectionService, PieceChangeReceiptStatusPublisher receiptStatusPublisher,
-        InventoryManager inventoryManager, TitlesService titlesService, OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
+                                        PieceStorageService pieceStorageService,
+                                        ProtectionService protectionService,
+                                        PieceChangeReceiptStatusPublisher receiptStatusPublisher,
+                                        InventoryItemManager inventoryItemManager,
+                                        InventoryHoldingManager inventoryHoldingManager,
+                                        InventoryInstanceManager inventoryInstanceManager,
+                                        TitlesService titlesService,
+                                        OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
     this.receiptStatusPublisher = receiptStatusPublisher;
-    this.inventoryManager = inventoryManager;
+    this.inventoryItemManager = inventoryItemManager;
+    this.inventoryHoldingManager = inventoryHoldingManager;
+    this.inventoryInstanceManager = inventoryInstanceManager;
     this.titlesService = titlesService;
     this.openCompositeOrderHolderBuilder = openCompositeOrderHolderBuilder;
   }
@@ -118,7 +130,7 @@ public class OpenCompositeOrderPieceService {
     return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
       .compose(order -> titlesService.getTitleById(piece.getTitleId(), requestContext)
         .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)))
-      .compose(v -> inventoryManager.updateItemWithPieceFields(piece, requestContext))
+      .compose(v -> inventoryItemManager.updateItemWithPieceFields(piece, requestContext))
       .compose(vVoid -> pieceStorageService.getPieceById(piece.getId(), requestContext))
       .compose(pieceStorage -> {
         Piece.ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
@@ -156,14 +168,14 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> inventoryManager.openOrderHandlePackageLineInstance(title, isInstanceMatchingDisabled, requestContext))
+        .compose(title -> inventoryInstanceManager.openOrderHandlePackageLineInstance(title, isInstanceMatchingDisabled, requestContext))
         .compose(title -> titlesService.saveTitle(title, requestContext).map(json -> title))
         .compose(title ->
         {
           if (piece.getHoldingId() != null) {
             return Future.succeededFuture(piece.getHoldingId());
           }
-          return inventoryManager.handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId()), title.getInstanceId(), requestContext)
+          return inventoryHoldingManager.handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId()), title.getInstanceId(), requestContext)
             .map(holdingId -> {
               piece.setLocationId(null);
               piece.setHoldingId(holdingId);
@@ -172,7 +184,7 @@ public class OpenCompositeOrderPieceService {
         })
         .compose(holdingId -> {
           if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-            return inventoryManager.openOrderCreateItemRecord(compPOL, holdingId, requestContext);
+            return inventoryItemManager.openOrderCreateItemRecord(compPOL, holdingId, requestContext);
           }
           return Future.succeededFuture();
         })
@@ -181,7 +193,7 @@ public class OpenCompositeOrderPieceService {
     }
     else
     {
-      return inventoryManager.updateItemWithPieceFields(piece, requestContext);
+      return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
   }
 

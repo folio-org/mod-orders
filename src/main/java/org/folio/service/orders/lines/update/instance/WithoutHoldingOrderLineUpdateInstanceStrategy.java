@@ -6,14 +6,16 @@ import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 
 import io.vertx.core.Future;
 
 public class WithoutHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
 
-  public WithoutHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
-    super(inventoryManager);
+  public WithoutHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
+                                                       InventoryHoldingManager inventoryHoldingManager) {
+    super(inventoryItemManager, inventoryHoldingManager);
   }
 
   Future<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
