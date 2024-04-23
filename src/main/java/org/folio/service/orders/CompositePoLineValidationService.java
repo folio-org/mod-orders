@@ -325,7 +325,7 @@ public class CompositePoLineValidationService extends BaseValidationService {
   }
 
   private void validateReceivingWorkflowForBindary(CompositePoLine poLine, List<Error> errors) {
-    if (Boolean.TRUE.equals(poLine.getCheckinItems())) {
+    if (Boolean.FALSE.equals(poLine.getCheckinItems())) {
       errors.add(RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE.toError());
     }
   }

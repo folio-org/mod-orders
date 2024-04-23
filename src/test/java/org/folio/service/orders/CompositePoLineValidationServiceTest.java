@@ -148,7 +148,7 @@ public class CompositePoLineValidationServiceTest {
   void shouldReturnErrorIfCheckInItemsFalseWhenBindaryActive() {
     var compositePoLine = new CompositePoLine()
       .withDetails(new Details().withIsBindaryActive(true))
-      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
       .withCheckinItems(false);
     var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
