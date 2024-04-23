@@ -245,7 +245,6 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(line, holdingId, requestContext);
     doReturn(succeededFuture(instanceId)).when(titlesInstanceService).createTitleInstance(eq(title), anyBoolean(), eq(requestContext));
-    doReturn(succeededFuture(instanceId)).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
 
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();
