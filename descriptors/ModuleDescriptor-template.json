@@ -1265,6 +1265,10 @@
     {
       "id": "template-engine",
       "version": "2.2"
+    },
+    {
+      "id": "holdings-sources",
+      "version": "1.0"
     }
   ],
   "optional": [
