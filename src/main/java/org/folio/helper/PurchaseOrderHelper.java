@@ -91,7 +91,7 @@ import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
@@ -125,7 +125,7 @@ public class PurchaseOrderHelper {
   private final ProtectionService protectionService;
   private final PrefixService prefixService;
   private final SuffixService suffixService;
-  private final InventoryManager inventoryManager;
+  private final InventoryItemManager inventoryItemManager;
   private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
   private final OpenCompositeOrderManager openCompositeOrderManager;
   private final OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
@@ -144,7 +144,7 @@ public class PurchaseOrderHelper {
       OrderInvoiceRelationService orderInvoiceRelationService, TagService tagService,
       PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
       ProtectionService protectionService, PrefixService prefixService,
-      SuffixService suffixService, InventoryManager inventoryManager, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+      SuffixService suffixService, InventoryItemManager inventoryItemManager, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
       OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
       ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
       OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
@@ -162,7 +162,7 @@ public class PurchaseOrderHelper {
     this.protectionService = protectionService;
     this.prefixService = prefixService;
     this.suffixService = suffixService;
-    this.inventoryManager = inventoryManager;
+    this.inventoryItemManager = inventoryItemManager;
     this.unOpenCompositeOrderManager = unOpenCompositeOrderManager;
     this.openCompositeOrderManager = openCompositeOrderManager;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
@@ -812,7 +812,7 @@ public class PurchaseOrderHelper {
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
     return GenericCompositeFuture.join(items.stream()
-      .map(item -> inventoryManager.updateItem(item, requestContext))
+      .map(item -> inventoryItemManager.updateItem(item, requestContext))
       .collect(toList()))
       .mapEmpty();
   }
@@ -843,7 +843,7 @@ public class PurchaseOrderHelper {
   private Future<Void> updateItemsStatus(List<String> poLineIds,
     String currentStatus, String newStatus, RequestContext requestContext) {
 
-    return inventoryManager.getItemsByPoLineIdsAndStatus(poLineIds, currentStatus, requestContext)
+    return inventoryItemManager.getItemsByPoLineIdsAndStatus(poLineIds, currentStatus, requestContext)
       .map(items -> updateStatusName(items, newStatus))
       .compose(items -> updateItemsInInventory(items, requestContext));
   }

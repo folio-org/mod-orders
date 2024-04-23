@@ -14,7 +14,7 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
 import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
@@ -65,7 +65,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertxconcurrent.Semaphore;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.orders.utils.ProductIdUtils;
 
 public class PurchaseOrderLineService {
@@ -79,12 +79,12 @@ public class PurchaseOrderLineService {
 
   private final RestClient restClient;
   private final InventoryCache inventoryCache;
-  private final InventoryManager inventoryManager;
+  private final InventoryHoldingManager inventoryHoldingManager;
 
-  public PurchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache, InventoryManager inventoryManager) {
+  public PurchaseOrderLineService(RestClient restClient, InventoryCache inventoryCache, InventoryHoldingManager inventoryHoldingManager) {
     this.inventoryCache = inventoryCache;
     this.restClient = restClient;
-    this.inventoryManager = inventoryManager;
+    this.inventoryHoldingManager = inventoryHoldingManager;
   }
 
   public Future<PoLineCollection> getOrderLineCollection(String query, int offset, int limit, RequestContext requestContext) {
@@ -517,7 +517,7 @@ public class PurchaseOrderLineService {
      * result in halting the entire flow. To avoid this, we do not compare the number of holdingIds with
      * the final result from the inventory.
      */
-    return inventoryManager.getHoldingsByIdsWithoutVerification(holdingIds, requestContext)
+    return inventoryHoldingManager.getHoldingsByIdsWithoutVerification(holdingIds, requestContext)
       .map(holdings -> StreamEx.of(holdings).map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         .nonNull().toList())
       .map(holdingsPermanentLocationIds -> StreamEx.of(locationIds).append(holdingsPermanentLocationIds)

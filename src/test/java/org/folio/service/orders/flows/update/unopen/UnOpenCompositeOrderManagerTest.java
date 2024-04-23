@@ -44,7 +44,8 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
@@ -78,7 +79,9 @@ public class UnOpenCompositeOrderManagerTest {
   @Autowired
   private PurchaseOrderLineService purchaseOrderLineService;
   @Autowired
-  private InventoryManager inventoryManager;
+  private InventoryItemManager inventoryItemManager;
+  @Autowired
+  private InventoryHoldingManager inventoryHoldingManager;
   @Autowired
   private PieceStorageService pieceStorageService;
   @Autowired
@@ -121,7 +124,7 @@ public class UnOpenCompositeOrderManagerTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    reset(encumbranceWorkflowStrategyFactory, pieceStorageService, inventoryManager);
+    reset(encumbranceWorkflowStrategyFactory, pieceStorageService, inventoryItemManager, inventoryHoldingManager);
   }
 
   @Test
@@ -138,9 +141,9 @@ public class UnOpenCompositeOrderManagerTest {
     // pieces should be deleted
     verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
     // items should be deleted
-    verify(inventoryManager).deleteItems(List.of(ITEM_ID), false, requestContext);
+    verify(inventoryItemManager).deleteItems(List.of(ITEM_ID), false, requestContext);
     // holdings should not be deleted because deleteHodlings = false
-    verify(inventoryManager, never()).deleteHoldingById(anyString(), anyBoolean(), any());
+    verify(inventoryHoldingManager, never()).deleteHoldingById(anyString(), anyBoolean(), any());
   }
 
   @Test
@@ -157,9 +160,9 @@ public class UnOpenCompositeOrderManagerTest {
     // piece should be deleted
     verify(pieceStorageService).deletePiece(PIECE_ID, requestContext);
     // item should be deleted
-    verify(inventoryManager).deleteItem(ITEM_ID, true, requestContext);
+    verify(inventoryItemManager).deleteItem(ITEM_ID, true, requestContext);
     // holdings should be deleted because deleteHodlings = true
-    verify(inventoryManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryHoldingManager).deleteHoldingById(HOLDING_ID, true, requestContext);
   }
 
   @Test
@@ -169,7 +172,7 @@ public class UnOpenCompositeOrderManagerTest {
     CompositePurchaseOrder orderFromStorage = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine poLine = getPoLine(order);
     prepareInitialSetup(order, orderFromStorage, poLine);
-    doReturn(succeededFuture(List.of(getItem()))).when(inventoryManager).getItemsByHoldingId(HOLDING_ID, requestContext);
+    doReturn(succeededFuture(List.of(getItem()))).when(inventoryItemManager).getItemsByHoldingId(HOLDING_ID, requestContext);
     //When
     unOpenCompositeOrderManager.process(order, orderFromStorage, true, requestContext).result();
     //Then
@@ -177,9 +180,9 @@ public class UnOpenCompositeOrderManagerTest {
     // piece should be deleted
     verify(pieceStorageService).deletePiece(PIECE_ID, requestContext);
     // item should be deleted
-    verify(inventoryManager).deleteItem(ITEM_ID, true, requestContext);
+    verify(inventoryItemManager).deleteItem(ITEM_ID, true, requestContext);
     // holding should not be deleted, because have links to on-order items
-    verify(inventoryManager, never()).deleteHoldingById(anyString(), anyBoolean(), any());
+    verify(inventoryHoldingManager, never()).deleteHoldingById(anyString(), anyBoolean(), any());
   }
 
   @Test
@@ -196,9 +199,9 @@ public class UnOpenCompositeOrderManagerTest {
     // piece should be deleted
     verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
     // item should be deleted
-    verify(inventoryManager).deleteItems(List.of(ITEM_ID), false, requestContext);
+    verify(inventoryItemManager).deleteItems(List.of(ITEM_ID), false, requestContext);
     // holding should not be deleted when delete holdings = false
-    verify(inventoryManager, never()).deleteHoldingById(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryHoldingManager, never()).deleteHoldingById(anyString(), anyBoolean(), any(RequestContext.class));
   }
 
   @Test
@@ -214,7 +217,7 @@ public class UnOpenCompositeOrderManagerTest {
     unOpenCompositeOrderManager.process(order, orderFromStorage, false, requestContext).result();
     //Then
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
-    verifyNoInteractions(inventoryManager);
+    verifyNoInteractions(inventoryItemManager);
   }
 
   @Test
@@ -232,7 +235,7 @@ public class UnOpenCompositeOrderManagerTest {
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
     // only pieces should be deleted because of Synchronized flow, items not because CreateInventory is None
     verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
-    verifyNoInteractions(inventoryManager);
+    verifyNoInteractions(inventoryItemManager);
   }
 
   @Test
@@ -253,7 +256,7 @@ public class UnOpenCompositeOrderManagerTest {
     makeBasicUnOpenWorkflowChecksForReceiptNotRequired(order, orderFromStorage);
     // pieces and inventory should not be deleted
     verifyNoInteractions(pieceStorageService);
-    verifyNoInteractions(inventoryManager);
+    verifyNoInteractions(inventoryItemManager);
   }
 
   @Test
@@ -270,9 +273,9 @@ public class UnOpenCompositeOrderManagerTest {
     //Then
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
     verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
-    verify(inventoryManager).deleteHoldingById(HOLDING_ID, true, requestContext);
-    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
-    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryHoldingManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryItemManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
 
   @Test
@@ -284,16 +287,16 @@ public class UnOpenCompositeOrderManagerTest {
     poLine.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING);
     poLine.getLocations().forEach(location -> location.setHoldingId(HOLDING_ID));
     prepareInitialSetup(order, orderFromStorage, poLine);
-    doReturn(succeededFuture(List.of(getItem()))).when(inventoryManager).getItemsByHoldingId(HOLDING_ID, requestContext);
+    doReturn(succeededFuture(List.of(getItem()))).when(inventoryItemManager).getItemsByHoldingId(HOLDING_ID, requestContext);
     //When
     unOpenCompositeOrderManager.process(order, orderFromStorage, true, requestContext).result();
     //Then
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
     verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
     // holding is not deleted because it has associated items
-    verify(inventoryManager, never()).deleteHoldingById(HOLDING_ID, true, requestContext);
-    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
-    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryHoldingManager, never()).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryItemManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
 
   @Test
@@ -310,9 +313,9 @@ public class UnOpenCompositeOrderManagerTest {
     //Then
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
     verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
-    verify(inventoryManager, never()).deleteHoldingById(HOLDING_ID, true, requestContext);
-    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
-    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryHoldingManager, never()).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryItemManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
 
   @Test
@@ -330,9 +333,9 @@ public class UnOpenCompositeOrderManagerTest {
     //Then
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
     verify(pieceStorageService, never()).deletePiecesByIds(List.of(PIECE_ID), requestContext);
-    verify(inventoryManager).deleteHoldingById(HOLDING_ID, true, requestContext);
-    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
-    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryHoldingManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryItemManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
 
   @Test
@@ -350,9 +353,9 @@ public class UnOpenCompositeOrderManagerTest {
     //Then
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
     verify(pieceStorageService, never()).deletePiecesByIds(List.of(PIECE_ID), requestContext);
-    verify(inventoryManager, never()).deleteHoldingById(HOLDING_ID, true, requestContext);
-    verify(inventoryManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
-    verify(inventoryManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryHoldingManager, never()).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryItemManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
+    verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
 
   private void prepareInitialSetup(CompositePurchaseOrder order, CompositePurchaseOrder orderFromStorage, CompositePoLine poLine) {
@@ -360,9 +363,9 @@ public class UnOpenCompositeOrderManagerTest {
     doReturn(succeededFuture(null)).when(openToPendingEncumbranceStrategy).processEncumbrances(eq(order), eq(orderFromStorage), any());
     JsonObject item = getItem();
     List<JsonObject> onOrderItems = List.of(item);
-    doReturn(succeededFuture(onOrderItems)).when(inventoryManager).getItemsByPoLineIdsAndStatus(List.of(poLine.getId()), ItemStatus.ON_ORDER.value(), requestContext);
-    doReturn(succeededFuture()).when(inventoryManager).deleteItems(List.of(ITEM_ID), false, requestContext);
-    doReturn(succeededFuture(onOrderItems)).when(inventoryManager).getItemRecordsByIds(List.of(ITEM_ID), requestContext);
+    doReturn(succeededFuture(onOrderItems)).when(inventoryItemManager).getItemsByPoLineIdsAndStatus(List.of(poLine.getId()), ItemStatus.ON_ORDER.value(), requestContext);
+    doReturn(succeededFuture()).when(inventoryItemManager).deleteItems(List.of(ITEM_ID), false, requestContext);
+    doReturn(succeededFuture(onOrderItems)).when(inventoryItemManager).getItemRecordsByIds(List.of(ITEM_ID), requestContext);
     Piece piece = new Piece().withId(PIECE_ID).withItemId(ITEM_ID).withPoLineId(poLine.getId());
     PieceCollection pieceCollection = new PieceCollection().withPieces(List.of(piece));
     doReturn(succeededFuture(pieceCollection)).when(pieceStorageService).getExpectedPiecesByLineId(poLine.getId(), requestContext);
@@ -373,13 +376,13 @@ public class UnOpenCompositeOrderManagerTest {
     PurchaseOrder simpleOrder = new PurchaseOrder().withId(order.getId());
     doReturn(succeededFuture(simpleOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(order.getId(), requestContext);
     doReturn(succeededFuture()).when(protectionService).isOperationRestricted(anyList(), any(ProtectedOperationType.class), any());
-    doReturn(succeededFuture(0)).when(inventoryManager).getNumberOfRequestsByItemId(ITEM_ID, requestContext);
+    doReturn(succeededFuture(0)).when(inventoryItemManager).getNumberOfRequestsByItemId(ITEM_ID, requestContext);
     doReturn(succeededFuture()).when(pieceStorageService).deletePiece(PIECE_ID, requestContext);
-    doReturn(succeededFuture()).when(inventoryManager).deleteItem(piece.getItemId(), true, requestContext);
-    doReturn(succeededFuture(Collections.emptyList())).when(inventoryManager).getItemsByHoldingId(HOLDING_ID, requestContext);
-    doReturn(succeededFuture()).when(inventoryManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    doReturn(succeededFuture()).when(inventoryItemManager).deleteItem(piece.getItemId(), true, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingId(HOLDING_ID, requestContext);
+    doReturn(succeededFuture()).when(inventoryHoldingManager).deleteHoldingById(HOLDING_ID, true, requestContext);
     JsonObject holding = new JsonObject().put("id", HOLDING_ID).put("permanentLocationId", poLine.getLocations().get(0).getLocationId());
-    doReturn(succeededFuture(List.of(holding))).when(inventoryManager).getHoldingsByIds(List.of(HOLDING_ID), requestContext);
+    doReturn(succeededFuture(List.of(holding))).when(inventoryHoldingManager).getHoldingsByIds(List.of(HOLDING_ID), requestContext);
   }
 
   private JsonObject getItem() {
@@ -427,8 +430,13 @@ public class UnOpenCompositeOrderManagerTest {
     }
 
     @Bean
-    public InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    public InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
+    }
+
+    @Bean
+    public InventoryHoldingManager inventoryHoldingManager() {
+      return mock(InventoryHoldingManager.class);
     }
 
     @Bean
@@ -449,12 +457,13 @@ public class UnOpenCompositeOrderManagerTest {
     @Bean
     UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                                             EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                                            InventoryManager inventoryManager,
+                                                            InventoryItemManager inventoryItemManager,
+                                                            InventoryHoldingManager inventoryHoldingManager,
                                                             PieceStorageService pieceStorageService,
                                                             PurchaseOrderStorageService purchaseOrderStorageService,
                                                             ProtectionService protectionService) {
-      return spy(new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryManager,
-        pieceStorageService, purchaseOrderStorageService, protectionService));
+      return spy(new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryItemManager,
+        inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService));
     }
   }
 }

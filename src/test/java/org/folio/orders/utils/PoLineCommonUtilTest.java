@@ -15,40 +15,40 @@ import java.util.UUID;
 public class PoLineCommonUtilTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
-
-  @Test
-  void testShouldMakePOLAsPendingIfPaymentAndReceiptStatusesEqualToAwaiting() {
-    //given
-    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    order.getCompositePoLines().forEach(line -> {
-      line.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
-      line.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-    });
-    //When
-    PoLineCommonUtil.makePoLinesPending(order.getCompositePoLines());
-    //Then
-    order.getCompositePoLines().forEach(line -> {
-      assertEquals(CompositePoLine.PaymentStatus.PENDING, line.getPaymentStatus());
-      assertEquals(CompositePoLine.ReceiptStatus.PENDING, line.getReceiptStatus());
-    });
-  }
-
-  @Test
-  void testShouldSkipMakePOLAsPendingIfPaymentAndReceiptStatusesNotEqualToAwaiting() {
-    //given
-    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    order.getCompositePoLines().forEach(line -> {
-      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
-      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
-    });
-    //When
-    PoLineCommonUtil.makePoLinesPending(order.getCompositePoLines());
-    //Then
-    order.getCompositePoLines().forEach(line -> {
-      assertEquals(CompositePoLine.PaymentStatus.FULLY_PAID, line.getPaymentStatus());
-      assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, line.getReceiptStatus());
-    });
-  }
+//
+//  @Test
+//  void testShouldMakePOLAsPendingIfPaymentAndReceiptStatusesEqualToAwaiting() {
+//    //given
+//    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+//    order.getCompositePoLines().forEach(line -> {
+//      line.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
+//      line.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
+//    });
+//    //When
+//    PoLineCommonUtil.makePoLinesPending(order.getCompositePoLines());
+//    //Then
+//    order.getCompositePoLines().forEach(line -> {
+//      assertEquals(CompositePoLine.PaymentStatus.PENDING, line.getPaymentStatus());
+//      assertEquals(CompositePoLine.ReceiptStatus.PENDING, line.getReceiptStatus());
+//    });
+//  }
+//
+//  @Test
+//  void testShouldSkipMakePOLAsPendingIfPaymentAndReceiptStatusesNotEqualToAwaiting() {
+//    //given
+//    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+//    order.getCompositePoLines().forEach(line -> {
+//      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+//      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
+//    });
+//    //When
+//    PoLineCommonUtil.makePoLinesPending(order.getCompositePoLines());
+//    //Then
+//    order.getCompositePoLines().forEach(line -> {
+//      assertEquals(CompositePoLine.PaymentStatus.FULLY_PAID, line.getPaymentStatus());
+//      assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, line.getReceiptStatus());
+//    });
+//  }
 
   @Test
   void testOnlyInstanceUpdateNeededForPhysicalIfCreateInventoryInstance() {

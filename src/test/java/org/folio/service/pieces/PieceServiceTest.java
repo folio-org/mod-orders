@@ -21,7 +21,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.titles.TitlesService;
@@ -49,7 +49,7 @@ public class PieceServiceTest {
   @Autowired
   private ProtectionService protectionService;
   @Autowired
-  private InventoryManager inventoryManager;
+  private InventoryItemManager inventoryItemManager;
   @Autowired
   private TitlesService titlesService;
   @Autowired
@@ -118,8 +118,8 @@ public class PieceServiceTest {
     }
 
     @Bean
-    InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
     }
 
     @Bean

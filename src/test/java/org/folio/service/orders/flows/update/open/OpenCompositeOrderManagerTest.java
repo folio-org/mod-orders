@@ -25,7 +25,7 @@ import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
@@ -57,7 +57,7 @@ public class OpenCompositeOrderManagerTest {
   @Autowired
   private ProtectionService protectionService;
   @Autowired
-  private InventoryManager inventoryManager;
+  private InventoryItemManager inventoryItemManager;
   @Autowired
   private TitlesService titlesService;
   @Autowired
@@ -126,8 +126,8 @@ public class OpenCompositeOrderManagerTest {
       return mock(PurchaseOrderLineService.class);
     }
 
-    @Bean InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    @Bean InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
     }
 
     @Bean PieceChangeReceiptStatusPublisher receiptStatusPublisher() {
