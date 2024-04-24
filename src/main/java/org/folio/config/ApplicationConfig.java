@@ -115,7 +115,7 @@ import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
 import org.folio.service.routinglists.RoutingListService;
-import org.folio.service.titles.TitlesInstanceService;
+import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -602,20 +602,20 @@ public class ApplicationConfig {
 
   @Bean
   PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager(TitlesService titlesService,
-                                                                  TitlesInstanceService titlesInstanceService,
+                                                                  TitleInstanceService titleInstanceService,
                                                                   PieceUpdateInventoryService pieceUpdateInventoryService,
                                                                   InventoryItemManager inventoryItemManager,
                                                                   InventoryHoldingManager inventoryHoldingManager) {
-    return new PieceUpdateFlowInventoryManager(titlesService,  titlesInstanceService, pieceUpdateInventoryService,
+    return new PieceUpdateFlowInventoryManager(titlesService, titleInstanceService, pieceUpdateInventoryService,
       inventoryItemManager, inventoryHoldingManager);
   }
 
   @Bean
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
-                                                                  TitlesInstanceService titlesInstanceService,
+                                                                  TitleInstanceService titleInstanceService,
                                                                   PieceUpdateInventoryService pieceUpdateInventoryService,
                                                                   InventoryHoldingManager inventoryHoldingManager) {
-    return new PieceCreateFlowInventoryManager(titlesService, titlesInstanceService,
+    return new PieceCreateFlowInventoryManager(titlesService, titleInstanceService,
       pieceUpdateInventoryService, inventoryHoldingManager);
   }
 
@@ -627,10 +627,10 @@ public class ApplicationConfig {
                                                                       InventoryItemManager inventoryItemManager,
                                                                       InventoryHoldingManager inventoryHoldingManager,
                                                                       TitlesService titlesService,
-                                                                      TitlesInstanceService titlesInstanceService,
+                                                                      TitleInstanceService titleInstanceService,
                                                                       OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
     return new OpenCompositeOrderPieceService(purchaseOrderStorageService, pieceStorageService, protectionService,
-      receiptStatusPublisher, inventoryItemManager, inventoryHoldingManager, titlesService, titlesInstanceService, openCompositeOrderHolderBuilder);
+      receiptStatusPublisher, inventoryItemManager, inventoryHoldingManager, titlesService, titleInstanceService, openCompositeOrderHolderBuilder);
   }
 
   @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryItemManager inventoryItemManager,
@@ -814,8 +814,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  TitlesInstanceService titlesInstanceService(TitlesService titlesService, InventoryInstanceManager inventoryInstanceManager) {
-    return new TitlesInstanceService(titlesService, inventoryInstanceManager);
+  TitleInstanceService titleInstanceService(TitlesService titlesService, InventoryInstanceManager inventoryInstanceManager) {
+    return new TitleInstanceService(titlesService, inventoryInstanceManager);
   }
 
 }

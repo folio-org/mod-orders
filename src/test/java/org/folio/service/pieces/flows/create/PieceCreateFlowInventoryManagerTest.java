@@ -39,7 +39,7 @@ import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
-import org.folio.service.titles.TitlesInstanceService;
+import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -64,7 +64,7 @@ public class PieceCreateFlowInventoryManagerTest {
   @Autowired
   TitlesService titlesService;
   @Autowired
-  TitlesInstanceService titlesInstanceService;
+  TitleInstanceService titleInstanceService;
   @Autowired
   PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
@@ -136,7 +136,7 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(piece.getId(), requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesInstanceService).createTitleInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titleInstanceService).createTitleInstance(eq(title), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
     doReturn(succeededFuture(holdingId)).when(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
@@ -180,7 +180,7 @@ public class PieceCreateFlowInventoryManagerTest {
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesInstanceService).createTitleInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titleInstanceService).createTitleInstance(eq(title), eq(requestContext));
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
@@ -222,7 +222,7 @@ public class PieceCreateFlowInventoryManagerTest {
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesInstanceService).createTitleInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titleInstanceService).createTitleInstance(eq(title), eq(requestContext));
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
@@ -247,8 +247,8 @@ public class PieceCreateFlowInventoryManagerTest {
     }
 
     @Bean
-    TitlesInstanceService titlesInstanceService () {
-      return mock(TitlesInstanceService.class);
+    TitleInstanceService titleInstanceService () {
+      return mock(TitleInstanceService.class);
     }
 
     @Bean
@@ -273,10 +273,10 @@ public class PieceCreateFlowInventoryManagerTest {
 
     @Bean
     PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
-                                                                    TitlesInstanceService titlesInstanceService,
+                                                                    TitleInstanceService titleInstanceService,
                                                                     PieceUpdateInventoryService pieceUpdateInventoryService,
                                                                     InventoryHoldingManager inventoryHoldingManager) {
-      return new PieceCreateFlowInventoryManager(titlesService, titlesInstanceService, pieceUpdateInventoryService, inventoryHoldingManager);
+      return new PieceCreateFlowInventoryManager(titlesService, titleInstanceService, pieceUpdateInventoryService, inventoryHoldingManager);
     }
   }
 }

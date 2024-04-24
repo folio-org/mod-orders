@@ -11,7 +11,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
-import org.folio.service.titles.TitlesInstanceService;
+import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
@@ -19,16 +19,16 @@ import io.vertx.core.Future;
 public class PieceCreateFlowInventoryManager {
 
   private final TitlesService titlesService;
-  private final TitlesInstanceService titlesInstanceService;
+  private final TitleInstanceService titleInstanceService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
   private final InventoryHoldingManager inventoryHoldingManager;
 
   public PieceCreateFlowInventoryManager(TitlesService titlesService,
-                                         TitlesInstanceService titlesInstanceService,
+                                         TitleInstanceService titleInstanceService,
                                          PieceUpdateInventoryService pieceUpdateInventoryService,
                                          InventoryHoldingManager inventoryHoldingManager) {
     this.titlesService = titlesService;
-    this.titlesInstanceService = titlesInstanceService;
+    this.titleInstanceService = titleInstanceService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
     this.inventoryHoldingManager = inventoryHoldingManager;
   }
@@ -102,11 +102,11 @@ public class PieceCreateFlowInventoryManager {
       return Future.succeededFuture(poLine.getInstanceId());
     }
     return titlesService.getTitleById(titleId, requestContext)
-      .compose(title -> titlesInstanceService.createTitleInstance(title, requestContext))
+      .compose(title -> titleInstanceService.createTitleInstance(title, requestContext))
       .map(instanceId -> poLine.withInstanceId(instanceId).getInstanceId());
   }
 
   private Future<String> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
-    return titlesInstanceService.createTitleInstance(title, requestContext);
+    return titleInstanceService.createTitleInstance(title, requestContext);
   }
 }

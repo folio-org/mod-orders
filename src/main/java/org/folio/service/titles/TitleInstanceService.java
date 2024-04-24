@@ -7,12 +7,12 @@ import org.folio.service.inventory.InventoryInstanceManager;
 
 import io.vertx.core.Future;
 
-public class TitlesInstanceService {
+public class TitleInstanceService {
 
   private final TitlesService titlesService;
   private final InventoryInstanceManager inventoryInstanceManager;
 
-  public TitlesInstanceService(TitlesService titlesService, InventoryInstanceManager inventoryInstanceManager) {
+  public TitleInstanceService(TitlesService titlesService, InventoryInstanceManager inventoryInstanceManager) {
     this.titlesService = titlesService;
     this.inventoryInstanceManager = inventoryInstanceManager;
   }

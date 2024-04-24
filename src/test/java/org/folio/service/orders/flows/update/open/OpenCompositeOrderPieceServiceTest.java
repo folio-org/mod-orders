@@ -59,7 +59,7 @@ import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.titles.TitlesInstanceService;
+import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -101,7 +101,7 @@ public class OpenCompositeOrderPieceServiceTest {
   @Autowired
   private TitlesService titlesService;
   @Autowired
-  private TitlesInstanceService titlesInstanceService;
+  private TitleInstanceService titleInstanceService;
   @Autowired
   private OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder;
 
@@ -211,7 +211,7 @@ public class OpenCompositeOrderPieceServiceTest {
     SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesInstanceService).createTitleInstance(eq(title), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titleInstanceService).createTitleInstance(eq(title), anyBoolean(), eq(requestContext));
 
     doReturn(succeededFuture(sharingInstance))
       .when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
@@ -244,7 +244,7 @@ public class OpenCompositeOrderPieceServiceTest {
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(line, holdingId, requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesInstanceService).createTitleInstance(eq(title), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titleInstanceService).createTitleInstance(eq(title), anyBoolean(), eq(requestContext));
 
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();
@@ -648,8 +648,9 @@ public class OpenCompositeOrderPieceServiceTest {
   @Bean TitlesService titlesService() {
     return mock(TitlesService.class);
   }
-  @Bean TitlesInstanceService titlesInstanceService() {
-    return mock(TitlesInstanceService.class);
+  @Bean
+  TitleInstanceService titleInstanceService() {
+    return mock(TitleInstanceService.class);
   }
   @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {
     return spy(new OpenCompositeOrderHolderBuilder(pieceStorageService));
@@ -663,10 +664,10 @@ public class OpenCompositeOrderPieceServiceTest {
                                                                   InventoryItemManager inventoryItemManager,
                                                                   InventoryHoldingManager inventoryHoldingManager,
                                                                   TitlesService titlesService,
-                                                                  TitlesInstanceService titlesInstanceService,
+                                                                  TitleInstanceService titleInstanceService,
                                                                   OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
       return spy(new OpenCompositeOrderPieceService(purchaseOrderStorageService, pieceStorageService, protectionService,
-        receiptStatusPublisher, inventoryItemManager, inventoryHoldingManager, titlesService, titlesInstanceService, openCompositeOrderHolderBuilder));
+        receiptStatusPublisher, inventoryItemManager, inventoryHoldingManager, titlesService, titleInstanceService, openCompositeOrderHolderBuilder));
     }
   }
 }
