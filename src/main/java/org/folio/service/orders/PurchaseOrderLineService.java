@@ -16,8 +16,8 @@ import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
-import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
 import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
+import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
 import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
 
 import java.util.ArrayList;
@@ -35,13 +35,6 @@ import java.util.function.UnaryOperator;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertxconcurrent.Semaphore;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
@@ -65,6 +58,13 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.service.caches.InventoryCache;
+
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertxconcurrent.Semaphore;
 import org.folio.service.inventory.InventoryManager;
 import org.folio.service.orders.utils.ProductIdUtils;
 
