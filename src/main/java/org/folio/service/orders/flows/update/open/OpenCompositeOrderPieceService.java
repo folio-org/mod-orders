@@ -168,7 +168,7 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> titleInstanceService.createTitleInstance(title, isInstanceMatchingDisabled, requestContext).map(title::withInstanceId))
+        .compose(title -> titleInstanceService.updateTitleWithInstance(title, isInstanceMatchingDisabled, requestContext).map(title::withInstanceId))
         .compose(title -> {
           if (piece.getHoldingId() != null) {
             return Future.succeededFuture(piece.getHoldingId());

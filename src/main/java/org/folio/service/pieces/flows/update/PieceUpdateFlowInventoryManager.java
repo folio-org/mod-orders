@@ -152,11 +152,11 @@ public class PieceUpdateFlowInventoryManager {
       return Future.succeededFuture(poLineToSave.getInstanceId());
     }
     return titlesService.getTitleById(pieceToUpdate.getTitleId(), requestContext)
-      .compose(title -> titleInstanceService.createTitleInstance(title, requestContext))
+      .compose(title -> titleInstanceService.updateTitleWithInstance(title, requestContext))
       .map(instanceId -> poLineToSave.withInstanceId(instanceId).getInstanceId());
   }
 
   private Future<String> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
-    return titleInstanceService.createTitleInstance(title, requestContext);
+    return titleInstanceService.updateTitleWithInstance(title, requestContext);
   }
 }

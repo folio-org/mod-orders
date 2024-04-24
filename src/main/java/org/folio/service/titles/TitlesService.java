@@ -25,7 +25,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryInstanceManager;
 
@@ -39,17 +38,17 @@ public class TitlesService {
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private final RestClient restClient;
   private final ProtectionService protectionService;
-  private final InventoryInstanceManager inventoryInstanceManager;
+  private final TitleInstanceService titleInstanceService;
 
-  public TitlesService(RestClient restClient, ProtectionService protectionService, InventoryInstanceManager inventoryInstanceManager) {
+  public TitlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService) {
     this.restClient = restClient;
     this.protectionService = protectionService;
-    this.inventoryInstanceManager = inventoryInstanceManager;
+    this.titleInstanceService = titleInstanceService;
   }
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
     return protectionService.validateAcqUnitsOnCreate(title.getAcqUnitIds(), TITLES_ASSIGN, requestContext)
-      .compose(v -> inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext))
+      .compose(v -> titleInstanceService.getOrCreateTitleInstance(title, requestContext))
       .compose(instId -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
         return restClient.post(requestEntry, title.withInstanceId(instId), Title.class, requestContext);
@@ -72,23 +71,17 @@ public class TitlesService {
   }
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
-    return saveTitleWithInstance(title, false, requestContext).mapEmpty();
-  }
-
-  public Future<String> saveTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    return inventoryInstanceManager.getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, requestContext)
-      .compose(instId -> {
-        RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
-        restClient.put(requestEntry, title, requestContext);
-        return Future.succeededFuture(instId);
-      });
+    RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
+    return restClient.put(requestEntry, title, requestContext);
   }
 
   public Future<Void> saveTitleWithAcqUnitsCheck(Title entity, RequestContext requestContext) {
     return getTitleById(entity.getId(), requestContext)
       .compose(titleFromStorage -> protectionService.validateAcqUnitsOnUpdate(entity.getAcqUnitIds(), titleFromStorage.getAcqUnitIds(),
         TITLES_MANAGE, Sets.newHashSet(ProtectedOperationType.UPDATE), requestContext))
-      .compose(v -> saveTitle(entity, requestContext));
+      .compose(v -> titleInstanceService.getOrCreateTitleInstance(entity, requestContext))
+      .map(entity::withInstanceId)
+      .compose(title -> saveTitle(title, requestContext));
   }
 
   public Future<Void> deleteTitle(String id, RequestContext requestContext) {
