@@ -21,7 +21,7 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.CANCELLED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.ONGOING;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
-import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -64,7 +64,8 @@ import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
@@ -91,7 +92,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   @Autowired
   protected TitlesService titlesService;
   @Autowired
-  protected InventoryManager inventoryManager;
+  protected InventoryHoldingManager inventoryHoldingManager;
+  @Autowired
+  protected InventoryItemManager inventoryItemManager;
   @Autowired
   protected PieceStorageService pieceStorageService;
   @Autowired
@@ -241,7 +244,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, Location receivedPieceLocation, RequestContext requestContext) {
     String holdingKey = buildProcessedHoldingKey(receivedPieceLocation, instanceId);
     if (ifHoldingNotProcessed(holdingKey) && !isRevertToOnOrder(piece)) {
-      return inventoryManager.getOrCreateHoldingsRecord(instanceId, receivedPieceLocation, requestContext)
+      return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, receivedPieceLocation, requestContext)
         .compose(holdingId -> {
           processedHoldings.put(holdingKey, holdingId);
           piece.setHoldingId(holdingId);
@@ -350,7 +353,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return future with list of item records
    */
   private Future<List<JsonObject>> getItemRecordsByIds(List<String> ids, Map<String, Piece> piecesWithItems, RequestContext requestContext) {
-    return inventoryManager.getItemRecordsByIds(ids, requestContext)
+    return inventoryItemManager.getItemRecordsByIds(ids, requestContext)
       .map(items -> {
         checkIfAllItemsFound(ids, items, piecesWithItems);
         return items;

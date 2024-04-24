@@ -8,7 +8,8 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
@@ -19,13 +20,17 @@ public class PieceCreateFlowInventoryManager {
 
   private final TitlesService titlesService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
-  private final InventoryManager inventoryManager;
+  private final InventoryHoldingManager inventoryHoldingManager;
+  private final InventoryInstanceManager inventoryInstanceManager;
 
-  public PieceCreateFlowInventoryManager(TitlesService titlesService,  PieceUpdateInventoryService pieceUpdateInventoryService,
-                                         InventoryManager inventoryManager) {
+  public PieceCreateFlowInventoryManager(TitlesService titlesService,
+                                         PieceUpdateInventoryService pieceUpdateInventoryService,
+                                         InventoryHoldingManager inventoryHoldingManager,
+                                         InventoryInstanceManager inventoryInstanceManager) {
     this.titlesService = titlesService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
-    this.inventoryManager = inventoryManager;
+    this.inventoryHoldingManager = inventoryHoldingManager;
+    this.inventoryInstanceManager = inventoryInstanceManager;
   }
 
   public Future<Void> processInventory(CompositePoLine compPOL,  Piece piece,  boolean createItem, RequestContext requestContext) {
@@ -67,7 +72,7 @@ public class PieceCreateFlowInventoryManager {
     }
     if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
       Location location = new Location().withLocationId(piece.getLocationId());
-      return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
+      return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
         .map(holdingId -> {
           if(holdingId != null) {
             piece.setLocationId(null);
@@ -110,7 +115,7 @@ public class PieceCreateFlowInventoryManager {
     if (title.getInstanceId() != null) {
       return Future.succeededFuture(title);
     } else {
-      return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
+      return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
         .map(title::withInstanceId)
         .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext)
           .map(json -> title));
@@ -118,7 +123,7 @@ public class PieceCreateFlowInventoryManager {
   }
 
   private Future<String> createTitleInstance(Title title, RequestContext requestContext) {
-    return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
+    return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
       .map(title::withInstanceId)
       .compose(titleWithInstanceId ->
         titlesService.saveTitle(titleWithInstanceId, requestContext)

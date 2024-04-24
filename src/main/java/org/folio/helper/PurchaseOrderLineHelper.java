@@ -78,7 +78,8 @@ import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.invoice.POLInvoiceLineRelationService;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
@@ -107,7 +108,8 @@ public class PurchaseOrderLineHelper {
   private static final String OTHER = "other";
   private static final String QUERY_BY_PO_LINE_ID = "poLineId==";
 
-  private final InventoryManager inventoryManager;
+  private final InventoryItemManager inventoryItemManager;
+  private final InventoryInstanceManager inventoryInstanceManager;
   private final EncumbranceService encumbranceService;
   private final ExpenseClassValidationService expenseClassValidationService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
@@ -121,15 +123,23 @@ public class PurchaseOrderLineHelper {
   private final OrganizationService organizationService;
   private final POLInvoiceLineRelationService polInvoiceLineRelationService;
 
-  public PurchaseOrderLineHelper(InventoryManager inventoryManager, EncumbranceService encumbranceService,
-    ExpenseClassValidationService expenseClassValidationService,
-    EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
-    TitlesService titlesService, ProtectionService protectionService,
-    PurchaseOrderLineService purchaseOrderLineService, PurchaseOrderStorageService purchaseOrderStorageService,
-    RestClient restClient, CompositePoLineValidationService compositePoLineValidationService,
-    POLInvoiceLineRelationService polInvoiceLineRelationService, OrganizationService organizationService) {
+  public PurchaseOrderLineHelper(InventoryItemManager inventoryItemManager,
+                                 InventoryInstanceManager inventoryInstanceManager,
+                                 EncumbranceService encumbranceService,
+                                 ExpenseClassValidationService expenseClassValidationService,
+                                 EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
+                                 OrderInvoiceRelationService orderInvoiceRelationService,
+                                 TitlesService titlesService,
+                                 ProtectionService protectionService,
+                                 PurchaseOrderLineService purchaseOrderLineService,
+                                 PurchaseOrderStorageService purchaseOrderStorageService,
+                                 RestClient restClient,
+                                 CompositePoLineValidationService compositePoLineValidationService,
+                                 POLInvoiceLineRelationService polInvoiceLineRelationService,
+                                 OrganizationService organizationService) {
 
-    this.inventoryManager = inventoryManager;
+    this.inventoryItemManager = inventoryItemManager;
+    this.inventoryInstanceManager = inventoryInstanceManager;
     this.encumbranceService = encumbranceService;
     this.expenseClassValidationService = expenseClassValidationService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
@@ -732,14 +742,14 @@ public class PurchaseOrderLineHelper {
         .compose(poLines -> {
           List<PoLine> notCanceledPoLines = poLines.stream().filter(Predicate.not(this::isDbPoLineStatusCancelled)).toList();
           if (CollectionUtils.isNotEmpty(notCanceledPoLines)) {
-            return inventoryManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
+            return inventoryItemManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
               .compose(items -> {
                 //Each poLine can have only one linked item
                 Optional<JsonObject> poLineItem = items.stream()
                   .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
                 if (poLineItem.isPresent()) {
                   JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
-                  inventoryManager.updateItem(updatedItem, requestContext);
+                  inventoryItemManager.updateItem(updatedItem, requestContext);
                 }
                 return Future.succeededFuture(null);
               });
@@ -892,7 +902,7 @@ public class PurchaseOrderLineHelper {
     if (Boolean.TRUE.equals(compositePoLine.getIsPackage()) || Objects.isNull(instanceId)) {
       return Future.succeededFuture();
     }
-    return inventoryManager.createShadowInstanceIfNeeded(instanceId, TenantTool.tenantId(requestContext.getHeaders()), requestContext)
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, TenantTool.tenantId(requestContext.getHeaders()), requestContext)
       .mapEmpty();
   }
 

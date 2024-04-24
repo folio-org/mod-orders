@@ -1002,7 +1002,7 @@
       ]
     },
     {
-      "id": "orders.routing-list",
+      "id": "orders.routing-lists",
       "version": "1.0",
       "handlers": [
         {
@@ -1046,7 +1046,7 @@
         {
           "methods": ["GET"],
           "pathPattern": "/orders/routing-lists/{id}/template",
-          "permissionsRequired": ["orders.routing-list-template.item.get"],
+          "permissionsRequired": ["orders.routing-lists-template.item.get"],
           "modulePermissions": [
             "orders-storage.routing-lists.item.get",
             "orders-storage.settings.collection.get",
@@ -1809,7 +1809,7 @@
       "description" : "Orders routing-list item delete"
     },
     {
-      "permissionName":  "orders.routing-list-template.item.get",
+      "permissionName":  "orders.routing-lists-template.item.get",
       "displayName" : "orders routing-list-template item get",
       "description" : "Orders routing-list-template item get"
     },
@@ -1823,7 +1823,7 @@
         "orders.routing-lists.item.get",
         "orders.routing-lists.item.put",
         "orders.routing-lists.item.delete",
-        "orders.routing-list-template.item.get"
+        "orders.routing-lists-template.item.get"
       ]
     },
     {

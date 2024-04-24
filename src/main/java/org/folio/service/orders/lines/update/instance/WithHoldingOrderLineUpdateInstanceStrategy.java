@@ -1,8 +1,8 @@
 package org.folio.service.orders.lines.update.instance;
 
 import static java.util.stream.Collectors.toList;
-import static org.folio.service.inventory.InventoryManager.ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.inventory.InventoryItemManager.ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +25,8 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
 
 import io.vertx.core.Future;
@@ -39,8 +40,10 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
   private final PieceStorageService pieceStorageService;
 
-  public WithHoldingOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager, PieceStorageService pieceStorageService) {
-    super(inventoryManager);
+  public WithHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
+                                                    InventoryHoldingManager inventoryHoldingManager,
+                                                    PieceStorageService pieceStorageService) {
+    super(inventoryItemManager, inventoryHoldingManager);
     this.pieceStorageService = pieceStorageService;
   }
 
@@ -71,11 +74,11 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       .map(pieces -> extractUniqueHoldingIds(pieces, holder.getStoragePoLine().getLocations()))
       .compose(holdingIds -> {
         holdingIds.forEach(holdingId -> holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, holdingId));
-        return inventoryManager.getHoldingsByIds(holdingIds, requestContext);
+        return inventoryHoldingManager.getHoldingsByIds(holdingIds, requestContext);
       })
       .compose(holdings -> {
         removeHoldingUnrecognizedFields(holdings);
-        return inventoryManager.updateInstanceForHoldingRecords(holdings, newInstanceId, requestContext);
+        return inventoryHoldingManager.updateInstanceForHoldingRecords(holdings, newInstanceId, requestContext);
       });
   }
 
@@ -91,7 +94,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     List<Future<Void>> futures = new ArrayList<>();
     return retrieveUniqueLocationsAndConsume(holder, requestContext, location -> {
       String holdingId = location.getHoldingId();
-      futures.add(inventoryManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, requestContext)
+      futures.add(inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, requestContext)
         .compose(newHoldingId -> {
           holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
           if (ObjectUtils.notEqual(holdingId, newHoldingId)) {
@@ -110,7 +113,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     List<Future<Void>> futures = new ArrayList<>();
     return retrieveUniqueLocationsAndConsume(holder, requestContext, location -> {
       String holdingId = location.getHoldingId();
-      futures.add(inventoryManager.createHolding(newInstanceId, location, requestContext)
+      futures.add(inventoryHoldingManager.createHolding(newInstanceId, location, requestContext)
         .compose(newHoldingId -> {
           holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
           return updateItemsHolding(holdingId, newHoldingId, holder.getStoragePoLine().getId(), requestContext);
@@ -139,7 +142,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   }
 
   private Future<Void> updateItemsHolding(String holdingId, String newHoldingId, String poLineId, RequestContext requestContext) {
-    return inventoryManager.getItemsByHoldingIdAndOrderLineId(holdingId, poLineId, requestContext)
+    return inventoryItemManager.getItemsByHoldingIdAndOrderLineId(holdingId, poLineId, requestContext)
         .map(items -> updateItemHoldingId(items, newHoldingId))
         .compose(items -> updateItemsInInventory(items, requestContext));
   }
@@ -152,7 +155,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
     List<Parameter> parameters = new ArrayList<>();
     return GenericCompositeFuture.join(items.stream()
-      .map(item -> inventoryManager.updateItem(item, requestContext)
+      .map(item -> inventoryItemManager.updateItem(item, requestContext)
         .otherwise(ex -> {
           Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));
           if (ex.getCause() instanceof HttpException httpException) {

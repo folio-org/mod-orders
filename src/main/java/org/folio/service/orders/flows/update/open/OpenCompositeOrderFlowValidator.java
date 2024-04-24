@@ -3,7 +3,7 @@ package org.folio.service.orders.flows.update.open;
 import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidator.verifyLocationsAndPiecesConsistency;
 import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
-import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,7 +39,8 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.pieces.PieceStorageService;
@@ -52,19 +53,19 @@ public class OpenCompositeOrderFlowValidator {
   private final PieceStorageService pieceStorageService;
   private final EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
   private final CompositePoLineValidationService compositePoLineValidationService;
-  private final InventoryManager inventoryManager;
+  private final InventoryHoldingManager inventoryHoldingManager;
 
   public OpenCompositeOrderFlowValidator(FundService fundService,
                                          ExpenseClassValidationService expenseClassValidationService,
                                          PieceStorageService pieceStorageService,
                                          EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
-                                         CompositePoLineValidationService compositePoLineValidationService, InventoryManager inventoryManager) {
+                                         CompositePoLineValidationService compositePoLineValidationService, InventoryHoldingManager inventoryHoldingManager) {
     this.fundService = fundService;
     this.expenseClassValidationService = expenseClassValidationService;
     this.pieceStorageService = pieceStorageService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.compositePoLineValidationService = compositePoLineValidationService;
-    this.inventoryManager = inventoryManager;
+    this.inventoryHoldingManager = inventoryHoldingManager;
   }
 
   public Future<Void> validate(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
@@ -239,7 +240,7 @@ public class OpenCompositeOrderFlowValidator {
       return Future.succeededFuture(result);
     }
 
-    return inventoryManager.getHoldingsByIds(holdingIds, createContextWithNewTenantId(requestContext, tenantId))
+    return inventoryHoldingManager.getHoldingsByIds(holdingIds, createContextWithNewTenantId(requestContext, tenantId))
       .map(holdings -> holdings.stream()
         .map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
         .map(locationId -> getTenantLocation(tenantId, locationId))

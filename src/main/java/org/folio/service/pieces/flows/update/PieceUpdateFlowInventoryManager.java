@@ -1,8 +1,8 @@
 package org.folio.service.pieces.flows.update;
 
-import static org.folio.service.inventory.InventoryManager.ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryItemManager.ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 
 import java.util.Optional;
 
@@ -16,7 +16,9 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
@@ -30,17 +32,24 @@ public class PieceUpdateFlowInventoryManager {
 
   private final TitlesService titlesService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
-  private final InventoryManager inventoryManager;
+  private final InventoryItemManager inventoryItemManager;
+  private final InventoryHoldingManager inventoryHoldingManager;
+  private final InventoryInstanceManager inventoryInstanceManager;
 
-  public PieceUpdateFlowInventoryManager(TitlesService titlesService,  PieceUpdateInventoryService pieceUpdateInventoryService,
-                                         InventoryManager inventoryManager) {
+  public PieceUpdateFlowInventoryManager(TitlesService titlesService,
+                                         PieceUpdateInventoryService pieceUpdateInventoryService,
+                                         InventoryItemManager inventoryItemManager,
+                                         InventoryHoldingManager inventoryHoldingManager,
+                                         InventoryInstanceManager inventoryInstanceManager) {
     this.titlesService = titlesService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
-    this.inventoryManager = inventoryManager;
+    this.inventoryItemManager = inventoryItemManager;
+    this.inventoryHoldingManager = inventoryHoldingManager;
+    this.inventoryInstanceManager = inventoryInstanceManager;
   }
 
   public Future<Void> processInventory(PieceUpdateHolder holder, RequestContext requestContext) {
-    return inventoryManager.updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext)
+    return inventoryItemManager.updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext)
       .compose(aVoid -> {
         if (Boolean.TRUE.equals(holder.getOriginPoLine().getIsPackage())) {
           return packagePoLineUpdateInventory(holder, requestContext);
@@ -95,7 +104,7 @@ public class PieceUpdateFlowInventoryManager {
     String instanceId = holder.getInstanceId();
     if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(pieceToUpdate, poLineToSave)) {
       Location location = new Location().withLocationId(pieceToUpdate.getLocationId());
-      return inventoryManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
+      return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
         .map(holdingId -> {
           Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
             pieceToUpdate.setLocationId(null);
@@ -115,7 +124,7 @@ public class PieceUpdateFlowInventoryManager {
     if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
         return Future.succeededFuture();
     }
-    return inventoryManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext)
+    return inventoryItemManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext)
       .compose(jsonItem -> {
         boolean jsonItemFound = jsonItem != null && !jsonItem.isEmpty();
         if (holder.isCreateItem() && !jsonItemFound && pieceToUpdate.getHoldingId() != null) {
@@ -123,7 +132,7 @@ public class PieceUpdateFlowInventoryManager {
         }
         if (jsonItemFound) {
           return updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate)
-            .compose(ignored -> inventoryManager.updateItem(jsonItem, requestContext).map(item -> jsonItem.getString(ID)));
+            .compose(ignored -> inventoryItemManager.updateItem(jsonItem, requestContext).map(item -> jsonItem.getString(ID)));
         }
         return Future.succeededFuture();
       });
@@ -156,14 +165,14 @@ public class PieceUpdateFlowInventoryManager {
     if (title.getInstanceId() != null) {
       return Future.succeededFuture(title);
     }
-    return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
+    return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
       .map(title::withInstanceId)
       .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext))
       .map(v -> title);
   }
 
   private Future<String> createTitleInstance(Title title, RequestContext requestContext) {
-    return inventoryManager.getOrCreateInstanceRecord(title, requestContext)
+    return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
       .map(title::withInstanceId)
       .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext))
       .map(aVoid -> title.getInstanceId());
