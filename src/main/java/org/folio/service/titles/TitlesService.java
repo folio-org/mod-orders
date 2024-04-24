@@ -26,7 +26,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryInstanceManager;
 
 import io.vertx.core.Future;
 import lombok.extern.log4j.Log4j2;
@@ -48,7 +47,7 @@ public class TitlesService {
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
     return protectionService.validateAcqUnitsOnCreate(title.getAcqUnitIds(), TITLES_ASSIGN, requestContext)
-      .compose(v -> titleInstanceService.getOrCreateTitleInstance(title, requestContext))
+      .compose(v -> titleInstanceService.getOrCreateInstance(title, requestContext))
       .compose(instId -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
         return restClient.post(requestEntry, title.withInstanceId(instId), Title.class, requestContext);
@@ -79,7 +78,7 @@ public class TitlesService {
     return getTitleById(entity.getId(), requestContext)
       .compose(titleFromStorage -> protectionService.validateAcqUnitsOnUpdate(entity.getAcqUnitIds(), titleFromStorage.getAcqUnitIds(),
         TITLES_MANAGE, Sets.newHashSet(ProtectedOperationType.UPDATE), requestContext))
-      .compose(v -> titleInstanceService.getOrCreateTitleInstance(entity, requestContext))
+      .compose(v -> titleInstanceService.getOrCreateInstance(entity, requestContext))
       .map(entity::withInstanceId)
       .compose(title -> saveTitle(title, requestContext));
   }
