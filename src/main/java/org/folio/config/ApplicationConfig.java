@@ -452,8 +452,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  TitlesService titlesService(RestClient restClient, ProtectionService protectionService, InventoryInstanceManager inventoryInstanceManager) {
-    return new TitlesService(restClient, protectionService, inventoryInstanceManager);
+  TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService) {
+    return new TitlesService(restClient, protectionService, titleInstanceService);
   }
 
   @Bean
