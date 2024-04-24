@@ -602,21 +602,17 @@ public class ApplicationConfig {
 
   @Bean
   PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager(TitlesService titlesService,
-                                                                  TitleInstanceService titleInstanceService,
                                                                   PieceUpdateInventoryService pieceUpdateInventoryService,
                                                                   InventoryItemManager inventoryItemManager,
                                                                   InventoryHoldingManager inventoryHoldingManager) {
-    return new PieceUpdateFlowInventoryManager(titlesService, titleInstanceService, pieceUpdateInventoryService,
-      inventoryItemManager, inventoryHoldingManager);
+    return new PieceUpdateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryItemManager, inventoryHoldingManager);
   }
 
   @Bean
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
-                                                                  TitleInstanceService titleInstanceService,
                                                                   PieceUpdateInventoryService pieceUpdateInventoryService,
                                                                   InventoryHoldingManager inventoryHoldingManager) {
-    return new PieceCreateFlowInventoryManager(titlesService, titleInstanceService,
-      pieceUpdateInventoryService, inventoryHoldingManager);
+    return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryHoldingManager);
   }
 
   @Bean
@@ -627,10 +623,9 @@ public class ApplicationConfig {
                                                                       InventoryItemManager inventoryItemManager,
                                                                       InventoryHoldingManager inventoryHoldingManager,
                                                                       TitlesService titlesService,
-                                                                      TitleInstanceService titleInstanceService,
                                                                       OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
     return new OpenCompositeOrderPieceService(purchaseOrderStorageService, pieceStorageService, protectionService,
-      receiptStatusPublisher, inventoryItemManager, inventoryHoldingManager, titlesService, titleInstanceService, openCompositeOrderHolderBuilder);
+      receiptStatusPublisher, inventoryItemManager, inventoryHoldingManager, titlesService, openCompositeOrderHolderBuilder);
   }
 
   @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryItemManager inventoryItemManager,
@@ -814,8 +809,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  TitleInstanceService titleInstanceService(TitlesService titlesService, InventoryInstanceManager inventoryInstanceManager) {
-    return new TitleInstanceService(titlesService, inventoryInstanceManager);
+  TitleInstanceService titleInstanceService(InventoryInstanceManager inventoryInstanceManager) {
+    return new TitleInstanceService(inventoryInstanceManager);
   }
 
 }

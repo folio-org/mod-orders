@@ -30,7 +30,6 @@ import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitlesService;
 
 public class OpenCompositeOrderPieceService {
@@ -44,7 +43,6 @@ public class OpenCompositeOrderPieceService {
   private final ProtectionService protectionService;
   private final OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder;
   private final TitlesService titlesService;
-  private final TitleInstanceService titleInstanceService;
 
   public OpenCompositeOrderPieceService(PurchaseOrderStorageService purchaseOrderStorageService,
                                         PieceStorageService pieceStorageService,
@@ -53,7 +51,6 @@ public class OpenCompositeOrderPieceService {
                                         InventoryItemManager inventoryItemManager,
                                         InventoryHoldingManager inventoryHoldingManager,
                                         TitlesService titlesService,
-                                        TitleInstanceService titleInstanceService,
                                         OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.pieceStorageService = pieceStorageService;
@@ -62,7 +59,6 @@ public class OpenCompositeOrderPieceService {
     this.inventoryItemManager = inventoryItemManager;
     this.inventoryHoldingManager = inventoryHoldingManager;
     this.titlesService = titlesService;
-    this.titleInstanceService = titleInstanceService;
     this.openCompositeOrderHolderBuilder = openCompositeOrderHolderBuilder;
   }
 
@@ -168,7 +164,7 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> titleInstanceService.updateTitleWithInstance(title, isInstanceMatchingDisabled, requestContext).map(title::withInstanceId))
+        .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, requestContext).map(title::withInstanceId))
         .compose(title -> {
           if (piece.getHoldingId() != null) {
             return Future.succeededFuture(piece.getHoldingId());

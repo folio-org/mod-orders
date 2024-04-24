@@ -39,7 +39,6 @@ import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
-import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -63,8 +62,6 @@ public class PieceCreateFlowInventoryManagerTest {
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
   @Autowired
   TitlesService titlesService;
-  @Autowired
-  TitleInstanceService titleInstanceService;
   @Autowired
   PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
@@ -131,12 +128,11 @@ public class PieceCreateFlowInventoryManagerTest {
                                     .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM))
                                     .withLocations(List.of(loc)).withCost(cost);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
-    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(piece.getId(), requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titleInstanceService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
     doReturn(succeededFuture(holdingId)).when(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
@@ -180,7 +176,7 @@ public class PieceCreateFlowInventoryManagerTest {
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titleInstanceService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
@@ -222,7 +218,7 @@ public class PieceCreateFlowInventoryManagerTest {
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titleInstanceService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
@@ -247,11 +243,6 @@ public class PieceCreateFlowInventoryManagerTest {
     }
 
     @Bean
-    TitleInstanceService titleInstanceService () {
-      return mock(TitleInstanceService.class);
-    }
-
-    @Bean
     InventoryHoldingManager inventoryHoldingManager() {
       return mock(InventoryHoldingManager.class);
     }
@@ -273,10 +264,9 @@ public class PieceCreateFlowInventoryManagerTest {
 
     @Bean
     PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager(TitlesService titlesService,
-                                                                    TitleInstanceService titleInstanceService,
                                                                     PieceUpdateInventoryService pieceUpdateInventoryService,
                                                                     InventoryHoldingManager inventoryHoldingManager) {
-      return new PieceCreateFlowInventoryManager(titlesService, titleInstanceService, pieceUpdateInventoryService, inventoryHoldingManager);
+      return new PieceCreateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryHoldingManager);
     }
   }
 }

@@ -130,4 +130,16 @@ public class TitlesService {
   private List<String> getNonPackageLineIds(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).map(CompositePoLine::getId).collect(toList());
   }
+
+  public Future<String> updateTitleWithInstance(Title title, RequestContext requestContext) {
+    return updateTitleWithInstance(title, false, requestContext);
+  }
+
+  public Future<String> updateTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    return titleInstanceService.getOrCreateInstance(title, isInstanceMatchingDisabled, requestContext)
+      .map(title::withInstanceId)
+      .compose(entity -> saveTitle(entity, requestContext)
+        .map(v -> entity.getInstanceId()));
+  }
+
 }

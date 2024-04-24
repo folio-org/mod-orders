@@ -43,7 +43,6 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryHoldingManager;
-import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.titles.TitleInstanceService;
@@ -71,15 +70,11 @@ public class PieceUpdateFlowInventoryManagerTest {
   @Autowired
   TitlesService titlesService;
   @Autowired
-  TitleInstanceService titleInstanceService;
-  @Autowired
   PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
   InventoryItemManager inventoryItemManager;
   @Autowired
   InventoryHoldingManager inventoryHoldingManager;
-  @Autowired
-  InventoryInstanceManager inventoryInstanceManager;
 
   private final Context ctx = getFirstContextFromVertx(getVertx());
   @Mock
@@ -138,7 +133,6 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
@@ -158,7 +152,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titleInstanceService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -188,7 +182,6 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
@@ -208,7 +201,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titleInstanceService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -238,7 +231,6 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
@@ -259,7 +251,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titleInstanceService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -292,7 +284,6 @@ public class PieceUpdateFlowInventoryManagerTest {
       .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(true).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
@@ -313,7 +304,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holder.getPieceFromStorage().getHoldingId(), true, requestContext);
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titleInstanceService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -348,7 +339,6 @@ public class PieceUpdateFlowInventoryManagerTest {
                                      .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withId(lineId)
@@ -368,7 +358,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titleInstanceService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -398,7 +388,6 @@ public class PieceUpdateFlowInventoryManagerTest {
                                      .withPoLineId(lineId).withHoldingId(holdingId).withFormat(Piece.Format.PHYSICAL);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
     Cost cost = new Cost().withQuantityElectronic(1);
-    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE).withId(lineId)
@@ -418,7 +407,7 @@ public class PieceUpdateFlowInventoryManagerTest {
     doReturn(succeededFuture(new ArrayList())).when(inventoryItemManager).getItemsByHoldingId(holder.getPieceFromStorage().getHoldingId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(holder.getPieceFromStorage(), requestContext);
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titleInstanceService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
 
     pieceUpdateFlowInventoryManager.processInventory(holder, requestContext).result();
 
@@ -586,22 +575,16 @@ public class PieceUpdateFlowInventoryManagerTest {
       return mock(InventoryHoldingManager.class);
     }
 
-    @Bean
-    InventoryInstanceManager inventoryInstanceManager() {
-      return mock(InventoryInstanceManager.class);
-    }
-
     @Bean PieceUpdateInventoryService pieceUpdateInventoryService() {
       return mock(PieceUpdateInventoryService.class);
     }
 
     @Bean
     PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager(TitlesService titlesService,
-                                                                    TitleInstanceService titleInstanceService,
                                                                     PieceUpdateInventoryService pieceUpdateInventoryService,
                                                                     InventoryItemManager inventoryItemManager,
                                                                     InventoryHoldingManager inventoryHoldingManager) {
-      return new PieceUpdateFlowInventoryManager(titlesService, titleInstanceService, pieceUpdateInventoryService,
+      return new PieceUpdateFlowInventoryManager(titlesService, pieceUpdateInventoryService,
         inventoryItemManager, inventoryHoldingManager);
     }
   }

@@ -11,7 +11,6 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
-import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
@@ -19,16 +18,13 @@ import io.vertx.core.Future;
 public class PieceCreateFlowInventoryManager {
 
   private final TitlesService titlesService;
-  private final TitleInstanceService titleInstanceService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
   private final InventoryHoldingManager inventoryHoldingManager;
 
   public PieceCreateFlowInventoryManager(TitlesService titlesService,
-                                         TitleInstanceService titleInstanceService,
                                          PieceUpdateInventoryService pieceUpdateInventoryService,
                                          InventoryHoldingManager inventoryHoldingManager) {
     this.titlesService = titlesService;
-    this.titleInstanceService = titleInstanceService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
     this.inventoryHoldingManager = inventoryHoldingManager;
   }
@@ -102,11 +98,11 @@ public class PieceCreateFlowInventoryManager {
       return Future.succeededFuture(poLine.getInstanceId());
     }
     return titlesService.getTitleById(titleId, requestContext)
-      .compose(title -> titleInstanceService.updateTitleWithInstance(title, requestContext))
+      .compose(title -> titlesService.updateTitleWithInstance(title, requestContext))
       .map(instanceId -> poLine.withInstanceId(instanceId).getInstanceId());
   }
 
   private Future<String> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
-    return titleInstanceService.updateTitleWithInstance(title, requestContext);
+    return titlesService.updateTitleWithInstance(title, requestContext);
   }
 }

@@ -381,8 +381,8 @@ public class TitlesApiTest {
     }
 
     @Bean
-    TitleInstanceService TitleInstanceService(TitlesService titlesService, InventoryInstanceManager inventoryInstanceManager) {
-      return new TitleInstanceService(titlesService, inventoryInstanceManager);
+    TitleInstanceService TitleInstanceService(InventoryInstanceManager inventoryInstanceManager) {
+      return new TitleInstanceService(inventoryInstanceManager);
     }
 
     @Bean
