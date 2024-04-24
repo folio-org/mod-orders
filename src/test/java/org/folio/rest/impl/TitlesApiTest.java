@@ -91,7 +91,7 @@ public class TitlesApiTest {
   private static boolean runningOnOwn;
 
   @Autowired
-  private InventoryInstanceManager inventoryManager;
+  private TitleInstanceService titleInstanceService;
   private AutoCloseable mockitoMocks;
 
   @BeforeAll
@@ -135,7 +135,7 @@ public class TitlesApiTest {
       .withPoLineId(poLineId)
       .withAcqUnitIds(List.of(ACQ_UNIT_ID));
 
-    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(inventoryManager).getOrCreateInstanceRecord(any(Title.class), any(RequestContext.class));
+    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(titleInstanceService).getOrCreateInstance(any(Title.class), any(RequestContext.class));
 
     // Positive cases
     // Title id is null initially
@@ -212,7 +212,7 @@ public class TitlesApiTest {
 
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(packagePoLine));
 
-    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(inventoryManager).getOrCreateInstanceRecord(any(Title.class), any(RequestContext.class));
+    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(titleInstanceService).getOrCreateInstance(any(Title.class), any(RequestContext.class));
 
     Title titleWithPackagePoLineRS = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(titleWithPackagePoLineRQ).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_ACQ_PERMISSIONS_HEADER), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
@@ -253,7 +253,7 @@ public class TitlesApiTest {
       .withTitle("new title")
       .withAcqUnitIds(List.of(ACQ_UNIT_ID));
 
-    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(inventoryManager).getOrCreateInstanceRecord(any(Title.class), anyBoolean(), any(RequestContext.class));
+    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(titleInstanceService).getOrCreateInstance(any(Title.class), any(RequestContext.class));
 
     verifyPut(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_ACQ_PERMISSIONS_HEADER), "", 204);
@@ -381,18 +381,13 @@ public class TitlesApiTest {
     }
 
     @Bean
-    TitleInstanceService TitleInstanceService(InventoryInstanceManager inventoryInstanceManager) {
-      return new TitleInstanceService(inventoryInstanceManager);
+    TitleInstanceService TitleInstanceService() {
+      return mock(TitleInstanceService.class);
     }
 
     @Bean
     ProtectionService protectionService(AcquisitionsUnitsService acquisitionsUnitsService) {
       return spy(new ProtectionService(acquisitionsUnitsService));
-    }
-
-    @Bean
-    InventoryInstanceManager inventoryInstanceManager() {
-      return mock(InventoryInstanceManager.class);
     }
 
   }
