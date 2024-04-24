@@ -24,6 +24,12 @@ public class TitleInstanceService {
       .compose(shadowInstId -> createInventoryInstance(shadowInstId, title, isInstanceMatchingDisabled, requestContext));
   }
 
+  private Future<String> createShadowInstance(String instanceId, RequestContext requestContext) {
+    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, targetTenantId, requestContext)
+      .map(sharingInstance -> sharingInstance != null ? instanceId : null);
+  }
+
   private Future<String> createInventoryInstance(String shadowInstId, Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (shadowInstId != null) {
       return Future.succeededFuture(shadowInstId);
@@ -31,12 +37,6 @@ public class TitleInstanceService {
       return Future.succeededFuture(title.getInstanceId());
     }
     return inventoryInstanceManager.getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, requestContext);
-  }
-
-  private Future<String> createShadowInstance(String instanceId, RequestContext requestContext) {
-    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
-    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, targetTenantId, requestContext)
-      .map(sharingInstance -> sharingInstance != null ? instanceId : null);
   }
 
 }
