@@ -6,11 +6,11 @@ import org.folio.service.caches.JobExecutionTotalRecordsCacheTest;
 import org.folio.service.dataimport.OrderIdStorageServiceImplTest;
 import org.folio.service.dataimport.handlers.CreateOrderEventHandlerTest;
 import org.folio.service.dataimport.handlers.OrderPostProcessingEventHandlerTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.junit.platform.suite.api.SelectClasses;
+import org.junit.platform.suite.api.Suite;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
+@Suite
+@SelectClasses(value = {
   CacheTest.class,
   InventoryCacheTest.class,
   JobExecutionTotalRecordsCacheTest.class,
