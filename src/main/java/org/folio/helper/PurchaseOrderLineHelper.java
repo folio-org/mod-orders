@@ -624,22 +624,22 @@ public class PurchaseOrderLineHelper {
 
     return compositePoLineValidationService.validatePoLine(compPOL, requestContext)
       .compose(poLineErrors -> {
-      if (CollectionUtils.isEmpty(poLineErrors)) {
-        return validatePoLineLimit(compPOL, tenantConfiguration, requestContext)
-          .compose(aErrors -> {
-            if (CollectionUtils.isEmpty(aErrors)) {
-              return purchaseOrderLineService.validateAndNormalizeISBN(Collections.singletonList(compPOL), requestContext)
-                .map(v -> errors);
-            } else {
-              errors.addAll(aErrors);
-              return Future.succeededFuture(errors);
-            }
-          });
-      } else {
-        errors.addAll(poLineErrors);
-        return Future.succeededFuture(errors);
-      }
-    });
+        if (CollectionUtils.isEmpty(poLineErrors)) {
+          return validatePoLineLimit(compPOL, tenantConfiguration, requestContext)
+            .compose(aErrors -> {
+              if (CollectionUtils.isEmpty(aErrors)) {
+                return purchaseOrderLineService.validateAndNormalizeISBN(Collections.singletonList(compPOL), requestContext)
+                  .map(v -> errors);
+              } else {
+                errors.addAll(aErrors);
+                return Future.succeededFuture(errors);
+              }
+            });
+        } else {
+          errors.addAll(poLineErrors);
+          return Future.succeededFuture(errors);
+        }
+      });
   }
 
 
