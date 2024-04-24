@@ -2,7 +2,6 @@
 ### Stories
 
 ### Bug Fixes
-
 * [MODORDERS-1090](https://folio-org.atlassian.net/browse/MODORDERS-1090) - Quantity = 0 for electronic format orders
 
 ## 12.8.0 - Released (Quesnelia R1 2024)
