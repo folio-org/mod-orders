@@ -52,7 +52,7 @@ public class TitlesService {
       .compose(v -> inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext))
       .compose(instId -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
-        return restClient.post(requestEntry, title.withTitle(instId), Title.class, requestContext);
+        return restClient.post(requestEntry, title.withInstanceId(instId), Title.class, requestContext);
       });
   }
 
