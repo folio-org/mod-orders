@@ -45,7 +45,6 @@ import org.folio.helper.BaseHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.exceptions.NoInventoryRecordException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
