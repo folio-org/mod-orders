@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -43,7 +44,6 @@ import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
-import static org.folio.orders.utils.RequestContextUtil.cloneRequestContextWithTargetTenantId;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_STATUS;
@@ -399,7 +399,7 @@ public class InventoryInstanceManager {
       .map(Location::getTenantId)
       .distinct()
       .filter(Objects::nonNull)
-      .map(tenantId -> cloneRequestContextWithTargetTenantId(requestContext, tenantId))
+      .map(tenantId -> RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
       .map(clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
         .map(instance -> Optional.<String>empty())
         .recover(throwable -> throwable instanceof HttpException httpException && httpException.getCode() == 404 ?

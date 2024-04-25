@@ -37,7 +37,6 @@ import java.util.Optional;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.RequestContextUtil.cloneRequestContextBasedOnLocation;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
@@ -222,9 +221,7 @@ public class InventoryItemManager {
             // Depending on piece format get already existing existingItemIds and send requests to create missing existingItemIds
             Piece pieceWithHoldingId = new Piece().withHoldingId(location.getHoldingId());
 
-            var future = consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-              .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
-                cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
+            var future = consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, location)
               .compose(updatedRequestContext -> {
                 List<String> existingItemIds;
                 if (pieceFormat == Piece.Format.ELECTRONIC) {
