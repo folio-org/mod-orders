@@ -192,7 +192,7 @@ public class OpenCompositeOrderFlowValidator {
 
     return GenericCompositeFuture.all(new ArrayList<>(holdingsByTenants.values())).map(ar -> {
       var locationsFromHoldings = holdingsByTenants.entrySet().stream()
-        .map(OpenCompositeOrderFlowValidator::mapHoldingsToLocations)
+        .map(this::mapHoldingsToLocations)
         .flatMap(List::stream)
         .toList();
 
@@ -216,7 +216,7 @@ public class OpenCompositeOrderFlowValidator {
       .toList();
   }
 
-  private static List<String> mapHoldingsToLocations(Map.Entry<String, Future<List<JsonObject>>> entry) {
+  private List<String> mapHoldingsToLocations(Map.Entry<String, Future<List<JsonObject>>> entry) {
     return entry.getValue().result()
       .stream()
       .map(holding -> getTenantLocation(entry.getKey(), holding.getString(HOLDING_PERMANENT_LOCATION_ID)))

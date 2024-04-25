@@ -165,11 +165,20 @@ public class UnOpenCompositeOrderManager {
 
   private Future<Void> processInventoryOnlyWithHolding(CompositePoLine compPOL, RequestContext requestContext) {
     return deleteExpectedPieces(compPOL, requestContext)
-      .compose(deletedPieces -> inventoryHoldingManager.getHoldingsForAllLocationTenants(compPOL, requestContext))
-      .compose(holdings -> deleteHoldings(holdings, requestContext))
-      .map(deletedHoldingVsLocationIds -> {
-        updateLocations(compPOL, deletedHoldingVsLocationIds);
-        return null;
+      .compose(deletedPieces -> {
+        var deleteHoldingsVsLocations = inventoryHoldingManager.getHoldingsByLocationTenants(compPOL, requestContext)
+          .entrySet()
+          .stream()
+          .map(entry -> entry.getValue().compose(holdings -> deleteHoldings(entry.getKey(), holdings, requestContext)))
+          .toList();
+        return GenericCompositeFuture.all(deleteHoldingsVsLocations).map(ar -> {
+          var deletedHoldingVsLocationIds = deleteHoldingsVsLocations.stream()
+            .map(Future::result)
+            .flatMap(List::stream)
+            .toList();
+          updateLocations(compPOL, deletedHoldingVsLocationIds);
+          return null;
+        });
       })
       .onSuccess(v -> logger.debug("Pieces, Holdings deleted after UnOpen order"))
       .mapEmpty();
@@ -303,7 +312,8 @@ public class UnOpenCompositeOrderManager {
       });
   }
 
-  private Future<List<Pair<String, String>>> deleteHoldings(List<JsonObject> holdings, RequestContext requestContext) {
+  // TODO: apply deleting by tenantId
+  private Future<List<Pair<String, String>>> deleteHoldings(String tenantId, List<JsonObject> holdings, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(holdings)) {
       return Future.succeededFuture(List.of());
     }
