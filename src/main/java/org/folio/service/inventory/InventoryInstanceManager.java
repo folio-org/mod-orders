@@ -307,15 +307,6 @@ public class InventoryInstanceManager {
       });
   }
 
-  public Future<Title> openOrderHandlePackageLineInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (title.getInstanceId() != null) {
-      return Future.succeededFuture(title);
-    } else {
-      return getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, requestContext)
-        .map(title::withInstanceId);
-    }
-  }
-
   public Future<String> getOrCreateInstanceRecord(Title title, RequestContext requestContext) {
     return getOrCreateInstanceRecord(title, false, requestContext);
   }

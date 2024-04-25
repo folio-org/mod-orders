@@ -26,7 +26,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
-import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
@@ -38,7 +37,6 @@ public class OpenCompositeOrderPieceService {
 
   private final InventoryItemManager inventoryItemManager;
   private final InventoryHoldingManager inventoryHoldingManager;
-  private final InventoryInstanceManager inventoryInstanceManager;
   private final PieceStorageService pieceStorageService;
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
@@ -52,7 +50,6 @@ public class OpenCompositeOrderPieceService {
                                         PieceChangeReceiptStatusPublisher receiptStatusPublisher,
                                         InventoryItemManager inventoryItemManager,
                                         InventoryHoldingManager inventoryHoldingManager,
-                                        InventoryInstanceManager inventoryInstanceManager,
                                         TitlesService titlesService,
                                         OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
@@ -61,7 +58,6 @@ public class OpenCompositeOrderPieceService {
     this.receiptStatusPublisher = receiptStatusPublisher;
     this.inventoryItemManager = inventoryItemManager;
     this.inventoryHoldingManager = inventoryHoldingManager;
-    this.inventoryInstanceManager = inventoryInstanceManager;
     this.titlesService = titlesService;
     this.openCompositeOrderHolderBuilder = openCompositeOrderHolderBuilder;
   }
@@ -168,10 +164,8 @@ public class OpenCompositeOrderPieceService {
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> inventoryInstanceManager.openOrderHandlePackageLineInstance(title, isInstanceMatchingDisabled, requestContext))
-        .compose(title -> titlesService.saveTitle(title, requestContext).map(json -> title))
-        .compose(title ->
-        {
+        .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, requestContext).map(title::withInstanceId))
+        .compose(title -> {
           if (piece.getHoldingId() != null) {
             return Future.succeededFuture(piece.getHoldingId());
           }
