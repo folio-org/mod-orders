@@ -320,16 +320,16 @@ public class InventoryHoldingManager {
     }
   }
 
-  public Future<List<JsonObject>> getHoldingsForAllTenants(CompositePoLine poLine, RequestContext requestContext) {
-    var futures = getHoldingsFutures(poLine, requestContext);
-    return GenericCompositeFuture.all(new ArrayList<>(futures.values()))
-      .map(ar -> futures.values().stream()
+  public Future<List<JsonObject>> getHoldingsForAllLocationTenants(CompositePoLine poLine, RequestContext requestContext) {
+    var holdingsByTenants = getHoldingsByLocationTenants(poLine, requestContext);
+    return GenericCompositeFuture.all(new ArrayList<>(holdingsByTenants.values()))
+      .map(ar -> holdingsByTenants.values().stream()
         .flatMap(future -> future.result().stream())
         .toList()
       );
   }
 
-  public Map<String, Future<List<JsonObject>>> getHoldingsFutures(CompositePoLine poLine, RequestContext requestContext) {
+  public Map<String, Future<List<JsonObject>>> getHoldingsByLocationTenants(CompositePoLine poLine, RequestContext requestContext) {
     String currentTenantId = TenantTool.tenantId(requestContext.getHeaders());
     Map<String, List<String>> holdingsByTenant = poLine.getLocations()
       .stream()
@@ -341,10 +341,10 @@ public class InventoryHoldingManager {
 
     return holdingsByTenant.entrySet()
       .stream()
-      .collect(Collectors.toMap(Map.Entry::getKey, entry -> getHoldingsFuture(entry.getKey(), entry.getValue(), requestContext)));
+      .collect(Collectors.toMap(Map.Entry::getKey, entry -> getHoldings(entry.getKey(), entry.getValue(), requestContext)));
   }
 
-  private Future<List<JsonObject>> getHoldingsFuture(String tenantId, List<String> holdingIds, RequestContext requestContext) {
+  private Future<List<JsonObject>> getHoldings(String tenantId, List<String> holdingIds, RequestContext requestContext) {
 
     if (holdingIds.isEmpty()) {
       return Future.succeededFuture(List.of());

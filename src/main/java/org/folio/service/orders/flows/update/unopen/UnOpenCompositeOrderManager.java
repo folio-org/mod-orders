@@ -165,7 +165,7 @@ public class UnOpenCompositeOrderManager {
 
   private Future<Void> processInventoryOnlyWithHolding(CompositePoLine compPOL, RequestContext requestContext) {
     return deleteExpectedPieces(compPOL, requestContext)
-      .compose(deletedPieces -> inventoryHoldingManager.getHoldingsForAllTenants(compPOL, requestContext))
+      .compose(deletedPieces -> inventoryHoldingManager.getHoldingsForAllLocationTenants(compPOL, requestContext))
       .compose(holdings -> deleteHoldings(holdings, requestContext))
       .map(deletedHoldingVsLocationIds -> {
         updateLocations(compPOL, deletedHoldingVsLocationIds);

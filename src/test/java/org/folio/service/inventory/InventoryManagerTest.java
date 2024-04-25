@@ -61,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
@@ -83,6 +84,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -91,6 +93,7 @@ import org.folio.Instance;
 import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.models.consortium.ConsortiumConfiguration;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -111,12 +114,14 @@ import org.folio.service.consortium.SharingInstanceService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.hamcrest.core.IsInstanceOf;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -921,6 +926,46 @@ public class InventoryManagerTest {
     assertThat(holdingIdAct.size(), equalTo(holdingsCollection.size()));
     verify(restClient, times(0)).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+  }
+
+  @Test
+  void shouldReturnHoldingsByLocationTenants(VertxTestContext vertxTestContext) {
+    // given
+    CompositePoLine poLine = new CompositePoLine()
+      .withId("ID")
+      .withPoLineNumber("number")
+      .withLocations(List.of(
+        new Location().withHoldingId("H1").withTenantId("T1"),
+        new Location().withHoldingId("H2").withTenantId("T2"),
+        new Location().withHoldingId("H3").withTenantId("T2")
+      ));
+
+    ArgumentMatcher<RequestContext> match1 = context -> context.getHeaders().get(XOkapiHeaders.TENANT).equals("T1");
+    ArgumentMatcher<RequestContext> match2 = context -> context.getHeaders().get(XOkapiHeaders.TENANT).equals("T2");
+    JsonObject holdings1 = createHoldingsCollection("H1");
+    JsonObject holdings2 = createHoldingsCollection("H2", "H3");
+    doReturn(succeededFuture(holdings1)).when(restClient).getAsJsonObject(any(RequestEntry.class), argThat(match1));
+    doReturn(succeededFuture(holdings2)).when(restClient).getAsJsonObject(any(RequestEntry.class), argThat(match2));
+
+    // when
+    var future = inventoryHoldingManager.getHoldingsForAllLocationTenants(poLine, requestContext);
+
+    // then
+    vertxTestContext.assertComplete(future)
+      .onComplete(result -> {
+        List<JsonObject> holdings = result.result();
+        assertEquals(3, holdings.size());
+        verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), argThat(match1));
+        verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), argThat(match2));
+        vertxTestContext.completeNow();
+      });
+
+  }
+
+  @NotNull
+  private static JsonObject createHoldingsCollection(String... holdingIds) {
+    List<JsonObject> holdings = Stream.of(holdingIds).map(id -> new JsonObject(Map.of(ID, id))).toList();
+    return new JsonObject(Map.of("holdingsRecords", new JsonArray(holdings)));
   }
 
   @Test

@@ -563,7 +563,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
-    when(inventoryHoldingManager.getHoldingsFutures(poLine, requestContext)).thenReturn(
+    when(inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext)).thenReturn(
       Map.of("folio_shared", Future.succeededFuture(List.of(holding)))
     );
 
@@ -603,7 +603,7 @@ public class OpenCompositeOrderFlowValidatorTest {
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
-    when(inventoryHoldingManager.getHoldingsFutures(poLine, requestContext)).thenReturn(
+    when(inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext)).thenReturn(
       Map.of("", Future.failedFuture(new HttpException(404, "Not found")))
     );
 

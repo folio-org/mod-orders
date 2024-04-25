@@ -188,10 +188,10 @@ public class OpenCompositeOrderFlowValidator {
     String currentTenantId = TenantTool.tenantId(requestContext.getHeaders());
 
     var locationsForCurrentTenant = getCurrentTenantLocations(poLine, currentTenantId);
-    var futures = inventoryHoldingManager.getHoldingsFutures(poLine, requestContext);
+    var holdingsByTenants = inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext);
 
-    return GenericCompositeFuture.all(new ArrayList<>(futures.values())).map(ar -> {
-      var locationsFromHoldings = futures.entrySet().stream()
+    return GenericCompositeFuture.all(new ArrayList<>(holdingsByTenants.values())).map(ar -> {
+      var locationsFromHoldings = holdingsByTenants.entrySet().stream()
         .map(OpenCompositeOrderFlowValidator::mapHoldingsToLocations)
         .flatMap(List::stream)
         .toList();
