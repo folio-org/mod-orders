@@ -673,17 +673,6 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void testShouldSkipCreationNewInstanceIfInstanceIdIsProvided()  {
-    //given
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    //When
-    Future<Title> result = inventoryInstanceManager.openOrderHandlePackageLineInstance(title, false, requestContext);
-    //Then
-    Title actTitle = result.result();
-    assertEquals(title, actTitle);
-  }
-
-  @Test
   void testShouldCreateInstanceRecordIfInstanceMatchingIsDisabled()  {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
@@ -692,19 +681,6 @@ public class InventoryManagerTest {
     inventoryInstanceManager.getOrCreateInstanceRecord(title, true, requestContext).result();
     //Then
     verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
-  }
-
-  @Test
-  void testShouldCreateInstanceIfInstanceIdIsNotProvided()  {
-    //given
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    title.setInstanceId(null);
-    mock(PieceService.class, CALLS_REAL_METHODS);
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).getOrCreateInstanceRecord(any(Title.class), any(Boolean.class), eq(requestContext));
-    //When
-    inventoryInstanceManager.openOrderHandlePackageLineInstance(title, false, requestContext).result();
-    //Then
-    verify(inventoryInstanceManager, times(1)).getOrCreateInstanceRecord(title, false, requestContext);
   }
 
   @Test

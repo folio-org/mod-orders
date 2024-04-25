@@ -9,7 +9,6 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryHoldingManager;
-import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
@@ -21,16 +20,13 @@ public class PieceCreateFlowInventoryManager {
   private final TitlesService titlesService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
   private final InventoryHoldingManager inventoryHoldingManager;
-  private final InventoryInstanceManager inventoryInstanceManager;
 
   public PieceCreateFlowInventoryManager(TitlesService titlesService,
                                          PieceUpdateInventoryService pieceUpdateInventoryService,
-                                         InventoryHoldingManager inventoryHoldingManager,
-                                         InventoryInstanceManager inventoryInstanceManager) {
+                                         InventoryHoldingManager inventoryHoldingManager) {
     this.titlesService = titlesService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
     this.inventoryHoldingManager = inventoryHoldingManager;
-    this.inventoryInstanceManager = inventoryInstanceManager;
   }
 
   public Future<Void> processInventory(CompositePoLine compPOL,  Piece piece,  boolean createItem, RequestContext requestContext) {
@@ -57,7 +53,7 @@ public class PieceCreateFlowInventoryManager {
   private Future<Void> packagePoLineUpdateInventory(CompositePoLine compPOL, Piece piece, boolean createItem, RequestContext requestContext) {
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> packageUpdateTitleWithInstance(title, requestContext))
-      .compose(title -> handleHolding(compPOL, piece, title.getInstanceId(), requestContext))
+      .compose(instanceId -> handleHolding(compPOL, piece, instanceId, requestContext))
       .compose(holdingId -> handleItem(compPOL, createItem, piece, requestContext))
       .map(itemId -> {
         Optional.ofNullable(itemId).ifPresent(piece::withItemId);
@@ -98,36 +94,15 @@ public class PieceCreateFlowInventoryManager {
 
 
   private Future<String> nonPackageUpdateTitleWithInstance(CompositePoLine poLine, String titleId, RequestContext requestContext) {
-    if (poLine.getInstanceId() == null && !PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
-      return titlesService.getTitleById(titleId, requestContext)
-        .compose(title -> {
-          if (title.getInstanceId() == null) {
-            return createTitleInstance(title, requestContext);
-          }
-          return Future.succeededFuture(title.getInstanceId());
-        })
-        .map(instanceId -> poLine.withInstanceId(instanceId).getInstanceId());
+    if (poLine.getInstanceId() != null || PoLineCommonUtil.isInventoryUpdateNotRequired(poLine)) {
+      return Future.succeededFuture(poLine.getInstanceId());
     }
-    return Future.succeededFuture(poLine.getInstanceId());
+    return titlesService.getTitleById(titleId, requestContext)
+      .compose(title -> titlesService.updateTitleWithInstance(title, requestContext))
+      .map(instanceId -> poLine.withInstanceId(instanceId).getInstanceId());
   }
 
-  private Future<Title> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
-    if (title.getInstanceId() != null) {
-      return Future.succeededFuture(title);
-    } else {
-      return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
-        .map(title::withInstanceId)
-        .compose(titleWithInstanceId -> titlesService.saveTitle(titleWithInstanceId, requestContext)
-          .map(json -> title));
-    }
-  }
-
-  private Future<String> createTitleInstance(Title title, RequestContext requestContext) {
-    return inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext)
-      .map(title::withInstanceId)
-      .compose(titleWithInstanceId ->
-        titlesService.saveTitle(titleWithInstanceId, requestContext)
-          .map(aVoid -> title.getInstanceId())
-      );
+  private Future<String> packageUpdateTitleWithInstance(Title title, RequestContext requestContext) {
+    return titlesService.updateTitleWithInstance(title, requestContext);
   }
 }
