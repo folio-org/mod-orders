@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
-import static org.folio.orders.utils.RequestContextUtil.cloneRequestContextBasedOnLocation;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 
@@ -65,9 +64,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
     List<Future<JsonObject>> itemsPerHolding = new ArrayList<>();
     compPOL.getLocations().forEach(location -> itemsPerHolding.add(
       findHoldingsId(compPOL, location, restClient, requestContext)
-        .compose(aVoid -> consortiumConfigurationService.getConsortiumConfiguration(requestContext))
-        .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
-          cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
+        .compose(aVoid -> consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, location))
         .compose(updatedRequestContext -> inventoryHoldingManager.getOrCreateHoldingsJsonRecord(compPOL.getEresource(), compPOL.getInstanceId(), location, updatedRequestContext)
           .map(holding -> {
             updateLocationWithHoldingInfo(holding, location);

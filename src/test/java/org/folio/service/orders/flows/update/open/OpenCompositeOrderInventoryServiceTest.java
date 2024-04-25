@@ -6,6 +6,7 @@ import io.vertx.junit5.VertxExtension;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.folio.ApiTestSuite;
 import org.folio.models.consortium.ConsortiumConfiguration;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -124,7 +125,7 @@ public class OpenCompositeOrderInventoryServiceTest {
 
     doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), eq(requestContext));
-    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(requestContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
     openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
 
@@ -140,13 +141,13 @@ public class OpenCompositeOrderInventoryServiceTest {
     Location location = new Location().withLocationId(UUID.randomUUID().toString()).withTenantId(RandomStringUtils.random(4));
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setLocations(Collections.singletonList(location));
-    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+    RequestContext newContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
 
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
 
     doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), requestContextCaptor.capture());
-    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(newContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
     openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
 
@@ -168,7 +169,7 @@ public class OpenCompositeOrderInventoryServiceTest {
 
     doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), requestContextCaptor.capture());
-    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(requestContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
     openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
 

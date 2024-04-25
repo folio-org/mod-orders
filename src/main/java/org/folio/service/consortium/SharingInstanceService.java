@@ -46,7 +46,7 @@ public class SharingInstanceService {
                                                       RequestContext requestContext) {
     SharingInstance sharingInstance = new SharingInstance(UUID.fromString(instanceId),
       consortiumConfiguration.centralTenantId(), targetTenantId);
-    RequestContext consortiaRequestContext = RequestContextUtil.cloneRequestContextWithTargetTenantId(requestContext,
+    RequestContext consortiaRequestContext = RequestContextUtil.createContextWithNewTenantId(requestContext,
       consortiumConfiguration.centralTenantId());
     return shareInstance(consortiumConfiguration.consortiumId(), sharingInstance, consortiaRequestContext);
   }

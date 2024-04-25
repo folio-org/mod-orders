@@ -1,7 +1,6 @@
 package org.folio.service.orders.flows.update.open;
 
 import static org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidator.verifyLocationsAndPiecesConsistency;
-import static org.folio.rest.core.exceptions.ErrorCodes.HOLDINGS_BY_ID_NOT_FOUND;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 
@@ -15,14 +14,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.orders.utils.FundDistributionUtils;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -40,7 +38,6 @@ import org.folio.service.finance.FundService;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryHoldingManager;
-import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.pieces.PieceStorageService;
@@ -191,11 +188,11 @@ public class OpenCompositeOrderFlowValidator {
     String currentTenantId = TenantTool.tenantId(requestContext.getHeaders());
 
     var locationsForCurrentTenant = getCurrentTenantLocations(poLine, currentTenantId);
-    var futures = getLocationsFromHoldingsFutures(poLine, requestContext, currentTenantId);
+    var futures = inventoryHoldingManager.getHoldingsFutures(poLine, requestContext);
 
-    return GenericCompositeFuture.all(futures).map(ar -> {
-      var locationsFromHoldings = futures.stream()
-        .map(Future::result)
+    return GenericCompositeFuture.all(new ArrayList<>(futures.values())).map(ar -> {
+      var locationsFromHoldings = futures.entrySet().stream()
+        .map(OpenCompositeOrderFlowValidator::mapHoldingsToLocations)
         .flatMap(List::stream)
         .toList();
 
@@ -219,38 +216,11 @@ public class OpenCompositeOrderFlowValidator {
       .toList();
   }
 
-  private List<Future<List<String>>> getLocationsFromHoldingsFutures(CompositePoLine poLine, RequestContext requestContext, String currentTenantId) {
-    Map<String, List<String>> holdingsByTenant = poLine.getLocations()
+  private static List<String> mapHoldingsToLocations(Map.Entry<String, Future<List<JsonObject>>> entry) {
+    return entry.getValue().result()
       .stream()
-      .collect(Collectors.groupingBy(
-        location -> ObjectUtils.defaultIfNull(location.getTenantId(), currentTenantId),
-        Collectors.mapping(Location::getHoldingId, Collectors.filtering(Objects::nonNull, Collectors.toList()))
-      ));
-
-    return holdingsByTenant.entrySet()
-      .stream()
-      .map(entry -> getLocationsFromHoldingsFutures(entry.getKey(), entry.getValue(), requestContext))
+      .map(holding -> getTenantLocation(entry.getKey(), holding.getString(HOLDING_PERMANENT_LOCATION_ID)))
       .toList();
-  }
-
-  private Future<List<String>> getLocationsFromHoldingsFutures(String tenantId, List<String> holdingIds, RequestContext requestContext) {
-    List<String> result = new ArrayList<>();
-
-    if (holdingIds.isEmpty()) {
-      return Future.succeededFuture(result);
-    }
-
-    return inventoryHoldingManager.getHoldingsByIds(holdingIds, createContextWithNewTenantId(requestContext, tenantId))
-      .map(holdings -> holdings.stream()
-        .map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
-        .map(locationId -> getTenantLocation(tenantId, locationId))
-        .toList())
-      .onFailure(failure -> {
-        logger.error("Couldn't retrieve holdings", failure);
-        var param = new Parameter().withKey("holdingIds").withValue(holdingIds.toString());
-        var cause = new Parameter().withKey("cause").withValue(failure.getMessage());
-        throw new HttpException(404, HOLDINGS_BY_ID_NOT_FOUND, List.of(param, cause));
-      });
   }
 
   private void extractRestrictedFundLocations(Fund fund, String currentTenantId,
@@ -269,12 +239,6 @@ public class OpenCompositeOrderFlowValidator {
 
   private static String getTenantLocation(String tenantId, String locationId) {
     return tenantId + "." + locationId;
-  }
-
-  private static RequestContext createContextWithNewTenantId(RequestContext requestContext, String tenantId) {
-    var modifiedHeaders = new CaseInsensitiveMap<>(requestContext.getHeaders());
-    modifiedHeaders.put(XOkapiHeaders.TENANT, tenantId);
-    return new RequestContext(requestContext.getContext(), modifiedHeaders);
   }
 
 }

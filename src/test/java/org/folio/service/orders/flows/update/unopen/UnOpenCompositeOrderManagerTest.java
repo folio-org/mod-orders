@@ -382,7 +382,7 @@ public class UnOpenCompositeOrderManagerTest {
     doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingId(HOLDING_ID, requestContext);
     doReturn(succeededFuture()).when(inventoryHoldingManager).deleteHoldingById(HOLDING_ID, true, requestContext);
     JsonObject holding = new JsonObject().put("id", HOLDING_ID).put("permanentLocationId", poLine.getLocations().get(0).getLocationId());
-    doReturn(succeededFuture(List.of(holding))).when(inventoryHoldingManager).getHoldingsByIds(List.of(HOLDING_ID), requestContext);
+    doReturn(succeededFuture(List.of(holding))).when(inventoryHoldingManager).getHoldingsForAllTenants(poLine, requestContext);
   }
 
   private JsonObject getItem() {
