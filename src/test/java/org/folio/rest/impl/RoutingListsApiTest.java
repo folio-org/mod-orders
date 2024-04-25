@@ -151,7 +151,7 @@ public class RoutingListsApiTest {
       .withLocations(getLocationPhysicalCopies(1));
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
-    doReturn(succeededFuture(sampleRoutingList)).when(routingListService).createRoutingList(eq(sampleRoutingList), any(RequestContext.class));
+    doReturn(succeededFuture(sampleRoutingList)).when(routingListService).createRoutingList(any(RoutingList.class), any(RequestContext.class));
 
     verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(sampleRoutingList).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID_WITH_ACQ_UNITS), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
@@ -167,7 +167,7 @@ public class RoutingListsApiTest {
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     var errorsExpected = getCodesAsErrors(INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT);
-    doReturn(failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, errorsExpected))).when(routingListService).createRoutingList(eq(sampleRoutingList), any(RequestContext.class));
+    doReturn(failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, errorsExpected))).when(routingListService).createRoutingList(any(RoutingList.class), any(RequestContext.class));
 
     List<Error> errors = verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(sampleRoutingList).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422)
@@ -188,7 +188,7 @@ public class RoutingListsApiTest {
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
 
     var errorsExpected = getCodesAsErrors(ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE);
-    doReturn(failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, errorsExpected))).when(routingListService).createRoutingList(eq(sampleRoutingList), any(RequestContext.class));
+    doReturn(failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, errorsExpected))).when(routingListService).createRoutingList(any(RoutingList.class), any(RequestContext.class));
 
     List<Error> errors = verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(sampleRoutingList).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422
@@ -204,7 +204,7 @@ public class RoutingListsApiTest {
     logger.info("=== Test POST Routing List should fail because it's POL does not exist ===");
 
     var errorsExpected = getCodesAsErrors(PO_LINE_NOT_FOUND_FOR_ROUTING_LIST);
-    doReturn(failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, errorsExpected))).when(routingListService).createRoutingList(eq(sampleRoutingList), any(RequestContext.class));
+    doReturn(failedFuture(new HttpException(RestConstants.VALIDATION_ERROR, errorsExpected))).when(routingListService).createRoutingList(any(RoutingList.class), any(RequestContext.class));
 
     List<Error> errors = verifyPostResponse(ROUTING_LISTS_ENDPOINT, JsonObject.mapFrom(sampleRoutingList).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 422
@@ -242,7 +242,7 @@ public class RoutingListsApiTest {
   void testPutRoutingList() {
     logger.info("=== Test update Routing List by id ===");
     sampleRoutingList.setNotes("new notes");
-    doReturn(succeededFuture()).when(routingListService).updateRoutingList(eq(sampleRoutingList), any(RequestContext.class));
+    doReturn(succeededFuture()).when(routingListService).updateRoutingList(any(RoutingList.class), any(RequestContext.class));
 
      verifyPut(String.format(ROUTING_LISTS_ID_PATH, ROUTING_LIST_UUID), JsonObject.mapFrom(sampleRoutingList).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), "", 204);
