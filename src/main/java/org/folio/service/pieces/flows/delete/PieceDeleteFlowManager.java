@@ -1,8 +1,8 @@
 package org.folio.service.pieces.flows.delete;
 
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +23,7 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
@@ -36,17 +36,17 @@ public class PieceDeleteFlowManager {
 
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
-  private final InventoryManager inventoryManager;
+  private final InventoryItemManager inventoryItemManager;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
   private final PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
   private final BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
 
   public PieceDeleteFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
-    InventoryManager inventoryManager, PieceUpdateInventoryService pieceUpdateInventoryService,
+    InventoryItemManager inventoryItemManager, PieceUpdateInventoryService pieceUpdateInventoryService,
     PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
-    this.inventoryManager = inventoryManager;
+    this.inventoryItemManager = inventoryItemManager;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
     this.pieceDeleteFlowPoLineService = pieceDeleteFlowPoLineService;
     this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
@@ -70,7 +70,7 @@ public class PieceDeleteFlowManager {
   private Future<Void> isDeletePieceRequestValid(PieceDeletionHolder holder, RequestContext requestContext) {
     List<Error> combinedErrors = new ArrayList<>();
     if (holder.getPieceToDelete().getItemId() != null) {
-      return inventoryManager.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext)
+      return inventoryItemManager.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext)
         .map(numOfRequests -> {
           if (numOfRequests != null && numOfRequests > 0) {
             combinedErrors.add(ErrorCodes.REQUEST_FOUND.toError());
@@ -112,7 +112,7 @@ public class PieceDeleteFlowManager {
     if (piece.getItemId() != null) {
       return getOnOrderItemForPiece(piece, requestContext).compose(item -> {
         if (item != null) {
-          return inventoryManager.deleteItem(piece.getItemId(), true, requestContext);
+          return inventoryItemManager.deleteItem(piece.getItemId(), true, requestContext);
         }
         return Future.succeededFuture();
       });
@@ -128,7 +128,7 @@ public class PieceDeleteFlowManager {
 
   private Future<JsonObject> getOnOrderItemForPiece(Piece piece, RequestContext requestContext) {
     if (StringUtils.isNotEmpty(piece.getItemId())) {
-      return inventoryManager.getItemRecordById(piece.getItemId(), true, requestContext)
+      return inventoryItemManager.getItemRecordById(piece.getItemId(), true, requestContext)
         .map(item -> {
           boolean isOnOrderItem = isItemWithStatus(item, ItemStatus.ON_ORDER.value());
           if (isOnOrderItem) {

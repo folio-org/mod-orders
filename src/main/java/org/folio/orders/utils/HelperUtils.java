@@ -45,7 +45,7 @@ import org.folio.helper.BaseHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.InventoryException;
+import org.folio.rest.core.exceptions.NoInventoryRecordException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
@@ -495,15 +495,6 @@ public class HelperUtils {
     return conversionQuery;
   }
 
-  public static void makePoLinePending(CompositePoLine poLine) {
-    if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
-    }
-    if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.AWAITING_RECEIPT) {
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
-    }
-  }
-
   public static ConversionQuery buildConversionQuery(PoLine poLine, String systemCurrency) {
     Cost cost = poLine.getCost();
     if (cost.getExchangeRate() != null) {
@@ -525,7 +516,8 @@ public class HelperUtils {
     return Optional.ofNullable(response.getJsonArray(propertyName))
       .flatMap(items -> items.stream().findFirst())
       .map(JsonObject.class::cast)
-      .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
+      .orElseThrow(() -> new CompletionException(new NoInventoryRecordException(
+          String.format("No records of '%s' can be found", propertyName))));
   }
 
   public static String extractId(JsonObject json) {

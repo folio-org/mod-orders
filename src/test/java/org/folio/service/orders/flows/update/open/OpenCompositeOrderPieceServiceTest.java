@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -39,6 +40,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import org.folio.ApiTestSuite;
+import org.folio.models.consortium.SharingInstance;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
@@ -51,7 +53,9 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
@@ -82,7 +86,11 @@ public class OpenCompositeOrderPieceServiceTest {
   @Autowired
   private ProtectionService protectionService;
   @Autowired
-  private InventoryManager inventoryManager;
+  private InventoryItemManager inventoryItemManager;
+  @Autowired
+  private InventoryHoldingManager inventoryHoldingManager;
+  @Autowired
+  private InventoryInstanceManager inventoryInstanceManager;
   @Autowired
   private PieceChangeReceiptStatusPublisher receiptStatusPublisher;
   @Autowired
@@ -138,7 +146,7 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
 
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), eq(ProtectedOperationType.UPDATE), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
     doReturn(succeededFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
@@ -159,7 +167,7 @@ public class OpenCompositeOrderPieceServiceTest {
     Title title = new Title().withId(titleId).withTitle("test title");
 
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), eq(ProtectedOperationType.UPDATE), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
     doReturn(succeededFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
@@ -177,8 +185,7 @@ public class OpenCompositeOrderPieceServiceTest {
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
     Piece piece = createPieceWithLocationId(line, title);
-    doReturn(succeededFuture(null)).when(inventoryManager).updateItemWithPieceFields(piece, requestContext);
-    doReturn(succeededFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(piece, requestContext);
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();
     //Then
@@ -189,26 +196,30 @@ public class OpenCompositeOrderPieceServiceTest {
   @Test
   void testUpdateInventoryPositiveCaseIfPOLIsPackage() {
     //given
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    line.setIsPackage(true);
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    Piece piece = createPieceWithLocationId(line, title);
     String itemId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
+    String instanceId = UUID.randomUUID().toString();
+
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setIsPackage(true);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class).withInstanceId(instanceId);
+    Piece piece = createPieceWithLocationId(line, title);
     Location location = new Location().withLocationId(piece.getLocationId());
+    SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(null)).when(titlesService).saveTitle(title, requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), eq(requestContext));
 
-    doReturn(succeededFuture(title.withInstanceId(UUID.randomUUID().toString())))
-      .when(inventoryManager).openOrderHandlePackageLineInstance(any(Title.class), any(Boolean.class), eq(requestContext));
+    doReturn(succeededFuture(sharingInstance))
+      .when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
     doReturn(succeededFuture(holdingId))
-      .when(inventoryManager).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
-    doReturn(succeededFuture(itemId)).when(inventoryManager).openOrderCreateItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
+      .when(inventoryHoldingManager).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
+    doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
+    doReturn(succeededFuture(itemId)).when(inventoryInstanceManager).createInstanceRecord(eq(title), eq(requestContext));
 
-    doReturn(succeededFuture(itemId)).when(inventoryManager).createInstanceRecord(eq(title), eq(requestContext));
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();
+
     //Then
     assertEquals(piece.getItemId(), itemId);
     assertEquals(piece.getPoLineId(), line.getId());
@@ -218,22 +229,23 @@ public class OpenCompositeOrderPieceServiceTest {
   @Test
   void testShouldUpdateInventoryPositiveCaseIfLineIsPackageAndPieceContainsHoldingId() {
     //given
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    String instanceId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String itemId = UUID.randomUUID().toString();
+
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.getLocations().get(0).withLocationId(null).withHoldingId(holdingId);
     line.setIsPackage(true);
-
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
+    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class).withInstanceId(instanceId);
     Piece piece = createPieceWithHoldingId(line, title);
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(null)).when(titlesService).saveTitle(title, requestContext);
-    doReturn(succeededFuture(title)).when(inventoryManager).openOrderHandlePackageLineInstance(title, false, requestContext);
-    doReturn(succeededFuture(itemId)).when(inventoryManager).openOrderCreateItemRecord(line, holdingId, requestContext);
+    doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(line, holdingId, requestContext);
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), eq(requestContext));
 
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();
+
     //Then
     assertEquals(holdingId, piece.getHoldingId());
     assertEquals(title.getId(), piece.getTitleId());
@@ -607,34 +619,62 @@ public class OpenCompositeOrderPieceServiceTest {
   }
 
   private static class ContextConfiguration {
-  @Bean PieceChangeReceiptStatusPublisher receiptStatusPublisher() {
-    return mock(PieceChangeReceiptStatusPublisher.class);
-  }
-  @Bean PurchaseOrderStorageService purchaseOrderService() {
-    return mock(PurchaseOrderStorageService.class);
-  }
-  @Bean PieceStorageService pieceStorageService() {
-    return mock(PieceStorageService.class);
-  }
-  @Bean ProtectionService protectionService() {
-    return mock(ProtectionService.class);
-  }
-  @Bean InventoryManager inventoryManager() {
-    return mock(InventoryManager.class);
-  }
-  @Bean TitlesService titlesService() {
-    return mock(TitlesService.class);
-  }
-  @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {
-    return spy(new OpenCompositeOrderHolderBuilder(pieceStorageService));
-  }
 
-  @Bean OpenCompositeOrderPieceService openCompositeOrderPieceService(PurchaseOrderStorageService purchaseOrderStorageService,
-            PieceStorageService pieceStorageService, ProtectionService protectionService,
-            PieceChangeReceiptStatusPublisher receiptStatusPublisher, InventoryManager inventoryManager, TitlesService titlesService,
-            OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder){
-    return spy(new OpenCompositeOrderPieceService(purchaseOrderStorageService, pieceStorageService, protectionService,
-                    receiptStatusPublisher, inventoryManager, titlesService, openCompositeOrderHolderBuilder));
-  }
+    @Bean PieceChangeReceiptStatusPublisher receiptStatusPublisher() {
+      return mock(PieceChangeReceiptStatusPublisher.class);
+    }
+
+    @Bean
+    PurchaseOrderStorageService purchaseOrderService() {
+      return mock(PurchaseOrderStorageService.class);
+    }
+
+    @Bean
+    PieceStorageService pieceStorageService() {
+      return mock(PieceStorageService.class);
+    }
+
+    @Bean
+    ProtectionService protectionService() {
+      return mock(ProtectionService.class);
+    }
+
+    @Bean
+    InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
+    }
+
+    @Bean
+    InventoryHoldingManager inventoryHoldingManager() {
+      return mock(InventoryHoldingManager.class);
+    }
+
+    @Bean
+    InventoryInstanceManager inventoryInstanceManager() {
+      return mock(InventoryInstanceManager.class);
+    }
+
+    @Bean
+    TitlesService titlesService() {
+      return mock(TitlesService.class);
+    }
+
+    @Bean OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder(PieceStorageService pieceStorageService) {
+      return spy(new OpenCompositeOrderHolderBuilder(pieceStorageService));
+    }
+
+    @Bean
+    OpenCompositeOrderPieceService openCompositeOrderPieceService(PurchaseOrderStorageService purchaseOrderStorageService,
+                                                                  PieceStorageService pieceStorageService,
+                                                                  ProtectionService protectionService,
+                                                                  PieceChangeReceiptStatusPublisher receiptStatusPublisher,
+                                                                  InventoryItemManager inventoryItemManager,
+                                                                  InventoryHoldingManager inventoryHoldingManager,
+                                                                  TitlesService titlesService,
+                                                                  OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder) {
+      return spy(new OpenCompositeOrderPieceService(purchaseOrderStorageService, pieceStorageService, protectionService,
+        receiptStatusPublisher, inventoryItemManager, inventoryHoldingManager, titlesService, openCompositeOrderHolderBuilder));
+    }
+
   }
 }

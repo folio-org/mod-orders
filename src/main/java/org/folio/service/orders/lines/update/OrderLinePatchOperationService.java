@@ -1,18 +1,18 @@
 package org.folio.service.orders.lines.update;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_INVALID_PRODUCT_ID_ERROR;
-import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME;
-import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_CONTRIBUTORS;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_DATE_OF_PUBLICATION;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIERS;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLICATION;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLISHER;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_RECORDS_BY_ID_ENDPOINT;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_TITLE;
-import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDPOINTS;
+import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME;
+import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME_TYPE_ID;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_CONTRIBUTORS;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_DATE_OF_PUBLICATION;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIERS;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_ID;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLICATION;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLISHER;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_TITLE;
+import static org.folio.service.inventory.InventoryUtils.INSTANCE_RECORDS_BY_ID_ENDPOINT;
+import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIds;
 import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates;
@@ -41,8 +41,9 @@ import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.InventoryCache;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
@@ -65,20 +66,24 @@ public class OrderLinePatchOperationService {
   private final PurchaseOrderLineService purchaseOrderLineService;
 
   private final InventoryCache inventoryCache;
-  private final InventoryManager inventoryManager;
+  private final InventoryInstanceManager inventoryInstanceManager;
 
-  public OrderLinePatchOperationService(RestClient restClient, OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
-                                        PurchaseOrderLineService purchaseOrderLineService, InventoryCache inventoryCache, InventoryManager inventoryManager) {
+  public OrderLinePatchOperationService(RestClient restClient,
+                                        OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
+                                        PurchaseOrderLineService purchaseOrderLineService,
+                                        InventoryCache inventoryCache,
+                                        InventoryInstanceManager inventoryInstanceManager) {
     this.restClient = restClient;
     this.orderLinePatchOperationHandlerResolver = orderLinePatchOperationHandlerResolver;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.inventoryCache = inventoryCache;
-    this.inventoryManager = inventoryManager;
+    this.inventoryInstanceManager = inventoryInstanceManager;
   }
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
+    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
-    return inventoryManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, targetTenantId, requestContext)
       .compose(v -> patchOrderLine(request, lineId, requestContext))
       .compose(v -> updateInventoryInstanceInformation(request, lineId, requestContext));
   }
@@ -129,7 +134,7 @@ public class OrderLinePatchOperationService {
   }
 
   private Future<Void> sendPatchOrderLineRequest(OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder, String lineId,
-      RequestContext requestContext) {
+                                                 RequestContext requestContext) {
     StoragePatchOrderLineRequest storagePatchOrderLineRequest = orderLineUpdateInstanceHolder.getStoragePatchOrderLineRequest();
     if (Objects.nonNull(storagePatchOrderLineRequest)) {
       RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
@@ -151,9 +156,9 @@ public class OrderLinePatchOperationService {
     inventoryCache.getISBNProductTypeId(requestContext)
       .compose(isbnTypeId -> {
         Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
-         return HelperUtils.executeWithSemaphores(setOfProductIds,
-          productId -> inventoryCache.convertToISBN13(extractProductId(productId), requestContext)
-            .map(normalizedId -> Map.entry(productId, normalizedId)), requestContext)
+        return HelperUtils.executeWithSemaphores(setOfProductIds,
+            productId -> inventoryCache.convertToISBN13(extractProductId(productId), requestContext)
+              .map(normalizedId -> Map.entry(productId, normalizedId)), requestContext)
           .map(result -> result
             .stream()
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
