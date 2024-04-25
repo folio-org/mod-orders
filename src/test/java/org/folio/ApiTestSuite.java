@@ -45,6 +45,7 @@ import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
 import org.folio.service.TagServiceTest;
 import org.folio.service.UserServiceTest;
+import org.folio.service.consortium.ConsortiumConfigurationServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
@@ -208,6 +209,10 @@ public class ApiTestSuite {
 
   @Nested
   class SharingInstanceServiceTestNested extends SharingInstanceServiceTest {
+  }
+
+  @Nested
+  class ConsortiumConfigurationServiceTestNested extends ConsortiumConfigurationServiceTest {
   }
 
   @Nested
