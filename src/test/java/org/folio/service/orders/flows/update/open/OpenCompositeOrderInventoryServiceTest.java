@@ -6,12 +6,15 @@ import io.vertx.junit5.VertxExtension;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.folio.ApiTestSuite;
 import org.folio.models.consortium.ConsortiumConfiguration;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.service.consortium.ConsortiumConfigurationService;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryElectronicStrategy;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryPhysicalStrategy;
@@ -71,7 +74,7 @@ public class OpenCompositeOrderInventoryServiceTest {
   @Autowired
   private OpenCompositeOrderInventoryService openCompositeOrderInventoryService;
   @Autowired
-  private InventoryManager inventoryManager;
+  private InventoryInstanceManager inventoryInstanceManager;
   @Autowired
   private TitlesService titlesService;
   @Autowired
@@ -120,9 +123,9 @@ public class OpenCompositeOrderInventoryServiceTest {
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
 
-    doReturn(succeededFuture(line)).when(inventoryManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), eq(requestContext));
-    doReturn(succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(requestContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
     openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
 
@@ -138,13 +141,13 @@ public class OpenCompositeOrderInventoryServiceTest {
     Location location = new Location().withLocationId(UUID.randomUUID().toString()).withTenantId(RandomStringUtils.random(4));
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setLocations(Collections.singletonList(location));
-    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+    RequestContext newContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
 
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
 
-    doReturn(succeededFuture(line)).when(inventoryManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), requestContextCaptor.capture());
-    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(newContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
     openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
 
@@ -164,9 +167,9 @@ public class OpenCompositeOrderInventoryServiceTest {
 
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
 
-    doReturn(succeededFuture(line)).when(inventoryManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(line)).when(inventoryInstanceManager).openOrderHandleInstance(any(), anyBoolean(), eq(requestContext));
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), requestContextCaptor.capture());
-    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(requestContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
     openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
 
@@ -184,8 +187,16 @@ public class OpenCompositeOrderInventoryServiceTest {
       return mock(TitlesService.class);
     }
 
-    @Bean InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    @Bean InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
+    }
+
+    @Bean InventoryHoldingManager inventoryHoldingManager() {
+      return mock(InventoryHoldingManager.class);
+    }
+
+    @Bean InventoryInstanceManager inventoryInstanceManager() {
+      return mock(InventoryInstanceManager.class);
     }
 
     @Bean PieceStorageService pieceStorageService() {
@@ -219,11 +230,16 @@ public class OpenCompositeOrderInventoryServiceTest {
       return spy(new ProcessInventoryStrategyResolver(strategy));
     }
 
-    @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryManager inventoryManager,
+    @Bean OpenCompositeOrderInventoryService openCompositeOrderInventoryService(InventoryItemManager inventoryItemManager,
+                                                                                InventoryHoldingManager inventoryHoldingManager,
+                                                                                InventoryInstanceManager inventoryInstanceManager,
                                                                                 OpenCompositeOrderPieceService openCompositeOrderPieceService,
                                                                                 ProcessInventoryStrategyResolver processInventoryStrategyResolver,
                                                                                 RestClient restClient) {
-      return spy(new OpenCompositeOrderInventoryService(inventoryManager, openCompositeOrderPieceService, processInventoryStrategyResolver, restClient));
+      return spy(new OpenCompositeOrderInventoryService(
+        inventoryItemManager, inventoryHoldingManager, inventoryInstanceManager,
+        openCompositeOrderPieceService, processInventoryStrategyResolver, restClient
+      ));
     }
   }
 }

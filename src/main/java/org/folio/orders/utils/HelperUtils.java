@@ -495,15 +495,6 @@ public class HelperUtils {
     return conversionQuery;
   }
 
-  public static void makePoLinePending(CompositePoLine poLine) {
-    if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
-    }
-    if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.AWAITING_RECEIPT) {
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
-    }
-  }
-
   public static ConversionQuery buildConversionQuery(PoLine poLine, String systemCurrency) {
     Cost cost = poLine.getCost();
     if (cost.getExchangeRate() != null) {

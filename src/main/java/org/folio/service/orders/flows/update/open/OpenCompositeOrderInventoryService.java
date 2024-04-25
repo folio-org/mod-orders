@@ -16,7 +16,9 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryStrategyResolver;
 
 import io.vertx.core.Future;
@@ -25,16 +27,22 @@ import io.vertxconcurrent.Semaphore;
 public class OpenCompositeOrderInventoryService {
   private static final Logger logger = LogManager.getLogger(OpenCompositeOrderInventoryService.class);
 
-  private final InventoryManager inventoryManager;
+  private final InventoryItemManager inventoryItemManager;
+  private final InventoryHoldingManager inventoryHoldingManager;
+  private final InventoryInstanceManager inventoryInstanceManager;
   private final OpenCompositeOrderPieceService openCompositeOrderPieceService;
   private final ProcessInventoryStrategyResolver processInventoryStrategyResolver;
   private final RestClient restClient;
 
-  public OpenCompositeOrderInventoryService(InventoryManager inventoryManager,
+  public OpenCompositeOrderInventoryService(InventoryItemManager inventoryItemManager,
+                                            InventoryHoldingManager inventoryHoldingManager,
+                                            InventoryInstanceManager inventoryInstanceManager,
                                             OpenCompositeOrderPieceService openCompositeOrderPieceService,
                                             ProcessInventoryStrategyResolver processInventoryStrategyResolver,
                                             RestClient restClient) {
-    this.inventoryManager = inventoryManager;
+    this.inventoryItemManager = inventoryItemManager;
+    this.inventoryHoldingManager = inventoryHoldingManager;
+    this.inventoryInstanceManager = inventoryInstanceManager;
     this.openCompositeOrderPieceService = openCompositeOrderPieceService;
     this.processInventoryStrategyResolver = processInventoryStrategyResolver;
     this.restClient = restClient;
@@ -71,7 +79,8 @@ public class OpenCompositeOrderInventoryService {
       logger.debug("Executing a strategy for: {}", compPOL.getOrderFormat().value());
     }
     return processInventoryStrategyResolver.getHoldingAndItemStrategy(compPOL.getOrderFormat().value())
-      .processInventory(compPOL, titleId, isInstanceMatchingDisabled, inventoryManager, openCompositeOrderPieceService, restClient, requestContext);
+      .processInventory(compPOL, titleId, isInstanceMatchingDisabled,
+        inventoryItemManager, inventoryHoldingManager, inventoryInstanceManager, openCompositeOrderPieceService, restClient, requestContext);
   }
 
   private String getFirstTitleIdIfExist(Map<String, List<Title>> lineIdsTitles, CompositePoLine poLine) {

@@ -4,12 +4,15 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.consortium.ConsortiumConfiguration;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.tools.utils.TenantTool;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -65,6 +68,14 @@ public class ConsortiumConfigurationService {
         logger.debug("Found centralTenantId: {} and consortiumId: {}", centralTenantId, consortiumId);
         return Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId));
       }).toCompletionStage().toCompletableFuture();
+  }
+
+  public Future<RequestContext> cloneRequestContextIfNeeded(RequestContext requestContext, Location location) {
+    if (StringUtils.isBlank(location.getTenantId())) {
+      return Future.succeededFuture(requestContext);
+    }
+    return getConsortiumConfiguration(requestContext)
+      .map(config -> config.isEmpty() ? requestContext : RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId()));
   }
 
 }

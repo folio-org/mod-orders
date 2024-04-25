@@ -3,11 +3,11 @@ package org.folio.service.orders.flows.update.open;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -21,7 +21,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.service.finance.FundService;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +37,7 @@ public class OpenCompositeOrderFlowValidatorTest {
   @Mock
   private FundService fundService;
   @Mock
-  private InventoryManager inventoryManager;
+  private InventoryHoldingManager inventoryHoldingManager;
 
   @InjectMocks
   private OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
@@ -563,8 +563,8 @@ public class OpenCompositeOrderFlowValidatorTest {
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
-    when(inventoryManager.getHoldingsByIds(any(), any())).thenReturn(
-      Future.succeededFuture(List.of(holding))
+    when(inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext)).thenReturn(
+      Map.of("folio_shared", Future.succeededFuture(List.of(holding)))
     );
 
     // when
@@ -603,8 +603,8 @@ public class OpenCompositeOrderFlowValidatorTest {
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
-    when(inventoryManager.getHoldingsByIds(any(), any())).thenReturn(
-      Future.failedFuture(new HttpException(401, "Not found"))
+    when(inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext)).thenReturn(
+      Map.of("", Future.failedFuture(new HttpException(404, "Not found")))
     );
 
     // when

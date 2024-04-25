@@ -5,8 +5,7 @@ import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.rest.RestConstants.ID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
-import static org.folio.service.inventory.InventoryManager.IDENTIFIER_TYPES;
-import static org.folio.service.inventory.InventoryManager.INVENTORY_LOOKUP_ENDPOINTS;
+import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 
 import java.util.Collections;
 import java.util.List;
@@ -25,6 +24,8 @@ import io.vertx.core.json.JsonObject;
 
 @Component
 public class InventoryService {
+  private static final String IDENTIFIER_TYPES = "identifierTypes";
+
   private static final Logger logger = LogManager.getLogger(InventoryService.class);
   private final RestClient restClient;
 
@@ -50,6 +51,7 @@ public class InventoryService {
         throw new HttpException(400, ISBN_NOT_VALID.toError().withParameters(parameters));
       });
   }
+
   public Future<JsonObject> getEntryTypeId(String entryType, String entryTypeValue, RequestContext requestContext) {
     String endpoint = buildInventoryLookupEndpoint(entryType, encodeQuery(entryTypeValue));
     RequestEntry requestEntry = new RequestEntry(endpoint);
@@ -61,6 +63,7 @@ public class InventoryService {
         return result;
       });
   }
+
   public String buildInventoryLookupEndpoint(String type, Object... params) {
     return String.format(INVENTORY_LOOKUP_ENDPOINTS.get(type), params);
   }

@@ -10,17 +10,21 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
 
 import io.vertx.core.Future;
 
 public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUpdateInstanceStrategy {
 
-  InventoryManager inventoryManager;
+  InventoryItemManager inventoryItemManager;
+  InventoryHoldingManager inventoryHoldingManager;
 
-  protected BaseOrderLineUpdateInstanceStrategy(InventoryManager inventoryManager) {
-    this.inventoryManager = inventoryManager;
+  protected BaseOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
+                                                InventoryHoldingManager inventoryHoldingManager) {
+    this.inventoryItemManager = inventoryItemManager;
+    this.inventoryHoldingManager = inventoryHoldingManager;
   }
 
   @Override
@@ -52,10 +56,10 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
   }
 
   private Future<Void> deleteHoldingWithoutItems(String holdingId, RequestContext requestContext) {
-    return inventoryManager.getItemsByHoldingId(holdingId, requestContext)
+    return inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
       .compose(items -> {
         if (items.isEmpty()) {
-          return inventoryManager.deleteHoldingById(holdingId, true, requestContext);
+          return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext);
         } else {
           return Future.succeededFuture();
         }
