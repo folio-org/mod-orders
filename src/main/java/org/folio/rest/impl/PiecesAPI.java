@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
@@ -68,6 +69,22 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
         asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece)));
       })
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+  }
+
+  @Override
+  public void deleteOrdersPiecesBatchPiecesCollection(boolean deleteHolding, PieceCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    List<Future> deleteFutures = entity.getPieces().stream()
+      .map(piece -> pieceDeleteFlowManager.deletePiece(piece.getId(), deleteHolding, new RequestContext(vertxContext, okapiHeaders))
+        .onFailure(t -> logger.error("Failed to delete piece with ID: " + piece.getId(), t))
+        .mapEmpty())
+      .collect(Collectors.toList());
+    CompositeFuture.join(deleteFutures).onComplete(ar -> {
+      if (ar.succeeded()) {
+        asyncResultHandler.handle(Future.succeededFuture(buildNoContentResponse()));
+      } else {
+        handleErrorResponse(asyncResultHandler, new Throwable("Error deleting multiple pieces"));
+      }
+    });
   }
 
   @Override

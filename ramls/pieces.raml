@@ -6,7 +6,7 @@ protocols: [ HTTP, HTTPS ]
 
 documentation:
   - title: Orders Business Logic API
-    content: <b>API for managing pieces</b>
+    content: <b>API for managing pieces including batch operations for deletion.</b>
 
 types:
   piece: !include acq-models/mod-orders-storage/schemas/piece.json
@@ -47,6 +47,39 @@ resourceTypes:
         example: true
         required: false
         default: false
+  /batch/PiecesCollection:
+    delete:
+      description: Batch delete pieces
+      queryParameters:
+            deleteHolding:
+              displayName: Delete associated holdings
+              type: boolean
+              description: Specify whether to delete associated holdings for the pieces in the batch
+              example: true
+              required: false
+              default: false
+      body:
+        application/json:
+          type: piece-collection
+          example: !include acq-models/mod-orders-storage/examples/piece_collection.sample
+      responses:
+        204:
+          description: "Batch delete of pieces successfully completed"
+        400:
+          description: "Bad request, e.g., malformed JSON or validation failed"
+          body:
+            application/json:
+              type: errors
+        404:
+          description: "One or more pieces not found"
+          body:
+            application/json:
+              type: errors
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            application/json:
+              type: errors
   /{id}:
     uriParameters:
       id:
