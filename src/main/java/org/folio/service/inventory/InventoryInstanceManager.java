@@ -101,9 +101,9 @@ public class InventoryInstanceManager {
       .map(this::buildProductIdQuery)
       .collect(joining(" or "));
 
-    // query contains special characters so must be encoded before submitting
-    String endpoint = inventoryService.buildInventoryLookupEndpoint(INSTANCES, encodeQuery(query));
-    return restClient.getAsJsonObject(endpoint, false, requestContext);
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
+      .withQuery(query).withOffset(0).withLimit(1);
+    return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 
   JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
