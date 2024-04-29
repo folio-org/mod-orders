@@ -40,7 +40,6 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
@@ -78,20 +77,17 @@ public class InventoryInstanceManager {
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final InventoryCache inventoryCache;
-  private final InventoryService inventoryService;
   private final SharingInstanceService sharingInstanceService;
   private final ConsortiumConfigurationService consortiumConfigurationService;
 
   public InventoryInstanceManager(RestClient restClient,
                                   ConfigurationEntriesCache configurationEntriesCache,
                                   InventoryCache inventoryCache,
-                                  InventoryService inventoryService,
                                   SharingInstanceService sharingInstanceService,
                                   ConsortiumConfigurationService consortiumConfigurationService) {
     this.restClient = restClient;
     this.configurationEntriesCache = configurationEntriesCache;
     this.inventoryCache = inventoryCache;
-    this.inventoryService = inventoryService;
     this.sharingInstanceService = sharingInstanceService;
     this.consortiumConfigurationService = consortiumConfigurationService;
   }
@@ -101,9 +97,9 @@ public class InventoryInstanceManager {
       .map(this::buildProductIdQuery)
       .collect(joining(" or "));
 
-    // query contains special characters so must be encoded before submitting
-    String endpoint = inventoryService.buildInventoryLookupEndpoint(INSTANCES, encodeQuery(query));
-    return restClient.getAsJsonObject(endpoint, false, requestContext);
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
+      .withQuery(query).withOffset(0).withLimit(1);
+    return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 
   JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {

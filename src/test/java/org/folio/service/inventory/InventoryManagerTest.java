@@ -63,7 +63,6 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -111,7 +110,6 @@ import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
-import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.hamcrest.core.IsInstanceOf;
 import org.jetbrains.annotations.NotNull;
@@ -1157,10 +1155,9 @@ public class InventoryManagerTest {
     public InventoryInstanceManager inventoryInstanceManager(RestClient restClient,
                                                              ConfigurationEntriesCache configurationEntriesCache,
                                                              InventoryCache inventoryCache,
-                                                             InventoryService inventoryService,
                                                              ConsortiumConfigurationService consortiumConfigurationService,
                                                              SharingInstanceService sharingInstanceService) {
-      return spy(new InventoryInstanceManager(restClient, configurationEntriesCache, inventoryCache, inventoryService, sharingInstanceService, consortiumConfigurationService));
+      return spy(new InventoryInstanceManager(restClient, configurationEntriesCache, inventoryCache, sharingInstanceService, consortiumConfigurationService));
     }
   }
 
