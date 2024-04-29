@@ -1,5 +1,13 @@
 ## 12.9.0 - Unreleased
 
+## 12.8.7 - Released (Quesnelia R1 2024)
+The primary focus of this release was to fix issue with instance matching during title creation
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.6...v12.8.7)
+
+### Bug Fixes
+* [MODORDERS-1106](https://folio-org.atlassian.net/browse/MODORDERS-1106) - New receiving tile erroneously links to pre-existing instance record
+
+
 ## 12.8.6 - Released (Quesnelia R1 2024)
 The primary focus of this release was to fix issue with missing interfaces dependencies in module descriptor
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.5...v12.8.6)

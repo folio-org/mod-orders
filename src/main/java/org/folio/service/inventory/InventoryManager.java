@@ -9,7 +9,6 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
@@ -1013,9 +1012,9 @@ public class InventoryManager {
       .map(this::buildProductIdQuery)
       .collect(joining(" or "));
 
-    // query contains special characters so must be encoded before submitting
-    String endpoint = inventoryService.buildInventoryLookupEndpoint(INSTANCES, encodeQuery(query));
-    return restClient.getAsJsonObject(endpoint, false, requestContext);
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
+      .withQuery(query).withOffset(0).withLimit(1);
+    return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 
   public Future<String> createInstanceRecord(Title title, RequestContext requestContext) {
