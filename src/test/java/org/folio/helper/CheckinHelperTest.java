@@ -46,7 +46,8 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
@@ -65,7 +66,7 @@ import org.springframework.context.annotation.Bean;
 public class CheckinHelperTest {
 
   @Autowired
-  InventoryManager inventoryManager;
+  InventoryItemManager inventoryItemManager;
   @Autowired
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
 
@@ -211,7 +212,7 @@ public class CheckinHelperTest {
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
-    when(inventoryManager.updateItem(any(JsonObject.class), any(RequestContext.class))).thenReturn(Future.succeededFuture());
+    when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class))).thenReturn(Future.succeededFuture());
 
     Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
     CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
@@ -228,7 +229,7 @@ public class CheckinHelperTest {
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
-    when(inventoryManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
+    when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new HttpException(500, "Barcode must be unique, 555 is already assigned to another item")));
 
     Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
@@ -249,7 +250,7 @@ public class CheckinHelperTest {
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
-    when(inventoryManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
+    when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new HttpException(500, "Service failure")));
 
     Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
@@ -306,8 +307,12 @@ public class CheckinHelperTest {
       return mock(PieceStorageService.class);
     }
     @Bean
-    InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
+    }
+    @Bean
+    InventoryHoldingManager inventoryHoldingManager() {
+      return mock(InventoryHoldingManager.class);
     }
     @Bean
     PurchaseOrderLineService purchaseOrderLineService() {

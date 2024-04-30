@@ -46,7 +46,7 @@ import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
@@ -237,8 +237,8 @@ public class PurchaseOrderHelperTest {
     }
 
     @Bean
-    public InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    public InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
     }
 
     @Bean
@@ -310,7 +310,7 @@ public class PurchaseOrderHelperTest {
               CompositeOrderDynamicDataPopulateService combinedPopulateService,
               EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
               TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-              PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryManager inventoryManager,
+              PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryItemManager inventoryItemManager,
               UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
               PurchaseOrderStorageService purchaseOrderStorageService,
               ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
@@ -319,7 +319,7 @@ public class PurchaseOrderHelperTest {
               ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService, RestClient restClient) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-        purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, inventoryManager,
+        purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, inventoryItemManager,
         unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
         poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager, organizationService, restClient);
     }

@@ -13,9 +13,9 @@ import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLD
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.EXPECTED;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.RECEIVED;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.UNRECEIVABLE;
-import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
+import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;

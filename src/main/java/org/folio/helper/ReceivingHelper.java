@@ -5,14 +5,14 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.service.inventory.InventoryManager.COPY_NUMBER;
-import static org.folio.service.inventory.InventoryManager.ITEM_BARCODE;
-import static org.folio.service.inventory.InventoryManager.ITEM_CHRONOLOGY;
-import static org.folio.service.inventory.InventoryManager.ITEM_DISPLAY_SUMMARY;
-import static org.folio.service.inventory.InventoryManager.ITEM_ENUMERATION;
-import static org.folio.service.inventory.InventoryManager.ITEM_LEVEL_CALL_NUMBER;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
+import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 import java.util.Collections;
 import java.util.Date;
@@ -201,7 +201,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   @Override
   protected boolean isRevertToOnOrder(Piece piece) {
     return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED
-        && inventoryManager
+        && inventoryItemManager
           .isOnOrderItemStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
   }
 
@@ -257,7 +257,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     piece.setCopyNumber(receivedItem.getCopyNumber());
     piece.setDisplayOnHolding(receivedItem.getDisplayOnHolding());
     // Piece record might be received or rolled-back to Expected
-    if (inventoryManager.isOnOrderItemStatus(receivedItem)) {
+    if (inventoryItemManager.isOnOrderItemStatus(receivedItem)) {
       piece.setReceivedDate(null);
       piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     } else {
@@ -296,7 +296,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       itemRecord.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
     }
 
-    return inventoryManager.updateItem(itemRecord, requestContext);
+    return inventoryItemManager.updateItem(itemRecord, requestContext);
   }
 
   @Override

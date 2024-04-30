@@ -132,7 +132,8 @@
             "finance.ledger-rollovers-errors.collection.get",
             "finance.ledger-rollovers-errors.item.delete",
             "finance.exchange-rate.item.get",
-            "finance-storage.ledgers.collection.get"
+            "finance-storage.ledgers.collection.get",
+            "inventory-storage.holdings.collection.get"
           ]
         }
       ]
@@ -178,6 +179,7 @@
             "acquisitions-units-storage.memberships.collection.get",
             "inventory.instances.item.get",
             "inventory-storage.identifier-types.collection.get",
+            "inventory-storage.holdings.collection.get",
             "isbn-utils.convert-to-13.get",
             "finance-storage.budget-expense-classes.collection.get",
             "user-tenants.collection.get",
@@ -547,7 +549,6 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.post",
             "inventory-storage.loan-types.collection.get",
-            "inventory-storage.holdings-sources.collection.get",
             "inventory-storage.items.item.post",
             "inventory-storage.instance-statuses.collection.get",
             "finance.transactions.batch",
@@ -581,6 +582,7 @@
             "inventory.items.collection.get",
             "inventory-storage.holdings.item.get",
             "inventory-storage.holdings.item.delete",
+            "inventory-storage.holdings.collection.get",
             "finance.funds.collection.get",
             "finance.funds.budget.item.get",
             "finance.fiscal-years.item.get",
@@ -961,8 +963,8 @@
             "orders-storage.po-lines-batch.collection.put",
             "finance.ledger-rollovers-errors.collection.get",
             "finance.ledger-rollovers-errors.item.post",
-            "finance.ledger-rollovers-progress.item.put"
-
+            "finance.ledger-rollovers-progress.item.put",
+            "inventory-storage.holdings.collection.get"
           ]
         }
       ]
@@ -1000,7 +1002,7 @@
       ]
     },
     {
-      "id": "orders.routing-list",
+      "id": "orders.routing-lists",
       "version": "1.0",
       "handlers": [
         {
@@ -1013,7 +1015,11 @@
           "methods": ["POST"],
           "pathPattern": "/orders/routing-lists",
           "permissionsRequired": ["orders.routing-lists.item.post"],
-          "modulePermissions": ["orders-storage.routing-lists.item.post"]
+          "modulePermissions": [
+            "orders-storage.routing-lists.item.post",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.routing-lists.collection.get"
+          ]
         },
         {
           "methods": ["GET"],
@@ -1025,7 +1031,11 @@
           "methods": ["PUT"],
           "pathPattern": "/orders/routing-lists/{id}",
           "permissionsRequired": ["orders.routing-lists.item.put"],
-          "modulePermissions": ["orders-storage.routing-lists.item.put"]
+          "modulePermissions": [
+            "orders-storage.routing-lists.item.put",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.routing-lists.collection.get"
+          ]
         },
         {
           "methods": ["DELETE"],
@@ -1036,7 +1046,7 @@
         {
           "methods": ["GET"],
           "pathPattern": "/orders/routing-lists/{id}/template",
-          "permissionsRequired": ["orders.routing-list-template.item.get"],
+          "permissionsRequired": ["orders.routing-lists-template.item.get"],
           "modulePermissions": [
             "orders-storage.routing-lists.item.get",
             "orders-storage.settings.collection.get",
@@ -1177,7 +1187,7 @@
     },
     {
       "id": "finance.transactions",
-      "version": "5.1"
+      "version": "6.0"
     },
     {
       "id": "finance.fiscal-years",
@@ -1209,6 +1219,14 @@
     },
     {
       "id": "orders-storage.configuration.suffixes",
+      "version": "1.0"
+    },
+    {
+      "id": "orders-storage.routing-lists",
+      "version": "1.0"
+    },
+    {
+      "id": "orders-storage.settings",
       "version": "1.0"
     },
     {
@@ -1254,6 +1272,10 @@
     {
       "id": "template-engine",
       "version": "2.2"
+    },
+    {
+      "id": "holdings-sources",
+      "version": "1.0"
     }
   ],
   "optional": [
@@ -1787,7 +1809,7 @@
       "description" : "Orders routing-list item delete"
     },
     {
-      "permissionName":  "orders.routing-list-template.item.get",
+      "permissionName":  "orders.routing-lists-template.item.get",
       "displayName" : "orders routing-list-template item get",
       "description" : "Orders routing-list-template item get"
     },
@@ -1801,7 +1823,7 @@
         "orders.routing-lists.item.get",
         "orders.routing-lists.item.put",
         "orders.routing-lists.item.delete",
-        "orders.routing-list-template.item.get"
+        "orders.routing-lists-template.item.get"
       ]
     },
     {
@@ -1916,7 +1938,8 @@
         "invoices.bypass-acquisition-units",
         "organizations-storage.organizations.collection.get",
         "organizations-storage.organizations.item.get",
-        "isbn-utils.convert-to-13.get"
+        "isbn-utils.convert-to-13.get",
+        "user-tenants.collection.get"
       ],
       "visible": false
     },
@@ -1980,7 +2003,8 @@
         "inventory-storage.identifier-types.collection.get",
         "isbn-utils.convert-to-13.get",
         "tags.collection.get",
-        "tags.item.post"
+        "tags.item.post",
+        "user-tenants.collection.get"
       ],
       "visible": false
     },

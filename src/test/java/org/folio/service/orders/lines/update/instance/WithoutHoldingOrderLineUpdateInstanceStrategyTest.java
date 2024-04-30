@@ -5,7 +5,7 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
-import static org.folio.service.inventory.InventoryManager.ID;
+import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -26,7 +26,8 @@ import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,9 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategyTest {
   @InjectMocks
   private WithoutHoldingOrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy;
   @Mock
-  private InventoryManager inventoryManager;
+  private InventoryItemManager inventoryItemManager;
+  @Mock
+  private InventoryHoldingManager inventoryHoldingManager;
   @Mock
   private RequestContext requestContext;
 
@@ -58,7 +61,7 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategyTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    Mockito.reset(inventoryManager);
+    Mockito.reset(inventoryItemManager, inventoryHoldingManager);
   }
 
 
@@ -141,14 +144,14 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategyTest {
       .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
     doReturn(succeededFuture(new ArrayList<>()))
-      .when(inventoryManager).getItemsByHoldingId(anyString(), eq(requestContext));
+      .when(inventoryItemManager).getItemsByHoldingId(anyString(), eq(requestContext));
 
     doReturn(succeededFuture(null))
-      .when(inventoryManager).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
+      .when(inventoryHoldingManager).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
 
     assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result());
-    verify(inventoryManager, times(1)).getItemsByHoldingId(anyString(), eq(requestContext));
-    verify(inventoryManager, times(1)).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).getItemsByHoldingId(anyString(), eq(requestContext));
+    verify(inventoryHoldingManager, times(1)).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
 
   }
 
@@ -192,14 +195,14 @@ public class WithoutHoldingOrderLineUpdateInstanceStrategyTest {
     itemsList.add(new JsonObject());
 
     doReturn(succeededFuture(itemsList))
-      .when(inventoryManager).getItemsByHoldingId(anyString(), eq(requestContext));
+      .when(inventoryItemManager).getItemsByHoldingId(anyString(), eq(requestContext));
 
     doReturn(succeededFuture(null))
-      .when(inventoryManager).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
+      .when(inventoryHoldingManager).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
 
     assertNull(withoutHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result());
-    verify(inventoryManager, times(1)).getItemsByHoldingId(anyString(), eq(requestContext));
-    verify(inventoryManager, times(0)).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
+    verify(inventoryItemManager, times(1)).getItemsByHoldingId(anyString(), eq(requestContext));
+    verify(inventoryHoldingManager, times(0)).deleteHoldingById(anyString(), anyBoolean(), eq(requestContext));
 
   }
 }

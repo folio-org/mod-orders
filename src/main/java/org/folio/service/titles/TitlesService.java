@@ -26,7 +26,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
 import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryManager;
 
 import io.vertx.core.Future;
 import lombok.extern.log4j.Log4j2;
@@ -38,20 +37,20 @@ public class TitlesService {
   private static final String BY_ID_ENDPOINT = ENDPOINT + "/{id}";
   private final RestClient restClient;
   private final ProtectionService protectionService;
-  private final InventoryManager inventoryManager;
+  private final TitleInstanceService titleInstanceService;
 
-  public TitlesService(RestClient restClient, ProtectionService protectionService, InventoryManager inventoryManager) {
+  public TitlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService) {
     this.restClient = restClient;
     this.protectionService = protectionService;
-    this.inventoryManager = inventoryManager;
+    this.titleInstanceService = titleInstanceService;
   }
 
   public Future<Title> createTitle(Title title, RequestContext requestContext) {
     return protectionService.validateAcqUnitsOnCreate(title.getAcqUnitIds(), TITLES_ASSIGN, requestContext)
-      .compose(v -> inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext))
-      .compose(shadowInstance -> {
+      .compose(v -> titleInstanceService.getOrCreateInstance(title, requestContext))
+      .compose(instId -> {
         RequestEntry requestEntry = new RequestEntry(ENDPOINT);
-        return restClient.post(requestEntry, title, Title.class, requestContext);
+        return restClient.post(requestEntry, title.withInstanceId(instId), Title.class, requestContext);
       });
   }
 
@@ -71,18 +70,17 @@ public class TitlesService {
   }
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
-    return inventoryManager.createShadowInstanceIfNeeded(title.getInstanceId(), requestContext)
-      .compose(shadowInstance -> {
-        RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
-        return restClient.put(requestEntry, title, requestContext);
-      });
+    RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
+    return restClient.put(requestEntry, title, requestContext);
   }
 
   public Future<Void> saveTitleWithAcqUnitsCheck(Title entity, RequestContext requestContext) {
     return getTitleById(entity.getId(), requestContext)
       .compose(titleFromStorage -> protectionService.validateAcqUnitsOnUpdate(entity.getAcqUnitIds(), titleFromStorage.getAcqUnitIds(),
         TITLES_MANAGE, Sets.newHashSet(ProtectedOperationType.UPDATE), requestContext))
-      .compose(v -> saveTitle(entity, requestContext));
+      .compose(v -> titleInstanceService.getOrCreateInstance(entity, requestContext))
+      .map(entity::withInstanceId)
+      .compose(title -> saveTitle(title, requestContext));
   }
 
   public Future<Void> deleteTitle(String id, RequestContext requestContext) {
@@ -132,4 +130,16 @@ public class TitlesService {
   private List<String> getNonPackageLineIds(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).map(CompositePoLine::getId).collect(toList());
   }
+
+  public Future<String> updateTitleWithInstance(Title title, RequestContext requestContext) {
+    return updateTitleWithInstance(title, false, requestContext);
+  }
+
+  public Future<String> updateTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    return titleInstanceService.getOrCreateInstance(title, isInstanceMatchingDisabled, requestContext)
+      .map(title::withInstanceId)
+      .compose(entity -> saveTitle(entity, requestContext)
+        .map(v -> entity.getInstanceId()));
+  }
+
 }

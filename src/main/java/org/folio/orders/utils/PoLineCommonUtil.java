@@ -68,11 +68,11 @@ public final class PoLineCommonUtil {
     }
   }
 
-  public static boolean isUpdateNotRequiredForEresource(CompositePoLine compPOL) {
+  private static boolean isUpdateNotRequiredForEresource(CompositePoLine compPOL) {
     return compPOL.getEresource() == null || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE;
   }
 
-  public static boolean isUpdateNotRequiredForPhysical(CompositePoLine compPOL) {
+  private static boolean isUpdateNotRequiredForPhysical(CompositePoLine compPOL) {
     return compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE;
   }
 
@@ -196,10 +196,6 @@ public final class PoLineCommonUtil {
     poLine.setReportingCodes(null);
     JsonObject jsonLine = JsonObject.mapFrom(poLine);
     return jsonLine.mapTo(CompositePoLine.class);
-  }
-
-  public static void makePoLinesPending(List<CompositePoLine> compositePoLines) {
-    compositePoLines.forEach(HelperUtils::makePoLinePending);
   }
 
   public static void updateLocationsQuantity(List<Location> locations) {

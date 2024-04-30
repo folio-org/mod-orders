@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static io.vertx.core.Future.succeededFuture;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.RestTestUtils.prepareHeaders;
@@ -7,6 +8,7 @@ import static org.folio.RestTestUtils.verifyDeleteResponse;
 import static org.folio.RestTestUtils.verifyPostResponse;
 import static org.folio.RestTestUtils.verifyPut;
 import static org.folio.RestTestUtils.verifySuccessGet;
+import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
@@ -30,6 +32,11 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
 import java.util.Date;
 import java.util.List;
@@ -43,14 +50,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
-import org.folio.config.ApplicationConfig;
-import org.folio.rest.acq.model.Title;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.TitleCollection;
+import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.ProtectionService;
+import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.titles.TitleInstanceService;
+import org.folio.service.titles.TitleValidationService;
+import org.folio.service.titles.TitlesService;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -58,6 +72,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 
 public class TitlesApiTest {
   private static final Logger logger = LogManager.getLogger();
@@ -68,10 +84,15 @@ public class TitlesApiTest {
   private static final String CONSISTENT_RECEIVED_STATUS_TITLE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private static final String ACQ_UNIT_ID = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
   public static final String SAMPLE_TITLE_ID = "9a665b22-9fe5-4c95-b4ee-837a5433c95d";
+  public static final String SAMPLE_INSTANCE_ID = "8d1bc213-82ca-56fd-b4ec-238c5421a15c";
   private final JsonObject titleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "title.json");
   private final JsonObject packageTitleJsonReqData = getMockAsJson(TITLES_MOCK_DATA_PATH + "package_title.json");
 
   private static boolean runningOnOwn;
+
+  @Autowired
+  private TitleInstanceService titleInstanceService;
+  private AutoCloseable mockitoMocks;
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -79,7 +100,7 @@ public class TitlesApiTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(ApplicationConfig.class);
+    initSpringContext(TitlesApiTest.ContextConfiguration.class);
   }
 
   @AfterEach
@@ -96,7 +117,8 @@ public class TitlesApiTest {
 
   @BeforeEach
   void initMocks(){
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
+    autowireDependencies(this);
   }
 
   @Test
@@ -112,6 +134,8 @@ public class TitlesApiTest {
     Title postTitleRq = titleJsonReqData.mapTo(Title.class)
       .withPoLineId(poLineId)
       .withAcqUnitIds(List.of(ACQ_UNIT_ID));
+
+    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(titleInstanceService).getOrCreateInstance(any(Title.class), any(RequestContext.class));
 
     // Positive cases
     // Title id is null initially
@@ -188,6 +212,8 @@ public class TitlesApiTest {
 
     addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(packagePoLine));
 
+    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(titleInstanceService).getOrCreateInstance(any(Title.class), any(RequestContext.class));
+
     Title titleWithPackagePoLineRS = verifyPostResponse(TITLES_ENDPOINT, JsonObject.mapFrom(titleWithPackagePoLineRQ).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, ALL_DESIRED_ACQ_PERMISSIONS_HEADER), APPLICATION_JSON, HttpStatus.HTTP_CREATED.toInt()).as(Title.class);
 
@@ -227,7 +253,9 @@ public class TitlesApiTest {
       .withTitle("new title")
       .withAcqUnitIds(List.of(ACQ_UNIT_ID));
 
-     verifyPut(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), JsonObject.mapFrom(reqData).encode(),
+    doReturn(succeededFuture(SAMPLE_INSTANCE_ID)).when(titleInstanceService).getOrCreateInstance(any(Title.class), any(RequestContext.class));
+
+    verifyPut(String.format(TITLES_ID_PATH, SAMPLE_TITLE_ID), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ALL_DESIRED_ACQ_PERMISSIONS_HEADER), "", 204);
   }
 
@@ -328,5 +356,39 @@ public class TitlesApiTest {
   void deleteTitleInternalErrorOnStorageTest() {
     logger.info("=== Test delete title by id - internal error from storage 500 ===");
     verifyDeleteResponse(String.format(TITLES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
+  }
+
+  static class ContextConfiguration {
+
+    @Bean
+    RestClient restClient(){
+      return new RestClient();
+    }
+
+    @Bean
+    AcquisitionsUnitsService acquisitionsUnitsService(RestClient restClient) {
+      return new AcquisitionsUnitsService(restClient);
+    }
+
+    @Bean
+    TitlesService titlesService(RestClient restClient, ProtectionService protectionService, TitleInstanceService titleInstanceService) {
+      return new TitlesService(restClient, protectionService, titleInstanceService);
+    }
+
+    @Bean
+    TitleValidationService titleValidationService() {
+      return new TitleValidationService();
+    }
+
+    @Bean
+    TitleInstanceService TitleInstanceService() {
+      return mock(TitleInstanceService.class);
+    }
+
+    @Bean
+    ProtectionService protectionService(AcquisitionsUnitsService acquisitionsUnitsService) {
+      return spy(new ProtectionService(acquisitionsUnitsService));
+    }
+
   }
 }
