@@ -500,7 +500,7 @@ public class ApplicationConfig {
                                                    ConsortiumConfigurationService consortiumConfigurationService,
                                                     SharingInstanceService sharingInstanceService) {
     return new InventoryInstanceManager(restClient, configurationEntriesCache,
-      inventoryCache, inventoryService, sharingInstanceService, consortiumConfigurationService);
+      inventoryCache, sharingInstanceService, consortiumConfigurationService);
   }
 
   @Bean
