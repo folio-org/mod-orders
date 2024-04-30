@@ -57,11 +57,8 @@ public class PieceDeleteFlowManager {
   public Future<Void> deletePiece(String pieceId, boolean deleteHolding, RequestContext requestContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(deleteHolding);
 
-    System.out.println("----------------------------------"+pieceId+"---------------------------------");
-
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .map(pieceToDelete -> {
-        System.out.print("----------------------------------"+pieceId+"---------------------------------");
         holder.withPieceToDelete(pieceToDelete); return null;
       })
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
@@ -147,21 +144,25 @@ public class PieceDeleteFlowManager {
     }
   }
 
-  public Future<Void> batchDeletePiece(List<String> ids, RequestContext requestContext) {
+ public Future<Void> batchDeletePiece(List<String> ids, RequestContext requestContext) {
+   PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(false);
 
+   List<Future> deleteFutures = ids.stream()
+     .map(id -> pieceStorageService.getPieceById(id, requestContext)
+       .map(pieceToDelete -> {
+         holder.withPieceToDelete(pieceToDelete);
+         return null;
+       })
+       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
+       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
+       .compose(aVoid -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext))
+       .compose(aVoid -> isDeletePieceRequestValid(holder, requestContext))
+       .compose(aVoid -> processInventory(holder, requestContext))
+       .compose(pair -> updatePoLine(holder, requestContext))
+       .compose(aVoid -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext))
+     )
+     .collect(Collectors.toList());
 
-    // Print the IDs to track the pieces being deleted
-    ids.forEach(id -> System.out.println("----------------------------------" + id + "---------------------------------"));
-
-    // Perform delete operations for each ID
-    List<Future> deleteFutures = ids.stream()
-      .map(id -> pieceStorageService.getPieceById(id, requestContext)
-        .onFailure(t -> logger.error("Failed to delete piece with ID: " + id, t)) // Log using the retrieved ID
-        .mapEmpty()) // Continue with empty to just track completion
-      .collect(Collectors.toList());
-
-    // Return a future to track completion
-    return CompositeFuture.all(deleteFutures).mapEmpty();
-  }
-
+   return CompositeFuture.all(deleteFutures).mapEmpty();
+ }
 }

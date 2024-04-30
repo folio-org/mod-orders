@@ -114,7 +114,6 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       pieceIds.add(piece.getId());
     }
     pieceDeleteFlowManager.batchDeletePiece(pieceIds, new RequestContext(vertxContext, okapiHeaders));
-
   }
 }
 
