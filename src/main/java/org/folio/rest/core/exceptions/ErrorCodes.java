@@ -121,6 +121,7 @@ public enum ErrorCodes {
   INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT("invalidRoutingListForPoLineFormat", "Cannot create routing list for POL without 'Physical' or 'P/E Mix' order format"),
   ROUTING_LIST_LIMIT_REACHED_FOR_PO_LINE("routingListLimitReachedForPoLine", "Cannot create routing list for POL as the associated lists' amount is not less than Physical copies"),
   PO_LINE_NOT_FOUND_FOR_ROUTING_LIST("poLineNotFoundForRoutingList", "Cannot find a corresponding PO Line with the provided id"),
+  ROUTING_LIST_UNIQUE_NAME_VIOLATION("routingListUniqueNameViolation", "Routing list with the same name already exists"),
   ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE("orderFormatIncorrectForBindaryActive", "When PoLine is bindery active, its format must be 'P/E Mix' or 'Physical Resource'"),
   CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE("createInventoryIncorrectForBindaryActive", "When PoLine is bindery active, Create Inventory must be 'Instance, Holding, Item'"),
   RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE("receivingWorkflowIncorrectForBindaryActive", "When PoLine is bindery active, its receiving workflow must be set to 'Independent order and receipt quantity'");
