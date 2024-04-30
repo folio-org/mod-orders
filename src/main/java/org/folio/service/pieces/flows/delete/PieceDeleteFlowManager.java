@@ -7,7 +7,9 @@ import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import io.vertx.core.CompositeFuture;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -54,8 +56,12 @@ public class PieceDeleteFlowManager {
 
   public Future<Void> deletePiece(String pieceId, boolean deleteHolding, RequestContext requestContext) {
     PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(deleteHolding);
+
+    System.out.println("----------------------------------"+pieceId+"---------------------------------");
+
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .map(pieceToDelete -> {
+        System.out.print("----------------------------------"+pieceId+"---------------------------------");
         holder.withPieceToDelete(pieceToDelete); return null;
       })
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
@@ -140,4 +146,22 @@ public class PieceDeleteFlowManager {
       return Future.succeededFuture();
     }
   }
+
+  public Future<Void> batchDeletePiece(List<String> ids, RequestContext requestContext) {
+
+
+    // Print the IDs to track the pieces being deleted
+    ids.forEach(id -> System.out.println("----------------------------------" + id + "---------------------------------"));
+
+    // Perform delete operations for each ID
+    List<Future> deleteFutures = ids.stream()
+      .map(id -> pieceStorageService.getPieceById(id, requestContext)
+        .onFailure(t -> logger.error("Failed to delete piece with ID: " + id, t)) // Log using the retrieved ID
+        .mapEmpty()) // Continue with empty to just track completion
+      .collect(Collectors.toList());
+
+    // Return a future to track completion
+    return CompositeFuture.all(deleteFutures).mapEmpty();
+  }
+
 }

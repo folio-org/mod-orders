@@ -18,10 +18,12 @@ import static org.hamcrest.Matchers.is;
 
 import java.util.Map;
 
+import jakarta.validation.Payload;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.HandlersTestHelper;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.tools.parser.JsonPathParser;
 import org.hamcrest.Matchers;
 
@@ -150,6 +152,8 @@ public class RestTestUtils {
 
   public static Response verifyDeleteResponse(String url, String expectedContentType, int expectedCode) {
     Headers headers =  prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT);
+    System.out.println("---------------------------------------------------------------------"+headers+"-------------------------------------------------------------");
+    System.out.println("--------------------------------------------------------"+url+"---------------------------------------------------");
     return verifyDeleteResponse(url, headers, expectedContentType, expectedCode);
   }
 
@@ -167,6 +171,25 @@ public class RestTestUtils {
 
     // Verify no messages sent via event bus
     HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
+
+    return response;
+  }
+
+  public static Response verifyBatchDeleteResponse(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+    Response response = RestAssured
+            .with()
+            .headers(headers)
+            .contentType(APPLICATION_JSON)
+            .body(body)
+            .when()
+            .delete(url)
+            .then()
+            .log()
+            .all()
+            .statusCode(expectedCode)
+            .contentType(expectedContentType)
+            .extract()
+            .response();
 
     return response;
   }

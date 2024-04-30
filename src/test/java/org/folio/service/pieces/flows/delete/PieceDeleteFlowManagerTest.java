@@ -354,6 +354,62 @@ public class PieceDeleteFlowManagerTest {
     verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 
+  @Test
+  void shouldUpdateLineQuantityIfPoLineIsNotPackageAndManualPieceCreateFalseAndInventoryInstanceVsHoldingAndDeleteHoldingAndPieceInBatch()  {
+    String orderId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    String itemId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    JsonObject holding = new JsonObject();
+    holding.put(ID, holdingId);
+    holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
+    JsonObject item = new JsonObject().put(ID, itemId);
+    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(lineId)
+      .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
+    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
+    PoLine poLine = new PoLine().withIsPackage(false).withCheckinItems(false).withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withEresource(new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING))
+      .withPurchaseOrderId(orderId).withId(lineId).withLocations(List.of(loc)).withCost(cost);
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    Title title = new Title().withId(titleId);
+    List<String> ids = new ArrayList<>();
+    ids.add(piece.getId());
+
+    doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).deleteHoldingById(piece.getHoldingId(), true, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).getItemRecordById(itemId, true, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryManager).deleteItem(itemId, true, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
+    doReturn(succeededFuture(new ArrayList<JsonObject>())).when(inventoryManager).getItemsByHoldingId(holdingId,  requestContext);
+    final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doAnswer((Answer<Future<Void>>) invocation -> {
+      PieceDeletionHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withOrderInformation(purchaseOrder, poLine);
+      return succeededFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
+    doAnswer((Answer<Future<Void>>) invocation -> {
+      PieceDeletionHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withTitleInformation(title);
+      return succeededFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithTitleInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
+
+    final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    pieceDeleteFlowManager.batchDeletePiece(ids, requestContext).result();
+    verify(inventoryManager, times(0)).deleteItem(itemId, true, requestContext);
+  }
   private static class ContextConfiguration {
     @Bean PieceStorageService pieceStorageService() {
       return mock(PieceStorageService.class);
