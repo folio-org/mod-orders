@@ -108,7 +108,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
 
   @Override
   @Validate
-  public void deleteOrdersPiecesBatchPiecesCollection(PieceCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void deleteOrdersPiecesBatch(PieceCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     List<String> pieceIds = new ArrayList<>();
     for (Piece piece : entity.getPieces()) {
       pieceIds.add(piece.getId());

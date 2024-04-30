@@ -47,7 +47,7 @@ resourceTypes:
         example: true
         required: false
         default: false
-  /batch/PiecesCollection:
+  /batch:
     delete:
       description: Batch delete pieces
       body:
@@ -58,7 +58,7 @@ resourceTypes:
               204:
                 description: "Batch delete of pieces successfully completed"
                 body:
-                  text/plain:
+                  application/json:
                     example: "All pieces successfully deleted."
               400:
                 description: "Bad request, e.g., malformed JSON or validation failed"

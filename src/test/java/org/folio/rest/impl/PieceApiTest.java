@@ -1,11 +1,14 @@
 package org.folio.rest.impl;
 
+import static io.restassured.RestAssured.given;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.RestTestUtils.verifyBatchDeleteResponse;
 import static org.folio.RestTestUtils.verifyDeleteResponse;
 import static org.folio.RestTestUtils.verifyPostResponse;
 import static org.folio.RestTestUtils.verifyPut;
+import static org.folio.TestConfig.X_OKAPI_URL;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
@@ -15,9 +18,12 @@ import static org.folio.TestConstants.ID_BAD_FORMAT;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestConstants.X_ECHO_STATUS;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.TestConstants.X_OKAPI_USER_ID_WITH_ACQ_UNITS;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_COLLECTION_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
@@ -31,15 +37,20 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import io.restassured.http.Header;
+import io.restassured.http.Headers;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -55,12 +66,15 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 public class PieceApiTest {
 
@@ -69,6 +83,7 @@ public class PieceApiTest {
   public static final String PIECES_ENDPOINT = "/orders/pieces";
   private static final String PIECES_ID_PATH = PIECES_ENDPOINT + "/%s";
   static final String CONSISTENT_RECEIVED_STATUS_PIECE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
+  private static final String PIECES_BATCH_PATH = PIECES_ENDPOINT+"/batch";
   private JsonObject pieceJsonReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
 
   private static boolean runningOnOwn;
@@ -356,4 +371,32 @@ public class PieceApiTest {
     logger.info("=== Test delete piece by id - internal error from storage 500 ===");
     verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
   }
+
+  @Test
+  @Timeout(5)
+  void deletePiecesByBatchWithItemDeletionTest() throws JsonProcessingException {
+    logger.info("=== Test delete pieces in batch - items deleted ===");
+    Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
+    postPieceRq.withId("2bafc9e1-9dd3-4ede-9f23-c4a03f8bb205");
+    postPieceRq.setPoLineId("2bafc9e1-9dd3-4ede-9f23-c4a03f8bb2d5");
+    postPieceRq.setReceiptDate(null);
+    String orderId = UUID.randomUUID().toString();
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
+    verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, X_OKAPI_TOKEN, X_OKAPI_USER_ID_WITH_ACQ_UNITS), APPLICATION_JSON, 201).as(Piece.class);
+
+    List<Piece> pieces = new ArrayList<>();
+    pieces.add(postPieceRq);
+    PieceCollection pieceCollection = new PieceCollection().withPieces(pieces);
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(postPieceRq));
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
+    JsonObject jsonPieceCollection = JsonObject.mapFrom(pieceCollection);
+    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(postPieceRq));
+    MockServer.addMockEntry(PIECES_COLLECTION_STORAGE,JsonObject.mapFrom(pieceCollection));
+    int status204 = HttpStatus.HTTP_NO_CONTENT.toInt();
+
+    verifyBatchDeleteResponse(PIECES_BATCH_PATH, jsonPieceCollection.encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,X_OKAPI_USER_ID_WITH_ACQ_UNITS ,X_OKAPI_TOKEN,  X_OKAPI_USER_ID), APPLICATION_JSON,204);
+  }
+
 }
