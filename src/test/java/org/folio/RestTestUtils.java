@@ -177,6 +177,7 @@ public class RestTestUtils {
     Response response = RestAssured
             .with()
             .header(X_OKAPI_URL)
+            .header(X_OKAPI_TOKEN)
             .headers(headers)
             .contentType(APPLICATION_JSON)
             .body(body)

@@ -383,7 +383,7 @@ public class PieceApiTest {
     String orderId = UUID.randomUUID().toString();
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, X_OKAPI_TOKEN, X_OKAPI_USER_ID_WITH_ACQ_UNITS), APPLICATION_JSON, 201).as(Piece.class);
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, X_OKAPI_USER_ID_WITH_ACQ_UNITS), APPLICATION_JSON, 201).as(Piece.class);
 
     List<Piece> pieces = new ArrayList<>();
     pieces.add(postPieceRq);
