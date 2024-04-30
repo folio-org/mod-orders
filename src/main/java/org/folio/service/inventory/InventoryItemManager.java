@@ -93,18 +93,12 @@ public class InventoryItemManager {
   }
 
 
-  /**
-   * Returns list of item records for specified id's.
-   *
-   * @param ids List of item id's
-   * @return future with list of item records
-   */
   public Future<List<JsonObject>> getItemRecordsByIds(List<String> ids, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS))
       .withQuery(query).withOffset(0).withLimit(ids.size());
     return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(response -> extractEntities(response, ITEMS));
+      .map(this::extractEntities);
   }
 
   public Future<JsonObject> getItemRecordById(String itemId, boolean skipThrowNorFoundException, RequestContext requestContext) {
@@ -112,12 +106,32 @@ public class InventoryItemManager {
     return restClient.getAsJsonObject(requestEntry, skipThrowNorFoundException, requestContext);
   }
 
-  /**
-   * Returns list of requests for specified item.
-   *
-   * @param itemId id of Item
-   * @return future with list of requests
-   */
+  public Future<List<JsonObject>> getItemsByHoldingIdAndOrderLineId(String holdingId, String purchaseOrderLineId, RequestContext requestContext) {
+    String query = String.format("holdingsRecordId==%s and purchaseOrderLineIdentifier==%s", holdingId, purchaseOrderLineId);
+    return getItemRecordsByQuery(query, requestContext);
+  }
+
+  public Future<List<JsonObject>> getItemsByPoLineIdsAndStatus(List<String> poLineIds, String itemStatus, RequestContext requestContext) {
+    logger.debug("getItemsByStatus start");
+    List<Future<List<JsonObject>>> futures = StreamEx
+      .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
+      .map(ids -> {
+        String query = String.format("status.name==%s and %s", itemStatus, HelperUtils.convertFieldListToCqlQuery(ids, InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true));
+        return getItemRecordsByQuery(query, requestContext);
+      })
+      .toList();
+
+    return collectResultsOnSuccess(futures)
+      .map(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
+  }
+
+  private Future<List<JsonObject>> getItemRecordsByQuery(String query, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS))
+      .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
+    return restClient.getAsJsonObject(requestEntry, requestContext)
+      .map(this::extractEntities);
+  }
+
   public Future<Integer> getNumberOfRequestsByItemId(String itemId, RequestContext requestContext) {
     String query = String.format("(itemId==%s and status=\"*\")", itemId);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
@@ -126,34 +140,31 @@ public class InventoryItemManager {
       .map(json -> json.getInteger(TOTAL_RECORDS));
   }
 
-  /**
-   * Returns list of item records for specified query.
-   *
-   * @param query item records query
-   * @return future with list of item records
-   */
-  private Future<List<JsonObject>> getItemRecordsByQuery(String query, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS))
-      .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
-    return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(response -> extractEntities(response, ITEMS));
-  }
-
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
   }
 
-  /**
-   * Wait for item creation requests completion and filter failed items if any
-   *
-   * @param itemRecords item record to be created
-   * @return completable future with list of item id's
-   */
   public Future<List<String>> updateItemRecords(List<JsonObject> itemRecords, RequestContext requestContext) {
     List<Future<String>> futures = new ArrayList<>(itemRecords.size());
     itemRecords.forEach(itemRecord -> futures.add(updateItem(itemRecord, requestContext).map(v -> itemRecord.getString(ID))));
     return collectResultsOnSuccess(futures);
+  }
+
+  public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
+    if (piece.getItemId() == null || piece.getPoLineId() == null) {
+      return Future.succeededFuture();
+    }
+    String itemId = piece.getItemId();
+    String poLineId = piece.getPoLineId();
+    return getItemRecordById(itemId, true, requestContext)
+      .compose(item -> {
+        if (poLineId != null && item != null && !item.isEmpty()) {
+          updateItemWithPieceFields(piece, item);
+          return updateItem(item, requestContext);
+        }
+        return Future.succeededFuture();
+      });
   }
 
   public Future<Void> deleteItem(String id, boolean skipNotFoundException, RequestContext requestContext) {
@@ -167,22 +178,10 @@ public class InventoryItemManager {
     return collectResultsOnSuccess(futures);
   }
 
-  /**
-   * Checks if the {@link ReceivedItem} has item status as "On order"
-   *
-   * @param receivedItem details specified by user upon receiving flow
-   * @return {@code true} if the item status is "On order"
-   */
   public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
     return ReceivedItem.ItemStatus.ON_ORDER == receivedItem.getItemStatus();
   }
 
-  /**
-   * Checks if the {@link ReceivedItem} has item status as "On order"
-   *
-   * @param checkinPiece details specified by user upon check-in flow
-   * @return {@code true} if the item status is "On order"
-   */
   public boolean isOnOrderPieceStatus(CheckInPiece checkinPiece) {
     return CheckInPiece.ItemStatus.ON_ORDER == checkinPiece.getItemStatus();
   }
@@ -248,6 +247,40 @@ public class InventoryItemManager {
               .collect(toList());
           });
       });
+  }
+
+  private Future<List<JsonObject>> searchStorageExistingItems(String poLineId, String holdingId, int expectedQuantity,
+                                                              RequestContext requestContext) {
+    String query = String.format(LOOKUP_ITEM_QUERY, poLineId, holdingId);
+    RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT).withQuery(query).withOffset(0).withLimit(expectedQuantity);
+    return restClient.getAsJsonObject(requestEntry, requestContext)
+      .map(itemsCollection -> {
+        List<JsonObject> items = extractEntities(itemsCollection);
+        logger.debug("{} existing items found out of {} for PO Line with '{}' id", items.size(), expectedQuantity, poLineId);
+        return items;
+      });
+  }
+
+  private List<String> getPhysicalItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
+    return getItemsByMaterialType(existingItems, compPOL.getPhysical().getMaterialType());
+  }
+
+  private List<String> getElectronicItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
+    return getItemsByMaterialType(existingItems, compPOL.getEresource().getMaterialType());
+  }
+
+  private List<String> getItemsByMaterialType(List<JsonObject> existingItems, String materialTypeId) {
+    return existingItems
+      .stream()
+      .filter(item -> {
+        String typeId = item.getString(ITEM_MATERIAL_TYPE_ID);
+        if (typeId == null) {
+          typeId = item.getJsonObject(ITEM_MATERIAL_TYPE).getString(ID);
+        }
+        return materialTypeId.equals(typeId);
+      })
+      .map(HelperUtils::extractId)
+      .collect(toList());
   }
 
   private List<Piece> buildPieces(Location location, String polId, Piece.Format pieceFormat, List<String> createdItemIds,
@@ -349,26 +382,12 @@ public class InventoryItemManager {
       }).collect(toList());
   }
 
-  private List<String> getPhysicalItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
-    return getItemsByMaterialType(existingItems, compPOL.getPhysical().getMaterialType());
-  }
-
-  private List<String> getElectronicItemIds(CompositePoLine compPOL, List<JsonObject> existingItems) {
-    return getItemsByMaterialType(existingItems, compPOL.getEresource().getMaterialType());
-  }
-
-  private List<String> getItemsByMaterialType(List<JsonObject> existingItems, String materialTypeId) {
-    return existingItems
-      .stream()
-      .filter(item -> {
-        String typeId = item.getString(ITEM_MATERIAL_TYPE_ID);
-        if (typeId == null) {
-          typeId = item.getJsonObject(ITEM_MATERIAL_TYPE).getString(ID);
-        }
-        return materialTypeId.equals(typeId);
-      })
-      .map(HelperUtils::extractId)
-      .collect(toList());
+  private void validateItemsCreation(String poLineId, int expectedItemsQuantity, int itemsSize) {
+    if (itemsSize != expectedItemsQuantity) {
+      String message = String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
+        poLineId, expectedItemsQuantity, itemsSize);
+      throw new InventoryException(message);
+    }
   }
 
   public Future<List<JsonObject>> getItemsByHoldingId(String holdingId, RequestContext requestContext) {
@@ -377,20 +396,12 @@ public class InventoryItemManager {
       .withOffset(0).withLimit(Integer.MAX_VALUE);
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(itemsCollection -> {
-        List<JsonObject> items = extractEntities(itemsCollection, ITEMS);
+        List<JsonObject> items = extractEntities(itemsCollection);
         logger.debug("{} existing items found for holding with '{}' id", items.size(), holdingId);
         return items;
       });
   }
 
-  public Future<List<JsonObject>> getItemsByHoldingIdAndOrderLineId(String holdingId, String purchaseOrderLineId, RequestContext requestContext) {
-    String query = String.format("holdingsRecordId==%s and purchaseOrderLineIdentifier==%s", holdingId, purchaseOrderLineId);
-    return getItemRecordsByQuery(query, requestContext);
-  }
-
-  /**
-   * Return id of created  Item
-   */
   public Future<String> openOrderCreateItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
     logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
@@ -421,20 +432,24 @@ public class InventoryItemManager {
    * @return id of newly created Instance Record
    */
   public Future<List<String>> createMissingElectronicItems(CompositePoLine compPOL, Piece piece, int quantity, RequestContext requestContext) {
-    if (quantity > 0) {
-      String holdingId = piece.getHoldingId();
-      return buildElectronicItemRecordJsonObject(compPOL, holdingId, requestContext)
-        .map(item -> {
-          updateItemWithPieceFields(piece, item);
-          return item;
-        })
-        .compose(item -> {
-          logger.debug("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
-          return createItemRecords(item, quantity, requestContext);
-        });
-    } else {
-      return Future.succeededFuture(Collections.emptyList());
+    if (quantity <= 0) {
+      return Future.succeededFuture(List.of());
     }
+    String holdingId = piece.getHoldingId();
+    return buildElectronicItemRecordJsonObject(compPOL, holdingId, requestContext)
+      .map(item -> {
+        updateItemWithPieceFields(piece, item);
+        return item;
+      })
+      .compose(item -> {
+        logger.debug("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
+        return createItemRecords(item, quantity, requestContext);
+      });
+  }
+
+  private Future<JsonObject> buildElectronicItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
+    return buildBaseItemRecordJsonObject(compPOL, holdingId, requestContext)
+      .map(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getEresource().getMaterialType()));
   }
 
   /**
@@ -447,67 +462,38 @@ public class InventoryItemManager {
    */
   public Future<List<String>> createMissingPhysicalItems(CompositePoLine compPOL, Piece piece, int quantity,
                                                          RequestContext requestContext) {
-    if (quantity > 0) {
-      String holdingId = piece.getHoldingId();
-      return buildPhysicalItemRecordJsonObject(compPOL, holdingId, requestContext)
-        .map(item -> {
-          updateItemWithPieceFields(piece, item);
-          return item;
-        })
-        .compose(item -> {
-          logger.debug("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
-          return createItemRecords(item, quantity, requestContext);
-        });
-    } else {
-      return Future.succeededFuture(Collections.emptyList());
+    if (quantity <= 0) {
+      return Future.succeededFuture(List.of());
     }
-  }
-
-  public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
-    if (piece.getItemId() == null || piece.getPoLineId() == null) {
-      return Future.succeededFuture();
-    }
-    String itemId = piece.getItemId();
-    String poLineId = piece.getPoLineId();
-    return getItemRecordById(itemId, true, requestContext)
+    String holdingId = piece.getHoldingId();
+    return buildPhysicalItemRecordJsonObject(compPOL, holdingId, requestContext)
+      .map(item -> {
+        updateItemWithPieceFields(piece, item);
+        return item;
+      })
       .compose(item -> {
-        if (poLineId != null && item != null && !item.isEmpty()) {
-          updateItemWithPieceFields(piece, item);
-          return updateItem(item, requestContext);
-        }
-        return Future.succeededFuture();
+        logger.debug("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
+        return createItemRecords(item, quantity, requestContext);
       });
   }
 
-  public Future<List<JsonObject>> getItemsByPoLineIdsAndStatus(List<String> poLineIds, String itemStatus, RequestContext requestContext) {
-    logger.debug("getItemsByStatus start");
-    List<Future<List<JsonObject>>> futures = StreamEx
-      .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
-      .map(ids -> {
-        String query = String.format("status.name==%s and %s", itemStatus, HelperUtils.convertFieldListToCqlQuery(ids, InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true));
-        return getItemRecordsByQuery(query, requestContext);
-      })
-      .toList();
-
-    return collectResultsOnSuccess(futures)
-      .map(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
+  private Future<JsonObject> buildPhysicalItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
+    return buildBaseItemRecordJsonObject(compPOL, holdingId, requestContext)
+      .map(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getPhysical().getMaterialType()));
   }
 
-  private void validateItemsCreation(String poLineId, int expectedItemsQuantity, int itemsSize) {
-    if (itemsSize != expectedItemsQuantity) {
-      String message = String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
-        poLineId, expectedItemsQuantity, itemsSize);
-      throw new InventoryException(message);
-    }
+  private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
+    return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
+      .map(loanTypeId -> {
+        JsonObject itemRecord = new JsonObject();
+        itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
+        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()));
+        itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId);
+        itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
+        return itemRecord;
+      });
   }
 
-  /**
-   * Wait for item creation requests completion and filter failed items if any
-   *
-   * @param itemRecord    item record to be created
-   * @param expectedCount count of the items to be created
-   * @return completable future with list of item id's
-   */
   private Future<List<String>> createItemRecords(JsonObject itemRecord, int expectedCount, RequestContext requestContext) {
     List<Future<String>> futures = new ArrayList<>(expectedCount);
     for (int i = 0; i < expectedCount; i++) {
@@ -517,12 +503,6 @@ public class InventoryItemManager {
     return collectResultsOnSuccess(futures);
   }
 
-  /**
-   * Creates new entry in the inventory storage based on the PO line data.
-   *
-   * @param itemData json to post
-   * @return id of newly created entity Record
-   */
   private Future<String> createItemInInventory(JsonObject itemData, RequestContext requestContext) {
     Promise<String> promise = Promise.promise();
     RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT);
@@ -542,81 +522,12 @@ public class InventoryItemManager {
     return promise.future();
   }
 
-  /**
-   * Builds JsonObject representing inventory item minimal data. The schema is located directly in 'mod-inventory-storage' module.
-   *
-   * @param compPOL   PO line to create Item Records for
-   * @param holdingId holding uuid from the inventory
-   * @return item data to be used as request body for POST operation
-   */
-  private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
-    return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
-      .map(loanTypeId -> {
-        JsonObject itemRecord = new JsonObject();
-        itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
-        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()));
-        itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId);
-        itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
-        return itemRecord;
-      });
-  }
-
-  /**
-   * Builds JsonObject representing inventory item minimal data. The schema is located directly in 'mod-inventory-storage' module.
-   *
-   * @param compPOL   PO line to create Item Records for
-   * @param holdingId holding uuid from the inventory
-   * @return item data to be used as request body for POST operation
-   */
-  private Future<JsonObject> buildElectronicItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
-    return buildBaseItemRecordJsonObject(compPOL, holdingId, requestContext)
-      .map(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getEresource().getMaterialType()));
-  }
-
-  /**
-   * Builds JsonObject representing inventory item minimal data. The schema is located directly in 'mod-inventory-storage' module.
-   *
-   * @param compPOL   PO line to create Item Records for
-   * @param holdingId holding uuid from the inventory
-   * @return item data to be used as request body for POST operation
-   */
-  private Future<JsonObject> buildPhysicalItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
-    return buildBaseItemRecordJsonObject(compPOL, holdingId, requestContext)
-      .map(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getPhysical().getMaterialType()));
-  }
-
-  /**
-   * Validates if the json object contains entries and returns entries as list of JsonObject elements
-   *
-   * @param entries {@link JsonObject} representing item storage response
-   * @return list of the entry records as JsonObject elements
-   */
-  private List<JsonObject> extractEntities(JsonObject entries, String key) {
-    return Optional.ofNullable(entries.getJsonArray(key))
+  private List<JsonObject> extractEntities(JsonObject entries) {
+    return Optional.ofNullable(entries.getJsonArray(InventoryUtils.ITEMS))
       .map(objects -> objects.stream()
         .map(JsonObject.class::cast)
         .collect(toList()))
-      .orElseGet(Collections::emptyList);
-  }
-
-  /**
-   * Search for items which might be already created for the PO line
-   *
-   * @param poLineId         purchase order line Id
-   * @param holdingId        holding uuid from the inventory
-   * @param expectedQuantity expected quantity of the items for combination of the holding and PO Line uuid's from the inventory
-   * @return future with list of item id's
-   */
-  private Future<List<JsonObject>> searchStorageExistingItems(String poLineId, String holdingId, int expectedQuantity,
-                                                              RequestContext requestContext) {
-    String query = String.format(LOOKUP_ITEM_QUERY, poLineId, holdingId);
-    RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT).withQuery(query).withOffset(0).withLimit(expectedQuantity);
-    return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(itemsCollection -> {
-        List<JsonObject> items = extractEntities(itemsCollection, ITEMS);
-        logger.debug("{} existing items found out of {} for PO Line with '{}' id", items.size(), expectedQuantity, poLineId);
-        return items;
-      });
+      .orElseGet(List::of);
   }
 
   void updateItemWithPieceFields(Piece piece, JsonObject item) {

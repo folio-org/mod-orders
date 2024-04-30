@@ -6,7 +6,6 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.helper.BaseHelper.ORDER_ID;
-import static org.folio.helper.PoNumberHelper.buildPoLineNumber;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertToPoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
@@ -374,7 +373,7 @@ public class PurchaseOrderLineHelper {
     String oldPoLineNumber = poLineFromStorage.getPoLineNumber();
     Matcher matcher = PO_LINE_NUMBER_PATTERN.matcher(oldPoLineNumber);
     if (matcher.find()) {
-      return buildPoLineNumber(poNumber, matcher.group(2));
+      return PoLineCommonUtil.buildPoLineNumber(poNumber, matcher.group(2));
     }
     logger.error("PO Line - {} has invalid or missing number.", poLineFromStorage.getId());
     return oldPoLineNumber;
@@ -677,7 +676,7 @@ public class PurchaseOrderLineHelper {
     return restClient.getAsJsonObject(rqEntry, requestContext)
       .map(sequenceNumbersJson -> {
         SequenceNumbers sequenceNumbers = JsonObject.mapFrom(sequenceNumbersJson).mapTo(SequenceNumbers.class);
-        return buildPoLineNumber(compOrder.getPoNumber(), sequenceNumbers.getSequenceNumbers().get(0));
+        return PoLineCommonUtil.buildPoLineNumber(compOrder.getPoNumber(), sequenceNumbers.getSequenceNumbers().get(0));
       });
   }
 
