@@ -203,6 +203,14 @@ public final class PoLineCommonUtil {
       .collect(Collectors.groupingBy(Location::getHoldingId));
   }
 
+  public static List<String> getLocationTenants(CompositePoLine poLine) {
+    return poLine.getLocations()
+      .stream()
+      .map(Location::getTenantId)
+      .distinct()
+      .toList();
+  }
+
   public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
     poLine.setAlerts(null);
     poLine.setReportingCodes(null);

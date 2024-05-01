@@ -36,7 +36,6 @@ import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLD
 import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
 import static org.folio.service.inventory.InventoryUtils.DEFAULT_LOAN_TYPE_NAME;
 import static org.folio.service.inventory.InventoryUtils.HOLDINGS_RECORDS;
-import static org.folio.service.inventory.InventoryUtils.HOLDINGS_SOURCES;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_INSTANCE_ID;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryItemManager.ID;
@@ -61,7 +60,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -92,7 +90,6 @@ import org.folio.Instance;
 import org.folio.TestConstants;
 import org.folio.models.PoLineUpdateHolder;
 import org.folio.models.consortium.ConsortiumConfiguration;
-import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -111,6 +108,7 @@ import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.utils.RequestContextMatcher;
 import org.hamcrest.core.IsInstanceOf;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
@@ -119,7 +117,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -148,8 +145,6 @@ public class InventoryManagerTest {
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instances.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
-  private static final JsonObject HOLDINGS_SOURCE_ID_RESPONSE = new JsonObject()
-    .put(HOLDINGS_SOURCES, "f32d531e-df79-46b3-8932-cdd35f7a2264");
 
   @Autowired
   InventoryItemManager inventoryItemManager;
@@ -220,7 +215,7 @@ public class InventoryManagerTest {
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
     List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
        .map(o -> ((JsonObject) o))
-       .collect(toList());
+       .toList();
 
     List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
 
@@ -240,7 +235,7 @@ public class InventoryManagerTest {
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
     List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
       .map(o -> ((JsonObject) o))
-      .collect(toList());
+      .toList();
 
     List<String> holdingIds = holdings.stream().map(holding ->  holding.getString(ID)).collect(toList());
     holdingIds.add(UUID.randomUUID().toString());
@@ -265,7 +260,7 @@ public class InventoryManagerTest {
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
     List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
       .map(o -> ((JsonObject) o))
-      .collect(toList());
+      .toList();
 
     List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
 
@@ -281,9 +276,9 @@ public class InventoryManagerTest {
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
     List<JsonObject> holdings = holdingsCollection.getJsonArray("holdingsRecords").stream()
       .map(o -> ((JsonObject) o))
-      .collect(toList());
+      .toList();
 
-    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).toList();
 
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
     inventoryHoldingManager.getFirstHoldingRecord(instanceId, locationIds.get(0), requestContext).result();
@@ -640,8 +635,8 @@ public class InventoryManagerTest {
 
     JsonObject holdingsRecJson = new JsonObject();
     holdingsRecJson.put(ID, holdingId);
-    holdingsRecJson.put(inventoryItemManager.ITEM_HOLDINGS_RECORD_ID, holdingsRecordId);
-    holdingsRecJson.put(inventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId);
+    holdingsRecJson.put(InventoryItemManager.ITEM_HOLDINGS_RECORD_ID, holdingsRecordId);
+    holdingsRecJson.put(InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId);
 
     JsonObject holdingsRecJsonColl = new JsonObject();
     holdingsRecJsonColl.put(HOLDINGS_RECORDS, new JsonArray().add(holdingsRecJson));
@@ -767,7 +762,7 @@ public class InventoryManagerTest {
     //given
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
-    doReturn(Future.failedFuture(new HttpException(500, inventoryItemManager.BARCODE_ALREADY_EXIST_ERROR)))
+    doReturn(Future.failedFuture(new HttpException(500, InventoryItemManager.BARCODE_ALREADY_EXIST_ERROR)))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
@@ -861,9 +856,9 @@ public class InventoryManagerTest {
     String holdingIdExp = extractId(getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS));
     List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
       .map(o -> ((JsonObject) o))
-      .collect(toList());
+      .toList();
 
-    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).toList();
 
     JsonObject holdingsRecJson = new JsonObject();
     holdingsRecJson.put(HOLDING_INSTANCE_ID, oldInstanceId);
@@ -884,9 +879,9 @@ public class InventoryManagerTest {
     String holdingIdExp = extractId(getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS));
     List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
       .map(o -> ((JsonObject) o))
-      .collect(toList());
+      .toList();
 
-    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).toList();
     Location location = new Location().withHoldingId(holdingIdExp).withQuantity(1).withQuantityPhysical(1);
 
     JsonObject holdingsRecJson = new JsonObject();
@@ -914,12 +909,10 @@ public class InventoryManagerTest {
         new Location().withHoldingId("H3").withTenantId("T2")
       ));
 
-    ArgumentMatcher<RequestContext> match1 = context -> context.getHeaders().get(XOkapiHeaders.TENANT).equals("T1");
-    ArgumentMatcher<RequestContext> match2 = context -> context.getHeaders().get(XOkapiHeaders.TENANT).equals("T2");
     JsonObject holdings1 = createHoldingsCollection("H1");
     JsonObject holdings2 = createHoldingsCollection("H2", "H3");
-    doReturn(succeededFuture(holdings1)).when(restClient).getAsJsonObject(any(RequestEntry.class), argThat(match1));
-    doReturn(succeededFuture(holdings2)).when(restClient).getAsJsonObject(any(RequestEntry.class), argThat(match2));
+    doReturn(succeededFuture(holdings1)).when(restClient).getAsJsonObject(any(RequestEntry.class), RequestContextMatcher.matchTenant("T1"));
+    doReturn(succeededFuture(holdings2)).when(restClient).getAsJsonObject(any(RequestEntry.class), RequestContextMatcher.matchTenant("T2"));
 
     // when
     var future = inventoryHoldingManager.getHoldingsForAllLocationTenants(poLine, requestContext);
@@ -929,8 +922,8 @@ public class InventoryManagerTest {
       .onComplete(result -> {
         List<JsonObject> holdings = result.result();
         assertEquals(3, holdings.size());
-        verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), argThat(match1));
-        verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), argThat(match2));
+        verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), RequestContextMatcher.matchTenant("T1"));
+        verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), RequestContextMatcher.matchTenant("T2"));
         vertxTestContext.completeNow();
       });
 
@@ -949,9 +942,9 @@ public class InventoryManagerTest {
     String holdingIdExp = extractId(getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS));
     List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
       .map(o -> ((JsonObject) o))
-      .collect(toList());
+      .toList();
 
-    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    List<String> locationIds = holdings.stream().map(holding ->  holding.getString(HOLDING_PERMANENT_LOCATION_ID)).toList();
     Location location = new Location().withHoldingId(holdingIdExp).withQuantity(1).withQuantityPhysical(1);
 
     JsonObject holdingsRecJson = new JsonObject();
@@ -980,9 +973,9 @@ public class InventoryManagerTest {
     String holdingIdExp = extractId(firstHoldingJson);
     List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
       .map(o -> ((JsonObject) o))
-      .collect(toList());
+      .toList();
 
-    List<String> locationIds = holdings.stream().map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    List<String> locationIds = holdings.stream().map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID)).toList();
     Location location = new Location().withHoldingId(holdingIdExp).withQuantity(1).withQuantityPhysical(1);
 
     JsonObject holdingsRecJson = new JsonObject();
@@ -1011,9 +1004,9 @@ public class InventoryManagerTest {
     String firstHoldingIdExp = extractId(firstHoldingJson);
     List<JsonObject> holdings = holdingsCollection.getJsonArray(HOLDINGS_RECORDS).stream()
       .map(o -> ((JsonObject) o))
-      .collect(toList());
+      .toList();
 
-    List<String> locationIds = holdings.stream().map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID)).collect(toList());
+    List<String> locationIds = holdings.stream().map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID)).toList();
     Location location = new Location().withLocationId(locationIds.get(0)).withQuantity(1).withQuantityPhysical(1);
 
     JsonObject holdingsRecJson = new JsonObject();
