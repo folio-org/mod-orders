@@ -69,7 +69,9 @@ public class InventoryItemManager {
   public static final String BARCODE_ALREADY_EXIST_ERROR = "lower(jsonb ->> 'barcode'::text) value already exists in table item";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
-  private static final String TOTAL_RECORDS = "totalRecords";
+  private static final String REQUESTS_RECORDS = "requests";
+  private static final String REQUESTS_TOTAL = "totalRecords";
+  private static final String REQUEST_ID = "id";
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   private static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
@@ -136,7 +138,30 @@ public class InventoryItemManager {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
       .withQuery(query).withOffset(0).withLimit(0);
     return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(json -> json.getInteger(TOTAL_RECORDS));
+      .map(json -> json.getInteger(REQUESTS_TOTAL));
+  }
+
+  /**
+   * Returns list of requestIds for specified item.
+   *
+   * @param itemId id of Item
+   * @return future with list of requestIds
+   */
+  public Future<List<String>> getRequestIdsByItemId(String itemId, RequestContext requestContext) {
+    String query = String.format("(itemId==%s and status=\"*\")", itemId);
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
+      .withQuery(query).withOffset(0).withLimit(0);
+    return restClient.getAsJsonObject(requestEntry, requestContext)
+      .map(json -> {
+        List<String> requestIds = new ArrayList<>();
+        var totalRecords = json.getInteger(REQUESTS_TOTAL);
+        var requests = json.getJsonArray(REQUESTS_RECORDS);
+        for (int i = 0; i < totalRecords; i++) {
+          var jsonObj = requests.getJsonObject(i);
+          requestIds.add(jsonObj.getString(REQUEST_ID));
+        }
+        return requestIds;
+      });
   }
 
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {

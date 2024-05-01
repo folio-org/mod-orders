@@ -58,6 +58,7 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
+import org.folio.service.inventory.InventoryBindingManager;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -502,6 +503,12 @@ public class ApplicationConfig {
                                                     SharingInstanceService sharingInstanceService) {
     return new InventoryInstanceManager(restClient, configurationEntriesCache,
       inventoryCache, sharingInstanceService, consortiumConfigurationService);
+  }
+
+  @Bean
+  InventoryBindingManager inventoryBindingManager(RestClient restClient,
+                                                  InventoryItemManager inventoryItemManager) {
+    return new InventoryBindingManager(restClient, inventoryItemManager);
   }
 
   @Bean
