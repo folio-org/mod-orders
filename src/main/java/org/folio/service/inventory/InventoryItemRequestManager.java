@@ -4,9 +4,8 @@ import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOI
 import static org.folio.service.inventory.InventoryUtils.REQUESTS;
 
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -41,30 +40,23 @@ public class InventoryItemRequestManager {
     if (logger.isDebugEnabled()) {
       logger.debug("Filtering itemIds with active requests: {}", itemIds);
     }
-    var futures = itemIds.stream()
-      .map(itemId -> getItemWithRequests(itemId, requestContext))
-      .collect(Collectors.toList());
-    return GenericCompositeFuture.all(futures)
-      .map(f -> f.<String>list().stream()
-        .filter(Objects::nonNull)
+    return circulationRequestsRetriever.getNumberOfRequestsByItemIds(itemIds, requestContext)
+      .map(map -> map.entrySet().stream()
+        .filter(e -> e.getValue() > 0)
+        .map(Map.Entry::getKey)
         .toList());
   }
 
-  private Future<String> getItemWithRequests(String itemId, RequestContext requestContext) {
-    return circulationRequestsRetriever.getNumberOfRequestsByItemId(itemId, requestContext)
-      .map(requests -> requests > 0 ? itemId : null);
+  public Future<Void> cancelItemsRequests(List<String> itemId, RequestContext requestContext) {
+    return handleItemsRequests(itemId, requestContext, reqId -> cancelRequest(reqId, requestContext));
   }
 
-  public Future<Void> cancelItemRequests(String itemId, RequestContext requestContext) {
-    return handleItemRequest(itemId, requestContext, reqId -> cancelRequest(reqId, requestContext));
+  public Future<Void> transferItemsRequests(List<String> originItemId, String destinationItemId, RequestContext requestContext) {
+    return handleItemsRequests(originItemId, requestContext, reqId -> transferRequest(reqId, destinationItemId, requestContext));
   }
 
-  public Future<Void> transferItemRequests(String originItemId, String destinationItemId, RequestContext requestContext) {
-    return handleItemRequest(originItemId, requestContext, reqId -> transferRequest(reqId, destinationItemId, requestContext));
-  }
-
-  private Future<Void> handleItemRequest(String itemId, RequestContext requestContext, Function<String, Future<Void>> handler) {
-    return circulationRequestsRetriever.getRequestIdsByItemId(itemId, requestContext)
+  private Future<Void> handleItemsRequests(List<String> itemId, RequestContext requestContext, Function<String, Future<Void>> handler) {
+    return circulationRequestsRetriever.getRequestIdsByItemIds(itemId, requestContext)
       .compose(reqIds -> {
         var futures = reqIds.stream().map(handler).toList();
         return GenericCompositeFuture.all(futures);
