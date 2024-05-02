@@ -160,23 +160,23 @@ public class UnOpenCompositeOrderManager {
         })
         .mapEmpty();
     }
-    boolean itemsUpdateRequired = PoLineCommonUtil.isItemsUpdateRequired(compPOL);
-    boolean holdingsUpdateRequired = PoLineCommonUtil.isHoldingsUpdateRequired(compPOL);
-    // itemsUpdateRequired => holdingsUpdateRequired
-    if (!itemsUpdateRequired && !holdingsUpdateRequired) {
-      return Future.succeededFuture();
+    if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
+      if (compPOL.getCheckinItems()) { // independent workflow
+        return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) : Future.succeededFuture();
+      } else { // synchronized workflow
+        return (deleteHoldings) ? processInventoryHoldingWithItems(compPOL, requestContext) : processInventoryOnlyWithItems(compPOL, requestContext);
+      }
+    }
+    if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
+      if (compPOL.getCheckinItems()) { // independent workflow
+        return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) : Future.succeededFuture();
+      } else { // synchronized workflow
+        return (deleteHoldings) ? processInventoryOnlyWithHolding(compPOL, requestContext) :
+          deleteExpectedPieces(compPOL, requestContext).mapEmpty();
+      }
     }
 
-    Boolean independentWorkflow = compPOL.getCheckinItems();
-    if (independentWorkflow) {
-      return deleteHoldings ? processInventoryOnlyWithHolding(compPOL, requestContext) : Future.succeededFuture();
-    }
-
-    if (itemsUpdateRequired) {
-      return deleteHoldings ? processInventoryHoldingWithItems(compPOL, requestContext) : processInventoryOnlyWithItems(compPOL, requestContext);
-    } else {
-      return deleteHoldings ? processInventoryOnlyWithHolding(compPOL, requestContext) : deleteExpectedPieces(compPOL, requestContext).mapEmpty();
-    }
+    return Future.succeededFuture();
   }
 
 

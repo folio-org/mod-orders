@@ -10,7 +10,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.PieceItemPair;
-import org.folio.models.PoLineUpdateHolder;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -304,65 +303,6 @@ public class InventoryItemManager {
         .withLocationId(location.getLocationId())
         .withReceivingTenantId(location.getTenantId());
     }
-  }
-
-  /**
-   * Handles Inventory items for passed list of locations. Items are either retrieved from Inventory or new ones are created
-   * if no corresponding item records exist yet.
-   * Returns list of {@link Piece} records with populated item id (and other info) corresponding to given PO line.
-   *
-   * @param compPOL PO line to retrieve/create Item Records for
-   * @param holder  pair of new location provided from POl and location from storage
-   * @return future with list of piece objects
-   */
-  public Future<List<Piece>> handleItemRecords(CompositePoLine compPOL, PoLineUpdateHolder holder, RequestContext requestContext) {
-    List<Location> polLocations = compPOL.getLocations().stream()
-      .filter(location -> location.getLocationId().equals(holder.getNewLocationId()))
-      .collect(toList());
-    Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, polLocations);
-    int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
-    String polId = compPOL.getId();
-
-    logger.debug("Handling {} items for PO Line with id={} and holdings with id={}", piecesWithItemsQty, polId, holder.getOldHoldingId());
-    if (piecesWithItemsQty == 0) {
-      return Future.succeededFuture(Collections.emptyList());
-    }
-    return pieceStorageService.getExpectedPiecesByLineId(compPOL.getId(), requestContext)
-      .map(existingPieces -> {
-        List<Piece> needUpdatePieces = new ArrayList<>();
-        List<Piece> pieces = existingPieces.getPieces().stream()
-          .filter(piece -> piece.getLocationId().equals(holder.getOldLocationId()))
-          .map(piece -> piece.withLocationId(holder.getNewLocationId()))
-          .toList();
-        if (!pieces.isEmpty()) {
-          needUpdatePieces.addAll(pieces);
-        }
-        return needUpdatePieces;
-      })
-      .compose(needUpdatePieces -> {
-        if (!needUpdatePieces.isEmpty()) {
-          return getItemRecordsByIds(needUpdatePieces.stream().map(Piece::getItemId)
-            .collect(toList()), requestContext)
-            .map(items -> buildPieceItemPairList(needUpdatePieces, items));
-        }
-        return Future.succeededFuture(Collections.<PieceItemPair>emptyList());
-      })
-      .compose(pieceItemPairs -> {
-        List<Future<String>> updatedItemIds = new ArrayList<>(pieceItemPairs.size());
-        pieceItemPairs.forEach(pair -> {
-          JsonObject item = pair.getItem();
-          if (isLocationContainsItemLocation(polLocations, item)) {
-            item.put(ITEM_HOLDINGS_RECORD_ID, holder.getNewHoldingId());
-            updatedItemIds.add(updateItem(item, requestContext).map(v -> item.getString(ID)));
-          }
-        });
-        // Wait for all items to be created and corresponding updatedItemIds are built
-        return collectResultsOnSuccess(updatedItemIds)
-          .map(results -> {
-            validateItemsCreation(compPOL.getId(), updatedItemIds.size(), results.size());
-            return pieceItemPairs.stream().map(PieceItemPair::getPiece).collect(toList());
-          });
-      });
   }
 
   private boolean isLocationContainsItemLocation(List<Location> polLocations, JsonObject item) {

@@ -28,8 +28,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PARTIALLY_RETURNED_COLLECTION;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
-import static org.folio.rest.impl.MockServer.ITEMS_RECORDS_MOCK_DATA_PATH;
-import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
@@ -47,7 +45,6 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SU
 import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.service.inventory.InventoryUtils.LOAN_TYPES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -87,8 +84,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.ApiTestSuite;
 import org.folio.Instance;
-import org.folio.TestConstants;
-import org.folio.models.PoLineUpdateHolder;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -98,9 +93,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
@@ -350,82 +343,6 @@ public class InventoryManagerTest {
     List<Piece> pieces = inventoryItemManager.handleItemRecords(reqData, location, requestContext).result();
 
     assertEquals(0, pieces.size());
-  }
-
-  @Test
-  void testShouldNotHandleItemRecordsIfCheckinItemsIsTrueInUpdatePoLIneTime() {
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
-    String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
-    reqData.setId(poLineId);
-    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
-    reqData.getEresource().setAccessProvider(ACTIVE_ACCESS_PROVIDER_B);
-    reqData.getEresource().setCreateInventory(INSTANCE_HOLDING);
-    reqData.getLocations().get(0).setLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
-    reqData.setCheckinItems(true);
-
-    CompositePoLine storagePoLineCom = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c0d08448-347b-418a-8c2f-5fb50248d67e").mapTo(CompositePoLine.class);
-    storagePoLineCom.setAlerts(null);
-    storagePoLineCom.setReportingCodes(null);
-    storagePoLineCom.getLocations().get(0).setQuantityPhysical(1);
-    storagePoLineCom.getLocations().get(0).setQuantity(1);
-    storagePoLineCom.getCost().setQuantityPhysical(1);
-    //When
-    PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withNewLocationId(NEW_LOCATION_ID);
-    List<Piece> pieces = inventoryItemManager.handleItemRecords(reqData, poLineUpdateHolder, requestContext).result();
-
-    assertEquals(0, pieces.size());
-  }
-
-  @Test
-  void testShouldHandleItemRecordsIfPhysycPresentInUpdatePoLineTime() throws IOException {
-    CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c0d08448-347b-418a-8c2f-5fb50248d67e").mapTo(CompositePoLine.class);
-    String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67d";
-    String itemId = "86481a22-633e-4b97-8061-0dc5fdaaeabb";
-    String materialType = "1a54b431-2e4f-452d-9cae-9cee66c9a892";
-    String locationId = "758258bc-ecc1-41b8-abca-f7b610822fff";
-    String oldLocationId = "fcd64ce1-6995-48f0-840e-89ffa2288371";
-
-    reqData.setId(poLineId);
-    reqData.setPurchaseOrderId("9d56b621-202d-414b-9e7f-5fefe4422ab3");
-    reqData.getPhysical().setMaterialType(materialType);
-    reqData.getPhysical().setMaterialSupplier(ACTIVE_ACCESS_PROVIDER_B);
-    reqData.getPhysical().setCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
-    reqData.getLocations().get(0).setQuantityPhysical(1);
-    reqData.getLocations().get(0).setQuantity(1);
-    reqData.getCost().setQuantityPhysical(1);
-    reqData.getLocations().get(0).setLocationId(locationId);
-
-    CompositePoLine storagePoLineCom = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c0d08448-347b-418a-8c2f-5fb50248d67e").mapTo(CompositePoLine.class);
-    storagePoLineCom.setAlerts(null);
-    storagePoLineCom.setReportingCodes(null);
-    storagePoLineCom.getLocations().get(0).setQuantityPhysical(1);
-    storagePoLineCom.getLocations().get(0).setQuantity(1);
-    storagePoLineCom.getCost().setQuantityPhysical(1);
-
-    JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
-    List<JsonObject> needUpdateItems = items.getJsonArray(ITEMS).stream()
-      .map(o -> ((JsonObject) o))
-      .filter(item -> item.getString(TestConstants.ID).equals(itemId))
-      .map(item -> item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLineId))
-      .collect(toList());
-
-    String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", poLineId);
-    PieceCollection existedPieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
-    existedPieces.getPieces().get(0).setItemId(itemId);
-    existedPieces.getPieces().get(0).setFormat(Piece.Format.PHYSICAL);
-    existedPieces.getPieces().get(0).setPoLineId(poLineId);
-    //given
-    doReturn(succeededFuture(existedPieces)).when(pieceStorageService).getExpectedPiecesByLineId(poLineId, requestContext);
-    doReturn(succeededFuture(needUpdateItems)).when(inventoryItemManager).getItemRecordsByIds(Collections.singletonList(itemId), requestContext);
-    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemRecords(any(), eq(requestContext));
-    doReturn(succeededFuture(null)).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-    //When
-    PoLineUpdateHolder poLineUpdateHolder = new PoLineUpdateHolder().withOldLocationId(oldLocationId).withNewLocationId(locationId);
-    List<Piece> pieces = inventoryItemManager.handleItemRecords(reqData, poLineUpdateHolder, requestContext).result();
-
-    assertEquals(1, pieces.size());
-    assertEquals(itemId, pieces.get(0).getItemId());
-    assertEquals(locationId, pieces.get(0).getLocationId());
   }
 
   @Test
