@@ -47,12 +47,12 @@ public class InventoryItemRequestManager {
         .toList());
   }
 
-  public Future<Void> cancelItemsRequests(List<String> itemId, RequestContext requestContext) {
-    return handleItemsRequests(itemId, requestContext, reqId -> cancelRequest(reqId, requestContext));
+  public Future<Void> cancelItemsRequests(String itemId, RequestContext requestContext) {
+    return handleItemsRequests(List.of(itemId), requestContext, reqId -> cancelRequest(reqId, requestContext));
   }
 
-  public Future<Void> transferItemsRequests(List<String> originItemId, String destinationItemId, RequestContext requestContext) {
-    return handleItemsRequests(originItemId, requestContext, reqId -> transferRequest(reqId, destinationItemId, requestContext));
+  public Future<Void> transferItemsRequests(String originItemId, String destinationItemId, RequestContext requestContext) {
+    return handleItemsRequests(List.of(originItemId), requestContext, reqId -> transferRequest(reqId, destinationItemId, requestContext));
   }
 
   private Future<Void> handleItemsRequests(List<String> itemId, RequestContext requestContext, Function<String, Future<Void>> handler) {
