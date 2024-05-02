@@ -69,9 +69,6 @@ public class InventoryItemManager {
   public static final String BARCODE_ALREADY_EXIST_ERROR = "lower(jsonb ->> 'barcode'::text) value already exists in table item";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
-  private static final String REQUESTS_RECORDS = "requests";
-  private static final String REQUESTS_TOTAL = "totalRecords";
-  private static final String REQUEST_ID = "id";
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   private static final String EFFECTIVE_LOCATION = "effectiveLocation";
 

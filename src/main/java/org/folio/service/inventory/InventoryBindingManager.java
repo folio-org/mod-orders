@@ -15,6 +15,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.CirculationRequestsRetriever;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -29,12 +30,12 @@ public class InventoryBindingManager {
   private static final String REQUEST_MOVE_ENDPOINT = REQUEST_ENDPOINT + "/move";
   private static final String REQUEST_JSON_KEY = "destinationItemId";
 
-  private final InventoryItemManager inventoryItemManager;
+  private final CirculationRequestsRetriever circulationRequestsRetriever;
   private final RestClient restClient;
 
-  public InventoryBindingManager(RestClient restClient, InventoryItemManager inventoryItemManager) {
+  public InventoryBindingManager(RestClient restClient, CirculationRequestsRetriever circulationRequestsRetriever) {
     this.restClient = restClient;
-    this.inventoryItemManager = inventoryItemManager;
+    this.circulationRequestsRetriever = circulationRequestsRetriever;
   }
 
   public Future<List<Piece>> getPiecesWithActiveRequests(List<Piece> pieces, RequestContext requestContext) {
@@ -50,8 +51,8 @@ public class InventoryBindingManager {
         .toList());
   }
 
-  public Future<Piece> getPieceWithRequests(Piece piece, RequestContext requestContext) {
-    return inventoryItemManager.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
+  private Future<Piece> getPieceWithRequests(Piece piece, RequestContext requestContext) {
+    return circulationRequestsRetriever.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
       .map(requests -> requests > 0 ? piece : null);
   }
 
@@ -63,8 +64,8 @@ public class InventoryBindingManager {
     return handleBindingPieces(piece, requestContext, reqId -> transferRequest(reqId, requestContext));
   }
 
-  public Future<Void> handleBindingPieces(Piece piece, RequestContext requestContext, Function<String, Future<Void>> bindHandler) {
-    return inventoryItemManager.getRequestIdsByItemId(piece.getItemId(), requestContext)
+  private Future<Void> handleBindingPieces(Piece piece, RequestContext requestContext, Function<String, Future<Void>> bindHandler) {
+    return circulationRequestsRetriever.getRequestIdsByItemId(piece.getItemId(), requestContext)
       .compose(reqIds -> {
         var futures = reqIds.stream().map(bindHandler).toList();
         return GenericCompositeFuture.all(futures);

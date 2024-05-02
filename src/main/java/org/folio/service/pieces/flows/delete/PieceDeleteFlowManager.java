@@ -22,6 +22,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
@@ -40,16 +41,22 @@ public class PieceDeleteFlowManager {
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
   private final PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
   private final BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
+  private final CirculationRequestsRetriever circulationRequestsRetriever;
 
-  public PieceDeleteFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
-    InventoryItemManager inventoryItemManager, PieceUpdateInventoryService pieceUpdateInventoryService,
-    PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+  public PieceDeleteFlowManager(PieceStorageService pieceStorageService,
+                                ProtectionService protectionService,
+                                InventoryItemManager inventoryItemManager,
+                                PieceUpdateInventoryService pieceUpdateInventoryService,
+                                PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
+                                BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
+                                CirculationRequestsRetriever circulationRequestsRetriever) {
     this.pieceStorageService = pieceStorageService;
     this.protectionService = protectionService;
     this.inventoryItemManager = inventoryItemManager;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
     this.pieceDeleteFlowPoLineService = pieceDeleteFlowPoLineService;
     this.basePieceFlowHolderBuilder = basePieceFlowHolderBuilder;
+    this.circulationRequestsRetriever = circulationRequestsRetriever;
   }
 
   public Future<Void> deletePiece(String pieceId, boolean deleteHolding, RequestContext requestContext) {
@@ -70,7 +77,7 @@ public class PieceDeleteFlowManager {
   private Future<Void> isDeletePieceRequestValid(PieceDeletionHolder holder, RequestContext requestContext) {
     List<Error> combinedErrors = new ArrayList<>();
     if (holder.getPieceToDelete().getItemId() != null) {
-      return inventoryItemManager.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext)
+      return circulationRequestsRetriever.getNumberOfRequestsByItemId(holder.getPieceToDelete().getItemId(), requestContext)
         .map(numOfRequests -> {
           if (numOfRequests != null && numOfRequests > 0) {
             combinedErrors.add(ErrorCodes.REQUEST_FOUND.toError());

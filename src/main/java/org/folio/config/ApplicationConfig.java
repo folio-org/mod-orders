@@ -18,6 +18,7 @@ import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ExportHistoryService;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.OrderTemplatesService;
@@ -507,8 +508,8 @@ public class ApplicationConfig {
 
   @Bean
   InventoryBindingManager inventoryBindingManager(RestClient restClient,
-                                                  InventoryItemManager inventoryItemManager) {
-    return new InventoryBindingManager(restClient, inventoryItemManager);
+                                                  CirculationRequestsRetriever circulationRequestsRetriever) {
+    return new InventoryBindingManager(restClient, circulationRequestsRetriever);
   }
 
   @Bean
@@ -552,9 +553,10 @@ public class ApplicationConfig {
                                                           InventoryHoldingManager inventoryHoldingManager,
                                                           PieceStorageService pieceStorageService,
                                                           PurchaseOrderStorageService purchaseOrderStorageService,
-                                      ProtectionService protectionService) {
-    return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-      inventoryItemManager, inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService);
+                                                          ProtectionService protectionService,
+                                                          CirculationRequestsRetriever circulationRequestsRetriever) {
+    return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryItemManager,
+      inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService, circulationRequestsRetriever);
   }
 
   @Bean
@@ -584,11 +586,15 @@ public class ApplicationConfig {
     return new PieceDeleteFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
-  @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
-    InventoryItemManager inventoryItemManager, PieceUpdateInventoryService pieceUpdateInventoryService,
-    PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+  @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService,
+                                                        ProtectionService protectionService,
+                                                        InventoryItemManager inventoryItemManager,
+                                                        PieceUpdateInventoryService pieceUpdateInventoryService,
+                                                        PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
+                                                        BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
+                                                        CirculationRequestsRetriever circulationRequestsRetriever) {
     return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryItemManager, pieceUpdateInventoryService,
-                      pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder);
+                      pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
   }
 
 
@@ -824,6 +830,11 @@ public class ApplicationConfig {
   @Bean
   TitleInstanceService titleInstanceService(InventoryInstanceManager inventoryInstanceManager) {
     return new TitleInstanceService(inventoryInstanceManager);
+  }
+
+  @Bean
+  CirculationRequestsRetriever circulationRequestsRetriever(RestClient restClient) {
+    return new CirculationRequestsRetriever(restClient);
   }
 
 }
