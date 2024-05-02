@@ -14,15 +14,14 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.CirculationRequestsRetriever;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
-public class InventoryBindingManager {
+public class InventoryItemRequestManager {
 
-  private static final Logger logger = LogManager.getLogger(InventoryBindingManager.class);
+  private static final Logger logger = LogManager.getLogger(InventoryItemRequestManager.class);
 
   private static final String REQUEST_CANCEL_MESSAGE = "Cancelling Request with id='{}'";
   private static final String REQUEST_MOVE_MESSAGE = "Moving Request with id='{}' to item with id='{}'";
@@ -33,41 +32,41 @@ public class InventoryBindingManager {
   private final CirculationRequestsRetriever circulationRequestsRetriever;
   private final RestClient restClient;
 
-  public InventoryBindingManager(RestClient restClient, CirculationRequestsRetriever circulationRequestsRetriever) {
+  public InventoryItemRequestManager(RestClient restClient, CirculationRequestsRetriever circulationRequestsRetriever) {
     this.restClient = restClient;
     this.circulationRequestsRetriever = circulationRequestsRetriever;
   }
 
-  public Future<List<Piece>> getPiecesWithActiveRequests(List<Piece> pieces, RequestContext requestContext) {
+  public Future<List<String>> getItemsWithActiveRequests(List<String> itemIds, RequestContext requestContext) {
     if (logger.isDebugEnabled()) {
-      logger.debug("Filtering pieces with active requests: {}", pieces.stream().map(Piece::getId).toList());
+      logger.debug("Filtering itemIds with active requests: {}", itemIds);
     }
-    var futures = pieces.stream()
-      .map(piece -> getPieceWithRequests(piece, requestContext))
+    var futures = itemIds.stream()
+      .map(itemId -> getItemWithRequests(itemId, requestContext))
       .collect(Collectors.toList());
     return GenericCompositeFuture.all(futures)
-      .map(f -> f.<Piece>list().stream()
+      .map(f -> f.<String>list().stream()
         .filter(Objects::nonNull)
         .toList());
   }
 
-  private Future<Piece> getPieceWithRequests(Piece piece, RequestContext requestContext) {
-    return circulationRequestsRetriever.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
-      .map(requests -> requests > 0 ? piece : null);
+  private Future<String> getItemWithRequests(String itemId, RequestContext requestContext) {
+    return circulationRequestsRetriever.getNumberOfRequestsByItemId(itemId, requestContext)
+      .map(requests -> requests > 0 ? itemId : null);
   }
 
-  public Future<Void> cancelPieceItemRequests(Piece piece, RequestContext requestContext) {
-    return handleBindingPieces(piece, requestContext, reqId -> cancelRequest(reqId, requestContext));
+  public Future<Void> cancelItemRequests(String itemId, RequestContext requestContext) {
+    return handleItemRequest(itemId, requestContext, reqId -> cancelRequest(reqId, requestContext));
   }
 
-  public Future<Void> transferPieceItemRequests(Piece piece, String itemId, RequestContext requestContext) {
-    return handleBindingPieces(piece, requestContext, reqId -> transferRequest(reqId, itemId, requestContext));
+  public Future<Void> transferItemRequests(String originItemId, String destinationItemId, RequestContext requestContext) {
+    return handleItemRequest(originItemId, requestContext, reqId -> transferRequest(reqId, destinationItemId, requestContext));
   }
 
-  private Future<Void> handleBindingPieces(Piece piece, RequestContext requestContext, Function<String, Future<Void>> bindHandler) {
-    return circulationRequestsRetriever.getRequestIdsByItemId(piece.getItemId(), requestContext)
+  private Future<Void> handleItemRequest(String itemId, RequestContext requestContext, Function<String, Future<Void>> handler) {
+    return circulationRequestsRetriever.getRequestIdsByItemId(itemId, requestContext)
       .compose(reqIds -> {
-        var futures = reqIds.stream().map(bindHandler).toList();
+        var futures = reqIds.stream().map(handler).toList();
         return GenericCompositeFuture.all(futures);
       })
       .mapEmpty();
