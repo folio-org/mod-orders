@@ -40,19 +40,19 @@ public class InventoryItemRequestManager {
     if (logger.isDebugEnabled()) {
       logger.debug("Filtering itemIds with active requests: {}", itemIds);
     }
-    return circulationRequestsRetriever.getNumberOfRequestsByItemIds(itemIds, requestContext)
+    return circulationRequestsRetriever.getNumbersOfRequestsByItemIds(itemIds, requestContext)
       .map(map -> map.entrySet().stream()
         .filter(e -> e.getValue() > 0)
         .map(Map.Entry::getKey)
         .toList());
   }
 
-  public Future<Void> cancelItemsRequests(String itemId, RequestContext requestContext) {
-    return handleItemsRequests(List.of(itemId), requestContext, reqId -> cancelRequest(reqId, requestContext));
+  public Future<Void> cancelItemsRequests(List<String> itemIds, RequestContext requestContext) {
+    return handleItemsRequests(itemIds, requestContext, reqId -> cancelRequest(reqId, requestContext));
   }
 
-  public Future<Void> transferItemsRequests(String originItemId, String destinationItemId, RequestContext requestContext) {
-    return handleItemsRequests(List.of(originItemId), requestContext, reqId -> transferRequest(reqId, destinationItemId, requestContext));
+  public Future<Void> transferItemsRequests(List<String> originItemIds, String destinationItemId, RequestContext requestContext) {
+    return handleItemsRequests(originItemIds, requestContext, reqId -> transferRequest(reqId, destinationItemId, requestContext));
   }
 
   private Future<Void> handleItemsRequests(List<String> itemId, RequestContext requestContext, Function<String, Future<Void>> handler) {

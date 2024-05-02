@@ -33,59 +33,41 @@ public class CirculationRequestsRetriever {
     this.restClient = restClient;
   }
 
-  /**
-   * Returns number of requests for specified item.
-   *
-   * @param itemId id of Item
-   * @return future with number of requests
-   */
   public Future<Integer> getNumberOfRequestsByItemId(String itemId, RequestContext requestContext) {
-    return getRequestById(itemId, 0, requestContext)
+    String query = String.format("(itemId==%s and status=\"*\")", itemId);
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
+      .withQuery(query).withOffset(0).withLimit(0); // limit = 0 means payload will include only totalRecords value
+    return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(json -> json.getInteger(REQUESTS_TOTAL));
   }
 
-  /**
-   * Returns map of items and associated requests' amount
-   *
-   * @param itemIds ids of Items
-   * @return future with map of items and number of requests
-   */
-  public Future<Map<String, Long>> getNumberOfRequestsByItemIds(List<String> itemIds, RequestContext requestContext) {
-    return getRequestsByIds(itemIds, Integer.MAX_VALUE, requestContext)
+  public Future<Map<String, Long>> getNumbersOfRequestsByItemIds(List<String> itemIds, RequestContext requestContext) {
+    return getRequestsByIds(itemIds, requestContext)
       .map(jsonList -> jsonList.stream()
         .collect(Collectors.groupingBy(json -> json.getString(ITEM_ID), Collectors.counting()))
       );
   }
 
-  /**
-   * Returns list of requestIds for specified item.
-   *
-   * @param itemIds ids of Items
-   * @return future with list of requestIds
-   */
   public Future<List<String>> getRequestIdsByItemIds(List<String> itemIds, RequestContext requestContext) {
-    return getRequestsByIds(itemIds, Integer.MAX_VALUE, requestContext)
+    return getRequestsByIds(itemIds, requestContext)
       .map(jsonList -> jsonList.stream()
         .map(json -> json.getString(ID))
         .toList()
       );
   }
 
-  private Future<JsonObject> getRequestById(String itemId, int limit, RequestContext requestContext) {
-    String query = String.format("(itemId==%s and status=\"*\")", itemId);
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
-      .withQuery(query).withOffset(0).withLimit(limit);
-    return restClient.getAsJsonObject(requestEntry, requestContext);
-  }
-
-  private Future<List<JsonObject>> getRequestsByIds(List<String> itemIds, int limit, RequestContext requestContext) {
+  private Future<List<JsonObject>> getRequestsByIds(List<String> itemIds, RequestContext requestContext) {
     var futures = StreamEx.ofSubLists(itemIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> String.format("(%s and status=\"*\")", convertIdsToCqlQuery(ids, ITEM_ID)))
       .map(query -> new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
-        .withQuery(query).withOffset(0).withLimit(limit))
+        .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE))
       .map(entry -> restClient.getAsJsonObject(entry, requestContext))
       .toList();
 
+    // Mapping logic:
+    // Lists<List<Collection of Requests>> ->
+    // List<Collection of Requests> ->
+    // List<Requests>
     return GenericCompositeFuture.all(futures)
       .map(f -> f.<List<JsonObject>>list().stream()
         .flatMap(Collection::stream)
