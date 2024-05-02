@@ -79,6 +79,7 @@ public class HelperUtils {
 
   public static final String ID = "id";
   public static final String FUND_ID = "fundId";
+  public static final String ITEM_ID = "itemId";
   public static final String COMPOSITE_PO_LINES = "compositePoLines";
   public static final String CONFIGS = "configs";
   public static final String CONFIG_NAME = "configName";
