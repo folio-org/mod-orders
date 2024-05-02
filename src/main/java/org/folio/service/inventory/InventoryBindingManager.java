@@ -60,8 +60,8 @@ public class InventoryBindingManager {
     return handleBindingPieces(piece, requestContext, reqId -> cancelRequest(reqId, requestContext));
   }
 
-  public Future<Void> transferPieceItemRequests(Piece piece, RequestContext requestContext) {
-    return handleBindingPieces(piece, requestContext, reqId -> transferRequest(reqId, requestContext));
+  public Future<Void> transferPieceItemRequests(Piece piece, String itemId, RequestContext requestContext) {
+    return handleBindingPieces(piece, requestContext, reqId -> transferRequest(reqId, itemId, requestContext));
   }
 
   private Future<Void> handleBindingPieces(Piece piece, RequestContext requestContext, Function<String, Future<Void>> bindHandler) {
@@ -79,20 +79,12 @@ public class InventoryBindingManager {
     return restClient.delete(requestEntry, requestContext);
   }
 
-  private Future<Void> transferRequest(String reqId, RequestContext requestContext) {
-    return createNewItemForRequest(reqId, requestContext)
-      .compose(itemId -> {
-        logger.info(REQUEST_MOVE_MESSAGE, reqId, itemId);
-        JsonObject jsonObject =  JsonObject.of(REQUEST_JSON_KEY, itemId);
-        RequestEntry requestEntry = new RequestEntry(String.format(REQUEST_MOVE_ENDPOINT, reqId));
-        return restClient.postJsonObject(requestEntry, jsonObject, requestContext);
-      })
-      .mapEmpty();
-
-  }
-
-  private Future<String> createNewItemForRequest(String requestId, RequestContext requestContext) {
-    throw new RuntimeException("Not implemented");
+  private Future<Void> transferRequest(String reqId, String itemId, RequestContext requestContext) {
+      logger.info(REQUEST_MOVE_MESSAGE, reqId, itemId);
+      JsonObject jsonObject =  JsonObject.of(REQUEST_JSON_KEY, itemId);
+      RequestEntry requestEntry = new RequestEntry(String.format(REQUEST_MOVE_ENDPOINT, reqId));
+      return restClient.postJsonObject(requestEntry, jsonObject, requestContext)
+        .mapEmpty();
   }
 
 }
