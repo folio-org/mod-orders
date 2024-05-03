@@ -505,6 +505,11 @@ public class ApplicationConfig {
   }
 
   @Bean
+  InventoryItemStatusSyncService itemStatusSyncService(InventoryItemManager inventoryItemManager) {
+    return new InventoryItemStatusSyncService(inventoryItemManager);
+  }
+
+  @Bean
   PieceChangeReceiptStatusPublisher receiptStatusPublisher() {
     return new PieceChangeReceiptStatusPublisher();
   }
