@@ -238,7 +238,7 @@ public class UnOpenCompositeOrderManager {
     return deleteExpectedPieces(compPOL, requestContext)
       .compose(deletedPieces ->
         GenericCompositeFuture.all(
-          PoLineCommonUtil.getTenantsFromLocationsOrRequest(compPOL, requestContext)
+          PoLineCommonUtil.getTenantsFromLocations(compPOL)
             .stream()
             .map(tenantId -> processInventoryOnlyWithItemsForTenant(compPOL, createContextWithNewTenantId(requestContext, tenantId)))
             .toList()
@@ -262,7 +262,7 @@ public class UnOpenCompositeOrderManager {
 
   private Future<Void> processInventoryHoldingWithItems(CompositePoLine compPOL, RequestContext requestContext) {
     return GenericCompositeFuture.all(
-      PoLineCommonUtil.getTenantsFromLocationsOrRequest(compPOL, requestContext)
+      PoLineCommonUtil.getTenantsFromLocations(compPOL)
         .stream()
         .map(tenantId -> processInventoryHoldingWithItemsForTenant(compPOL, createContextWithNewTenantId(requestContext, tenantId)))
         .toList()

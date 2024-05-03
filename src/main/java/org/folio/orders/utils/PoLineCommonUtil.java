@@ -23,10 +23,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
-import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -205,14 +203,12 @@ public final class PoLineCommonUtil {
       .collect(Collectors.groupingBy(Location::getHoldingId));
   }
 
-  public static List<String> getTenantsFromLocationsOrRequest(CompositePoLine poLine, RequestContext requestContext) {
-    String requestTenantId = requestContext.getHeaders().get(XOkapiHeaders.TENANT);
-    List<String> locationTenantIds = poLine.getLocations()
+  public static List<String> getTenantsFromLocations(CompositePoLine poLine) {
+    return poLine.getLocations()
       .stream()
       .map(Location::getTenantId)
       .distinct()
       .toList();
-    return locationTenantIds.isEmpty() ? List.of(requestTenantId) : locationTenantIds;
   }
 
   public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
