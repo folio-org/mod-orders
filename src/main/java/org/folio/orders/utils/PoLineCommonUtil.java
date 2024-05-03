@@ -204,7 +204,11 @@ public final class PoLineCommonUtil {
   }
 
   public static List<String> getTenantsFromLocations(CompositePoLine poLine) {
-    return poLine.getLocations()
+    return getTenantsFromLocations(poLine.getLocations());
+  }
+
+  public static List<String> getTenantsFromLocations(List<Location> locations) {
+    return locations
       .stream()
       .map(Location::getTenantId)
       .distinct()

@@ -47,6 +47,7 @@ import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
@@ -310,7 +311,7 @@ public class PurchaseOrderHelperTest {
               CompositeOrderDynamicDataPopulateService combinedPopulateService,
               EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
               TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-              PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryItemManager inventoryItemManager,
+              PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
               UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
               PurchaseOrderStorageService purchaseOrderStorageService,
               ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
@@ -319,9 +320,10 @@ public class PurchaseOrderHelperTest {
               ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService, RestClient restClient) {
       return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
         combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-        purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, inventoryItemManager,
-        unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
-        poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager, organizationService, restClient);
+        purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, itemStatusSyncService,
+        unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService,
+        configurationEntriesCache, poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService,
+        reOpenCompositeOrderManager, organizationService, restClient);
     }
   }
 

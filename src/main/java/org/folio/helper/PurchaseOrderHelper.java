@@ -3,7 +3,6 @@ package org.folio.helper;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.helper.BaseHelper.MAX_REPEAT_ON_FAILURE;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
@@ -31,7 +30,6 @@ import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
 import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
@@ -47,7 +45,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +58,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
-import org.folio.completablefuture.VertxFutureRepeater;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ItemStatus;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -69,7 +65,6 @@ import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -81,7 +76,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -95,7 +89,7 @@ import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
@@ -112,7 +106,6 @@ import org.folio.service.titles.TitlesService;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
 
 public class PurchaseOrderHelper {
   private static final Logger logger = LogManager.getLogger(PurchaseOrderHelper.class);
@@ -129,7 +122,7 @@ public class PurchaseOrderHelper {
   private final ProtectionService protectionService;
   private final PrefixService prefixService;
   private final SuffixService suffixService;
-  private final InventoryItemManager inventoryItemManager;
+  private final InventoryItemStatusSyncService itemStatusSyncService;
   private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
   private final OpenCompositeOrderManager openCompositeOrderManager;
   private final OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
@@ -147,8 +140,8 @@ public class PurchaseOrderHelper {
       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
       OrderInvoiceRelationService orderInvoiceRelationService, TagService tagService,
       PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-      ProtectionService protectionService, PrefixService prefixService,
-      SuffixService suffixService, InventoryItemManager inventoryItemManager, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+      ProtectionService protectionService, PrefixService prefixService, SuffixService suffixService,
+      InventoryItemStatusSyncService itemStatusSyncService, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
       OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
       ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
       OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
@@ -166,7 +159,7 @@ public class PurchaseOrderHelper {
     this.protectionService = protectionService;
     this.prefixService = prefixService;
     this.suffixService = suffixService;
-    this.inventoryItemManager = inventoryItemManager;
+    this.itemStatusSyncService = itemStatusSyncService;
     this.unOpenCompositeOrderManager = unOpenCompositeOrderManager;
     this.openCompositeOrderManager = openCompositeOrderManager;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
@@ -351,9 +344,9 @@ public class PurchaseOrderHelper {
   public Future<Void> handleFinalOrderItemsStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, String initialOrdersStatus,
                                                              RequestContext requestContext) {
     if (isOrderClosing(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
-      return updateItemsStatusInInventory(poLines, ItemStatus.ON_ORDER, ItemStatus.ORDER_CLOSED, requestContext);
+      return itemStatusSyncService.updateItemStatusesInInventory(poLines, ItemStatus.ON_ORDER, ItemStatus.ORDER_CLOSED, requestContext);
     } else if (isOrderReopening(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
-      return updateItemsStatusInInventory(poLines, ItemStatus.ORDER_CLOSED, ItemStatus.ON_ORDER, requestContext);
+      return itemStatusSyncService.updateItemStatusesInInventory(poLines, ItemStatus.ORDER_CLOSED, ItemStatus.ON_ORDER, requestContext);
     }
     return Future.succeededFuture();
   }
@@ -813,66 +806,8 @@ public class PurchaseOrderHelper {
       .map(CompositeOrderRetrieveHolder::getOrder);
   }
 
-
-  private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
-    return GenericCompositeFuture.join(items.stream()
-      .map(item -> inventoryItemManager.updateItem(item, requestContext))
-      .collect(toList()))
-      .mapEmpty();
-  }
-
   private List<CompositePoLine> getNonPackageLines(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
-  }
-
-  private List<JsonObject> updateStatusName(List<JsonObject> items, ItemStatus status) {
-    items.forEach(item -> item.getJsonObject("status").put("name", status.value()));
-    return items;
-  }
-
-  private Future<Void> updateItemsStatusInInventory(List<PoLine> poLines,
-    ItemStatus currentStatus, ItemStatus newStatus, RequestContext requestContext) {
-
-    if (CollectionUtils.isEmpty(poLines)) {
-      return Future.succeededFuture();
-    }
-    return GenericCompositeFuture.join(
-      StreamEx.ofSubLists(poLines, MAX_IDS_FOR_GET_RQ_15)
-        .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemsStatus(chunk, currentStatus, newStatus, requestContext)))
-        .collect(toList()))
-      .mapEmpty();
-  }
-
-  private Future<Void> updateItemsStatus(List<PoLine> poLines,
-    ItemStatus currentStatus, ItemStatus newStatus, RequestContext requestContext) {
-
-    Map<String, List<String>> tenantIdToPoLineIds = getTenantIdsToPoLineIdsMap(poLines);
-    List<Future<Void>> futures = new ArrayList<>();
-    for (Map.Entry<String, List<String>> entry : tenantIdToPoLineIds.entrySet()) {
-      String tenantId = entry.getKey();
-      List<String> poLineIds = entry.getValue();
-      RequestContext updatedContext = RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId);
-      Future<Void> updateItemFeature = inventoryItemManager.getItemsByPoLineIdsAndStatus(poLineIds, currentStatus.value(), updatedContext)
-        .map(items -> updateStatusName(items, newStatus))
-        .compose(items -> updateItemsInInventory(items, requestContext));
-      futures.add(updateItemFeature);
-    }
-    return GenericCompositeFuture.all(futures)
-      .mapEmpty();
-  }
-
-  private Map<String, List<String>> getTenantIdsToPoLineIdsMap(List<PoLine> poLines) {
-    Map<String, List<String>> result = new HashMap<>();
-    for (PoLine poLine : poLines) {
-      for (Location location : poLine.getLocations()) {
-        String tenantId = location.getTenantId();
-        if (!result.containsKey(tenantId)) {
-          result.put(tenantId, new ArrayList<>());
-        }
-        result.get(tenantId).add(poLine.getId());
-      }
-    }
-    return result;
   }
 
   private Set<ProtectedOperationType> getInvolvedOperations(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
