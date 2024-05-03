@@ -39,18 +39,40 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public final class PoLineCommonUtil {
-  public static final String DASH_SEPARATOR = "-";
+  private static final String DASH_SEPARATOR = "-";
   private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
 
-  public static final List<String> NOT_EDITABLE_ONGOING_SUBSCRIPTION_FIELDS = List.of("reviewDate", "manualRenewal");
-  public static final List<String> NOT_EDITABLE_ONGOING_NOT_SUBSCRIPTION_FIELDS = List.of("interval", "renewalDate", "reviewPeriod", "manualRenewal");
+  private static final List<String> NOT_EDITABLE_ONGOING_SUBSCRIPTION_FIELDS = List.of(
+    "reviewDate",
+    "manualRenewal"
+  );
+
+  private static final List<String> NOT_EDITABLE_ONGOING_NOT_SUBSCRIPTION_FIELDS = List.of(
+    "interval",
+    "renewalDate",
+    "reviewPeriod",
+    "manualRenewal"
+  );
 
   private PoLineCommonUtil() {
+  }
 
+  public static String buildPoLineNumber(String poNumber, String sequence) {
+    return poNumber + DASH_SEPARATOR + sequence;
   }
 
   public static void sortPoLinesByPoLineNumber(List<CompositePoLine> poLines) {
     poLines.sort(PoLineCommonUtil::comparePoLinesByPoLineNumber);
+  }
+
+  private static int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {
+    String n1 = poLine1.getPoLineNumber();
+    String n2 = poLine2.getPoLineNumber();
+    if (n1 == null || n2 == null)
+      return 0;
+    String poLineNumberSuffix1 = n1.split(DASH_SEPARATOR)[1];
+    String poLineNumberSuffix2 = n2.split(DASH_SEPARATOR)[1];
+    return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
   }
 
   public static boolean isReceiptNotRequired(CompositePoLine.ReceiptStatus receiptStatus) {
@@ -147,16 +169,6 @@ public final class PoLineCommonUtil {
       || (isHoldingUpdateRequiredForEresource(compPOL) && ObjectUtils.defaultIfNull(location.getQuantityElectronic(), 0) > 0);
   }
 
-  private static int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {
-    String n1 = poLine1.getPoLineNumber();
-    String n2 = poLine2.getPoLineNumber();
-    if (n1 == null || n2 == null)
-      return 0;
-    String poLineNumberSuffix1 = n1.split(DASH_SEPARATOR)[1];
-    String poLineNumberSuffix2 = n2.split(DASH_SEPARATOR)[1];
-    return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
-  }
-
   /**
    * Group all PO Line's locations for which the holding should be created by location identifier
    * @param compPOL PO line with locations to group
@@ -189,6 +201,14 @@ public final class PoLineCommonUtil {
       .filter(location -> Objects.nonNull(location.getHoldingId()))
       .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location))
       .collect(Collectors.groupingBy(Location::getHoldingId));
+  }
+
+  public static List<String> getTenantsFromLocations(CompositePoLine poLine) {
+    return poLine.getLocations()
+      .stream()
+      .map(Location::getTenantId)
+      .distinct()
+      .toList();
   }
 
   public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
