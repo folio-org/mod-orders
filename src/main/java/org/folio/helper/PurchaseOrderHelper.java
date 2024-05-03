@@ -47,6 +47,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -62,11 +63,13 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.completablefuture.VertxFutureRepeater;
 import org.folio.models.CompositeOrderRetrieveHolder;
+import org.folio.models.ItemStatus;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -78,6 +81,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -347,9 +351,9 @@ public class PurchaseOrderHelper {
   public Future<Void> handleFinalOrderItemsStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, String initialOrdersStatus,
                                                              RequestContext requestContext) {
     if (isOrderClosing(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
-      return updateItemsStatusInInventory(poLines, "On order", "Order closed", requestContext);
+      return updateItemsStatusInInventory(poLines, ItemStatus.ON_ORDER, ItemStatus.ORDER_CLOSED, requestContext);
     } else if (isOrderReopening(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
-      return updateItemsStatusInInventory(poLines, "Order closed", "On order", requestContext);
+      return updateItemsStatusInInventory(poLines, ItemStatus.ORDER_CLOSED, ItemStatus.ON_ORDER, requestContext);
     }
     return Future.succeededFuture();
   }
@@ -821,31 +825,54 @@ public class PurchaseOrderHelper {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
   }
 
-  private List<JsonObject> updateStatusName(List<JsonObject> items, String status) {
-    items.forEach(item -> item.getJsonObject("status").put("name", status));
+  private List<JsonObject> updateStatusName(List<JsonObject> items, ItemStatus status) {
+    items.forEach(item -> item.getJsonObject("status").put("name", status.value()));
     return items;
   }
 
   private Future<Void> updateItemsStatusInInventory(List<PoLine> poLines,
-    String currentStatus, String newStatus, RequestContext requestContext) {
+    ItemStatus currentStatus, ItemStatus newStatus, RequestContext requestContext) {
 
     if (CollectionUtils.isEmpty(poLines)) {
       return Future.succeededFuture();
     }
-    List<String> poLineIds = poLines.stream().map(PoLine::getId).collect(toList());
     return GenericCompositeFuture.join(
-      StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
+      StreamEx.ofSubLists(poLines, MAX_IDS_FOR_GET_RQ_15)
         .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemsStatus(chunk, currentStatus, newStatus, requestContext)))
         .collect(toList()))
       .mapEmpty();
   }
 
-  private Future<Void> updateItemsStatus(List<String> poLineIds,
-    String currentStatus, String newStatus, RequestContext requestContext) {
+  private Future<Void> updateItemsStatus(List<PoLine> poLines,
+    ItemStatus currentStatus, ItemStatus newStatus, RequestContext requestContext) {
 
-    return inventoryItemManager.getItemsByPoLineIdsAndStatus(poLineIds, currentStatus, requestContext)
-      .map(items -> updateStatusName(items, newStatus))
-      .compose(items -> updateItemsInInventory(items, requestContext));
+    Map<String, List<String>> tenantIdToPoLineIds = getTenantIdsToPoLineIdsMap(poLines);
+    List<Future<Void>> futures = new ArrayList<>();
+    for (Map.Entry<String, List<String>> entry : tenantIdToPoLineIds.entrySet()) {
+      String tenantId = entry.getKey();
+      List<String> poLineIds = entry.getValue();
+      RequestContext updatedContext = RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId);
+      Future<Void> updateItemFeature = inventoryItemManager.getItemsByPoLineIdsAndStatus(poLineIds, currentStatus.value(), updatedContext)
+        .map(items -> updateStatusName(items, newStatus))
+        .compose(items -> updateItemsInInventory(items, requestContext));
+      futures.add(updateItemFeature);
+    }
+    return GenericCompositeFuture.all(futures)
+      .mapEmpty();
+  }
+
+  private Map<String, List<String>> getTenantIdsToPoLineIdsMap(List<PoLine> poLines) {
+    Map<String, List<String>> result = new HashMap<>();
+    for (PoLine poLine : poLines) {
+      for (Location location : poLine.getLocations()) {
+        String tenantId = location.getTenantId();
+        if (!result.containsKey(tenantId)) {
+          result.put(tenantId, new ArrayList<>());
+        }
+        result.get(tenantId).add(poLine.getId());
+      }
+    }
+    return result;
   }
 
   private Set<ProtectedOperationType> getInvolvedOperations(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {

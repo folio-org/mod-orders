@@ -50,6 +50,7 @@ import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFieldsUtil;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.RestConstants;
 import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.core.RestClient;
@@ -740,23 +741,33 @@ public class PurchaseOrderLineHelper {
       return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
         .compose(poLines -> {
           List<PoLine> notCanceledPoLines = poLines.stream().filter(Predicate.not(this::isDbPoLineStatusCancelled)).toList();
-          if (CollectionUtils.isNotEmpty(notCanceledPoLines)) {
-            return inventoryItemManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
-              .compose(items -> {
-                //Each poLine can have only one linked item
-                Optional<JsonObject> poLineItem = items.stream()
-                  .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
-                if (poLineItem.isPresent()) {
-                  JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
-                  inventoryItemManager.updateItem(updatedItem, requestContext);
-                }
-                return Future.succeededFuture(null);
-              });
+          if (CollectionUtils.isEmpty(notCanceledPoLines)) {
+            logger.info("updateInventoryItemStatus:: not canceled po lines not found, returning...");
+            return Future.succeededFuture(null);
           }
-          return Future.succeededFuture(null);
+          return GenericCompositeFuture.all(
+            PoLineCommonUtil.getTenantsFromLocations(compOrderLine)
+              .stream()
+              .map(tenantId -> updateItemStatusForTenant(compOrderLine, RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId)))
+              .toList()
+          ).mapEmpty();
         });
     }
     return Future.succeededFuture(null);
+  }
+
+  private Future<Void> updateItemStatusForTenant(CompositePoLine compOrderLine, RequestContext requestContext) {
+    return inventoryItemManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
+      .compose(items -> {
+        //Each poLine can have only one linked item
+        Optional<JsonObject> poLineItem = items.stream()
+          .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
+        if (poLineItem.isPresent()) {
+          JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
+          return inventoryItemManager.updateItem(updatedItem, requestContext);
+        }
+        return Future.succeededFuture(null);
+      });
   }
 
   private boolean isStatusChanged(CompositePoLine compOrderLine, PoLine lineFromStorage) {
