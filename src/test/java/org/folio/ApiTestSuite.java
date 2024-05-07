@@ -65,6 +65,7 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategyTes
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
+import org.folio.service.inventory.InventoryItemRequestServiceTest;
 import org.folio.service.inventory.InventoryItemStatusSyncServiceTest;
 import org.folio.service.inventory.InventoryItemRequestManagerTest;
 import org.folio.service.inventory.InventoryManagerTest;
@@ -263,7 +264,7 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class InventoryItemRequestManagerTestNested extends InventoryItemRequestManagerTest {
+  class InventoryItemRequestServiceTestNested extends InventoryItemRequestServiceTest {
   }
 
   @Nested

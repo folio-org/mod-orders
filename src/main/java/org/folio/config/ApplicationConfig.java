@@ -59,7 +59,7 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.inventory.InventoryItemRequestManager;
+import org.folio.service.inventory.InventoryItemRequestService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -506,9 +506,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  InventoryItemRequestManager inventoryItemRequestManager(RestClient restClient,
+  InventoryItemRequestService inventoryItemRequestService(RestClient restClient,
                                                           CirculationRequestsRetriever circulationRequestsRetriever) {
-    return new InventoryItemRequestManager(restClient, circulationRequestsRetriever);
+    return new InventoryItemRequestService(restClient, circulationRequestsRetriever);
   }
 
   @Bean

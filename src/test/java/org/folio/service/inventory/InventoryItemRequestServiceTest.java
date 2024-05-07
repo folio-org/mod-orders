@@ -55,13 +55,13 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
-public class InventoryItemRequestManagerTest {
+public class InventoryItemRequestServiceTest {
 
   @Autowired
   RestClient restClient;
 
   @Autowired
-  InventoryItemRequestManager inventoryItemRequestManager;
+  InventoryItemRequestService inventoryItemRequestService;
 
   @Autowired
   CirculationRequestsRetriever circulationRequestsRetriever;
@@ -78,7 +78,7 @@ public class InventoryItemRequestManagerTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
-    initSpringContext(InventoryItemRequestManagerTest.ContextConfiguration.class);
+    initSpringContext(InventoryItemRequestServiceTest.ContextConfiguration.class);
   }
 
   @AfterAll
@@ -116,7 +116,7 @@ public class InventoryItemRequestManagerTest {
 
     doReturn(Future.succeededFuture(itemReqMap)).when(circulationRequestsRetriever).getNumbersOfRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<List<String>> future = inventoryItemRequestManager.getItemsWithActiveRequests(itemIds, requestContext);
+    Future<List<String>> future = inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -135,7 +135,7 @@ public class InventoryItemRequestManagerTest {
 
     doReturn(Future.succeededFuture(itemReqMap)).when(circulationRequestsRetriever).getNumbersOfRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<List<String>> future = inventoryItemRequestManager.getItemsWithActiveRequests(itemIds, requestContext);
+    Future<List<String>> future = inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -154,7 +154,7 @@ public class InventoryItemRequestManagerTest {
     doReturn(Future.succeededFuture()).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
     doReturn(Future.succeededFuture(List.of(reqId))).when(circulationRequestsRetriever).getRequestIdsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestManager.cancelItemsRequests(List.of(itemId), requestContext);
+    Future<Void> future = inventoryItemRequestService.cancelItemsRequests(List.of(itemId), requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -171,7 +171,7 @@ public class InventoryItemRequestManagerTest {
     doReturn(Future.succeededFuture()).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
     doReturn(Future.succeededFuture(reqIds)).when(circulationRequestsRetriever).getRequestIdsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestManager.cancelItemsRequests(itemIds, requestContext);
+    Future<Void> future = inventoryItemRequestService.cancelItemsRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -190,7 +190,7 @@ public class InventoryItemRequestManagerTest {
     doReturn(Future.succeededFuture()).when(restClient).postJsonObject(any(RequestEntry.class), eq(jsonObject), eq(requestContext));
     doReturn(Future.succeededFuture(List.of(reqId))).when(circulationRequestsRetriever).getRequestIdsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestManager.transferItemsRequests(List.of(itemId), destItemId, requestContext);
+    Future<Void> future = inventoryItemRequestService.transferItemsRequests(List.of(itemId), destItemId, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -209,7 +209,7 @@ public class InventoryItemRequestManagerTest {
     doReturn(Future.succeededFuture()).when(restClient).postJsonObject(any(RequestEntry.class), eq(jsonObject), eq(requestContext));
     doReturn(Future.succeededFuture(reqIds)).when(circulationRequestsRetriever).getRequestIdsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestManager.transferItemsRequests(itemIds, destItemId, requestContext);
+    Future<Void> future = inventoryItemRequestService.transferItemsRequests(itemIds, destItemId, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -243,9 +243,9 @@ public class InventoryItemRequestManagerTest {
     }
 
     @Bean
-    public InventoryItemRequestManager inventoryItemRequestManager(RestClient restClient,
+    public InventoryItemRequestService inventoryItemRequestService(RestClient restClient,
                                                                    CirculationRequestsRetriever circulationRequestsRetriever) {
-      return new InventoryItemRequestManager(restClient, circulationRequestsRetriever);
+      return new InventoryItemRequestService(restClient, circulationRequestsRetriever);
     }
 
   }

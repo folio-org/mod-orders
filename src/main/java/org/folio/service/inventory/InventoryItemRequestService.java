@@ -19,9 +19,9 @@ import org.folio.service.CirculationRequestsRetriever;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
-public class InventoryItemRequestManager {
+public class InventoryItemRequestService {
 
-  private static final Logger logger = LogManager.getLogger(InventoryItemRequestManager.class);
+  private static final Logger logger = LogManager.getLogger(InventoryItemRequestService.class);
 
   private static final String CANCEL_MESSAGE = "cancelRequest:: Cancelling Request with id='{}'";
   private static final String MOVE_MESSAGE = "transferRequest:: Moving Request with id='{}' to item with id='{}'";
@@ -32,7 +32,7 @@ public class InventoryItemRequestManager {
   private final CirculationRequestsRetriever circulationRequestsRetriever;
   private final RestClient restClient;
 
-  public InventoryItemRequestManager(RestClient restClient, CirculationRequestsRetriever circulationRequestsRetriever) {
+  public InventoryItemRequestService(RestClient restClient, CirculationRequestsRetriever circulationRequestsRetriever) {
     this.restClient = restClient;
     this.circulationRequestsRetriever = circulationRequestsRetriever;
   }
