@@ -1,5 +1,58 @@
 package org.folio.rest.impl;
 
+import io.restassured.response.Response;
+import io.vertx.core.json.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.ApiTestSuite;
+import org.folio.HttpStatus;
+import org.folio.config.ApplicationConfig;
+import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.rest.acq.model.PieceCollection;
+import org.folio.rest.jaxrs.model.BindPiecesCollection;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Eresource;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.ExpectCollection;
+import org.folio.rest.jaxrs.model.ExpectPiece;
+import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.jaxrs.model.ReceivingCollection;
+import org.folio.rest.jaxrs.model.ReceivingItemResult;
+import org.folio.rest.jaxrs.model.ReceivingResult;
+import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.ToBeBound;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.rest.jaxrs.model.ToBeExpected;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
 import static org.folio.RestTestUtils.verifyPostResponse;
@@ -7,15 +60,18 @@ import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.ORDERS_BIND_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_EXPECT_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
 import static org.folio.TestUtils.getInstanceId;
+import static org.folio.TestUtils.getMinimalContentBindItem;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMinimalContentPiece;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.TestUtils.getTitle;
 import static org.folio.orders.events.handlers.HandlersTestHelper.verifyCheckinOrderStatusUpdateEvent;
 import static org.folio.orders.events.handlers.HandlersTestHelper.verifyOrderStatusUpdateEvent;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
@@ -23,6 +79,7 @@ import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredFor
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
@@ -65,56 +122,6 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.ApiTestSuite;
-import org.folio.HttpStatus;
-import org.folio.config.ApplicationConfig;
-import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.rest.acq.model.PieceCollection;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.rest.jaxrs.model.Eresource;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Errors;
-import org.folio.rest.jaxrs.model.ExpectCollection;
-import org.folio.rest.jaxrs.model.ExpectPiece;
-import org.folio.rest.jaxrs.model.Physical;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLineCollection;
-import org.folio.rest.jaxrs.model.ProcessingStatus;
-import org.folio.rest.jaxrs.model.ReceivedItem;
-import org.folio.rest.jaxrs.model.ReceivingCollection;
-import org.folio.rest.jaxrs.model.ReceivingItemResult;
-import org.folio.rest.jaxrs.model.ReceivingResult;
-import org.folio.rest.jaxrs.model.ReceivingResults;
-import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-import org.folio.rest.jaxrs.model.ToBeExpected;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
-import io.restassured.response.Response;
-import io.vertx.core.json.JsonObject;
 
 public class CheckinReceivingApiTest {
   private static final Logger logger = LogManager.getLogger();
@@ -963,6 +970,58 @@ public class CheckinReceivingApiTest {
     }
   }
 
+
+  @Test
+  void testBindPiecesToTitleWithItem() {
+    logger.info("=== Test POST Bind to Title With Item");
+
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withId(UUID.randomUUID().toString());
+    var poLine = getMinimalContentCompositePoLine(order.getId())
+      .withId(UUID.randomUUID().toString())
+      .withLocations(List.of(new Location().withHoldingId("849241fa-4a14-4df5-b951-846dcd6cfc4d")
+      .withQuantityPhysical(1).withQuantity(1)));
+
+    var bindingPiece1 = getMinimalContentPiece(poLine.getId())
+      .withId(UUID.randomUUID().toString())
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+    var bindingPiece2 = getMinimalContentPiece(poLine.getId())
+      .withId(UUID.randomUUID().toString())
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+    var bindItem = getMinimalContentBindItem();
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece1);
+    addMockEntry(PIECES_STORAGE, bindingPiece2);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withToBeBound(new ToBeBound()
+        .withPoLineId(poLine.getId())
+        .withBindItem(bindItem)
+        .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId())));
+
+    var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
+
+    assertThat(response.as(ReceivingResults.class).getReceivingResults().get(0).getProcessedSuccessfully(), is(2));
+
+    var pieceUpdates = getPieceUpdates();
+
+    assertThat(pieceUpdates, not(nullValue()));
+    assertThat(pieceUpdates, hasSize(bindPiecesCollection.getToBeBound().getBindPieceIds().size()));
+
+    var pieceList = pieceUpdates.stream().filter(pol -> {
+      Piece piece = pol.mapTo(Piece.class);
+      String pieceId = piece.getId();
+      return Objects.equals(bindingPiece1.getId(), pieceId) || Objects.equals(bindingPiece2.getId(), pieceId);
+    }).toList();
+
+    assertThat(pieceList.size(), is(2));
+  }
 
   @Test
   void testPostReceivingWithErrorSearchingForPiece() {

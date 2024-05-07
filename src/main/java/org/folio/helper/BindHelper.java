@@ -49,7 +49,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
   }
 
   public Future<ReceivingResults> bindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
-    return removeForbiddenEntities(bindPiecesCollection.getToBeBound().getBindPieceIds(), requestContext)
+    return removeForbiddenEntities(requestContext)
       .compose(vVoid -> processBindPieces(bindPiecesCollection, requestContext));
   }
 

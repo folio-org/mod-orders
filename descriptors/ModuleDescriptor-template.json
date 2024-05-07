@@ -1874,8 +1874,8 @@
     },
     {
       "permissionName": "orders.bind.collection.post",
-      "displayName" : "bind-pieces collection post",
-      "description" : "Bind-pieces collection post"
+      "displayName" : "bind pieces collection post",
+      "description" : "Bind pieces collection post"
     },
 
     {
