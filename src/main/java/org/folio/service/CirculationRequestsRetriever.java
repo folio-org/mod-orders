@@ -9,7 +9,6 @@ import static org.folio.service.inventory.util.RequestFields.COLLECTION_TOTAL;
 import static org.folio.service.inventory.util.RequestFields.ID_KEY;
 import static org.folio.service.inventory.util.RequestFields.ITEM_ID_KEY;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
