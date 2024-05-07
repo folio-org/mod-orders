@@ -1,7 +1,5 @@
 package org.folio.helper;
 
-import java.util.*;
-
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -17,7 +15,14 @@ import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeBound;
 
-import static java.util.stream.Collectors.*;
+import java.util.AbstractMap;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static java.util.stream.Collectors.flatMapping;
+import static java.util.stream.Collectors.toMap;
 
 public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
 
