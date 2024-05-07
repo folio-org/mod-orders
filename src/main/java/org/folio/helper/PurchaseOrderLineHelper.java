@@ -22,7 +22,6 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.C
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -78,7 +77,7 @@ import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryInstanceManager;
-import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.invoice.POLInvoiceLineRelationService;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
@@ -107,7 +106,7 @@ public class PurchaseOrderLineHelper {
   private static final String OTHER = "other";
   private static final String QUERY_BY_PO_LINE_ID = "poLineId==";
 
-  private final InventoryItemManager inventoryItemManager;
+  private final InventoryItemStatusSyncService itemStatusSyncService;
   private final InventoryInstanceManager inventoryInstanceManager;
   private final EncumbranceService encumbranceService;
   private final ExpenseClassValidationService expenseClassValidationService;
@@ -122,7 +121,7 @@ public class PurchaseOrderLineHelper {
   private final OrganizationService organizationService;
   private final POLInvoiceLineRelationService polInvoiceLineRelationService;
 
-  public PurchaseOrderLineHelper(InventoryItemManager inventoryItemManager,
+  public PurchaseOrderLineHelper(InventoryItemStatusSyncService inventoryItemStatusSyncService,
                                  InventoryInstanceManager inventoryInstanceManager,
                                  EncumbranceService encumbranceService,
                                  ExpenseClassValidationService expenseClassValidationService,
@@ -137,7 +136,7 @@ public class PurchaseOrderLineHelper {
                                  POLInvoiceLineRelationService polInvoiceLineRelationService,
                                  OrganizationService organizationService) {
 
-    this.inventoryItemManager = inventoryItemManager;
+    this.itemStatusSyncService = inventoryItemStatusSyncService;
     this.inventoryInstanceManager = inventoryInstanceManager;
     this.encumbranceService = encumbranceService;
     this.expenseClassValidationService = expenseClassValidationService;
@@ -740,20 +739,12 @@ public class PurchaseOrderLineHelper {
       return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
         .compose(poLines -> {
           List<PoLine> notCanceledPoLines = poLines.stream().filter(Predicate.not(this::isDbPoLineStatusCancelled)).toList();
-          if (CollectionUtils.isNotEmpty(notCanceledPoLines)) {
-            return inventoryItemManager.getItemsByPoLineIdsAndStatus(List.of(compOrderLine.getId()), ItemStatus.ON_ORDER.value(), requestContext)
-              .compose(items -> {
-                //Each poLine can have only one linked item
-                Optional<JsonObject> poLineItem = items.stream()
-                  .filter(item -> compOrderLine.getId().equals(item.getString("purchaseOrderLineIdentifier"))).findFirst();
-                if (poLineItem.isPresent()) {
-                  JsonObject updatedItem = updateItemStatus(poLineItem.get(), ItemStatus.ORDER_CLOSED);
-                  inventoryItemManager.updateItem(updatedItem, requestContext);
-                }
-                return Future.succeededFuture(null);
-              });
+          if (CollectionUtils.isEmpty(notCanceledPoLines)) {
+            logger.info("updateInventoryItemStatus:: not canceled po lines not found, returning...");
+            return Future.succeededFuture(null);
           }
-          return Future.succeededFuture(null);
+          return itemStatusSyncService.updateInventoryItemStatus(compOrderLine.getId(), compOrderLine.getLocations(),
+            ItemStatus.ORDER_CLOSED, requestContext);
         });
     }
     return Future.succeededFuture(null);
@@ -772,14 +763,6 @@ public class PurchaseOrderLineHelper {
   private boolean isCurrentStatusCanceled(CompositePoLine compOrderLine) {
     return CompositePoLine.ReceiptStatus.CANCELLED.equals(compOrderLine.getReceiptStatus()) ||
       CompositePoLine.PaymentStatus.CANCELLED.equals(compOrderLine.getPaymentStatus());
-  }
-
-  private JsonObject updateItemStatus(JsonObject poLineItem, ItemStatus itemStatus) {
-    JsonObject status = new JsonObject();
-    status.put("name", itemStatus);
-    status.put("date", Instant.now());
-    poLineItem.put("status", status);
-    return poLineItem;
   }
 
   private boolean isEncumbranceUpdateNeeded(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine, PoLine storagePoLine) {
