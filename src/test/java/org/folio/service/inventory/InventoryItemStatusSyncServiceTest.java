@@ -8,11 +8,11 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -42,9 +42,7 @@ public class InventoryItemStatusSyncServiceTest {
     //given
     when(inventoryItemManager.getItemsByPoLineIdsAndStatus(eq(List.of(PO_LINE_ID)), eq(ItemStatus.ON_ORDER.value()), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(List.of()));
-    Location location = new Location()
-      .withTenantId("tenant1");
-    List<Location> locations = List.of(location);
+    List<Location> locations = getLocations("tenant1");
     //when
     itemStatusSyncService.updateInventoryItemStatus(PO_LINE_ID, locations, ItemStatus.ORDER_CLOSED, requestContext);
     //then
@@ -59,9 +57,7 @@ public class InventoryItemStatusSyncServiceTest {
     when(inventoryItemManager.getItemsByPoLineIdsAndStatus(eq(List.of(PO_LINE_ID)), eq(ItemStatus.ON_ORDER.value()), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(List.of(item)));
     when(inventoryItemManager.updateItem(eq(item), any(RequestContext.class))).thenReturn(Future.succeededFuture());
-    Location location = new Location()
-      .withTenantId("tenant1");
-    List<Location> locations = List.of(location);
+    List<Location> locations = getLocations("tenant1");
     //when
     itemStatusSyncService.updateInventoryItemStatus(PO_LINE_ID, locations, ItemStatus.ORDER_CLOSED, requestContext);
     //then
@@ -77,11 +73,7 @@ public class InventoryItemStatusSyncServiceTest {
     when(inventoryItemManager.getItemsByPoLineIdsAndStatus(eq(List.of(PO_LINE_ID)), eq(ItemStatus.ON_ORDER.value()), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(List.of(item)));
     when(inventoryItemManager.updateItem(eq(item), any(RequestContext.class))).thenReturn(Future.succeededFuture());
-    Location location1 = new Location()
-      .withTenantId("tenant1");
-    Location location2 = new Location()
-      .withTenantId("tenant2");
-    List<Location> locations = List.of(location1, location2);
+    List<Location> locations = getLocations("tenant1", "tenant2");
     //when
     itemStatusSyncService.updateInventoryItemStatus(PO_LINE_ID, locations, ItemStatus.ORDER_CLOSED, requestContext);
     //then
@@ -130,9 +122,9 @@ public class InventoryItemStatusSyncServiceTest {
     //given
     JsonObject item = new JsonObject()
       .put(InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, PO_LINE_ID);
-    List<PoLine> poLines = List.of(new PoLine().withId(PO_LINE_ID).withLocations(List.of(
-      new Location().withTenantId("tenant1"),
-      new Location().withTenantId("tenant2"))));
+    List<PoLine> poLines = List.of(new PoLine()
+      .withId(PO_LINE_ID)
+      .withLocations(getLocations("tenant1", "tenant2")));
     when(inventoryItemManager.getItemsByPoLineIdsAndStatus(eq(List.of(PO_LINE_ID)), eq(ItemStatus.ON_ORDER.value()), any(RequestContext.class)))
       .thenReturn(Future.succeededFuture(List.of(item)));
     when(inventoryItemManager.updateItem(eq(item), any(RequestContext.class))).thenReturn(Future.succeededFuture());
@@ -141,5 +133,16 @@ public class InventoryItemStatusSyncServiceTest {
     //then
     verify(inventoryItemManager, times(2)).updateItem(any(JsonObject.class), any(RequestContext.class));
     assertEquals(ItemStatus.IN_TRANSIT, ItemStatus.fromValue(item.getJsonObject("status").getString("name")));
+  }
+
+  private List<Location> getLocations(String... tenantIds) {
+    if (tenantIds.length == 0) {
+      return List.of();
+    }
+    List<Location> result = new ArrayList<>();
+    for (String tenantId: tenantIds) {
+      result.add(new Location().withTenantId(tenantId));
+    }
+    return result;
   }
 }

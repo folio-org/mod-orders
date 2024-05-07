@@ -38,9 +38,9 @@ public class InventoryItemStatusSyncService {
    * Update Inventory item statuses that have an On order status for the provided order line.
    * For ECS based envs cross-tenant requests are possible to update Inventory item statuses in different tenants based on PoLine:Location:tenantId
    *
-   * @param poLineId the po line id used to find related items and update statuses
-   * @param locations the locations array
-   * @param newStatus the new status to update
+   * @param poLineId       the po line id used to find related items and update statuses
+   * @param locations      the locations array
+   * @param newStatus      the new status to update
    * @param requestContext initial request context
    * @return future with void result when all items processed
    */
@@ -75,9 +75,9 @@ public class InventoryItemStatusSyncService {
    * Update Inventory item statuses for order lines.
    * For ECS based envs cross-tenant requests are possible to update Inventory item statuses in different tenants based on PoLine:Location:tenantId
    *
-   * @param poLines the po lines
-   * @param currentStatus the current status to find items
-   * @param newStatus the new status to update
+   * @param poLines        the po lines
+   * @param currentStatus  the current status to find items
+   * @param newStatus      the new status to update
    * @param requestContext the initial request context
    * @return future with void result when all items processed
    */
@@ -96,9 +96,9 @@ public class InventoryItemStatusSyncService {
       RequestContext updatedContext = RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId);
       Future<Void> updateItemFeature =
         GenericCompositeFuture.join(
-          StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
-            .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemStatuses(chunk, currentStatus, newStatus, updatedContext)))
-            .toList())
+            StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
+              .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemStatuses(chunk, currentStatus, newStatus, updatedContext)))
+              .toList())
           .mapEmpty();
       futures.add(updateItemFeature);
     }
