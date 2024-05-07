@@ -46,7 +46,6 @@ import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
-import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
@@ -238,8 +237,8 @@ public class PurchaseOrderHelperTest {
     }
 
     @Bean
-    public InventoryItemManager inventoryItemManager() {
-      return mock(InventoryItemManager.class);
+    public InventoryItemStatusSyncService inventoryItemManager() {
+      return mock(InventoryItemStatusSyncService.class);
     }
 
     @Bean

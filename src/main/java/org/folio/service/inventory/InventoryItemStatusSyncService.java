@@ -4,6 +4,8 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.completablefuture.VertxFutureRepeater;
 import org.folio.models.ItemStatus;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -25,6 +27,8 @@ import static org.folio.helper.BaseHelper.MAX_REPEAT_ON_FAILURE;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 public class InventoryItemStatusSyncService {
+  private static final Logger logger = LogManager.getLogger(InventoryItemStatusSyncService.class);
+
   private final InventoryItemManager inventoryItemManager;
 
   public InventoryItemStatusSyncService(InventoryItemManager inventoryItemManager) {
@@ -61,18 +65,11 @@ public class InventoryItemStatusSyncService {
           .filter(item -> poLineId.equals(item.getString(InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))).findFirst();
         if (poLineItem.isPresent()) {
           JsonObject updatedItem = updateItemStatus(poLineItem.get(), status);
-          return inventoryItemManager.updateItem(updatedItem, requestContext);
+          return inventoryItemManager.updateItem(updatedItem, requestContext)
+            .onFailure(e -> logger.error("Failed to update Inventory item status to: {}, po line id: {}", status.value(), poLineId));
         }
         return Future.succeededFuture(null);
       });
-  }
-
-  private JsonObject updateItemStatus(JsonObject poLineItem, ItemStatus itemStatus) {
-    JsonObject status = new JsonObject();
-    status.put("name", itemStatus);
-    status.put("date", Instant.now());
-    poLineItem.put("status", status);
-    return poLineItem;
   }
 
   /**
@@ -90,32 +87,34 @@ public class InventoryItemStatusSyncService {
                                                     ItemStatus newStatus,
                                                     RequestContext requestContext) {
     if (CollectionUtils.isEmpty(poLines)) {
-      return io.vertx.core.Future.succeededFuture();
+      return Future.succeededFuture();
     }
-    return GenericCompositeFuture.join(
-        StreamEx.ofSubLists(poLines, MAX_IDS_FOR_GET_RQ_15)
-          .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemStatuses(chunk, currentStatus, newStatus, requestContext)))
-          .collect(toList()))
-      .mapEmpty();
-  }
-
-  private Future<Void> updateItemStatuses(List<PoLine> poLines,
-                                          ItemStatus currentStatus,
-                                          ItemStatus newStatus,
-                                          RequestContext requestContext) {
     Map<String, List<String>> tenantIdToPoLineIds = getTenantIdsToPoLineIdsMap(poLines);
     List<Future<Void>> futures = new ArrayList<>();
     for (Map.Entry<String, List<String>> entry : tenantIdToPoLineIds.entrySet()) {
       String tenantId = entry.getKey();
       List<String> poLineIds = entry.getValue();
       RequestContext updatedContext = RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId);
-      Future<Void> updateItemFeature = inventoryItemManager.getItemsByPoLineIdsAndStatus(poLineIds, currentStatus.value(), updatedContext)
-        .map(items -> updateStatusName(items, newStatus))
-        .compose(items -> updateItemsInInventory(items, requestContext));
+      Future<Void> updateItemFeature =
+        GenericCompositeFuture.join(
+          StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
+            .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemStatuses(chunk, currentStatus, newStatus, updatedContext)))
+            .collect(toList()))
+          .mapEmpty();
       futures.add(updateItemFeature);
     }
     return GenericCompositeFuture.all(futures)
       .mapEmpty();
+  }
+
+  private Future<Void> updateItemStatuses(List<String> poLineIds,
+                                          ItemStatus currentStatus,
+                                          ItemStatus newStatus,
+                                          RequestContext requestContext) {
+    return inventoryItemManager.getItemsByPoLineIdsAndStatus(poLineIds, currentStatus.value(), requestContext)
+      .map(items -> updateItemStatuses(items, newStatus))
+      .compose(items -> updateItemsInInventory(items, requestContext))
+      .onFailure(e -> logger.error("Failed to update Inventory item status to: {} for po line ids: {}", newStatus.value(), poLineIds));
   }
 
   private Map<String, List<String>> getTenantIdsToPoLineIdsMap(List<PoLine> poLines) {
@@ -132,9 +131,17 @@ public class InventoryItemStatusSyncService {
     return result;
   }
 
-  private List<JsonObject> updateStatusName(List<JsonObject> items, ItemStatus status) {
-    items.forEach(item -> item.getJsonObject("status").put("name", status.value()));
+  private List<JsonObject> updateItemStatuses(List<JsonObject> items, ItemStatus status) {
+    items.forEach(item -> updateItemStatus(item, status));
     return items;
+  }
+
+  private JsonObject updateItemStatus(JsonObject item, ItemStatus itemStatus) {
+    JsonObject status = new JsonObject();
+    status.put("name", itemStatus.value());
+    status.put("date", Instant.now());
+    item.put("status", status);
+    return item;
   }
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
