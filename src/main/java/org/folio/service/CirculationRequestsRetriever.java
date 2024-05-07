@@ -1,5 +1,18 @@
 package org.folio.service;
 
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.StreamEx;
+import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
@@ -9,21 +22,9 @@ import static org.folio.service.inventory.util.RequestFields.COLLECTION_TOTAL;
 import static org.folio.service.inventory.util.RequestFields.ID_KEY;
 import static org.folio.service.inventory.util.RequestFields.ITEM_ID_KEY;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.rest.core.RestClient;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.core.models.RequestEntry;
-
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
-
 public class CirculationRequestsRetriever {
+
+  private final static String OUTSTANDING_REQUEST_STATUS_PREFIX = "Open - ";
 
   private final RestClient restClient;
 
@@ -32,7 +33,7 @@ public class CirculationRequestsRetriever {
   }
 
   public Future<Integer> getNumberOfRequestsByItemId(String itemId, RequestContext requestContext) {
-    String query = String.format("(itemId==%s and status=\"*\")", itemId);
+    String query = String.format("(itemId==%s and status=\"%s\")", itemId, OUTSTANDING_REQUEST_STATUS_PREFIX);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
       .withQuery(query).withOffset(0).withLimit(0); // limit = 0 means payload will include only totalRecords value
     return restClient.getAsJsonObject(requestEntry, requestContext)
