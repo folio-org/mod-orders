@@ -43,7 +43,6 @@ import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 import static org.folio.service.inventory.InventoryUtils.ITEMS;
 import static org.folio.service.inventory.InventoryUtils.ITEM_BY_ID_ENDPOINT;
-import static org.folio.service.inventory.InventoryUtils.REQUESTS;
 
 public class InventoryItemManager {
   private static final Logger logger = LogManager.getLogger(InventoryItemManager.class);

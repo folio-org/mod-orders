@@ -21,6 +21,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.util.HashMap;
 import java.util.List;
@@ -122,6 +124,7 @@ public class CirculationRequestsRetrieverTest {
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
       assertEquals(5, f.result());
+      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
       vertxTestContext.completeNow();
     });
   }
@@ -140,6 +143,7 @@ public class CirculationRequestsRetrieverTest {
       assertEquals(2, res.size());
       assertEquals(5, res.get(MOCK_ITEM_IDS.get(0)));
       assertEquals(2, res.get(MOCK_ITEM_IDS.get(1)));
+      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
       vertxTestContext.completeNow();
     });
   }
@@ -154,8 +158,8 @@ public class CirculationRequestsRetrieverTest {
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
-      var res = f.result();
-      assertEquals(7, res.size());
+      assertEquals(7, f.result().size());
+      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
       vertxTestContext.completeNow();
     });
   }
