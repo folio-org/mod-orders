@@ -466,6 +466,15 @@ public class InventoryItemManager {
     }
   }
 
+  public Future<String> createBindItem(CompositePoLine compPOL, BindItem bindItem,
+                                       RequestContext requestContext) {
+    return buildBaseItemRecordJsonObject(compPOL, bindItem, requestContext)
+      .compose(item -> {
+        logger.debug("Creating item for PO Line with '{}' id", compPOL.getId());
+        return createItemInInventory(item, requestContext);
+      });
+  }
+
   public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
     if (piece.getItemId() == null || piece.getPoLineId() == null) {
       return Future.succeededFuture();
@@ -559,6 +568,25 @@ public class InventoryItemManager {
         itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
         itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()));
         itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId);
+        itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
+        return itemRecord;
+      });
+  }
+
+  private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePoLine compPOL, BindItem bindItem, RequestContext requestContext) {
+    var holdingLocation = compPOL.getLocations().stream().filter(location -> location.getHoldingId() != null).findAny();
+    if (holdingLocation.isEmpty()) {
+      throw new IllegalArgumentException("Holding Id must not be null");
+    }
+    return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
+      .map(loanTypeId -> {
+        JsonObject itemRecord = new JsonObject();
+        itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingLocation.get().getHoldingId());
+        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()));
+        itemRecord.put(ITEM_BARCODE, bindItem.getBarcode());
+        itemRecord.put(ITEM_LEVEL_CALL_NUMBER, bindItem.getCallNumber());
+        itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, bindItem.getPermanentLoanTypeId());
+        itemRecord.put(ITEM_MATERIAL_TYPE_ID, bindItem.getMaterialTypeId());
         itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
         return itemRecord;
       });

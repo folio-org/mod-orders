@@ -806,6 +806,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         .mapEmpty() : Future.succeededFuture());
   }
 
+  protected Future<Void> removeForbiddenEntities(List<String> pieceIds, RequestContext requestContext) {
+    return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
+      .compose(titles -> CollectionUtils.isNotEmpty(titles) ? GenericCompositeFuture
+        .join(getListOfRestrictionCheckingFutures(titles, requestContext))
+        .mapEmpty() : Future.succeededFuture());
+  }
+
   private static class PoLineAndTitleById {
     Map<String, CompositePoLine> poLineById;
     Map<String, Title> titleById;
