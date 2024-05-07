@@ -63,13 +63,8 @@ public class CirculationRequestsRetriever {
       .map(entry -> restClient.getAsJsonObject(entry, requestContext))
       .toList();
 
-    // Mapping logic:
-    // Lists<List<Collection of Requests>> ->
-    // List<Collection of Requests> ->
-    // List<Requests>
     return GenericCompositeFuture.all(futures)
-      .map(f -> f.<List<JsonObject>>list().stream()
-        .flatMap(Collection::stream)
+      .map(f -> f.<JsonObject>list().stream()
         .flatMap(json -> {
           var totalRecords = json.getInteger(COLLECTION_TOTAL.getValue());
           var requests = json.getJsonArray(COLLECTION_RECORDS.getValue());
