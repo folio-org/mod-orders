@@ -18,6 +18,7 @@ import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
+import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ExportHistoryService;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.OrderTemplatesService;
@@ -58,9 +59,11 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
+import org.folio.service.inventory.InventoryItemRequestService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.inventory.InventoryService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.invoice.InvoiceService;
@@ -495,12 +498,22 @@ public class ApplicationConfig {
   @Bean
   InventoryInstanceManager inventoryInstanceManager(RestClient restClient,
                                                     ConfigurationEntriesCache configurationEntriesCache,
-                                                   InventoryCache inventoryCache,
-                                                    InventoryService inventoryService,
-                                                   ConsortiumConfigurationService consortiumConfigurationService,
+                                                    InventoryCache inventoryCache,
+                                                    ConsortiumConfigurationService consortiumConfigurationService,
                                                     SharingInstanceService sharingInstanceService) {
     return new InventoryInstanceManager(restClient, configurationEntriesCache,
       inventoryCache, sharingInstanceService, consortiumConfigurationService);
+  }
+
+  @Bean
+  InventoryItemRequestService inventoryItemRequestService(RestClient restClient,
+                                                          CirculationRequestsRetriever circulationRequestsRetriever) {
+    return new InventoryItemRequestService(restClient, circulationRequestsRetriever);
+  }
+
+  @Bean
+  InventoryItemStatusSyncService itemStatusSyncService(InventoryItemManager inventoryItemManager) {
+    return new InventoryItemStatusSyncService(inventoryItemManager);
   }
 
   @Bean
@@ -539,9 +552,10 @@ public class ApplicationConfig {
                                                           InventoryHoldingManager inventoryHoldingManager,
                                                           PieceStorageService pieceStorageService,
                                                           PurchaseOrderStorageService purchaseOrderStorageService,
-                                      ProtectionService protectionService) {
-    return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-      inventoryItemManager, inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService);
+                                                          ProtectionService protectionService,
+                                                          CirculationRequestsRetriever circulationRequestsRetriever) {
+    return new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryItemManager,
+      inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService, circulationRequestsRetriever);
   }
 
   @Bean
@@ -571,11 +585,15 @@ public class ApplicationConfig {
     return new PieceDeleteFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
-  @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
-    InventoryItemManager inventoryItemManager, PieceUpdateInventoryService pieceUpdateInventoryService,
-    PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+  @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService,
+                                                        ProtectionService protectionService,
+                                                        InventoryItemManager inventoryItemManager,
+                                                        PieceUpdateInventoryService pieceUpdateInventoryService,
+                                                        PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
+                                                        BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
+                                                        CirculationRequestsRetriever circulationRequestsRetriever) {
     return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryItemManager, pieceUpdateInventoryService,
-                      pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder);
+                      pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
   }
 
 
@@ -659,8 +677,8 @@ public class ApplicationConfig {
     @Qualifier("combinedPopulateService") CompositeOrderDynamicDataPopulateService combinedPopulateService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-    PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryItemManager inventoryItemManager,
-    UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+    PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService,
+    InventoryItemStatusSyncService itemStatusSyncService, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
@@ -668,14 +686,14 @@ public class ApplicationConfig {
     RestClient restClient) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-      purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, inventoryItemManager,
-      unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
-      poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager,
-      organizationService, restClient);
+      purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, itemStatusSyncService,
+      unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService,
+      configurationEntriesCache, poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService,
+      reOpenCompositeOrderManager, organizationService, restClient);
   }
 
   @Bean
-  PurchaseOrderLineHelper purchaseOrderLineHelper(InventoryItemManager inventoryItemManager,
+  PurchaseOrderLineHelper purchaseOrderLineHelper(InventoryItemStatusSyncService itemStatusSyncService,
                                                   InventoryInstanceManager inventoryInstanceManager,
                                                   EncumbranceService encumbranceService,
                                                   ExpenseClassValidationService expenseClassValidationService,
@@ -688,7 +706,7 @@ public class ApplicationConfig {
                                                   RestClient restClient, CompositePoLineValidationService compositePoLineValidationService,
                                                   POLInvoiceLineRelationService polInvoiceLineRelationService,
                                                   OrganizationService organizationService) {
-    return new PurchaseOrderLineHelper(inventoryItemManager, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
+    return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
       purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService, polInvoiceLineRelationService,
       organizationService);
@@ -811,6 +829,11 @@ public class ApplicationConfig {
   @Bean
   TitleInstanceService titleInstanceService(InventoryInstanceManager inventoryInstanceManager) {
     return new TitleInstanceService(inventoryInstanceManager);
+  }
+
+  @Bean
+  CirculationRequestsRetriever circulationRequestsRetriever(RestClient restClient) {
+    return new CirculationRequestsRetriever(restClient);
   }
 
 }

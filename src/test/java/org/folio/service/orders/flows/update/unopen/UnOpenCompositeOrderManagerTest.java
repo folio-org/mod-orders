@@ -41,6 +41,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
@@ -89,6 +90,9 @@ public class UnOpenCompositeOrderManagerTest {
   private PurchaseOrderStorageService purchaseOrderStorageService;
   @Autowired
   private ProtectionService protectionService;
+  @Autowired
+  private CirculationRequestsRetriever circulationRequestsRetriever;
+
   @Mock
   private OpenToPendingEncumbranceStrategy openToPendingEncumbranceStrategy;
   @Mock
@@ -377,7 +381,7 @@ public class UnOpenCompositeOrderManagerTest {
     PurchaseOrder simpleOrder = new PurchaseOrder().withId(order.getId());
     doReturn(succeededFuture(simpleOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(order.getId(), requestContext);
     doReturn(succeededFuture()).when(protectionService).isOperationRestricted(anyList(), any(ProtectedOperationType.class), any());
-    doReturn(succeededFuture(0)).when(inventoryItemManager).getNumberOfRequestsByItemId(ITEM_ID, requestContext);
+    doReturn(succeededFuture(0)).when(circulationRequestsRetriever).getNumberOfRequestsByItemId(ITEM_ID, requestContext);
     doReturn(succeededFuture()).when(pieceStorageService).deletePiece(PIECE_ID, requestContext);
     doReturn(succeededFuture()).when(inventoryItemManager).deleteItem(piece.getItemId(), true, requestContext);
     doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingId(eq(HOLDING_ID), RequestContextMatcher.matchCentralTenant());
@@ -456,15 +460,21 @@ public class UnOpenCompositeOrderManagerTest {
     }
 
     @Bean
+    public CirculationRequestsRetriever circulationRequestsRetriever() {
+      return mock(CirculationRequestsRetriever.class);
+    }
+
+    @Bean
     UnOpenCompositeOrderManager unOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                                             EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
                                                             InventoryItemManager inventoryItemManager,
                                                             InventoryHoldingManager inventoryHoldingManager,
                                                             PieceStorageService pieceStorageService,
                                                             PurchaseOrderStorageService purchaseOrderStorageService,
-                                                            ProtectionService protectionService) {
+                                                            ProtectionService protectionService,
+                                                            CirculationRequestsRetriever circulationRequestsRetriever) {
       return spy(new UnOpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory, inventoryItemManager,
-        inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService));
+        inventoryHoldingManager, pieceStorageService, purchaseOrderStorageService, protectionService, circulationRequestsRetriever));
     }
   }
 }
