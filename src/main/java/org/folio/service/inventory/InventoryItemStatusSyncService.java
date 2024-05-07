@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.stream.Collectors.toList;
 import static org.folio.helper.BaseHelper.MAX_REPEAT_ON_FAILURE;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
@@ -99,7 +98,7 @@ public class InventoryItemStatusSyncService {
         GenericCompositeFuture.join(
           StreamEx.ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
             .map(chunk -> VertxFutureRepeater.repeat(MAX_REPEAT_ON_FAILURE, () -> updateItemStatuses(chunk, currentStatus, newStatus, updatedContext)))
-            .collect(toList()))
+            .toList())
           .mapEmpty();
       futures.add(updateItemFeature);
     }
@@ -122,10 +121,7 @@ public class InventoryItemStatusSyncService {
     for (PoLine poLine : poLines) {
       for (Location location : poLine.getLocations()) {
         String tenantId = location.getTenantId();
-        if (!result.containsKey(tenantId)) {
-          result.put(tenantId, new ArrayList<>());
-        }
-        result.get(tenantId).add(poLine.getId());
+        result.computeIfAbsent(tenantId, k -> new ArrayList<>()).add(poLine.getId());
       }
     }
     return result;
@@ -145,9 +141,7 @@ public class InventoryItemStatusSyncService {
   }
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, RequestContext requestContext) {
-    return GenericCompositeFuture.join(items.stream()
-        .map(item -> inventoryItemManager.updateItem(item, requestContext))
-        .collect(toList()))
+    return GenericCompositeFuture.join(items.stream().map(item -> inventoryItemManager.updateItem(item, requestContext)).toList())
       .mapEmpty();
   }
 }
