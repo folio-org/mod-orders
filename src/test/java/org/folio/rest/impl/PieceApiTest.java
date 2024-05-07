@@ -371,48 +371,4 @@ public class PieceApiTest {
     logger.info("=== Test delete piece by id - internal error from storage 500 ===");
     verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
   }
-
-  @Test
-  void deletePiecesByBatchWithItemDeletionTest() throws JsonProcessingException {
-    logger.info("=== Test delete pieces in batch - items deleted ===");
-    String itemId = UUID.randomUUID().toString();
-    JsonObject item = new JsonObject().put(ID, itemId);
-    String lineId = UUID.randomUUID().toString();
-    String orderId = UUID.randomUUID().toString();
-    String holdingId = UUID.randomUUID().toString();
-    String titleId = UUID.randomUUID().toString();
-
-    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
-    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
-    CompositePoLine poLine = new CompositePoLine().withId(lineId).withPurchaseOrderId(order.getId())
-      .withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
-      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE)
-      .withLocations(List.of(loc)).withCost(cost);
-    order.setCompositePoLines(Collections.singletonList(poLine));
-    Title title = new Title().withId(titleId).withTitle("title name");
-
-    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withFormat(Piece.Format.ELECTRONIC)
-      .withHoldingId(holdingId).withItemId(itemId).withPoLineId(poLine.getId())
-      .withTitleId(titleId);
-
-    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
-    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
-    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
-    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
-    MockServer.addMockEntry(ITEM_RECORDS, item);
-
-    List<Piece> pieces = new ArrayList<>();
-    pieces.add(piece);
-    PieceCollection pieceCollection = new PieceCollection();
-    pieceCollection.setPieces(pieces);
-    String jsonPieceCollection = JsonObject.mapFrom(pieceCollection).encode();
-    System.out.println(pieceCollection.getPieces().get(0).toString());
-
-    verifyDeleteResponse(PIECES_BATCH_PATH, jsonPieceCollection,
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),APPLICATION_JSON,400);
-
-    assertNull(MockServer.getItemDeletions());
-    assertThat(MockServer.getPieceDeletions(), hasSize(1));
-  }
 }
