@@ -53,7 +53,7 @@ public class InventoryService {
   }
 
   public Future<JsonObject> getEntryTypeId(String entryType, String entryTypeValue, RequestContext requestContext) {
-    String endpoint = buildInventoryLookupEndpoint(entryType, encodeQuery(entryTypeValue));
+    String endpoint = String.format(INVENTORY_LOOKUP_ENDPOINTS.get(entryType), encodeQuery(entryTypeValue));
     RequestEntry requestEntry = new RequestEntry(endpoint);
 
     return restClient.getAsJsonObject(requestEntry, requestContext)
@@ -63,9 +63,4 @@ public class InventoryService {
         return result;
       });
   }
-
-  public String buildInventoryLookupEndpoint(String type, Object... params) {
-    return String.format(INVENTORY_LOOKUP_ENDPOINTS.get(type), params);
-  }
-
 }

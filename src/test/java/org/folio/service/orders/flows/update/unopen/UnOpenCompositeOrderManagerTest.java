@@ -50,6 +50,7 @@ import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.utils.RequestContextMatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -273,7 +274,7 @@ public class UnOpenCompositeOrderManagerTest {
     //Then
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
     verify(pieceStorageService).deletePiecesByIds(List.of(PIECE_ID), requestContext);
-    verify(inventoryHoldingManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryHoldingManager).deleteHoldingById(eq(HOLDING_ID), eq(true), RequestContextMatcher.matchCentralTenant());
     verify(inventoryItemManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
     verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
@@ -333,7 +334,7 @@ public class UnOpenCompositeOrderManagerTest {
     //Then
     makeBasicUnOpenWorkflowChecks(order, orderFromStorage);
     verify(pieceStorageService, never()).deletePiecesByIds(List.of(PIECE_ID), requestContext);
-    verify(inventoryHoldingManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    verify(inventoryHoldingManager).deleteHoldingById(eq(HOLDING_ID), eq(true), RequestContextMatcher.matchCentralTenant());
     verify(inventoryItemManager, never()).deleteItem(anyString(), anyBoolean(), any(RequestContext.class));
     verify(inventoryItemManager, never()).deleteItems(anyList(), anyBoolean(), any(RequestContext.class));
   }
@@ -379,10 +380,10 @@ public class UnOpenCompositeOrderManagerTest {
     doReturn(succeededFuture(0)).when(inventoryItemManager).getNumberOfRequestsByItemId(ITEM_ID, requestContext);
     doReturn(succeededFuture()).when(pieceStorageService).deletePiece(PIECE_ID, requestContext);
     doReturn(succeededFuture()).when(inventoryItemManager).deleteItem(piece.getItemId(), true, requestContext);
-    doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingId(HOLDING_ID, requestContext);
-    doReturn(succeededFuture()).when(inventoryHoldingManager).deleteHoldingById(HOLDING_ID, true, requestContext);
+    doReturn(succeededFuture(Collections.emptyList())).when(inventoryItemManager).getItemsByHoldingId(eq(HOLDING_ID), RequestContextMatcher.matchCentralTenant());
+    doReturn(succeededFuture()).when(inventoryHoldingManager).deleteHoldingById(eq(HOLDING_ID), eq(true), RequestContextMatcher.matchCentralTenant());
     JsonObject holding = new JsonObject().put("id", HOLDING_ID).put("permanentLocationId", poLine.getLocations().get(0).getLocationId());
-    doReturn(succeededFuture(List.of(holding))).when(inventoryHoldingManager).getHoldingsByIds(List.of(HOLDING_ID), requestContext);
+    doReturn(Map.of("folio_shared", succeededFuture(List.of(holding)))).when(inventoryHoldingManager).getHoldingsByLocationTenants(poLine, requestContext);
   }
 
   private JsonObject getItem() {

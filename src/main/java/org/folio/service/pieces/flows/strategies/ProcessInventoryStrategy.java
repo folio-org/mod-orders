@@ -23,7 +23,6 @@ import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService
 
 import io.vertx.core.Future;
 
-import static org.folio.orders.utils.RequestContextUtil.cloneRequestContextBasedOnLocation;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDINGS_LOOKUP_QUERY;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryUtils.HOLDINGS_RECORDS;
@@ -92,9 +91,7 @@ public abstract class ProcessInventoryStrategy {
       findHoldingsId(compPOL, location, restClient, requestContext)
         .compose(aVoid -> {
           // Search for or create a new holdings record and then create items for it if required
-          return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-            .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
-              cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
+          return consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, location)
             .compose(updatedRequestContext -> inventoryHoldingManager.getOrCreateHoldingsRecord(compPOL.getInstanceId(), location, updatedRequestContext))
             .compose(holdingId -> {
               // Items are not going to be created when create inventory is "Instance, Holding"
@@ -119,9 +116,7 @@ public abstract class ProcessInventoryStrategy {
       String query = String.format(HOLDINGS_LOOKUP_QUERY, compPOL.getInstanceId(), location.getLocationId());
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
         .withQuery(query).withOffset(0).withLimit(1);
-      return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-        .map(optionalConfiguration -> optionalConfiguration.map(configuration ->
-          cloneRequestContextBasedOnLocation(requestContext, location)).orElse(requestContext))
+      return consortiumConfigurationService.cloneRequestContextIfNeeded(requestContext, location)
         .compose(updatedRequestContext -> restClient.getAsJsonObject(requestEntry, updatedRequestContext))
         .compose(holdings -> {
           if (!holdings.getJsonArray(HOLDINGS_RECORDS).isEmpty()) {

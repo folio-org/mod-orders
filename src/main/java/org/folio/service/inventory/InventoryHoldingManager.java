@@ -3,12 +3,14 @@ package org.folio.service.inventory;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -26,6 +28,7 @@ import org.folio.service.orders.utils.HelperUtils.BiFunctionReturningFuture;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.function.UnaryOperator;
@@ -315,6 +318,45 @@ public class InventoryHoldingManager {
     } catch (Exception e) {
       return Future.failedFuture(e);
     }
+  }
+
+  public Future<List<JsonObject>> getHoldingsForAllLocationTenants(CompositePoLine poLine, RequestContext requestContext) {
+    var holdingsByTenants = getHoldingsByLocationTenants(poLine, requestContext);
+    return GenericCompositeFuture.all(new ArrayList<>(holdingsByTenants.values()))
+      .map(ar -> holdingsByTenants.values().stream()
+        .flatMap(future -> future.result().stream())
+        .toList()
+      );
+  }
+
+  public Map<String, Future<List<JsonObject>>> getHoldingsByLocationTenants(CompositePoLine poLine, RequestContext requestContext) {
+    String currentTenantId = TenantTool.tenantId(requestContext.getHeaders());
+    Map<String, List<String>> holdingsByTenant = poLine.getLocations()
+      .stream()
+      .filter(location -> location.getHoldingId() != null)
+      .collect(Collectors.groupingBy(
+        location -> ObjectUtils.defaultIfNull(location.getTenantId(), currentTenantId),
+        Collectors.mapping(Location::getHoldingId, Collectors.toList())
+      ));
+
+    return holdingsByTenant.entrySet()
+      .stream()
+      .collect(Collectors.toMap(Map.Entry::getKey, entry -> getHoldings(entry.getKey(), entry.getValue(), requestContext)));
+  }
+
+  private Future<List<JsonObject>> getHoldings(String tenantId, List<String> holdingIds, RequestContext requestContext) {
+
+    if (holdingIds.isEmpty()) {
+      return Future.succeededFuture(List.of());
+    }
+
+    return getHoldingsByIds(holdingIds, RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
+      .onFailure(failure -> {
+        logger.error("Couldn't retrieve holdings", failure);
+        var param = new Parameter().withKey("holdingIds").withValue(holdingIds.toString());
+        var cause = new Parameter().withKey("cause").withValue(failure.getMessage());
+        throw new HttpException(404, HOLDINGS_BY_ID_NOT_FOUND, List.of(param, cause));
+      });
   }
 
 }

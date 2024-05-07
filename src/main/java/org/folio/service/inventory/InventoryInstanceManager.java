@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -39,11 +40,9 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
-import static org.folio.orders.utils.RequestContextUtil.cloneRequestContextWithTargetTenantId;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_STATUS;
@@ -78,20 +77,17 @@ public class InventoryInstanceManager {
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final InventoryCache inventoryCache;
-  private final InventoryService inventoryService;
   private final SharingInstanceService sharingInstanceService;
   private final ConsortiumConfigurationService consortiumConfigurationService;
 
   public InventoryInstanceManager(RestClient restClient,
                                   ConfigurationEntriesCache configurationEntriesCache,
                                   InventoryCache inventoryCache,
-                                  InventoryService inventoryService,
                                   SharingInstanceService sharingInstanceService,
                                   ConsortiumConfigurationService consortiumConfigurationService) {
     this.restClient = restClient;
     this.configurationEntriesCache = configurationEntriesCache;
     this.inventoryCache = inventoryCache;
-    this.inventoryService = inventoryService;
     this.sharingInstanceService = sharingInstanceService;
     this.consortiumConfigurationService = consortiumConfigurationService;
   }
@@ -101,9 +97,9 @@ public class InventoryInstanceManager {
       .map(this::buildProductIdQuery)
       .collect(joining(" or "));
 
-    // query contains special characters so must be encoded before submitting
-    String endpoint = inventoryService.buildInventoryLookupEndpoint(INSTANCES, encodeQuery(query));
-    return restClient.getAsJsonObject(endpoint, false, requestContext);
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCES))
+      .withQuery(query).withOffset(0).withLimit(1);
+    return restClient.getAsJsonObject(requestEntry, requestContext);
   }
 
   JsonObject buildInstanceRecordJsonObject(Title title, JsonObject lookupObj) {
@@ -307,15 +303,6 @@ public class InventoryInstanceManager {
       });
   }
 
-  public Future<Title> openOrderHandlePackageLineInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (title.getInstanceId() != null) {
-      return Future.succeededFuture(title);
-    } else {
-      return getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, requestContext)
-        .map(title::withInstanceId);
-    }
-  }
-
   public Future<String> getOrCreateInstanceRecord(Title title, RequestContext requestContext) {
     return getOrCreateInstanceRecord(title, false, requestContext);
   }
@@ -408,7 +395,7 @@ public class InventoryInstanceManager {
       .map(Location::getTenantId)
       .distinct()
       .filter(Objects::nonNull)
-      .map(tenantId -> cloneRequestContextWithTargetTenantId(requestContext, tenantId))
+      .map(tenantId -> RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
       .map(clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
         .map(instance -> Optional.<String>empty())
         .recover(throwable -> throwable instanceof HttpException httpException && httpException.getCode() == 404 ?

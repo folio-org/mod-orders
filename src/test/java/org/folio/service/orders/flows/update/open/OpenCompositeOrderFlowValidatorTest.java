@@ -3,11 +3,11 @@ package org.folio.service.orders.flows.update.open;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_LOCATION_RESTRICTION_VIOLATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -563,8 +563,8 @@ public class OpenCompositeOrderFlowValidatorTest {
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
-    when(inventoryHoldingManager.getHoldingsByIds(any(), any())).thenReturn(
-      Future.succeededFuture(List.of(holding))
+    when(inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext)).thenReturn(
+      Map.of("folio_shared", Future.succeededFuture(List.of(holding)))
     );
 
     // when
@@ -603,8 +603,8 @@ public class OpenCompositeOrderFlowValidatorTest {
         new Fund().withId("F2").withCode("FC").withRestrictByLocations(true).withLocations(createLocations("L1"))
       ))
     );
-    when(inventoryHoldingManager.getHoldingsByIds(any(), any())).thenReturn(
-      Future.failedFuture(new HttpException(401, "Not found"))
+    when(inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext)).thenReturn(
+      Map.of("", Future.failedFuture(new HttpException(404, "Not found")))
     );
 
     // when
