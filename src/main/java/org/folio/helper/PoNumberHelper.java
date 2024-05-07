@@ -1,6 +1,5 @@
 package org.folio.helper;
 
-import static org.folio.orders.utils.PoLineCommonUtil.DASH_SEPARATOR;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
@@ -31,6 +30,13 @@ public class PoNumberHelper {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
   }
 
+  public Future<Void> validatePoNumber(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo, RequestContext requestContext) {
+    if (StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber())) {
+      return Future.succeededFuture();
+    }
+    return checkPONumberUnique(updatedPo.getPoNumber(), requestContext);
+  }
+
   public Future<Void> checkPONumberUnique(PoNumber poNumber, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
     checkPONumberUnique(poNumber.getPoNumber(), requestContext)
@@ -40,6 +46,20 @@ public class PoNumberHelper {
       })
       .onFailure(promise::fail);
     return promise.future();
+  }
+
+  public Future<Void> checkPONumberUnique(String poNumber, RequestContext requestContext) {
+    if (StringUtils.isEmpty(poNumber)){
+      return Future.succeededFuture();
+    }
+    return purchaseOrderStorageService.getPurchaseOrderByPONumber(poNumber, requestContext)
+      .map(po -> {
+        if (po.getInteger("totalRecords") != 0) {
+          logger.error("Exception validating PO Number existence");
+          throw new HttpException(400, ErrorCodes.PO_NUMBER_ALREADY_EXISTS);
+        }
+        return null;
+      });
   }
 
   public Future<PoNumber> getPoNumber(RequestContext requestContext) {
@@ -53,31 +73,10 @@ public class PoNumberHelper {
     return promise.future();
   }
 
-  public Future<Void> checkPONumberUnique(String poNumber, RequestContext requestContext) {
-    if (StringUtils.isEmpty(poNumber)){
-      return Future.succeededFuture();
-    }
-    return purchaseOrderStorageService.getPurchaseOrderByPONumber(poNumber, requestContext)
-      .map(po -> {
-         if (po.getInteger("totalRecords") != 0) {
-           logger.error("Exception validating PO Number existence");
-           throw new HttpException(400, ErrorCodes.PO_NUMBER_ALREADY_EXISTS);
-         }
-         return null;
-      });
-  }
-
   public Future<String> generatePoNumber(RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(resourcesPath(PO_NUMBER));
     return restClient.getAsJsonObject(requestEntry, requestContext)
                       .map(seqNumber -> seqNumber.mapTo(SequenceNumber.class).getSequenceNumber());
-  }
-
-  public Future<Void> validatePoNumber(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo, RequestContext requestContext) {
-    if (isPoNumberChanged(poFromStorage, updatedPo)) {
-       return checkPONumberUnique(updatedPo.getPoNumber(), requestContext);
-    }
-    return Future.succeededFuture();
   }
 
   public Future<Void> validatePoNumberPrefixAndSuffix(CompositePurchaseOrder updatedPo) {
@@ -101,11 +100,4 @@ public class PoNumberHelper {
     return Future.succeededFuture();
   }
 
-  public static boolean isPoNumberChanged(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder updatedPo) {
-    return !StringUtils.equalsIgnoreCase(poFromStorage.getPoNumber(), updatedPo.getPoNumber());
-  }
-
-  public static String buildPoLineNumber(String poNumber, String sequence) {
-    return poNumber + DASH_SEPARATOR + sequence;
-  }
 }

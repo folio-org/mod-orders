@@ -10,6 +10,9 @@ public class RequestContextUtil {
   }
 
   public static RequestContext createContextWithNewTenantId(RequestContext requestContext, String tenantId) {
+    if (tenantId == null) {
+      return requestContext;
+    }
     var modifiedHeaders = new CaseInsensitiveMap<>(requestContext.getHeaders());
     modifiedHeaders.put(XOkapiHeaders.TENANT, tenantId);
     return new RequestContext(requestContext.getContext(), modifiedHeaders);
