@@ -1,6 +1,7 @@
 package org.folio.service.pieces.flows.create;
 
-import io.vertx.core.Future;
+import java.util.Optional;
+
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -12,7 +13,7 @@ import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
 
-import java.util.Optional;
+import io.vertx.core.Future;
 
 public class PieceCreateFlowInventoryManager {
 
