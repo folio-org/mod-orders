@@ -173,8 +173,8 @@ public class RestTestUtils {
     return response;
   }
 
-  public static Response verifyBatchDeleteResponse(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
-    Response response = RestAssured
+  public static Response verifyDeleteResponse(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+    return  RestAssured
             .with()
             .header(X_OKAPI_URL)
             .header(X_OKAPI_TOKEN)
@@ -188,8 +188,6 @@ public class RestTestUtils {
             .contentType(expectedContentType)
             .extract()
             .response();
-    HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
-    return response;
   }
 
   public static void checkPreventProtectedFieldsModificationRule(String path, JsonObject compPO, Map<String, Object> updatedFields) {

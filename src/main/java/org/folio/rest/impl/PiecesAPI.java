@@ -72,8 +72,6 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
-
-
   @Override
   @Validate
   public void getOrdersPiecesById(String id, Map<String, String> okapiHeaders,
@@ -103,17 +101,12 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
     pieceDeleteFlowManager.deletePiece(pieceId, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
-
   }
 
   @Override
   @Validate
   public void deleteOrdersPiecesBatch(PieceCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    List<String> pieceIds = new ArrayList<>();
-    for (Piece piece : entity.getPieces()) {
-      pieceIds.add(piece.getId());
-    }
-    pieceDeleteFlowManager.batchDeletePiece(pieceIds, new RequestContext(vertxContext, okapiHeaders));
+    pieceDeleteFlowManager.batchDeletePiece(entity, new RequestContext(vertxContext, okapiHeaders));
   }
 }
 

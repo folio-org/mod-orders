@@ -7,6 +7,7 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import io.vertx.core.CompositeFuture;
@@ -24,6 +25,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
@@ -144,25 +146,11 @@ public class PieceDeleteFlowManager {
     }
   }
 
- public Future<Void> batchDeletePiece(List<String> ids, RequestContext requestContext) {
+ public Future<Void> batchDeletePiece(PieceCollection entity, RequestContext requestContext) {
    PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(false);
-
-   List<Future> deleteFutures = ids.stream()
-     .map(id -> pieceStorageService.getPieceById(id, requestContext)
-       .map(pieceToDelete -> {
-         holder.withPieceToDelete(pieceToDelete);
-         return null;
-       })
-       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
-       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
-       .compose(aVoid -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext))
-       .compose(aVoid -> isDeletePieceRequestValid(holder, requestContext))
-       .compose(aVoid -> processInventory(holder, requestContext))
-       .compose(pair -> updatePoLine(holder, requestContext))
-       .compose(aVoid -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext))
-     )
+   List<String> ids = entity.getPieces().stream()
+     .map(Piece::getId)
      .collect(Collectors.toList());
-
-   return CompositeFuture.all(deleteFutures).mapEmpty();
+   return pieceStorageService.deletePiecesByIds(ids,requestContext);
  }
 }

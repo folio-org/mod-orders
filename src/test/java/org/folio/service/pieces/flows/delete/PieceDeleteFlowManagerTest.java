@@ -42,6 +42,7 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
@@ -380,8 +381,10 @@ public class PieceDeleteFlowManagerTest {
       .withPurchaseOrderId(orderId).withId(lineId).withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
     Title title = new Title().withId(titleId);
-    List<String> ids = new ArrayList<>();
-    ids.add(piece.getId());
+    List<Piece> ids = new ArrayList<>();
+    ids.add(piece);
+    PieceCollection pieceCollection = new PieceCollection();
+    pieceCollection.withPieces(ids);
 
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
@@ -410,7 +413,7 @@ public class PieceDeleteFlowManagerTest {
     final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
     doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
     //When
-   pieceDeleteFlowManager.batchDeletePiece(ids, requestContext).result();
+   pieceDeleteFlowManager.batchDeletePiece(pieceCollection, requestContext).result();
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     verify(inventoryItemManager, times(0)).deleteItem(itemId, true, requestContext);
     verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));

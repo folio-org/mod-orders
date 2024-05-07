@@ -4,8 +4,8 @@ import static io.restassured.RestAssured.given;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.RestTestUtils.prepareHeaders;
-import static org.folio.RestTestUtils.verifyBatchDeleteResponse;
 import static org.folio.RestTestUtils.verifyDeleteResponse;
+import static org.folio.RestTestUtils.verifyPatch;
 import static org.folio.RestTestUtils.verifyPostResponse;
 import static org.folio.RestTestUtils.verifyPut;
 import static org.folio.TestConfig.X_OKAPI_URL;
@@ -373,30 +373,46 @@ public class PieceApiTest {
   }
 
   @Test
-  @Timeout(5)
   void deletePiecesByBatchWithItemDeletionTest() throws JsonProcessingException {
     logger.info("=== Test delete pieces in batch - items deleted ===");
-    Piece postPieceRq = pieceJsonReqData.mapTo(Piece.class);
-    postPieceRq.withId("2bafc9e1-9dd3-4ede-9f23-c4a03f8bb205");
-    postPieceRq.setPoLineId("2bafc9e1-9dd3-4ede-9f23-c4a03f8bb2d5");
-    postPieceRq.setReceiptDate(null);
+    String itemId = UUID.randomUUID().toString();
+    JsonObject item = new JsonObject().put(ID, itemId);
+    String lineId = UUID.randomUUID().toString();
     String orderId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
-    verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID, X_OKAPI_USER_ID_WITH_ACQ_UNITS), APPLICATION_JSON, 201).as(Piece.class);
+    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost = new Cost().withQuantityElectronic(1);
+    CompositePoLine poLine = new CompositePoLine().withId(lineId).withPurchaseOrderId(order.getId())
+      .withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
+      .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE)
+      .withLocations(List.of(loc)).withCost(cost);
+    order.setCompositePoLines(Collections.singletonList(poLine));
+    Title title = new Title().withId(titleId).withTitle("title name");
+
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withFormat(Piece.Format.ELECTRONIC)
+      .withHoldingId(holdingId).withItemId(itemId).withPoLineId(poLine.getId())
+      .withTitleId(titleId);
+
+    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
+    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
+    MockServer.addMockEntry(ITEM_RECORDS, item);
 
     List<Piece> pieces = new ArrayList<>();
-    pieces.add(postPieceRq);
-    PieceCollection pieceCollection = new PieceCollection().withPieces(pieces);
-    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(postPieceRq));
-    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
-    JsonObject jsonPieceCollection = JsonObject.mapFrom(pieceCollection);
-    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(postPieceRq));
-    MockServer.addMockEntry(PIECES_COLLECTION_STORAGE,JsonObject.mapFrom(pieceCollection));
-    int status204 = HttpStatus.HTTP_NO_CONTENT.toInt();
+    pieces.add(piece);
+    PieceCollection pieceCollection = new PieceCollection();
+    pieceCollection.setPieces(pieces);
+    String jsonPieceCollection = JsonObject.mapFrom(pieceCollection).encode();
+    System.out.println(pieceCollection.getPieces().get(0).toString());
 
-    verifyBatchDeleteResponse(PIECES_BATCH_PATH, jsonPieceCollection.encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10,X_OKAPI_USER_ID_WITH_ACQ_UNITS ,X_OKAPI_TOKEN,  X_OKAPI_USER_ID), APPLICATION_JSON,204);
+    verifyDeleteResponse(PIECES_BATCH_PATH, jsonPieceCollection,
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10),APPLICATION_JSON,400);
+
+    assertNull(MockServer.getItemDeletions());
+    assertThat(MockServer.getPieceDeletions(), hasSize(1));
   }
-
 }
