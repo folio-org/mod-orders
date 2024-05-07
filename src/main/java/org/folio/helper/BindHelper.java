@@ -15,14 +15,11 @@ import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeBound;
 
-import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static java.util.stream.Collectors.flatMapping;
-import static java.util.stream.Collectors.toMap;
+import java.util.stream.Collectors;
 
 public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
 
@@ -40,12 +37,15 @@ public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
   }
 
   private Map<String, Map<String, ToBeBound>> groupBindPieceByPoLineId(BindPiecesCollection bindPiecesCollection) {
-    return StreamEx.of(bindPiecesCollection.getToBeBound())
-      .distinct()
-      .groupingBy(ToBeBound::getPoLineId,
-        flatMapping(toBeBound -> toBeBound.getBindPieceIds().stream()
-            .map(bindPieceId -> new AbstractMap.SimpleEntry<>(bindPieceId, toBeBound)),
-          toMap(Map.Entry::getKey, Map.Entry::getValue, (existing, replacement) -> existing)));
+    ToBeBound toBeBound = bindPiecesCollection.getToBeBound();
+    String poLineId = toBeBound.getPoLineId();
+    Map<String, ToBeBound> bindPieceMap = toBeBound.getBindPieceIds().stream()
+      .collect(Collectors.toMap(
+        bindPieceId -> bindPieceId,
+        bindPieceId -> toBeBound
+      ));
+
+    return Map.of(poLineId, bindPieceMap);
   }
 
   public Future<ReceivingResults> bindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
