@@ -20,6 +20,17 @@
         "quantityPhysical": 1,
         "poLineEstimatedPrice": 0.9
       },
+      "locations": [
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        }
+      ],
+      "searchLocationIds": [
+        "fcd64ce1-6995-48f0-840e-89ffa2288371"
+      ],
       "orderFormat": "Physical Resource",
       "paymentStatus": "Payment Not Required",
       "physical": {

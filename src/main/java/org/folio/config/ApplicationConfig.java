@@ -61,6 +61,7 @@ import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.inventory.InventoryService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.invoice.InvoiceService;
@@ -504,6 +505,11 @@ public class ApplicationConfig {
   }
 
   @Bean
+  InventoryItemStatusSyncService itemStatusSyncService(InventoryItemManager inventoryItemManager) {
+    return new InventoryItemStatusSyncService(inventoryItemManager);
+  }
+
+  @Bean
   PieceChangeReceiptStatusPublisher receiptStatusPublisher() {
     return new PieceChangeReceiptStatusPublisher();
   }
@@ -659,8 +665,8 @@ public class ApplicationConfig {
     @Qualifier("combinedPopulateService") CompositeOrderDynamicDataPopulateService combinedPopulateService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-    PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryItemManager inventoryItemManager,
-    UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+    PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService,
+    InventoryItemStatusSyncService itemStatusSyncService, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
@@ -668,14 +674,14 @@ public class ApplicationConfig {
     RestClient restClient) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-      purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, inventoryItemManager,
-      unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
-      poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService, reOpenCompositeOrderManager,
-      organizationService, restClient);
+      purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, itemStatusSyncService,
+      unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService,
+      configurationEntriesCache, poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService,
+      reOpenCompositeOrderManager, organizationService, restClient);
   }
 
   @Bean
-  PurchaseOrderLineHelper purchaseOrderLineHelper(InventoryItemManager inventoryItemManager,
+  PurchaseOrderLineHelper purchaseOrderLineHelper(InventoryItemStatusSyncService itemStatusSyncService,
                                                   InventoryInstanceManager inventoryInstanceManager,
                                                   EncumbranceService encumbranceService,
                                                   ExpenseClassValidationService expenseClassValidationService,
@@ -688,7 +694,7 @@ public class ApplicationConfig {
                                                   RestClient restClient, CompositePoLineValidationService compositePoLineValidationService,
                                                   POLInvoiceLineRelationService polInvoiceLineRelationService,
                                                   OrganizationService organizationService) {
-    return new PurchaseOrderLineHelper(inventoryItemManager, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
+    return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
       purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService, polInvoiceLineRelationService,
       organizationService);
