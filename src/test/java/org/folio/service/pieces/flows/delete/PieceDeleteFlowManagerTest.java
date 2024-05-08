@@ -385,7 +385,6 @@ public class PieceDeleteFlowManagerTest {
     ids.add(piece);
     PieceCollection pieceCollection = new PieceCollection();
     pieceCollection.withPieces(ids);
-
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
