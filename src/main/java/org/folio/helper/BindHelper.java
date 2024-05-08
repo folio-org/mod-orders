@@ -4,7 +4,6 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
@@ -13,7 +12,6 @@ import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.jaxrs.model.ToBeBound;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -21,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
+public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection> {
 
   public BindHelper(BindPiecesCollection bindPiecesCollection,
                     Map<String, String> okapiHeaders, Context ctx) {
@@ -36,13 +34,12 @@ public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
     }
   }
 
-  private Map<String, Map<String, ToBeBound>> groupBindPieceByPoLineId(BindPiecesCollection bindPiecesCollection) {
-    ToBeBound toBeBound = bindPiecesCollection.getToBeBound();
-    String poLineId = toBeBound.getPoLineId();
-    Map<String, ToBeBound> bindPieceMap = toBeBound.getBindPieceIds().stream()
+  private Map<String, Map<String, BindPiecesCollection>> groupBindPieceByPoLineId(BindPiecesCollection bindPiecesCollection) {
+    String poLineId = bindPiecesCollection.getPoLineId();
+    Map<String, BindPiecesCollection> bindPieceMap = bindPiecesCollection.getBindPieceIds().stream()
       .collect(Collectors.toMap(
         bindPieceId -> bindPieceId,
-        bindPieceId -> toBeBound
+        bindPieceId -> bindPiecesCollection
       ));
 
     return Map.of(poLineId, bindPieceMap);
@@ -79,13 +76,12 @@ public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
   private Future<Map<String, List<Piece>>> createItemForPiece(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                       BindPiecesCollection bindPiecesCollection,
                                                       RequestContext requestContext) {
-    String poLineId = bindPiecesCollection.getToBeBound().getPoLineId();
+    String poLineId = bindPiecesCollection.getPoLineId();
     logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
       .compose(compPOL ->
-        inventoryItemManager.createBindItem(compPOL, bindPiecesCollection.getToBeBound().getBindItem(), requestContext)
-      )
+        inventoryItemManager.createBindItem(compPOL, bindPiecesCollection.getBindItem(), requestContext))
       .map(itemId -> {
           piecesGroupedByPoLine.get(poLineId).forEach(piece -> piece.withItemId(itemId));
           return piecesGroupedByPoLine;
@@ -114,8 +110,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
                                                Map<String, List<Piece>> piecesGroupedByPoLine) {
     ReceivingResults results = new ReceivingResults();
     results.setTotalRecords(1);
-    var toBeBound = bindPiecesCollection.getToBeBound();
-    String poLineId = toBeBound.getPoLineId();
+    String poLineId = bindPiecesCollection.getPoLineId();
     ReceivingResult result = new ReceivingResult();
     results.getReceivingResults().add(result);
 
@@ -127,7 +122,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
     Map<String, Integer> resultCounts = new HashMap<>();
     resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
     resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
-    for (String pieceId : toBeBound.getBindPieceIds()) {
+    for (String pieceId : bindPiecesCollection.getBindPieceIds()) {
       calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
     }
 
@@ -144,21 +139,21 @@ public class BindHelper extends CheckinReceivePiecesHelper<ToBeBound> {
 
   @Override
   protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
-    return Future.succeededFuture(false);
+    return null;
   }
 
   @Override
   protected Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    return Collections.emptyMap();
+    return Map.of();
   }
 
   @Override
   protected String getHoldingId(Piece piece) {
-    return StringUtils.EMPTY;
+    return "";
   }
 
   @Override
   protected String getLocationId(Piece piece) {
-    return StringUtils.EMPTY;
+    return "";
   }
 }

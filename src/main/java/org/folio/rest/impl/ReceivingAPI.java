@@ -67,7 +67,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
 
   @Override
   public void postOrdersBind(BindPiecesCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Bind {} pieces", entity.getToBeBound().getBindPieceIds());
+    logger.info("Bind {} pieces", entity.getBindPieceIds());
     BindHelper helper = new BindHelper(entity, okapiHeaders, vertxContext);
     helper.bindPieces(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))

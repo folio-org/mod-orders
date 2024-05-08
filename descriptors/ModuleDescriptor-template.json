@@ -1079,14 +1079,14 @@
       ]
     },
     {
-      "id": "orders.bind",
+      "id": "orders.bind-pieces",
       "version": "1.0",
       "handlers": [
         {
           "methods": ["POST"],
-          "pathPattern": "/orders/bind",
+          "pathPattern": "/orders/bind-pieces",
           "permissionsRequired": [
-            "orders.bind.collection.post"
+            "orders.bind-pieces.collection.post"
           ],
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
@@ -1873,8 +1873,8 @@
       ]
     },
     {
-      "permissionName": "orders.bind.collection.post",
-      "displayName" : "bind pieces collection post",
+      "permissionName": "orders.bind-pieces.collection.post",
+      "displayName" : "bind-pieces collection post",
       "description" : "Bind pieces collection post"
     },
 
@@ -1914,7 +1914,7 @@
         "orders.acquisition-methods.all",
         "orders.export-history.all",
         "orders.routing-lists.all",
-        "orders.bind.collection.post"
+        "orders.bind-pieces.collection.post"
       ]
     },
     {

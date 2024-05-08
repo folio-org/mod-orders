@@ -30,7 +30,6 @@ import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
-import org.folio.rest.jaxrs.model.ToBeBound;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeExpected;
 import org.junit.jupiter.api.AfterAll;
@@ -999,10 +998,9 @@ public class CheckinReceivingApiTest {
     addMockEntry(TITLES, getTitle(poLine));
 
     var bindPiecesCollection = new BindPiecesCollection()
-      .withToBeBound(new ToBeBound()
-        .withPoLineId(poLine.getId())
+      .withPoLineId(poLine.getId())
         .withBindItem(bindItem)
-        .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId())));
+        .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId()));
 
     var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
@@ -1012,7 +1010,7 @@ public class CheckinReceivingApiTest {
     var pieceUpdates = getPieceUpdates();
 
     assertThat(pieceUpdates, not(nullValue()));
-    assertThat(pieceUpdates, hasSize(bindPiecesCollection.getToBeBound().getBindPieceIds().size()));
+    assertThat(pieceUpdates, hasSize(bindPiecesCollection.getBindPieceIds().size()));
 
     var pieceList = pieceUpdates.stream().filter(pol -> {
       Piece piece = pol.mapTo(Piece.class);
