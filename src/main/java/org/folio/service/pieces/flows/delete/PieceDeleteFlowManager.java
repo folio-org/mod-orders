@@ -165,13 +165,14 @@ public class PieceDeleteFlowManager {
             return holder;
           });
       })
-      .collect(Collectors.toList());
+      .toList();
 
     return collectResultsOnSuccess(deletionHolders)
       .compose(holders -> {
         List<Future<Void>> deleteFutures = holders.stream()
           .map(holder -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext))
-          .collect(Collectors.toList());
+          .toList();
+
         return collectResultsOnSuccess(deleteFutures);
       });
   }
