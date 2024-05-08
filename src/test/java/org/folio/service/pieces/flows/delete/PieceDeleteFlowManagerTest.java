@@ -369,7 +369,7 @@ public class PieceDeleteFlowManagerTest {
   }
 
   @Test
-  void shouldDeleteHoldingAndPieceInBatch()  {
+  void shouldDeletePiecesInBatch()  {
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
