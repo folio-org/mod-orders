@@ -46,6 +46,7 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -69,14 +70,24 @@ import org.springframework.context.annotation.Bean;
 
 @ExtendWith(VertxExtension.class)
 public class PieceDeleteFlowManagerTest {
-  @Autowired PieceDeleteFlowManager pieceDeleteFlowManager;
-  @Autowired PieceStorageService pieceStorageService;
-  @Autowired ProtectionService protectionService;
-  @Autowired InventoryItemManager inventoryItemManager;
-  @Autowired InventoryHoldingManager inventoryHoldingManager;
-  @Autowired PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
-  @Autowired PieceUpdateInventoryService pieceUpdateInventoryService;
-  @Autowired BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
+  @Autowired
+  PieceDeleteFlowManager pieceDeleteFlowManager;
+  @Autowired
+  PieceStorageService pieceStorageService;
+  @Autowired
+  ProtectionService protectionService;
+  @Autowired
+  InventoryItemManager inventoryItemManager;
+  @Autowired
+  InventoryHoldingManager inventoryHoldingManager;
+  @Autowired
+  PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService;
+  @Autowired
+  PieceUpdateInventoryService pieceUpdateInventoryService;
+  @Autowired
+  BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
+  @Autowired
+  CirculationRequestsRetriever circulationRequestsRetriever;
 
   private final Context ctx = getFirstContextFromVertx(getVertx());
   @Mock
@@ -142,7 +153,7 @@ public class PieceDeleteFlowManagerTest {
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(piece.getId(), true,requestContext);
-    doReturn(succeededFuture(null)).when(inventoryItemManager).getNumberOfRequestsByItemId(piece.getItemId(), requestContext);
+    doReturn(succeededFuture(null)).when(circulationRequestsRetriever).getNumberOfRequestsByItemId(piece.getItemId(), requestContext);
     doReturn(succeededFuture(item)).when(inventoryItemManager).getItemRecordById(itemId, true, requestContext);
     doReturn(succeededFuture(null)).when(inventoryItemManager).deleteItem(itemId, true, requestContext);
 
@@ -206,7 +217,7 @@ public class PieceDeleteFlowManagerTest {
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(null)).when(circulationRequestsRetriever).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(succeededFuture(item)).when(inventoryItemManager).getItemRecordById(itemId, true, requestContext);
     doReturn(succeededFuture(null)).when(inventoryItemManager).deleteItem(itemId, true, requestContext);
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
@@ -262,9 +273,9 @@ public class PieceDeleteFlowManagerTest {
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(null)).when(circulationRequestsRetriever).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(null)).when(circulationRequestsRetriever).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(inventoryItemManager).deleteItem(itemId, true, requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
     final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
@@ -322,7 +333,7 @@ public class PieceDeleteFlowManagerTest {
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    doReturn(succeededFuture(null)).when(inventoryItemManager).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
+    doReturn(succeededFuture(null)).when(circulationRequestsRetriever).getNumberOfRequestsByItemId(eq(piece.getItemId()), eq(requestContext));
     doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, false, requestContext);
     doReturn(succeededFuture(null)).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
     doReturn(succeededFuture(null)).when(inventoryHoldingManager).deleteHoldingById(piece.getHoldingId(), true, requestContext);
@@ -417,35 +428,56 @@ public class PieceDeleteFlowManagerTest {
   }
 
   private static class ContextConfiguration {
-    @Bean PieceStorageService pieceStorageService() {
+
+    @Bean
+    PieceStorageService pieceStorageService() {
       return mock(PieceStorageService.class);
     }
-    @Bean ProtectionService protectionService() {
+
+    @Bean
+    ProtectionService protectionService() {
       return mock(ProtectionService.class);
     }
 
     @Bean PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService() {
       return mock(PieceDeleteFlowPoLineService.class);
     }
-    @Bean InventoryItemManager inventoryItemManager() {
+
+    @Bean
+    InventoryItemManager inventoryItemManager() {
       return mock(InventoryItemManager.class);
     }
-    @Bean InventoryHoldingManager inventoryHoldingManager() {
+
+    @Bean
+    InventoryHoldingManager inventoryHoldingManager() {
       return mock(InventoryHoldingManager.class);
     }
-    @Bean PieceUpdateInventoryService pieceUpdateInventoryService() {
+
+    @Bean
+    PieceUpdateInventoryService pieceUpdateInventoryService() {
       return mock(PieceUpdateInventoryService.class);
     }
 
-    @Bean BasePieceFlowHolderBuilder basePieceFlowHolderBuilder() {
+    @Bean
+    BasePieceFlowHolderBuilder basePieceFlowHolderBuilder() {
       return mock(BasePieceFlowHolderBuilder.class);
     }
 
-    @Bean PieceDeleteFlowManager pieceDeleteFlowManager(PieceStorageService pieceStorageService, ProtectionService protectionService,
-      InventoryItemManager inventoryItemManager, PieceUpdateInventoryService pieceUpdateInventoryService,
-      PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
-      return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryItemManager,
-            pieceUpdateInventoryService, pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder);
+    @Bean
+    public CirculationRequestsRetriever circulationRequestsRetriever() {
+      return mock(CirculationRequestsRetriever.class);
     }
+
+    @Bean PieceDeleteFlowManager pieceDeleteFlowManager(PieceStorageService pieceStorageService,
+                                                        ProtectionService protectionService,
+                                                        InventoryItemManager inventoryItemManager,
+                                                        PieceUpdateInventoryService pieceUpdateInventoryService,
+                                                        PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
+                                                        BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
+                                                        CirculationRequestsRetriever circulationRequestsRetriever) {
+      return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryItemManager,
+        pieceUpdateInventoryService, pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
+    }
+
   }
 }

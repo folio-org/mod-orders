@@ -43,7 +43,6 @@ import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 import static org.folio.service.inventory.InventoryUtils.ITEMS;
 import static org.folio.service.inventory.InventoryUtils.ITEM_BY_ID_ENDPOINT;
-import static org.folio.service.inventory.InventoryUtils.REQUESTS;
 
 public class InventoryItemManager {
   private static final Logger logger = LogManager.getLogger(InventoryItemManager.class);
@@ -69,7 +68,6 @@ public class InventoryItemManager {
   public static final String BARCODE_ALREADY_EXIST_ERROR = "lower(jsonb ->> 'barcode'::text) value already exists in table item";
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
-  private static final String TOTAL_RECORDS = "totalRecords";
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
   private static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
@@ -129,14 +127,6 @@ public class InventoryItemManager {
       .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(this::extractEntities);
-  }
-
-  public Future<Integer> getNumberOfRequestsByItemId(String itemId, RequestContext requestContext) {
-    String query = String.format("(itemId==%s and status=\"*\")", itemId);
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
-      .withQuery(query).withOffset(0).withLimit(0);
-    return restClient.getAsJsonObject(requestEntry, requestContext)
-      .map(json -> json.getInteger(TOTAL_RECORDS));
   }
 
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {

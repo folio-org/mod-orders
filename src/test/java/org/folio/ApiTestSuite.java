@@ -40,6 +40,7 @@ import org.folio.rest.impl.protection.LinesProtectionTest;
 import org.folio.rest.impl.protection.OrdersProtectionTest;
 import org.folio.rest.impl.protection.PiecesProtectionTest;
 import org.folio.rest.impl.protection.ReceivingCheckinProtectionTest;
+import org.folio.service.CirculationRequestsRetrieverTest;
 import org.folio.service.PrefixServiceTest;
 import org.folio.service.ReasonForClosureServiceTest;
 import org.folio.service.SuffixServiceTest;
@@ -64,6 +65,7 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategyTes
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
 import org.folio.service.inventory.HoldingsSummaryServiceTest;
+import org.folio.service.inventory.InventoryItemRequestServiceTest;
 import org.folio.service.inventory.InventoryItemStatusSyncServiceTest;
 import org.folio.service.inventory.InventoryManagerTest;
 import org.folio.service.invoice.InvoiceLineServiceTest;
@@ -258,6 +260,10 @@ public class ApiTestSuite {
 
   @Nested
   class InventoryManagerTestNested extends InventoryManagerTest {
+  }
+
+  @Nested
+  class InventoryItemRequestServiceTestNested extends InventoryItemRequestServiceTest {
   }
 
   @Nested
@@ -495,4 +501,9 @@ public class ApiTestSuite {
   @Nested
   class UserServiceTestNested extends UserServiceTest {
   }
+
+  @Nested
+  class CirculationRequestsRetrieverTestNested extends CirculationRequestsRetrieverTest {
+  }
+
 }
