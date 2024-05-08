@@ -37,6 +37,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -59,6 +60,7 @@ public class UnOpenCompositeOrderManager {
   private final InventoryHoldingManager inventoryHoldingManager;
   private final PieceStorageService pieceStorageService;
   private final ProtectionService protectionService;
+  private final CirculationRequestsRetriever circulationRequestsRetriever;
 
   public UnOpenCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
                                      EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
@@ -66,7 +68,8 @@ public class UnOpenCompositeOrderManager {
                                      InventoryHoldingManager inventoryHoldingManager,
                                      PieceStorageService pieceStorageService,
                                      PurchaseOrderStorageService purchaseOrderStorageService,
-                                     ProtectionService protectionService) {
+                                     ProtectionService protectionService,
+                                     CirculationRequestsRetriever circulationRequestsRetriever) {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.encumbranceWorkflowStrategyFactory = encumbranceWorkflowStrategyFactory;
     this.inventoryItemManager = inventoryItemManager;
@@ -74,6 +77,7 @@ public class UnOpenCompositeOrderManager {
     this.pieceStorageService = pieceStorageService;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.protectionService = protectionService;
+    this.circulationRequestsRetriever = circulationRequestsRetriever;
   }
 
 
@@ -406,7 +410,7 @@ public class UnOpenCompositeOrderManager {
   }
 
   private Future<Void> canDeletePieceWithItem(Piece piece, RequestContext requestContext) {
-    return inventoryItemManager.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
+    return circulationRequestsRetriever.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
       .map(numOfRequests -> {
         if (numOfRequests != null && numOfRequests > 0) {
           throw new HttpException(422, ErrorCodes.REQUEST_FOUND.toError());
