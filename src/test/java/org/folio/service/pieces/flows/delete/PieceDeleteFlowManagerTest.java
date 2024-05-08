@@ -369,7 +369,7 @@ public class PieceDeleteFlowManagerTest {
   }
 
   @Test
-  void shouldUpdateLineQuantityIfPoLineIsNotPackageAndManualPieceCreateFalseAndInventoryInstanceVsHoldingAndDeleteHoldingAndPieceInBatch()  {
+  void shouldDeleteHoldingAndPieceInBatch()  {
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -427,8 +427,6 @@ public class PieceDeleteFlowManagerTest {
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     verify(inventoryItemManager, times(0)).deleteItem(itemId, true, requestContext);
     verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
-    verify(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
-
   }
 
   private static class ContextConfiguration {
