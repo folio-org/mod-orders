@@ -805,7 +805,8 @@
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "configuration.entries.collection.get"
           ]
         },
         {
