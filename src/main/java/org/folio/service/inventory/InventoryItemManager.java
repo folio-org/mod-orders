@@ -75,18 +75,15 @@ public class InventoryItemManager {
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final InventoryCache inventoryCache;
-  private final PieceStorageService pieceStorageService;
   private final ConsortiumConfigurationService consortiumConfigurationService;
 
   public InventoryItemManager(RestClient restClient,
                               ConfigurationEntriesCache configurationEntriesCache,
-                              PieceStorageService pieceStorageService,
                               InventoryCache inventoryCache,
                               ConsortiumConfigurationService consortiumConfigurationService) {
     this.restClient = restClient;
     this.configurationEntriesCache = configurationEntriesCache;
     this.inventoryCache = inventoryCache;
-    this.pieceStorageService = pieceStorageService;
     this.consortiumConfigurationService = consortiumConfigurationService;
   }
 
@@ -425,30 +422,22 @@ public class InventoryItemManager {
       });
   }
 
-  private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePoLine compPOL, BindItem bindItem, RequestContext requestContext) {
+  public Future<String> createBindItem(CompositePoLine compPOL, BindItem bindItem,
+                                       RequestContext requestContext) {
     var holdingLocation = compPOL.getLocations().stream().filter(location -> location.getHoldingId() != null).findAny();
     if (holdingLocation.isEmpty()) {
       throw new IllegalArgumentException("Holding Id must not be null");
     }
-    return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
-      .map(loanTypeId -> new JsonObject()
-        .put(ITEM_HOLDINGS_RECORD_ID, holdingLocation.get().getHoldingId())
-        .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()))
-        .put(ITEM_BARCODE, bindItem.getBarcode())
-        .put(ITEM_LEVEL_CALL_NUMBER, bindItem.getCallNumber())
-        .put(ITEM_PERMANENT_LOAN_TYPE_ID, bindItem.getPermanentLoanTypeId())
-        .put(ITEM_MATERIAL_TYPE_ID, bindItem.getMaterialTypeId())
-        .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId())
-      );
-  }
-
-  public Future<String> createBindItem(CompositePoLine compPOL, BindItem bindItem,
-                                       RequestContext requestContext) {
-    return buildBaseItemRecordJsonObject(compPOL, bindItem, requestContext)
-      .compose(item -> {
-        logger.debug("Creating item for PO Line with '{}' id", compPOL.getId());
-        return createItemInInventory(item, requestContext);
-      });
+    JsonObject item = new JsonObject()
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingLocation.get().getHoldingId())
+      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()))
+      .put(ITEM_BARCODE, bindItem.getBarcode())
+      .put(ITEM_LEVEL_CALL_NUMBER, bindItem.getCallNumber())
+      .put(ITEM_PERMANENT_LOAN_TYPE_ID, bindItem.getPermanentLoanTypeId())
+      .put(ITEM_MATERIAL_TYPE_ID, bindItem.getMaterialTypeId())
+      .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
+    logger.debug("Creating item for PO Line with '{}' id", compPOL.getId());
+    return createItemInInventory(item, requestContext);
   }
 
   private Future<List<String>> createItemRecords(JsonObject itemRecord, int expectedCount, RequestContext requestContext) {
