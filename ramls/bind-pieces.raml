@@ -1,16 +1,17 @@
 #%RAML 1.0
-title: Expect
+title: Bind Pieces
 baseUri: https://github.com/folio-org/mod-orders
 version: v1
 protocols: [ HTTP, HTTPS ]
 
 documentation:
   - title: Orders Business Logic API
-    content: <b>API for transitioning pieces status from Unreceivable to Expected</b>
+    content: <b>API for binding pieces with item for one title</b>
 
 types:
-  expect-collection: !include acq-models/mod-orders/schemas/expectCollection.json
+  bind-pieces-collection: !include acq-models/mod-orders/schemas/bindPiecesCollection.json
   receiving-results: !include acq-models/mod-orders/schemas/receivingResults.json
+
   errors: !include raml-util/schemas/errors.schema
   UUID:
     type: string
@@ -22,17 +23,16 @@ traits:
 resourceTypes:
   post-with-200: !include rtypes/post-json-200.raml
 
-/orders/expect:
-  displayName: Expect pieces
+/orders/bind:
+  displayName: Bind pieces
   description: |
-    Expect pieces spanning one or more PO lines. The endpoint is used to:
-    - move a unreceivable piece back to "Expected"
+    This endpoint used to bind pieces to one item and connect that item to title.
   type:
     post-with-200:
-      requestSchema: expect-collection
+      requestSchema: bind-pieces-collection
       responseSchema: receiving-results
-      requestExample: !include acq-models/mod-orders/examples/expectCollection.sample
+      requestExample: !include acq-models/mod-orders/examples/bindPiecesCollection.sample
       responseExample: !include acq-models/mod-orders/examples/receivingResults.sample
   is: [validate]
   post:
-    description: Expect pieces spanning one or more PO lines
+    description: bind pieces to item and connect that item to title
