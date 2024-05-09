@@ -30,7 +30,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       int piecesQty = StreamEx.ofValues(piecesByLineId)
         .mapToInt(Map::size)
         .sum();
-      logger.debug("{} piece records(s) are going to be bind for {} PO line(s)", piecesQty, poLineQty);
+      logger.debug("{} piece records(s) are going to be bound for {} PO line(s)", piecesQty, poLineQty);
     }
   }
 
@@ -60,9 +60,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       // 3. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
       // 4. Update Title with new bind items
-      .map(piecesByPoLineIds -> updateTitleWithBindItems(piecesByPoLineIds, requestContext))
+      .map(piecesGroupedByPoLine -> updateTitleWithBindItems(piecesGroupedByPoLine, requestContext))
       // 5. Return results to the client
-      .map(piecesGroupedByPoLine -> prepareResponseBody(bindPiecesCollection, piecesGroupedByPoLine));
+      .map(piecesGroupedByPoLine -> prepareResponseBody(piecesGroupedByPoLine, bindPiecesCollection));
   }
 
   private Map<String, List<Piece>> updatePieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
@@ -83,7 +83,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .compose(compPOL ->
         inventoryItemManager.createBindItem(compPOL, bindPiecesCollection.getBindItem(), requestContext))
       .map(itemId -> {
-          piecesGroupedByPoLine.get(poLineId).forEach(piece -> piece.withItemId(itemId));
+          piecesGroupedByPoLine.get(poLineId).forEach(piece -> piece.setItemId(itemId));
           return piecesGroupedByPoLine;
         }
       );
@@ -106,13 +106,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return piecesByPoLineIds;
   }
 
-  private ReceivingResults prepareResponseBody(BindPiecesCollection bindPiecesCollection,
-                                               Map<String, List<Piece>> piecesGroupedByPoLine) {
-    ReceivingResults results = new ReceivingResults();
-    results.setTotalRecords(1);
+  private ReceivingResults prepareResponseBody(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                               BindPiecesCollection bindPiecesCollection) {
     String poLineId = bindPiecesCollection.getPoLineId();
-    ReceivingResult result = new ReceivingResult();
-    results.getReceivingResults().add(result);
 
     // Get all processed piece records for PO Line
     Map<String, Piece> processedPiecesForPoLine = StreamEx
@@ -122,6 +118,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     Map<String, Integer> resultCounts = new HashMap<>();
     resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
     resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
+    ReceivingResult result = new ReceivingResult();
     for (String pieceId : bindPiecesCollection.getBindPieceIds()) {
       calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
     }
@@ -129,7 +126,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     result.withPoLineId(poLineId)
       .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
       .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
-    return results;
+    return new ReceivingResults()
+      .withTotalRecords(1)
+      .withReceivingResults(List.of(result));
   }
 
   @Override

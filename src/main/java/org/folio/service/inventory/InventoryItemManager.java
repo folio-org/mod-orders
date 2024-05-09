@@ -431,17 +431,15 @@ public class InventoryItemManager {
       throw new IllegalArgumentException("Holding Id must not be null");
     }
     return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
-      .map(loanTypeId -> {
-        JsonObject itemRecord = new JsonObject();
-        itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingLocation.get().getHoldingId());
-        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()));
-        itemRecord.put(ITEM_BARCODE, bindItem.getBarcode());
-        itemRecord.put(ITEM_LEVEL_CALL_NUMBER, bindItem.getCallNumber());
-        itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, bindItem.getPermanentLoanTypeId());
-        itemRecord.put(ITEM_MATERIAL_TYPE_ID, bindItem.getMaterialTypeId());
-        itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
-        return itemRecord;
-      });
+      .map(loanTypeId -> new JsonObject()
+        .put(ITEM_HOLDINGS_RECORD_ID, holdingLocation.get().getHoldingId())
+        .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()))
+        .put(ITEM_BARCODE, bindItem.getBarcode())
+        .put(ITEM_LEVEL_CALL_NUMBER, bindItem.getCallNumber())
+        .put(ITEM_PERMANENT_LOAN_TYPE_ID, bindItem.getPermanentLoanTypeId())
+        .put(ITEM_MATERIAL_TYPE_ID, bindItem.getMaterialTypeId())
+        .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId())
+      );
   }
 
   public Future<String> createBindItem(CompositePoLine compPOL, BindItem bindItem,
