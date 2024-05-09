@@ -2,8 +2,6 @@ package org.folio.helper;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
-import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
@@ -11,45 +9,26 @@ import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
 import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
-import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderClosing;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderReopening;
-import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToApproved;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToClosed;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToOpen;
-import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToPending;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isTransitionToReopen;
 import static org.folio.orders.utils.POProtectedFields.getFieldNames;
 import static org.folio.orders.utils.POProtectedFields.getFieldNamesForOpenOrder;
 import static org.folio.orders.utils.PermissionsUtil.*;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyOngoingFieldsChanged;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
-import static org.folio.orders.utils.ProtectedOperationType.CREATE;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
-import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
-import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
-import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.core.exceptions.ErrorCodes.APPROVAL_REQUIRED_TO_OPEN;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
-import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_APPROVAL_PERMISSIONS;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_REOPEN_PERMISSIONS;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_UNOPEN_PERMISSIONS;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.folio.service.UserService.getCurrentUserId;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -60,30 +39,23 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ItemStatus;
-import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.rest.core.RestClient;
-import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.CompositePoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.service.PrefixService;
 import org.folio.service.ProtectionService;
-import org.folio.service.SuffixService;
 import org.folio.service.TagService;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.finance.transaction.EncumbranceService;
@@ -91,16 +63,14 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
-import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
+import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.OrderWorkflowType;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
-import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
-import org.folio.service.organization.OrganizationService;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
@@ -120,19 +90,14 @@ public class PurchaseOrderHelper {
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TitlesService titlesService;
   private final ProtectionService protectionService;
-  private final PrefixService prefixService;
-  private final SuffixService suffixService;
   private final InventoryItemStatusSyncService itemStatusSyncService;
-  private final UnOpenCompositeOrderManager unOpenCompositeOrderManager;
   private final OpenCompositeOrderManager openCompositeOrderManager;
   private final OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final PoNumberHelper poNumberHelper;
-  private final CompositePoLineValidationService compositePoLineValidationService;
   private final ReOpenCompositeOrderManager reOpenCompositeOrderManager;
-  private final OrganizationService organizationService;
-  private final RestClient restClient;
+  private final OrderValidationService orderValidationService;
 
   public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
       CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
@@ -140,13 +105,11 @@ public class PurchaseOrderHelper {
       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
       OrderInvoiceRelationService orderInvoiceRelationService, TagService tagService,
       PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-      ProtectionService protectionService, PrefixService prefixService, SuffixService suffixService,
-      InventoryItemStatusSyncService itemStatusSyncService, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+      ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
       OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
       ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
       OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-      CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager,
-      OrganizationService organizationService, RestClient restClient) {
+      ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrderValidationService orderValidationService) {
     this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.orderLinesSummaryPopulateService = orderLinesSummaryPopulateService;
     this.encumbranceService = encumbranceService;
@@ -157,19 +120,14 @@ public class PurchaseOrderHelper {
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.titlesService = titlesService;
     this.protectionService = protectionService;
-    this.prefixService = prefixService;
-    this.suffixService = suffixService;
     this.itemStatusSyncService = itemStatusSyncService;
-    this.unOpenCompositeOrderManager = unOpenCompositeOrderManager;
     this.openCompositeOrderManager = openCompositeOrderManager;
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.configurationEntriesCache = configurationEntriesCache;
     this.poNumberHelper = poNumberHelper;
     this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
-    this.compositePoLineValidationService = compositePoLineValidationService;
     this.reOpenCompositeOrderManager = reOpenCompositeOrderManager;
-    this.organizationService = organizationService;
-    this.restClient = restClient;
+    this.orderValidationService = orderValidationService;
   }
 
   /**
@@ -182,13 +140,7 @@ public class PurchaseOrderHelper {
    */
   public Future<PurchaseOrderCollection> getPurchaseOrders(int limit, int offset, String query, RequestContext requestContext) {
     return protectionService.getQueryWithAcqUnitsCheck(StringUtils.EMPTY, query, requestContext)
-      .compose(finalQuery -> {
-        RequestEntry requestEntry = new RequestEntry(resourcesPath(PURCHASE_ORDER_STORAGE))
-          .withQuery(finalQuery)
-          .withLimit(limit)
-          .withOffset(offset);
-        return restClient.get(requestEntry, PurchaseOrderCollection.class, requestContext);
-      })
+      .compose(finalQuery -> purchaseOrderStorageService.getPurchaseOrders(finalQuery, limit, offset, requestContext))
       .onFailure(t -> logger.error("Error getting orders", t));
   }
 
@@ -203,14 +155,32 @@ public class PurchaseOrderHelper {
     return purchaseOrderStorageService.getPurchaseOrderById(orderId, requestContext);
   }
 
+  public Future<CompositePurchaseOrder> postCompositeOrder(CompositePurchaseOrder compPO, RequestContext requestContext) {
+    // First validate content of the PO and proceed only if all is okay
+    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
+      .compose(tenantConfig -> orderValidationService.validateOrderForPost(compPO, tenantConfig, requestContext)
+        .compose(errors -> {
+          if (CollectionUtils.isEmpty(errors)) {
+            logger.info("Creating PO and POLines...");
+            return createPurchaseOrder(compPO, tenantConfig, requestContext)
+              .onSuccess(po -> logger.info("Successfully Placed Order: {}", JsonObject.mapFrom(po).encodePrettily()));
+          } else {
+            throw new HttpException(422, new Errors().withErrors(errors)
+              .withTotalRecords(errors.size()));
+          }
+        }))
+      .onFailure(t -> logger.error("Failed to create order: {}", JsonObject.mapFrom(compPO).encodePrettily(), t));
+  }
+
   /**
    * Create a purchase order (PO) and a number of PO lines if provided.
    * @param compPO {@link CompositePurchaseOrder} object representing Purchase Order and optionally Purchase Order Line details.
    * @return completable future with {@link CompositePurchaseOrder} object with populated uuid on success or an exception if processing fails
    */
-  public Future<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO, JsonObject tenantConfiguration, RequestContext requestContext) {
+  public Future<CompositePurchaseOrder> createPurchaseOrder(CompositePurchaseOrder compPO, JsonObject tenantConfiguration,
+      RequestContext requestContext) {
     logger.info("createPurchaseOrder :: orderId: {}", compPO.getId());
-    return validateNewPurchaseOrders(compPO, requestContext)
+    return orderValidationService.validateOrderForCreation(compPO, requestContext)
       .compose(v -> setPoNumberIfMissing(compPO, requestContext))
       .compose(v -> processPoLineTags(compPO, requestContext))
       .compose(v -> createPOandPOLines(compPO, tenantConfiguration, requestContext))
@@ -219,21 +189,24 @@ public class PurchaseOrderHelper {
         .map(v -> compOrder));
   }
 
-  private Future<Void> validateNewPurchaseOrders(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    logger.info("validateNewPurchaseOrders :: orderId: {}", compPO.getId());
-    List<Future<Void>> futures = new ArrayList<>();
+  public Future<Void> putCompositeOrderById(String orderId, boolean deleteHoldings, CompositePurchaseOrder compPO,
+      RequestContext requestContext) {
 
-    futures.add(protectionService.validateAcqUnitsOnCreate(compPO.getAcqUnitIds(), AcqDesiredPermissions.ASSIGN, requestContext));
-    futures.add(checkOrderApprovalPermissions(compPO, requestContext));
-    futures.add(prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(), requestContext));
-    futures.add(suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(), requestContext));
-    futures.add(poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext));
+    // Set order id from path if not specified in body
+    populateOrderId(orderId, compPO);
 
-    return GenericCompositeFuture.join(futures)
-      .onSuccess(v -> logger.info("validation successful"))
-      .onFailure(v-> logger.error("validation failed"))
-      .mapEmpty();
-
+    return orderValidationService.validateOrderForPut(orderId, compPO, requestContext)
+      .map(validationErrors -> {
+        if (CollectionUtils.isNotEmpty(validationErrors)) {
+          Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
+          logger.error("Validation error. Failed to update purchase order : {}", JsonObject.mapFrom(errors).encodePrettily());
+          throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
+        }
+        return null;
+      })
+      .compose(v-> updateOrder(compPO, deleteHoldings, requestContext))
+      .onSuccess(v -> logger.info("Successfully updated order: {}", JsonObject.mapFrom(compPO).encodePrettily()))
+      .onFailure(t -> logger.error("Failed to update order: {}", JsonObject.mapFrom(compPO).encodePrettily(), t));
   }
 
   /**
@@ -248,24 +221,7 @@ public class PurchaseOrderHelper {
       .compose(lines -> purchaseOrderLineService.populateOrderLines(lines, requestContext))
       .compose(poFromStorage -> {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
-        return validateAcqUnitsOnUpdate(compPO, poFromStorage, requestContext)
-          .compose(ok -> prefixService.validatePrefixAvailability(compPO.getPoNumberPrefix(), requestContext))
-          .compose(ok -> suffixService.validateSuffixAvailability(compPO.getPoNumberSuffix(), requestContext))
-          .compose(ok -> poNumberHelper.validatePoNumberPrefixAndSuffix(compPO))
-          .compose(ok -> poNumberHelper.validatePoNumber(poFromStorage, compPO, requestContext))
-          .compose(ok -> {
-            if (isTransitionToApproved(poFromStorage, compPO)) {
-              return checkOrderApprovalPermissions(compPO, requestContext);
-            }
-            return Future.succeededFuture();
-          })
-          .compose(ok -> {
-            if (isTransitionToPending(poFromStorage, compPO)) {
-              checkOrderUnopenPermissions(requestContext);
-              return unOpenCompositeOrderManager.process(compPO, poFromStorage, deleteHoldings, requestContext);
-            }
-            return Future.succeededFuture();
-          })
+        return orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext)
           .compose(ok -> {
             if (isTransitionToClosed(poFromStorage, compPO)) {
               return closeOrder(compPO, poFromStorage, requestContext);
@@ -298,7 +254,7 @@ public class PurchaseOrderHelper {
           .compose(v -> purchaseOrderLineHelper.updatePoLines(poFromStorage, compPO, requestContext))
           .compose(v -> {
             if (isTransitionToOpen) {
-              return checkOrderApprovalRequired(compPO, requestContext)
+              return orderValidationService.checkOrderApprovalRequired(compPO, requestContext)
                 .compose(ok -> configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext))
                 .compose(tenantConfiguration -> openCompositeOrderManager.process(compPO, poFromStorage, tenantConfiguration, requestContext));
             } else {
@@ -440,81 +396,17 @@ public class PurchaseOrderHelper {
     return promise.future();
   }
 
-  /**
-   * Sets the tenant default values and validates the order. Checks if Orders has
-   * PO Lines within limit and validates vendors and access providers.
-   *
-   * @param compPO
-   *          Purchase Order to validate
-   * @return completable future which might be completed with {@code true} if
-   *         order is valid, {@code false} if not valid or an exception if
-   *         processing fails
-   */
-  public Future<List<Error>> validateOrder(CompositePurchaseOrder compPO, JsonObject tenantConfig, RequestContext requestContext) {
-    List<Error> errors = new ArrayList<>();
-    return setCreateInventoryDefaultValues(compPO, tenantConfig)
-      .compose(v -> validateOrderPoLines(compPO, requestContext))
-      .map(errors::addAll)
-      .map(v -> errors.addAll(validatePoLineLimit(compPO, tenantConfig)))
-      .compose(v -> purchaseOrderLineService.validateAndNormalizeISBN(compPO.getCompositePoLines(), requestContext))
-      .compose(v -> validateVendor(compPO, requestContext))
-      .map(errors::addAll)
-      .map(v -> {
-        errors.addAll(validateRenewalInfo(compPO));
-        return errors;
-      });
-  }
-
-  public Future<List<Error>> validateOrderPoLines(CompositePurchaseOrder compositeOrder, RequestContext requestContext) {
-    List<Future<List<Error>>> poLinesErrors = compositeOrder.getCompositePoLines().stream()
-      .map(compositePoLine -> compositePoLineValidationService.validatePoLine(compositePoLine, requestContext))
-      .collect(toList());
-
-    return collectResultsOnSuccess(poLinesErrors).map(
-      lists -> lists.stream()
-        .flatMap(Collection::stream)
-        .collect(toList()));
-  }
-
-  /**
-   * Validates purchase order which already exists in the storage.
-   * Checks PO Number presence, validates that provided order id corresponds to one set in order and its lines.
-   * @param orderId Purchase Order id
-   * @param compPO Purchase Order to validate
-   * @return completable future which might be completed with {@code true} if order is valid, {@code false} if not valid or an exception if processing fails
-   */
-  public Future<List<Error>> validateExistingOrder(String orderId, CompositePurchaseOrder compPO,
-                                                          RequestContext requestContext) {
-    // The PO Number is required for existing orders
-    List<Error> resultErrors = new ArrayList<>();
-    if (StringUtils.isEmpty(compPO.getPoNumber())) {
-      resultErrors.add(ErrorCodes.PO_NUMBER_REQUIRED.toError());
+  private void populateOrderId(String orderId, CompositePurchaseOrder compPO) {
+    if (StringUtils.isEmpty(compPO.getId())) {
+      compPO.setId(orderId);
     }
-
-    // Validate order uuid
-    if (!compPO.getId().equals(orderId)) {
-      resultErrors.add(ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError());
-    } else if (isNotEmpty(compPO.getCompositePoLines())) {
-      // Validate that each PO Line has correct order id
+    if (CollectionUtils.isNotEmpty(compPO.getCompositePoLines())) {
       compPO.getCompositePoLines().forEach(poLine -> {
-        if (!orderId.equals(poLine.getPurchaseOrderId())) {
-          Error error = ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY.toError();
-          if (StringUtils.isNotEmpty(poLine.getPoLineNumber())) {
-            error.getParameters()
-                 .add(new Parameter().withKey(PO_LINE_NUMBER)
-                                     .withValue(poLine.getPoLineNumber()));
-          }
-          resultErrors.add(error);
+        if (StringUtils.isEmpty(poLine.getPurchaseOrderId())) {
+          poLine.setPurchaseOrderId(orderId);
         }
       });
     }
-
-    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .compose(tenantConfig -> validateOrder(compPO, tenantConfig, requestContext))
-      .map(errors -> {
-        resultErrors.addAll(errors);
-        return resultErrors;
-      });
   }
 
   private Future<Void> setPoNumberIfMissing(CompositePurchaseOrder compPO, RequestContext requestContext) {
@@ -537,39 +429,6 @@ public class PurchaseOrderHelper {
     return Future.succeededFuture(result.toString());
   }
 
-  private Future<List<Error>> validateVendor(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    if (compPO.getWorkflowStatus() == WorkflowStatus.OPEN) {
-      List<Error> combinedErrors = new ArrayList<>();
-      return organizationService.validateVendor(compPO.getVendor(), requestContext)
-        .map(aErrors -> combinedErrors.addAll(aErrors.getErrors()))
-        .compose(errors -> fetchCompositePoLines(compPO, requestContext)
-          .compose(poLines -> organizationService.validateAccessProviders(poLines, requestContext))
-          .map(aErrors -> combinedErrors.addAll(aErrors.getErrors()))
-          .map(v -> combinedErrors));
-    }
-    return Future.succeededFuture(Collections.emptyList());
-  }
-
-  private List<Error> validateRenewalInfo(CompositePurchaseOrder compPO) {
-    if (compPO.getOrderType() == CompositePurchaseOrder.OrderType.ONGOING && Objects.isNull(compPO.getOngoing())) {
-      return List.of(MISSING_ONGOING.toError());
-    } else if (compPO.getOrderType() == CompositePurchaseOrder.OrderType.ONE_TIME && Objects.nonNull(compPO.getOngoing())) {
-      return List.of(ONGOING_NOT_ALLOWED.toError());
-    }
-    return Collections.emptyList();
-  }
-
-  private List<Error> validatePoLineLimit(CompositePurchaseOrder compPO, JsonObject tenantConfig) {
-    if (isNotEmpty(compPO.getCompositePoLines())) {
-      int limit = getPoLineLimit(tenantConfig);
-      if (compPO.getCompositePoLines().size() > limit) {
-        return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
-      }
-      return Collections.emptyList();
-    }
-    return Collections.emptyList();
-  }
-
   private Future<CompositePurchaseOrder> createPOandPOLines(CompositePurchaseOrder compPO, JsonObject cachedTenantConfiguration,
                                                                       RequestContext requestContext) {
     logger.info("createPOandPOLines :: orderId: {}", compPO.getId());
@@ -588,7 +447,7 @@ public class PurchaseOrderHelper {
       .compose(createdOrder -> {
         if (finalStatus == OPEN) {
           compPO.setWorkflowStatus(OPEN);
-          return checkOrderApprovalRequired(compPO, requestContext)
+          return orderValidationService.checkOrderApprovalRequired(compPO, requestContext)
             .compose(v -> purchaseOrderLineService.populateOrderLines(compPO, requestContext))
             .compose(po -> openCompositeOrderManager.process(po, null, cachedTenantConfiguration, requestContext))
             .compose(ok -> handleFinalOrderStatus(compPO, finalStatus.value(), requestContext));
@@ -598,64 +457,10 @@ public class PurchaseOrderHelper {
       .map(v -> compPO);
   }
 
-
-  /**
-   * Checks the value of "isApprovalRequired" in configurations, if the value is set to true, and order is being approved, verifies
-   * if the user has required permissions to approve order
-   *
-   * @param compPO composite purchase order for checking permissions
-   */
-  private Future<Void> checkOrderApprovalPermissions(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .map(tenantConfig -> {
-        boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
-        if (isApprovalRequired && compPO.getApproved()
-          .equals(Boolean.TRUE)) {
-          if (userDoesNotHaveApprovePermission(requestContext)) {
-            throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_APPROVAL_PERMISSIONS);
-          }
-          compPO.setApprovalDate(new Date());
-          compPO.setApprovedById(getCurrentUserId(requestContext.getHeaders()));
-        }
-        return null;
-      });
-
-  }
-
-  private void checkOrderUnopenPermissions(RequestContext requestContext) {
-    if (userDoesNotHaveUnopenPermission(requestContext)) {
-      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_UNOPEN_PERMISSIONS);
-    }
-  }
-
   private void checkOrderReopenPermissions(RequestContext requestContext) {
     if (userDoesNotHaveReopenPermission(requestContext)) {
       throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_REOPEN_PERMISSIONS);
     }
-  }
-
-  public static boolean isApprovalRequiredConfiguration(JsonObject config) {
-    return Optional.ofNullable(config.getString("approvals"))
-      .map(approval -> new JsonObject(approval).getBoolean("isApprovalRequired"))
-      .orElse(false);
-  }
-
-  /**
-   * If an order is transitioning to OPEN, checks if approval is required and throws an error if it is not approved
-   *
-   * @param compPO composite purchase order
-   */
-  private Future<Void> checkOrderApprovalRequired(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    return configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext)
-      .map(tenantConfig -> {
-        boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
-        if (isApprovalRequired && !compPO.getApproved().equals(Boolean.TRUE)) {
-          throw new HttpException(400, APPROVAL_REQUIRED_TO_OPEN);
-        }
-        compPO.setApprovedById(getCurrentUserId(requestContext.getHeaders()));
-        compPO.setApprovalDate(new Date());
-        return null;
-      });
   }
 
   private Future<List<CompositePoLine>> createPoLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
@@ -665,18 +470,6 @@ public class PurchaseOrderHelper {
             .map(compositePoLine -> purchaseOrderLineHelper.createPoLine(compositePoLine, compPO, requestContext))
             .collect(Collectors.toList());
     return collectResultsOnSuccess(futures);
-  }
-
-  private Future<List<CompositePoLine>> fetchCompositePoLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return  purchaseOrderLineService.getCompositePoLinesByOrderId(compPO.getId(), requestContext)
-        .map(poLines -> {
-          PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
-          return poLines;
-        });
-    } else {
-      return Future.succeededFuture(compPO.getCompositePoLines());
-    }
   }
 
   private void populateInstanceId(Map<String, List<Title>> lineIdsTitles, List<CompositePoLine> lines) {
@@ -707,22 +500,6 @@ public class PurchaseOrderHelper {
     JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
     purchaseOrder.remove(COMPOSITE_PO_LINES);
     return purchaseOrder.mapTo(PurchaseOrder.class);
-  }
-
-  /**
-   * @param updatedOrder purchase order from request
-   * @param poFromStorage purchase order from storage
-   * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
-   *         caused by acquisitions units
-   */
-  private Future<Void> validateAcqUnitsOnUpdate(CompositePurchaseOrder updatedOrder, CompositePurchaseOrder poFromStorage,
-                                                            RequestContext requestContext) {
-    List<String> newAcqUnitIds = updatedOrder.getAcqUnitIds();
-    List<String> acqUnitUdsFromStorage = poFromStorage.getAcqUnitIds();
-
-    return Future.succeededFuture()
-      .map(ok -> getInvolvedOperations(updatedOrder, poFromStorage))
-      .compose(involvedOperations -> protectionService.validateAcqUnitsOnUpdate(newAcqUnitIds, acqUnitUdsFromStorage, MANAGE, involvedOperations, requestContext));
   }
 
   private Future<Void> processPoLineTags(CompositePurchaseOrder compPO, RequestContext requestContext) {
@@ -789,51 +566,15 @@ public class PurchaseOrderHelper {
     });
   }
 
-  private Future<Void> setCreateInventoryDefaultValues(CompositePurchaseOrder compPO, JsonObject tenantConfiguration) {
-    logger.info("setCreateInventoryDefaultValues:: orderId: {}", compPO.getId());
-    List<Future<Void>> futures = compPO.getCompositePoLines()
-      .stream()
-      .map(compPOL -> purchaseOrderLineHelper.setTenantDefaultCreateInventoryValues(compPOL, tenantConfiguration))
-      .collect(toList());
-
-    return GenericCompositeFuture.join(futures)
-      .mapEmpty();
-  }
-
   private Future<CompositePurchaseOrder> populateOrderSummary(CompositePurchaseOrder order, RequestContext requestContext) {
     logger.info("populateOrderSummary :: orderId: {}", order.getId());
     return orderLinesSummaryPopulateService.populate(new CompositeOrderRetrieveHolder(order), requestContext)
       .map(CompositeOrderRetrieveHolder::getOrder);
   }
 
+
   private List<CompositePoLine> getNonPackageLines(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).collect(toList());
   }
 
-  private Set<ProtectedOperationType> getInvolvedOperations(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
-    if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return Collections.singleton(UPDATE);
-    }
-    List<PoLine> poLines = HelperUtils.convertToPoLines(poFromStorage.getCompositePoLines());
-    Set<String> newIds = compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(Collectors.toSet());
-    Set<String> storageIds = poLines.stream().map(PoLine::getId).collect(Collectors.toSet());
-    Set<ProtectedOperationType> operations = new HashSet<>();
-    operations.add(UPDATE);
-    operations.addAll(getInvolvedOperations(newIds, storageIds));
-    return operations;
-  }
-
-  private Set<ProtectedOperationType> getInvolvedOperations(Set<String> newIds, Set<String> storageIds) {
-    if (CollectionUtils.isEqualCollection(newIds, storageIds)) {
-      return Collections.emptySet();
-    } else if (CollectionUtils.isSubCollection(storageIds, newIds)) {
-      return Collections.singleton(CREATE);
-    } else if (CollectionUtils.isSubCollection(newIds, storageIds)) {
-      return Collections.singleton(DELETE);
-    }
-    Set<ProtectedOperationType> operations = new HashSet<>();
-    operations.add(CREATE);
-    operations.add(DELETE);
-    return operations;
-  }
 }

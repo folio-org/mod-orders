@@ -59,10 +59,10 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.inventory.InventoryItemRequestService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryItemRequestService;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.inventory.InventoryService;
 import org.folio.service.invoice.InvoiceLineService;
@@ -78,6 +78,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
+import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
@@ -677,19 +678,28 @@ public class ApplicationConfig {
     @Qualifier("combinedPopulateService") CompositeOrderDynamicDataPopulateService combinedPopulateService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-    PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService,
-    InventoryItemStatusSyncService itemStatusSyncService, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+    ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService,
-    RestClient restClient) {
+    ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrderValidationService orderValidationService) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-      purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, itemStatusSyncService,
-      unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService,
-      configurationEntriesCache, poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService,
-      reOpenCompositeOrderManager, organizationService, restClient);
+      purchaseOrderLineService, titlesService, protectionService, itemStatusSyncService,
+      openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
+      poNumberHelper, openCompositeOrderFlowValidator, reOpenCompositeOrderManager,
+      orderValidationService);
+  }
+
+  @Bean
+  public OrderValidationService orderValidationService(CompositePoLineValidationService compositePoLineValidationService,
+    ConfigurationEntriesCache configurationEntriesCache, OrganizationService organizationService,
+    ProtectionService protectionService, PrefixService prefixService, PurchaseOrderLineHelper purchaseOrderLineHelper,
+    PurchaseOrderLineService purchaseOrderLineService, SuffixService suffixService, PoNumberHelper poNumberHelper,
+    UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
+    return new OrderValidationService(compositePoLineValidationService, configurationEntriesCache, organizationService,
+      protectionService, prefixService, purchaseOrderLineHelper, purchaseOrderLineService, suffixService, poNumberHelper,
+      unOpenCompositeOrderManager);
   }
 
   @Bean

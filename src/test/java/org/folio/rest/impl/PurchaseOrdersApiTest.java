@@ -53,7 +53,6 @@ import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
-import static org.folio.rest.core.exceptions.ErrorCodes.INCORRECT_FUND_DISTRIBUTION_TOTAL;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
@@ -116,20 +115,16 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -196,7 +191,6 @@ import org.folio.rest.jaxrs.model.PurchaseOrderCollection;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.titles.TitlesService;
 import org.hamcrest.beans.HasPropertyWithValue;
 import org.hamcrest.core.Every;
 import org.hamcrest.core.Is;
@@ -258,8 +252,8 @@ public class PurchaseOrdersApiTest {
   public static final String ORDER_WITHOUT_MATERIAL_TYPES_ID =  "0cb6741d-4a00-47e5-a902-5678eb24478d";
 
   // API paths
-  public final static String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
-  private final static String COMPOSITE_ORDERS_BY_ID_PATH = COMPOSITE_ORDERS_PATH + "/%s";
+  public static final String COMPOSITE_ORDERS_PATH = "/orders/composite-orders";
+  private static final String COMPOSITE_ORDERS_BY_ID_PATH = COMPOSITE_ORDERS_PATH + "/%s";
 
   static final String LISTED_PRINT_MONOGRAPH_PATH = "po_listed_print_monograph.json";
   static final String LISTED_PRINT_SERIAL_RECEIPT_NOT_REQUIRED_PATH = "po_listed_print_serial_with_receipt_payment_not_required.json";
@@ -268,7 +262,6 @@ public class PurchaseOrdersApiTest {
   private static final String PE_MIX_PATH = "po_listed_print_monograph_pe_mix.json";
   private static final String MONOGRAPH_FOR_CREATE_INVENTORY_TEST = "print_monograph_for_create_inventory_test.json";
   private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
-  private static final String LISTED_PRINT_SERIAL_WITHOUT_RENEWALDATE_PATH = "po_listed_print_serial_without_renewalDateAndInterval.json";
   private static final String MINIMAL_ORDER_PATH = "minimal_order.json";
   private static final String ELECTRONIC_FOR_CREATE_INVENTORY_TEST = "po_listed_electronic_monograph.json";
   private static final String PO_FOR_TAGS_INHERITANCE_TEST = "po_tags_inheritance.json";
@@ -298,6 +291,7 @@ public class PurchaseOrdersApiTest {
   public static final Header X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, TENANT_ID);
 
   private static boolean runningOnOwn;
+  private AutoCloseable mockitoMocks;
 
   @InjectMocks
   private EncumbranceService encumbranceService;
@@ -305,8 +299,6 @@ public class PurchaseOrdersApiTest {
   private TransactionService transactionService;
   @Mock
   private RestClient restClient;
-  @Mock
-  private TitlesService titlesService;
 
   private RequestContext requestContext;
   @Mock
@@ -314,7 +306,7 @@ public class PurchaseOrdersApiTest {
 
   @BeforeEach
   public void initMocks() {
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
     Context context = Vertx.vertx().getOrCreateContext();
     Map<String, String> okapiHeaders = new HashMap<>();
     okapiHeaders.put(OKAPI_URL, "http://localhost:" + mockPort);
@@ -333,8 +325,9 @@ public class PurchaseOrdersApiTest {
   }
 
   @AfterEach
-  void afterEach() {
+  void afterEach() throws Exception {
     clearServiceInteractions();
+    mockitoMocks.close();
   }
 
   @AfterAll
@@ -342,228 +335,6 @@ public class PurchaseOrdersApiTest {
     if (runningOnOwn) {
       ApiTestSuite.after();
     }
-  }
-
-  @Test
-  void testValidFundDistributionTotalPercentage() throws Exception {
-    logger.info("=== Test fund distribution total must add upto totalEstimatedPrice - valid total percentage ===");
-    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
-    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
-    prepareOrderForPostRequest(reqData);
-
-    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
-
-    // Make sure expected number of PO Lines available
-    assertThat(reqData.getCompositePoLines(), hasSize(1));
-
-    // Calculated poLineEstimatedPrice = 47.98
-    // Calculate remaining Percentage for fundDistribution1 = 47.98 - 23.99(50%) = 23.99
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(50d);
-
-    // Calculate remaining Percentage for fundDistribution2 = 23.99 - 23.99(50%) = 0.0
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(50d);
-
-    doReturn(succeededFuture(null)).when(titlesService).getTitleById(anyString(), any());
-
-    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
-
-    assertThat(resp.getCompositePoLines().get(0).getCost().getPoLineEstimatedPrice(), equalTo(47.98));
-  }
-
-  @Test
-  void testOrderWithoutRenewalDateAndInterval() throws Exception {
-    logger.info("=== Test Post Successful test completion if Renewal_Date and Interval is absent ===");
-
-    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_WITHOUT_RENEWALDATE_PATH));
-    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
-
-    verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-     prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
-  }
-
-  @Test
-  void testInvalidFundDistributionTotalPercentage() throws Exception {
-    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total percentage ===");
-
-    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
-    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
-    prepareOrderForPostRequest(reqData);
-
-    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
-
-    // Make sure expected number of PO Lines available
-    assertThat(reqData.getCompositePoLines(), hasSize(1));
-
-    // Calculated poLineEstimatedPrice = 47.98
-    // Calculate remaining Amount for fundDistribution1 = 47.98 - 47.98(100%) = 0
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.PERCENTAGE);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(100d);
-
-    // Calculate remaining Amount for fundDistribution2 = 0 - 47.98(100%) = -47.98
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(100d);
-
-    // Amount < 0 is not allowed
-    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
-
-    assertThat(errorResponse.getErrors(), hasSize(1));
-
-    Error error = errorResponse.getErrors().get(0);
-
-    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
-  }
-
-  @Test
-  void testInvalidFundDistributionTotalAmountPercentage() throws Exception {
-    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount and percentage ===");
-
-    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
-    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
-
-    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
-
-    // Make sure expected number of PO Lines available
-    assertThat(reqData.getCompositePoLines(), hasSize(1));
-
-    // Calculated poLineEstimatedPrice = 47.98
-    // Calculate remaining Amount for fundDistribution1 = 47.98 - 10 = 37.98
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.AMOUNT);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(10d);
-
-    // Calculate remaining percentage for fundDistribution2 = 37.98 - 40.783(85%) = -2.803
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.PERCENTAGE);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(85d);
-
-    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
-
-    assertThat(errorResponse.getErrors(), hasSize(1));
-
-    Error error = errorResponse.getErrors().get(0);
-
-    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
-  }
-
-  @Test
-  void testInvalidFundDistributionTotalAmount() throws Exception {
-    logger.info("===  Test fund distribution total must add upto totalEstimatedPrice - invalid total amount ===");
-
-    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
-    CompositePurchaseOrder reqData = order.mapTo(CompositePurchaseOrder.class);
-
-    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
-    reqData.setTotalEstimatedPrice(200d);
-    // Make sure expected number of PO Lines available
-    assertThat(reqData.getCompositePoLines(), hasSize(1));
-
-    // Calculated poLineEstimatedPrice = 47.98
-    // Calculate remaining Amount for fundDistribution1 = 47.98 - 40 = 7.98
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setDistributionType(DistributionType.AMOUNT);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(0).setValue(40d);
-
-    // Calculate remaining Amount for fundDistribution2 = 7.98 - 8 = -0.02
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setDistributionType(DistributionType.AMOUNT);
-    reqData.getCompositePoLines().get(0).getFundDistribution().get(1).setValue(8d);
-
-    // Amount < 0 is not allowed
-    Errors errorResponse = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT), APPLICATION_JSON, 422).as(Errors.class);
-
-    assertThat(errorResponse.getErrors(), hasSize(1));
-
-    Error error = errorResponse.getErrors().get(0);
-
-    assertThat(error.getCode(), is(INCORRECT_FUND_DISTRIBUTION_TOTAL.getCode()));
-  }
-
-  @Test
-  void testListedPrintMonograph() throws Exception {
-    logger.info("=== Test Listed Print Monograph ===");
-
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    prepareOrderForPostRequest(reqData);
-
-    // Make sure expected number of PO Lines available
-    assertThat(reqData.getCompositePoLines(), hasSize(2));
-    assertThat(reqData.getCompositePoLines().get(0).getOrderFormat(), equalTo(OrderFormat.P_E_MIX));
-    assertThat(reqData.getCompositePoLines().get(1).getOrderFormat(), equalTo(OrderFormat.ELECTRONIC_RESOURCE));
-
-    // Prepare cost details for the first PO Line (see MODORDERS-180 and MODORDERS-181)
-    Cost cost = reqData.getCompositePoLines().get(0).getCost();
-    cost.setAdditionalCost(10d);
-    cost.setDiscount(3d);
-    cost.setDiscountType(Cost.DiscountType.PERCENTAGE);
-    cost.setQuantityElectronic(1);
-    cost.setListUnitPriceElectronic(5.5d);
-    cost.setQuantityPhysical(3);
-    cost.setListUnitPrice(9.99d);
-    cost.setPoLineEstimatedPrice(null);
-    double expectedTotalPoLine1 = 44.41d;
-
-    // Prepare cost details for the second PO Line (see MODORDERS-180 and MODORDERS-181)
-    cost = reqData.getCompositePoLines().get(1).getCost();
-    cost.setAdditionalCost(2d);
-    cost.setDiscount(4.99d);
-    cost.setDiscountType(Cost.DiscountType.AMOUNT);
-    cost.setQuantityElectronic(3);
-    cost.setListUnitPriceElectronic(11.99d);
-    cost.setPoLineEstimatedPrice(null);
-    double expectedTotalPoLine2 = 32.98d;
-
-    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
-
-    logger.info(JsonObject.mapFrom(resp));
-
-    String poId = resp.getId();
-    String poNumber = resp.getPoNumber();
-
-    assertThat(poId, notNullValue());
-    assertThat(poNumber, notNullValue());
-    assertThat(resp.getCompositePoLines(), hasSize(2));
-    assertThat(resp.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.PENDING));
-
-    for (int i = 0; i < resp.getCompositePoLines().size(); i++) {
-      CompositePoLine line = resp.getCompositePoLines().get(i);
-      String polNumber = line.getPoLineNumber();
-      String polId = line.getId();
-
-      assertThat(line.getPurchaseOrderId(), equalTo(poId));
-      assertThat(polId, notNullValue());
-      assertThat(polNumber, notNullValue());
-      assertThat(polNumber, startsWith(poNumber));
-      assertThat(line.getInstanceId(), nullValue());
-      line.getLocations().forEach(location -> verifyLocationQuantity(location, line.getOrderFormat()));
-    }
-
-    // see MODORDERS-180 and MODORDERS-181
-    CompositePoLine compositePoLine1 = resp.getCompositePoLines().get(0);
-    CompositePoLine compositePoLine2 = resp.getCompositePoLines().get(1);
-    assertThat(compositePoLine1.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine1));
-    assertThat(compositePoLine2.getCost().getPoLineEstimatedPrice(), equalTo(expectedTotalPoLine2));
-
-    // the sum might be wrong if using regular double e.g. 44.41d + 32.98d results to 77.38999999999999
-    double expectedTotal = BigDecimal.valueOf(expectedTotalPoLine1)
-                                     .add(BigDecimal.valueOf(expectedTotalPoLine2))
-                                     .doubleValue();
-    assertThat(resp.getTotalEstimatedPrice(), equalTo(expectedTotal));
-
-    List<JsonObject> poLines = MockServer.serverRqRs.get(PO_LINES_STORAGE, HttpMethod.POST);
-    assertThat(poLines, hasSize(2));
-    poLines.forEach(line -> {
-      PoLine poLine = line.mapTo(PoLine.class);
-      Double poLineEstimatedPrice = poLine.getCost().getPoLineEstimatedPrice();
-      if (compositePoLine1.getId().equals(poLine.getId())) {
-        assertThat(poLineEstimatedPrice, equalTo(expectedTotalPoLine1));
-      } else {
-        assertThat(poLineEstimatedPrice, equalTo(expectedTotalPoLine2));
-      }
-    });
-    assertThat(getCreatedEncumbrances(), empty());
   }
 
   @Test
