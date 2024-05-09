@@ -26,7 +26,6 @@ import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
-import org.folio.service.pieces.PieceStorageService;
 
 import java.util.ArrayList;
 import java.util.Collections;
