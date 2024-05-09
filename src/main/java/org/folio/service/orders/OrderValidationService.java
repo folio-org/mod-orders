@@ -40,7 +40,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.MANAGE;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
@@ -201,12 +200,12 @@ public class OrderValidationService {
   public Future<List<Error>> validateOrderPoLines(CompositePurchaseOrder compositeOrder, RequestContext requestContext) {
     List<Future<List<Error>>> poLinesErrors = compositeOrder.getCompositePoLines().stream()
       .map(compositePoLine -> compositePoLineValidationService.validatePoLine(compositePoLine, requestContext))
-      .collect(toList());
+      .toList();
 
     return collectResultsOnSuccess(poLinesErrors).map(
       lists -> lists.stream()
         .flatMap(Collection::stream)
-        .collect(toList()));
+        .toList());
   }
 
   /**
@@ -311,7 +310,7 @@ public class OrderValidationService {
     List<Future<Void>> futures = compPO.getCompositePoLines()
       .stream()
       .map(compPOL -> purchaseOrderLineHelper.setTenantDefaultCreateInventoryValues(compPOL, tenantConfiguration))
-      .collect(toList());
+      .toList();
 
     return GenericCompositeFuture.join(futures)
       .mapEmpty();
