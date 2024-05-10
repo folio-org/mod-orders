@@ -86,13 +86,13 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<Map<String, List<Piece>>> checkRequestsForPieceItems(Map<String, List<Piece>> piecesGroupedByPoLine, Boolean transferRequests, RequestContext requestContext) {
     var itemIds = extractAllPieces(piecesGroupedByPoLine)
       .map(Piece::getItemId)
-      .filter(StringUtils::isEmpty)
+      .filter(StringUtils::isNotEmpty)
       .toList();
 
     return inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext)
       .map(items -> {
-        if (!items.isEmpty() && BooleanUtils.isTrue(transferRequests)) {
-          logger.debug("checkRequestsForPieceItems:: Transfer Requests flag disabled for outstanding requests on items: {}", items);
+        if (!items.isEmpty() && !BooleanUtils.isTrue(transferRequests)) {
+          logger.debug("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
           throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_FOUND_WITH_TRANSFER_DISABLED);
         }
         return piecesGroupedByPoLine;

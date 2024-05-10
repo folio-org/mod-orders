@@ -79,6 +79,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
+import static org.folio.rest.RestConstants.VALIDATION_ERROR;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOC_NOT_PROVIDED;
@@ -88,6 +89,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_UPDATE_FAILED;
+import static org.folio.rest.core.exceptions.ErrorCodes.REQUESTS_FOUND_WITH_TRANSFER_DISABLED;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
@@ -133,6 +135,7 @@ public class CheckinReceivingApiTest {
   private static final String ITEM_STATUS = "status";
   private static final String COMPOSITE_POLINE_ONGOING_ID = "6e2b169a-ebeb-4c3c-a2f2-6233ff9c59ae";
   private static final String COMPOSITE_POLINE_CANCELED_ID = "1196fcd9-7607-447d-ae85-6e91883d7e4f";
+  private static final String OUTSTANDING_REQUEST_ITEM_ID = "f972fa0e-5e84-4a47-a27b-137724a73fee";
 
   private static boolean runningOnOwn;
 
@@ -968,7 +971,6 @@ public class CheckinReceivingApiTest {
     }
   }
 
-
   @Test
   void testBindPiecesToTitleWithItem() {
     logger.info("=== Test POST Bind to Title With Item");
@@ -1057,6 +1059,43 @@ public class CheckinReceivingApiTest {
       .as(Errors.class);
 
     assertEquals(errors.getErrors().get(0).getMessage(), "Holding Id must not be null or different for pieces");
+  }
+
+  @Test
+  void testBindPiecesToTitleWithItemWithOutstandingRequest() {
+    logger.info("=== Test POST Bind to Title with Item with Outstanding Request");
+
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId())
+      .withId(UUID.randomUUID().toString())
+      .withLocations(List.of(new Location().withHoldingId(UUID.randomUUID().toString())
+      .withQuantityPhysical(1).withQuantity(1)));
+    var title = getTitle(poLine);
+    var bindingPiece = getMinimalContentPiece(poLine.getId())
+      .withId(UUID.randomUUID().toString())
+      .withItemId(OUTSTANDING_REQUEST_ITEM_ID)
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+    var bindItem = getMinimalContentBindItem();
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(bindItem)
+      .withBindPieceIds(List.of(bindingPiece.getId()))
+      .withTransferRequests(false);
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece);
+    addMockEntry(TITLES, title);
+
+    var errors = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, VALIDATION_ERROR)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(REQUESTS_FOUND_WITH_TRANSFER_DISABLED.getDescription()));
   }
 
   @Test
