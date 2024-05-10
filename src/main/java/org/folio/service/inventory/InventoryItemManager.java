@@ -9,7 +9,6 @@ import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.models.PieceItemPair;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -17,7 +16,6 @@ import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.BindItem;
-import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -69,7 +67,6 @@ public class InventoryItemManager {
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
-  private static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
@@ -162,14 +159,6 @@ public class InventoryItemManager {
     List<Future<Void>> futures = new ArrayList<>(itemIds.size());
     itemIds.forEach(itemId -> futures.add(deleteItem(itemId, skipNotFoundException, requestContext)));
     return collectResultsOnSuccess(futures);
-  }
-
-  public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
-    return ReceivedItem.ItemStatus.ON_ORDER == receivedItem.getItemStatus();
-  }
-
-  public boolean isOnOrderPieceStatus(CheckInPiece checkinPiece) {
-    return CheckInPiece.ItemStatus.ON_ORDER == checkinPiece.getItemStatus();
   }
 
   /**
@@ -290,23 +279,6 @@ public class InventoryItemManager {
         .withLocationId(location.getLocationId())
         .withReceivingTenantId(location.getTenantId());
     }
-  }
-
-  private boolean isLocationContainsItemLocation(List<Location> polLocations, JsonObject item) {
-    return item != null && polLocations.stream().noneMatch(
-      location -> location.getLocationId().equals(item.getJsonObject(EFFECTIVE_LOCATION).getString(ID))
-    );
-  }
-
-  private List<PieceItemPair> buildPieceItemPairList(List<Piece> needUpdatePieces, List<JsonObject> items) {
-    return needUpdatePieces.stream()
-      .map(piece -> {
-        PieceItemPair pieceItemPair = new PieceItemPair().withPiece(piece);
-        items.stream().filter(item -> item.getString(ID).equals(piece.getItemId()))
-          .findAny()
-          .ifPresent(pieceItemPair::withItem);
-        return pieceItemPair;
-      }).collect(toList());
   }
 
   private void validateItemsCreation(String poLineId, int expectedItemsQuantity, int itemsSize) {

@@ -1,25 +1,10 @@
 package org.folio.helper;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
-import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
-
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.MessageAddress;
@@ -39,11 +24,25 @@ import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.service.ProtectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
@@ -61,8 +60,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     if (logger.isDebugEnabled()) {
       int poLinesQty = piecesByLineId.size();
       int piecesQty = StreamEx.ofValues(piecesByLineId)
-                               .mapToInt(Map::size)
-                               .sum();
+        .mapToInt(Map::size)
+        .sum();
       logger.debug("{} piece record(s) are going to be received for {} PO line(s)", piecesQty, poLinesQty);
     }
   }
@@ -72,7 +71,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     piecesByLineId = null;
   }
 
-  public Future<ReceivingResults>   receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
+  public Future<ReceivingResults> receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     return removeForbiddenEntities(requestContext)
       .compose(vVoid -> processReceiveItems(receivingCollection, requestContext));
   }
@@ -80,7 +79,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnReceiving(receivingCollection);
     // 1. Get piece records from storage
-    return this.retrievePieceRecords(requestContext)
+    return retrievePieceRecords(requestContext)
       // 2. Filter locationId
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
@@ -132,13 +131,13 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
           collectingAndThen(toList(),
             lists -> StreamEx.of(lists)
               .flatMap(List::stream)
-              .toMap(ReceivedItem::getPieceId, checkInPiece  ->
+              .toMap(ReceivedItem::getPieceId, checkInPiece ->
                 new Location().withHoldingId(checkInPiece.getHoldingId()).withLocationId(checkInPiece.getLocationId())
               ))));
   }
 
   public Future<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query,
-      RequestContext requestContext) {
+                                                                RequestContext requestContext) {
     return protectionService.getQueryWithAcqUnitsCheck(StringUtils.EMPTY, query, requestContext)
       .compose(finalQuery -> {
         RequestEntry rq = new RequestEntry(GET_RECEIVING_HISTORY_BY_QUERY)
@@ -173,8 +172,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       }
 
       result.withPoLineId(poLineId)
-            .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
-            .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
+        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
+        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
     }
 
     return results;
@@ -183,6 +182,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   /**
    * Converts {@link ReceivingCollection} to map with PO line id as a key and value is map with piece id as a key
    * and {@link ReceivedItem} as a value
+   *
    * @param receivingCollection {@link ReceivingCollection} object
    * @return map with PO line id as a key and value is map with piece id as a key and {@link ReceivedItem} as a value
    */
@@ -199,16 +199,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   @Override
-  protected boolean isRevertToOnOrder(Piece piece) {
-    return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED
-        && inventoryItemManager
-          .isOnOrderItemStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
-  }
-
-  @Override
   protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
-    ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
-      .get(piece.getId());
+    ReceivedItem receivedItem = getByPiece(piece);
     return receiveItem(item, receivedItem, requestContext)
       // Update Piece record object with receiving details if item updated
       // successfully
@@ -236,13 +228,10 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   /**
    * Updates piece record with receiving information
    *
-   * @param piece
-   *          piece record to be updated with receiving info
+   * @param piece piece record to be updated with receiving info
    */
   private void updatePieceWithReceivingInfo(Piece piece) {
-    // Get ReceivedItem corresponding to piece record
-    ReceivedItem receivedItem = piecesByLineId.get(piece.getPoLineId())
-      .get(piece.getId());
+    ReceivedItem receivedItem = getByPiece(piece);
 
     piece.setDisplaySummary(receivedItem.getDisplaySummary());
     piece.setComment(receivedItem.getComment());
@@ -257,7 +246,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     piece.setCopyNumber(receivedItem.getCopyNumber());
     piece.setDisplayOnHolding(receivedItem.getDisplayOnHolding());
     // Piece record might be received or rolled-back to Expected
-    if (inventoryItemManager.isOnOrderItemStatus(receivedItem)) {
+    if (isOnOrderItemStatus(receivedItem)) {
       piece.setReceivedDate(null);
       piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     } else {
@@ -301,11 +290,21 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   @Override
   protected String getLocationId(Piece piece) {
-    return piecesByLineId.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
+    return getByPiece(piece).getLocationId();
   }
 
   @Override
   protected String getHoldingId(Piece piece) {
-    return piecesByLineId.get(piece.getPoLineId()).get(piece.getId()).getHoldingId();
+    return getByPiece(piece).getHoldingId();
   }
+
+  @Override
+  protected boolean isRevertToOnOrder(Piece piece) {
+    return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED && isOnOrderItemStatus(getByPiece(piece));
+  }
+
+  private boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
+    return receivedItem.getItemStatus() == ReceivedItem.ItemStatus.ON_ORDER;
+  }
+
 }
