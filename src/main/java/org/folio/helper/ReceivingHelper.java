@@ -199,9 +199,9 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
     ReceivedItem receivedItem = getByPiece(piece);
-    return receiveItem(item, receivedItem, requestContext)
+    return receiveItem(item, receivedItem, locationContext)
       // Update Piece record object with receiving details if item updated
       // successfully
       .map(v -> {
@@ -262,7 +262,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
    * @param receivedItem item details specified by user upon receiving flow
    * @return future with list of item records
    */
-  private Future<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem, RequestContext requestContext) {
+  private Future<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem, RequestContext locationContext) {
     // Update item record with receiving details
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
 
@@ -285,7 +285,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       itemRecord.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
     }
 
-    return inventoryItemManager.updateItem(itemRecord, requestContext);
+    return inventoryItemManager.updateItem(itemRecord, locationContext);
   }
 
   @Override

@@ -197,10 +197,10 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
     Promise<Boolean> promise = Promise.promise();
     CheckInPiece checkinPiece = getByPiece(piece);
-    checkinItem(item, checkinPiece, requestContext)
+    checkinItem(item, checkinPiece, locationContext)
       // Update Piece record object with check-in details if item updated
       // successfully
       .map(v -> {
@@ -314,7 +314,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     return orderClosedStatusesMap;
   }
 
-  private Future<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece, RequestContext requestContext) {
+  private Future<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece, RequestContext locationContext) {
 
     // Update item record with checkIn details
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
@@ -344,7 +344,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       itemRecord.put(ITEM_DISCOVERY_SUPPRESS, checkinPiece.getDiscoverySuppress());
     }
 
-    return inventoryItemManager.updateItem(itemRecord, requestContext);
+    return inventoryItemManager.updateItem(itemRecord, locationContext);
   }
 
   @Override
