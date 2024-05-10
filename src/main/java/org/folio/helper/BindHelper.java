@@ -13,6 +13,7 @@ import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -115,7 +116,10 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       titlesService.getTitlesByPoLineIds(List.of(poLineId), requestContext)
         .map(titles -> {
             if (titles.containsKey(poLineId) && !titles.get(poLineId).isEmpty()) {
-              Title title = titles.get(poLineId).get(0).withBindItemIds(itemIds);
+              Title title = titles.get(poLineId).get(0);
+              List<String> existingBindItemIds = title.getBindItemIds() != null ? title.getBindItemIds() : new ArrayList<>();
+              existingBindItemIds.addAll(itemIds);
+              title = title.withBindItemIds(existingBindItemIds);
               titlesService.saveTitle(title, requestContext);
             }
             return titles;
