@@ -8,9 +8,9 @@ import org.folio.models.ItemFields;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
-import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
@@ -88,7 +88,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
             logger.info("updateItemStatus:: '{}' item status set to 'Unavailable'", item.getString(ItemFields.ID.value()));
             item.put(ItemFields.STATUS.value(), new JsonObject()
               .put(ItemFields.STATUS_DATE.value(), new Date())
-              .put(ItemFields.STATUS_NAME.value(), CheckInPiece.ItemStatus.UNAVAILABLE));
+              .put(ItemFields.STATUS_NAME.value(), ReceivedItem.ItemStatus.UNAVAILABLE));
           }
         );
         return inventoryItemManager.updateItemRecords(items, requestContext);
