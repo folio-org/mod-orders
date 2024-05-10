@@ -14,10 +14,13 @@ import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 
 public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection> {
 
@@ -55,13 +58,15 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return retrievePieceRecords(requestContext)
       // 2. Update piece isBound flag
       .map(this::updatePieceRecords)
+      // 3. Update currently associated items
+      .map(piecesGroupedByPoLine -> updateItemStatus(piecesGroupedByPoLine, requestContext))
       // 4. Crate item for pieces with specific fields
       .compose(piecesGroupedByPoLine -> createItemForPiece(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
-      // 3. Update received piece records in the storage
+      // 5. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 4. Update Title with new bind items
+      // 6. Update Title with new bind items
       .map(piecesGroupedByPoLine -> updateTitleWithBindItems(piecesGroupedByPoLine, requestContext))
-      // 5. Return results to the client
+      // 7. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(piecesGroupedByPoLine, bindPiecesCollection));
   }
 
@@ -70,6 +75,20 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .flatMap(List::stream)
       .forEach(piece -> piece.setIsBound(true));
 
+    return piecesGroupedByPoLine;
+  }
+
+  private Map<String, List<Piece>> updateItemStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                            RequestContext requestContext) {
+    List<String> itemIds = piecesGroupedByPoLine.values().stream().flatMap(List::stream)
+        .map(Piece::getItemId).toList();
+    inventoryItemManager.getItemRecordsByIds(itemIds, requestContext)
+      .compose(items -> {
+        items.forEach(item ->
+          item.put(ITEM_STATUS, new JsonObject().put("date", new Date()).put("name", "Unavailable"))
+        );
+        return inventoryItemManager.updateItemRecords(items, requestContext);
+      });
     return piecesGroupedByPoLine;
   }
 
