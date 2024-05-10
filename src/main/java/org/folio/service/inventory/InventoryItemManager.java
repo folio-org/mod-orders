@@ -16,6 +16,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
@@ -25,7 +26,6 @@ import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
-import org.folio.service.pieces.PieceStorageService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,18 +74,15 @@ public class InventoryItemManager {
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final InventoryCache inventoryCache;
-  private final PieceStorageService pieceStorageService;
   private final ConsortiumConfigurationService consortiumConfigurationService;
 
   public InventoryItemManager(RestClient restClient,
                               ConfigurationEntriesCache configurationEntriesCache,
-                              PieceStorageService pieceStorageService,
                               InventoryCache inventoryCache,
                               ConsortiumConfigurationService consortiumConfigurationService) {
     this.restClient = restClient;
     this.configurationEntriesCache = configurationEntriesCache;
     this.inventoryCache = inventoryCache;
-    this.pieceStorageService = pieceStorageService;
     this.consortiumConfigurationService = consortiumConfigurationService;
   }
 
@@ -422,6 +419,24 @@ public class InventoryItemManager {
         itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
         return itemRecord;
       });
+  }
+
+  public Future<String> createBindItem(CompositePoLine compPOL, BindItem bindItem,
+                                       RequestContext requestContext) {
+    var holdingLocation = compPOL.getLocations().stream().filter(location -> location.getHoldingId() != null).findAny();
+    if (holdingLocation.isEmpty()) {
+      throw new IllegalArgumentException("Holding Id must not be null");
+    }
+    JsonObject item = new JsonObject()
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingLocation.get().getHoldingId())
+      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()))
+      .put(ITEM_BARCODE, bindItem.getBarcode())
+      .put(ITEM_LEVEL_CALL_NUMBER, bindItem.getCallNumber())
+      .put(ITEM_PERMANENT_LOAN_TYPE_ID, bindItem.getPermanentLoanTypeId())
+      .put(ITEM_MATERIAL_TYPE_ID, bindItem.getMaterialTypeId())
+      .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
+    logger.debug("Creating item for PO Line with '{}' id", compPOL.getId());
+    return createItemInInventory(item, requestContext);
   }
 
   private Future<List<String>> createItemRecords(JsonObject itemRecord, int expectedCount, RequestContext requestContext) {

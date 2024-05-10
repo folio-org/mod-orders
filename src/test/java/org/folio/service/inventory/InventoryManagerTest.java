@@ -1048,10 +1048,9 @@ public class InventoryManagerTest {
     @Bean
     public InventoryItemManager inventoryItemManager(RestClient restClient,
                                                      ConfigurationEntriesCache configurationEntriesCache,
-                                                     PieceStorageService pieceStorageService,
                                                      InventoryCache inventoryCache,
                                                      ConsortiumConfigurationService consortiumConfigurationService) {
-      return spy(new InventoryItemManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, consortiumConfigurationService));
+      return spy(new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService));
     }
 
     @Bean

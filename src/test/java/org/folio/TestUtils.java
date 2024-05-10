@@ -36,6 +36,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.impl.MockServer;
+import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -186,23 +187,13 @@ public final class TestUtils {
       .withAcquisitionMethod(PURCHASE_METHOD)
       .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
       .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
-      .withLocations(Collections.singletonList(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1).withQuantity(1)))
+      .withLocations(List.of(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1).withQuantity(1)))
       .withTitleOrPackage("Title")
       .withPurchaseOrderId(orderId);
   }
 
   public static Title getMinimalContentTitle() {
     return new Title().withTitle("Test title").withId(SAMPLE_TITLE_ID);
-  }
-
-  public static CompositePoLine getMinimalPackageCompositePoLine(String orderId) {
-    return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
-      .withId(MIN_PO_LINE_ID)
-      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
-      .withAcquisitionMethod(PURCHASE_METHOD)
-      .withIsPackage(true)
-      .withTitleOrPackage("Title")
-      .withPurchaseOrderId(orderId);
   }
 
   public static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {
@@ -213,6 +204,14 @@ public final class TestUtils {
       .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");
   }
 
+  public static BindItem getMinimalContentBindItem() {
+    return new BindItem()
+      .withBarcode("223512")
+      .withCallNumber("TK5105.88815 . A58 2004 FT MEADE")
+      .withMaterialTypeId("1a54b431-2e4f-452d-9cae-9cee66c9a892")
+      .withPermanentLoanTypeId("2b94c631-fca9-4892-a730-03ee529ffe27")
+      .withPermanentLocationId("fcd64ce1-6995-48f0-840e-89ffa2288371");
+  }
   public static String encodePrettily(Object entity) {
     return JsonObject.mapFrom(entity).encodePrettily();
   }
