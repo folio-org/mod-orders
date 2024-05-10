@@ -4,8 +4,12 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.models.ItemFields;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.rest.RestConstants;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
@@ -17,6 +21,8 @@ import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.inventory.InventoryItemRequestService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,6 +36,10 @@ import java.util.stream.Collectors;
 public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection> {
 
   private static final String TITLE_BY_POLINE_QUERY = "poLineId==%s";
+
+  @Autowired
+  private InventoryItemRequestService inventoryItemRequestService;
+
   public BindHelper(BindPiecesCollection bindPiecesCollection,
                     Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
@@ -58,6 +68,8 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     // 1. Get piece records from storage
     return retrievePieceRecords(requestContext)
       // 2. Update piece isBound flag
+      .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection.getTransferRequests(), requestContext))
+      // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
       // 3. Update currently associated items
       .map(piecesGroupedByPoLine -> updateItemStatus(piecesGroupedByPoLine, requestContext))
@@ -71,10 +83,25 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .map(piecesGroupedByPoLine -> prepareResponseBody(piecesGroupedByPoLine, bindPiecesCollection));
   }
 
+  private Future<Map<String, List<Piece>>> checkRequestsForPieceItems(Map<String, List<Piece>> piecesGroupedByPoLine, Boolean transferRequests, RequestContext requestContext) {
+    var itemIds = extractAllPieces(piecesGroupedByPoLine)
+      .map(Piece::getItemId)
+      .filter(StringUtils::isEmpty)
+      .toList();
+
+    return inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext)
+      .map(items -> {
+        if (!items.isEmpty() && BooleanUtils.isTrue(transferRequests)) {
+          logger.debug("checkRequestsForPieceItems:: Transfer Requests flag disabled for outstanding requests on items: {}", items);
+          throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_FOUND_WITH_TRANSFER_DISABLED);
+        }
+        return piecesGroupedByPoLine;
+      });
+  }
+
   private Map<String, List<Piece>> updatePieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
     logger.debug("updatePieceRecords:: Updating the piece records to set isBound flag as TRUE");
-    piecesGroupedByPoLine.values().stream()
-      .flatMap(List::stream)
+    extractAllPieces(piecesGroupedByPoLine)
       .forEach(piece -> piece.setIsBound(true));
     return piecesGroupedByPoLine;
   }

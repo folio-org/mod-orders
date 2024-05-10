@@ -83,6 +83,7 @@ public enum ErrorCodes {
   PIECES_TO_BE_CREATED("piecesNeedToBeCreated", "Pieces need to be created"),
   LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN("locationCannotBeModifiedAfterOpen", "Please use the receiving App to update pieces and locations"),
   REQUEST_FOUND("thereAreRequestsOnItem", "There are requests on item"),
+  REQUESTS_FOUND_WITH_TRANSFER_DISABLED("thereAreRequestsOnItemsAndTransferIsDisabled", "There are requests on items and transfer requests is disabled"),
   BUDGET_EXPENSE_CLASS_NOT_FOUND("budgetExpenseClassNotFound", "Budget expense class not found"),
   INACTIVE_EXPENSE_CLASS("inactiveExpenseClass", "Expense class is Inactive"),
   HOLDINGS_BY_INSTANCE_AND_LOCATION_NOT_FOUND("holdingsByInstanceAndLocationNotFoundError", "Holdings by instance id %s and location id %s not found"),

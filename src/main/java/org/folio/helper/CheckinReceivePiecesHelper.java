@@ -465,8 +465,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
                                              PoLineAndTitleById poLinesAndTitlesById,
                                              RequestContext requestContext) {
     List<Future<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
-    StreamEx.ofValues(piecesGroupedByPoLine)
-      .flatMap(List::stream)
+    extractAllPieces(piecesGroupedByPoLine)
       .forEach(piece -> {
         CompositePoLine poLine = poLinesAndTitlesById.poLineById.get(piece.getPoLineId());
         if (poLine == null) {
@@ -781,6 +780,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       var causeParam = new Parameter().withKey("cause").withValue(e.getMessage());
       addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError().withParameters(List.of(causeParam)));
     }
+  }
+
+  protected StreamEx<Piece> extractAllPieces(Map<String, List<Piece>> piecesGroupedByPoLine) {
+    return StreamEx.ofValues(piecesGroupedByPoLine).flatMap(List::stream);
   }
 
   /**

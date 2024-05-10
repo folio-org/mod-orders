@@ -110,8 +110,7 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
   }
 
   private Map<String, List<Piece>> updatePieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    StreamEx.ofValues(piecesGroupedByPoLine)
-      .flatMap(List::stream)
+    extractAllPieces(piecesGroupedByPoLine)
       .forEach(this::updatePieceWithExpectInfo);
 
     return piecesGroupedByPoLine;
