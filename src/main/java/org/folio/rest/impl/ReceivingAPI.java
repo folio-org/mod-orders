@@ -19,7 +19,7 @@ import org.folio.rest.jaxrs.model.BindPiecesCollection;
 import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.ExpectCollection;
 import org.folio.rest.jaxrs.model.ReceivingCollection;
-import org.folio.rest.jaxrs.resource.OrdersBind;
+import org.folio.rest.jaxrs.resource.OrdersBindPieces;
 import org.folio.rest.jaxrs.resource.OrdersCheckIn;
 import org.folio.rest.jaxrs.resource.OrdersExpect;
 import org.folio.rest.jaxrs.resource.OrdersReceive;
@@ -30,7 +30,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
-public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect, OrdersBind, OrdersReceivingHistory {
+public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect, OrdersBindPieces, OrdersReceivingHistory {
 
   private static final Logger logger = LogManager.getLogger();
 
@@ -66,7 +66,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
   }
 
   @Override
-  public void postOrdersBind(BindPiecesCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOrdersBindPieces(BindPiecesCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Bind {} pieces", entity.getBindPieceIds());
     BindHelper helper = new BindHelper(entity, okapiHeaders, vertxContext);
     helper.bindPieces(entity, new RequestContext(vertxContext, okapiHeaders))

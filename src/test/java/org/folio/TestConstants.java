@@ -20,7 +20,7 @@ public final class TestConstants {
   public static final String ORDERS_RECEIVING_ENDPOINT = "/orders/receive";
   public static final String ORDERS_CHECKIN_ENDPOINT = "/orders/check-in";
   public static final String ORDERS_EXPECT_ENDPOINT = "/orders/expect";
-  public static final String ORDERS_BIND_ENDPOINT = "/orders/bind";
+  public static final String ORDERS_BIND_ENDPOINT = "/orders/bind-pieces";
   public static final String PO_LINE_NUMBER_VALUE = "1";
 
   public static final String BAD_QUERY = "unprocessableQuery";
