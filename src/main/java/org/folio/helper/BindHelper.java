@@ -4,9 +4,11 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
+import org.folio.models.ItemFields;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
+import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingResult;
@@ -21,21 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 
 public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection> {
 
+  private static final String TITLE_BY_POLINE_QUERY = "id==%s";
   public BindHelper(BindPiecesCollection bindPiecesCollection,
                     Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
     piecesByLineId = groupBindPieceByPoLineId(bindPiecesCollection);
-    if (logger.isDebugEnabled()) {
-      int poLineQty = piecesByLineId.size();
-      int piecesQty = StreamEx.ofValues(piecesByLineId)
-        .mapToInt(Map::size)
-        .sum();
-      logger.debug("{} piece records(s) are going to be bound for {} PO line(s)", piecesQty, poLineQty);
-    }
+    logger.debug("{} piece records(s) are going to be bound for '{}' PO line",
+        bindPiecesCollection.getPoLineId(), bindPiecesCollection.getBindPieceIds().size());
   }
 
   private Map<String, Map<String, BindPiecesCollection>> groupBindPieceByPoLineId(BindPiecesCollection bindPiecesCollection) {
@@ -72,21 +69,27 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private Map<String, List<Piece>> updatePieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    StreamEx.ofValues(piecesGroupedByPoLine)
+    logger.debug("updatePieceRecords:: Updating the piece records to set isBound flag as TRUE");
+    piecesGroupedByPoLine.values().stream()
       .flatMap(List::stream)
       .forEach(piece -> piece.setIsBound(true));
-
     return piecesGroupedByPoLine;
   }
 
   private Map<String, List<Piece>> updateItemStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                             RequestContext requestContext) {
-    List<String> itemIds = piecesGroupedByPoLine.values().stream().flatMap(List::stream)
-        .map(Piece::getItemId).toList();
+    logger.debug("updateItemStatus:: Updating previous item status to 'Unavailable'");
+    List<String> itemIds = piecesGroupedByPoLine.values()
+      .stream().flatMap(List::stream)
+      .map(Piece::getItemId).toList();
     inventoryItemManager.getItemRecordsByIds(itemIds, requestContext)
       .compose(items -> {
-        items.forEach(item ->
-          item.put(ITEM_STATUS, new JsonObject().put("date", new Date()).put("name", "Unavailable"))
+        items.forEach(item -> {
+            logger.info("updateItemStatus:: '{}' item status set to 'Unavailable'", item.getString(ItemFields.ID.value()));
+            item.put(ItemFields.STATUS.value(), new JsonObject()
+              .put(ItemFields.STATUS_DATE.value(), new Date())
+              .put(ItemFields.STATUS_NAME.value(), CheckInPiece.ItemStatus.UNAVAILABLE));
+          }
         );
         return inventoryItemManager.updateItemRecords(items, requestContext);
       });
@@ -113,20 +116,21 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
                                                             RequestContext requestContext) {
     piecesByPoLineIds.forEach((poLineId, pieces) -> {
       List<String> itemIds = pieces.stream().map(Piece::getItemId).distinct().toList();
-      titlesService.getTitlesByPoLineIds(List.of(poLineId), requestContext)
-        .map(titles -> {
-            if (titles.containsKey(poLineId) && !titles.get(poLineId).isEmpty()) {
-              Title title = titles.get(poLineId).get(0);
-              List<String> existingBindItemIds = title.getBindItemIds() != null ? title.getBindItemIds() : new ArrayList<>();
-              existingBindItemIds.addAll(itemIds);
-              title = title.withBindItemIds(existingBindItemIds);
-              titlesService.saveTitle(title, requestContext);
-            }
-            return titles;
-          }
-        );
+      titlesService.getTitlesByQuery(String.format(TITLE_BY_POLINE_QUERY, poLineId), requestContext)
+        .map(titles -> updateTitle(titles, itemIds, requestContext));
     });
     return piecesByPoLineIds;
+  }
+
+  private Future<Void> updateTitle(List<Title> titles, List<String> itemIds, RequestContext requestContext) {
+    if (titles.isEmpty() || titles.get(0) == null) {
+      return Future.succeededFuture();
+    }
+    var title = titles.get(0);
+    List<String> existingBindItemIds = title.getBindItemIds() != null ? title.getBindItemIds() : new ArrayList<>();
+    existingBindItemIds.addAll(itemIds);
+    title = title.withBindItemIds(existingBindItemIds);
+    return titlesService.saveTitle(title, requestContext);
   }
 
   private ReceivingResults prepareResponseBody(Map<String, List<Piece>> piecesGroupedByPoLine,
