@@ -15,7 +15,7 @@ import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
-import static org.folio.helper.PurchaseOrderHelper.isApprovalRequiredConfiguration;
+import static org.folio.service.orders.OrderValidationService.isApprovalRequiredConfiguration;
 import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
@@ -77,6 +77,7 @@ import org.folio.service.dataimport.IdStorageService;
 import org.folio.service.dataimport.PoLineImportProgressService;
 import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.utils.DataImportUtils;
+import org.folio.service.orders.OrderValidationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -126,6 +127,7 @@ public class CreateOrderEventHandler implements EventHandler {
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
   private final SequentialOrderIdService sequentialOrderIdService;
   private final PoLineImportProgressService poLineImportProgressService;
+  private final OrderValidationService orderValidationService;
   private final JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache;
   private final RetryPolicy retryPolicy = (failure, retryCount) -> 1000L;
   private final Vertx vertx;
@@ -140,7 +142,8 @@ public class CreateOrderEventHandler implements EventHandler {
                                  PoLineImportProgressService poLineImportProgressService,
                                  JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache,
                                  Vertx vertx,
-                                 MappingParametersCache mappingParametersCache) {
+                                 MappingParametersCache mappingParametersCache,
+                                 OrderValidationService orderValidationService) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
     this.configurationEntriesCache = configurationEntriesCache;
@@ -151,6 +154,7 @@ public class CreateOrderEventHandler implements EventHandler {
     this.poLineImportProgressService = poLineImportProgressService;
     this.jobExecutionTotalRecordsCache = jobExecutionTotalRecordsCache;
     this.vertx = vertx;
+    this.orderValidationService = orderValidationService;
     circuitBreaker = CircuitBreaker.create("order line circuit breaker", vertx,
       new CircuitBreakerOptions()
         .setMaxRetries(5)       // number of retries
@@ -408,7 +412,7 @@ public class CreateOrderEventHandler implements EventHandler {
         dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getContext().get(RECORD_ID_HEADER), orderId);
     }
 
-    return purchaseOrderHelper.validateOrder(orderToSave, tenantConfig, requestContext)
+    return orderValidationService.validateOrderForPost(orderToSave, tenantConfig, requestContext)
       .compose(errors -> {
         if (CollectionUtils.isNotEmpty(errors)) {
           return Future.failedFuture(new EventProcessingException(Json.encode(errors)));

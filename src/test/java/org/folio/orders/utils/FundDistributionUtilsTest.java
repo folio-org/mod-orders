@@ -39,7 +39,8 @@ public class FundDistributionUtilsTest {
     "0:amount:0:percentage:100:cannotMixTypesForZeroPrice:",
     "0:percentage:0:amount:0:cannotMixTypesForZeroPrice:",
     "0:amount:10:amount:10:incorrectFundDistributionTotal:0.00",
-    "0:percentage:10:percentage:10:incorrectFundDistributionTotal:0.00"
+    "0:percentage:10:percentage:10:incorrectFundDistributionTotal:0.00",
+    "47.98:percentage:100:percentage:100:incorrectFundDistributionTotal:-47.98"
   }, delimiter = ':')
   void testValidateFundDistributionTotal(Double estimatedPrice, String fd1Type, Double fd1Value, String fd2Type,
       Double fd2Value, String errorCode, String remainingAmount) {

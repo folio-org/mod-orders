@@ -12,6 +12,7 @@ public class ResourcePathResolver {
 
   public static final String PO_LINES_STORAGE = "poLines";
   public static final String PO_LINES_BUSINESS = "poLinesBusinessEndpoint";
+  public static final String ORDERS_BUSINESS = "ordersBusinessEndpoint";
   public static final String PO_NUMBER = "poNumber";
   public static final String VENDOR_ID = "vendor";
   public static final String PO_LINE_NUMBER = "poLineNumber";
@@ -64,6 +65,7 @@ public class ResourcePathResolver {
     apis.put(REPORTING_CODES, "/orders-storage/reporting-codes");
     apis.put(PO_LINES_STORAGE, "/orders-storage/po-lines");
     apis.put(PO_LINES_BUSINESS, "/orders/order-lines");
+    apis.put(ORDERS_BUSINESS, "/orders/composite-orders");
     apis.put(PO_NUMBER, "/orders-storage/po-number");
     apis.put(PURCHASE_ORDER_STORAGE, "/orders-storage/purchase-orders");
     apis.put(PIECES_STORAGE, "/orders-storage/pieces");
