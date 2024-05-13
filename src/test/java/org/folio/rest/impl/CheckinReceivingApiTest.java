@@ -19,7 +19,6 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.ExpectCollection;
 import org.folio.rest.jaxrs.model.ExpectPiece;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -977,16 +976,16 @@ public class CheckinReceivingApiTest {
     var order = getMinimalContentCompositePurchaseOrder()
       .withId(UUID.randomUUID().toString());
     var poLine = getMinimalContentCompositePoLine(order.getId())
-      .withId(UUID.randomUUID().toString())
-      .withLocations(List.of(new Location().withHoldingId("849241fa-4a14-4df5-b951-846dcd6cfc4d")
-      .withQuantityPhysical(1).withQuantity(1)));
+      .withId(UUID.randomUUID().toString());
 
     var bindingPiece1 = getMinimalContentPiece(poLine.getId())
       .withId(UUID.randomUUID().toString())
+      .withHoldingId("849241fa-4a14-4df5-b951-846dcd6cfc4d")
       .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
     var bindingPiece2 = getMinimalContentPiece(poLine.getId())
       .withId(UUID.randomUUID().toString())
+      .withHoldingId("849241fa-4a14-4df5-b951-846dcd6cfc4d")
       .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
     var bindItem = getMinimalContentBindItem();

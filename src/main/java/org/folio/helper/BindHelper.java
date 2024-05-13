@@ -79,7 +79,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Map<String, List<Piece>> updateItemStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                             RequestContext requestContext) {
     logger.debug("updateItemStatus:: Updating previous item status to 'Unavailable'");
-    List<String> itemIds = piecesGroupedByPoLine.values()
+    var itemIds = piecesGroupedByPoLine.values()
       .stream().flatMap(List::stream)
       .map(Piece::getItemId).toList();
     inventoryItemManager.getItemRecordsByIds(itemIds, requestContext)
@@ -99,12 +99,19 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<Map<String, List<Piece>>> createItemForPiece(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                       BindPiecesCollection bindPiecesCollection,
                                                       RequestContext requestContext) {
-    String poLineId = bindPiecesCollection.getPoLineId();
+    var poLineId = bindPiecesCollection.getPoLineId();
+    var holdingIds = piecesGroupedByPoLine.values()
+      .stream().flatMap(List::stream)
+      .map(Piece::getItemId).distinct().toList();
+    if (holdingIds.size() != 1) {
+      throw new IllegalArgumentException(String.format("Holding Id must not be null or different for pieces '%s'",
+        bindPiecesCollection.getBindPieceIds()));
+    }
     logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
       .compose(compPOL ->
-        inventoryItemManager.createBindItem(compPOL, bindPiecesCollection.getBindItem(), requestContext))
+        inventoryItemManager.createBindItem(compPOL, holdingIds.get(0), bindPiecesCollection.getBindItem(), requestContext))
       .map(itemId -> {
           piecesGroupedByPoLine.get(poLineId).forEach(piece -> piece.setItemId(itemId));
           return piecesGroupedByPoLine;
