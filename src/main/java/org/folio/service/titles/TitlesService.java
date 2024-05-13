@@ -116,7 +116,7 @@ public class TitlesService {
       .map(lists -> StreamEx.of(lists).toFlatList(Function.identity()).stream().toList());
   }
 
-  private Future<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
+  public Future<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
     return getTitles(Integer.MAX_VALUE, 0, query, requestContext)
       .map(TitleCollection::getTitles);
   }

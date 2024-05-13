@@ -421,14 +421,11 @@ public class InventoryItemManager {
       });
   }
 
-  public Future<String> createBindItem(CompositePoLine compPOL, BindItem bindItem,
+  public Future<String> createBindItem(CompositePoLine compPOL, String holdingId,
+                                       BindItem bindItem,
                                        RequestContext requestContext) {
-    var holdingLocation = compPOL.getLocations().stream().filter(location -> location.getHoldingId() != null).findAny();
-    if (holdingLocation.isEmpty()) {
-      throw new IllegalArgumentException("Holding Id must not be null");
-    }
     JsonObject item = new JsonObject()
-      .put(ITEM_HOLDINGS_RECORD_ID, holdingLocation.get().getHoldingId())
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
       .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()))
       .put(ITEM_BARCODE, bindItem.getBarcode())
       .put(ITEM_LEVEL_CALL_NUMBER, bindItem.getCallNumber())
