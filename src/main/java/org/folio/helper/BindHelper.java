@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection> {
 
-  private static final String TITLE_BY_POLINE_QUERY = "id==%s";
+  private static final String TITLE_BY_POLINE_QUERY = "poLineId==%s";
   public BindHelper(BindPiecesCollection bindPiecesCollection,
                     Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
