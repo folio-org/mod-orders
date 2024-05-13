@@ -22,7 +22,6 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -169,7 +168,10 @@ public class OpenCompositeOrderPieceService {
           if (piece.getHoldingId() != null) {
             return Future.succeededFuture(piece.getHoldingId());
           }
-          return inventoryHoldingManager.handleHoldingsRecord(compPOL, new Location().withLocationId(piece.getLocationId()), title.getInstanceId(), requestContext)
+          if (!PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
+            return Future.succeededFuture();
+          }
+          return inventoryHoldingManager.createHoldingReturnId(title.getInstanceId(), piece.getLocationId(), requestContext)
             .map(holdingId -> {
               piece.setLocationId(null);
               piece.setHoldingId(holdingId);

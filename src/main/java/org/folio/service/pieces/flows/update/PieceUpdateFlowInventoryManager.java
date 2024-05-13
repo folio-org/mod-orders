@@ -99,9 +99,9 @@ public class PieceUpdateFlowInventoryManager {
     }
     String instanceId = holder.getInstanceId();
     if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(pieceToUpdate, poLineToSave)) {
-      Location location = new Location().withLocationId(pieceToUpdate.getLocationId());
-      return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, requestContext)
+      return inventoryHoldingManager.createHoldingReturnId(instanceId, pieceToUpdate.getLocationId(), requestContext)
         .map(holdingId -> {
+          Location location = new Location().withLocationId(pieceToUpdate.getLocationId());
           Optional.ofNullable(holdingId).ifPresent(holdingIdP -> {
             pieceToUpdate.setLocationId(null);
             pieceToUpdate.setHoldingId(holdingId);
