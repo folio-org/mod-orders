@@ -6,8 +6,11 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.folio.models.ItemFields;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivedItem;
@@ -103,10 +106,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     var holdingIds = piecesGroupedByPoLine.values()
       .stream().flatMap(List::stream)
       .map(Piece::getHoldingId).distinct().toList();
-    if (holdingIds.size() != 1) {
-      throw new IllegalArgumentException(String.format("Holding Id must not be null or different for pieces '%s'",
-        bindPiecesCollection.getBindPieceIds()));
-    }
+    validateHoldingIds(holdingIds, bindPiecesCollection);
     logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
@@ -117,6 +117,16 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
           return piecesGroupedByPoLine;
         }
       );
+  }
+
+  private void validateHoldingIds(List<String> holdingIds, BindPiecesCollection bindPiecesCollection) {
+    if (holdingIds.size() != 1) {
+      var holdingParam = new Parameter().withKey("holdingIds").withValue(holdingIds.toString());
+      var pieceParam = new Parameter().withKey("pieceIds").withValue(bindPiecesCollection.getBindPieceIds().toString());
+      var error = new Error().withParameters(List.of(holdingParam, pieceParam))
+        .withMessage("Holding Id must not be null or different for pieces");
+      throw new HttpException(400, error);
+    }
   }
 
   private Map<String, List<Piece>> updateTitleWithBindItems(Map<String, List<Piece>> piecesByPoLineIds,

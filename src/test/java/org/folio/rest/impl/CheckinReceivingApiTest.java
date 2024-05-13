@@ -1021,6 +1021,45 @@ public class CheckinReceivingApiTest {
   }
 
   @Test
+  void testBindPiecesWithDifferentHoldingIdAndThrowError() {
+    logger.info("=== Test POST Bind with different holdingId to Title With and throw error");
+
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withId(UUID.randomUUID().toString());
+    var poLine = getMinimalContentCompositePoLine(order.getId())
+      .withId(UUID.randomUUID().toString());
+
+    var bindingPiece1 = getMinimalContentPiece(poLine.getId())
+      .withId(UUID.randomUUID().toString())
+      .withHoldingId("849241fa-4a14-4df5-b951-846dcd6cfc4d")
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+    var bindingPiece2 = getMinimalContentPiece(poLine.getId())
+      .withId(UUID.randomUUID().toString())
+      .withHoldingId("64ee33f2-b2b5-4912-942a-50ddea063663")
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+    var bindItem = getMinimalContentBindItem();
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece1);
+    addMockEntry(PIECES_STORAGE, bindingPiece2);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(bindItem)
+      .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId()));
+
+    var errors = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_BAD_REQUEST.toInt())
+      .as(Errors.class);
+
+    assertEquals(errors.getErrors().get(0).getMessage(), "Holding Id must not be null or different for pieces");
+  }
+
+  @Test
   void testPostReceivingWithErrorSearchingForPiece() {
     logger.info("=== Test POST Receiving - Receive resources with error searching for piece");
 
