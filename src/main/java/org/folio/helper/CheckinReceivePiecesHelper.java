@@ -124,12 +124,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   retrievePieceRecords
    */
 
-  /**
-   * Retrieves piece records from storage based on request data
-   *
-   * @return {@link Future} which holds map with PO line id as key
-   * and list of corresponding pieces as value
-   */
   public Future<Map<String, List<Piece>>> retrievePieceRecords(RequestContext requestContext) {
     Map<String, List<Piece>> piecesByPoLine = new HashMap<>();
     // Split all piece id's by maximum number of id's for get query
@@ -220,8 +214,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return map passed as a parameter
    */
   protected Future<Map<String, List<Piece>>> storeUpdatedPieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
-    // Collect all piece records which marked as ready to be received and update
-    // storage
     List<Future<Void>> futures = StreamEx
       .ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
@@ -250,10 +242,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       });
   }
 
-  /**
-   * @param pieceId piece id
-   * @return PO Line id corresponding to passed pieceId from request data
-   */
   private String getPoLineIdByPieceId(String pieceId) {
     return StreamEx
       .ofKeys(piecesByLineId, values -> values.containsKey(pieceId))
@@ -291,7 +279,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         return collectResultsOnSuccess(futures).map(updatedPoLines -> {
           logger.debug("{} out of {} PO Line(s) updated with new status", updatedPoLines.size(), piecesGroupedByPoLine.size());
 
-          // Send event to check order status for successfully processed PO Lines
           List<PoLine> successPoLines = StreamEx.of(poLines)
             .filter(line -> updatedPoLines.contains(line.getId()))
             .toList();
@@ -307,8 +294,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .of(piecesGroupedByPoLine)
       .filter(entry -> entry.getValue()
         .stream()
-        // Check if there is at least one piece record which processed
-        // successfully
         .anyMatch(this::isSuccessfullyProcessedPiece))
       .keys()
       .toList();
@@ -320,11 +305,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .toList();
   }
 
-  /**
-   * @param poLine PO Line record from storage
-   * @param pieces list of pieces
-   * @return resulting PO Line status
-   */
   private Future<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces, RequestContext requestContext) {
 
     if (CollectionUtils.isEmpty(pieces)) {
