@@ -102,7 +102,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     var poLineId = bindPiecesCollection.getPoLineId();
     var holdingIds = piecesGroupedByPoLine.values()
       .stream().flatMap(List::stream)
-      .map(Piece::getItemId).distinct().toList();
+      .map(Piece::getHoldingId).distinct().toList();
     if (holdingIds.size() != 1) {
       throw new IllegalArgumentException(String.format("Holding Id must not be null or different for pieces '%s'",
         bindPiecesCollection.getBindPieceIds()));
