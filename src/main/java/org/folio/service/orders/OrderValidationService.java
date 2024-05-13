@@ -92,6 +92,8 @@ public class OrderValidationService {
   }
 
   /**
+   * This validation is only used when the POST endpoint is called.
+   * Additional creation validation is done in validateOrderForCreation().
    * Sets the tenant default values and validates the order. Checks if Orders has
    * PO Lines within limit and validates vendors and access providers.
    *
@@ -117,6 +119,9 @@ public class OrderValidationService {
       });
   }
 
+  /**
+   * This validation is used for both the POST endpoint and data import.
+   */
   public Future<Void> validateOrderForCreation(CompositePurchaseOrder compPO, RequestContext requestContext) {
     logger.info("validateOrderForCreation :: orderId: {}", compPO.getId());
     List<Future<Void>> futures = new ArrayList<>();
@@ -128,12 +133,14 @@ public class OrderValidationService {
     futures.add(poNumberHelper.checkPONumberUnique(compPO.getPoNumber(), requestContext));
 
     return GenericCompositeFuture.join(futures)
-      .onSuccess(v -> logger.info("validateOrderForCreation successful"))
-      .onFailure(t -> logger.error("validateOrderForCreation failed", t))
+      .onSuccess(v -> logger.info("validateOrderForCreation :: successful"))
+      .onFailure(t -> logger.error("validateOrderForCreation :: failed", t))
       .mapEmpty();
   }
 
   /**
+   * This validation is only used when the PUT endpoint is called.
+   * Additional update validation is done in validateOrderForUpdate().
    * Validates purchase order which already exists in the storage.
    * Checks PO Number presence, validates that provided order id corresponds to one set in order and its lines.
    * @param orderId Purchase Order id
@@ -174,6 +181,9 @@ public class OrderValidationService {
       });
   }
 
+  /**
+   * This validation is used for both the PUT endpoint and data import.
+   */
   public Future<Void> validateOrderForUpdate(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
       boolean deleteHoldings, RequestContext requestContext) {
     logger.info("validateOrderForUpdate :: orderId: {}", compPO.getId());
@@ -344,14 +354,13 @@ public class OrderValidationService {
       if (compPO.getCompositePoLines().size() > limit) {
         return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
       }
-      return Collections.emptyList();
     }
     return Collections.emptyList();
   }
 
   private Future<List<CompositePoLine>> fetchCompositePoLines(CompositePurchaseOrder compPO, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-      return  purchaseOrderLineService.getCompositePoLinesByOrderId(compPO.getId(), requestContext)
+      return purchaseOrderLineService.getCompositePoLinesByOrderId(compPO.getId(), requestContext)
         .map(poLines -> {
           PoLineCommonUtil.sortPoLinesByPoLineNumber(poLines);
           return poLines;

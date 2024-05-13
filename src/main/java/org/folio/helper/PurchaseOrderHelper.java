@@ -151,7 +151,7 @@ public class PurchaseOrderHelper {
    * @return completable future with {@link PurchaseOrder} object
    */
   public Future<PurchaseOrder> getPurchaseOrderById(String orderId, RequestContext requestContext) {
-    logger.info("getPurchaseOrderById:: orderId: {}", orderId);
+    logger.info("getPurchaseOrderById :: orderId: {}", orderId);
     return purchaseOrderStorageService.getPurchaseOrderById(orderId, requestContext);
   }
 
@@ -161,15 +161,17 @@ public class PurchaseOrderHelper {
       .compose(tenantConfig -> orderValidationService.validateOrderForPost(compPO, tenantConfig, requestContext)
         .compose(errors -> {
           if (CollectionUtils.isEmpty(errors)) {
-            logger.info("Creating PO and POLines...");
+            logger.info("postCompositeOrder :: Creating PO and POLines...");
             return createPurchaseOrder(compPO, tenantConfig, requestContext)
-              .onSuccess(po -> logger.info("Successfully Placed Order: {}", JsonObject.mapFrom(po).encodePrettily()));
+              .onSuccess(po -> logger.info("postCompositeOrder :: Successfully Placed Order: {}",
+                JsonObject.mapFrom(po).encodePrettily()));
           } else {
             throw new HttpException(422, new Errors().withErrors(errors)
               .withTotalRecords(errors.size()));
           }
         }))
-      .onFailure(t -> logger.error("Failed to create order: {}", JsonObject.mapFrom(compPO).encodePrettily(), t));
+      .onFailure(t -> logger.error("postCompositeOrder :: Failed to create order: {}",
+        JsonObject.mapFrom(compPO).encodePrettily(), t));
   }
 
   /**
@@ -199,14 +201,16 @@ public class PurchaseOrderHelper {
       .map(validationErrors -> {
         if (CollectionUtils.isNotEmpty(validationErrors)) {
           Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
-          logger.error("Validation error. Failed to update purchase order : {}", JsonObject.mapFrom(errors).encodePrettily());
+          logger.error("putCompositeOrderById :: Validation error. Failed to update purchase order : {}",
+            JsonObject.mapFrom(errors).encodePrettily());
           throw new HttpException(RestConstants.VALIDATION_ERROR, errors);
         }
         return null;
-      })
-      .compose(v-> updateOrder(compPO, deleteHoldings, requestContext))
-      .onSuccess(v -> logger.info("Successfully updated order: {}", JsonObject.mapFrom(compPO).encodePrettily()))
-      .onFailure(t -> logger.error("Failed to update order: {}", JsonObject.mapFrom(compPO).encodePrettily(), t));
+      }).compose(v -> updateOrder(compPO, deleteHoldings, requestContext))
+      .onSuccess(v -> logger.info("putCompositeOrderById :: Successfully updated order: {}",
+        JsonObject.mapFrom(compPO).encodePrettily()))
+      .onFailure(t -> logger.error("putCompositeOrderById :: Failed to update order: {}",
+        JsonObject.mapFrom(compPO).encodePrettily(), t));
   }
 
   /**
@@ -334,30 +338,31 @@ public class PurchaseOrderHelper {
           .compose(aVoid -> encumbranceService.deleteOrderEncumbrances(orderId, requestContext)
             .compose(v -> purchaseOrderLineService.deletePoLinesByOrderId(orderId, requestContext))
             .compose(v -> {
-              logger.info("Successfully deleted poLines, proceeding with purchase order");
+              logger.info("deleteOrder :: Successfully deleted poLines, proceeding with purchase order");
               return purchaseOrderStorageService.deleteOrderById(orderId, requestContext)
                 .onSuccess(rs -> {
-                  logger.info("Successfully deleted order with id={}", orderId);
+                  logger.info("deleteOrder :: Successfully deleted order with id={}", orderId);
                   promise.complete();
                 })
                 .onFailure(t -> {
-                  logger.error("Failed to delete the order with id={}", orderId, t.getCause());
+                  logger.error("deleteOrder :: Failed to delete the order with id={}", orderId, t.getCause());
                   promise.fail(t);
                 });
             })
             .onFailure(t -> {
-              logger.error("Failed to delete PO Lines of the order with id={}", orderId, t.getCause());
+              logger.error("deleteOrder :: Failed to delete PO Lines of the order with id={}", orderId, t.getCause());
               promise.fail(t);
             })
           )
           .onFailure(t -> {
-            logger.error("User with id={} is forbidden to view delete with id={}", getCurrentUserId(requestContext.getHeaders()), orderId, t.getCause());
+            logger.error("deleteOrder :: User with id={} is forbidden to view delete with id={}",
+              getCurrentUserId(requestContext.getHeaders()), orderId, t.getCause());
             promise.fail(t);
           });
         return null;
       })
       .onFailure(t -> {
-        logger.error("Failed to delete PO Lines", t);
+        logger.error("deleteOrder :: Failed to delete PO Lines", t);
         promise.fail(t);
       });
 
@@ -376,8 +381,8 @@ public class PurchaseOrderHelper {
       .map(HelperUtils::convertToCompositePurchaseOrder)
       .compose(compPO -> protectionService.isOperationRestricted(compPO.getAcqUnitIds(), ProtectedOperationType.READ, requestContext)
         .onFailure(t -> {
-          logger.error("User with id={} is forbidden to view order with id={}", getCurrentUserId(requestContext.getHeaders()),
-              orderId, t.getCause());
+          logger.error("getCompositeOrder :: User with id={} is forbidden to view order with id={}",
+            getCurrentUserId(requestContext.getHeaders()), orderId, t.getCause());
           promise.fail(t);
         })
         .compose(ok -> purchaseOrderLineService.populateOrderLines(compPO, requestContext)
@@ -390,7 +395,7 @@ public class PurchaseOrderHelper {
         .map(CompositeOrderRetrieveHolder::getOrder))
       .onSuccess(promise::complete)
       .onFailure(t -> {
-        logger.error("Failed to build composite purchase order with id={}", orderId, t.getCause());
+        logger.error("getCompositeOrder :: Failed to build composite purchase order with id={}", orderId, t.getCause());
         promise.fail(t);
       });
     return promise.future();
