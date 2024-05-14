@@ -1083,8 +1083,7 @@ public class CheckinReceivingApiTest {
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
       .withBindItem(bindItem)
-      .withBindPieceIds(List.of(bindingPiece.getId()))
-      .withTransferRequests(false);
+      .withBindPieceIds(List.of(bindingPiece.getId()));
 
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, poLine);

@@ -3,8 +3,6 @@ package org.folio.helper;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.ItemFields;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -25,13 +23,13 @@ import org.folio.service.inventory.InventoryItemRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static org.folio.rest.jaxrs.model.BindPiecesCollection.TransferRequests.TRANSFER;
 
 
 public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection> {
@@ -69,7 +67,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     // 1. Get piece records from storage
     return retrievePieceRecords(requestContext)
       // 2. Check if there are any outstanding requests for items
-      .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection.getTransferRequests(), requestContext))
+      .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
       // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
       // 3. Update currently associated items
@@ -84,7 +82,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .map(piecesGroupedByPoLine -> prepareResponseBody(piecesGroupedByPoLine, bindPiecesCollection));
   }
 
-  private Future<Map<String, List<Piece>>> checkRequestsForPieceItems(Map<String, List<Piece>> piecesGroupedByPoLine, Boolean transferRequests, RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> checkRequestsForPieceItems(Map<String, List<Piece>> piecesGroupedByPoLine, BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
     var itemIds = extractAllPieces(piecesGroupedByPoLine)
       .map(Piece::getItemId)
       .filter(StringUtils::isNotEmpty)
@@ -92,7 +90,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
     return inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext)
       .map(items -> {
-        if (!items.isEmpty() && Objects.isNull(transferRequests)) {
+        if (!items.isEmpty() && Objects.isNull(bindPiecesCollection.getTransferRequests())) {
           logger.debug("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
           throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_FOUND_WITH_TRANSFER_DISABLED);
         }
@@ -142,7 +140,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
         inventoryItemManager.createBindItem(compPOL, holdingIds.get(0), bindPiecesCollection.getBindItem(), requestContext))
       .map(newItemId -> {
         // Transfer requests if flag is on
-        if (BooleanUtils.isTrue(bindPiecesCollection.getTransferRequests())) {
+        if (TRANSFER.equals(bindPiecesCollection.getTransferRequests())) {
           var itemIds = extractAllPieces(piecesGroupedByPoLine).map(Piece::getItemId).toList();
           inventoryItemRequestService.transferItemsRequests(itemIds, newItemId, requestContext);
         }
