@@ -124,13 +124,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       results.getReceivingResults().add(result);
 
       // Get all processed piece records for PO Line
-      Map<String, Piece> processedPiecesForPoLine = StreamEx
-        .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
-        .toMap(Piece::getId, piece -> piece);
+      Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-      Map<String, Integer> resultCounts = new HashMap<>();
-      resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
-      resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
+      Map<String, Integer> resultCounts = getEmptyResultCounts();
       for (CheckInPiece checkinPiece : toBeCheckedIn.getCheckInPieces()) {
         String pieceId = checkinPiece.getId();
 

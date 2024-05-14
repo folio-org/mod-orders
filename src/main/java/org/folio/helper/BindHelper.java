@@ -30,6 +30,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 
@@ -67,7 +68,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<ReceivingResults> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
     // 1. Get piece records from storage
     return retrievePieceRecords(requestContext)
-      // 2. Update piece isBound flag
+      // 2. Check if there are any outstanding requests for items
       .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection.getTransferRequests(), requestContext))
       // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
@@ -91,7 +92,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
     return inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext)
       .map(items -> {
-        if (!items.isEmpty() && !BooleanUtils.isTrue(transferRequests)) {
+        if (!items.isEmpty() && Objects.isNull(transferRequests)) {
           logger.debug("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
           throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_FOUND_WITH_TRANSFER_DISABLED);
         }
@@ -139,11 +140,16 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .map(PoLineCommonUtil::convertToCompositePoLine)
       .compose(compPOL ->
         inventoryItemManager.createBindItem(compPOL, holdingIds.get(0), bindPiecesCollection.getBindItem(), requestContext))
-      .map(itemId -> {
-          piecesGroupedByPoLine.get(poLineId).forEach(piece -> piece.setItemId(itemId));
-          return piecesGroupedByPoLine;
+      .map(newItemId -> {
+        // Transfer requests if flag is on
+        if (BooleanUtils.isTrue(bindPiecesCollection.getTransferRequests())) {
+          var itemIds = extractAllPieces(piecesGroupedByPoLine).map(Piece::getItemId).toList();
+          inventoryItemRequestService.transferItemsRequests(itemIds, newItemId, requestContext);
         }
-      );
+        // Set new item ids for pieces
+        piecesGroupedByPoLine.get(poLineId).forEach(piece -> piece.setItemId(newItemId));
+        return piecesGroupedByPoLine;
+      });
   }
 
   private void validateHoldingIds(List<String> holdingIds, BindPiecesCollection bindPiecesCollection) {
@@ -182,13 +188,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     String poLineId = bindPiecesCollection.getPoLineId();
 
     // Get all processed piece records for PO Line
-    Map<String, Piece> processedPiecesForPoLine = StreamEx
-      .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
-      .toMap(Piece::getId, piece -> piece);
+    Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-    Map<String, Integer> resultCounts = new HashMap<>();
-    resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
-    resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
+    Map<String, Integer> resultCounts = getEmptyResultCounts();
     ReceivingResult result = new ReceivingResult();
     for (String pieceId : bindPiecesCollection.getBindPieceIds()) {
       calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);

@@ -782,6 +782,19 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     }
   }
 
+  protected Map<String, Piece> getProcessedPiecesForPoLine(String poLineId, Map<String, List<Piece>> piecesGroupedByPoLine) {
+    return StreamEx
+      .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
+      .toMap(Piece::getId, piece -> piece);
+  }
+
+  protected Map<String, Integer> getEmptyResultCounts() {
+    Map<String, Integer> resultCounts = new HashMap<>();
+    resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
+    resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
+    return resultCounts;
+  }
+
   protected StreamEx<Piece> extractAllPieces(Map<String, List<Piece>> piecesGroupedByPoLine) {
     return StreamEx.ofValues(piecesGroupedByPoLine).flatMap(List::stream);
   }
