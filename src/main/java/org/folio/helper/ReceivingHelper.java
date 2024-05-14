@@ -11,7 +11,6 @@ import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
@@ -77,13 +76,12 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
-    Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnReceiving(receivingCollection);
     // 1. Get piece records from storage
     return retrievePieceRecords(requestContext)
       // 2. Filter locationId
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
-      .compose(pieces -> updateInventoryItemsAndHoldings(pieceLocationsGroupedByPoLine, pieces, requestContext))
+      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, requestContext))
       // 4. Update piece records with receiving details which do not have associated item
       .map(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
@@ -120,20 +118,6 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     sendMessage(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, new JsonArray(poIds), requestContext);
 
     logger.debug("updateOrderStatus::Event to verify order status - sent");
-  }
-
-  private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnReceiving(ReceivingCollection receivingCollection) {
-    return StreamEx
-      .of(receivingCollection.getToBeReceived())
-      .distinct()
-      .groupingBy(ToBeReceived::getPoLineId,
-        mapping(ToBeReceived::getReceivedItems,
-          collectingAndThen(toList(),
-            lists -> StreamEx.of(lists)
-              .flatMap(List::stream)
-              .toMap(ReceivedItem::getPieceId, checkInPiece ->
-                new Location().withHoldingId(checkInPiece.getHoldingId()).withLocationId(checkInPiece.getLocationId())
-              ))));
   }
 
   public Future<ReceivingHistoryCollection> getReceivingHistory(int limit, int offset, String query,

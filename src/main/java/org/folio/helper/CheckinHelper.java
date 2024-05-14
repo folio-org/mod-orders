@@ -14,7 +14,6 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
@@ -73,13 +72,12 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
-    Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
     // 1. Get piece records from storage
     return createItemsWithPieceUpdate(checkinCollection, requestContext)
       // 2. Filter locationId
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
-      .compose(pieces -> updateInventoryItemsAndHoldings(pieceLocationsGroupedByPoLine, pieces, requestContext))
+      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, requestContext))
       // 4. Update piece records with checkIn details which do not have
       // associated item
       .map(this::updatePieceRecordsWithoutItems)
@@ -114,23 +112,6 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         .distinct()
         .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists)
           .collect(toList()))))));
-  }
-
-  private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
-    return StreamEx
-      .of(checkinCollection.getToBeCheckedIn())
-      .distinct()
-      .groupingBy(ToBeCheckedIn::getPoLineId,
-        mapping(ToBeCheckedIn::getCheckInPieces,
-          collectingAndThen(toList(),
-            lists -> StreamEx.of(lists)
-              .flatMap(List::stream)
-              .toMap(CheckInPiece::getId, checkInPiece ->
-                new Location().withHoldingId(checkInPiece.getHoldingId()).withLocationId(checkInPiece.getLocationId())
-              )
-          )
-        )
-      );
   }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,

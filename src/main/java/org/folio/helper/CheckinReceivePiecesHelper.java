@@ -417,8 +417,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return {@link Future} which holds map with PO line id as key
    * and list of corresponding pieces as value
    */
-  protected Future<Map<String, List<Piece>>> updateInventoryItemsAndHoldings(Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine,
-                                                                             Map<String, List<Piece>> piecesGroupedByPoLine,
+  protected Future<Map<String, List<Piece>>> updateInventoryItemsAndHoldings(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                                              RequestContext requestContext) {
     Map<String, Piece> piecesByItemId = StreamEx.ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
@@ -428,9 +427,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
     return getPoLineAndTitleById(poLineIds, requestContext)
-      .compose(poLineAndTitleById -> processHoldingsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, poLineAndTitleById, requestContext)
-        .compose(v -> getItemRecords(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, piecesByItemId, requestContext))
-        .compose(items -> processItemsUpdate(pieceLocationsGroupedByPoLine, piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext))
+      .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
+        .compose(v -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
+        .compose(items -> processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext))
       );
   }
 
@@ -462,8 +461,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       });
   }
 
-  private Future<Void> processHoldingsUpdate(Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine,
-                                             Map<String, List<Piece>> piecesGroupedByPoLine,
+  private Future<Void> processHoldingsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
                                              PoLineAndTitleById poLinesAndTitlesById,
                                              RequestContext requestContext) {
     List<Future<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
@@ -483,11 +481,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
           return;
         }
-        Location receivedPieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId()).get(piece.getId());
 
-        if (holdingUpdateOnCheckinReceiveRequired(piece, receivedPieceLocation, poLine)) {
+        if (holdingUpdateOnCheckinReceiveRequired(piece, poLine)) {
           futuresForHoldingsUpdates.add(
-            createHoldingsForChangedLocations(piece, title.getInstanceId(), receivedPieceLocation, requestContext)
+            createHoldingsForChangedLocations(piece, title.getInstanceId(), requestContext)
           );
         }
       });
@@ -504,16 +501,20 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .mapEmpty();
   }
 
-  private Future<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, Location receivedPieceLocation, RequestContext requestContext) {
-    String holdingKey = buildProcessedHoldingKey(receivedPieceLocation, instanceId);
+  private Future<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, RequestContext requestContext) {
+    String holdingKey = buildProcessedHoldingKey(piece, instanceId);
     if (!ifHoldingNotProcessed(holdingKey) || isRevertToOnOrder(piece)) {
       return Future.succeededFuture(true);
     }
-    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, receivedPieceLocation.getTenantId());
-    return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, receivedPieceLocation, locationContext)
-      .compose(holdingId -> {
-        processedHoldings.put(holdingKey, holdingId);
-        piece.setHoldingId(holdingId);
+
+    String locationId = getLocationId(piece);
+    String holdingId = getHoldingId(piece);
+    Location location = new Location().withLocationId(locationId).withHoldingId(holdingId);
+    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+    return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, locationContext)
+      .compose(createdHoldingId -> {
+        processedHoldings.put(holdingKey, createdHoldingId);
+        piece.setHoldingId(createdHoldingId);
         return Future.succeededFuture(true);
       })
       .onFailure(t -> {
@@ -532,23 +533,18 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   /**
    * Retrieves item records from inventory storage for
    *
-   * @param piecesByItemId                map with item id as a key and piece record as a value
-   * @param pieceLocationsGroupedByPoLine map[ key=poLineId, value=map<key=pieceId, value=piece> ]
+   * @param piecesByItemId map with item id as a key and piece record as a value
    * @return future with list of item records
    */
-  private Future<List<JsonObject>> getItemRecords(Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine,
-                                                  Map<String, List<Piece>> piecesGroupedByPoLine,
+  private Future<List<JsonObject>> getItemRecords(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                   Map<String, Piece> piecesByItemId,
                                                   RequestContext requestContext) {
 
     Map<String, List<String>> itemIdsByTenantId = new HashMap<>();
-    for (Map.Entry<String, List<Piece>> pieceListEntry : piecesGroupedByPoLine.entrySet()) {
-      String poLineId = pieceListEntry.getKey();
-      List<Piece> pieces = pieceListEntry.getValue();
-      for (Piece piece : pieces) {
+    for (List<Piece> pieceList : piecesGroupedByPoLine.values()) {
+      for (Piece piece : pieceList) {
         if (StringUtils.isNotEmpty(piece.getItemId())) {
-          Location location = pieceLocationsGroupedByPoLine.get(poLineId).get(piece.getId());
-          itemIdsByTenantId.computeIfAbsent(location.getTenantId(), k -> new ArrayList<>()).add(piece.getItemId());
+          itemIdsByTenantId.computeIfAbsent(piece.getReceivingTenantId(), k -> new ArrayList<>()).add(piece.getItemId());
         }
       }
     }
@@ -559,7 +555,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .flatMap(
         entry -> StreamEx.ofSubLists(entry.getValue(), MAX_IDS_FOR_GET_RQ_15)
           .map(ids -> {
-            RequestContext locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+            var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
             return getItemRecordsByIds(ids, piecesByItemId, locationContext);
           })
       )
@@ -616,8 +612,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     }
   }
 
-  private Future<Map<String, List<Piece>>> processItemsUpdate(Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine,
-                                                              Map<String, List<Piece>> piecesGroupedByPoLine,
+  private Future<Map<String, List<Piece>>> processItemsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                               Map<String, Piece> piecesByItemId,
                                                               List<JsonObject> items,
                                                               PoLineAndTitleById poLinesAndTitlesById,
@@ -640,13 +635,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       if (title == null)
         continue;
 
-      Location pieceLocation = pieceLocationsGroupedByPoLine.get(poLine.getId()).get(piece.getId());
-      if (holdingUpdateOnCheckinReceiveRequired(piece, pieceLocation, poLine) && !isRevertToOnOrder(piece)) {
-        String holdingKey = buildProcessedHoldingKey(pieceLocation, title.getInstanceId());
+      if (holdingUpdateOnCheckinReceiveRequired(piece, poLine) && !isRevertToOnOrder(piece)) {
+        String holdingKey = buildProcessedHoldingKey(piece, title.getInstanceId());
         String holdingId = processedHoldings.get(holdingKey);
         item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
       }
-      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, pieceLocation.getTenantId());
+      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates).map(results -> {
@@ -667,19 +661,22 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    */
   protected abstract Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext);
 
-  private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, Location location, CompositePoLine poLine) {
-    boolean isHoldingUpdateRequired;
-    if (piece.getFormat() == Piece.Format.ELECTRONIC) {
-      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine);
-    } else {
-      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine);
+  private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, CompositePoLine poLine) {
+    if (piece.getFormat() == Piece.Format.ELECTRONIC && !PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine)) {
+      return false;
     }
-    return isHoldingUpdateRequired && (StringUtils.isNotEmpty(location.getLocationId()) || StringUtils.isNotEmpty(location.getHoldingId()));
+    if (piece.getFormat() != Piece.Format.ELECTRONIC && !PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine)) {
+      return false;
+    }
+    String locationId = getLocationId(piece);
+    String holdingId = getHoldingId(piece);
+    return StringUtils.isNotEmpty(locationId) || StringUtils.isNotEmpty(holdingId);
   }
 
-  private String buildProcessedHoldingKey(Location receivedPieceLocation, String instanceId) {
-    String keyPrefix = Optional.ofNullable(receivedPieceLocation.getLocationId()).orElse(receivedPieceLocation.getHoldingId());
-    return keyPrefix + instanceId;
+  private String buildProcessedHoldingKey(Piece piece, String instanceId) {
+    String locationId = getLocationId(piece);
+    String holdingId = getHoldingId(piece);
+    return Optional.ofNullable(locationId).orElse(holdingId) + instanceId;
   }
 
   //-------------------------------------------------------------------------------------
