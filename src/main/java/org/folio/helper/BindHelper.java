@@ -66,21 +66,19 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<ReceivingResults> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
     //   1. Get piece records from storage
     return retrievePieceRecords(requestContext)
-      // 2. Check if any piece contains different receivingTenantId
-      .map(piecesGroupedByPoLine -> validateReceivingTenantIds(piecesGroupedByPoLine, bindPiecesCollection))
-      // 3. Check if there are any outstanding requests for items
+      // 2. Check if there are any outstanding requests for items
       .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
-      // 4. Update piece isBound flag
+      // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
-      // 5. Update currently associated items
+      // 4. Update currently associated items
       .map(piecesGroupedByPoLine -> updateItemStatus(piecesGroupedByPoLine, requestContext))
-      // 6. Crate item for pieces with specific fields
+      // 5. Crate item for pieces with specific fields
       .compose(piecesGroupedByPoLine -> createItemForPiece(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
-      // 7. Update received piece records in the storage
+      // 6. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 8. Update Title with new bind items
+      // 7. Update Title with new bind items
       .map(piecesGroupedByPoLine -> updateTitleWithBindItems(piecesGroupedByPoLine, requestContext))
-      // 9. Return results to the client
+      // 8. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(piecesGroupedByPoLine, bindPiecesCollection));
   }
 
@@ -92,25 +90,23 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
     return inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext)
       .map(items -> {
-        if (!items.isEmpty() && Objects.isNull(bindPiecesCollection.getRequestsAction())) {
-          logger.warn("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
-          throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
+        if (!items.isEmpty()) {
+          // requestsAction is required to handle outstanding requests
+          if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
+            logger.warn("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
+            throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
+          }
+
+          // Check if any piece contains different receivingTenantId
+          var receivingTenantIds = extractAllPieces(piecesGroupedByPoLine).map(Piece::getReceivingTenantId).toList();
+          var tenantId = receivingTenantIds.get(0);
+          if (!receivingTenantIds.stream().allMatch(tenantId::equals)) {
+            logger.warn("validateReceivingTenantIds:: all pieces do not have the same receivingTenantId: {}", receivingTenantIds);
+            throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
+          }
         }
         return piecesGroupedByPoLine;
       });
-  }
-
-  private Map<String, List<Piece>> validateReceivingTenantIds(Map<String, List<Piece>> piecesGroupedByPoLine, BindPiecesCollection bindPiecesCollection) {
-    var receivingTenantIds = extractAllPieces(piecesGroupedByPoLine).map(Piece::getReceivingTenantId).toList();
-    if (!receivingTenantIds.isEmpty()) {
-      var tenantId = receivingTenantIds.get(0);
-      var sameReceivingTenantIds = receivingTenantIds.stream().allMatch(receivingTenantId -> receivingTenantId.equals(tenantId));
-      if (!sameReceivingTenantIds) {
-        logger.warn("validateReceivingTenantIds:: all pieces do not have the same receivingTenantId: {}", receivingTenantIds);
-        throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
-      }
-    }
-    return piecesGroupedByPoLine;
   }
 
   private Map<String, List<Piece>> updatePieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
