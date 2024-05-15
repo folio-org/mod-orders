@@ -90,7 +90,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_POL_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_UPDATE_FAILED;
-import static org.folio.rest.core.exceptions.ErrorCodes.REQUESTS_FOUND_WITH_TRANSFER_DISABLED;
+import static org.folio.rest.core.exceptions.ErrorCodes.REQUESTS_ACTION_REQUIRED;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
@@ -1095,7 +1095,7 @@ public class CheckinReceivingApiTest {
       .as(Errors.class)
       .getErrors();
 
-    assertThat(errors.get(0).getMessage(), equalTo(REQUESTS_FOUND_WITH_TRANSFER_DISABLED.getDescription()));
+    assertThat(errors.get(0).getMessage(), equalTo(REQUESTS_ACTION_REQUIRED.getDescription()));
   }
 
   @Test
