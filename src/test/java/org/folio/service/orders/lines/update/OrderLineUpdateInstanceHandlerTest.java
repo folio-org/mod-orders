@@ -238,7 +238,8 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
 
     @Bean
-    public InventoryItemManager inventoryItemManager(RestClient restClient, ConfigurationEntriesCache configurationEntriesCache,
+    public InventoryItemManager inventoryItemManager(RestClient restClient,
+                                                     ConfigurationEntriesCache configurationEntriesCache,
                                                      InventoryCache inventoryCache,
                                                      ConsortiumConfigurationService consortiumConfigurationService) {
       return new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService);

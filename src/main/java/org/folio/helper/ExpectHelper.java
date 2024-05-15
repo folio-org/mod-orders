@@ -118,8 +118,7 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
   }
 
   private void updatePieceWithExpectInfo(Piece piece) {
-    ExpectPiece expectPiece = piecesByLineId.get(piece.getPoLineId())
-      .get(piece.getId());
+    ExpectPiece expectPiece = getByPiece(piece);
 
     piece.setComment(expectPiece.getComment());
     piece.setReceivedDate(null);
@@ -132,7 +131,7 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
     return Future.succeededFuture(false);
   }
 

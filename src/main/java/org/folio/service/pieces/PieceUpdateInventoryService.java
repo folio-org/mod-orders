@@ -9,10 +9,8 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -35,20 +33,6 @@ public class PieceUpdateInventoryService {
     this.inventoryItemManager = inventoryItemManager;
     this.inventoryHoldingManager = inventoryHoldingManager;
     this.pieceStorageService = pieceStorageService;
-  }
-
-  public Future<String> handleHoldingsRecord(final CompositePoLine compPOL, Location location, String instanceId,
-    RequestContext requestContext) {
-    try {
-      if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
-        return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, requestContext);
-      } else {
-        return Future.succeededFuture();
-      }
-    }
-    catch (Exception e) {
-      return Future.failedFuture(e);
-    }
   }
 
   /**

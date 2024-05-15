@@ -1,20 +1,25 @@
 package org.folio.helper;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ACCESSION_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SUPPRESS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
-import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.StreamEx;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.ReceivingResult;
+import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,35 +29,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CheckInPiece;
-import org.folio.rest.jaxrs.model.CheckinCollection;
-import org.folio.rest.jaxrs.model.Location;
-import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.ProcessingStatus;
-import org.folio.rest.jaxrs.model.ReceivingResult;
-import org.folio.rest.jaxrs.model.ReceivingResults;
-import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_ACCESSION_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SUPPRESS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   public static final String IS_ITEM_ORDER_CLOSED_PRESENT = "isItemOrderClosedPresent";
 
   public CheckinHelper(CheckinCollection checkinCollection, Map<String, String> okapiHeaders,
-                Context ctx) {
+                       Context ctx) {
     super(okapiHeaders, ctx);
     // Convert request to map representation
     CheckinCollection checkinCollectionClone = JsonObject.mapFrom(checkinCollection).mapTo(CheckinCollection.class);
@@ -74,13 +72,12 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
-    Map<String, Map<String, Location>> pieceLocationsGroupedByPoLine = groupLocationsByPoLineIdOnCheckin(checkinCollection);
-     // 1. Get piece records from storage
+    // 1. Get piece records from storage
     return createItemsWithPieceUpdate(checkinCollection, requestContext)
       // 2. Filter locationId
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
-      .compose(pieces -> updateInventoryItemsAndHoldings(pieceLocationsGroupedByPoLine, pieces, requestContext))
+      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, requestContext))
       // 4. Update piece records with checkIn details which do not have
       // associated item
       .map(this::updatePieceRecordsWithoutItems)
@@ -96,41 +93,26 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     Map<String, List<CheckInPiece>> poLineIdVsCheckInPiece = getItemCreateNeededCheckinPieces(checkinCollection);
     List<Future<Pair<String, Piece>>> futures = new ArrayList<>();
     return retrievePieceRecords(requestContext)
-      .map(piecesGroupedByPoLine -> { piecesGroupedByPoLine.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
-        .forEach(checkInPiece -> pieces.forEach(piece -> {
-          if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
-            futures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-                            .map(PoLineCommonUtil::convertToCompositePoLine)
-                            .compose(compPOL -> pieceCreateFlowInventoryManager.processInventory(compPOL, piece,
-                                                                                checkInPiece.getCreateItem(), requestContext))
-                            .map(aVoid -> Pair.of(poLineId, piece)));
-          } else {
-            futures.add(Future.succeededFuture(Pair.of(poLineId, piece)));
-          }
-        })));
-        return null;})
+      .map(piecesGroupedByPoLine -> {
+        piecesGroupedByPoLine.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
+          .forEach(checkInPiece -> pieces.forEach(piece -> {
+            if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
+              futures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
+                .map(PoLineCommonUtil::convertToCompositePoLine)
+                .compose(compPOL -> pieceCreateFlowInventoryManager.processInventory(compPOL, piece,
+                  checkInPiece.getCreateItem(), requestContext))
+                .map(aVoid -> Pair.of(poLineId, piece)));
+            } else {
+              futures.add(Future.succeededFuture(Pair.of(poLineId, piece)));
+            }
+          })));
+        return null;
+      })
       .compose(v -> collectResultsOnSuccess(futures).map(poLineIdVsPieceList -> StreamEx.of(poLineIdVsPieceList)
         .distinct()
         .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists)
           .collect(toList()))))));
   }
-
-  private Map<String, Map<String, Location>> groupLocationsByPoLineIdOnCheckin(CheckinCollection checkinCollection) {
-    return StreamEx
-      .of(checkinCollection.getToBeCheckedIn())
-      .distinct()
-      .groupingBy(ToBeCheckedIn::getPoLineId,
-        mapping(ToBeCheckedIn::getCheckInPieces,
-          collectingAndThen(toList(),
-            lists -> StreamEx.of(lists)
-              .flatMap(List::stream)
-              .toMap(CheckInPiece::getId, checkInPiece  ->
-                new Location().withHoldingId(checkInPiece.getHoldingId()).withLocationId(checkInPiece.getLocationId())
-              )
-          )
-        )
-      );
-    }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,
                                                Map<String, List<Piece>> piecesGroupedByPoLine) {
@@ -196,17 +178,10 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   @Override
-  protected boolean isRevertToOnOrder(Piece piece) {
-    return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED
-      && inventoryItemManager.isOnOrderPieceStatus(piecesByLineId.get(piece.getPoLineId()).get(piece.getId()));
-  }
-
-  @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
     Promise<Boolean> promise = Promise.promise();
-    CheckInPiece checkinPiece = piecesByLineId.get(piece.getPoLineId())
-      .get(piece.getId());
-    checkinItem(item, checkinPiece, requestContext)
+    CheckInPiece checkinPiece = getByPiece(piece);
+    checkinItem(item, checkinPiece, locationContext)
       // Update Piece record object with check-in details if item updated
       // successfully
       .map(v -> {
@@ -223,9 +198,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private void updatePieceWithCheckinInfo(Piece piece) {
-    // Get checkinPiece corresponding to piece record
-    CheckInPiece checkinPiece = piecesByLineId.get(piece.getPoLineId())
-      .get(piece.getId());
+    CheckInPiece checkinPiece = getByPiece(piece);
 
     piece.setDisplaySummary(checkinPiece.getDisplaySummary());
     piece.setComment(checkinPiece.getComment());
@@ -247,7 +220,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     piece.setReceiptDate(checkinPiece.getReceiptDate());
     piece.setCallNumber(checkinPiece.getCallNumber());
     // Piece record might be received or rolled-back to Expected
-    if (inventoryItemManager.isOnOrderPieceStatus(checkinPiece)) {
+    if (isOnOrderPieceStatus(checkinPiece)) {
       piece.setReceivedDate(null);
       piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
     } else {
@@ -279,7 +252,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
-                            CheckinCollection checkinCollection, RequestContext requestContext) {
+                                                                       CheckinCollection checkinCollection, RequestContext requestContext) {
     return updateOrderAndPoLinesStatus(
       piecesGroupedByPoLine,
       requestContext,
@@ -310,22 +283,19 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     Map<String, Map<String, CheckInPiece>> poLineCheckInPieces = groupCheckinPiecesByPoLineId(checkinCollection);
     Map<String, List<PoLine>> orderIdOrderLineMap = poLines.stream().distinct().collect(groupingBy(PoLine::getPurchaseOrderId));
 
-   Map<String, Boolean> orderClosedStatusesMap = new HashMap<>();
+    Map<String, Boolean> orderClosedStatusesMap = new HashMap<>();
     orderIdOrderLineMap.forEach((orderId, orderPoLines) ->
       orderPoLines.forEach(orderPoLine -> {
         boolean isItemOrderClosedPresent =
-        poLineCheckInPieces.get(orderPoLine.getId()).values()
-                           .stream()
-                           .filter(checkinPiece -> CheckInPiece.ItemStatus.ORDER_CLOSED.equals(checkinPiece.getItemStatus()))
-                           .map(CheckInPiece::getItemStatus)
-                           .findAny()
-                           .isPresent();
-      orderClosedStatusesMap.put(orderId, isItemOrderClosedPresent);
-    }));
+          poLineCheckInPieces.get(orderPoLine.getId()).values()
+            .stream()
+            .anyMatch(piece -> piece.getItemStatus() == CheckInPiece.ItemStatus.ORDER_CLOSED);
+        orderClosedStatusesMap.put(orderId, isItemOrderClosedPresent);
+      }));
     return orderClosedStatusesMap;
   }
 
-  private Future<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece, RequestContext requestContext) {
+  private Future<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece, RequestContext locationContext) {
 
     // Update item record with checkIn details
     itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
@@ -355,16 +325,26 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       itemRecord.put(ITEM_DISCOVERY_SUPPRESS, checkinPiece.getDiscoverySuppress());
     }
 
-    return inventoryItemManager.updateItem(itemRecord, requestContext);
+    return inventoryItemManager.updateItem(itemRecord, locationContext);
   }
 
   @Override
   protected String getLocationId(Piece piece) {
-    return piecesByLineId.get(piece.getPoLineId()).get(piece.getId()).getLocationId();
+    return getByPiece(piece).getLocationId();
   }
 
   @Override
   protected String getHoldingId(Piece piece) {
-    return piecesByLineId.get(piece.getPoLineId()).get(piece.getId()).getHoldingId();
+    return getByPiece(piece).getHoldingId();
   }
+
+  @Override
+  protected boolean isRevertToOnOrder(Piece piece) {
+    return piece.getReceivingStatus() == Piece.ReceivingStatus.RECEIVED && isOnOrderPieceStatus(getByPiece(piece));
+  }
+
+  private boolean isOnOrderPieceStatus(CheckInPiece checkinPiece) {
+    return checkinPiece.getItemStatus() == CheckInPiece.ItemStatus.ON_ORDER;
+  }
+
 }
