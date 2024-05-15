@@ -154,7 +154,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .compose(compPOL ->
         inventoryItemManager.createBindItem(compPOL, holdingIds.get(0), bindPiecesCollection.getBindItem(), requestContext))
       .map(newItemId -> {
-        // Transfer requests if flag is on
+        // Move requests if requestsAction is TRANSFER, otherwise do nothing
         if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
           var itemIds = extractAllPieces(piecesGroupedByPoLine).map(Piece::getItemId).toList();
           inventoryItemRequestService.transferItemsRequests(itemIds, newItemId, requestContext);
