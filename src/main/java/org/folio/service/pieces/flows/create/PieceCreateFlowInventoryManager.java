@@ -67,7 +67,7 @@ public class PieceCreateFlowInventoryManager {
       return Future.succeededFuture(new Location().withHoldingId(piece.getHoldingId()));
     }
     if (instanceId != null && DefaultPieceFlowsValidator.isCreateHoldingForPiecePossible(piece, compPOL)) {
-      return inventoryHoldingManager.createHoldingReturnId(instanceId, piece.getLocationId(), requestContext)
+      return inventoryHoldingManager.createHoldingAndReturnId(instanceId, piece.getLocationId(), requestContext)
         .map(holdingId -> {
           Location location = new Location().withLocationId(piece.getLocationId());
           if(holdingId != null) {

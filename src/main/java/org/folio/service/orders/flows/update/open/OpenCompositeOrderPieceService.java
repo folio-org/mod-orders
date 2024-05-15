@@ -171,7 +171,7 @@ public class OpenCompositeOrderPieceService {
           if (!PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
             return Future.succeededFuture();
           }
-          return inventoryHoldingManager.createHoldingReturnId(title.getInstanceId(), piece.getLocationId(), requestContext)
+          return inventoryHoldingManager.createHoldingAndReturnId(title.getInstanceId(), piece.getLocationId(), requestContext)
             .map(holdingId -> {
               piece.setLocationId(null);
               piece.setHoldingId(holdingId);

@@ -75,7 +75,7 @@ public class InventoryHoldingManager {
     if (Objects.nonNull(location.getHoldingId())) {
       return getFromCacheOrCreateHolding(location.getHoldingId(), requestContext);
     } else {
-      return createHoldingReturnId(instanceId, location.getLocationId(), requestContext);
+      return createHoldingAndReturnId(instanceId, location.getLocationId(), requestContext);
     }
   }
 
@@ -234,7 +234,7 @@ public class InventoryHoldingManager {
       });
   }
 
-  public Future<String> createHoldingReturnId(String instanceId, String locationId, RequestContext requestContext) {
+  public Future<String> createHoldingAndReturnId(String instanceId, String locationId, RequestContext requestContext) {
     return createHolding(instanceId, locationId, requestContext)
       .map(holding -> holding.getString(ID));
   }
@@ -271,7 +271,7 @@ public class InventoryHoldingManager {
                 String holdingId = jsonHolding.getString(ID);
                 return Future.succeededFuture(holdingId);
               }
-              return createHoldingReturnId(instanceId, locationId, requestContext);
+              return createHoldingAndReturnId(instanceId, locationId, requestContext);
             });
         });
     } else {
@@ -281,7 +281,7 @@ public class InventoryHoldingManager {
             String holdingId = jsonHolding.getString(ID);
             return Future.succeededFuture(holdingId);
           }
-          return createHoldingReturnId(instanceId, location.getLocationId(), requestContext);
+          return createHoldingAndReturnId(instanceId, location.getLocationId(), requestContext);
         });
     }
   }
@@ -291,10 +291,10 @@ public class InventoryHoldingManager {
       return getHoldingById(location.getHoldingId(), true, requestContext)
         .compose(holding -> {
           String locationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-          return createHoldingReturnId(instanceId, locationId, requestContext);
+          return createHoldingAndReturnId(instanceId, locationId, requestContext);
         });
     } else {
-      return createHoldingReturnId(instanceId, location.getLocationId(), requestContext);
+      return createHoldingAndReturnId(instanceId, location.getLocationId(), requestContext);
     }
   }
 

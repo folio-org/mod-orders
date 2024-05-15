@@ -662,15 +662,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected abstract Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext);
 
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, CompositePoLine poLine) {
-    if (piece.getFormat() == Piece.Format.ELECTRONIC && !PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine)) {
-      return false;
-    }
-    if (piece.getFormat() != Piece.Format.ELECTRONIC && !PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine)) {
-      return false;
+    boolean isHoldingUpdateRequired;
+    if (piece.getFormat() == Piece.Format.ELECTRONIC) {
+      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine);
+    } else {
+      isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine);
     }
     String locationId = getLocationId(piece);
     String holdingId = getHoldingId(piece);
-    return StringUtils.isNotEmpty(locationId) || StringUtils.isNotEmpty(holdingId);
+    return isHoldingUpdateRequired && (StringUtils.isNotEmpty(locationId) || StringUtils.isNotEmpty(holdingId));
   }
 
   private String buildProcessedHoldingKey(Piece piece, String instanceId) {
