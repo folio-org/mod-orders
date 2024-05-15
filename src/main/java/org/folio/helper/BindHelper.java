@@ -70,15 +70,15 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
       // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
-      // 3. Update currently associated items
+      // 4. Update currently associated items
       .map(piecesGroupedByPoLine -> updateItemStatus(piecesGroupedByPoLine, requestContext))
-      // 4. Crate item for pieces with specific fields
+      // 5. Crate item for pieces with specific fields
       .compose(piecesGroupedByPoLine -> createItemForPiece(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
-      // 5. Update received piece records in the storage
+      // 6. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 6. Update Title with new bind items
+      // 7. Update Title with new bind items
       .map(piecesGroupedByPoLine -> updateTitleWithBindItems(piecesGroupedByPoLine, requestContext))
-      // 7. Return results to the client
+      // 8. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(piecesGroupedByPoLine, bindPiecesCollection));
   }
 
