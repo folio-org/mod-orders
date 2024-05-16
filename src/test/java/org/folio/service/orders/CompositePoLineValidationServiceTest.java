@@ -1,34 +1,58 @@
 package org.folio.service.orders;
 
-import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE;
-import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE;
-import static org.folio.rest.core.exceptions.ErrorCodes.RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE;
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.rest.core.exceptions.ErrorCodes.*;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import io.vertx.core.Future;
 import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class CompositePoLineValidationServiceTest {
+  private AutoCloseable mockitoMocks;
+  @Mock
+  private ExpenseClassValidationService expenseClassValidationService;
   @InjectMocks
   private CompositePoLineValidationService compositePoLineValidationService;
+  @Mock
+  private RequestContext requestContext;
 
   @BeforeEach
   public void initMocks(){
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
+  }
+
+  @AfterEach
+  void afterEach() throws Exception {
+    mockitoMocks.close();
   }
 
   @Test
@@ -136,7 +160,7 @@ public class CompositePoLineValidationServiceTest {
     var compositePoLine = new CompositePoLine()
       .withDetails(new Details().withIsBindaryActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
-      .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
+      .withOrderFormat(P_E_MIX)
       .withCheckinItems(true);
     var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
 
@@ -149,7 +173,7 @@ public class CompositePoLineValidationServiceTest {
     var compositePoLine = new CompositePoLine()
       .withDetails(new Details().withIsBindaryActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
+      .withOrderFormat(P_E_MIX)
       .withCheckinItems(false);
     var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
 
@@ -171,7 +195,7 @@ public class CompositePoLineValidationServiceTest {
     var compositePoLineWithPEMix = new CompositePoLine()
       .withDetails(new Details().withIsBindaryActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
-      .withOrderFormat(CompositePoLine.OrderFormat.P_E_MIX)
+      .withOrderFormat(P_E_MIX)
       .withCheckinItems(true);
     var errors2 = compositePoLineValidationService.validateForBinadryActive(compositePoLineWithPEMix);
 
@@ -187,5 +211,166 @@ public class CompositePoLineValidationServiceTest {
     var errors = compositePoLineValidationService.validateForBinadryActive(compositePoLine);
 
     assertEquals(0, errors.size());
+  }
+
+  @Test
+  @DisplayName("Test validatePoLine with incorrect cost for PE Mix format")
+  void testValidatePoLineWithIncorrectCostForPEMixFormat() {
+    // Given
+    // Set incorrect quantities for the PO Line
+    Cost cost = new Cost()
+      .withQuantityPhysical(1)
+      .withQuantityElectronic(0)
+      .withListUnitPrice(-10d)
+      .withListUnitPriceElectronic(-5d);
+    Location location = new Location()
+      .withLocationId(UUID.randomUUID().toString())
+      .withQuantityElectronic(1)
+      .withQuantityPhysical(2);
+    CompositePoLine poLine = new CompositePoLine()
+      .withOrderFormat(P_E_MIX)
+      .withCost(cost)
+      .withLocations(List.of(location));
+
+    doReturn(succeededFuture(null))
+      .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
+
+    // When
+    Future<List<Error>> future = compositePoLineValidationService.validatePoLine(poLine, requestContext);
+
+    // Then
+    if (future.failed()) {
+      fail(future.cause());
+    }
+    List<Error> errors = future.result();
+    assertThat(errors, hasSize(5));
+    Set<String> errorCodes = errorsToCodes(errors);
+
+    assertThat(errorCodes, containsInAnyOrder(
+      ZERO_COST_ELECTRONIC_QTY.getCode(),
+      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+      ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+      COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
+      COST_UNIT_PRICE_INVALID.getCode()));
+  }
+
+  @Test
+  @DisplayName("Test validatePoLine with incorrect cost for Other format")
+  void testValidatePoLineWithIncorrectCostForOtherFormat() {
+    // Given
+    // Set incorrect quantities for the PO Line
+    Cost cost = new Cost()
+      .withQuantityPhysical(0)
+      .withQuantityElectronic(1)
+      .withListUnitPrice(-1d)
+      .withListUnitPriceElectronic(10d);
+    Location location = new Location()
+      .withLocationId(UUID.randomUUID().toString())
+      .withQuantityElectronic(0)
+      .withQuantityPhysical(1);
+    CompositePoLine poLine = new CompositePoLine()
+      .withOrderFormat(OTHER)
+      .withCost(cost)
+      .withLocations(List.of(location));
+
+    doReturn(succeededFuture(null))
+      .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
+
+    // When
+    Future<List<Error>> future = compositePoLineValidationService.validatePoLine(poLine, requestContext);
+
+    // Then
+    if (future.failed()) {
+      fail(future.cause());
+    }
+    List<Error> errors = future.result();
+    assertThat(errors, hasSize(5));
+    Set<String> errorCodes = errorsToCodes(errors);
+
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
+      NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
+      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+      COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
+      COST_UNIT_PRICE_INVALID.getCode()));
+  }
+
+  @Test
+  @DisplayName("Test validatePoLine with incorrect quantities")
+  void testValidatePoLineWithIncorrectQuantities() {
+    // Given
+    // Set incorrect quantities for the PO Line
+    Cost cost = new Cost()
+      .withQuantityPhysical(0)
+      .withQuantityElectronic(0)
+      .withListUnitPrice(24.99)
+      .withListUnitPriceElectronic(20.99);
+    Location location1 = new Location()
+      .withLocationId(UUID.randomUUID().toString())
+      .withQuantityElectronic(1)
+      .withQuantityPhysical(1);
+    Location location2 = new Location()
+      .withLocationId(location1.getLocationId())
+      .withQuantityElectronic(0)
+      .withQuantityPhysical(0);
+    CompositePoLine poLine = new CompositePoLine()
+      .withOrderFormat(P_E_MIX)
+      .withCost(cost)
+      .withLocations(List.of(location1, location2));
+
+    doReturn(succeededFuture(null))
+      .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
+
+    // When
+    Future<List<Error>> future = compositePoLineValidationService.validatePoLine(poLine, requestContext);
+
+    // Then
+    if (future.failed()) {
+      fail(future.cause());
+    }
+    List<Error> errors = future.result();
+    assertThat(errors, hasSize(5));
+    Set<String> errorCodes = errorsToCodes(errors);
+
+    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
+      ZERO_COST_PHYSICAL_QTY.getCode(),
+      ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
+      PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
+      ZERO_LOCATION_QTY.getCode()));
+  }
+
+  @Test
+  @DisplayName("Test validatePoLine with zero quantities without locations")
+  void testValidatePoLineWithZeroQuantitiesWithoutLocations() {
+    // MODORDERS-584
+    // Skip quantity validation with 0 electronic and physical quantities and without location
+    // Given
+    Cost cost = new Cost()
+      .withQuantityPhysical(0)
+      .withQuantityElectronic(0)
+      .withListUnitPrice(24.99)
+      .withListUnitPriceElectronic(20.99);
+    CompositePoLine poLine = new CompositePoLine()
+      .withOrderFormat(P_E_MIX)
+      .withCost(cost);
+
+    doReturn(succeededFuture(null))
+      .when(expenseClassValidationService).validateExpenseClasses(eq(List.of(poLine)), eq(false), eq(requestContext));
+
+    // When
+    Future<List<Error>> future = compositePoLineValidationService.validatePoLine(poLine, requestContext);
+
+    // Then
+    if (future.failed()) {
+      fail(future.cause());
+    }
+    List<Error> errors = future.result();
+    assertThat(errors, hasSize(0));
+  }
+
+  private Set<String> errorsToCodes(List<Error> errors) {
+    return errors
+      .stream()
+      .map(Error::getCode)
+      .collect(Collectors.toSet());
   }
 }

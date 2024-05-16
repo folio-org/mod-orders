@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Objects;
-import java.util.concurrent.CompletionException;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -435,8 +434,8 @@ public class PurchaseOrderLineHelper {
     return GenericCompositeFuture.join(new ArrayList<>(futures))
       .map(reportingIds -> line.put(REPORTING_CODES, reportingIds.list()))
       .recover(t -> {
-        logger.error("failed to create Reporting Codes", t);
-        throw new CompletionException(t.getCause());
+        logger.error("Failed to create reporting codes", t);
+        throw new HttpException(500, "Failed to create reporting codes", t);
       })
       .mapEmpty();
   }
@@ -453,8 +452,8 @@ public class PurchaseOrderLineHelper {
     return GenericCompositeFuture.join(new ArrayList<>(futures))
       .map(ids -> line.put(ALERTS, ids.list()))
       .recover(t -> {
-        logger.error("failed to create Alerts", t);
-        throw new CompletionException(t.getCause());
+        logger.error("Failed to create alerts", t);
+        throw new HttpException(500, "Failed to create alerts", t);
       })
       .mapEmpty();
   }

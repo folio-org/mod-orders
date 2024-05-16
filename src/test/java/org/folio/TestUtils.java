@@ -2,7 +2,6 @@ package org.folio;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.TestConstants.EXISTED_ITEM_ID;
-import static org.folio.TestConstants.ID;
 import static org.folio.TestConstants.LOCATION_ID;
 import static org.folio.TestConstants.MIN_PO_ID;
 import static org.folio.TestConstants.MIN_PO_LINE_ID;
@@ -10,7 +9,6 @@ import static org.folio.TestConstants.PIECE_ID;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
-import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.serverRqRs;
 import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,8 +20,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -33,8 +29,6 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.CheckInPiece;
@@ -59,7 +53,6 @@ import io.vertx.junit5.VertxTestContext;
 
 public final class TestUtils {
 
-  private static final Logger logger = LogManager.getLogger();
   public static final String PURCHASE_METHOD = "df26d81b-9d63-4ff8-bf41-49bf75cfa70e";
   public static final String APPROVAL_PLAN_METHOD = "796596c4-62b5-4b64-a2ce-524c747afaa2";
   public static final String DEPOSITORY_METHOD = "d2420b93-7b93-41b7-8b42-798f64cb6dd2";
@@ -92,12 +85,6 @@ public final class TestUtils {
       fail(e.getMessage());
     }
     return new JsonObject();
-  }
-
-  public static Date convertLocalDateTimeToDate(LocalDateTime dateToConvert) {
-    return Date
-      .from(dateToConvert.atZone(ZoneId.systemDefault())
-        .toInstant());
   }
 
   public static Object[] getModifiedProtectedFields(Error error) {
@@ -246,14 +233,6 @@ public final class TestUtils {
 
   public static String getRandomId() {
     return UUID.randomUUID().toString();
-  }
-
-  public static void validateSavedPoLines() {
-    getPoLineUpdates()
-      .forEach(poline -> {
-        logger.info("validate poline {}", poline.getString(ID));
-        poline.mapTo(PoLine.class);
-      });
   }
 
   public static List<Location> getLocationPhysicalCopies(int n) {
