@@ -775,6 +775,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
   protected Map<String, List<String>> mapTenantIdsToItemIds(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
     return extractAllPieces(piecesGroupedByPoLine)
+      .filter(piece -> StringUtils.isNotEmpty(piece.getItemId()))
       .groupingBy(piece -> Optional.ofNullable(piece.getReceivingTenantId())
           .orElse(RequestContextUtil.getContextTenantId(requestContext)),
         mapping(Piece::getItemId, toList()));
