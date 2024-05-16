@@ -298,7 +298,7 @@ public class CompositePoLineValidationService extends BaseValidationService {
 
   protected List<Error> validateForBinadryActive(CompositePoLine poLine) {
     List<Error> errors = new ArrayList<>();
-    if (poLine.getDetails() != null && Boolean.TRUE.equals(poLine.getDetails().getIsBindaryActive())) {
+    if (poLine.getDetails() != null && Boolean.TRUE.equals(poLine.getDetails().getIsBinderyActive())) {
       validateOrderFormatForBindaryActive(poLine, errors);
       validateCreateInventoryForBindary(poLine, errors);
       validateReceivingWorkflowForBindary(poLine, errors);
