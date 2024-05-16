@@ -55,6 +55,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
@@ -797,6 +799,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
   protected StreamEx<Piece> extractAllPieces(Map<String, List<Piece>> piecesGroupedByPoLine) {
     return StreamEx.ofValues(piecesGroupedByPoLine).flatMap(List::stream);
+  }
+
+  protected Map<String, List<String>> mapTenantIdsToItemIds(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
+    return extractAllPieces(piecesGroupedByPoLine)
+      .groupingBy(piece -> Optional.ofNullable(piece.getReceivingTenantId())
+          .orElse(RequestContextUtil.getContextTenantId(requestContext)),
+        mapping(Piece::getItemId, toList()));
   }
 
   /**

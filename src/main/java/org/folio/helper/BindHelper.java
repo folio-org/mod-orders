@@ -3,9 +3,10 @@ package org.folio.helper;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.models.ItemFields;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -71,7 +72,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
       // 4. Update currently associated items
-      .map(piecesGroupedByPoLine -> updateItemStatus(piecesGroupedByPoLine, requestContext))
+      .compose(piecesGroupedByPoLine -> updateItemStatus(piecesGroupedByPoLine, requestContext))
       // 5. Crate item for pieces with specific fields
       .compose(piecesGroupedByPoLine -> createItemForPiece(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
       // 6. Update received piece records in the storage
@@ -82,31 +83,36 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .map(piecesGroupedByPoLine -> prepareResponseBody(piecesGroupedByPoLine, bindPiecesCollection));
   }
 
-  private Future<Map<String, List<Piece>>> checkRequestsForPieceItems(Map<String, List<Piece>> piecesGroupedByPoLine, BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
-    var itemIds = extractAllPieces(piecesGroupedByPoLine)
-      .map(Piece::getItemId)
-      .filter(StringUtils::isNotEmpty)
-      .toList();
-
-    return inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext)
-      .map(items -> {
-        if (!items.isEmpty()) {
-          // requestsAction is required to handle outstanding requests
-          if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
-            logger.warn("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
-            throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
-          }
-
-          // Check if any piece contains different receivingTenantId
-          var receivingTenantIds = extractAllPieces(piecesGroupedByPoLine).map(Piece::getReceivingTenantId).toList();
-          var tenantId = receivingTenantIds.get(0);
-          if (!receivingTenantIds.stream().allMatch(tenantId::equals)) {
-            logger.warn("validateReceivingTenantIds:: all pieces do not have the same receivingTenantId: {}", receivingTenantIds);
-            throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
-          }
-        }
-        return piecesGroupedByPoLine;
-      });
+  private Future<Map<String, List<Piece>>> checkRequestsForPieceItems(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                                      BindPiecesCollection bindPiecesCollection,
+                                                                      RequestContext requestContext) {
+    var tenantToItem = mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext);
+    return GenericCompositeFuture.all(
+        tenantToItem.entrySet().stream()
+          .map(entry -> {
+          var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+          return inventoryItemRequestService.getItemsWithActiveRequests(entry.getValue(), locationContext)
+            .compose(items -> {
+              if (!items.isEmpty()) {
+                // requestsAction is required to handle outstanding requests
+                if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
+                  logger.warn("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
+                  throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
+                }
+                else if (bindPiecesCollection.getRequestsAction().equals(TRANSFER)) {
+                  // When requests are to be transferred check if pieces contain different receivingTenantIds
+                  // Transferring requests between tenants is not a requirement for R
+                  if (!tenantToItem.keySet().isEmpty()) {
+                    logger.warn("checkRequestsForPieceItems:: All pieces do not have the same receivingTenantId: {}", tenantToItem.keySet());
+                    throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
+                  }
+                }
+              }
+              return Future.succeededFuture();
+            });
+          })
+          .toList())
+      .map(f -> piecesGroupedByPoLine);
   }
 
   private Map<String, List<Piece>> updatePieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
@@ -116,24 +122,25 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return piecesGroupedByPoLine;
   }
 
-  private Map<String, List<Piece>> updateItemStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
-                                                            RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> updateItemStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
     logger.debug("updateItemStatus:: Updating previous item status to 'Unavailable'");
-    var itemIds = piecesGroupedByPoLine.values()
-      .stream().flatMap(List::stream)
-      .map(Piece::getItemId).toList();
-    inventoryItemManager.getItemRecordsByIds(itemIds, requestContext)
-      .compose(items -> {
-        items.forEach(item -> {
-            logger.info("updateItemStatus:: '{}' item status set to 'Unavailable'", item.getString(ItemFields.ID.value()));
-            item.put(ItemFields.STATUS.value(), new JsonObject()
-              .put(ItemFields.STATUS_DATE.value(), new Date())
-              .put(ItemFields.STATUS_NAME.value(), ReceivedItem.ItemStatus.UNAVAILABLE));
-          }
-        );
-        return inventoryItemManager.updateItemRecords(items, requestContext);
-      });
-    return piecesGroupedByPoLine;
+    return GenericCompositeFuture.all(
+      mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext).entrySet().stream()
+        .map(entry -> {
+          var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+          return inventoryItemManager.getItemRecordsByIds(entry.getValue(), locationContext)
+            .compose(items -> {
+              items.forEach(item -> {
+                logger.info("updateItemStatus:: '{}' item status set to 'Unavailable'", item.getString(ItemFields.ID.value()));
+                item.put(ItemFields.STATUS.value(), new JsonObject()
+                  .put(ItemFields.STATUS_DATE.value(), new Date())
+                  .put(ItemFields.STATUS_NAME.value(), ReceivedItem.ItemStatus.UNAVAILABLE));
+              });
+              return inventoryItemManager.updateItemRecords(items, locationContext);
+            });
+        })
+        .toList()
+    ).map(f -> piecesGroupedByPoLine);
   }
 
   private Future<Map<String, List<Piece>>> createItemForPiece(Map<String, List<Piece>> piecesGroupedByPoLine,
