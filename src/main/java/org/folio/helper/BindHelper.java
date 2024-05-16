@@ -3,9 +3,12 @@ package org.folio.helper;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import one.util.streamex.StreamEx;
 import org.folio.models.ItemFields;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.orders.utils.RequestContextUtil;
+import org.folio.rest.RestConstants;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
@@ -17,19 +20,26 @@ import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.service.inventory.InventoryItemRequestService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static org.folio.rest.jaxrs.model.BindPiecesCollection.RequestsAction.TRANSFER;
 
 
 public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection> {
 
   private static final String TITLE_BY_POLINE_QUERY = "poLineId==%s";
+
+  @Autowired
+  private InventoryItemRequestService inventoryItemRequestService;
+
   public BindHelper(BindPiecesCollection bindPiecesCollection,
                     Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
@@ -55,48 +65,83 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private Future<ReceivingResults> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
-    // 1. Get piece records from storage
+    //   1. Get piece records from storage
     return retrievePieceRecords(requestContext)
-      // 2. Update piece isBound flag
+      // 2. Check if there are any outstanding requests for items
+      .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
+      // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
-      // 3. Update currently associated items
-      .map(piecesGroupedByPoLine -> updateItemStatus(piecesGroupedByPoLine, requestContext))
-      // 4. Crate item for pieces with specific fields
+      // 4. Update currently associated items
+      .compose(piecesGroupedByPoLine -> updateItemStatus(piecesGroupedByPoLine, requestContext))
+      // 5. Crate item for pieces with specific fields
       .compose(piecesGroupedByPoLine -> createItemForPiece(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
-      // 5. Update received piece records in the storage
+      // 6. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 6. Update Title with new bind items
+      // 7. Update Title with new bind items
       .map(piecesGroupedByPoLine -> updateTitleWithBindItems(piecesGroupedByPoLine, requestContext))
-      // 7. Return results to the client
+      // 8. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(piecesGroupedByPoLine, bindPiecesCollection));
+  }
+
+  private Future<Map<String, List<Piece>>> checkRequestsForPieceItems(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                                      BindPiecesCollection bindPiecesCollection,
+                                                                      RequestContext requestContext) {
+    var tenantToItem = mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext);
+    return GenericCompositeFuture.all(
+        tenantToItem.entrySet().stream()
+          .map(entry -> {
+          var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+          return inventoryItemRequestService.getItemsWithActiveRequests(entry.getValue(), locationContext)
+            .compose(items -> {
+              if (items.isEmpty()) {
+                return Future.succeededFuture();
+              }
+
+              // requestsAction is required to handle outstanding requests
+              if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
+                logger.warn("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
+                throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
+              }
+
+              // When requests are to be transferred check if pieces contain different receivingTenantIds
+              // Transferring requests between tenants is not a requirement for R
+              if (bindPiecesCollection.getRequestsAction().equals(TRANSFER) && !tenantToItem.keySet().isEmpty()) {
+                logger.warn("checkRequestsForPieceItems:: All pieces do not have the same receivingTenantId: {}", tenantToItem.keySet());
+                throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
+              }
+              return Future.succeededFuture();
+            });
+          })
+          .toList())
+      .map(f -> piecesGroupedByPoLine);
   }
 
   private Map<String, List<Piece>> updatePieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
     logger.debug("updatePieceRecords:: Updating the piece records to set isBound flag as TRUE");
-    piecesGroupedByPoLine.values().stream()
-      .flatMap(List::stream)
+    extractAllPieces(piecesGroupedByPoLine)
       .forEach(piece -> piece.setIsBound(true));
     return piecesGroupedByPoLine;
   }
 
-  private Map<String, List<Piece>> updateItemStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
-                                                            RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> updateItemStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
     logger.debug("updateItemStatus:: Updating previous item status to 'Unavailable'");
-    var itemIds = piecesGroupedByPoLine.values()
-      .stream().flatMap(List::stream)
-      .map(Piece::getItemId).toList();
-    inventoryItemManager.getItemRecordsByIds(itemIds, requestContext)
-      .compose(items -> {
-        items.forEach(item -> {
-            logger.info("updateItemStatus:: '{}' item status set to 'Unavailable'", item.getString(ItemFields.ID.value()));
-            item.put(ItemFields.STATUS.value(), new JsonObject()
-              .put(ItemFields.STATUS_DATE.value(), new Date())
-              .put(ItemFields.STATUS_NAME.value(), ReceivedItem.ItemStatus.UNAVAILABLE));
-          }
-        );
-        return inventoryItemManager.updateItemRecords(items, requestContext);
-      });
-    return piecesGroupedByPoLine;
+    return GenericCompositeFuture.all(
+      mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext).entrySet().stream()
+        .map(entry -> {
+          var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+          return inventoryItemManager.getItemRecordsByIds(entry.getValue(), locationContext)
+            .compose(items -> {
+              items.forEach(item -> {
+                logger.info("updateItemStatus:: '{}' item status set to 'Unavailable'", item.getString(ItemFields.ID.value()));
+                item.put(ItemFields.STATUS.value(), new JsonObject()
+                  .put(ItemFields.STATUS_DATE.value(), new Date())
+                  .put(ItemFields.STATUS_NAME.value(), ReceivedItem.ItemStatus.UNAVAILABLE));
+              });
+              return inventoryItemManager.updateItemRecords(items, locationContext);
+            });
+        })
+        .toList()
+    ).map(f -> piecesGroupedByPoLine);
   }
 
   private Future<Map<String, List<Piece>>> createItemForPiece(Map<String, List<Piece>> piecesGroupedByPoLine,
@@ -112,11 +157,16 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .map(PoLineCommonUtil::convertToCompositePoLine)
       .compose(compPOL ->
         inventoryItemManager.createBindItem(compPOL, holdingIds.get(0), bindPiecesCollection.getBindItem(), requestContext))
-      .map(itemId -> {
-          piecesGroupedByPoLine.get(poLineId).forEach(piece -> piece.setItemId(itemId));
-          return piecesGroupedByPoLine;
+      .map(newItemId -> {
+        // Move requests if requestsAction is TRANSFER, otherwise do nothing
+        if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
+          var itemIds = extractAllPieces(piecesGroupedByPoLine).map(Piece::getItemId).toList();
+          inventoryItemRequestService.transferItemsRequests(itemIds, newItemId, requestContext);
         }
-      );
+        // Set new item ids for pieces
+        piecesGroupedByPoLine.get(poLineId).forEach(piece -> piece.setItemId(newItemId));
+        return piecesGroupedByPoLine;
+      });
   }
 
   private void validateHoldingIds(List<String> holdingIds, BindPiecesCollection bindPiecesCollection) {
@@ -155,21 +205,17 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     String poLineId = bindPiecesCollection.getPoLineId();
 
     // Get all processed piece records for PO Line
-    Map<String, Piece> processedPiecesForPoLine = StreamEx
-      .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
-      .toMap(Piece::getId, piece -> piece);
+    Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-    Map<String, Integer> resultCounts = new HashMap<>();
-    resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
-    resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
+    var resultCounts = getEmptyResultCounts();
     ReceivingResult result = new ReceivingResult();
     for (String pieceId : bindPiecesCollection.getBindPieceIds()) {
       calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
     }
 
     result.withPoLineId(poLineId)
-      .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
-      .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
+      .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS))
+      .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE));
     return new ReceivingResults()
       .withTotalRecords(1)
       .withReceivingResults(List.of(result));
@@ -181,7 +227,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext requestContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
     return null;
   }
 

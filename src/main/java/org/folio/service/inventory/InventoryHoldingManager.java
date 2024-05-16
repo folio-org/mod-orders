@@ -9,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -74,35 +73,38 @@ public class InventoryHoldingManager {
 
   public Future<String> getOrCreateHoldingsRecord(String instanceId, Location location, RequestContext requestContext) {
     if (Objects.nonNull(location.getHoldingId())) {
-      Context ctx = requestContext.getContext();
-      String tenantId = TenantTool.tenantId(requestContext.getHeaders());
-
-      String holdingId = location.getHoldingId();
-      RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId);
-
-      Future<String> holdingIdFuture;
-      var holdingIdKey = String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, "getOrCreateHoldingsRecord", holdingId);
-      String holdingIdCached = ctx.get(holdingIdKey);
-
-      if (Objects.nonNull(holdingIdCached)) {
-        holdingIdFuture = Future.succeededFuture(holdingIdCached);
-      } else {
-        holdingIdFuture = restClient.getAsJsonObject(requestEntry, requestContext)
-          .onSuccess(id -> ctx.put(holdingIdKey, id))
-          .map(holdingJson -> {
-            var id = HelperUtils.extractId(holdingJson);
-            ctx.put(holdingIdKey, id);
-            return id;
-          });
-      }
-
-      return holdingIdFuture.recover(throwable -> {
-        handleHoldingsError(holdingId, throwable);
-        return null;
-      });
+      return getFromCacheOrCreateHolding(location.getHoldingId(), requestContext);
     } else {
-      return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
+      return createHoldingAndReturnId(instanceId, location.getLocationId(), requestContext);
     }
+  }
+
+  public Future<String> getFromCacheOrCreateHolding(String holdingId, RequestContext requestContext) {
+    Context ctx = requestContext.getContext();
+    String tenantId = TenantTool.tenantId(requestContext.getHeaders());
+
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT)).withId(holdingId);
+
+    Future<String> holdingIdFuture;
+    var holdingIdKey = String.format(TENANT_SPECIFIC_KEY_FORMAT, tenantId, "getFromCacheOrCreateHolding", holdingId);
+    String holdingIdCached = ctx.get(holdingIdKey);
+
+    if (Objects.nonNull(holdingIdCached)) {
+      holdingIdFuture = Future.succeededFuture(holdingIdCached);
+    } else {
+      holdingIdFuture = restClient.getAsJsonObject(requestEntry, requestContext)
+        .onSuccess(id -> ctx.put(holdingIdKey, id))
+        .map(holdingJson -> {
+          var id = HelperUtils.extractId(holdingJson);
+          ctx.put(holdingIdKey, id);
+          return id;
+        });
+    }
+
+    return holdingIdFuture.recover(throwable -> {
+      handleHoldingsError(holdingId, throwable);
+      return null;
+    });
   }
 
   public Future<JsonObject> getOrCreateHoldingsJsonRecord(Eresource eresource, String instanceId, Location location, RequestContext requestContext) {
@@ -117,10 +119,10 @@ public class InventoryHoldingManager {
         });
     } else if (Eresource.CreateInventory.NONE == eresource.getCreateInventory() || Eresource.CreateInventory.INSTANCE == eresource.getCreateInventory()) {
       if (location.getQuantityPhysical() != null && location.getQuantityPhysical() > 0) {
-        return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
+        return createHolding(instanceId, location.getLocationId(), requestContext);
       }
     } else {
-      return createHoldingsRecord(instanceId, location.getLocationId(), requestContext);
+      return createHolding(instanceId, location.getLocationId(), requestContext);
     }
     return Future.succeededFuture();
   }
@@ -217,7 +219,7 @@ public class InventoryHoldingManager {
       });
   }
 
-  private Future<JsonObject> createHoldingsRecord(String instanceId, String locationId, RequestContext requestContext) {
+  private Future<JsonObject> createHolding(String instanceId, String locationId, RequestContext requestContext) {
     return InventoryUtils.getSourceId(configurationEntriesCache, inventoryCache, requestContext)
       .map(sourceId -> {
         JsonObject holdingsRecJson = new JsonObject();
@@ -232,8 +234,8 @@ public class InventoryHoldingManager {
       });
   }
 
-  private Future<String> createHoldingsRecordId(String instanceId, String locationId, RequestContext requestContext) {
-    return createHoldingsRecord(instanceId, locationId, requestContext)
+  public Future<String> createHoldingAndReturnId(String instanceId, String locationId, RequestContext requestContext) {
+    return createHolding(instanceId, locationId, requestContext)
       .map(holding -> holding.getString(ID));
   }
 
@@ -269,7 +271,7 @@ public class InventoryHoldingManager {
                 String holdingId = jsonHolding.getString(ID);
                 return Future.succeededFuture(holdingId);
               }
-              return createHoldingsRecordId(instanceId, locationId, requestContext);
+              return createHoldingAndReturnId(instanceId, locationId, requestContext);
             });
         });
     } else {
@@ -279,7 +281,7 @@ public class InventoryHoldingManager {
             String holdingId = jsonHolding.getString(ID);
             return Future.succeededFuture(holdingId);
           }
-          return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
+          return createHoldingAndReturnId(instanceId, location.getLocationId(), requestContext);
         });
     }
   }
@@ -289,10 +291,10 @@ public class InventoryHoldingManager {
       return getHoldingById(location.getHoldingId(), true, requestContext)
         .compose(holding -> {
           String locationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-          return createHoldingsRecordId(instanceId, locationId, requestContext);
+          return createHoldingAndReturnId(instanceId, locationId, requestContext);
         });
     } else {
-      return createHoldingsRecordId(instanceId, location.getLocationId(), requestContext);
+      return createHoldingAndReturnId(instanceId, location.getLocationId(), requestContext);
     }
   }
 
@@ -303,21 +305,6 @@ public class InventoryHoldingManager {
       return restClient.delete(requestEntry, skipNotFoundException, requestContext);
     }
     return Future.succeededFuture();
-  }
-
-  /**
-   * Return id of created  Holding
-   */
-  public Future<String> handleHoldingsRecord(CompositePoLine compPOL, Location location, String instanceId, RequestContext requestContext) {
-    try {
-      if (PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
-        return getOrCreateHoldingsRecord(instanceId, location, requestContext);
-      } else {
-        return Future.succeededFuture();
-      }
-    } catch (Exception e) {
-      return Future.failedFuture(e);
-    }
   }
 
   public Future<List<JsonObject>> getHoldingsForAllLocationTenants(CompositePoLine poLine, RequestContext requestContext) {

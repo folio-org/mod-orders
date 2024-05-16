@@ -1287,6 +1287,9 @@ public class MockServer {
     logger.info("handleGetItemRequests got: " + ctx.request().path());
     try {
       String itemId = ctx.request().getParam("query").split("and")[0].split("==")[1].trim();
+      if (itemId.startsWith("(") && itemId.endsWith(")")) {
+        itemId = itemId.substring(1, itemId.length() - 1);
+      }
       int limit = Integer.parseInt(ctx.request().getParam("limit"));
       JsonObject entries = new JsonObject(getMockData(ITEM_REQUESTS_MOCK_DATA_PATH + "itemRequests.json"));
       filterByKeyValue("itemId", itemId, entries.getJsonArray(REQUESTS));

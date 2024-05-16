@@ -144,7 +144,7 @@ public class CompositePoLineValidationServiceTest {
   @Test
   void shouldReturnErrorIfIncorrectOrderFormatWhenBindaryActive() {
     var compositePoLine = new CompositePoLine()
-      .withDetails(new Details().withIsBindaryActive(true))
+      .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE)
       .withCheckinItems(true);
@@ -158,7 +158,7 @@ public class CompositePoLineValidationServiceTest {
   @Test
   void shouldReturnErrorIfIncorrectCreateInventoryWhenBindaryActive() {
     var compositePoLine = new CompositePoLine()
-      .withDetails(new Details().withIsBindaryActive(true))
+      .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING))
       .withOrderFormat(P_E_MIX)
       .withCheckinItems(true);
@@ -171,7 +171,7 @@ public class CompositePoLineValidationServiceTest {
   @Test
   void shouldReturnErrorIfCheckInItemsFalseWhenBindaryActive() {
     var compositePoLine = new CompositePoLine()
-      .withDetails(new Details().withIsBindaryActive(true))
+      .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withOrderFormat(P_E_MIX)
       .withCheckinItems(false);
@@ -184,7 +184,7 @@ public class CompositePoLineValidationServiceTest {
   @Test
   void shouldPassWhenBindaryActiveAndCorrectFormat() {
     var compositePoLineWithPhysical = new CompositePoLine()
-      .withDetails(new Details().withIsBindaryActive(true))
+      .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withCheckinItems(true);
@@ -193,7 +193,7 @@ public class CompositePoLineValidationServiceTest {
     assertEquals(0, errors1.size());
 
     var compositePoLineWithPEMix = new CompositePoLine()
-      .withDetails(new Details().withIsBindaryActive(true))
+      .withDetails(new Details().withIsBinderyActive(true))
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM))
       .withOrderFormat(P_E_MIX)
       .withCheckinItems(true);
