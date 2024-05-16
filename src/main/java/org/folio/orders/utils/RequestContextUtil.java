@@ -22,4 +22,8 @@ public class RequestContextUtil {
     return new RequestContext(requestContext.getContext(), modifiedHeaders);
   }
 
+  public static String getContextTenantId(RequestContext requestContext) {
+    return requestContext.getHeaders().get(XOkapiHeaders.TENANT);
+  }
+
 }

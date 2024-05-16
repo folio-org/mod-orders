@@ -1100,7 +1100,9 @@
             "orders-storage.titles.item.put",
             "inventory-storage.items.item.post",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "circulation.requests.collection.get",
+            "circulation.requests.item.move.post"
           ]
         }
       ]

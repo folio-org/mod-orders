@@ -23,7 +23,6 @@ import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -124,13 +123,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       results.getReceivingResults().add(result);
 
       // Get all processed piece records for PO Line
-      Map<String, Piece> processedPiecesForPoLine = StreamEx
-        .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
-        .toMap(Piece::getId, piece -> piece);
+      Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-      Map<String, Integer> resultCounts = new HashMap<>();
-      resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
-      resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
+      Map<ProcessingStatus.Type, Integer> resultCounts = getEmptyResultCounts();
       for (CheckInPiece checkinPiece : toBeCheckedIn.getCheckInPieces()) {
         String pieceId = checkinPiece.getId();
 
@@ -138,8 +133,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       }
 
       result.withPoLineId(poLineId)
-        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
-        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
+        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS))
+        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE));
     }
 
     return results;
@@ -231,8 +226,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   @Override
   protected Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    StreamEx.ofValues(piecesGroupedByPoLine)
-      .flatMap(List::stream)
+    extractAllPieces(piecesGroupedByPoLine)
       .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
       .forEach(this::updatePieceWithCheckinInfo);
 

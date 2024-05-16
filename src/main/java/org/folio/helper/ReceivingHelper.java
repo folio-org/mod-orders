@@ -23,9 +23,7 @@ import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.service.ProtectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -142,13 +140,9 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       results.getReceivingResults().add(result);
 
       // Get all processed piece records for PO Line
-      Map<String, Piece> processedPiecesForPoLine = StreamEx
-        .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
-        .toMap(Piece::getId, piece -> piece);
+      Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-      Map<String, Integer> resultCounts = new HashMap<>();
-      resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
-      resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
+      Map<ProcessingStatus.Type, Integer> resultCounts = getEmptyResultCounts();
 
       for (ReceivedItem receivedItem : toBeReceived.getReceivedItems()) {
         String pieceId = receivedItem.getPieceId();
@@ -156,8 +150,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       }
 
       result.withPoLineId(poLineId)
-        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
-        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
+        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS))
+        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE));
     }
 
     return results;
@@ -201,8 +195,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   @Override
   protected Map<String, List<Piece>> updatePieceRecordsWithoutItems(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    StreamEx.ofValues(piecesGroupedByPoLine)
-      .flatMap(List::stream)
+    extractAllPieces(piecesGroupedByPoLine)
       .filter(piece -> StringUtils.isEmpty(piece.getItemId()))
       .forEach(this::updatePieceWithReceivingInfo);
 

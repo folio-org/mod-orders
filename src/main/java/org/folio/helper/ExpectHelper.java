@@ -15,7 +15,6 @@ import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeExpected;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -88,13 +87,9 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
       results.getReceivingResults().add(result);
 
       // Get all processed piece records for PO Line
-      Map<String, Piece> processedPiecesForPoLine = StreamEx
-        .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
-        .toMap(Piece::getId, piece -> piece);
+      Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-      Map<String, Integer> resultCounts = new HashMap<>();
-      resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
-      resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
+      Map<ProcessingStatus.Type, Integer> resultCounts = getEmptyResultCounts();
       for (ExpectPiece expectPiece : toBeExpected.getExpectPieces()) {
         String pieceId = expectPiece.getId();
 
@@ -102,16 +97,15 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
       }
 
       result.withPoLineId(poLineId)
-        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
-        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
+        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS))
+        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE));
     }
 
     return results;
   }
 
   private Map<String, List<Piece>> updatePieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    StreamEx.ofValues(piecesGroupedByPoLine)
-      .flatMap(List::stream)
+    extractAllPieces(piecesGroupedByPoLine)
       .forEach(this::updatePieceWithExpectInfo);
 
     return piecesGroupedByPoLine;
