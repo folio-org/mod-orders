@@ -93,20 +93,21 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
           var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
           return inventoryItemRequestService.getItemsWithActiveRequests(entry.getValue(), locationContext)
             .compose(items -> {
-              if (!items.isEmpty()) {
-                // requestsAction is required to handle outstanding requests
-                if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
-                  logger.warn("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
-                  throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
-                }
-                else if (bindPiecesCollection.getRequestsAction().equals(TRANSFER)) {
-                  // When requests are to be transferred check if pieces contain different receivingTenantIds
-                  // Transferring requests between tenants is not a requirement for R
-                  if (!tenantToItem.keySet().isEmpty()) {
-                    logger.warn("checkRequestsForPieceItems:: All pieces do not have the same receivingTenantId: {}", tenantToItem.keySet());
-                    throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
-                  }
-                }
+              if (items.isEmpty()) {
+                return Future.succeededFuture();
+              }
+
+              // requestsAction is required to handle outstanding requests
+              if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
+                logger.warn("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
+                throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
+              }
+
+              // When requests are to be transferred check if pieces contain different receivingTenantIds
+              // Transferring requests between tenants is not a requirement for R
+              if (bindPiecesCollection.getRequestsAction().equals(TRANSFER) && !tenantToItem.keySet().isEmpty()) {
+                logger.warn("checkRequestsForPieceItems:: All pieces do not have the same receivingTenantId: {}", tenantToItem.keySet());
+                throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
               }
               return Future.succeededFuture();
             });
@@ -206,15 +207,15 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     // Get all processed piece records for PO Line
     Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-    Map<String, Integer> resultCounts = getEmptyResultCounts();
+    var resultCounts = getEmptyResultCounts();
     ReceivingResult result = new ReceivingResult();
     for (String pieceId : bindPiecesCollection.getBindPieceIds()) {
       calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
     }
 
     result.withPoLineId(poLineId)
-      .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
-      .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
+      .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS))
+      .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE));
     return new ReceivingResults()
       .withTotalRecords(1)
       .withReceivingResults(List.of(result));

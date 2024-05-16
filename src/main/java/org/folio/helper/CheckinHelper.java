@@ -125,7 +125,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       // Get all processed piece records for PO Line
       Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-      Map<String, Integer> resultCounts = getEmptyResultCounts();
+      Map<ProcessingStatus.Type, Integer> resultCounts = getEmptyResultCounts();
       for (CheckInPiece checkinPiece : toBeCheckedIn.getCheckInPieces()) {
         String pieceId = checkinPiece.getId();
 
@@ -133,8 +133,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       }
 
       result.withPoLineId(poLineId)
-        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
-        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
+        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS))
+        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE));
     }
 
     return results;

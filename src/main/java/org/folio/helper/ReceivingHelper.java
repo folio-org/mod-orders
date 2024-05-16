@@ -142,7 +142,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       // Get all processed piece records for PO Line
       Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-      Map<String, Integer> resultCounts = getEmptyResultCounts();
+      Map<ProcessingStatus.Type, Integer> resultCounts = getEmptyResultCounts();
 
       for (ReceivedItem receivedItem : toBeReceived.getReceivedItems()) {
         String pieceId = receivedItem.getPieceId();
@@ -150,8 +150,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       }
 
       result.withPoLineId(poLineId)
-        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
-        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
+        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS))
+        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE));
     }
 
     return results;

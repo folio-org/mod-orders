@@ -540,30 +540,18 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<List<JsonObject>> getItemRecords(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                   Map<String, Piece> piecesByItemId,
                                                   RequestContext requestContext) {
-
-    Map<String, List<String>> itemIdsByTenantId = new HashMap<>();
-    for (List<Piece> pieceList : piecesGroupedByPoLine.values()) {
-      for (Piece piece : pieceList) {
-        if (StringUtils.isNotEmpty(piece.getItemId())) {
-          itemIdsByTenantId.computeIfAbsent(piece.getReceivingTenantId(), k -> new ArrayList<>()).add(piece.getItemId());
-        }
-      }
-    }
-
-    // split all id lists by maximum number of id's for get query
-    List<Future<List<JsonObject>>> futures = itemIdsByTenantId.entrySet()
-      .stream()
-      .flatMap(
-        entry -> StreamEx.ofSubLists(entry.getValue(), MAX_IDS_FOR_GET_RQ_15)
-          .map(ids -> {
-            var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
-            return getItemRecordsByIds(ids, piecesByItemId, locationContext);
-          })
-      )
-      .toList();
-
-    return collectResultsOnSuccess(futures)
-      .map(lists -> StreamEx.of(lists).toFlatList(jsonObjects -> jsonObjects));
+    // Split all id lists by maximum number of id's for get query
+    return collectResultsOnSuccess(
+      mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext).entrySet().stream()
+        .flatMap(entry ->
+          StreamEx.ofSubLists(entry.getValue(), MAX_IDS_FOR_GET_RQ_15)
+            .map(ids -> {
+              var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+              return getItemRecordsByIds(ids, piecesByItemId, locationContext);
+            })
+        )
+        .toList())
+      .map(lists -> StreamEx.of(lists).toFlatList(items -> items));
   }
 
   /**
@@ -768,6 +756,30 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .toFlatList(ids -> ids);
   }
 
+  protected Map<String, Piece> getProcessedPiecesForPoLine(String poLineId, Map<String, List<Piece>> piecesGroupedByPoLine) {
+    return StreamEx
+      .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
+      .toMap(Piece::getId, piece -> piece);
+  }
+
+  protected Map<ProcessingStatus.Type, Integer> getEmptyResultCounts() {
+    Map<ProcessingStatus.Type, Integer> resultCounts = new HashMap<>();
+    resultCounts.put(ProcessingStatus.Type.SUCCESS, 0);
+    resultCounts.put(ProcessingStatus.Type.FAILURE, 0);
+    return resultCounts;
+  }
+
+  protected StreamEx<Piece> extractAllPieces(Map<String, List<Piece>> piecesGroupedByPoLine) {
+    return StreamEx.ofValues(piecesGroupedByPoLine).flatMap(List::stream);
+  }
+
+  protected Map<String, List<String>> mapTenantIdsToItemIds(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
+    return extractAllPieces(piecesGroupedByPoLine)
+      .groupingBy(piece -> Optional.ofNullable(piece.getReceivingTenantId())
+          .orElse(RequestContextUtil.getContextTenantId(requestContext)),
+        mapping(Piece::getItemId, toList()));
+  }
+
   //-------------------------------------------------------------------------------------
   /*
   Errors
@@ -782,30 +794,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       var causeParam = new Parameter().withKey("cause").withValue(e.getMessage());
       addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError().withParameters(List.of(causeParam)));
     }
-  }
-
-  protected Map<String, Piece> getProcessedPiecesForPoLine(String poLineId, Map<String, List<Piece>> piecesGroupedByPoLine) {
-    return StreamEx
-      .of(piecesGroupedByPoLine.getOrDefault(poLineId, Collections.emptyList()))
-      .toMap(Piece::getId, piece -> piece);
-  }
-
-  protected Map<String, Integer> getEmptyResultCounts() {
-    Map<String, Integer> resultCounts = new HashMap<>();
-    resultCounts.put(ProcessingStatus.Type.SUCCESS.toString(), 0);
-    resultCounts.put(ProcessingStatus.Type.FAILURE.toString(), 0);
-    return resultCounts;
-  }
-
-  protected StreamEx<Piece> extractAllPieces(Map<String, List<Piece>> piecesGroupedByPoLine) {
-    return StreamEx.ofValues(piecesGroupedByPoLine).flatMap(List::stream);
-  }
-
-  protected Map<String, List<String>> mapTenantIdsToItemIds(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
-    return extractAllPieces(piecesGroupedByPoLine)
-      .groupingBy(piece -> Optional.ofNullable(piece.getReceivingTenantId())
-          .orElse(RequestContextUtil.getContextTenantId(requestContext)),
-        mapping(Piece::getItemId, toList()));
   }
 
   /**
@@ -838,17 +826,17 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
   public void calculateProcessingErrors(String poLineId, ReceivingResult result,
                                         Map<String, Piece> processedPiecesForPoLine,
-                                        Map<String, Integer> resultCounts, String pieceId) {
+                                        Map<ProcessingStatus.Type, Integer> resultCounts, String pieceId) {
     // Calculate processing status
     ProcessingStatus status = new ProcessingStatus();
     Error error = getError(poLineId, pieceId);
     if (processedPiecesForPoLine.get(pieceId) != null && error == null) {
       status.setType(ProcessingStatus.Type.SUCCESS);
-      resultCounts.merge(ProcessingStatus.Type.SUCCESS.toString(), 1, Integer::sum);
+      resultCounts.merge(ProcessingStatus.Type.SUCCESS, 1, Integer::sum);
     } else {
       status.setType(ProcessingStatus.Type.FAILURE);
       status.setError(error);
-      resultCounts.merge(ProcessingStatus.Type.FAILURE.toString(), 1, Integer::sum);
+      resultCounts.merge(ProcessingStatus.Type.FAILURE, 1, Integer::sum);
     }
 
     ReceivingItemResult itemResult = new ReceivingItemResult();

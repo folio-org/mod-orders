@@ -89,7 +89,7 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
       // Get all processed piece records for PO Line
       Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
 
-      Map<String, Integer> resultCounts = getEmptyResultCounts();
+      Map<ProcessingStatus.Type, Integer> resultCounts = getEmptyResultCounts();
       for (ExpectPiece expectPiece : toBeExpected.getExpectPieces()) {
         String pieceId = expectPiece.getId();
 
@@ -97,8 +97,8 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
       }
 
       result.withPoLineId(poLineId)
-        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS.toString()))
-        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE.toString()));
+        .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS))
+        .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE));
     }
 
     return results;
