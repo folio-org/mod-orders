@@ -191,7 +191,7 @@ public class PurchaseOrderLineHelper {
             .map(this::validateOrderState)
             .compose(po -> protectionService.isOperationRestricted(po.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
             .compose(v -> createShadowInstanceIfNeeded(compPOL, requestContext))
-            .compose(v -> createPoLine(compPOL, po, requestContext)));
+            .compose(v -> createPoLineWithOrder(compPOL, po, requestContext)));
         } else {
             Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
             logger.error("Create POL validation error : {}", JsonObject.mapFrom(errors).encodePrettily());
@@ -206,7 +206,8 @@ public class PurchaseOrderLineHelper {
    * @param compOrder associated {@link CompositePurchaseOrder} object
    * @return completable future which might hold {@link CompositePoLine} on success or an exception if any issue happens
    */
-  public Future<CompositePoLine> createPoLine(CompositePoLine compPoLine, CompositePurchaseOrder compOrder, RequestContext requestContext) {
+  public Future<CompositePoLine> createPoLineWithOrder(CompositePoLine compPoLine, CompositePurchaseOrder compOrder,
+      RequestContext requestContext) {
     // The id is required because sub-objects are being created first
     if (isEmpty(compPoLine.getId())) {
       compPoLine.setId(UUID.randomUUID().toString());
@@ -558,7 +559,7 @@ public class PurchaseOrderLineHelper {
   private List<Future<CompositePoLine>> processPoLinesCreation(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
     RequestContext requestContext) {
     return getNewPoLines(compOrder, poLinesFromStorage)
-      .map(compPOL -> createPoLine(compPOL, compOrder, requestContext))
+      .map(compPOL -> createPoLineWithOrder(compPOL, compOrder, requestContext))
       .toList();
   }
 

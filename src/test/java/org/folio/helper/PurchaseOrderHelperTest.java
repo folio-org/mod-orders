@@ -135,7 +135,7 @@ public class PurchaseOrderHelperTest {
     doAnswer((Answer<Future<CompositePoLine>>) invocation -> {
       CompositePoLine poLine = invocation.getArgument(0);
       return succeededFuture(poLine);
-    }).when(purchaseOrderLineHelper).createPoLine(any(CompositePoLine.class), any(CompositePurchaseOrder.class),
+    }).when(purchaseOrderLineHelper).createPoLineWithOrder(any(CompositePoLine.class), any(CompositePurchaseOrder.class),
       eq(requestContext));
     doReturn(succeededFuture(null))
       .when(orderValidationService).checkOrderApprovalRequired(any(CompositePurchaseOrder.class), eq(requestContext));
