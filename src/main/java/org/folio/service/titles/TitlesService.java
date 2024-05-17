@@ -136,10 +136,6 @@ public class TitlesService {
       .compose(title -> updateTitleWithInstance(title, false, requestContext));
   }
 
-  public Future<String> updateTitleWithInstance(Title title, RequestContext requestContext) {
-    return updateTitleWithInstance(title, false, requestContext);
-  }
-
   public Future<String> updateTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     return titleInstanceService.getOrCreateInstance(title, isInstanceMatchingDisabled, requestContext)
       .map(title::withInstanceId)

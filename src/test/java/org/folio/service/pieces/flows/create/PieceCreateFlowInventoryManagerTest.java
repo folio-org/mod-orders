@@ -130,7 +130,7 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(piece.getId(), requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
 
@@ -172,7 +172,7 @@ public class PieceCreateFlowInventoryManagerTest {
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext));
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
@@ -213,7 +213,7 @@ public class PieceCreateFlowInventoryManagerTest {
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext));
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);

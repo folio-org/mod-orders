@@ -40,7 +40,7 @@ public class PieceCreateFlowInventoryManager {
   private Future<String> updateInventoryForPoLine(CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
     if (BooleanUtils.isNotTrue(compPOL.getIsPackage())) {
       return Optional.ofNullable(getPoLineInstanceId(compPOL))
-        .orElse(titlesService.updateTitleWithInstance(piece.getTitleId(), requestContext))
+        .orElseGet(() -> titlesService.updateTitleWithInstance(piece.getTitleId(), requestContext))
         .map(instanceId -> compPOL.withInstanceId(instanceId).getInstanceId());
     }
     return titlesService.updateTitleWithInstance(piece.getTitleId(), requestContext);

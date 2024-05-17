@@ -63,7 +63,7 @@ public class PieceUpdateFlowInventoryManager {
     Piece pieceToUpdate = holder.getPieceToUpdate();
     if (BooleanUtils.isNotTrue(poLineToSave.getIsPackage())) {
       return Optional.ofNullable(getPoLineInstanceId(poLineToSave))
-        .orElse(titlesService.updateTitleWithInstance(pieceToUpdate.getTitleId(), requestContext))
+        .orElseGet(() -> titlesService.updateTitleWithInstance(pieceToUpdate.getTitleId(), requestContext))
         .map(instanceId -> poLineToSave.withInstanceId(instanceId).getInstanceId());
     }
     return titlesService.updateTitleWithInstance(pieceToUpdate.getTitleId(), requestContext);
