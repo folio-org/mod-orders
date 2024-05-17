@@ -6,7 +6,6 @@ import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -105,15 +104,9 @@ public class PurchaseOrderHelperTest {
 
   @Test
   @DisplayName("Test POST open composite order")
-  void testPostOpenCompositeOrder() {
+  void testPostOpenCompositeOrder() throws IOException {
     // Given
-    JsonObject order;
-    try {
-      order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
-    } catch (IOException ex) {
-      fail(ex);
-      return;
-    }
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(compPO);
     compPO.setWorkflowStatus(OPEN);
@@ -167,15 +160,9 @@ public class PurchaseOrderHelperTest {
 
   @Test
   @DisplayName("Test PUT pending composite order (no change)")
-  void testPutPendingCompositeOrder() {
+  void testPutPendingCompositeOrder() throws IOException {
     // Given
-    JsonObject order;
-    try {
-      order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
-    } catch (IOException ex) {
-      fail(ex);
-      return;
-    }
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
     CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(compPO);
     compPO.setId(UUID.randomUUID().toString());
