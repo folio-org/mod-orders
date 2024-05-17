@@ -38,7 +38,7 @@ public class PieceCreateFlowInventoryManager {
   }
 
   private Future<String> updateInventoryForPoLine(CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
-    if (BooleanUtils.isTrue(compPOL.getIsPackage())) {
+    if (BooleanUtils.isNotTrue(compPOL.getIsPackage())) {
       return Optional.ofNullable(getPoLineInstanceId(compPOL))
         .orElse(titlesService.updateTitleWithInstance(piece.getTitleId(), requestContext))
         .map(instanceId -> compPOL.withInstanceId(instanceId).getInstanceId());
@@ -72,10 +72,9 @@ public class PieceCreateFlowInventoryManager {
   }
 
   private Future<String> handleItem(CompositePoLine compPOL, boolean createItem, Piece piece, RequestContext requestContext) {
-    if (piece.getItemId() != null || !createItem || piece.getHoldingId() == null) {
-      return Future.succeededFuture(piece.getItemId());
-    }
-    return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
+    return piece.getItemId() != null || !createItem || piece.getHoldingId() == null
+      ? Future.succeededFuture(piece.getItemId())
+      : pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }
 
 }
