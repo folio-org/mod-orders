@@ -408,15 +408,20 @@ public class PieceDeleteFlowManagerTest {
       return mock(CirculationRequestsRetriever.class);
     }
 
-    @Bean PieceDeleteFlowManager pieceDeleteFlowManager(PieceStorageService pieceStorageService,
+    @Bean
+    PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager(InventoryItemManager inventoryItemManager,
+                                                                    PieceUpdateInventoryService pieceUpdateInventoryService) {
+      return new PieceDeleteFlowInventoryManager(inventoryItemManager, pieceUpdateInventoryService);
+    }
+
+    @Bean PieceDeleteFlowManager pieceDeleteFlowManager(PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager,
+                                                        PieceStorageService pieceStorageService,
                                                         ProtectionService protectionService,
-                                                        InventoryItemManager inventoryItemManager,
-                                                        PieceUpdateInventoryService pieceUpdateInventoryService,
                                                         PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
                                                         BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
                                                         CirculationRequestsRetriever circulationRequestsRetriever) {
-      return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryItemManager,
-        pieceUpdateInventoryService, pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
+      return new PieceDeleteFlowManager(pieceDeleteFlowInventoryManager, pieceStorageService, protectionService,
+        pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
     }
 
   }

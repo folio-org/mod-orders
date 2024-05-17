@@ -108,6 +108,7 @@ import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowInventoryManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryElectronicStrategy;
@@ -580,36 +581,46 @@ public class ApplicationConfig {
     return new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService);
   }
 
-  @Bean PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
+  @Bean
+  PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
                     PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
     return new PieceDeleteFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
-  @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService,
-                                                        ProtectionService protectionService,
-                                                        InventoryItemManager inventoryItemManager,
-                                                        PieceUpdateInventoryService pieceUpdateInventoryService,
-                                                        PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
-                                                        BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
-                                                        CirculationRequestsRetriever circulationRequestsRetriever) {
-    return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryItemManager, pieceUpdateInventoryService,
-                      pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
+  @Bean
+  PieceDeleteFlowManager pieceDeletionFlowManager(PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager,
+                                                  PieceStorageService pieceStorageService,
+                                                  ProtectionService protectionService,
+                                                  PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
+                                                  BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
+                                                  CirculationRequestsRetriever circulationRequestsRetriever) {
+    return new PieceDeleteFlowManager(pieceDeleteFlowInventoryManager, pieceStorageService, protectionService,
+      pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
+  }
+
+  @Bean
+  PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager(InventoryItemManager inventoryItemManager,
+                                                                  PieceUpdateInventoryService pieceUpdateInventoryService) {
+    return new PieceDeleteFlowInventoryManager(inventoryItemManager, pieceUpdateInventoryService);
   }
 
 
-  @Bean BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(PurchaseOrderStorageService purchaseOrderStorageService,
+  @Bean
+  BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(PurchaseOrderStorageService purchaseOrderStorageService,
                                                               PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService) {
       return new BasePieceFlowHolderBuilder(purchaseOrderStorageService, purchaseOrderLineService, titlesService);
   }
 
-  @Bean PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
+  @Bean
+  PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
           ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
           PieceCreateFlowPoLineService pieceCreateFlowPoLineService) {
     return new PieceUpdateFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy,
           pieceCreateFlowPoLineService, pieceDeleteFlowPoLineService);
   }
 
-  @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
+  @Bean
+  PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
             PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager,
             BasePieceFlowHolderBuilder basePieceFlowHolderBuilder, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
             PurchaseOrderLineService purchaseOrderLineService) {
