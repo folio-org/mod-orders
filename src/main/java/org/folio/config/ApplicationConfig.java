@@ -522,26 +522,34 @@ public class ApplicationConfig {
     return new PieceChangeReceiptStatusPublisher();
   }
 
-  @Bean PieceStorageService pieceStorageService(RestClient restClient) {
+  @Bean
+  PieceStorageService pieceStorageService(RestClient restClient) {
     return new PieceStorageService(restClient);
   }
 
-  @Bean PieceService piecesService(PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+  @Bean
+  PieceService piecesService(PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
     return new PieceService(receiptStatusPublisher);
   }
 
-  @Bean DefaultPieceFlowsValidator pieceCreateFlowValidator() {
+  @Bean
+  DefaultPieceFlowsValidator pieceCreateFlowValidator() {
     return new DefaultPieceFlowsValidator();
   }
 
-  @Bean PieceCreateFlowPoLineService pieceCreateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
-    PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+  @Bean
+  PieceCreateFlowPoLineService pieceCreateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
+                                                            PurchaseOrderLineService purchaseOrderLineService,
+                                                            ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
     return new PieceCreateFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
-  @Bean PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, ProtectionService protectionService,
-                PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
-                PieceCreateFlowPoLineService pieceCreateFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+  @Bean
+  PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, ProtectionService protectionService,
+                                              PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager,
+                                              DefaultPieceFlowsValidator defaultPieceFlowsValidator,
+                                              PieceCreateFlowPoLineService pieceCreateFlowPoLineService,
+                                              BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
     return new PieceCreateFlowManager(pieceStorageService, protectionService, pieceCreateFlowInventoryManager,
       defaultPieceFlowsValidator, pieceCreateFlowPoLineService, basePieceFlowHolderBuilder);
   }
