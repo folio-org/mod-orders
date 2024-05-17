@@ -131,6 +131,11 @@ public class TitlesService {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).map(CompositePoLine::getId).collect(toList());
   }
 
+  public Future<String> updateTitleWithInstance(String titleId, RequestContext requestContext) {
+    return getTitleById(titleId, requestContext)
+      .compose(title -> updateTitleWithInstance(title, false, requestContext));
+  }
+
   public Future<String> updateTitleWithInstance(Title title, RequestContext requestContext) {
     return updateTitleWithInstance(title, false, requestContext);
   }
