@@ -11,7 +11,6 @@ import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -25,7 +24,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import org.folio.ApiTestSuite;
-import org.folio.models.consortium.SharingInstance;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -134,7 +132,6 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
-    doReturn(succeededFuture(holdingId)).when(pieceUpdateInventoryService).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
@@ -148,7 +145,6 @@ public class PieceCreateFlowInventoryManagerTest {
     assertEquals(holdingId, piece.getHoldingId());
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
-    verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }
 
@@ -190,7 +186,6 @@ public class PieceCreateFlowInventoryManagerTest {
     assertEquals(locationId, piece.getLocationId());
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
-    verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }
 
@@ -232,7 +227,6 @@ public class PieceCreateFlowInventoryManagerTest {
     assertEquals(locationId, piece.getLocationId());
     verify(titlesService).getTitleById(piece.getTitleId(), requestContext);
 
-    verify(pieceUpdateInventoryService, times(0)).handleHoldingsRecord(eq(compPOL), any(Location.class), eq(title.getInstanceId()), eq(requestContext));
     verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }
 
