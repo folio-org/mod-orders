@@ -472,7 +472,7 @@ public class PurchaseOrderHelper {
     List<Future<CompositePoLine>> futures =
       compPO.getCompositePoLines()
             .stream()
-            .map(compositePoLine -> purchaseOrderLineHelper.createPoLine(compositePoLine, compPO, requestContext))
+            .map(compositePoLine -> purchaseOrderLineHelper.createPoLineWithOrder(compositePoLine, compPO, requestContext))
             .collect(Collectors.toList());
     return collectResultsOnSuccess(futures);
   }

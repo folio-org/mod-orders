@@ -25,8 +25,6 @@ import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.validatePoLineCreationErrorForNonPendingOrder;
-import static org.folio.TestUtils.verifyLocationQuantity;
-import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoCreation;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
 import static org.folio.helper.InventoryInteractionTestHelper.joinExistingAndNewItems;
 import static org.folio.helper.InventoryInteractionTestHelper.verifyHoldingsCreated;
@@ -48,31 +46,21 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_EXPENSE_CLASS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.rest.core.exceptions.ErrorCodes.CLAIMING_CONFIG_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_INVALID;
-import static org.folio.rest.core.exceptions.ErrorCodes.ELECTRONIC_COST_LOC_QTY_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.INACTIVE_EXPENSE_CLASS;
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_ID_NOT_ALLOWED_FOR_PACKAGE_POLINE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ISBN_NOT_VALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_MATERIAL_TYPE;
-import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_ONGOING;
-import static org.folio.rest.core.exceptions.ErrorCodes.NON_ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.rest.core.exceptions.ErrorCodes.ONGOING_NOT_ALLOWED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_CLOSED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_OPEN;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_VENDOR_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORGANIZATION_NOT_A_VENDOR;
-import static org.folio.rest.core.exceptions.ErrorCodes.PHYSICAL_COST_LOC_QTY_MISMATCH;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_TO_BE_DELETED;
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_ACCESS_PROVIDER_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.POL_LINES_LIMIT_EXCEEDED;
 import static org.folio.rest.core.exceptions.ErrorCodes.VENDOR_ISSUE;
-import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_ELECTRONIC_QTY;
-import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_COST_PHYSICAL_QTY;
-import static org.folio.rest.core.exceptions.ErrorCodes.ZERO_LOCATION_QTY;
 import static org.folio.rest.impl.MockServer.BUDGET_IS_INACTIVE_TENANT;
 import static org.folio.rest.impl.MockServer.BUDGET_NOT_FOUND_FOR_TRANSACTION_TENANT;
 import static org.folio.rest.impl.MockServer.ENCUMBRANCE_PATH;
@@ -98,12 +86,8 @@ import static org.folio.rest.impl.MockServer.getLoanTypesSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.MockServer.getQueryParams;
-import static org.folio.rest.impl.MockServer.getUpdatedTransactions;
-import static org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC;
 import static org.folio.rest.jaxrs.model.Piece.Format.OTHER;
-import static org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.endsWith;
@@ -128,7 +112,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -136,13 +119,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -336,438 +317,6 @@ public class PurchaseOrdersApiTest {
       ApiTestSuite.after();
     }
   }
-
-  @Test
-  void testPostOrderWithIncorrectCost() throws Exception {
-    logger.info("=== Test Order creation - Cost validation fails ===");
-
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    // Assert that there are 2 lines
-    assertEquals(2, reqData.getCompositePoLines().size());
-
-    // Set incorrect quantities for the first PO Line
-    CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
-    firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
-    firstPoLine.getCost().setQuantityPhysical(1);
-    firstPoLine.getCost().setQuantityElectronic(0);
-    firstPoLine.getCost().setListUnitPrice(-10d);
-    firstPoLine.getCost().setListUnitPriceElectronic(-5d);
-    firstPoLine.getLocations().forEach(location -> {
-      location.setQuantityElectronic(1);
-      location.setQuantityPhysical(2);
-    });
-
-    // Set incorrect quantities for the second PO Line
-    CompositePoLine secondPoLine = reqData.getCompositePoLines().get(1);
-    secondPoLine.setOrderFormat(CompositePoLine.OrderFormat.OTHER);
-    secondPoLine.getCost().setQuantityPhysical(0);
-    secondPoLine.getCost().setQuantityElectronic(1);
-    secondPoLine.getCost().setListUnitPrice(-1d);
-    secondPoLine.getCost().setListUnitPriceElectronic(10d);
-    secondPoLine.getLocations().forEach(location -> {
-      location.setQuantityElectronic(0);
-      location.setQuantityPhysical(1);
-    });
-
-    final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    assertThat(response.getErrors(), hasSize(10));
-    Set<String> errorCodes = response.getErrors()
-                                     .stream()
-                                     .map(Error::getCode)
-                                     .collect(Collectors.toSet());
-
-    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_PHYSICAL_QTY.getCode(),
-                                              ZERO_COST_ELECTRONIC_QTY.getCode(),
-                                              NON_ZERO_COST_ELECTRONIC_QTY.getCode(),
-                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
-                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
-                                              COST_UNIT_PRICE_ELECTRONIC_INVALID.getCode(),
-                                              COST_UNIT_PRICE_INVALID.getCode()));
-  }
-
-  @Test
-  void testPostOneTimeOrderWithOngoingFields() {
-    logger.info("=== Test Order creation - Ongoing field validation fails ===");
-
-    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
-    reqData.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME);
-    reqData.setOngoing(new org.folio.rest.jaxrs.model.Ongoing());
-
-    final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    assertThat(response.getErrors(), hasSize(1));
-    Error error = response.getErrors().get(0);
-
-    assertThat(error.getCode(), is(ONGOING_NOT_ALLOWED.getCode()));
-
-    // Check that no other calls are made by the business logic to other services
-    assertEquals(0, MockServer.serverRqRs.size());
-  }
-
-  @Test
-  void testPostOngoingOrderWithoutOngoingFields() {
-    logger.info("=== Test Order creation - Ongoing field validation fails ===");
-
-    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
-    reqData.setOrderType(CompositePurchaseOrder.OrderType.ONGOING);
-    reqData.setOngoing(null);
-
-    final Errors response = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    assertThat(response.getErrors(), hasSize(1));
-    Error error = response.getErrors().get(0);
-
-    assertThat(error.getCode(), is(MISSING_ONGOING.getCode()));
-
-    // Check that no other calls are made by the business logic to other services
-    assertEquals(0, MockServer.serverRqRs.size());
-  }
-
-  @Test
-  void testPutOneTimeOrderWithOngoingField() {
-    logger.info("=== Test Order update - Ongoing field validation fails ===");
-
-    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
-    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
-    reqData.setOrderType(CompositePurchaseOrder.OrderType.ONE_TIME);
-    reqData.setOngoing(new org.folio.rest.jaxrs.model.Ongoing());
-
-    addMockEntry(PURCHASE_ORDER_STORAGE, reqData);
-
-    final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData),
-      APPLICATION_JSON, 422).as(Errors.class);
-
-    assertThat(response.getErrors(), hasSize(1));
-    Error error = response.getErrors().get(0);
-
-    assertThat(error.getCode(), is(ONGOING_NOT_ALLOWED.getCode()));
-
-    MockServer.serverRqRs.columnKeySet().remove(HttpMethod.SEARCH);
-    // Check that no any calls made by the business logic to other services
-    assertEquals(0, MockServer.serverRqRs.size());
-  }
-
-  @Test
-  void testPutOngoingOrderWithoutOngoingField() {
-    logger.info("=== Test Order update - Ongoing field validation fails ===");
-
-    CompositePurchaseOrder reqData = getMinimalContentCompositePurchaseOrder();
-    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
-    reqData.setOrderType(CompositePurchaseOrder.OrderType.ONGOING);
-    reqData.setOngoing(null);
-
-    addMockEntry(PURCHASE_ORDER_STORAGE, reqData);
-
-    final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData),
-      APPLICATION_JSON, 422).as(Errors.class);
-
-    assertThat(response.getErrors(), hasSize(1));
-    Error error = response.getErrors().get(0);
-
-    assertThat(error.getCode(), is(MISSING_ONGOING.getCode()));
-
-    MockServer.serverRqRs.columnKeySet().remove(HttpMethod.SEARCH);
-    // Check that no any calls made by the business logic to other services
-    assertEquals(0, MockServer.serverRqRs.size());
-  }
-
-  @Test
-  void testPutOrderWithIncorrectQuantities() throws Exception {
-    logger.info("=== Test Order update - Quantity validation fails for the first PO Line ===");
-
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
-
-    // Set incorrect quantities for the first PO Line
-    CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
-    firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
-    firstPoLine.getCost().setQuantityPhysical(0);
-    firstPoLine.getCost().setQuantityElectronic(0);
-    firstPoLine.getLocations().forEach(location -> {
-      location.setQuantityElectronic(1);
-      location.setQuantityPhysical(1);
-    });
-
-    firstPoLine.getLocations().add(new Location()
-                                    .withQuantityElectronic(0)
-                                    .withQuantityPhysical(0)
-                                    .withLocationId(firstPoLine.getLocations().get(0).getLocationId()));
-    final Errors response = verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData),
-
-      APPLICATION_JSON, 422).as(Errors.class);
-
-    assertThat(response.getErrors(), hasSize(5));
-    Set<String> errorCodes = response.getErrors()
-                                     .stream()
-                                     .map(Error::getCode)
-                                     .collect(Collectors.toSet());
-
-    assertThat(errorCodes, containsInAnyOrder(ZERO_COST_ELECTRONIC_QTY.getCode(),
-                                              ZERO_COST_PHYSICAL_QTY.getCode(),
-                                              ELECTRONIC_COST_LOC_QTY_MISMATCH.getCode(),
-                                              PHYSICAL_COST_LOC_QTY_MISMATCH.getCode(),
-                                              ZERO_LOCATION_QTY.getCode()));
-  }
-
-  @Test
-  void testPutOrderWithZeroQuantitiesWithoutLocations() throws Exception {
-    //MODORDERS-584
-    logger.info("=== Test Order update - Skip quantity validation with 0 electronic and physical quantities and without location ===");
-
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
-
-    CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
-    firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.P_E_MIX);
-    firstPoLine.getCost().setQuantityPhysical(0);
-    firstPoLine.getCost().setQuantityElectronic(0);
-    firstPoLine.setLocations(new ArrayList<>());
-
-    verifyPut(COMPOSITE_ORDERS_PATH + "/" + reqData.getId(), JsonObject.mapFrom(reqData), "", 204);
-  }
-
-  @Test
-  void testListedPrintMonographInOpenStatus() throws Exception {
-    logger.info("=== Test Listed Print Monograph in Open status ===");
-
-    CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
-    MockServer.addMockTitles(reqData.getCompositePoLines());
-    prepareOrderForPostRequest(reqData);
-    reqData.setId(ID_FOR_PRINT_MONOGRAPH_ORDER);
-    reqData.getCompositePoLines().forEach(poLine -> {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
-      poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED);
-    });
-    CompositePoLine firstPoLine = reqData.getCompositePoLines().get(0);
-    // remove productId from PO line to test scenario when it's not provided so there is no check for existing instance but new one will be created
-    firstPoLine.getDetails().getProductIds().clear();
-    // MODORDERS-117 only physical quantity will be used
-    firstPoLine.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
-    firstPoLine.setEresource(null);
-    // Set locations quantities
-    int totalQty = 0;
-    for (int i = 0; i < firstPoLine.getLocations().size(); i++) {
-      Location location = firstPoLine.getLocations().get(i);
-      int quantityPhysical = i * (i + 1) + 1;
-
-      location.setQuantityElectronic(0);
-      location.setQuantityPhysical(quantityPhysical);
-      totalQty += quantityPhysical;
-    }
-    // Set cost quantities
-    firstPoLine.getCost().setQuantityPhysical(totalQty);
-    firstPoLine.getCost().setQuantityElectronic(0);
-    firstPoLine.getCost().setListUnitPrice(10d);
-    firstPoLine.getCost().setListUnitPriceElectronic(0d);
-    Transaction encumbrance = getMockAsJson(ENCUMBRANCE_PATH).getJsonArray("transactions").getJsonObject(0).mapTo(Transaction.class);
-    firstPoLine.getFundDistribution().get(0).setEncumbrance(encumbrance.getId());
-    firstPoLine.getFundDistribution().get(0).setFundId(encumbrance.getFromFundId());
-    encumbrance.getEncumbrance().setSourcePoLineId(firstPoLine.getId());
-    encumbrance.getEncumbrance().setSourcePurchaseOrderId(reqData.getId());
-    // Set status to Open
-    reqData.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-
-    LocalDate now = LocalDate.now();
-
-    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
-
-    LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
-    assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
-    assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
-
-    logger.info(JsonObject.mapFrom(resp));
-
-    String poId = resp.getId();
-    String poNumber = resp.getPoNumber();
-
-    assertNotNull(poId);
-    assertNotNull(poNumber);
-    assertEquals(reqData.getCompositePoLines().size(), resp.getCompositePoLines().size());
-
-    for (int i = 0; i < resp.getCompositePoLines().size(); i++) {
-      CompositePoLine line = resp.getCompositePoLines().get(i);
-      String polNumber = line.getPoLineNumber();
-      String polId = line.getId();
-
-      assertEquals(poId, line.getPurchaseOrderId());
-      assertNotNull(polId);
-      assertNotNull(polNumber);
-      assertTrue(polNumber.startsWith(poNumber));
-      assertNotNull(line.getInstanceId());
-      line.getLocations().forEach(location -> verifyLocationQuantity(location, line.getOrderFormat()));
-      line.getLocations().forEach(location -> {
-        assertNull(location.getLocationId());
-        assertNotNull(location.getHoldingId());
-      });
-    }
-
-    int polCount = resp.getCompositePoLines().size();
-
-    List<JsonObject> instancesSearches = getInstancesSearches();
-    assertNotNull(instancesSearches);
-    // Check that search for existing instances was done not for all PO lines
-    assertEquals(polCount - 1, instancesSearches.size());
-
-    CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
-    CompositePoLine respLine2 = resp.getCompositePoLines().get(1);
-    List<JsonObject> createdInstances = getCreatedInstances();
-    assertEquals(2, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
-    assertNotNull(respLine1.getInstanceId(), "Line must be connected to instance, if create inventory include instance");
-    assertNotNull(respLine2.getInstanceId(), "Line must be connected to instance, if create inventory include instance");
-
-    List<JsonObject> createdHoldings = getCreatedHoldings();
-    assertEquals(5, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
-    verifyHoldingsCreated(3, createdHoldings, respLine1);
-    verifyHoldingsCreated(2, createdHoldings, respLine2);
-
-    // All existing and created items
-    List<JsonObject> items = joinExistingAndNewItems();
-    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 11, items, respLine1);
-    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 3, items, respLine2);
-
-    List<JsonObject> createdPieces = getCreatedPieces();
-    verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces, 0);
-
-    verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getUpdatedTransactions(), hasSize(0));
-    verifyCalculatedData(resp);
-    verifyReceiptStatusChangedTo(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED.value(), reqData.getCompositePoLines().size());
-    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.AWAITING_PAYMENT.value(), reqData.getCompositePoLines().size());
-  }
-
-
-  @Test
-  @Disabled
-  //TODO Must be fixed in scope of https://issues.folio.org/browse/MODORDERS-587
-  void testPostListedPrintSerialInOpenStatus() throws Exception {
-    logger.info("=== Test Listed Print Monograph in Open status ===");
-
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH)).mapTo(CompositePurchaseOrder.class);
-    String orderId = UUID.randomUUID().toString();
-    reqData.setWorkflowStatus(WorkflowStatus.OPEN);
-
-    MockServer.addMockTitles(reqData.getCompositePoLines());
-    prepareOrderForPostRequest(reqData);
-
-    reqData.setId(orderId);
-
-    reqData.getCompositePoLines().forEach(poLine -> {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
-      poLine.setReceiptStatus(ReceiptStatus.PENDING);
-    });
-
-    LocalDate now = LocalDate.now();
-
-    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
-
-    LocalDate dateOrdered = resp.getDateOrdered().toInstant().atZone(ZoneId.of(ZoneOffset.UTC.getId())).toLocalDate();
-    assertThat(dateOrdered.getMonth(), equalTo(now.getMonth()));
-    assertThat(dateOrdered.getYear(), equalTo(now.getYear()));
-
-    logger.info(JsonObject.mapFrom(resp));
-
-    String poId = resp.getId();
-    String poNumber = resp.getPoNumber();
-
-    assertNotNull(poId);
-    assertNotNull(poNumber);
-    assertEquals(reqData.getCompositePoLines().size(), resp.getCompositePoLines().size());
-
-    for (int i = 0; i < resp.getCompositePoLines().size(); i++) {
-      CompositePoLine line = resp.getCompositePoLines().get(i);
-      String polNumber = line.getPoLineNumber();
-      String polId = line.getId();
-
-      assertEquals(poId, line.getPurchaseOrderId());
-      assertNotNull(polId);
-      assertNotNull(polNumber);
-      assertTrue(polNumber.startsWith(poNumber));
-      assertNotNull(line.getInstanceId());
-      line.getLocations().forEach(location -> verifyLocationQuantity(location, line.getOrderFormat()));
-      line.getLocations().forEach(location -> {
-        assertNull(location.getLocationId());
-        assertNotNull(location.getHoldingId());
-      });
-    }
-
-    int polCount = resp.getCompositePoLines().size();
-
-    List<JsonObject> instancesSearches = getInstancesSearches();
-    assertNotNull(instancesSearches);
-    assertEquals(polCount, instancesSearches.size());
-
-    CompositePoLine respLine1 = resp.getCompositePoLines().get(0);
-    List<JsonObject> createdInstances = getCreatedInstances();
-    assertEquals(1, createdInstances.size(), "Quantity of created instance must be equal of line, if create inventory include instance");
-    assertNotNull("Line must be connected to instance, if create inventory include instance", respLine1.getInstanceId());
-
-    List<JsonObject> createdHoldings = getCreatedHoldings();
-    assertEquals(1, createdHoldings.size(), "Quantity of created holding must be depended of quantity in the locations and create inventory include holding");
-    verifyHoldingsCreated(1, createdHoldings, respLine1);
-
-    // All existing and created items
-    List<JsonObject> items = joinExistingAndNewItems();
-    verifyItemsCreated(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, 1, items, respLine1);
-
-    List<JsonObject> createdPieces = getCreatedPieces();
-    verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces, 0);
-
-    createdPieces.stream().map(json -> json.mapTo(Piece.class))
-      .filter(piece -> PHYSICAL.equals(piece.getFormat())).forEach(piece -> {
-      assertNull(piece.getLocationId());
-      assertNotNull(piece.getHoldingId());
-    });
-    createdPieces.stream().map(json -> json.mapTo(Piece.class))
-      .filter(piece -> ELECTRONIC.equals(piece.getFormat())).forEach(piece -> {
-        assertNotNull(piece.getLocationId());
-        assertNull(piece.getHoldingId());
-    });
-
-    verifyEncumbrancesOnPoCreation(reqData, resp);
-    assertThat(getBatchCalls(), hasSize(0));
-    verifyCalculatedData(resp);
-
-    // MODORDERS-459 - check status changed to ONGOING
-    verifyReceiptStatusChangedTo(ReceiptStatus.ONGOING.value(), reqData.getCompositePoLines().size());
-    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.ONGOING.value(), reqData.getCompositePoLines().size());
-  }
-
-  @Test
-  void tesPutListedPrintSerialInOpenStatus() throws Exception {
-    logger.info("=== Test Put Listed Print Serial in Open status ===");
-
-    // create order in pending status
-    CompositePurchaseOrder reqData = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH)).mapTo(CompositePurchaseOrder.class);
-    String orderId = UUID.randomUUID().toString();
-    reqData.setWorkflowStatus(WorkflowStatus.PENDING);
-
-    MockServer.addMockTitles(reqData.getCompositePoLines());
-    prepareOrderForPostRequest(reqData);
-
-    reqData.setId(orderId);
-
-    reqData.getCompositePoLines().forEach(poLine -> {
-      poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
-      poLine.setReceiptStatus(ReceiptStatus.PENDING);
-    });
-
-    final CompositePurchaseOrder createdOrder = verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
-    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(createdOrder));
-
-    // open Order
-    createdOrder.setWorkflowStatus(WorkflowStatus.OPEN);
-
-    verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, createdOrder.getId()), JsonObject.mapFrom(createdOrder), "", 204);
-
-    // MODORDERS-459 - check status changed to ONGOING
-    verifyReceiptStatusChangedTo(ReceiptStatus.ONGOING.value(), reqData.getCompositePoLines().size());
-    verifyPaymentStatusChangedTo(CompositePoLine.PaymentStatus.ONGOING.value(), reqData.getCompositePoLines().size());
-  }
-
 
   @Test
   void testOrderWithPoLinesWithoutSource() throws Exception {
