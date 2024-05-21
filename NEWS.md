@@ -22,6 +22,7 @@ This release focused on fixing Data Import organization feature and electronic f
 
 ### Bug Fixes
 * [MODORDERS-1090](https://folio-org.atlassian.net/browse/MODORDERS-1090) - Quantity = 0 for electronic format orders
+* [MODORDERS-1102](https://folio-org.atlassian.net/browse/MODORDERS-1102) - Order lines search results do not display fund code for orders created by data import
 
 
 ## 12.8.4 - Released (Quesnelia R1 2024)

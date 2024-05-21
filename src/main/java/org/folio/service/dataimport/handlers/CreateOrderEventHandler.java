@@ -5,6 +5,7 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -32,6 +33,7 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +47,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -109,6 +112,9 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String POL_ERESOURCE_FIELD = "eresource";
   private static final String POL_PHYSICAL_FIELD = "physical";
   private static final String POL_CREATE_INVENTORY_FIELD = "createInventory";
+  private static final String POL_FUND_DISTRIBUTION_FIELD = "fundDistribution";
+  private static final String POL_FUND_CODE_FIELD = "code";
+  private static final String POL_FUND_ID_FIELD = "fundId";
   private static final String PO_LINE_KEY = "PO_LINE";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
@@ -118,6 +124,8 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String WORKFLOW_STATUS_PATH = "order.po.workflowStatus";
   private static final String PO_LINE_ORDER_ID_KEY = "purchaseOrderId";
   private static final String DEFAULT_PO_LINES_LIMIT = "1";
+  private static final char LEFT_BRACKET = '(';
+  private static final char RIGHT_BRACKET = ')';
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
@@ -180,7 +188,6 @@ public class CreateOrderEventHandler implements EventHandler {
           future.completeExceptionally(result.cause());
         } else {
           Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
-          MappingManager.map(dataImportEventPayload, new MappingContext());
 
           RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
           Future<JsonObject> tenantConfigFuture = configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
@@ -504,6 +511,7 @@ public class CreateOrderEventHandler implements EventHandler {
     JsonObject orderJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(ORDER_FIELD);
     JsonObject poLineJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(PO_LINES_FIELD);
     calculateActivationDue(poLineJson);
+    ensureFundCode(poLineJson, dataImportEventPayload);
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
 
     if (WorkflowStatus.OPEN.value().equals(orderJson.getString(ORDER_STATUS_FIELD))) {
@@ -527,6 +535,35 @@ public class CreateOrderEventHandler implements EventHandler {
         : 1;
       poLineJson.getJsonObject(POL_ERESOURCE_FIELD).put(POL_ACTIVATION_DUE_FIELD, activationDue);
     }
+  }
+
+  private void ensureFundCode(JsonObject poLineJson, DataImportEventPayload dataImportEventPayload) {
+    if (!IterableUtils.isEmpty(poLineJson.getJsonArray(POL_FUND_DISTRIBUTION_FIELD))) {
+      Map<String, String> idToFundName = extractFundsData(dataImportEventPayload);
+
+      poLineJson.getJsonArray(POL_FUND_DISTRIBUTION_FIELD).stream()
+        .map(JsonObject.class::cast)
+        .filter(fundDistributionJson -> isNotEmpty(fundDistributionJson.getString(POL_FUND_ID_FIELD)))
+        .forEach(fundDistribution -> fundDistribution.put(POL_FUND_CODE_FIELD, determineFundCode(fundDistribution, idToFundName)));
+    }
+  }
+
+  private Map<String, String> extractFundsData(DataImportEventPayload dataImportEventPayload) {
+    ProfileSnapshotWrapper mappingProfileWrapper = dataImportEventPayload.getCurrentNode();
+    MappingProfile mappingProfile = ObjectMapperTool.getMapper().convertValue(mappingProfileWrapper.getContent(), MappingProfile.class);
+
+    return mappingProfile.getMappingDetails().getMappingFields().stream()
+      .filter(mappingRule -> POL_FUND_DISTRIBUTION_FIELD.equals(mappingRule.getName()) && !mappingRule.getSubfields().isEmpty())
+      .flatMap(mappingRule -> mappingRule.getSubfields().get(0).getFields().stream())
+      .filter(mappingRule -> POL_FUND_ID_FIELD.equals(mappingRule.getName()))
+      .map(mappingRule -> ((Map<String, String>) mappingRule.getAcceptedValues()))
+      .findAny()
+      .orElse(Collections.emptyMap());
+  }
+
+  private String determineFundCode(JsonObject fundDistribution, Map<String, String> idToFundName) {
+    String fundName = idToFundName.get(fundDistribution.getString(POL_FUND_ID_FIELD));
+    return fundName.substring(fundName.lastIndexOf(LEFT_BRACKET) + 1, fundName.lastIndexOf(RIGHT_BRACKET));
   }
 
   private Future<Void> overrideCreateInventoryField(JsonObject poLineJson, DataImportEventPayload dataImportEventPayload) {
