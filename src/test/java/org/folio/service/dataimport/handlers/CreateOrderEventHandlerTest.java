@@ -37,6 +37,7 @@ import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.RepeatableSubfieldMapping;
 import org.folio.service.dataimport.PoLineImportProgressService;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -91,6 +92,8 @@ import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RE
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
+import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.PERCENTAGE;
+import static org.folio.rest.jaxrs.model.MappingRule.RepeatableFieldAction.EXTEND_EXISTING;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
@@ -578,7 +581,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     CompositePurchaseOrder order = Json.decodeValue(eventPayload.getContext().get(ActionProfile.FolioRecord.ORDER.value()), CompositePurchaseOrder.class);
-    assertEquals(order.getApproved(), Boolean.FALSE);
+    assertEquals(Boolean.FALSE, order.getApproved());
 
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
@@ -1499,6 +1502,61 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertNull(poLine.getPhysical().getMaterialSupplier());
 
     assertNull(poLine.getEresource());
+  }
+
+  @Test
+  public void shouldCreatePoLineWithFundIdAndFundCode() throws InterruptedException {
+    // given
+    String expectedFundId = "7fbd5d84-62d1-44c6-9c45-6cb173998bbd";
+    String expectedFundCode = "AFRICAHIST";
+    double expectedDistributionValue = 100;
+
+    MappingRule fundDistributionsRule = new MappingRule()
+      .withName("fundDistribution")
+      .withPath("order.poLine.fundDistribution[]")
+      .withEnabled("true")
+      .withRepeatableFieldAction(EXTEND_EXISTING)
+      .withSubfields(List.of(new RepeatableSubfieldMapping()
+        .withOrder(0)
+        .withPath("order.poLine.fundDistribution[]")
+        .withFields(List.of(
+          new MappingRule().withPath("order.poLine.fundDistribution[].fundId").withName("fundId")
+            .withValue("\"African (History) (AFRICAHIST)\"")
+            .withAcceptedValues(new HashMap<>(Map.of(expectedFundId, "African (History) (AFRICAHIST)"))),
+          new MappingRule().withPath("order.poLine.fundDistribution[].value").withValue("\"100\""),
+          new MappingRule().withPath("order.poLine.fundDistribution[].distributionType").withValue("\"percentage\"")))
+      ));
+
+    mappingProfile.getMappingDetails().getMappingFields().add(fundDistributionsRule);
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    verifyOrder(eventPayload);
+    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    assertNotNull(createdPoLine.getFundDistribution());
+    assertEquals(1, createdPoLine.getFundDistribution().size());
+    assertEquals(expectedFundId, createdPoLine.getFundDistribution().get(0).getFundId());
+    assertEquals(expectedFundCode, createdPoLine.getFundDistribution().get(0).getCode());
+    assertEquals(expectedDistributionValue, createdPoLine.getFundDistribution().get(0).getValue());
+    assertEquals(PERCENTAGE, createdPoLine.getFundDistribution().get(0).getDistributionType());
   }
 
   @Test
