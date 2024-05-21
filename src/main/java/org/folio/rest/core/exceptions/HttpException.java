@@ -23,6 +23,19 @@ public class HttpException extends RuntimeException {
       .withTotalRecords(1);
   }
 
+  public HttpException(int code, String message, Throwable cause) {
+    super(message, cause);
+    this.code = code;
+    Parameter causeParam = new Parameter().withKey("cause").withValue(cause.getMessage());
+    Error error = new Error()
+      .withCode(ErrorCodes.GENERIC_ERROR_CODE.getCode())
+      .withMessage(message)
+      .withParameters(List.of(causeParam));
+    this.errors = new Errors()
+      .withErrors(List.of(error))
+      .withTotalRecords(1);
+  }
+
   public HttpException(int code, ErrorCodes errCodes) {
     this(code, errCodes, Lists.newArrayList());
   }

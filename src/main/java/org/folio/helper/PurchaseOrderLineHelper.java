@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Objects;
-import java.util.concurrent.CompletionException;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -192,7 +191,7 @@ public class PurchaseOrderLineHelper {
             .map(this::validateOrderState)
             .compose(po -> protectionService.isOperationRestricted(po.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
             .compose(v -> createShadowInstanceIfNeeded(compPOL, requestContext))
-            .compose(v -> createPoLine(compPOL, po, requestContext)));
+            .compose(v -> createPoLineWithOrder(compPOL, po, requestContext)));
         } else {
             Errors errors = new Errors().withErrors(validationErrors).withTotalRecords(validationErrors.size());
             logger.error("Create POL validation error : {}", JsonObject.mapFrom(errors).encodePrettily());
@@ -207,7 +206,8 @@ public class PurchaseOrderLineHelper {
    * @param compOrder associated {@link CompositePurchaseOrder} object
    * @return completable future which might hold {@link CompositePoLine} on success or an exception if any issue happens
    */
-  public Future<CompositePoLine> createPoLine(CompositePoLine compPoLine, CompositePurchaseOrder compOrder, RequestContext requestContext) {
+  public Future<CompositePoLine> createPoLineWithOrder(CompositePoLine compPoLine, CompositePurchaseOrder compOrder,
+      RequestContext requestContext) {
     // The id is required because sub-objects are being created first
     if (isEmpty(compPoLine.getId())) {
       compPoLine.setId(UUID.randomUUID().toString());
@@ -435,8 +435,8 @@ public class PurchaseOrderLineHelper {
     return GenericCompositeFuture.join(new ArrayList<>(futures))
       .map(reportingIds -> line.put(REPORTING_CODES, reportingIds.list()))
       .recover(t -> {
-        logger.error("failed to create Reporting Codes", t);
-        throw new CompletionException(t.getCause());
+        logger.error("Failed to create reporting codes", t);
+        throw new HttpException(500, "Failed to create reporting codes", t);
       })
       .mapEmpty();
   }
@@ -453,8 +453,8 @@ public class PurchaseOrderLineHelper {
     return GenericCompositeFuture.join(new ArrayList<>(futures))
       .map(ids -> line.put(ALERTS, ids.list()))
       .recover(t -> {
-        logger.error("failed to create Alerts", t);
-        throw new CompletionException(t.getCause());
+        logger.error("Failed to create alerts", t);
+        throw new HttpException(500, "Failed to create alerts", t);
       })
       .mapEmpty();
   }
@@ -559,7 +559,7 @@ public class PurchaseOrderLineHelper {
   private List<Future<CompositePoLine>> processPoLinesCreation(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
     RequestContext requestContext) {
     return getNewPoLines(compOrder, poLinesFromStorage)
-      .map(compPOL -> createPoLine(compPOL, compOrder, requestContext))
+      .map(compPOL -> createPoLineWithOrder(compPOL, compOrder, requestContext))
       .toList();
   }
 
