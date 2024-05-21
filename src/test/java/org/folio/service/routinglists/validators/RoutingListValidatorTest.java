@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.RoutingList;
 import org.folio.rest.jaxrs.model.RoutingListCollection;
@@ -56,6 +57,18 @@ public class RoutingListValidatorTest {
   @Test
   void testValidateRoutingListWithPOLineInvalidOrderFormat() {
     samplePoLine.setOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE);
+    RoutingListCollection collection = getRoutingListCollection(1);
+    List<Error> errors = RoutingListValidatorUtil.validateRoutingList(sampleRoutingList, collection, samplePoLine);
+    assertEquals(errors.size(), 1);
+    assertEquals(errors.get(0).getMessage(), INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT.getDescription());
+  }
+
+  @Test
+  void testValidateRoutingListWithPOLinePEMixOrderFormat() {
+    var locations = new ArrayList<>(samplePoLine.getLocations());
+    locations.add(new Location().withLocationId(UUID.randomUUID().toString()).withQuantityElectronic(1).withQuantity(1));
+    samplePoLine.withOrderFormat(PoLine.OrderFormat.P_E_MIX).withLocations(locations);
+
     RoutingListCollection collection = getRoutingListCollection(1);
     List<Error> errors = RoutingListValidatorUtil.validateRoutingList(sampleRoutingList, collection, samplePoLine);
     assertEquals(errors.size(), 1);
