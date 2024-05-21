@@ -192,7 +192,6 @@ public class CreateOrderEventHandler implements EventHandler {
           future.completeExceptionally(result.cause());
         } else {
           Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
-          MappingManager.map(dataImportEventPayload, new MappingContext());
 
           RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
           Future<JsonObject> tenantConfigFuture = configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
