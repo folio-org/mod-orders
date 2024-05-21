@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceDeletionHolder;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryItemManager;
@@ -27,9 +28,10 @@ public class PieceDeleteFlowInventoryManager {
   }
 
   public Future<Pair<String, String>> processInventory(PieceDeletionHolder holder, RequestContext requestContext) {
-    return deleteItem(holder, requestContext)
+    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, holder.getPieceToDelete().getReceivingTenantId());
+    return deleteItem(holder, locationContext)
       .compose(aVoid -> holder.isDeleteHolding()
-          ? pieceUpdateInventoryService.deleteHoldingConnectedToPiece(holder.getPieceToDelete(), requestContext)
+          ? pieceUpdateInventoryService.deleteHoldingConnectedToPiece(holder.getPieceToDelete(), locationContext)
           : Future.succeededFuture()
       );
   }

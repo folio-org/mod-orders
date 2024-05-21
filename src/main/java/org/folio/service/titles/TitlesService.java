@@ -18,6 +18,7 @@ import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -131,13 +132,13 @@ public class TitlesService {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).map(CompositePoLine::getId).collect(toList());
   }
 
-  public Future<String> updateTitleWithInstance(String titleId, RequestContext requestContext) {
+  public Future<String> updateTitleWithInstance(String titleId, RequestContext locationContext, RequestContext requestContext) {
     return getTitleById(titleId, requestContext)
-      .compose(title -> updateTitleWithInstance(title, false, requestContext));
+      .compose(title -> updateTitleWithInstance(title, false, locationContext, requestContext));
   }
 
-  public Future<String> updateTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    return titleInstanceService.getOrCreateInstance(title, isInstanceMatchingDisabled, requestContext)
+  public Future<String> updateTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext locationContext, RequestContext requestContext) {
+    return titleInstanceService.getOrCreateInstance(title, isInstanceMatchingDisabled, locationContext)
       .map(title::withInstanceId)
       .compose(entity -> saveTitle(entity, requestContext)
         .map(v -> entity.getInstanceId()));

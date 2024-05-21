@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
@@ -30,20 +31,21 @@ public class PieceCreateFlowInventoryManager {
   }
 
   public Future<Void> processInventory(CompositePoLine compPOL, Piece piece, boolean createItem, RequestContext requestContext) {
-    return updateInventoryForPoLine(compPOL, piece, requestContext)
-      .compose(instanceId -> handleHolding(compPOL, piece, instanceId, requestContext))
-      .compose(holdingId -> handleItem(compPOL, createItem, piece, requestContext))
+    final var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+    return updateInventoryForPoLine(compPOL, piece, locationContext, requestContext)
+      .compose(instanceId -> handleHolding(compPOL, piece, instanceId, locationContext))
+      .compose(holdingId -> handleItem(compPOL, createItem, piece, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
       .mapEmpty();
   }
 
-  private Future<String> updateInventoryForPoLine(CompositePoLine compPOL, Piece piece, RequestContext requestContext) {
+  private Future<String> updateInventoryForPoLine(CompositePoLine compPOL, Piece piece, RequestContext locationContext, RequestContext requestContext) {
     if (BooleanUtils.isNotTrue(compPOL.getIsPackage())) {
       return Optional.ofNullable(getPoLineInstanceId(compPOL))
-        .orElseGet(() -> titlesService.updateTitleWithInstance(piece.getTitleId(), requestContext))
+        .orElseGet(() -> titlesService.updateTitleWithInstance(piece.getTitleId(), locationContext, requestContext))
         .map(instanceId -> compPOL.withInstanceId(instanceId).getInstanceId());
     }
-    return titlesService.updateTitleWithInstance(piece.getTitleId(), requestContext);
+    return titlesService.updateTitleWithInstance(piece.getTitleId(), locationContext, requestContext);
   }
 
   private Future<String> getPoLineInstanceId(CompositePoLine compPOL) {

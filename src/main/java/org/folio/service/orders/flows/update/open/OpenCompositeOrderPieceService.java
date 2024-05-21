@@ -13,12 +13,14 @@ import java.util.concurrent.CompletionException;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.OpenOrderPieceHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -161,36 +163,22 @@ public class OpenCompositeOrderPieceService {
    * @return CompletableFuture with void.
    */
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (Boolean.TRUE.equals(compPOL.getIsPackage())) {
-      return titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, requestContext).map(title::withInstanceId))
-        .compose(title -> {
-          if (piece.getHoldingId() != null) {
-            return Future.succeededFuture(piece.getHoldingId());
-          }
-          if (!PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
-            return Future.succeededFuture();
-          }
-          return inventoryHoldingManager.createHoldingAndReturnId(title.getInstanceId(), piece.getLocationId(), requestContext)
-            .map(holdingId -> {
-              piece.setLocationId(null);
-              piece.setHoldingId(holdingId);
-              return holdingId;
-            });
-        })
-        .compose(holdingId -> {
-          if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-            return inventoryItemManager.openOrderCreateItemRecord(compPOL, holdingId, requestContext);
-          }
-          return Future.succeededFuture();
-        })
-        .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(piece::withItemId))
-        .mapEmpty();
-    }
-    else
-    {
+    if (BooleanUtils.isNotTrue(compPOL.getIsPackage())) {
       return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
+    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+    return titlesService.getTitleById(piece.getTitleId(), requestContext)
+      .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
+      .compose(title -> piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)
+        ? Future.succeededFuture(piece.getHoldingId())
+        : inventoryHoldingManager.createHoldingAndReturnId(title.getInstanceId(), piece.getLocationId(), requestContext)
+          .map(holdingId -> piece.withLocationId(null).withHoldingId(holdingId).getHoldingId()))
+      .compose(holdingId -> PoLineCommonUtil.isItemsUpdateRequired(compPOL)
+        ? inventoryItemManager.openOrderCreateItemRecord(compPOL, holdingId, requestContext)
+        : Future.succeededFuture()
+      )
+      .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(piece::setItemId))
+      .mapEmpty();
   }
 
   private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {

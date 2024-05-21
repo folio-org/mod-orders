@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
@@ -46,11 +47,12 @@ public class PieceUpdateFlowInventoryManager {
   }
 
   public Future<Void> processInventory(PieceUpdateHolder holder, RequestContext requestContext) {
-    return inventoryItemManager.updateItemWithPieceFields(holder.getPieceToUpdate(), requestContext)
-      .compose(v -> updateInventoryForPoLine(holder, requestContext)
+    final var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, holder.getPieceToUpdate().getReceivingTenantId());
+    return inventoryItemManager.updateItemWithPieceFields(holder.getPieceToUpdate(), locationContext)
+      .compose(v -> updateInventoryForPoLine(holder, locationContext, requestContext)
           .map(holder::withInstanceId)
-          .compose(aHolder -> handleHolding(holder, requestContext))
-          .compose(holdingId -> handleItem(holder, requestContext))
+          .compose(aHolder -> handleHolding(holder, locationContext))
+          .compose(holdingId -> handleItem(holder, locationContext))
           .map(itemId -> Optional.ofNullable(itemId).map(holder.getPieceToUpdate()::withItemId))
           .compose(aVoid -> deleteHolding(holder, requestContext))
           .onSuccess(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE))
@@ -58,15 +60,15 @@ public class PieceUpdateFlowInventoryManager {
       );
   }
 
-  private Future<String> updateInventoryForPoLine(PieceUpdateHolder holder, RequestContext requestContext) {
+  private Future<String> updateInventoryForPoLine(PieceUpdateHolder holder, RequestContext locationContext, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
     if (BooleanUtils.isNotTrue(poLineToSave.getIsPackage())) {
       return Optional.ofNullable(getPoLineInstanceId(poLineToSave))
-        .orElseGet(() -> titlesService.updateTitleWithInstance(pieceToUpdate.getTitleId(), requestContext))
+        .orElseGet(() -> titlesService.updateTitleWithInstance(pieceToUpdate.getTitleId(), locationContext, requestContext))
         .map(instanceId -> poLineToSave.withInstanceId(instanceId).getInstanceId());
     }
-    return titlesService.updateTitleWithInstance(pieceToUpdate.getTitleId(), requestContext);
+    return titlesService.updateTitleWithInstance(pieceToUpdate.getTitleId(), locationContext, requestContext);
   }
 
   private Future<String> getPoLineInstanceId(CompositePoLine compPOL) {

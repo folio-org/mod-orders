@@ -129,7 +129,7 @@ public class PieceCreateFlowInventoryManagerTest {
 
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(piece.getId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
 
@@ -142,7 +142,7 @@ public class PieceCreateFlowInventoryManagerTest {
 
     assertEquals(itemId, piece.getItemId());
     assertEquals(holdingId, piece.getHoldingId());
-    verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext);
+    verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
     verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }
@@ -170,7 +170,7 @@ public class PieceCreateFlowInventoryManagerTest {
       .withLocations(List.of(loc)).withCost(cost);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
@@ -182,7 +182,7 @@ public class PieceCreateFlowInventoryManagerTest {
     assertNull(piece.getItemId());
     assertNull(piece.getHoldingId());
     assertEquals(locationId, piece.getLocationId());
-    verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext);
+    verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
     verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }
@@ -210,7 +210,7 @@ public class PieceCreateFlowInventoryManagerTest {
       .withLocations(List.of(loc)).withCost(cost);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(orderId).withCompositePoLines(List.of(compPOL));
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
@@ -222,7 +222,7 @@ public class PieceCreateFlowInventoryManagerTest {
     assertNull(piece.getItemId());
     assertNull(piece.getHoldingId());
     assertEquals(locationId, piece.getLocationId());
-    verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext);
+    verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
     verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
   }

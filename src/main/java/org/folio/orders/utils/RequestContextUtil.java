@@ -6,6 +6,8 @@ import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.core.models.RequestContext;
 
+import java.util.Optional;
+
 public class RequestContextUtil {
   private static final Logger logger = LogManager.getLogger(RequestContextUtil.class);
 

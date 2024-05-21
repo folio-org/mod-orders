@@ -9,6 +9,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
@@ -63,13 +64,14 @@ public class PieceUpdateInventoryService {
 
   public Future<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext requestContext) {
     if (piece != null && piece.getHoldingId() != null) {
+      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
       String holdingId = piece.getHoldingId();
-      return inventoryHoldingManager.getHoldingById(holdingId, true, requestContext)
+      return inventoryHoldingManager.getHoldingById(holdingId, true, locationContext)
                   .compose(holding -> {
                       if (holding != null && !holding.isEmpty()) {
                           return pieceStorageService.getPiecesByHoldingId(holdingId, requestContext)
                             .map(pieces -> skipPieceToProcess(piece, pieces))
-                                  .compose(existingPieces -> inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
+                                  .compose(existingPieces -> inventoryItemManager.getItemsByHoldingId(holdingId, locationContext)
                                     .map(existingItems-> {
                                       List<Piece> remainingPieces = skipPieceToProcess(piece, existingPieces);
                                       if (CollectionUtils.isEmpty(remainingPieces) && CollectionUtils.isEmpty(existingItems)) {
@@ -83,7 +85,7 @@ public class PieceUpdateInventoryService {
                   .compose(isUpdatePossibleVsHolding -> {
                     if (isUpdatePossibleVsHolding.getKey() && !isUpdatePossibleVsHolding.getValue().isEmpty()) {
                       String permanentLocationId = isUpdatePossibleVsHolding.getValue().getString(HOLDING_PERMANENT_LOCATION_ID);
-                      return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
+                      return inventoryHoldingManager.deleteHoldingById(holdingId, true, locationContext)
                                               .map(v -> Pair.of(holdingId, permanentLocationId));
                     }
                     return Future.succeededFuture();
