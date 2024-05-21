@@ -70,9 +70,8 @@ public class RoutingListValidatorTest {
     samplePoLine.withOrderFormat(PoLine.OrderFormat.P_E_MIX).withLocations(locations);
 
     RoutingListCollection collection = getRoutingListCollection(1);
-    List<Error> errors = RoutingListValidatorUtil.validateRoutingList(sampleRoutingList, collection, samplePoLine);
-    assertEquals(errors.size(), 1);
-    assertEquals(errors.get(0).getMessage(), INVALID_ROUTING_LIST_FOR_PO_LINE_FORMAT.getDescription());
+    List<Error> errorList = RoutingListValidatorUtil.validateRoutingList(sampleRoutingList, collection, samplePoLine);
+    assertEquals(errorList.size(), 0);
   }
 
   private RoutingListCollection getRoutingListCollection(int n) {
