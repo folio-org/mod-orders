@@ -549,8 +549,7 @@ public class CreateOrderEventHandler implements EventHandler {
       poLineJson.getJsonArray(POL_FUND_DISTRIBUTION_FIELD).stream()
         .map(JsonObject.class::cast)
         .filter(fundDistributionJson -> isNotEmpty(fundDistributionJson.getString(POL_FUND_ID_FIELD)))
-        .forEach(fundDistribution ->
-          fundDistribution.getMap().put(POL_FUND_CODE_FIELD, determineFundCode(fundDistribution, idToFundName)));
+        .forEach(fundDistribution -> fundDistribution.put(POL_FUND_CODE_FIELD, determineFundCode(fundDistribution, idToFundName)));
     }
   }
 
