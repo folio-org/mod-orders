@@ -105,7 +105,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
               // When requests are to be transferred check if pieces contain different receivingTenantIds
               // Transferring requests between tenants is not a requirement for R
-              if (bindPiecesCollection.getRequestsAction().equals(TRANSFER) && !tenantToItem.keySet().isEmpty()) {
+              if (bindPiecesCollection.getRequestsAction().equals(TRANSFER) && tenantToItem.keySet().size() > 1) {
                 logger.warn("checkRequestsForPieceItems:: All pieces do not have the same receivingTenantId: {}", tenantToItem.keySet());
                 throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
               }
