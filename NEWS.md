@@ -1,5 +1,13 @@
 ## 12.9.0 - Unreleased
 
+## 12.8.8 - Released (Quesnelia R1 2024)
+The primary focus of this release was to fix issue with fund code population during order line import
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.7...v12.8.8)
+
+### Bug Fixes
+* [MODORDERS-1102](https://folio-org.atlassian.net/browse/MODORDERS-1102) - Order lines search results do not display fund code for orders created by data import
+
+
 ## 12.8.7 - Released (Quesnelia R1 2024)
 The primary focus of this release was to fix issue with instance matching during title creation
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.6...v12.8.7)
@@ -22,7 +30,6 @@ This release focused on fixing Data Import organization feature and electronic f
 
 ### Bug Fixes
 * [MODORDERS-1090](https://folio-org.atlassian.net/browse/MODORDERS-1090) - Quantity = 0 for electronic format orders
-* [MODORDERS-1102](https://folio-org.atlassian.net/browse/MODORDERS-1102) - Order lines search results do not display fund code for orders created by data import
 
 
 ## 12.8.4 - Released (Quesnelia R1 2024)
