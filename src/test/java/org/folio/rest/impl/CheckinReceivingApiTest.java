@@ -1096,7 +1096,7 @@ public class CheckinReceivingApiTest {
 
   @Test
   void testBindPiecesToTitleWithBindItemWithDifferentTenantId() {
-    logger.info("=== Test POST Bind to Title with Item with Outstanding Request");
+    logger.info("=== Test POST Bind to Title with Item with Different Tenant ID");
 
     var order = getMinimalContentCompositePurchaseOrder()
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -1125,6 +1125,48 @@ public class CheckinReceivingApiTest {
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS.getDescription()));
+  }
+
+  @Test
+  void testBindPiecesToTitleWithTransferRequestsAction() {
+    logger.info("=== Test POST Bind to Title with Item with Transfer as Requests Action");
+
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId())
+      .withLocations(List.of(new Location().withHoldingId(UUID.randomUUID().toString())
+        .withQuantityPhysical(1).withQuantity(1)));
+    var bindingPiece = getMinimalContentPiece(poLine.getId())
+      .withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98") // Present in mockdata/itemRequests/itemRequests.json
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(getMinimalContentBindItem())
+      .withBindPieceIds(List.of(bindingPiece.getId()))
+      .withRequestsAction(BindPiecesCollection.RequestsAction.TRANSFER);
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
+
+    assertThat(response.as(ReceivingResults.class).getReceivingResults().get(0).getProcessedSuccessfully(), is(1));
+
+    var pieceUpdates = getPieceUpdates();
+
+    assertThat(pieceUpdates, notNullValue());
+    assertThat(pieceUpdates, hasSize(bindPiecesCollection.getBindPieceIds().size()));
+
+    var pieceList = pieceUpdates.stream()
+      .map(pol -> pol.mapTo(Piece.class))
+      .filter(piece -> Objects.equals(bindingPiece.getId(), piece.getId()))
+      .toList();
+
+    assertThat(pieceList.size(), is(1));
   }
 
   @Test
