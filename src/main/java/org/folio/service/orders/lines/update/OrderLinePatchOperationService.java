@@ -100,19 +100,26 @@ public class OrderLinePatchOperationService {
   }
 
   public Future<Void> handleUpdateInstance(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
-    PoLine storagePoLine = holder.getStoragePoLine();
+    return updateInstanceForPhysical(holder, requestContext)
+      .compose(v -> updateInstanceForEresource(holder, requestContext));
+  }
 
-    var physical = PoLineCommonUtil.getPhysical(storagePoLine);
-    Future<Void> updatePhysical = physical == null ? Future.succeededFuture() :
-      orderLineUpdateInstanceStrategyResolver.resolve(CreateInventoryType.fromValue(physical.getCreateInventory().value()))
-        .updateInstance(holder, requestContext);
+  private Future<Void> updateInstanceForPhysical(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    var physical = PoLineCommonUtil.getPhysical(holder.getStoragePoLine());
+    if (physical == null) {
+      return Future.succeededFuture();
+    }
+    return orderLineUpdateInstanceStrategyResolver.resolve(
+      CreateInventoryType.fromValue(physical.getCreateInventory().value())).updateInstance(holder, requestContext);
+  }
 
-    var eresource = PoLineCommonUtil.getEresource(storagePoLine);
-    Future<Void> updateEresource = eresource == null ? Future.succeededFuture() :
-      orderLineUpdateInstanceStrategyResolver.resolve(CreateInventoryType.fromValue(eresource.getCreateInventory().value()))
-        .updateInstance(holder, requestContext);
-
-    return updatePhysical.compose(v -> updateEresource);
+  private Future<Void> updateInstanceForEresource(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    var eresource = PoLineCommonUtil.getEresource(holder.getStoragePoLine());
+    if (eresource == null) {
+      return Future.succeededFuture();
+    }
+    return orderLineUpdateInstanceStrategyResolver.resolve(
+      CreateInventoryType.fromValue(eresource.getCreateInventory().value())).updateInstance(holder, requestContext);
   }
 
   private Future<Void> sendPatchOrderLineRequest(OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder, String lineId,

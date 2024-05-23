@@ -79,24 +79,6 @@ public final class PoLineCommonUtil {
     return receiptStatus == CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
   }
 
-  public static Physical getPhysical(PoLine poLine) {
-    return getPhysical(convertToCompositePoLine(poLine));
-  }
-
-  public static Eresource getEresource(PoLine poLine) {
-    return getEresource(convertToCompositePoLine(poLine));
-  }
-
-  public static Physical getPhysical(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    return format == PHYSICAL_RESOURCE || format == P_E_MIX || format == OTHER ? compPOL.getPhysical() : null;
-  }
-
-  public static Eresource getEresource(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    return format == ELECTRONIC_RESOURCE || format == P_E_MIX ? compPOL.getEresource() : null;
-  }
-
   public static boolean isInventoryUpdateNotRequired(CompositePoLine compPOL) {
     // in case of "Other" order format check Physical createInventory value only
     if (compPOL.getOrderFormat() == OTHER || compPOL.getOrderFormat() == PHYSICAL_RESOURCE) {
@@ -152,6 +134,24 @@ public final class PoLineCommonUtil {
     return Optional.ofNullable(getPhysical(compPOL))
       .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
       .orElse(false);
+  }
+
+  public static Physical getPhysical(PoLine poLine) {
+    return getPhysical(convertToCompositePoLine(poLine));
+  }
+
+  public static Eresource getEresource(PoLine poLine) {
+    return getEresource(convertToCompositePoLine(poLine));
+  }
+
+  public static Physical getPhysical(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    return format == PHYSICAL_RESOURCE || format == P_E_MIX || format == OTHER ? compPOL.getPhysical() : null;
+  }
+
+  public static Eresource getEresource(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    return format == ELECTRONIC_RESOURCE || format == P_E_MIX ? compPOL.getEresource() : null;
   }
 
   public static boolean isOnlyInstanceUpdateRequired(CompositePoLine compPOL) {

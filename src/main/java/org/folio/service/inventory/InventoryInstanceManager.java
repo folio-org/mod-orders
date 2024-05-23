@@ -363,9 +363,6 @@ public class InventoryInstanceManager {
       .map(sharingInstances -> instanceId);
   }
 
-  /*
-  Returns list of tenant ids for which instance wasn't found
-   */
   private Future<List<String>> findTenantsWithUnsharedInstance(String instanceId, List<Location> locations, RequestContext requestContext) {
     List<Future<Optional<String>>> tenantIdFutures = locations.stream()
       .map(Location::getTenantId)
@@ -375,8 +372,12 @@ public class InventoryInstanceManager {
       .map(
         clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
         .map(instance -> Optional.<String>empty())
-        .recover(throwable -> throwable instanceof HttpException httpException && httpException.getCode() == 404 ?
-          Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders()))) : Future.failedFuture(throwable))
+        .recover(throwable -> {
+          if (throwable instanceof HttpException httpException && httpException.getCode() == 404) {
+            return Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders())));
+          }
+          return Future.failedFuture(throwable);
+        })
       )
       .toList();
     return collectResultsOnSuccess(tenantIdFutures)
@@ -407,7 +408,7 @@ public class InventoryInstanceManager {
   }
 
   public static String getPublisher(JsonObject instance) {
-    JsonArray publication = instance.getJsonArray(INSTANCE_PUBLICATION);
+    var publication = instance.getJsonArray(INSTANCE_PUBLICATION);
     if (publication == null || publication.isEmpty()) {
       return null;
     }
@@ -415,7 +416,7 @@ public class InventoryInstanceManager {
   }
 
   public static String getPublicationDate(JsonObject instance) {
-    JsonArray publication = instance.getJsonArray(INSTANCE_PUBLICATION);
+    var publication = instance.getJsonArray(INSTANCE_PUBLICATION);
     if (publication == null || publication.isEmpty()) {
       return null;
     }
