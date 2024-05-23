@@ -216,15 +216,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @return map passed as a parameter
    */
   protected Future<Map<String, List<Piece>>> storeUpdatedPieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
-    List<Future<Void>> futures = StreamEx
-      .ofValues(piecesGroupedByPoLine)
-      .flatMap(List::stream)
-      .filter(this::isSuccessfullyProcessedPiece)
-      .map(piece -> piece.withStatusUpdatedDate(new Date()))
-      .map(piece -> storeUpdatedPieceRecord(piece, requestContext))
-      .toList();
-
-    return GenericCompositeFuture.join(futures)
+    return GenericCompositeFuture.join(
+      extractAllPieces(piecesGroupedByPoLine)
+        .filter(this::isSuccessfullyProcessedPiece)
+        .map(piece -> piece.withStatusUpdatedDate(new Date()))
+        .map(piece -> storeUpdatedPieceRecord(piece, requestContext))
+        .toList())
       .map(v -> piecesGroupedByPoLine);
   }
 

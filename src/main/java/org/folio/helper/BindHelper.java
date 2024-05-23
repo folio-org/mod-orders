@@ -75,11 +75,13 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .compose(piecesGroupedByPoLine -> updateItemStatus(piecesGroupedByPoLine, requestContext))
       // 5. Crate item for pieces with specific fields
       .compose(piecesGroupedByPoLine -> createItemForPiece(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
-      // 6. Update received piece records in the storage
+      // 6. Sync pieces with new item fields and clear old ones
+      .map(piecesGroupedByPoLine -> syncPiecesWithNewItem(piecesGroupedByPoLine, bindPiecesCollection))
+      // 7. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 7. Update Title with new bind items
+      // 8. Update Title with new bind items
       .map(piecesGroupedByPoLine -> updateTitleWithBindItems(piecesGroupedByPoLine, requestContext))
-      // 8. Return results to the client
+      // 9. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(piecesGroupedByPoLine, bindPiecesCollection));
   }
 
@@ -145,8 +147,8 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private Future<Map<String, List<Piece>>> createItemForPiece(Map<String, List<Piece>> piecesGroupedByPoLine,
-                                                      BindPiecesCollection bindPiecesCollection,
-                                                      RequestContext requestContext) {
+                                                              BindPiecesCollection bindPiecesCollection,
+                                                              RequestContext requestContext) {
     var poLineId = bindPiecesCollection.getPoLineId();
     var holdingIds = piecesGroupedByPoLine.values()
       .stream().flatMap(List::stream)
@@ -177,6 +179,26 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
         .withMessage("Holding Id must not be null or different for pieces");
       throw new HttpException(400, error);
     }
+  }
+
+  private Map<String, List<Piece>> syncPiecesWithNewItem(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                         BindPiecesCollection bindPiecesCollection) {
+    logger.debug("syncPiecesWithNewItem:: Syncing all pieces with newly created item");
+    var bindItem = bindPiecesCollection.getBindItem();
+    extractAllPieces(piecesGroupedByPoLine)
+      .forEach(piece -> piece
+        // Clear old fields that could be populated by previous item
+        .withDisplaySummary(null)
+        .withEnumeration(null)
+        .withCopyNumber(null)
+        .withChronology(null)
+        .withAccessionNumber(null)
+        .withDiscoverySuppress(null)
+        // Populated fields contained in new item
+        .withBarcode(bindItem.getBarcode())
+        .withCallNumber(bindItem.getCallNumber())
+        .withLocationId(bindItem.getPermanentLocationId()));
+    return piecesGroupedByPoLine;
   }
 
   private Map<String, List<Piece>> updateTitleWithBindItems(Map<String, List<Piece>> piecesByPoLineIds,

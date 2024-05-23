@@ -976,24 +976,24 @@ public class CheckinReceivingApiTest {
   void testBindPiecesToTitleWithItem() {
     logger.info("=== Test POST Bind to Title With Item");
 
-    var order = getMinimalContentCompositePurchaseOrder()
-      .withId(UUID.randomUUID().toString());
-    var poLine = getMinimalContentCompositePoLine(order.getId())
-      .withId(UUID.randomUUID().toString());
+    var holdingId = "849241fa-4a14-4df5-b951-846dcd6cfc4d";
+    var receivingStatus = Piece.ReceivingStatus.UNRECEIVABLE;
+    var format = Piece.Format.ELECTRONIC;
 
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId());
     var bindingPiece1 = getMinimalContentPiece(poLine.getId())
-      .withId(UUID.randomUUID().toString())
-      .withHoldingId("849241fa-4a14-4df5-b951-846dcd6cfc4d")
-      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
-      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+      .withHoldingId(holdingId)
+      .withReceivingStatus(receivingStatus)
+      .withFormat(format);
     var bindingPiece2 = getMinimalContentPiece(poLine.getId())
       .withId(UUID.randomUUID().toString())
-      .withHoldingId("849241fa-4a14-4df5-b951-846dcd6cfc4d")
-      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
-      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
-    var bindItem = getMinimalContentBindItem();
+      .withHoldingId(holdingId)
+      .withReceivingStatus(receivingStatus)
+      .withFormat(format);
 
-    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, bindingPiece1);
     addMockEntry(PIECES_STORAGE, bindingPiece2);
@@ -1001,8 +1001,8 @@ public class CheckinReceivingApiTest {
 
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
-        .withBindItem(bindItem)
-        .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId()));
+      .withBindItem(getMinimalContentBindItem())
+      .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId()));
 
     var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
@@ -1011,7 +1011,7 @@ public class CheckinReceivingApiTest {
 
     var pieceUpdates = getPieceUpdates();
 
-    assertThat(pieceUpdates, not(nullValue()));
+    assertThat(pieceUpdates, notNullValue());
     assertThat(pieceUpdates, hasSize(bindPiecesCollection.getBindPieceIds().size()));
 
     var pieceList = pieceUpdates.stream().filter(pol -> {
@@ -1027,24 +1027,24 @@ public class CheckinReceivingApiTest {
   void testBindPiecesWithDifferentHoldingIdAndThrowError() {
     logger.info("=== Test POST Bind with different holdingId to Title With and throw error");
 
-    var order = getMinimalContentCompositePurchaseOrder()
-      .withId(UUID.randomUUID().toString());
-    var poLine = getMinimalContentCompositePoLine(order.getId())
-      .withId(UUID.randomUUID().toString());
+    var holdingId = "849241fa-4a14-4df5-b951-846dcd6cfc4d";
+    var receivingStatus = Piece.ReceivingStatus.UNRECEIVABLE;
+    var format = Piece.Format.ELECTRONIC;
 
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId());
     var bindingPiece1 = getMinimalContentPiece(poLine.getId())
-      .withId(UUID.randomUUID().toString())
-      .withHoldingId("849241fa-4a14-4df5-b951-846dcd6cfc4d")
-      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
-      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+      .withHoldingId(holdingId)
+      .withReceivingStatus(receivingStatus)
+      .withFormat(format);
     var bindingPiece2 = getMinimalContentPiece(poLine.getId())
       .withId(UUID.randomUUID().toString())
       .withHoldingId("64ee33f2-b2b5-4912-942a-50ddea063663")
-      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
-      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
-    var bindItem = getMinimalContentBindItem();
+      .withReceivingStatus(receivingStatus)
+      .withFormat(format);
 
-    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, bindingPiece1);
     addMockEntry(PIECES_STORAGE, bindingPiece2);
@@ -1052,7 +1052,7 @@ public class CheckinReceivingApiTest {
 
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
-      .withBindItem(bindItem)
+      .withBindItem(getMinimalContentBindItem())
       .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId()));
 
     var errors = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
@@ -1067,28 +1067,23 @@ public class CheckinReceivingApiTest {
     logger.info("=== Test POST Bind to Title with Item with Outstanding Request");
 
     var order = getMinimalContentCompositePurchaseOrder()
-      .withId(UUID.randomUUID().toString())
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     var poLine = getMinimalContentCompositePoLine(order.getId())
-      .withId(UUID.randomUUID().toString())
       .withLocations(List.of(new Location().withHoldingId(UUID.randomUUID().toString())
       .withQuantityPhysical(1).withQuantity(1)));
-    var title = getTitle(poLine);
     var bindingPiece = getMinimalContentPiece(poLine.getId())
-      .withId(UUID.randomUUID().toString())
       .withItemId(OUTSTANDING_REQUEST_ITEM_ID)
       .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
-    var bindItem = getMinimalContentBindItem();
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
-      .withBindItem(bindItem)
+      .withBindItem(getMinimalContentBindItem())
       .withBindPieceIds(List.of(bindingPiece.getId()));
 
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, bindingPiece);
-    addMockEntry(TITLES, title);
+    addMockEntry(TITLES, getTitle(poLine));
 
     var errors = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, VALIDATION_ERROR)
@@ -1096,6 +1091,59 @@ public class CheckinReceivingApiTest {
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(REQUESTS_ACTION_REQUIRED.getDescription()));
+  }
+
+  @Test
+  void testBindPiecesToVerifySyncWithNewBindItem() {
+    logger.info("=== Test POST Bind to Title with Item with Outstanding Request");
+
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId())
+      .withLocations(List.of(new Location().withHoldingId(UUID.randomUUID().toString())
+      .withQuantityPhysical(1).withQuantity(1)));
+    var bindingPiece1 = getMinimalContentPiece(poLine.getId())
+      .withItemId(OUTSTANDING_REQUEST_ITEM_ID)
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+    var bindingPiece2 = getMinimalContentPiece(poLine.getId())
+      .withId(UUID.randomUUID().toString())
+      .withItemId(OUTSTANDING_REQUEST_ITEM_ID)
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC)
+      .withCopyNumber(UUID.randomUUID().toString())
+      .withBarcode("0987654216");
+    var bindItem = getMinimalContentBindItem();
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(bindItem)
+      .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId()));
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece1);
+    addMockEntry(PIECES_STORAGE, bindingPiece2);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
+
+    assertThat(response.as(ReceivingResults.class).getReceivingResults().get(0).getProcessedSuccessfully(), is(2));
+
+    var pieceUpdates = getPieceUpdates();
+
+    assertThat(pieceUpdates, notNullValue());
+    assertThat(pieceUpdates, hasSize(bindPiecesCollection.getBindPieceIds().size()));
+
+    var pieceList = pieceUpdates.stream().filter(pol -> {
+      Piece piece = pol.mapTo(Piece.class);
+      String pieceId = piece.getId();
+      return (Objects.equals(bindingPiece1.getId(), pieceId) || Objects.equals(bindingPiece2.getId(), pieceId))
+        && piece.getBarcode().equals(bindItem.getBarcode()) && piece.getCopyNumber() == null;
+    }).toList();
+
+    assertThat(pieceList.size(), is(2));
+
   }
 
   @Test
