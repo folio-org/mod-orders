@@ -149,7 +149,7 @@ public class InventoryInstanceManager {
     return instance;
   }
 
-  public Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
+  Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(instanceId);
     return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
   }
@@ -161,7 +161,7 @@ public class InventoryInstanceManager {
    * @param compPOL PO line to retrieve Instance Record Id for
    * @return future with Instance Id
    */
-  public Future<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  private Future<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     // proceed with new Instance Record creation if no productId is provided
     if (!isProductIdsExist(compPOL) || isInstanceMatchingDisabled) {
       return createInstanceRecord(compPOL, requestContext);
@@ -303,10 +303,6 @@ public class InventoryInstanceManager {
       });
   }
 
-  public Future<String> getOrCreateInstanceRecord(Title title, RequestContext requestContext) {
-    return getOrCreateInstanceRecord(title, false, requestContext);
-  }
-
   public Future<String> getOrCreateInstanceRecord(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(title.getProductIds()) || isInstanceMatchingDisabled) {
       return createInstanceRecord(title, requestContext);
@@ -347,15 +343,44 @@ public class InventoryInstanceManager {
   public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> {
-        if (compPOL.getInstanceId() != null) {
-          return consortiumConfiguration.isEmpty() ? Future.succeededFuture(compPOL.getInstanceId())
-            : shareInstanceAmongTenantsIfNeeded(compPOL.getInstanceId(), consortiumConfiguration.get(), compPOL.getLocations(), requestContext);
-        } else {
-          return getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext)
-            .compose(instanceId -> consortiumConfiguration.isEmpty() ? Future.succeededFuture(instanceId)
-              : shareInstanceAmongTenantsIfNeeded(instanceId, consortiumConfiguration.get(), compPOL.getLocations(), requestContext));
-        }
+        Future<String> instanceIdFuture = compPOL.getInstanceId() != null ?
+          Future.succeededFuture(compPOL.getInstanceId()) :
+          getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext);
+        consortiumConfiguration.ifPresent(
+          configuration -> instanceIdFuture
+            .compose(instanceId -> shareInstanceAmongTenantsIfNeeded(instanceId, configuration, compPOL.getLocations(), requestContext))
+        );
+        return instanceIdFuture;
       }).map(compPOL::withInstanceId);
+  }
+
+  private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
+                                                           List<Location> locations, RequestContext requestContext) {
+    return findTenantsWithUnsharedInstance(instanceId, locations, requestContext)
+      .map(tenantIds -> tenantIds.stream().map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId,
+        targetTenantId, consortiumConfiguration, requestContext)).toList())
+      .compose(HelperUtils::collectResultsOnSuccess)
+      .map(sharingInstances -> instanceId);
+  }
+
+  /*
+  Returns list of tenant ids for which instance wasn't found
+   */
+  private Future<List<String>> findTenantsWithUnsharedInstance(String instanceId, List<Location> locations, RequestContext requestContext) {
+    List<Future<Optional<String>>> tenantIdFutures = locations.stream()
+      .map(Location::getTenantId)
+      .distinct()
+      .filter(Objects::nonNull)
+      .map(tenantId -> RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
+      .map(
+        clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
+        .map(instance -> Optional.<String>empty())
+        .recover(throwable -> throwable instanceof HttpException httpException && httpException.getCode() == 404 ?
+          Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders()))) : Future.failedFuture(throwable))
+      )
+      .toList();
+    return collectResultsOnSuccess(tenantIdFutures)
+      .map(tenantIds -> tenantIds.stream().flatMap(Optional::stream).toList());
   }
 
   public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, String targetTenantId, RequestContext requestContext) {
@@ -381,28 +406,48 @@ public class InventoryInstanceManager {
       });
   }
 
-  private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
-                                                           List<Location> locations, RequestContext requestContext) {
-    return findTenantsWithUnsharedInstance(instanceId, locations, requestContext)
-      .map(tenantIds -> tenantIds.stream().map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId,
-        targetTenantId, consortiumConfiguration, requestContext)).toList())
-      .compose(HelperUtils::collectResultsOnSuccess)
-      .map(sharingInstances -> instanceId);
+  public static String getPublisher(JsonObject instance) {
+    JsonArray publication = instance.getJsonArray(INSTANCE_PUBLICATION);
+    if (publication == null || publication.isEmpty()) {
+      return null;
+    }
+    return publication.getJsonObject(0).getString(INSTANCE_PUBLISHER);
   }
 
-  private Future<List<String>> findTenantsWithUnsharedInstance(String instanceId, List<Location> locations, RequestContext requestContext) {
-    List<Future<Optional<String>>> tenantIdFutures = locations.stream()
-      .map(Location::getTenantId)
-      .distinct()
-      .filter(Objects::nonNull)
-      .map(tenantId -> RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
-      .map(clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
-        .map(instance -> Optional.<String>empty())
-        .recover(throwable -> throwable instanceof HttpException httpException && httpException.getCode() == 404 ?
-          Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders()))) : Future.failedFuture(throwable)))
+  public static String getPublicationDate(JsonObject instance) {
+    JsonArray publication = instance.getJsonArray(INSTANCE_PUBLICATION);
+    if (publication == null || publication.isEmpty()) {
+      return null;
+    }
+    return publication.getJsonObject(0).getString(INSTANCE_DATE_OF_PUBLICATION);
+  }
+
+  public static List<ProductId> getProductIds(JsonObject instance) {
+    JsonArray productIds = instance.getJsonArray(INSTANCE_IDENTIFIERS);
+    if (productIds == null || productIds.isEmpty()) {
+      return List.of();
+    }
+    return productIds
+      .stream()
+      .map(JsonObject.class::cast)
+      .map(jsonObject -> new ProductId()
+        .withProductId(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_VALUE))
+        .withProductIdType(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_ID)))
       .toList();
-    return collectResultsOnSuccess(tenantIdFutures)
-      .map(tenantIds -> tenantIds.stream().flatMap(Optional::stream).toList());
+  }
+
+  public static List<Contributor> getContributors(JsonObject instance) {
+    JsonArray contributors = instance.getJsonArray(INSTANCE_CONTRIBUTORS);
+    if (contributors == null || contributors.isEmpty()) {
+      return List.of();
+    }
+    return contributors
+      .stream()
+      .map(JsonObject.class::cast)
+      .map(jsonObject -> new Contributor()
+        .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
+        .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
+      .toList();
   }
 
 }

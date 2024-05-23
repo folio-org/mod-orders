@@ -62,7 +62,7 @@ import io.vertx.core.Vertx;
 
 public class OrderLineUpdateInstanceHandlerTest {
   @Autowired
-  private OrderLineUpdateInstanceHandler orderLineUpdateInstanceHandler;
+  private OrderLinePatchOperationService orderLinePatchOperationService;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -125,7 +125,7 @@ public class OrderLineUpdateInstanceHandlerTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext);
+    orderLinePatchOperationService.handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
@@ -157,7 +157,7 @@ public class OrderLineUpdateInstanceHandlerTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext);
+    orderLinePatchOperationService.handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext);
   }
 
   @Test
@@ -179,7 +179,7 @@ public class OrderLineUpdateInstanceHandlerTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext);
+    orderLinePatchOperationService.handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext);
 
   }
 
@@ -202,7 +202,7 @@ public class OrderLineUpdateInstanceHandlerTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
-    orderLineUpdateInstanceHandler.handle(orderLineUpdateInstanceHolder, requestContext);
+    orderLinePatchOperationService.handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext);
 
   }
 
@@ -219,7 +219,7 @@ public class OrderLineUpdateInstanceHandlerTest {
       return new ProtectionService(acquisitionsUnitsService);
     }
 
-    @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
+    @Bean PieceStorageService pieceStorageService(RestClient restClient) {
       return new PieceStorageService(restClient);
     }
     @Bean InventoryService inventoryService (RestClient restClient) {
@@ -270,6 +270,7 @@ public class OrderLineUpdateInstanceHandlerTest {
     InventoryCache inventoryCache(InventoryService inventoryService) {
       return new InventoryCache(inventoryService);
     }
+
     @Bean
     ConfigurationEntriesCache configurationEntriesCache(ConfigurationEntriesService configurationEntriesService) {
       return new ConfigurationEntriesCache(configurationEntriesService);
@@ -277,23 +278,11 @@ public class OrderLineUpdateInstanceHandlerTest {
 
     @Bean OrderLinePatchOperationService orderLinePatchOperationService(
         RestClient restClient,
-        OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
+        OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver,
         PurchaseOrderLineService purchaseOrderLineService,
         InventoryCache inventoryCache,
         InventoryInstanceManager inventoryInstanceManager) {
-      return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver, purchaseOrderLineService, inventoryCache, inventoryInstanceManager);
-    }
-
-    @Bean PatchOperationHandler orderLineUpdateInstanceHandler(
-        OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver) {
-      return new OrderLineUpdateInstanceHandler(updateInstanceStrategyResolver);
-    }
-
-    @Bean OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver(
-        PatchOperationHandler orderLineUpdateInstanceHandler) {
-      Map<PatchOrderLineRequest.Operation, PatchOperationHandler> handlers = new HashMap<>();
-      handlers.put(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF, orderLineUpdateInstanceHandler);
-      return new OrderLinePatchOperationHandlerResolver(handlers);
+      return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver, purchaseOrderLineService, inventoryCache, inventoryInstanceManager);
     }
 
     @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,

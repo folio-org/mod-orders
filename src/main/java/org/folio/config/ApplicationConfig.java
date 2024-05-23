@@ -15,7 +15,6 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
-import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.CirculationRequestsRetriever;
@@ -90,12 +89,9 @@ import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
-import org.folio.service.orders.lines.update.OrderLinePatchOperationHandlerResolver;
 import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
-import org.folio.service.orders.lines.update.OrderLineUpdateInstanceHandler;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategyResolver;
-import org.folio.service.orders.lines.update.PatchOperationHandler;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.organization.OrganizationService;
@@ -789,24 +785,12 @@ public class ApplicationConfig {
 
   @Bean OrderLinePatchOperationService orderLinePatchOperationService(
       RestClient restClient,
-      OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
+      OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver,
       PurchaseOrderLineService purchaseOrderLineService,
       InventoryCache inventoryCache,
       InventoryInstanceManager inventoryInstanceManager) {
-    return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver,
+    return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver,
       purchaseOrderLineService, inventoryCache, inventoryInstanceManager);
-  }
-
-  @Bean PatchOperationHandler orderLineUpdateInstanceHandler(
-      OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver) {
-    return new OrderLineUpdateInstanceHandler(updateInstanceStrategyResolver);
-  }
-
-  @Bean OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver(
-      PatchOperationHandler orderLineUpdateInstanceHandler) {
-    Map<PatchOrderLineRequest.Operation, PatchOperationHandler> handlers = new EnumMap<>(PatchOrderLineRequest.Operation.class);
-    handlers.put(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF, orderLineUpdateInstanceHandler);
-    return new OrderLinePatchOperationHandlerResolver(handlers);
   }
 
   @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,

@@ -592,30 +592,6 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void testShouldCreateInstanceRecordIfProductIsEmpty()  {
-    //given
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    title.setProductIds(null);
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
-    //When
-    inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext).result();
-    //Then
-    verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
-  }
-
-  @Test
-  void testShouldCreateInstanceRecordIfProductPresentAndInstancesNotFoundInDB()  {
-    //given
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    doReturn(succeededFuture(new JsonObject("{\"instances\" : []}"))).when(inventoryInstanceManager).searchInstancesByProducts(any(), eq(requestContext));
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
-    //When
-    inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext).result();
-    //Then
-    verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
-  }
-
-  @Test
   void testShouldNotCreateInstanceRecordIfInstancesFoundInDB() throws IOException {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
