@@ -18,7 +18,6 @@ import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -126,7 +125,6 @@ public class TitlesService {
     List<String> lineIds = getNonPackageLineIds(compPO.getCompositePoLines());
     return getTitlesByPoLineIds(lineIds, requestContext);
   }
-
 
   private List<String> getNonPackageLineIds(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).map(CompositePoLine::getId).collect(toList());

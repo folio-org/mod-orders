@@ -12,9 +12,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
-import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 
 import io.vertx.core.Future;

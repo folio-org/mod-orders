@@ -31,7 +31,7 @@ public class PieceCreateFlowInventoryManager {
   }
 
   public Future<Void> processInventory(CompositePoLine compPOL, Piece piece, boolean createItem, RequestContext requestContext) {
-    final var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return updateInventoryForPoLine(compPOL, piece, locationContext, requestContext)
       .compose(instanceId -> handleHolding(compPOL, piece, instanceId, locationContext))
       .compose(holdingId -> handleItem(compPOL, createItem, piece, locationContext))

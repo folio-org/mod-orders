@@ -48,14 +48,14 @@ public class PieceDeleteFlowInventoryManager {
     return StringUtils.isEmpty(piece.getItemId())
       ? Future.succeededFuture()
       : inventoryItemManager.getItemRecordById(piece.getItemId(), true, requestContext)
-          .map(item -> isItemWithStatus(item, ItemStatus.ON_ORDER.value()) ? item : null);
+          .map(item -> getItemWithStatus(item, ItemStatus.ON_ORDER.value()));
   }
 
-  private boolean isItemWithStatus(JsonObject item, String status) {
+  private JsonObject getItemWithStatus(JsonObject item, String status) {
     return Optional.ofNullable(item)
       .map(itemObj -> itemObj.getJsonObject(ITEM_STATUS))
       .filter(itemStatus -> status.equalsIgnoreCase(itemStatus.getString(ITEM_STATUS_NAME)))
-      .isPresent();
+      .orElse(null);
   }
 
 }
