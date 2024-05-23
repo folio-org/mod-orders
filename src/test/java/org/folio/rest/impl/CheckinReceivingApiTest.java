@@ -85,6 +85,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_NOT_RETRIEVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOC_NOT_PROVIDED;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_ALREADY_RECEIVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_RETRIEVED;
@@ -1091,6 +1092,39 @@ public class CheckinReceivingApiTest {
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(REQUESTS_ACTION_REQUIRED.getDescription()));
+  }
+
+  @Test
+  void testBindPiecesToTitleWithBindItemWithDifferentTenantId() {
+    logger.info("=== Test POST Bind to Title with Item with Outstanding Request");
+
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId())
+      .withLocations(List.of(new Location().withHoldingId(UUID.randomUUID().toString())
+        .withQuantityPhysical(1).withQuantity(1)));
+    var bindingPiece = getMinimalContentPiece(poLine.getId())
+      .withItemId(OUTSTANDING_REQUEST_ITEM_ID)
+      .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(getMinimalContentBindItem()
+        .withTenantId("differentTenantId"))
+      .withBindPieceIds(List.of(bindingPiece.getId()))
+      .withRequestsAction(BindPiecesCollection.RequestsAction.TRANSFER);
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    var errors = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, VALIDATION_ERROR)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS.getDescription()));
   }
 
   @Test
