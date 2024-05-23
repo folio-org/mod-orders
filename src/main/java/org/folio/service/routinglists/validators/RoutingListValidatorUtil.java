@@ -2,10 +2,10 @@ package org.folio.service.routinglists.validators;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.RoutingList;
 import org.folio.rest.jaxrs.model.RoutingListCollection;
@@ -36,7 +36,10 @@ public class RoutingListValidatorUtil {
   }
 
   private static int getQuantityPhysicalTotal(PoLine poLine) {
-    return poLine.getLocations().stream().mapToInt(Location::getQuantityPhysical).sum();
+    return poLine.getLocations()
+      .stream()
+      .mapToInt(loc -> Optional.ofNullable(loc.getQuantityPhysical()).orElse(0))
+      .sum();
   }
 
   private static List<RoutingList> extractDifferentRoutingLists(RoutingList routingList, RoutingListCollection routingListCollection) {
