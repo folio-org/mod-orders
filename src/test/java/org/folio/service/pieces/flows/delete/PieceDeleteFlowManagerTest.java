@@ -49,6 +49,7 @@ import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.pieces.PieceDeleteInventoryService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
@@ -409,9 +410,14 @@ public class PieceDeleteFlowManagerTest {
     }
 
     @Bean
-    PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager(InventoryItemManager inventoryItemManager,
+    PieceDeleteInventoryService pieceDeleteInventoryService(InventoryItemManager inventoryItemManager) {
+      return new PieceDeleteInventoryService(inventoryItemManager);
+    }
+
+    @Bean
+    PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager(PieceDeleteInventoryService pieceDeleteInventoryService,
                                                                     PieceUpdateInventoryService pieceUpdateInventoryService) {
-      return new PieceDeleteFlowInventoryManager(inventoryItemManager, pieceUpdateInventoryService);
+      return new PieceDeleteFlowInventoryManager(pieceDeleteInventoryService, pieceUpdateInventoryService);
     }
 
     @Bean PieceDeleteFlowManager pieceDeleteFlowManager(PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager,

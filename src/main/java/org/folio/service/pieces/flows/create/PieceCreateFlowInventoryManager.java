@@ -2,7 +2,6 @@ package org.folio.service.pieces.flows.create;
 
 import java.util.Optional;
 
-import org.apache.commons.lang3.BooleanUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -32,15 +31,15 @@ public class PieceCreateFlowInventoryManager {
 
   public Future<Void> processInventory(CompositePoLine compPOL, Piece piece, boolean createItem, RequestContext requestContext) {
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
-    return updateInventoryForPoLine(compPOL, piece, locationContext, requestContext)
+    return updateInventoryInstanceForPoLine(compPOL, piece, locationContext, requestContext)
       .compose(instanceId -> handleHolding(compPOL, piece, instanceId, locationContext))
       .compose(holdingId -> handleItem(compPOL, createItem, piece, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
       .mapEmpty();
   }
 
-  private Future<String> updateInventoryForPoLine(CompositePoLine compPOL, Piece piece, RequestContext locationContext, RequestContext requestContext) {
-    if (BooleanUtils.isNotTrue(compPOL.getIsPackage())) {
+  private Future<String> updateInventoryInstanceForPoLine(CompositePoLine compPOL, Piece piece, RequestContext locationContext, RequestContext requestContext) {
+    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return Optional.ofNullable(getPoLineInstanceId(compPOL))
         .orElseGet(() -> titlesService.updateTitleWithInstance(piece.getTitleId(), locationContext, requestContext))
         .map(instanceId -> compPOL.withInstanceId(instanceId).getInstanceId());

@@ -100,6 +100,7 @@ import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdate
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.organization.OrganizationService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
+import org.folio.service.pieces.PieceDeleteInventoryService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
@@ -590,6 +591,11 @@ public class ApplicationConfig {
   }
 
   @Bean
+  PieceDeleteInventoryService pieceDeleteInventoryService(InventoryItemManager inventoryItemManager) {
+    return new PieceDeleteInventoryService(inventoryItemManager);
+  }
+
+  @Bean
   PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
                     PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
     return new PieceDeleteFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
@@ -607,9 +613,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager(InventoryItemManager inventoryItemManager,
+  PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager(PieceDeleteInventoryService pieceDeleteInventoryService,
                                                                   PieceUpdateInventoryService pieceUpdateInventoryService) {
-    return new PieceDeleteFlowInventoryManager(inventoryItemManager, pieceUpdateInventoryService);
+    return new PieceDeleteFlowInventoryManager(pieceDeleteInventoryService, pieceUpdateInventoryService);
   }
 
 

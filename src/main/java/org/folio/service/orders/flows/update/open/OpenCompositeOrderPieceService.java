@@ -3,6 +3,7 @@ package org.folio.service.orders.flows.update.open;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -13,14 +14,12 @@ import java.util.concurrent.CompletionException;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.OpenOrderPieceHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -163,21 +162,21 @@ public class OpenCompositeOrderPieceService {
    * @return CompletableFuture with void.
    */
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (BooleanUtils.isNotTrue(compPOL.getIsPackage())) {
+    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
-    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+    var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
       .compose(title -> piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)
         ? Future.succeededFuture(piece.getHoldingId())
-        : inventoryHoldingManager.createHoldingAndReturnId(title.getInstanceId(), piece.getLocationId(), requestContext)
+        : inventoryHoldingManager.createHoldingAndReturnId(title.getInstanceId(), piece.getLocationId(), locationContext)
           .map(holdingId -> piece.withLocationId(null).withHoldingId(holdingId).getHoldingId()))
       .compose(holdingId -> PoLineCommonUtil.isItemsUpdateRequired(compPOL)
-        ? inventoryItemManager.openOrderCreateItemRecord(compPOL, holdingId, requestContext)
+        ? inventoryItemManager.openOrderCreateItemRecord(compPOL, holdingId, locationContext)
         : Future.succeededFuture()
       )
-      .onSuccess(itemId -> Optional.ofNullable(itemId).ifPresent(piece::setItemId))
+      .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
       .mapEmpty();
   }
 
