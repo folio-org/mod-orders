@@ -3,7 +3,6 @@ package org.folio.service.pieces.flows.create;
 import java.util.Optional;
 
 import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
@@ -14,6 +13,8 @@ import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
+
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 
 public class PieceCreateFlowInventoryManager {
 
@@ -30,7 +31,7 @@ public class PieceCreateFlowInventoryManager {
   }
 
   public Future<Void> processInventory(CompositePoLine compPOL, Piece piece, boolean createItem, RequestContext requestContext) {
-    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+    var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return updateInventoryInstanceForPoLine(compPOL, piece, locationContext, requestContext)
       .compose(instanceId -> handleHolding(compPOL, piece, instanceId, locationContext))
       .compose(holdingId -> handleItem(compPOL, createItem, piece, locationContext))

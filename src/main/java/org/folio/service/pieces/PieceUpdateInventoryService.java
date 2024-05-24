@@ -1,5 +1,6 @@
 package org.folio.service.pieces;
 
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 
 import java.util.List;
@@ -9,7 +10,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
@@ -64,7 +64,7 @@ public class PieceUpdateInventoryService {
 
   public Future<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext requestContext) {
     if (piece != null && piece.getHoldingId() != null) {
-      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+      var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
       String holdingId = piece.getHoldingId();
       return inventoryHoldingManager.getHoldingById(holdingId, true, locationContext)
                   .compose(holding -> {

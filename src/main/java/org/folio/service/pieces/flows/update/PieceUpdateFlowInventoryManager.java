@@ -1,5 +1,6 @@
 package org.folio.service.pieces.flows.update;
 
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
@@ -12,7 +13,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
@@ -47,7 +47,7 @@ public class PieceUpdateFlowInventoryManager {
   }
 
   public Future<Void> processInventory(PieceUpdateHolder holder, RequestContext requestContext) {
-    final var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, holder.getPieceToUpdate().getReceivingTenantId());
+    final var locationContext = createContextWithNewTenantId(requestContext, holder.getPieceToUpdate().getReceivingTenantId());
     return inventoryItemManager.updateItemWithPieceFields(holder.getPieceToUpdate(), locationContext)
       .compose(v -> updateInventoryForPoLine(holder, locationContext, requestContext)
           .map(holder::withInstanceId)
