@@ -69,7 +69,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<ReceivingResults> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
     //   1. Get piece records from storage
     return retrievePieceRecords(requestContext)
-      // 2. Check if there are any outstanding requests for items
+      // 2. Check if there are any "outstanding" requests for items
       .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
       // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
@@ -107,18 +107,18 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       return Future.succeededFuture();
     }
 
-    // requestsAction is required to handle outstanding requests
+    // requestsAction is required to handle "outstanding" requests
     if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
-      logger.warn("validateItemsForRequestTransfer:: Found outstanding requests on items with ids: {}", items);
+      logger.warn("validateItemsForRequestTransfer:: Found 'outstanding' requests on items with ids: {}", items);
       throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
     }
 
     var bindItemTenantId = bindPiecesCollection.getBindItem().getTenantId();
-    var itemsInSameTenant = Optional.ofNullable(bindItemTenantId)
+    var areItemsInSameTenant = Optional.ofNullable(bindItemTenantId)
       .map(tenants::contains).orElse(true) && tenants.size() == 1;
     // Transferring requests between tenants is not a requirement for R
     // All items should be in same tenant as the bind item tenantId for requests to be transferred
-    if (TRANSFER.equals(bindPiecesCollection.getRequestsAction()) && !itemsInSameTenant) {
+    if (TRANSFER.equals(bindPiecesCollection.getRequestsAction()) && !areItemsInSameTenant) {
       logger.warn("validateItemsForRequestTransfer:: All piece items and bindItem must be in same tenant. Pieces: {}, BindItem: {}", tenants, bindItemTenantId);
       throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
     }

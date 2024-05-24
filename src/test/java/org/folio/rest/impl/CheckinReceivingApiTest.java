@@ -185,7 +185,7 @@ public class CheckinReceivingApiTest {
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
-    assertThat(getItemsSearches(),is(nullValue()));
+    assertThat(getItemsSearches(), is(nullValue()));
     assertThat(getItemUpdates(), is(nullValue()));
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
@@ -1368,9 +1368,9 @@ public class CheckinReceivingApiTest {
 
 
     List<ReceivingItemResult> results = response.getReceivingItemResults();
-    for(ReceivingItemResult r : results) {
+    for (ReceivingItemResult r : results) {
       Error error = r.getProcessingStatus().getError();
-      if(error != null) {
+      if (error != null) {
         assertThat(r.getProcessingStatus().getError().getCode(), equalTo(LOC_NOT_PROVIDED.getCode()));
         assertThat(r.getProcessingStatus().getError().getMessage(), equalTo(LOC_NOT_PROVIDED.getDescription()));
         assertThat(r.getPieceId(), is(in(pieceIds)));
