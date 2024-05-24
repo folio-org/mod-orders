@@ -137,7 +137,7 @@ public class CheckinReceivingApiTest {
   private static final String ITEM_STATUS = "status";
   private static final String COMPOSITE_POLINE_ONGOING_ID = "6e2b169a-ebeb-4c3c-a2f2-6233ff9c59ae";
   private static final String COMPOSITE_POLINE_CANCELED_ID = "1196fcd9-7607-447d-ae85-6e91883d7e4f";
-  private static final String OUTSTANDING_REQUEST_ITEM_ID = "f972fa0e-5e84-4a47-a27b-137724a73fee";
+  private static final String OPEN_REQUEST_ITEM_ID = "f972fa0e-5e84-4a47-a27b-137724a73fee";
 
   private static boolean runningOnOwn;
 
@@ -1073,7 +1073,7 @@ public class CheckinReceivingApiTest {
       .withLocations(List.of(new Location().withHoldingId(UUID.randomUUID().toString())
         .withQuantityPhysical(1).withQuantity(1)));
     var bindingPiece = getMinimalContentPiece(poLine.getId())
-      .withItemId(OUTSTANDING_REQUEST_ITEM_ID)
+      .withItemId(OPEN_REQUEST_ITEM_ID)
       .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
     var bindPiecesCollection = new BindPiecesCollection()
@@ -1104,7 +1104,7 @@ public class CheckinReceivingApiTest {
       .withLocations(List.of(new Location().withHoldingId(UUID.randomUUID().toString())
         .withQuantityPhysical(1).withQuantity(1)));
     var bindingPiece = getMinimalContentPiece(poLine.getId())
-      .withItemId(OUTSTANDING_REQUEST_ITEM_ID)
+      .withItemId(OPEN_REQUEST_ITEM_ID)
       .withReceivingStatus(Piece.ReceivingStatus.UNRECEIVABLE)
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
     var bindPiecesCollection = new BindPiecesCollection()

@@ -69,7 +69,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<ReceivingResults> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
     //   1. Get piece records from storage
     return retrievePieceRecords(requestContext)
-      // 2. Check if there are any "outstanding" requests for items
+      // 2. Check if there are any open requests for items
       .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
       // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
@@ -107,9 +107,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       return Future.succeededFuture();
     }
 
-    // requestsAction is required to handle "outstanding" requests
+    // requestsAction is required to handle open requests
     if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
-      logger.warn("validateItemsForRequestTransfer:: Found 'outstanding' requests on items with ids: {}", items);
+      logger.warn("validateItemsForRequestTransfer:: Found open requests on items with ids: {}", items);
       throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
     }
 
