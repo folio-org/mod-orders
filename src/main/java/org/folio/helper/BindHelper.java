@@ -28,6 +28,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.folio.rest.jaxrs.model.BindPiecesCollection.RequestsAction.TRANSFER;
@@ -67,7 +69,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<ReceivingResults> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
     //   1. Get piece records from storage
     return retrievePieceRecords(requestContext)
-      // 2. Check if there are any outstanding requests for items
+      // 2. Check if there are any open requests for items
       .compose(piecesGroupedByPoLine -> checkRequestsForPieceItems(piecesGroupedByPoLine, bindPiecesCollection, requestContext))
       // 3. Update piece isBound flag
       .map(this::updatePieceRecords)
@@ -88,32 +90,39 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
                                                                       RequestContext requestContext) {
     var tenantToItem = mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext);
     return GenericCompositeFuture.all(
-        tenantToItem.entrySet().stream()
-          .map(entry -> {
-          var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
-          return inventoryItemRequestService.getItemsWithActiveRequests(entry.getValue(), locationContext)
-            .compose(items -> {
-              if (items.isEmpty()) {
-                return Future.succeededFuture();
-              }
-
-              // requestsAction is required to handle outstanding requests
-              if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
-                logger.warn("checkRequestsForPieceItems:: Found outstanding requests on items with ids: {}", items);
-                throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
-              }
-
-              // When requests are to be transferred check if pieces contain different receivingTenantIds
-              // Transferring requests between tenants is not a requirement for R
-              if (bindPiecesCollection.getRequestsAction().equals(TRANSFER) && tenantToItem.keySet().size() > 1) {
-                logger.warn("checkRequestsForPieceItems:: All pieces do not have the same receivingTenantId: {}", tenantToItem.keySet());
-                throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
-              }
-              return Future.succeededFuture();
-            });
-          })
-          .toList())
+      tenantToItem.entrySet().stream()
+        .map(entry -> {
+        var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+        return inventoryItemRequestService.getItemsWithActiveRequests(entry.getValue(), locationContext)
+          .compose(items -> validateItemsForRequestTransfer(tenantToItem.keySet(), items, bindPiecesCollection));
+        })
+        .toList())
       .map(f -> piecesGroupedByPoLine);
+  }
+
+  private Future<Void> validateItemsForRequestTransfer(Set<String> tenants,
+                                                       List<String> items,
+                                                       BindPiecesCollection bindPiecesCollection) {
+    if (items.isEmpty()) {
+      return Future.succeededFuture();
+    }
+
+    // requestsAction is required to handle open requests
+    if (Objects.isNull(bindPiecesCollection.getRequestsAction())) {
+      logger.warn("validateItemsForRequestTransfer:: Found open requests on items with ids: {}", items);
+      throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.REQUESTS_ACTION_REQUIRED);
+    }
+
+    var bindItemTenantId = bindPiecesCollection.getBindItem().getTenantId();
+    var areItemsInSameTenant = Optional.ofNullable(bindItemTenantId)
+      .map(tenants::contains).orElse(true) && tenants.size() == 1;
+    // Transferring requests between tenants is not a requirement for R
+    // All items should be in same tenant as the bind item tenantId for requests to be transferred
+    if (TRANSFER.equals(bindPiecesCollection.getRequestsAction()) && !areItemsInSameTenant) {
+      logger.warn("validateItemsForRequestTransfer:: All piece items and bindItem must be in same tenant. Pieces: {}, BindItem: {}", tenants, bindItemTenantId);
+      throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS);
+    }
+    return Future.succeededFuture();
   }
 
   private Map<String, List<Piece>> updatePieceRecords(Map<String, List<Piece>> piecesGroupedByPoLine) {
