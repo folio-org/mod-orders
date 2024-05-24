@@ -8,6 +8,8 @@ import io.vertx.core.json.JsonObject;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 import java.util.UUID;
@@ -123,5 +125,37 @@ public class PoLineCommonUtilTest {
     String errorMessage = "{\"message\":\"Protected fields can't be modified\",\"code\":\"protectedFieldChanging\",\"parameters\":[],\"protectedAndModifiedFields\":[\"details.productIds\"]}";
     assertEquals(400, exception.getCode());
     assertEquals(errorMessage, exception.getMessage());
+  }
+
+  @ParameterizedTest
+  @CsvSource(value = {"false:true:Other::Instance:true",
+    "true:false:Other:None::true",
+    "true:false:Other:Instance::false",
+    "true:false:Physical Resource:None::true",
+    "true:false:Physical Resource:Instance::false",
+    "false:true:Electronic Resource::None:true",
+    "false:true:Electronic Resource::Instance:false",
+    "true:true:P/E Mix:None:None:true",
+    "true:true:P/E Mix:Instance:None:false",
+    "true:true:P/E Mix:None:Instance:false"
+  }, delimiter = ':')
+  void testIsInventoryUpdateNotRequired(Boolean withPhysical, Boolean withEResource, String orderFormat,
+      String physicalCreateInventory, String eresourceCreateInventory, Boolean updateNotRequired) {
+    CompositePoLine poLine = new CompositePoLine();
+    if (withPhysical) {
+      poLine.setPhysical(new Physical());
+    }
+    if (withEResource) {
+      poLine.setEresource(new Eresource());
+    }
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.fromValue(orderFormat));
+    if (physicalCreateInventory != null) {
+      poLine.getPhysical().setCreateInventory(Physical.CreateInventory.fromValue(physicalCreateInventory));
+    }
+    if (eresourceCreateInventory != null) {
+      poLine.getEresource().setCreateInventory(Eresource.CreateInventory.fromValue(eresourceCreateInventory));
+    }
+    boolean result = PoLineCommonUtil.isInventoryUpdateNotRequired(poLine);
+    assertEquals(result, updateNotRequired);
   }
 }
