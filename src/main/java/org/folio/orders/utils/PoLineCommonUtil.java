@@ -140,13 +140,13 @@ public final class PoLineCommonUtil {
     return getPhysical(convertToCompositePoLine(poLine));
   }
 
-  public static Eresource getEresource(PoLine poLine) {
-    return getEresource(convertToCompositePoLine(poLine));
-  }
-
   public static Physical getPhysical(CompositePoLine compPOL) {
     CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
     return format == PHYSICAL_RESOURCE || format == P_E_MIX || format == OTHER ? compPOL.getPhysical() : null;
+  }
+
+  public static Eresource getEresource(PoLine poLine) {
+    return getEresource(convertToCompositePoLine(poLine));
   }
 
   public static Eresource getEresource(CompositePoLine compPOL) {

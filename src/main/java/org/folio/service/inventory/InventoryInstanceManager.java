@@ -342,13 +342,16 @@ public class InventoryInstanceManager {
 
   public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> {
-        Future<String> instanceIdFuture = compPOL.getInstanceId() != null ?
-          Future.succeededFuture(compPOL.getInstanceId()) :
-          getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext);
-        consortiumConfiguration.ifPresent(
-          configuration -> instanceIdFuture
-            .compose(instanceId -> shareInstanceAmongTenantsIfNeeded(instanceId, configuration, compPOL.getLocations(), requestContext))
+      .compose(configuration -> {
+        Future<String> instanceIdFuture;
+        if (compPOL.getInstanceId() != null) {
+          instanceIdFuture = Future.succeededFuture(compPOL.getInstanceId());
+        } else {
+          instanceIdFuture = getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext);
+        }
+        configuration.ifPresent(
+          config -> instanceIdFuture
+            .compose(instanceId -> shareInstanceAmongTenantsIfNeeded(instanceId, config, compPOL.getLocations(), requestContext))
         );
         return instanceIdFuture;
       }).map(compPOL::withInstanceId);
@@ -371,13 +374,13 @@ public class InventoryInstanceManager {
       .map(tenantId -> RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
       .map(
         clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
-        .map(instance -> Optional.<String>empty())
-        .recover(throwable -> {
-          if (throwable instanceof HttpException httpException && httpException.getCode() == 404) {
-            return Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders())));
-          }
-          return Future.failedFuture(throwable);
-        })
+          .map(instance -> Optional.<String>empty())
+          .recover(throwable -> {
+            if (throwable instanceof HttpException httpException && httpException.getCode() == 404) {
+              return Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders())));
+            }
+            return Future.failedFuture(throwable);
+          })
       )
       .toList();
     return collectResultsOnSuccess(tenantIdFutures)
