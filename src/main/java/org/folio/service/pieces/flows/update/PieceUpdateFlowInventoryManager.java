@@ -7,7 +7,6 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORD
 
 import java.util.Optional;
 
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -63,7 +62,7 @@ public class PieceUpdateFlowInventoryManager {
   private Future<String> updateInventoryForPoLine(PieceUpdateHolder holder, RequestContext locationContext, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
-    if (BooleanUtils.isNotTrue(poLineToSave.getIsPackage())) {
+    if (!Boolean.TRUE.equals(poLineToSave.getIsPackage())) {
       return Optional.ofNullable(getPoLineInstanceId(poLineToSave))
         .orElseGet(() -> titlesService.updateTitleWithInstance(pieceToUpdate.getTitleId(), locationContext, requestContext))
         .map(instanceId -> poLineToSave.withInstanceId(instanceId).getInstanceId());

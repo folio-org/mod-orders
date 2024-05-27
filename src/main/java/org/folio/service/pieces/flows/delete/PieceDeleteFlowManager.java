@@ -2,7 +2,6 @@ package org.folio.service.pieces.flows.delete;
 
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceDeletionHolder;
@@ -75,7 +74,7 @@ public class PieceDeleteFlowManager {
 
   protected Future<Void> updatePoLine(PieceDeletionHolder holder, RequestContext requestContext) {
     var comPOL = holder.getOriginPoLine();
-    return BooleanUtils.isTrue(comPOL.getIsPackage()) || BooleanUtils.isTrue(comPOL.getCheckinItems())
+    return Boolean.TRUE.equals(comPOL.getIsPackage()) || Boolean.TRUE.equals(comPOL.getCheckinItems())
       ? Future.succeededFuture()
       : pieceDeleteFlowPoLineService.updatePoLine(holder, requestContext);
   }
