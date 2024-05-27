@@ -1,5 +1,6 @@
 package org.folio.service.pieces;
 
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 
 import java.util.List;
@@ -62,32 +63,42 @@ public class PieceUpdateInventoryService {
   }
 
   public Future<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext requestContext) {
-    if (piece != null && piece.getHoldingId() != null) {
+      if (piece == null || piece.getHoldingId() == null) {
+          return Future.succeededFuture();
+      }
+      var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
       String holdingId = piece.getHoldingId();
-      return inventoryHoldingManager.getHoldingById(holdingId, true, requestContext)
-                  .compose(holding -> {
-                      if (holding != null && !holding.isEmpty()) {
-                          return pieceStorageService.getPiecesByHoldingId(holdingId, requestContext)
-                            .map(pieces -> skipPieceToProcess(piece, pieces))
-                                  .compose(existingPieces -> inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
-                                    .map(existingItems-> {
-                                      List<Piece> remainingPieces = skipPieceToProcess(piece, existingPieces);
-                                      if (CollectionUtils.isEmpty(remainingPieces) && CollectionUtils.isEmpty(existingItems)) {
-                                        return Pair.of(true, holding);
-                                      }
-                                      return Pair.of(false, new JsonObject());
-                                    }));
-                      }
-                      return Future.succeededFuture(Pair.of(false, new JsonObject()));
-                  })
-                  .compose(isUpdatePossibleVsHolding -> {
-                    if (isUpdatePossibleVsHolding.getKey() && !isUpdatePossibleVsHolding.getValue().isEmpty()) {
-                      String permanentLocationId = isUpdatePossibleVsHolding.getValue().getString(HOLDING_PERMANENT_LOCATION_ID);
-                      return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
-                                              .map(v -> Pair.of(holdingId, permanentLocationId));
-                    }
-                    return Future.succeededFuture();
-                  });
+      return inventoryHoldingManager.getHoldingById(holdingId, true, locationContext)
+        .compose(holding -> getUpdatePossibleForHolding(holding, holdingId, piece, locationContext, requestContext))
+        .compose(isUpdatePossibleVsHolding -> deleteHoldingIfPossible(isUpdatePossibleVsHolding, holdingId, locationContext));
+  }
+
+  private Future<Pair<Boolean, JsonObject>> getUpdatePossibleForHolding(JsonObject holding, String holdingId, Piece piece,
+                                                                        RequestContext locationContext, RequestContext requestContext) {
+    if (holding == null || holding.isEmpty()) {
+      return Future.succeededFuture(Pair.of(false, new JsonObject()));
+    }
+    return pieceStorageService.getPiecesByHoldingId(holdingId, requestContext)
+      .map(pieces -> skipPieceToProcess(piece, pieces))
+      .compose(existingPieces -> inventoryItemManager.getItemsByHoldingId(holdingId, locationContext)
+        .map(existingItems-> {
+          List<Piece> remainingPieces = skipPieceToProcess(piece, existingPieces);
+          if (CollectionUtils.isEmpty(remainingPieces) && CollectionUtils.isEmpty(existingItems)) {
+            return Pair.of(true, holding);
+          }
+          return Pair.of(false, new JsonObject());
+        })
+      );
+  }
+
+  private Future<Pair<String, String>> deleteHoldingIfPossible(Pair<Boolean, JsonObject> isUpdatePossibleVsHolding,
+                                                               String holdingId, RequestContext locationContext) {
+    var isUpdatePossible = isUpdatePossibleVsHolding.getKey();
+    var holding = isUpdatePossibleVsHolding.getValue();
+    if (isUpdatePossible && !holding.isEmpty()) {
+      String permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
+      return inventoryHoldingManager.deleteHoldingById(holdingId, true, locationContext)
+        .map(v -> Pair.of(holdingId, permanentLocationId));
     }
     return Future.succeededFuture();
   }
