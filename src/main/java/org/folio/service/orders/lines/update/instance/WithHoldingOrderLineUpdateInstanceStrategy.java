@@ -206,7 +206,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> updateItemsInInventory(List<JsonObject> items, String newHoldingId, RequestContext requestContext) {
     items.forEach(item -> item.put(ITEM_HOLDINGS_RECORD_ID, newHoldingId));
     List<Parameter> parameters = new ArrayList<>();
-    return GenericCompositeFuture.join(items.stream()
+    return GenericCompositeFuture.join(
+      items
+        .stream()
         .map(item -> inventoryItemManager.updateItem(item, requestContext)
           .otherwise(ex -> {
             Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));
@@ -216,7 +218,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
             parameters.add(parameter);
             return null;
           }))
-        .collect(toList()))
+        .toList()
+      )
       .mapEmpty()
       .map(v -> {
         if (CollectionUtils.isNotEmpty(parameters)) {
