@@ -1,9 +1,13 @@
 package org.folio.helper;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -17,9 +21,14 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import io.vertx.core.json.JsonObject;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.models.ItemStatus;
 import org.folio.rest.acq.model.OrderInvoiceRelationship;
@@ -192,6 +201,23 @@ public class PurchaseOrderHelperTest {
 
     // Then
     assertTrue(future.succeeded());
+  }
+
+  @Test
+  @DisplayName("Test source validation in line")
+  void testSourceValidationInLine() {
+    // Note: RMB schema validation is not reliable in unit tests with MockServer (it does not always return the same code),
+    // but we can check the same validation using a Validator.
+    CompositePurchaseOrder compPO = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine();
+    poLine.setSource(null);
+    compPO.getCompositePoLines().add(poLine);
+    try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+      Validator schemaValidator = factory.getValidator();
+      Set<ConstraintViolation<CompositePurchaseOrder>> violations = schemaValidator.validate(compPO);
+      assertThat(violations, hasSize(1));
+      assertEquals(violations.iterator().next().getPropertyPath().toString(), "compositePoLines[0].source");
+    }
   }
 
   @Test

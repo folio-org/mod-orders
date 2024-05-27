@@ -24,6 +24,7 @@ import org.folio.rest.core.ResponseUtilTest;
 import org.folio.rest.core.RestClientTest;
 import org.folio.rest.core.exceptions.ExceptionUtilTest;
 import org.folio.rest.impl.AcquisitionMethodAPITest;
+import org.folio.rest.impl.BaseApiTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
 import org.folio.rest.impl.ExportHistoryImplTest;
 import org.folio.rest.impl.HoldingsSummaryAPITest;
@@ -506,4 +507,7 @@ public class ApiTestSuite {
   class CirculationRequestsRetrieverTestNested extends CirculationRequestsRetrieverTest {
   }
 
+  @Nested
+  class BaseApiTestNested extends BaseApiTest {
+  }
 }
