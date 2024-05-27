@@ -149,7 +149,7 @@ public class InventoryInstanceManager {
     return instance;
   }
 
-  public Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
+  Future<JsonObject> getInstanceById(String instanceId, boolean skipNotFoundException, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(instanceId);
     return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
   }
@@ -161,7 +161,7 @@ public class InventoryInstanceManager {
    * @param compPOL PO line to retrieve Instance Record Id for
    * @return future with Instance Id
    */
-  public Future<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  private Future<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     // proceed with new Instance Record creation if no productId is provided
     if (!isProductIdsExist(compPOL) || isInstanceMatchingDisabled) {
       return createInstanceRecord(compPOL, requestContext);
@@ -303,10 +303,6 @@ public class InventoryInstanceManager {
       });
   }
 
-  public Future<String> getOrCreateInstanceRecord(Title title, RequestContext requestContext) {
-    return getOrCreateInstanceRecord(title, false, requestContext);
-  }
-
   public Future<String> getOrCreateInstanceRecord(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(title.getProductIds()) || isInstanceMatchingDisabled) {
       return createInstanceRecord(title, requestContext);
@@ -346,16 +342,49 @@ public class InventoryInstanceManager {
 
   public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> {
+      .compose(configuration -> {
+        Future<String> instanceIdFuture;
         if (compPOL.getInstanceId() != null) {
-          return consortiumConfiguration.isEmpty() ? Future.succeededFuture(compPOL.getInstanceId())
-            : shareInstanceAmongTenantsIfNeeded(compPOL.getInstanceId(), consortiumConfiguration.get(), compPOL.getLocations(), requestContext);
+          instanceIdFuture = Future.succeededFuture(compPOL.getInstanceId());
         } else {
-          return getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext)
-            .compose(instanceId -> consortiumConfiguration.isEmpty() ? Future.succeededFuture(instanceId)
-              : shareInstanceAmongTenantsIfNeeded(instanceId, consortiumConfiguration.get(), compPOL.getLocations(), requestContext));
+          instanceIdFuture = getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext);
         }
+        if (configuration.isEmpty()) {
+          return instanceIdFuture;
+        }
+        return instanceIdFuture
+          .compose(instanceId -> shareInstanceAmongTenantsIfNeeded(instanceId, configuration.get(), compPOL.getLocations(), requestContext));
       }).map(compPOL::withInstanceId);
+  }
+
+  private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
+                                                           List<Location> locations, RequestContext requestContext) {
+    return findTenantsWithUnsharedInstance(instanceId, locations, requestContext)
+      .map(tenantIds -> tenantIds.stream().map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId,
+        targetTenantId, consortiumConfiguration, requestContext)).toList())
+      .compose(HelperUtils::collectResultsOnSuccess)
+      .map(sharingInstances -> instanceId);
+  }
+
+  private Future<List<String>> findTenantsWithUnsharedInstance(String instanceId, List<Location> locations, RequestContext requestContext) {
+    List<Future<Optional<String>>> tenantIdFutures = locations.stream()
+      .map(Location::getTenantId)
+      .distinct()
+      .filter(Objects::nonNull)
+      .map(tenantId -> RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
+      .map(
+        clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
+          .map(instance -> Optional.<String>empty())
+          .recover(throwable -> {
+            if (throwable instanceof HttpException httpException && httpException.getCode() == 404) {
+              return Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders())));
+            }
+            return Future.failedFuture(throwable);
+          })
+      )
+      .toList();
+    return collectResultsOnSuccess(tenantIdFutures)
+      .map(tenantIds -> tenantIds.stream().flatMap(Optional::stream).toList());
   }
 
   public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, String targetTenantId, RequestContext requestContext) {
@@ -379,30 +408,6 @@ public class InventoryInstanceManager {
             return sharingInstanceService.createShadowInstance(instanceId, targetTenantId, consortiumConfiguration.get(), requestContext);
           });
       });
-  }
-
-  private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
-                                                           List<Location> locations, RequestContext requestContext) {
-    return findTenantsWithUnsharedInstance(instanceId, locations, requestContext)
-      .map(tenantIds -> tenantIds.stream().map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId,
-        targetTenantId, consortiumConfiguration, requestContext)).toList())
-      .compose(HelperUtils::collectResultsOnSuccess)
-      .map(sharingInstances -> instanceId);
-  }
-
-  private Future<List<String>> findTenantsWithUnsharedInstance(String instanceId, List<Location> locations, RequestContext requestContext) {
-    List<Future<Optional<String>>> tenantIdFutures = locations.stream()
-      .map(Location::getTenantId)
-      .distinct()
-      .filter(Objects::nonNull)
-      .map(tenantId -> RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
-      .map(clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
-        .map(instance -> Optional.<String>empty())
-        .recover(throwable -> throwable instanceof HttpException httpException && httpException.getCode() == 404 ?
-          Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders()))) : Future.failedFuture(throwable)))
-      .toList();
-    return collectResultsOnSuccess(tenantIdFutures)
-      .map(tenantIds -> tenantIds.stream().flatMap(Optional::stream).toList());
   }
 
 }

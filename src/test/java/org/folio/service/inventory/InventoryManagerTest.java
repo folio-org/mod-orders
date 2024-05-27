@@ -97,7 +97,6 @@ import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
-import org.folio.service.pieces.PieceStorageService;
 import org.folio.utils.RequestContextMatcher;
 import org.hamcrest.core.IsInstanceOf;
 import org.jetbrains.annotations.NotNull;
@@ -144,8 +143,6 @@ public class InventoryManagerTest {
   InventoryInstanceManager inventoryInstanceManager;
   @Autowired
   private RestClient restClient;
-  @Autowired
-  private PieceStorageService pieceStorageService;
   @Autowired
   private ConfigurationEntriesCache configurationEntriesCache;
   @Autowired
@@ -592,30 +589,6 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void testShouldCreateInstanceRecordIfProductIsEmpty()  {
-    //given
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    title.setProductIds(null);
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
-    //When
-    inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext).result();
-    //Then
-    verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
-  }
-
-  @Test
-  void testShouldCreateInstanceRecordIfProductPresentAndInstancesNotFoundInDB()  {
-    //given
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    doReturn(succeededFuture(new JsonObject("{\"instances\" : []}"))).when(inventoryInstanceManager).searchInstancesByProducts(any(), eq(requestContext));
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
-    //When
-    inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext).result();
-    //Then
-    verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
-  }
-
-  @Test
   void testShouldNotCreateInstanceRecordIfInstancesFoundInDB() throws IOException {
     //given
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
@@ -970,10 +943,6 @@ public class InventoryManagerTest {
       return mock(InventoryService.class);
     }
 
-    @Bean
-    public PieceStorageService pieceStorageService() {
-      return mock(PieceStorageService.class);
-    }
     @Bean
     public ConsortiumConfigurationService consortiumConfigurationService() {
       return mock(ConsortiumConfigurationService.class);

@@ -2,12 +2,15 @@ package org.folio.service.inventory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 
@@ -19,6 +22,15 @@ import static java.util.Map.entry;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_HOLDINGS_SOURCE_ID;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
+import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME;
+import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME_TYPE_ID;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_CONTRIBUTORS;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_DATE_OF_PUBLICATION;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIERS;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_ID;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLICATION;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLISHER;
 
 public class InventoryUtils {
 
@@ -121,6 +133,50 @@ public class InventoryUtils {
     parameters.add(new Parameter().withKey("missingEntry").withValue(value));
     return errorCode.toError()
       .withParameters(parameters);
+  }
+
+  public static String getPublisher(JsonObject instance) {
+    var publication = instance.getJsonArray(INSTANCE_PUBLICATION);
+    if (publication == null || publication.isEmpty()) {
+      return null;
+    }
+    return publication.getJsonObject(0).getString(INSTANCE_PUBLISHER);
+  }
+
+  public static String getPublicationDate(JsonObject instance) {
+    var publication = instance.getJsonArray(INSTANCE_PUBLICATION);
+    if (publication == null || publication.isEmpty()) {
+      return null;
+    }
+    return publication.getJsonObject(0).getString(INSTANCE_DATE_OF_PUBLICATION);
+  }
+
+  public static List<ProductId> getProductIds(JsonObject instance) {
+    JsonArray productIds = instance.getJsonArray(INSTANCE_IDENTIFIERS);
+    if (productIds == null || productIds.isEmpty()) {
+      return List.of();
+    }
+    return productIds
+      .stream()
+      .map(JsonObject.class::cast)
+      .map(jsonObject -> new ProductId()
+        .withProductId(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_VALUE))
+        .withProductIdType(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_ID)))
+      .toList();
+  }
+
+  public static List<Contributor> getContributors(JsonObject instance) {
+    JsonArray contributors = instance.getJsonArray(INSTANCE_CONTRIBUTORS);
+    if (contributors == null || contributors.isEmpty()) {
+      return List.of();
+    }
+    return contributors
+      .stream()
+      .map(JsonObject.class::cast)
+      .map(jsonObject -> new Contributor()
+        .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
+        .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
+      .toList();
   }
 
 }
