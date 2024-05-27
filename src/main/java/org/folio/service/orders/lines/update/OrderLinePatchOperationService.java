@@ -33,6 +33,7 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
@@ -157,13 +158,13 @@ public class OrderLinePatchOperationService {
     Promise<PoLine> promise = Promise.promise();
 
     poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
-    poLine.setPublisher(InventoryInstanceManager.getPublisher(lookupObj));
-    poLine.setPublicationDate(InventoryInstanceManager.getPublicationDate(lookupObj));
-    poLine.setContributors(InventoryInstanceManager.getContributors(lookupObj));
+    poLine.setPublisher(InventoryUtils.getPublisher(lookupObj));
+    poLine.setPublicationDate(InventoryUtils.getPublicationDate(lookupObj));
+    poLine.setContributors(InventoryUtils.getContributors(lookupObj));
 
     inventoryCache.getISBNProductTypeId(requestContext)
       .compose(isbnTypeId -> {
-        List<ProductId> productIds = InventoryInstanceManager.getProductIds(lookupObj);
+        List<ProductId> productIds = InventoryUtils.getProductIds(lookupObj);
         Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
         return HelperUtils.executeWithSemaphores(setOfProductIds,
             productId -> inventoryCache.convertToISBN13(extractProductId(productId), requestContext)

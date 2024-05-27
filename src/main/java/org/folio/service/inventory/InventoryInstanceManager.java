@@ -349,11 +349,11 @@ public class InventoryInstanceManager {
         } else {
           instanceIdFuture = getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext);
         }
-        configuration.ifPresent(
-          config -> instanceIdFuture
-            .compose(instanceId -> shareInstanceAmongTenantsIfNeeded(instanceId, config, compPOL.getLocations(), requestContext))
-        );
-        return instanceIdFuture;
+        if (configuration.isEmpty()) {
+          return instanceIdFuture;
+        }
+        return instanceIdFuture
+          .compose(instanceId -> shareInstanceAmongTenantsIfNeeded(instanceId, configuration.get(), compPOL.getLocations(), requestContext));
       }).map(compPOL::withInstanceId);
   }
 
@@ -408,50 +408,6 @@ public class InventoryInstanceManager {
             return sharingInstanceService.createShadowInstance(instanceId, targetTenantId, consortiumConfiguration.get(), requestContext);
           });
       });
-  }
-
-  public static String getPublisher(JsonObject instance) {
-    var publication = instance.getJsonArray(INSTANCE_PUBLICATION);
-    if (publication == null || publication.isEmpty()) {
-      return null;
-    }
-    return publication.getJsonObject(0).getString(INSTANCE_PUBLISHER);
-  }
-
-  public static String getPublicationDate(JsonObject instance) {
-    var publication = instance.getJsonArray(INSTANCE_PUBLICATION);
-    if (publication == null || publication.isEmpty()) {
-      return null;
-    }
-    return publication.getJsonObject(0).getString(INSTANCE_DATE_OF_PUBLICATION);
-  }
-
-  public static List<ProductId> getProductIds(JsonObject instance) {
-    JsonArray productIds = instance.getJsonArray(INSTANCE_IDENTIFIERS);
-    if (productIds == null || productIds.isEmpty()) {
-      return List.of();
-    }
-    return productIds
-      .stream()
-      .map(JsonObject.class::cast)
-      .map(jsonObject -> new ProductId()
-        .withProductId(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_VALUE))
-        .withProductIdType(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_ID)))
-      .toList();
-  }
-
-  public static List<Contributor> getContributors(JsonObject instance) {
-    JsonArray contributors = instance.getJsonArray(INSTANCE_CONTRIBUTORS);
-    if (contributors == null || contributors.isEmpty()) {
-      return List.of();
-    }
-    return contributors
-      .stream()
-      .map(JsonObject.class::cast)
-      .map(jsonObject -> new Contributor()
-        .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
-        .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
-      .toList();
   }
 
 }

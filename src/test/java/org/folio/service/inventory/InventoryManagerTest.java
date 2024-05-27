@@ -97,7 +97,6 @@ import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
-import org.folio.service.pieces.PieceStorageService;
 import org.folio.utils.RequestContextMatcher;
 import org.hamcrest.core.IsInstanceOf;
 import org.jetbrains.annotations.NotNull;
@@ -144,8 +143,6 @@ public class InventoryManagerTest {
   InventoryInstanceManager inventoryInstanceManager;
   @Autowired
   private RestClient restClient;
-  @Autowired
-  private PieceStorageService pieceStorageService;
   @Autowired
   private ConfigurationEntriesCache configurationEntriesCache;
   @Autowired
@@ -946,10 +943,6 @@ public class InventoryManagerTest {
       return mock(InventoryService.class);
     }
 
-    @Bean
-    public PieceStorageService pieceStorageService() {
-      return mock(PieceStorageService.class);
-    }
     @Bean
     public ConsortiumConfigurationService consortiumConfigurationService() {
       return mock(ConsortiumConfigurationService.class);
