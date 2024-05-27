@@ -163,7 +163,7 @@ public class OpenCompositeOrderPieceService {
    * @return CompletableFuture with void.
    */
   public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
+    if (Boolean.FALSE.equals(compPOL.getIsPackage())) {
       return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
