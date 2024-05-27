@@ -24,6 +24,7 @@ import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -168,16 +169,24 @@ public class OpenCompositeOrderPieceService {
     var locationContext = createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
-      .compose(title -> piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)
-        ? Future.succeededFuture(piece.getHoldingId())
-        : inventoryHoldingManager.createHoldingAndReturnId(title.getInstanceId(), piece.getLocationId(), locationContext)
-          .map(holdingId -> piece.withLocationId(null).withHoldingId(holdingId).getHoldingId()))
-      .compose(holdingId -> PoLineCommonUtil.isItemsUpdateRequired(compPOL)
-        ? inventoryItemManager.openOrderCreateItemRecord(compPOL, holdingId, locationContext)
-        : Future.succeededFuture()
-      )
+      .compose(title -> getOrCreateHolding(compPOL, piece, title, locationContext))
+      .compose(holdingId -> updateItemsIfNeeded(compPOL, holdingId, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
       .mapEmpty();
+  }
+
+  private Future<String> getOrCreateHolding(CompositePoLine compPOL, Piece piece, Title title, RequestContext locationContext) {
+    if (piece.getHoldingId() != null || !PoLineCommonUtil.isHoldingsUpdateRequired(compPOL)) {
+      return Future.succeededFuture(piece.getHoldingId());
+    }
+    return inventoryHoldingManager.createHoldingAndReturnId(title.getInstanceId(), piece.getLocationId(), locationContext)
+      .map(holdingId -> piece.withLocationId(null).withHoldingId(holdingId).getHoldingId());
+  }
+
+  private Future<String> updateItemsIfNeeded(CompositePoLine compPOL, String holdingId, RequestContext locationContext) {
+    return PoLineCommonUtil.isItemsUpdateRequired(compPOL)
+      ? inventoryItemManager.openOrderCreateItemRecord(compPOL, holdingId, locationContext)
+      : Future.succeededFuture();
   }
 
   private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
