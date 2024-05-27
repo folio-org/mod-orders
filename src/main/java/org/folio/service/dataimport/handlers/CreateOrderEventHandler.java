@@ -26,8 +26,8 @@ import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -363,7 +363,7 @@ public class CreateOrderEventHandler implements EventHandler {
     List<ProfileSnapshotWrapper> actionProfiles = jobProfileSnapshotWrapper
       .getChildSnapshotWrappers()
       .stream()
-      .filter(e -> e.getContentType() == ProfileSnapshotWrapper.ContentType.ACTION_PROFILE)
+      .filter(e -> e.getContentType() == ACTION_PROFILE)
       .collect(Collectors.toList());
 
     if (!actionProfiles.isEmpty() && checkIfCurrentProfileIsTheLastOne(dataImportEventPayload, actionProfiles)) {

@@ -5,6 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.serverError;
 import static org.folio.dataimport.util.RestUtil.OKAPI_URL_HEADER;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 
@@ -86,7 +87,7 @@ public class CacheTest {
           context.assertTrue(ar.succeeded());
           Optional<ProfileSnapshotWrapper> result = ar.result();
           context.assertNotNull(result.orElse(null));
-          context.assertEquals(result.orElse(new ProfileSnapshotWrapper()).getContentType(), ProfileSnapshotWrapper.ContentType.JOB_PROFILE);
+          context.assertEquals(result.orElse(new ProfileSnapshotWrapper()).getContentType(), JOB_PROFILE);
           async.complete();
         });
   }
