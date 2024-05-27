@@ -98,7 +98,7 @@ public class PieceUpdateFlowInventoryManager {
     return inventoryHoldingManager.createHoldingAndReturnId(instanceId, pieceToUpdate.getLocationId(), requestContext)
       .map(holdingId -> {
         if (holdingId != null) {
-          pieceToUpdate.withHoldingId(null).setHoldingId(holdingId);
+          pieceToUpdate.withLocationId(null).setHoldingId(holdingId);
           location.withLocationId(null).setHoldingId(holdingId);
         }
         return location;
