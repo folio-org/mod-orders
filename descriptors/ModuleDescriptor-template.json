@@ -805,7 +805,8 @@
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post",
             "acquisitions-units-storage.units.collection.get",
-            "acquisitions-units-storage.memberships.collection.get"
+            "acquisitions-units-storage.memberships.collection.get",
+            "configuration.entries.collection.get"
           ]
         },
         {
@@ -1074,6 +1075,34 @@
             "orders-storage.settings.collection.get",
             "users.collection.get",
             "template-request.post"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orders.bind-pieces",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/bind-pieces",
+          "permissionsRequired": [
+            "orders.bind-pieces.collection.post"
+          ],
+          "modulePermissions": [
+            "orders-storage.pieces.collection.get",
+            "orders-storage.pieces.item.put",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.po-lines.item.put",
+            "orders-storage.purchase-orders.item.get",
+            "orders-storage.purchase-orders.item.put",
+            "orders-storage.titles.collection.get",
+            "orders-storage.titles.item.put",
+            "inventory-storage.items.item.post",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
+            "circulation.requests.collection.get",
+            "circulation.requests.item.move.post"
           ]
         }
       ]
@@ -1849,6 +1878,12 @@
       ]
     },
     {
+      "permissionName": "orders.bind-pieces.collection.post",
+      "displayName" : "bind-pieces collection post",
+      "description" : "Bind pieces collection post"
+    },
+
+    {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
       "description": "Entire set of permissions needed to use orders",
@@ -1883,7 +1918,8 @@
         "orders.holding-summary.collection.get",
         "orders.acquisition-methods.all",
         "orders.export-history.all",
-        "orders.routing-lists.all"
+        "orders.routing-lists.all",
+        "orders.bind-pieces.collection.post"
       ]
     },
     {

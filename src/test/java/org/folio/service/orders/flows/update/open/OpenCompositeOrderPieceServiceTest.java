@@ -99,8 +99,6 @@ public class OpenCompositeOrderPieceServiceTest {
   private OpenCompositeOrderPieceService openCompositeOrderPieceService;
   @Autowired
   private TitlesService titlesService;
-  @Autowired
-  private OpenCompositeOrderHolderBuilder openCompositeOrderHolderBuilder;
 
   @Mock
   private Map<String, String> okapiHeadersMock;
@@ -204,16 +202,15 @@ public class OpenCompositeOrderPieceServiceTest {
     line.setIsPackage(true);
     Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class).withInstanceId(instanceId);
     Piece piece = createPieceWithLocationId(line, title);
-    Location location = new Location().withLocationId(piece.getLocationId());
     SharingInstance sharingInstance = new SharingInstance(UUID.randomUUID(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), eq(requestContext), eq(requestContext));
 
     doReturn(succeededFuture(sharingInstance))
       .when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
     doReturn(succeededFuture(holdingId))
-      .when(inventoryHoldingManager).handleHoldingsRecord(any(CompositePoLine.class), eq(location), eq(title.getInstanceId()), eq(requestContext));
+      .when(inventoryHoldingManager).createHoldingAndReturnId(eq(title.getInstanceId()), eq(piece.getLocationId()), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(inventoryInstanceManager).createInstanceRecord(eq(title), eq(requestContext));
 
@@ -241,7 +238,7 @@ public class OpenCompositeOrderPieceServiceTest {
 
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(piece.getTitleId(), requestContext);
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(line, holdingId, requestContext);
-    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), eq(requestContext));
+    doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), eq(requestContext), eq(requestContext));
 
     //When
     openCompositeOrderPieceService.openOrderUpdateInventory(line, piece, false, requestContext).result();

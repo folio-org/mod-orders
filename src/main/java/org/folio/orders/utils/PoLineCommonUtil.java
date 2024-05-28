@@ -103,19 +103,13 @@ public final class PoLineCommonUtil {
   }
 
   public static boolean isHoldingUpdateRequiredForPhysical(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    if (!(format == PHYSICAL_RESOURCE || format == OTHER || format == P_E_MIX))
-      return false;
-    Physical physical = compPOL.getPhysical();
+    Physical physical = getPhysical(compPOL);
     return physical != null && (physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
       || physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
 
   public static boolean isHoldingUpdateRequiredForEresource(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    if (!(format == ELECTRONIC_RESOURCE || format == P_E_MIX))
-      return false;
-    Eresource eresource = compPOL.getEresource();
+    Eresource eresource = getEresource(compPOL);
     return eresource != null && (eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
       || eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
@@ -125,27 +119,39 @@ public final class PoLineCommonUtil {
   }
 
   public static boolean isItemsUpdateRequiredForEresource(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    if (!(format == ELECTRONIC_RESOURCE || format == P_E_MIX))
-      return false;
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return false;
     }
-    return Optional.ofNullable(compPOL.getEresource())
+    return Optional.ofNullable(getEresource(compPOL))
       .map(eresource -> eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
       .orElse(false);
   }
 
   public static boolean isItemsUpdateRequiredForPhysical(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    if (!(format == PHYSICAL_RESOURCE || format == OTHER || format == P_E_MIX))
-      return false;
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return false;
     }
-    return Optional.ofNullable(compPOL.getPhysical())
+    return Optional.ofNullable(getPhysical(compPOL))
       .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
       .orElse(false);
+  }
+
+  public static Physical getPhysical(PoLine poLine) {
+    return getPhysical(convertToCompositePoLine(poLine));
+  }
+
+  public static Physical getPhysical(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    return format == PHYSICAL_RESOURCE || format == P_E_MIX || format == OTHER ? compPOL.getPhysical() : null;
+  }
+
+  public static Eresource getEresource(PoLine poLine) {
+    return getEresource(convertToCompositePoLine(poLine));
+  }
+
+  public static Eresource getEresource(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    return format == ELECTRONIC_RESOURCE || format == P_E_MIX ? compPOL.getEresource() : null;
   }
 
   public static boolean isOnlyInstanceUpdateRequired(CompositePoLine compPOL) {

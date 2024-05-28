@@ -23,8 +23,9 @@ public class PieceDeleteFlowInventoryManager {
     var locationContext = createContextWithNewTenantId(requestContext, holder.getPieceToDelete().getReceivingTenantId());
     return pieceDeleteInventoryService.deleteItem(holder, locationContext)
       .compose(aVoid -> holder.isDeleteHolding()
-        ? pieceUpdateInventoryService.deleteHoldingConnectedToPiece(holder.getPieceToDelete(), locationContext)
-        : Future.succeededFuture()
+          ? pieceUpdateInventoryService.deleteHoldingConnectedToPiece(holder.getPieceToDelete(), locationContext)
+          : Future.succeededFuture()
       );
   }
+
 }

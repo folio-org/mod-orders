@@ -1,138 +1,223 @@
 package org.folio.helper;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.TestConfig.autowireDependencies;
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.clearVertxContext;
-import static org.folio.TestConfig.getFirstContextFromVertx;
-import static org.folio.TestConfig.getVertx;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.TestConfig.mockPort;
-import static org.folio.TestConstants.X_OKAPI_TOKEN;
-import static org.folio.TestConstants.X_OKAPI_USER_ID;
-import static org.folio.rest.RestConstants.OKAPI_URL;
-import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
-import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
+import static org.folio.TestUtils.getMinimalContentCompositePoLine;
+import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.TestUtils.getMockData;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.spy;
 
+import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
-import org.folio.ApiTestSuite;
+import io.vertx.core.json.JsonObject;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+import org.folio.models.CompositeOrderRetrieveHolder;
+import org.folio.models.ItemStatus;
 import org.folio.rest.acq.model.OrderInvoiceRelationship;
 import org.folio.rest.acq.model.OrderInvoiceRelationshipCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.service.AcquisitionsUnitsService;
-import org.folio.service.PrefixService;
-import org.folio.service.ProtectionService;
-import org.folio.service.SuffixService;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.TagService;
 import org.folio.service.caches.ConfigurationEntriesCache;
-import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
-import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
-import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategy;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.invoice.InvoiceLineService;
-import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
-import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
-import org.folio.service.orders.OrderLinesSummaryPopulateService;
-import org.folio.service.orders.OrderReEncumberService;
+import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
-import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
-import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
-import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
-import org.folio.service.organization.OrganizationService;
-import org.folio.service.pieces.PieceService;
-import org.folio.service.pieces.PieceStorageService;
-import org.folio.service.titles.TitlesService;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.mockito.stubbing.Answer;
 
 @ExtendWith(VertxExtension.class)
 public class PurchaseOrderHelperTest {
+  public static final String BASE_MOCK_DATA_PATH = "mockdata/";
+  private static final String LISTED_PRINT_SERIAL_PATH = "po_listed_print_serial.json";
+
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af20";
   public static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
 
-  @Autowired
-  private EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory;
-  @Autowired
-  private PurchaseOrderLineService purchaseOrderLineService;
-  @Mock
-  private OpenToPendingEncumbranceStrategy openToPendingEncumbranceStrategy;
+  private AutoCloseable mockitoMocks;
+  @InjectMocks
+  private PurchaseOrderHelper purchaseOrderHelper;
   @Mock
   private RestClient restClient;
-
-  private  Map<String, String> okapiHeadersMock;
-  private Context ctxMock;
-  private static boolean runningOnOwn;
-
-  @BeforeAll
-  public static void before() throws InterruptedException, ExecutionException, TimeoutException {
-    if (isVerticleNotDeployed()) {
-      ApiTestSuite.before();
-      runningOnOwn = true;
-    }
-    initSpringContext(PurchaseOrderHelperTest.ContextConfiguration.class);
-  }
-
-  @AfterAll
-  public static void after() {
-    clearVertxContext();
-    if (runningOnOwn) {
-      ApiTestSuite.after();
-    }
-  }
+  @Mock
+  private RequestContext requestContext;
+  @Mock
+  PurchaseOrderLineHelper purchaseOrderLineHelper;
+  @Mock
+  CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService;
+  @Mock
+  EncumbranceService encumbranceService;
+  @Mock
+  TagService tagService;
+  @Mock
+  PurchaseOrderLineService purchaseOrderLineService;
+  @Mock
+  InventoryItemStatusSyncService itemStatusSyncService;
+  @Mock
+  OpenCompositeOrderManager openCompositeOrderManager;
+  @Mock
+  PurchaseOrderStorageService purchaseOrderStorageService;
+  @Mock
+  ConfigurationEntriesCache configurationEntriesCache;
+  @Mock
+  OrderValidationService orderValidationService;
 
   @BeforeEach
   void beforeEach() {
-    MockitoAnnotations.openMocks(this);
-    autowireDependencies(this);
-    ctxMock = getFirstContextFromVertx(getVertx());
-    okapiHeadersMock = new HashMap<>();
-    okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
-    okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
-    okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
-    okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
-
+    mockitoMocks = MockitoAnnotations.openMocks(this);
   }
 
   @AfterEach
-  void resetMocks() {
-    clearServiceInteractions();
-    reset(encumbranceWorkflowStrategyFactory);
+  void resetMocks() throws Exception {
+    mockitoMocks.close();
+  }
+
+  @Test
+  @DisplayName("Test POST open composite order")
+  void testPostOpenCompositeOrder() throws IOException {
+    // Given
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(compPO);
+    compPO.setWorkflowStatus(OPEN);
+    compPO.setId(UUID.randomUUID().toString());
+
+    JsonObject tenantConfig = new JsonObject();
+    doReturn(succeededFuture(tenantConfig))
+      .when(configurationEntriesCache).loadConfiguration(eq(ORDER_CONFIG_MODULE_NAME), eq(requestContext));
+    doReturn(succeededFuture(List.of()))
+      .when(orderValidationService).validateOrderForPost(any(CompositePurchaseOrder.class), eq(tenantConfig), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(orderValidationService).validateOrderForCreation(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(tagService).createTagsIfMissing(any(), eq(requestContext));
+    doAnswer((Answer<Future<PurchaseOrder>>) invocation -> {
+      PurchaseOrder po = invocation.getArgument(0);
+      return succeededFuture(po);
+    }).when(purchaseOrderStorageService).createPurchaseOrder(any(PurchaseOrder.class), eq(requestContext));
+    doAnswer((Answer<Future<CompositePoLine>>) invocation -> {
+      CompositePoLine poLine = invocation.getArgument(0);
+      return succeededFuture(poLine);
+    }).when(purchaseOrderLineHelper).createPoLineWithOrder(any(CompositePoLine.class), any(CompositePurchaseOrder.class),
+      eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(orderValidationService).checkOrderApprovalRequired(any(CompositePurchaseOrder.class), eq(requestContext));
+    doAnswer((Answer<Future<CompositePurchaseOrder>>) invocation -> {
+      CompositePurchaseOrder po = invocation.getArgument(0);
+      return succeededFuture(po);
+    }).when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(openCompositeOrderManager).process(any(CompositePurchaseOrder.class), eq(null), eq(tenantConfig),
+        eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(itemStatusSyncService).updateItemStatusesInInventory(anyList(), any(ItemStatus.class), any(ItemStatus.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderStorageService).saveOrder(any(PurchaseOrder.class), eq(requestContext));
+    doAnswer((Answer<Future<CompositeOrderRetrieveHolder>>) invocation -> {
+      CompositeOrderRetrieveHolder holder = invocation.getArgument(0);
+      return succeededFuture(holder);
+    }).when(orderLinesSummaryPopulateService).populate(any(CompositeOrderRetrieveHolder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class),
+        eq(requestContext));
+
+    // When
+    Future<CompositePurchaseOrder> future = purchaseOrderHelper.postCompositeOrder(compPO, requestContext);
+
+    // Then
+    assertTrue(future.succeeded());
+  }
+
+  @Test
+  @DisplayName("Test PUT pending composite order (no change)")
+  void testPutPendingCompositeOrder() throws IOException {
+    // Given
+    JsonObject order = new JsonObject(getMockData(LISTED_PRINT_SERIAL_PATH));
+    CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
+    prepareOrderForPostRequest(compPO);
+    compPO.setId(UUID.randomUUID().toString());
+    CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
+
+    boolean deleteHoldings = false;
+
+    doReturn(succeededFuture(List.of()))
+      .when(orderValidationService).validateOrderForPut(eq(compPO.getId()), any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(JsonObject.mapFrom(poFromStorage)))
+      .when(purchaseOrderStorageService).getPurchaseOrderByIdAsJson(eq(compPO.getId()), eq(requestContext));
+    doReturn(succeededFuture(poFromStorage))
+      .when(purchaseOrderLineService).populateOrderLines(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(orderValidationService).validateOrderForUpdate(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
+        eq(deleteHoldings), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderLineHelper).updatePoLines(any(CompositePurchaseOrder.class), any(CompositePurchaseOrder.class),
+        eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderStorageService).saveOrder(any(PurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
+
+    // When
+    Future<Void> future = purchaseOrderHelper.putCompositeOrderById(compPO.getId(), deleteHoldings, compPO, requestContext);
+
+    // Then
+    assertTrue(future.succeeded());
+  }
+
+  @Test
+  @DisplayName("Test source validation in line")
+  void testSourceValidationInLine() {
+    // Note: RMB schema validation is not reliable in unit tests with MockServer (it does not always return the same code),
+    // but we can check the same validation using a Validator.
+    CompositePurchaseOrder compPO = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine();
+    poLine.setSource(null);
+    compPO.getCompositePoLines().add(poLine);
+    try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+      Validator schemaValidator = factory.getValidator();
+      Set<ConstraintViolation<CompositePurchaseOrder>> violations = schemaValidator.validate(compPO);
+      assertThat(violations, hasSize(1));
+      assertEquals(violations.iterator().next().getPropertyPath().toString(), "compositePoLines[0].source");
+    }
   }
 
   @Test
@@ -140,16 +225,16 @@ public class PurchaseOrderHelperTest {
     // given
     InvoiceLineService invoiceLineService = new InvoiceLineService(restClient);
     RestClient restClient = mock(RestClient.class, CALLS_REAL_METHODS);
-    OrderInvoiceRelationService orderInvoiceRelationService = spy(new OrderInvoiceRelationService(restClient, invoiceLineService));
+    OrderInvoiceRelationService orderInvoiceRelationService = new OrderInvoiceRelationService(restClient, invoiceLineService);
 
     // for returning non empty collection
     OrderInvoiceRelationshipCollection oirCollection = new OrderInvoiceRelationshipCollection()
             .withOrderInvoiceRelationships(Collections.singletonList(new OrderInvoiceRelationship()))
             .withTotalRecords(1);
 
-    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(RequestEntry.class), any(), any());
+    doReturn(succeededFuture(oirCollection)).when(restClient).get(any(RequestEntry.class), any(), eq(requestContext));
 
-    Future<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, new RequestContext(ctxMock, okapiHeadersMock));
+    Future<Void> future = orderInvoiceRelationService.checkOrderInvoiceRelationship(ORDER_ID, requestContext);
     vertxTestContext.assertFailure(future)
       .onComplete(result -> {
         assertEquals(ErrorCodes.ORDER_RELATES_TO_INVOICE.getDescription(), result.cause().getMessage());
@@ -157,173 +242,15 @@ public class PurchaseOrderHelperTest {
       });
   }
 
-  /**
-   * Define unit test specific beans to override actual ones
-   */
-  static class ContextConfiguration {
+  private void prepareOrderForPostRequest(CompositePurchaseOrder reqData) {
+    reqData.setDateOrdered(null);
+    removeAllEncumbranceLinks(reqData);
+  }
 
-    @Bean
-    public EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory() {
-      return mock(EncumbranceWorkflowStrategyFactory.class);
-    }
-
-    @Bean
-    public ConfigurationEntriesService configurationEntriesService() {
-      return mock(ConfigurationEntriesService.class);
-    }
-    @Bean
-    public ConfigurationEntriesCache configurationEntriesCache() {
-      return mock(ConfigurationEntriesCache.class);
-    }
-
-    @Bean
-    public EncumbranceService encumbranceService() {
-      return mock(EncumbranceService.class);
-    }
-
-    @Bean
-    public OrderReEncumberService orderReEncumberService() {
-      return mock(OrderReEncumberService.class);
-    }
-
-    @Bean
-    public ExpenseClassValidationService expenseClassValidationService() {
-      return mock(ExpenseClassValidationService.class);
-    }
-
-    @Bean
-    public OrderInvoiceRelationService orderInvoiceRelationService() {
-      return mock(OrderInvoiceRelationService.class);
-    }
-
-    @Bean
-    TagService tagService() {
-      return mock(TagService.class);
-    }
-
-    @Bean
-    public RestClient restClient() {
-      return mock(RestClient.class);
-    }
-
-    @Bean
-    CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService() {
-      return mock(OrderLinesSummaryPopulateService.class);
-    }
-
-    @Bean
-    CompositeOrderDynamicDataPopulateService combinedPopulateService() {
-      return mock(CombinedOrderDataPopulateService.class);
-    }
-
-    @Bean
-    PurchaseOrderLineService purchaseOrderLineService() {
-      return mock(PurchaseOrderLineService.class);
-    }
-
-    @Bean
-    public TitlesService titlesService() {
-      return mock(TitlesService.class);
-    }
-
-    @Bean
-    public AcquisitionsUnitsService acquisitionsUnitsService() {
-      return mock(AcquisitionsUnitsService.class);
-    }
-
-    @Bean
-    public ProtectionService protectionService() {
-      return mock(ProtectionService.class);
-    }
-
-    @Bean
-    public InventoryItemStatusSyncService inventoryItemManager() {
-      return mock(InventoryItemStatusSyncService.class);
-    }
-
-    @Bean
-    public PieceService piecesService() {
-      return mock(PieceService.class);
-    }
-
-    @Bean
-    public PurchaseOrderLineHelper purchaseOrderLineHelper() {
-      return mock(PurchaseOrderLineHelper.class);
-    }
-
-    @Bean
-    public PurchaseOrderStorageService purchaseOrderStorageService() {
-      return mock(PurchaseOrderStorageService.class);
-    }
-
-    @Bean
-    public PieceStorageService pieceStorageService() {
-      return mock(PieceStorageService.class);
-    }
-
-    @Bean
-    public UnOpenCompositeOrderManager unOpenCompositeOrderManager() {
-      return mock(UnOpenCompositeOrderManager.class);
-    }
-
-    @Bean
-    public OpenCompositeOrderManager openCompositeOrderManager() {
-      return mock(OpenCompositeOrderManager.class);
-    }
-
-    @Bean
-    public OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator() {
-      return mock(OpenCompositeOrderFlowValidator.class);
-    }
-
-    @Bean
-    public CompositePoLineValidationService compositePoLineValidationService() {
-      return mock(CompositePoLineValidationService.class);
-    }
-
-    @Bean
-    public PrefixService prefixService() {
-      return mock(PrefixService.class);
-    }
-    @Bean
-    public SuffixService suffixService() {
-      return mock(SuffixService.class);
-    }
-
-    @Bean
-    public OrganizationService organizationService () {
-      return mock(OrganizationService.class);
-    }
-
-    @Bean
-    public ReOpenCompositeOrderManager reOpenCompositeOrderManager() {
-      return mock(ReOpenCompositeOrderManager.class);
-    }
-
-    @Bean PoNumberHelper poNumberHelper() {
-      return mock(PoNumberHelper.class);
-    }
-
-    @Bean
-    public PurchaseOrderHelper purchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
-              OrderLinesSummaryPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
-              CompositeOrderDynamicDataPopulateService combinedPopulateService,
-              EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
-              TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-              PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
-              UnOpenCompositeOrderManager unOpenCompositeOrderManager, OpenCompositeOrderManager openCompositeOrderManager,
-              PurchaseOrderStorageService purchaseOrderStorageService,
-              ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
-              OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-              CompositePoLineValidationService compositePoLineValidationService,
-              ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService, RestClient restClient) {
-      return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
-        combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-        purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, itemStatusSyncService,
-        unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService,
-        configurationEntriesCache, poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService,
-        reOpenCompositeOrderManager, organizationService, restClient);
-    }
+  private void removeAllEncumbranceLinks(CompositePurchaseOrder reqData) {
+    reqData.getCompositePoLines().forEach(poLine ->
+      poLine.getFundDistribution().forEach(fundDistribution -> fundDistribution.setEncumbrance(null))
+    );
   }
 
 }

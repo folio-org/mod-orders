@@ -1,15 +1,6 @@
 package org.folio.service.orders.lines.update;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.INSTANCE_INVALID_PRODUCT_ID_ERROR;
-import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME;
-import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME_TYPE_ID;
-import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_CONTRIBUTORS;
-import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_DATE_OF_PUBLICATION;
-import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIERS;
-import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_ID;
-import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
-import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLICATION;
-import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLISHER;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_TITLE;
 import static org.folio.service.inventory.InventoryUtils.INSTANCE_RECORDS_BY_ID_ENDPOINT;
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
@@ -21,22 +12,20 @@ import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
-import org.folio.rest.jaxrs.model.Contributor;
+import org.folio.rest.jaxrs.model.CreateInventoryType;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -44,11 +33,11 @@ import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.inventory.InventoryInstanceManager;
+import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.service.orders.utils.HelperUtils;
 
@@ -61,7 +50,7 @@ public class OrderLinePatchOperationService {
 
   private final RestClient restClient;
 
-  private final OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver;
+  private final OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver;
 
   private final PurchaseOrderLineService purchaseOrderLineService;
 
@@ -69,12 +58,12 @@ public class OrderLinePatchOperationService {
   private final InventoryInstanceManager inventoryInstanceManager;
 
   public OrderLinePatchOperationService(RestClient restClient,
-                                        OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
+                                        OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver,
                                         PurchaseOrderLineService purchaseOrderLineService,
                                         InventoryCache inventoryCache,
                                         InventoryInstanceManager inventoryInstanceManager) {
     this.restClient = restClient;
-    this.orderLinePatchOperationHandlerResolver = orderLinePatchOperationHandlerResolver;
+    this.orderLineUpdateInstanceStrategyResolver = orderLineUpdateInstanceStrategyResolver;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.inventoryCache = inventoryCache;
     this.inventoryInstanceManager = inventoryInstanceManager;
@@ -97,8 +86,7 @@ public class OrderLinePatchOperationService {
           .withPathOrderLineRequest(request)
           .withStoragePoLine(poLine);
 
-        PatchOperationHandler patchOperationHandler = orderLinePatchOperationHandlerResolver.resolve(request.getOperation());
-        patchOperationHandler.handle(orderLineUpdateInstanceHolder, requestContext)
+        handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext)
           .compose(v -> sendPatchOrderLineRequest(orderLineUpdateInstanceHolder, lineId, requestContext))
           .onSuccess(v -> promise.complete())
           .onFailure(promise::fail);
@@ -110,6 +98,39 @@ public class OrderLinePatchOperationService {
       });
 
     return promise.future();
+  }
+
+  public Future<Void> handleUpdateInstance(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    return updateInstanceForPhysical(holder, requestContext)
+      .compose(v -> updateInstanceForEresource(holder, requestContext));
+  }
+
+  private Future<Void> updateInstanceForPhysical(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    var physical = PoLineCommonUtil.getPhysical(holder.getStoragePoLine());
+    if (physical == null) {
+      return Future.succeededFuture();
+    }
+    return orderLineUpdateInstanceStrategyResolver.resolve(
+      CreateInventoryType.fromValue(physical.getCreateInventory().value())).updateInstance(holder, requestContext);
+  }
+
+  private Future<Void> updateInstanceForEresource(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
+    var eresource = PoLineCommonUtil.getEresource(holder.getStoragePoLine());
+    if (eresource == null) {
+      return Future.succeededFuture();
+    }
+    return orderLineUpdateInstanceStrategyResolver.resolve(
+      CreateInventoryType.fromValue(eresource.getCreateInventory().value())).updateInstance(holder, requestContext);
+  }
+
+  private Future<Void> sendPatchOrderLineRequest(OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder, String lineId,
+                                                 RequestContext requestContext) {
+    StoragePatchOrderLineRequest storagePatchOrderLineRequest = orderLineUpdateInstanceHolder.getStoragePatchOrderLineRequest();
+    if (Objects.nonNull(storagePatchOrderLineRequest)) {
+      RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
+      return restClient.patch(requestEntry, storagePatchOrderLineRequest, requestContext);
+    }
+    return Future.succeededFuture();
   }
 
   private Future<Void> updateInventoryInstanceInformation(PatchOrderLineRequest request, String lineId, RequestContext requestContext) {
@@ -133,28 +154,17 @@ public class OrderLinePatchOperationService {
     return promise.future();
   }
 
-  private Future<Void> sendPatchOrderLineRequest(OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder, String lineId,
-                                                 RequestContext requestContext) {
-    StoragePatchOrderLineRequest storagePatchOrderLineRequest = orderLineUpdateInstanceHolder.getStoragePatchOrderLineRequest();
-    if (Objects.nonNull(storagePatchOrderLineRequest)) {
-      RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
-      return restClient.patch(requestEntry, storagePatchOrderLineRequest, requestContext);
-    }
-    return Future.succeededFuture();
-  }
-
   private Future<PoLine> updatePoLineWithInstanceRecordInfo(JsonObject lookupObj, PoLine poLine, RequestContext requestContext) {
     Promise<PoLine> promise = Promise.promise();
-    Pair<String, String> instancePublication = getInstancePublication(lookupObj);
-    List<ProductId> productIds = getProductIds(lookupObj);
 
     poLine.setTitleOrPackage(lookupObj.getString(INSTANCE_TITLE));
-    poLine.setPublisher(instancePublication.getLeft());
-    poLine.setPublicationDate(instancePublication.getRight());
-    poLine.setContributors(getContributors(lookupObj));
+    poLine.setPublisher(InventoryUtils.getPublisher(lookupObj));
+    poLine.setPublicationDate(InventoryUtils.getPublicationDate(lookupObj));
+    poLine.setContributors(InventoryUtils.getContributors(lookupObj));
 
     inventoryCache.getISBNProductTypeId(requestContext)
       .compose(isbnTypeId -> {
+        List<ProductId> productIds = InventoryUtils.getProductIds(lookupObj);
         Set<String> setOfProductIds = buildSetOfProductIds(productIds, isbnTypeId);
         return HelperUtils.executeWithSemaphores(setOfProductIds,
             productId -> inventoryCache.convertToISBN13(extractProductId(productId), requestContext)
@@ -188,34 +198,4 @@ public class OrderLinePatchOperationService {
     return promise.future();
   }
 
-  private static List<ProductId> getProductIds(JsonObject lookupObj) {
-    return Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_IDENTIFIERS))
-      .orElse(new JsonArray())
-      .stream()
-      .map(JsonObject.class::cast)
-      .map(jsonObject -> new ProductId()
-        .withProductId(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_VALUE))
-        .withProductIdType(jsonObject.getString(INSTANCE_IDENTIFIER_TYPE_ID)))
-      .toList();
-  }
-
-  private static List<Contributor> getContributors(JsonObject lookupObj) {
-    return Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_CONTRIBUTORS))
-      .orElse(new JsonArray())
-      .stream()
-      .map(JsonObject.class::cast)
-      .map(jsonObject -> new Contributor()
-        .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
-        .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
-      .toList();
-  }
-
-  private Pair<String, String> getInstancePublication(JsonObject lookupObj) {
-    return Optional.ofNullable(lookupObj.getJsonArray(INSTANCE_PUBLICATION)).orElse(new JsonArray())
-      .stream()
-      .map(JsonObject.class::cast)
-      .findFirst()
-      .map(publication -> Pair.of(publication.getString(INSTANCE_PUBLISHER), publication.getString(INSTANCE_DATE_OF_PUBLICATION)))
-      .orElse(new MutablePair<>());
-  }
 }

@@ -33,7 +33,7 @@ public class CirculationRequestsRetriever {
   }
 
   public Future<Integer> getNumberOfRequestsByItemId(String itemId, RequestContext requestContext) {
-    String query = String.format("(itemId==%s and status=\"%s\")", itemId, OUTSTANDING_REQUEST_STATUS_PREFIX);
+    String query = String.format("(itemId==%s and status=\"%s*\")", itemId, OUTSTANDING_REQUEST_STATUS_PREFIX);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
       .withQuery(query).withOffset(0).withLimit(0); // limit = 0 means payload will include only totalRecords value
     return restClient.getAsJsonObject(requestEntry, requestContext)
@@ -57,7 +57,7 @@ public class CirculationRequestsRetriever {
 
   private Future<List<JsonObject>> getRequestsByIds(List<String> itemIds, RequestContext requestContext) {
     var futures = StreamEx.ofSubLists(itemIds, MAX_IDS_FOR_GET_RQ_15)
-      .map(ids -> String.format("(%s and status=\"*\")", convertIdsToCqlQuery(ids, ITEM_ID_KEY.getValue())))
+      .map(ids -> String.format("(%s and status=\"%s*\")", convertIdsToCqlQuery(ids, ITEM_ID_KEY.getValue()), OUTSTANDING_REQUEST_STATUS_PREFIX))
       .map(query -> new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
         .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE))
       .map(entry -> restClient.getAsJsonObject(entry, requestContext))

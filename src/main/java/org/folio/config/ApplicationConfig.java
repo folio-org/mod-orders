@@ -15,7 +15,6 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CreateInventoryType;
-import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.service.AcquisitionMethodsService;
 import org.folio.service.AcquisitionsUnitsService;
 import org.folio.service.CirculationRequestsRetriever;
@@ -59,10 +58,10 @@ import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategy;
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategy;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.inventory.InventoryItemRequestService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryItemRequestService;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.inventory.InventoryService;
 import org.folio.service.invoice.InvoiceLineService;
@@ -78,6 +77,7 @@ import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.OrderReEncumberService;
 import org.folio.service.orders.OrderRolloverService;
+import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
@@ -89,16 +89,14 @@ import org.folio.service.orders.flows.update.open.OpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderPieceService;
 import org.folio.service.orders.flows.update.reopen.ReOpenCompositeOrderManager;
 import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
-import org.folio.service.orders.lines.update.OrderLinePatchOperationHandlerResolver;
 import org.folio.service.orders.lines.update.OrderLinePatchOperationService;
-import org.folio.service.orders.lines.update.OrderLineUpdateInstanceHandler;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategyResolver;
-import org.folio.service.orders.lines.update.PatchOperationHandler;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.organization.OrganizationService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
+import org.folio.service.pieces.PieceDeleteInventoryService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
@@ -107,6 +105,7 @@ import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
+import org.folio.service.pieces.flows.delete.PieceDeleteFlowInventoryManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowManager;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
 import org.folio.service.pieces.flows.strategies.ProcessInventoryElectronicStrategy;
@@ -482,10 +481,9 @@ public class ApplicationConfig {
   @Bean
   InventoryItemManager inventoryItemManager(RestClient restClient,
                                             ConfigurationEntriesCache configurationEntriesCache,
-                                            PieceStorageService pieceStorageService,
                                             InventoryCache inventoryCache,
                                             ConsortiumConfigurationService consortiumConfigurationService) {
-    return new InventoryItemManager(restClient, configurationEntriesCache, pieceStorageService, inventoryCache, consortiumConfigurationService);
+    return new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService);
   }
 
   @Bean
@@ -521,26 +519,34 @@ public class ApplicationConfig {
     return new PieceChangeReceiptStatusPublisher();
   }
 
-  @Bean PieceStorageService pieceStorageService(RestClient restClient) {
+  @Bean
+  PieceStorageService pieceStorageService(RestClient restClient) {
     return new PieceStorageService(restClient);
   }
 
-  @Bean PieceService piecesService(PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
+  @Bean
+  PieceService piecesService(PieceChangeReceiptStatusPublisher receiptStatusPublisher) {
     return new PieceService(receiptStatusPublisher);
   }
 
-  @Bean DefaultPieceFlowsValidator pieceCreateFlowValidator() {
+  @Bean
+  DefaultPieceFlowsValidator pieceCreateFlowValidator() {
     return new DefaultPieceFlowsValidator();
   }
 
-  @Bean PieceCreateFlowPoLineService pieceCreateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
-    PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
+  @Bean
+  PieceCreateFlowPoLineService pieceCreateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
+                                                            PurchaseOrderLineService purchaseOrderLineService,
+                                                            ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
     return new PieceCreateFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
-  @Bean PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, ProtectionService protectionService,
-                PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
-                PieceCreateFlowPoLineService pieceCreateFlowPoLineService, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
+  @Bean
+  PieceCreateFlowManager pieceCreationService(PieceStorageService pieceStorageService, ProtectionService protectionService,
+                                              PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager,
+                                              DefaultPieceFlowsValidator defaultPieceFlowsValidator,
+                                              PieceCreateFlowPoLineService pieceCreateFlowPoLineService,
+                                              BasePieceFlowHolderBuilder basePieceFlowHolderBuilder) {
     return new PieceCreateFlowManager(pieceStorageService, protectionService, pieceCreateFlowInventoryManager,
       defaultPieceFlowsValidator, pieceCreateFlowPoLineService, basePieceFlowHolderBuilder);
   }
@@ -580,36 +586,51 @@ public class ApplicationConfig {
     return new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService);
   }
 
-  @Bean PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
+  @Bean
+  PieceDeleteInventoryService pieceDeleteInventoryService(InventoryItemManager inventoryItemManager) {
+    return new PieceDeleteInventoryService(inventoryItemManager);
+  }
+
+  @Bean
+  PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService,
                     PurchaseOrderLineService purchaseOrderLineService, ReceivingEncumbranceStrategy receivingEncumbranceStrategy) {
     return new PieceDeleteFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy);
   }
 
-  @Bean PieceDeleteFlowManager pieceDeletionFlowManager(PieceStorageService pieceStorageService,
-                                                        ProtectionService protectionService,
-                                                        InventoryItemManager inventoryItemManager,
-                                                        PieceUpdateInventoryService pieceUpdateInventoryService,
-                                                        PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
-                                                        BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
-                                                        CirculationRequestsRetriever circulationRequestsRetriever) {
-    return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryItemManager, pieceUpdateInventoryService,
-                      pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
+  @Bean
+  PieceDeleteFlowManager pieceDeletionFlowManager(PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager,
+                                                  PieceStorageService pieceStorageService,
+                                                  ProtectionService protectionService,
+                                                  PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
+                                                  BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
+                                                  CirculationRequestsRetriever circulationRequestsRetriever) {
+    return new PieceDeleteFlowManager(pieceDeleteFlowInventoryManager, pieceStorageService, protectionService,
+      pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
+  }
+
+  @Bean
+  PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager(PieceDeleteInventoryService pieceDeleteInventoryService,
+                                                                  PieceUpdateInventoryService pieceUpdateInventoryService) {
+    return new PieceDeleteFlowInventoryManager(pieceDeleteInventoryService, pieceUpdateInventoryService);
   }
 
 
-  @Bean BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(PurchaseOrderStorageService purchaseOrderStorageService,
+  @Bean
+  BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(PurchaseOrderStorageService purchaseOrderStorageService,
                                                               PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService) {
       return new BasePieceFlowHolderBuilder(purchaseOrderStorageService, purchaseOrderLineService, titlesService);
   }
 
-  @Bean PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
+  @Bean
+  PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService(PurchaseOrderStorageService purchaseOrderStorageService, PurchaseOrderLineService purchaseOrderLineService,
           ReceivingEncumbranceStrategy receivingEncumbranceStrategy, PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
           PieceCreateFlowPoLineService pieceCreateFlowPoLineService) {
     return new PieceUpdateFlowPoLineService(purchaseOrderStorageService, purchaseOrderLineService, receivingEncumbranceStrategy,
           pieceCreateFlowPoLineService, pieceDeleteFlowPoLineService);
   }
 
-  @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
+  @Bean
+  PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
             PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager,
             BasePieceFlowHolderBuilder basePieceFlowHolderBuilder, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
             PurchaseOrderLineService purchaseOrderLineService) {
@@ -677,19 +698,28 @@ public class ApplicationConfig {
     @Qualifier("combinedPopulateService") CompositeOrderDynamicDataPopulateService combinedPopulateService,
     EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory, OrderInvoiceRelationService orderInvoiceRelationService,
     TagService tagService, PurchaseOrderLineService purchaseOrderLineService, TitlesService titlesService,
-    PrefixService prefixService, SuffixService suffixService, ProtectionService protectionService,
-    InventoryItemStatusSyncService itemStatusSyncService, UnOpenCompositeOrderManager unOpenCompositeOrderManager,
+    ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
     OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-    CompositePoLineValidationService compositePoLineValidationService, ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrganizationService organizationService,
-    RestClient restClient) {
+    ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrderValidationService orderValidationService) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
-      purchaseOrderLineService, titlesService, protectionService, prefixService, suffixService, itemStatusSyncService,
-      unOpenCompositeOrderManager, openCompositeOrderManager, purchaseOrderStorageService,
-      configurationEntriesCache, poNumberHelper, openCompositeOrderFlowValidator, compositePoLineValidationService,
-      reOpenCompositeOrderManager, organizationService, restClient);
+      purchaseOrderLineService, titlesService, protectionService, itemStatusSyncService,
+      openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
+      poNumberHelper, openCompositeOrderFlowValidator, reOpenCompositeOrderManager,
+      orderValidationService);
+  }
+
+  @Bean
+  public OrderValidationService orderValidationService(CompositePoLineValidationService compositePoLineValidationService,
+    ConfigurationEntriesCache configurationEntriesCache, OrganizationService organizationService,
+    ProtectionService protectionService, PrefixService prefixService, PurchaseOrderLineHelper purchaseOrderLineHelper,
+    PurchaseOrderLineService purchaseOrderLineService, SuffixService suffixService, PoNumberHelper poNumberHelper,
+    UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
+    return new OrderValidationService(compositePoLineValidationService, configurationEntriesCache, organizationService,
+      protectionService, prefixService, purchaseOrderLineHelper, purchaseOrderLineService, suffixService, poNumberHelper,
+      unOpenCompositeOrderManager);
   }
 
   @Bean
@@ -755,24 +785,12 @@ public class ApplicationConfig {
 
   @Bean OrderLinePatchOperationService orderLinePatchOperationService(
       RestClient restClient,
-      OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver,
+      OrderLineUpdateInstanceStrategyResolver orderLineUpdateInstanceStrategyResolver,
       PurchaseOrderLineService purchaseOrderLineService,
       InventoryCache inventoryCache,
       InventoryInstanceManager inventoryInstanceManager) {
-    return new OrderLinePatchOperationService(restClient, orderLinePatchOperationHandlerResolver,
+    return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver,
       purchaseOrderLineService, inventoryCache, inventoryInstanceManager);
-  }
-
-  @Bean PatchOperationHandler orderLineUpdateInstanceHandler(
-      OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver) {
-    return new OrderLineUpdateInstanceHandler(updateInstanceStrategyResolver);
-  }
-
-  @Bean OrderLinePatchOperationHandlerResolver orderLinePatchOperationHandlerResolver(
-      PatchOperationHandler orderLineUpdateInstanceHandler) {
-    Map<PatchOrderLineRequest.Operation, PatchOperationHandler> handlers = new EnumMap<>(PatchOrderLineRequest.Operation.class);
-    handlers.put(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF, orderLineUpdateInstanceHandler);
-    return new OrderLinePatchOperationHandlerResolver(handlers);
   }
 
   @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
