@@ -33,7 +33,8 @@ public class TitleInstanceService {
   private Future<String> createInventoryInstance(String shadowInstId, Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (shadowInstId != null) {
       return Future.succeededFuture(shadowInstId);
-    } else if (title.getInstanceId() != null) {
+    }
+    if (title.getInstanceId() != null) {
       return Future.succeededFuture(title.getInstanceId());
     }
     return inventoryInstanceManager.getOrCreateInstanceRecord(title, isInstanceMatchingDisabled, requestContext);

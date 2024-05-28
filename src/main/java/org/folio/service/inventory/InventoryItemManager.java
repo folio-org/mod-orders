@@ -9,15 +9,14 @@ import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.models.PieceItemPair;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.BindItem;
-import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -69,7 +68,6 @@ public class InventoryItemManager {
   private static final String LOOKUP_ITEM_QUERY = "purchaseOrderLineIdentifier==%s and holdingsRecordId==%s";
   private static final String ITEM_STOR_ENDPOINT = "/item-storage/items";
   private static final String BUILDING_PIECE_MESSAGE = "Building {} {} piece(s) for PO Line with id={}";
-  private static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
@@ -162,14 +160,6 @@ public class InventoryItemManager {
     List<Future<Void>> futures = new ArrayList<>(itemIds.size());
     itemIds.forEach(itemId -> futures.add(deleteItem(itemId, skipNotFoundException, requestContext)));
     return collectResultsOnSuccess(futures);
-  }
-
-  public boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
-    return ReceivedItem.ItemStatus.ON_ORDER == receivedItem.getItemStatus();
-  }
-
-  public boolean isOnOrderPieceStatus(CheckInPiece checkinPiece) {
-    return CheckInPiece.ItemStatus.ON_ORDER == checkinPiece.getItemStatus();
   }
 
   /**
@@ -292,23 +282,6 @@ public class InventoryItemManager {
     }
   }
 
-  private boolean isLocationContainsItemLocation(List<Location> polLocations, JsonObject item) {
-    return item != null && polLocations.stream().noneMatch(
-      location -> location.getLocationId().equals(item.getJsonObject(EFFECTIVE_LOCATION).getString(ID))
-    );
-  }
-
-  private List<PieceItemPair> buildPieceItemPairList(List<Piece> needUpdatePieces, List<JsonObject> items) {
-    return needUpdatePieces.stream()
-      .map(piece -> {
-        PieceItemPair pieceItemPair = new PieceItemPair().withPiece(piece);
-        items.stream().filter(item -> item.getString(ID).equals(piece.getItemId()))
-          .findAny()
-          .ifPresent(pieceItemPair::withItem);
-        return pieceItemPair;
-      }).collect(toList());
-  }
-
   private void validateItemsCreation(String poLineId, int expectedItemsQuantity, int itemsSize) {
     if (itemsSize != expectedItemsQuantity) {
       String message = String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
@@ -421,14 +394,11 @@ public class InventoryItemManager {
       });
   }
 
-  public Future<String> createBindItem(CompositePoLine compPOL, BindItem bindItem,
+  public Future<String> createBindItem(CompositePoLine compPOL, String holdingId,
+                                       BindItem bindItem,
                                        RequestContext requestContext) {
-    var holdingLocation = compPOL.getLocations().stream().filter(location -> location.getHoldingId() != null).findAny();
-    if (holdingLocation.isEmpty()) {
-      throw new IllegalArgumentException("Holding Id must not be null");
-    }
     JsonObject item = new JsonObject()
-      .put(ITEM_HOLDINGS_RECORD_ID, holdingLocation.get().getHoldingId())
+      .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
       .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()))
       .put(ITEM_BARCODE, bindItem.getBarcode())
       .put(ITEM_LEVEL_CALL_NUMBER, bindItem.getCallNumber())
@@ -436,7 +406,8 @@ public class InventoryItemManager {
       .put(ITEM_MATERIAL_TYPE_ID, bindItem.getMaterialTypeId())
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
     logger.debug("Creating item for PO Line with '{}' id", compPOL.getId());
-    return createItemInInventory(item, requestContext);
+    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, bindItem.getTenantId());
+    return createItemInInventory(item, locationContext);
   }
 
   private Future<List<String>> createItemRecords(JsonObject itemRecord, int expectedCount, RequestContext requestContext) {

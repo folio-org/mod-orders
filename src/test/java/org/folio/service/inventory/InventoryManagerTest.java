@@ -51,16 +51,13 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -100,7 +97,6 @@ import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
-import org.folio.service.pieces.PieceStorageService;
 import org.folio.utils.RequestContextMatcher;
 import org.hamcrest.core.IsInstanceOf;
 import org.jetbrains.annotations.NotNull;
@@ -147,8 +143,6 @@ public class InventoryManagerTest {
   InventoryInstanceManager inventoryInstanceManager;
   @Autowired
   private RestClient restClient;
-  @Autowired
-  private PieceStorageService pieceStorageService;
   @Autowired
   private ConfigurationEntriesCache configurationEntriesCache;
   @Autowired
@@ -495,14 +489,12 @@ public class InventoryManagerTest {
 
   @Test
   void shouldCheckIfTheHoldingExistsWhenHoldingIdSpecifiedAndIfExistThenReturnHoldingIdFromLocation() throws IOException {
-    String instanceId = UUID.randomUUID().toString();
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
     JsonObject holdingExp = getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS);
     String holdingIdExp = extractId(holdingExp);
-    Location location = new Location().withHoldingId(holdingIdExp).withQuantity(1).withQuantityPhysical(1);
 
     doReturn(succeededFuture(holdingExp)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    String holdingIdAct = inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).result();
+    String holdingIdAct = inventoryHoldingManager.getFromCacheOrCreateHolding(holdingIdExp, requestContext).result();
 
     assertThat(holdingIdAct, equalTo(holdingIdExp));
     verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
@@ -510,9 +502,7 @@ public class InventoryManagerTest {
 
   @Test
   void shouldThrowExceptionIfHoldingIsNotAlreadyExist() {
-    String instanceId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
-    Location location = new Location().withHoldingId(holdingId).withQuantity(1).withQuantityPhysical(1);
     String msg = String.format(HOLDINGS_BY_ID_NOT_FOUND.getDescription(), holdingId);
     Error error = new Error().withCode(HOLDINGS_BY_ID_NOT_FOUND.getCode()).withMessage(msg);
 
@@ -520,7 +510,7 @@ public class InventoryManagerTest {
       .thenThrow(new CompletionException(new HttpException(NOT_FOUND, error)));
 
     CompletionException exception = assertThrows(CompletionException.class,
-      () -> inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, requestContext).result());
+      () -> inventoryHoldingManager.getFromCacheOrCreateHolding(holdingId, requestContext).result());
 
     assertThat(exception.getCause(), IsInstanceOf.instanceOf(HttpException.class));
     HttpException cause = (HttpException) exception.getCause();
@@ -594,30 +584,6 @@ public class InventoryManagerTest {
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
     //When
     inventoryInstanceManager.getOrCreateInstanceRecord(title, true, requestContext).result();
-    //Then
-    verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
-  }
-
-  @Test
-  void testShouldCreateInstanceRecordIfProductIsEmpty()  {
-    //given
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    title.setProductIds(null);
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
-    //When
-    inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext).result();
-    //Then
-    verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
-  }
-
-  @Test
-  void testShouldCreateInstanceRecordIfProductPresentAndInstancesNotFoundInDB()  {
-    //given
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    doReturn(succeededFuture(new JsonObject("{\"instances\" : []}"))).when(inventoryInstanceManager).searchInstancesByProducts(any(), eq(requestContext));
-    doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryInstanceManager).createInstanceRecord(any(Title.class), eq(requestContext));
-    //When
-    inventoryInstanceManager.getOrCreateInstanceRecord(title, requestContext).result();
     //Then
     verify(inventoryInstanceManager, times(1)).createInstanceRecord(any(Title.class), eq(requestContext));
   }
@@ -704,56 +670,6 @@ public class InventoryManagerTest {
     //Then
     verify(inventoryItemManager).createMissingPhysicalItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
     assertEquals(expItemId, actItemId);
-  }
-
-  @Test
-  void testHoldingsItemCreationShouldBeSkippedIfEresourceOrPhysicsIsAbsent()  {
-    //given
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    line.setEresource(null);
-    line.setPhysical(null);
-
-    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-
-    doReturn(succeededFuture(HOLDING_ID)).when(inventoryHoldingManager).getOrCreateHoldingsRecord(anyString(), any(Location.class), eq(requestContext));
-    //When
-    Location location = new Location().withLocationId(piece.getLocationId());
-    Future<String> result = inventoryHoldingManager.handleHoldingsRecord(line, location, title.getInstanceId(), requestContext);
-
-    //Then
-    String holdingId = result.result();
-    verify(inventoryHoldingManager, never()).getOrCreateHoldingsRecord(title.getInstanceId(), location, requestContext);
-    assertNull(holdingId);
-  }
-
-  @Test
-  void testHoldingsItemShouldNotBeCreatedIfPOLIsNull() {
-    //given
-    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-    //When
-    Location location = new Location().withLocationId(piece.getLocationId());
-    Future<String> result = inventoryHoldingManager.handleHoldingsRecord(null, location, title.getInstanceId(), requestContext);
-    //Then
-    assertTrue(result.failed());
-  }
-
-  @Test
-  void testHoldingsRecordShouldBeCreated()  {
-    //given
-    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
-    Title title = getMockAsJson(TILES_PATH,"title").mapTo(Title.class);
-
-    doReturn(succeededFuture(HOLDING_ID)).when(inventoryHoldingManager).getOrCreateHoldingsRecord(anyString(), any(Location.class), eq(requestContext));
-    //When
-    Location location = new Location().withLocationId(piece.getLocationId());
-    Future<String> result = inventoryHoldingManager.handleHoldingsRecord(line, location, title.getInstanceId(), requestContext);
-    String actHoldingId = result.result();
-    //Then
-    verify(inventoryHoldingManager).getOrCreateHoldingsRecord(eq(title.getInstanceId()), eq(location), eq(requestContext));
-    assertEquals(HOLDING_ID, actHoldingId);
   }
 
   @Test
@@ -1027,10 +943,6 @@ public class InventoryManagerTest {
       return mock(InventoryService.class);
     }
 
-    @Bean
-    public PieceStorageService pieceStorageService() {
-      return mock(PieceStorageService.class);
-    }
     @Bean
     public ConsortiumConfigurationService consortiumConfigurationService() {
       return mock(ConsortiumConfigurationService.class);

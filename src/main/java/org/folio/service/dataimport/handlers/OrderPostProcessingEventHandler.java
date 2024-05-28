@@ -34,7 +34,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 
 @Component
 public class OrderPostProcessingEventHandler implements EventHandler {

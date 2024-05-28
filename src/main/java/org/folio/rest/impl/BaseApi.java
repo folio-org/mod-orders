@@ -59,6 +59,9 @@ public class BaseApi {
 
   public Response buildErrorResponse(Throwable throwable) {
     logger.error("Exception encountered", throwable);
+    if (throwable instanceof HttpException exception) {
+      return buildErrorResponseFromHttpException(exception);
+    }
     final int code = defineErrorCode(throwable);
     final Errors errors = convertToErrors(throwable);
     final Response.ResponseBuilder responseBuilder = createResponseBuilder(code);
@@ -89,6 +92,13 @@ public class BaseApi {
 
     return responseBuilder.header(CONTENT_TYPE, APPLICATION_JSON)
       .entity(getProcessingErrors())
+      .build();
+  }
+
+  private static Response buildErrorResponseFromHttpException(HttpException exception) {
+    return Response.status(exception.getCode())
+      .header(CONTENT_TYPE, APPLICATION_JSON)
+      .entity(exception.getErrors())
       .build();
   }
 

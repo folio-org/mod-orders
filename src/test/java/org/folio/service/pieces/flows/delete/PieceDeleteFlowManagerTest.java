@@ -50,6 +50,7 @@ import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.pieces.PieceDeleteInventoryService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
@@ -459,15 +460,25 @@ public class PieceDeleteFlowManagerTest {
       return mock(CirculationRequestsRetriever.class);
     }
 
-    @Bean PieceDeleteFlowManager pieceDeleteFlowManager(PieceStorageService pieceStorageService,
+    @Bean
+    PieceDeleteInventoryService pieceDeleteInventoryService(InventoryItemManager inventoryItemManager) {
+      return new PieceDeleteInventoryService(inventoryItemManager);
+    }
+
+    @Bean
+    PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager(PieceDeleteInventoryService pieceDeleteInventoryService,
+                                                                    PieceUpdateInventoryService pieceUpdateInventoryService) {
+      return new PieceDeleteFlowInventoryManager(pieceDeleteInventoryService, pieceUpdateInventoryService);
+    }
+
+    @Bean PieceDeleteFlowManager pieceDeleteFlowManager(PieceDeleteFlowInventoryManager pieceDeleteFlowInventoryManager,
+                                                        PieceStorageService pieceStorageService,
                                                         ProtectionService protectionService,
-                                                        InventoryItemManager inventoryItemManager,
-                                                        PieceUpdateInventoryService pieceUpdateInventoryService,
                                                         PieceDeleteFlowPoLineService pieceDeleteFlowPoLineService,
                                                         BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
                                                         CirculationRequestsRetriever circulationRequestsRetriever) {
-      return new PieceDeleteFlowManager(pieceStorageService, protectionService, inventoryItemManager,
-        pieceUpdateInventoryService, pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
+      return new PieceDeleteFlowManager(pieceDeleteFlowInventoryManager, pieceStorageService, protectionService,
+        pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder, circulationRequestsRetriever);
     }
   }
 }

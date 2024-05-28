@@ -116,7 +116,7 @@ public class TitlesService {
       .map(lists -> StreamEx.of(lists).toFlatList(Function.identity()).stream().toList());
   }
 
-  private Future<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
+  public Future<List<Title>> getTitlesByQuery(String query, RequestContext requestContext) {
     return getTitles(Integer.MAX_VALUE, 0, query, requestContext)
       .map(TitleCollection::getTitles);
   }
@@ -126,17 +126,17 @@ public class TitlesService {
     return getTitlesByPoLineIds(lineIds, requestContext);
   }
 
-
   private List<String> getNonPackageLineIds(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream().filter(line -> !line.getIsPackage()).map(CompositePoLine::getId).collect(toList());
   }
 
-  public Future<String> updateTitleWithInstance(Title title, RequestContext requestContext) {
-    return updateTitleWithInstance(title, false, requestContext);
+  public Future<String> updateTitleWithInstance(String titleId, RequestContext locationContext, RequestContext requestContext) {
+    return getTitleById(titleId, requestContext)
+      .compose(title -> updateTitleWithInstance(title, false, locationContext, requestContext));
   }
 
-  public Future<String> updateTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    return titleInstanceService.getOrCreateInstance(title, isInstanceMatchingDisabled, requestContext)
+  public Future<String> updateTitleWithInstance(Title title, boolean isInstanceMatchingDisabled, RequestContext locationContext, RequestContext requestContext) {
+    return titleInstanceService.getOrCreateInstance(title, isInstanceMatchingDisabled, locationContext)
       .map(title::withInstanceId)
       .compose(entity -> saveTitle(entity, requestContext)
         .map(v -> entity.getInstanceId()));

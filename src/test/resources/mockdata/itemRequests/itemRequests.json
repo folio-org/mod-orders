@@ -37,7 +37,15 @@
           "important"
         ]
       }
+    },
+    {
+      "id": "f972fa0e-5e84-4a47-a27b-137724a73fee",
+      "requestType": "Recall",
+      "requestDate": "2023-03-23T11:04:25.000+00:00",
+      "requesterId": "b4cee18d-f862-4ef1-95a5-879fdd619603",
+      "itemId": "f972fa0e-5e84-4a47-a27b-137724a73fee",
+      "fulfillmentPreference": "Delivery"
     }
   ],
-  "totalRecords": 2
+  "totalRecords": 3
 }
