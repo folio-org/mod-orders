@@ -30,7 +30,6 @@ import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryUtils;
@@ -70,9 +69,8 @@ public class OrderLinePatchOperationService {
   }
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
-    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
-    return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, targetTenantId, requestContext)
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
       .compose(v -> patchOrderLine(request, lineId, requestContext))
       .compose(v -> updateInventoryInstanceInformation(request, lineId, requestContext));
   }

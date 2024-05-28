@@ -3,15 +3,17 @@ package org.folio.helper;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.models.ItemFields;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
@@ -20,6 +22,8 @@ import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -32,6 +36,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.rest.jaxrs.model.BindPiecesCollection.RequestsAction.TRANSFER;
 
 
@@ -41,6 +46,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   @Autowired
   private InventoryItemRequestService inventoryItemRequestService;
+
+  @Autowired
+  private InventoryInstanceManager inventoryInstanceManager;
 
   public BindHelper(BindPiecesCollection bindPiecesCollection,
                     Map<String, String> okapiHeaders, Context ctx) {
@@ -92,7 +100,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return GenericCompositeFuture.all(
       tenantToItem.entrySet().stream()
         .map(entry -> {
-        var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+        var locationContext = createContextWithNewTenantId(requestContext, entry.getKey());
         return inventoryItemRequestService.getItemsWithActiveRequests(entry.getValue(), locationContext)
           .compose(items -> validateItemsForRequestTransfer(tenantToItem.keySet(), items, bindPiecesCollection));
         })
@@ -137,7 +145,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return GenericCompositeFuture.all(
       mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext).entrySet().stream()
         .map(entry -> {
-          var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+          var locationContext = createContextWithNewTenantId(requestContext, entry.getKey());
           return inventoryItemManager.getItemRecordsByIds(entry.getValue(), locationContext)
             .compose(items -> {
               items.forEach(item -> {
@@ -162,10 +170,10 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .map(Piece::getHoldingId).distinct().toList();
     validateHoldingIds(holdingIds, bindPiecesCollection);
     logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
+
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
-      .compose(compPOL ->
-        inventoryItemManager.createBindItem(compPOL, holdingIds.get(0), bindPiecesCollection.getBindItem(), requestContext))
+      .compose(compPOL -> createInventoryObjects(compPOL, holdingIds.get(0), bindPiecesCollection.getBindItem(), requestContext))
       .map(newItemId -> {
         // Move requests if requestsAction is TRANSFER, otherwise do nothing
         if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
@@ -186,6 +194,24 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
         .withMessage("Holding Id must not be null or different for pieces");
       throw new HttpException(400, error);
     }
+  }
+
+  private Future<String> createInventoryObjects(CompositePoLine compPOL, String holdingId, BindItem bindItem, RequestContext requestContext) {
+    var locationContext = createContextWithNewTenantId(requestContext, bindItem.getTenantId());
+    return createShadowInstanceAndHoldingIfNeeded(compPOL, bindItem, holdingId, locationContext, requestContext)
+      .compose(targetHoldingId -> inventoryItemManager.createBindItem(compPOL, targetHoldingId, bindItem, locationContext));
+  }
+
+  private Future<String> createShadowInstanceAndHoldingIfNeeded(CompositePoLine compPOL, BindItem bindItem, String holdingId,
+                                                                RequestContext locationContext, RequestContext requestContext) {
+    // No need to create inventory objects if BindItem tenantId is not different
+    var targetTenantId = bindItem.getTenantId();
+    if (StringUtils.isEmpty(targetTenantId) || targetTenantId.equals(TenantTool.tenantId(requestContext.getHeaders()))) {
+      return Future.succeededFuture(holdingId);
+    }
+    var instanceId = compPOL.getInstanceId();
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, locationContext)
+      .compose(s -> inventoryHoldingManager.createHoldingAndReturnId(instanceId, bindItem.getPermanentLocationId(), locationContext));
   }
 
   private Map<String, List<Piece>> updateTitleWithBindItems(Map<String, List<Piece>> piecesByPoLineIds,

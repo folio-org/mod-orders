@@ -360,8 +360,9 @@ public class InventoryInstanceManager {
   private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
                                                            List<Location> locations, RequestContext requestContext) {
     return findTenantsWithUnsharedInstance(instanceId, locations, requestContext)
-      .map(tenantIds -> tenantIds.stream().map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId,
-        targetTenantId, consortiumConfiguration, requestContext)).toList())
+      .map(tenantIds -> tenantIds.stream()
+        .map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration, requestContext))
+        .toList())
       .compose(HelperUtils::collectResultsOnSuccess)
       .map(sharingInstances -> instanceId);
   }
@@ -387,7 +388,7 @@ public class InventoryInstanceManager {
       .map(tenantIds -> tenantIds.stream().flatMap(Optional::stream).toList());
   }
 
-  public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, String targetTenantId, RequestContext requestContext) {
+  public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> {
         if (consortiumConfiguration.isEmpty()) {
@@ -405,7 +406,7 @@ public class InventoryInstanceManager {
               return Future.succeededFuture();
             }
             logger.info("createShadowInstanceIfNeeded:: Creating shadow instance with instanceId: {}", instanceId);
-            return sharingInstanceService.createShadowInstance(instanceId, targetTenantId, consortiumConfiguration.get(), requestContext);
+            return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration.get(), requestContext);
           });
       });
   }

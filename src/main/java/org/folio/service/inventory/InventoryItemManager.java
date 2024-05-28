@@ -10,7 +10,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.InventoryException;
@@ -394,9 +393,7 @@ public class InventoryItemManager {
       });
   }
 
-  public Future<String> createBindItem(CompositePoLine compPOL, String holdingId,
-                                       BindItem bindItem,
-                                       RequestContext requestContext) {
+  public Future<String> createBindItem(CompositePoLine compPOL, String holdingId, BindItem bindItem, RequestContext locationContext) {
     JsonObject item = new JsonObject()
       .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
       .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()))
@@ -406,7 +403,6 @@ public class InventoryItemManager {
       .put(ITEM_MATERIAL_TYPE_ID, bindItem.getMaterialTypeId())
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
     logger.debug("Creating item for PO Line with '{}' id", compPOL.getId());
-    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, bindItem.getTenantId());
     return createItemInInventory(item, locationContext);
   }
 

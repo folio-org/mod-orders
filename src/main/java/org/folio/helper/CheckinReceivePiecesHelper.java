@@ -31,6 +31,7 @@ import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -774,7 +775,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     return extractAllPieces(piecesGroupedByPoLine)
       .filter(piece -> StringUtils.isNotEmpty(piece.getItemId()))
       .groupingBy(piece -> Optional.ofNullable(piece.getReceivingTenantId())
-          .orElse(RequestContextUtil.getContextTenantId(requestContext)),
+          .orElse(TenantTool.tenantId(requestContext.getHeaders())),
         mapping(Piece::getItemId, toList()));
   }
 

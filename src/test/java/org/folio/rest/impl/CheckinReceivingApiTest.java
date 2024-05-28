@@ -1011,7 +1011,6 @@ public class CheckinReceivingApiTest {
     assertThat(response.as(ReceivingResults.class).getReceivingResults().get(0).getProcessedSuccessfully(), is(2));
 
     var pieceUpdates = getPieceUpdates();
-
     assertThat(pieceUpdates, notNullValue());
     assertThat(pieceUpdates, hasSize(bindPiecesCollection.getBindPieceIds().size()));
 
@@ -1020,8 +1019,11 @@ public class CheckinReceivingApiTest {
       String pieceId = piece.getId();
       return Objects.equals(bindingPiece1.getId(), pieceId) || Objects.equals(bindingPiece2.getId(), pieceId);
     }).toList();
-
     assertThat(pieceList.size(), is(2));
+
+    var createdHoldings = getCreatedHoldings();
+    assertThat(createdHoldings, nullValue());
+
   }
 
   @Test
