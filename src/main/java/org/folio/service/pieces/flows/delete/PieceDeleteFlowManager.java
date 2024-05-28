@@ -10,10 +10,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceDeletionHolder;
 import org.folio.rest.RestConstants;
+import org.folio.models.ItemStatus;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -26,6 +30,7 @@ import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 
 import io.vertx.core.Future;
