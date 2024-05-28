@@ -30,7 +30,6 @@ import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.PatchOrderLineRequest;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ProductId;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryUtils;

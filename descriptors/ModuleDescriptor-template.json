@@ -1102,7 +1102,11 @@
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "circulation.requests.collection.get",
-            "circulation.requests.item.move.post"
+            "circulation.requests.item.move.post",
+            "inventory-storage.holdings-sources.collection.get",
+            "inventory-storage.holdings.item.post",
+            "user-tenants.collection.get",
+            "consortia.sharing-instances.item.post"
           ]
         }
       ]
