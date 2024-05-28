@@ -884,7 +884,7 @@ public class PurchaseOrderLineHelper {
     if (Boolean.TRUE.equals(compositePoLine.getIsPackage()) || Objects.isNull(instanceId)) {
       return Future.succeededFuture();
     }
-    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, TenantTool.tenantId(requestContext.getHeaders()), requestContext)
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext)
       .mapEmpty();
   }
 

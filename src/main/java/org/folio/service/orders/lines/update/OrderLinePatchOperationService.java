@@ -70,9 +70,8 @@ public class OrderLinePatchOperationService {
   }
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
-    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
-    return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, targetTenantId, requestContext)
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
       .compose(v -> patchOrderLine(request, lineId, requestContext))
       .compose(v -> updateInventoryInstanceInformation(request, lineId, requestContext));
   }

@@ -2,7 +2,6 @@ package org.folio.service.titles;
 
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.inventory.InventoryInstanceManager;
 
 import io.vertx.core.Future;
@@ -25,8 +24,7 @@ public class TitleInstanceService {
   }
 
   private Future<String> createShadowInstance(String instanceId, RequestContext requestContext) {
-    String targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
-    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, targetTenantId, requestContext)
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext)
       .map(sharingInstance -> sharingInstance != null ? instanceId : null);
   }
 

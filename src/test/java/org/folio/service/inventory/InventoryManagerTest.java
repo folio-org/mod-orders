@@ -867,7 +867,7 @@ public class InventoryManagerTest {
     doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(JsonObject.mapFrom(new Instance()))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
 
-    inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, StringUtils.EMPTY, requestContext).result();
+    inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
 
     verifyNoInteractions(sharingInstanceService);
   }
@@ -878,7 +878,7 @@ public class InventoryManagerTest {
     doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(JsonObject.mapFrom(new Instance()))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
 
-    inventoryInstanceManager.createShadowInstanceIfNeeded(null, StringUtils.EMPTY, requestContext).result();
+    inventoryInstanceManager.createShadowInstanceIfNeeded(null, requestContext).result();
 
     verifyNoInteractions(sharingInstanceService);
   }
@@ -888,7 +888,7 @@ public class InventoryManagerTest {
     String instanceId = UUID.randomUUID().toString();
     doReturn(succeededFuture(null)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
 
-    inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, StringUtils.EMPTY, requestContext).result();
+    inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
 
     verifyNoInteractions(sharingInstanceService);
   }
@@ -900,9 +900,9 @@ public class InventoryManagerTest {
     doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
     doReturn(succeededFuture(null)).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
 
-    inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, StringUtils.EMPTY, requestContext).result();
+    inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
 
-    verify(sharingInstanceService).createShadowInstance(instanceId, StringUtils.EMPTY, configuration.get(), requestContext);
+    verify(sharingInstanceService).createShadowInstance(instanceId, configuration.get(), requestContext);
   }
 
   @Test
