@@ -207,8 +207,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     if (Objects.equals(TenantTool.tenantId(requestContext.getHeaders()), bindItem.getTenantId())) {
       return Future.succeededFuture(holdingId);
     }
-    return inventoryInstanceManager.createShadowInstanceIfNeeded(compPOL.getInstanceId(), locationContext)
-      .compose(inst -> inventoryHoldingManager.createHoldingAndReturnId(inst.instanceIdentifier().toString(), bindItem.getPermanentLocationId(), locationContext));
+    var instanceId = compPOL.getInstanceId();
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, locationContext)
+      .compose(s -> inventoryHoldingManager.createHoldingAndReturnId(instanceId, bindItem.getPermanentLocationId(), locationContext));
   }
 
   private Map<String, List<Piece>> updateTitleWithBindItems(Map<String, List<Piece>> piecesByPoLineIds,
