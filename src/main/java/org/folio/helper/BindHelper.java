@@ -3,6 +3,7 @@ package org.folio.helper;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.models.ItemFields;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -204,7 +205,8 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<String> createShadowInstanceAndHoldingIfNeeded(CompositePoLine compPOL, BindItem bindItem, String holdingId,
                                                                 RequestContext locationContext, RequestContext requestContext) {
     // No need to create inventory objects if BindItem tenantId is not different
-    if (Objects.equals(TenantTool.tenantId(requestContext.getHeaders()), bindItem.getTenantId())) {
+    var targetTenantId = bindItem.getTenantId();
+    if (StringUtils.isEmpty(targetTenantId) || targetTenantId.equals(TenantTool.tenantId(requestContext.getHeaders()))) {
       return Future.succeededFuture(holdingId);
     }
     var instanceId = compPOL.getInstanceId();
