@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
@@ -95,5 +96,11 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
     pieceDeleteFlowManager.deletePiece(pieceId, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(ok -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
+  }
+
+  @Override
+  @Validate
+  public void deleteOrdersPiecesBatch(PieceCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    pieceDeleteFlowManager.batchDeletePiece(entity, new RequestContext(vertxContext, okapiHeaders));
   }
 }

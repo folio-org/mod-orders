@@ -1,7 +1,12 @@
 package org.folio.service.pieces.flows.delete;
 
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
+import static org.folio.service.orders.utils.HelperUtils.collectResultsOnSuccess;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceDeletionHolder;
@@ -13,6 +18,7 @@ import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
+import org.folio.rest.jaxrs.model.PieceCollection;
 
 import io.vertx.core.Future;
 
@@ -77,6 +83,28 @@ public class PieceDeleteFlowManager {
     return Boolean.TRUE.equals(comPOL.getIsPackage()) || Boolean.TRUE.equals(comPOL.getCheckinItems())
       ? Future.succeededFuture()
       : pieceDeleteFlowPoLineService.updatePoLine(holder, requestContext);
+  }
+
+  public Future<List<Void>> batchDeletePiece (PieceCollection entity, RequestContext requestContext) {
+    List <String> ids = new ArrayList<>();
+    entity.getPieces().stream().forEach(v -> ids.add(v.getId()));
+    List<Future<PieceDeletionHolder>> deletionHolders = ids.stream()
+      .map(pieceId -> {
+        PieceDeletionHolder holder = new PieceDeletionHolder().withDeleteHolding(true);
+        return pieceStorageService.getPieceById(pieceId, requestContext)
+          .map(pieceToDelete -> {
+            holder.withPieceToDelete(pieceToDelete);
+            return holder;
+          });
+      })
+      .toList();
+    return collectResultsOnSuccess(deletionHolders)
+      .compose(holders -> {
+        List<Future<Void>> deleteFutures = holders.stream()
+          .map(holder -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext))
+          .toList();
+        return collectResultsOnSuccess(deleteFutures);
+      });
   }
 
 }
