@@ -10,8 +10,8 @@ documentation:
 
 types:
   bind-pieces-collection: !include acq-models/mod-orders/schemas/bindPiecesCollection.json
-  receiving-results: !include acq-models/mod-orders/schemas/receivingResults.json
-
+  bind-pieces-result: !include acq-models/mod-orders/schemas/bindPiecesResult.json
+  requestsAction: !include acq-models/mod-orders/schemas/requestsAction.json
   errors: !include raml-util/schemas/errors.schema
   UUID:
     type: string
@@ -26,13 +26,13 @@ resourceTypes:
 /orders/bind-pieces:
   displayName: Bind pieces
   description: |
-    This endpoint used to bind pieces to one item and connect that item to title.
+    This endpoint is used to bind pieces to one item and connect that item to a title.
   type:
     post-with-200:
       requestSchema: bind-pieces-collection
-      responseSchema: receiving-results
+      responseSchema: bind-pieces-result
       requestExample: !include acq-models/mod-orders/examples/bindPiecesCollection.sample
-      responseExample: !include acq-models/mod-orders/examples/receivingResults.sample
+      responseExample: !include acq-models/mod-orders/examples/bindPiecesResult.sample
   is: [validate]
   post:
     description: bind pieces to item and connect that item to title

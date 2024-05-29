@@ -13,14 +13,12 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
+import org.folio.rest.jaxrs.model.BindPiecesResult;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivedItem;
-import org.folio.rest.jaxrs.model.ReceivingResult;
-import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.inventory.InventoryInstanceManager;
@@ -69,12 +67,12 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return Map.of(poLineId, bindPieceMap);
   }
 
-  public Future<ReceivingResults> bindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
+  public Future<BindPiecesResult> bindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
     return removeForbiddenEntities(requestContext)
       .compose(vVoid -> processBindPieces(bindPiecesCollection, requestContext));
   }
 
-  private Future<ReceivingResults> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
+  private Future<BindPiecesResult> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
     //   1. Get piece records from storage
     return retrievePieceRecords(requestContext)
       // 2. Check if there are any open requests for items
@@ -235,25 +233,12 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return titlesService.saveTitle(title, requestContext);
   }
 
-  private ReceivingResults prepareResponseBody(Map<String, List<Piece>> piecesGroupedByPoLine,
+  private BindPiecesResult prepareResponseBody(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                BindPiecesCollection bindPiecesCollection) {
-    String poLineId = bindPiecesCollection.getPoLineId();
-
-    // Get all processed piece records for PO Line
-    Map<String, Piece> processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, piecesGroupedByPoLine);
-
-    var resultCounts = getEmptyResultCounts();
-    ReceivingResult result = new ReceivingResult();
-    for (String pieceId : bindPiecesCollection.getBindPieceIds()) {
-      calculateProcessingErrors(poLineId, result, processedPiecesForPoLine, resultCounts, pieceId);
-    }
-
-    result.withPoLineId(poLineId)
-      .withProcessedSuccessfully(resultCounts.get(ProcessingStatus.Type.SUCCESS))
-      .withProcessedWithError(resultCounts.get(ProcessingStatus.Type.FAILURE));
-    return new ReceivingResults()
-      .withTotalRecords(1)
-      .withReceivingResults(List.of(result));
+    return new BindPiecesResult()
+      .withPoLineId(bindPiecesCollection.getPoLineId())
+      .withRequestsAction(BindPiecesResult.RequestsAction.fromValue(bindPiecesCollection.getRequestsAction().value()))
+      .withBoundPieceIds(extractAllPieces(piecesGroupedByPoLine).map(Piece::getId).toList());
   }
 
   @Override
