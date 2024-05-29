@@ -235,10 +235,15 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   private BindPiecesResult prepareResponseBody(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                BindPiecesCollection bindPiecesCollection) {
+    var poLineId = bindPiecesCollection.getPoLineId();
+    var boundPieceIds = extractAllPieces(piecesGroupedByPoLine).map(Piece::getId).toList();
+    var requestsAction = Optional.of(bindPiecesCollection.getRequestsAction())
+      .map(action -> BindPiecesResult.RequestsAction.fromValue(action.value()))
+      .orElse(null);
     return new BindPiecesResult()
-      .withPoLineId(bindPiecesCollection.getPoLineId())
-      .withRequestsAction(BindPiecesResult.RequestsAction.fromValue(bindPiecesCollection.getRequestsAction().value()))
-      .withBoundPieceIds(extractAllPieces(piecesGroupedByPoLine).map(Piece::getId).toList());
+      .withPoLineId(poLineId)
+      .withBoundPieceIds(boundPieceIds)
+      .withRequestsAction(requestsAction);
   }
 
   @Override
