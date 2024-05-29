@@ -237,7 +237,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
                                                BindPiecesCollection bindPiecesCollection) {
     var poLineId = bindPiecesCollection.getPoLineId();
     var boundPieceIds = extractAllPieces(piecesGroupedByPoLine).map(Piece::getId).toList();
-    var requestsAction = Optional.of(bindPiecesCollection.getRequestsAction())
+    var requestsAction = Optional.ofNullable(bindPiecesCollection.getRequestsAction())
       .map(action -> BindPiecesResult.RequestsAction.fromValue(action.value()))
       .orElse(null);
     return new BindPiecesResult()
