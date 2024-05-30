@@ -15,6 +15,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
 import org.folio.rest.jaxrs.model.BindPiecesResult;
+import org.folio.rest.jaxrs.model.BindingResult;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -239,9 +240,17 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private BindPiecesResult prepareResponseBody(BindPiecesHolder holder) {
+    var poLineId = holder.getPoLineId();
+    var processedPiecesForPoLine = getProcessedPiecesForPoLine(poLineId, holder.getPiecesGroupedByPoLine());
+    var results = holder.getBindPiecesCollection().getBindPieceIds().stream()
+      .map(pieceId -> new BindingResult()
+        .withPieceId(pieceId)
+        .withProcessingStatus(calculateProcessingStatus(poLineId, processedPiecesForPoLine, getEmptyResultCounts(), pieceId)))
+      .toList();
+
     return new BindPiecesResult()
       .withPoLineId(holder.getPoLineId())
-      .withBoundPieceIds(holder.getPieces().map(Piece::getId).toList())
+      .withBindingResults(results)
       .withItemId(holder.getBindItemId());
   }
 

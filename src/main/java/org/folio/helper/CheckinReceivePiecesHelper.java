@@ -823,12 +823,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .put(pieceId, error);
   }
 
-  public void calculateProcessingErrors(String poLineId, ReceivingResult result,
-                                        Map<String, Piece> processedPiecesForPoLine,
-                                        Map<ProcessingStatus.Type, Integer> resultCounts, String pieceId) {
+  public ProcessingStatus calculateProcessingStatus(String poLineId, Map<String, Piece> processedPiecesForPoLine,
+                                                    Map<ProcessingStatus.Type, Integer> resultCounts, String pieceId) {
     // Calculate processing status
-    ProcessingStatus status = new ProcessingStatus();
-    Error error = getError(poLineId, pieceId);
+    var status = new ProcessingStatus();
+    var error = getError(poLineId, pieceId);
     if (processedPiecesForPoLine.get(pieceId) != null && error == null) {
       status.setType(ProcessingStatus.Type.SUCCESS);
       resultCounts.merge(ProcessingStatus.Type.SUCCESS, 1, Integer::sum);
@@ -837,10 +836,16 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       status.setError(error);
       resultCounts.merge(ProcessingStatus.Type.FAILURE, 1, Integer::sum);
     }
+    return status;
+  }
 
-    ReceivingItemResult itemResult = new ReceivingItemResult();
+  public void calculateProcessingErrors(String poLineId, ReceivingResult result,
+                                        Map<String, Piece> processedPiecesForPoLine,
+                                        Map<ProcessingStatus.Type, Integer> resultCounts, String pieceId) {
+    var processingStatus = calculateProcessingStatus(poLineId, processedPiecesForPoLine, resultCounts, pieceId);
+    var itemResult = new ReceivingItemResult();
     itemResult.setPieceId(pieceId);
-    itemResult.setProcessingStatus(status);
+    itemResult.setProcessingStatus(processingStatus);
     result.getReceivingItemResults().add(itemResult);
   }
 
