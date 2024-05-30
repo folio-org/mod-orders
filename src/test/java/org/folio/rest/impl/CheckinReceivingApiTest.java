@@ -1013,6 +1013,7 @@ public class CheckinReceivingApiTest {
 
     assertThat(response.getPoLineId(), is(poLine.getId()));
     assertThat(response.getBoundPieceIds(), is(pieceIds));
+    assertThat(response.getItemId(), notNullValue());
 
     var pieceUpdates = getPieceUpdates();
     assertThat(pieceUpdates, notNullValue());
