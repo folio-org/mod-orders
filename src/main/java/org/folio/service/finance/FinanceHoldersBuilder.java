@@ -3,10 +3,15 @@ package org.folio.service.finance;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
+import static one.util.streamex.StreamEx.ofSubLists;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertFieldListToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.getConversionQuery;
+import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_FISCAL_YEAR;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -17,6 +22,8 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.FiscalYear;
@@ -33,6 +40,7 @@ import org.folio.service.finance.budget.BudgetService;
 import io.vertx.core.Future;
 
 public class FinanceHoldersBuilder {
+  protected final Logger logger = LogManager.getLogger();
 
   private final FundService fundService;
   private final FiscalYearService fiscalYearService;
@@ -52,14 +60,16 @@ public class FinanceHoldersBuilder {
 
   public Future<Void> withFinances(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
       RequestContext requestContext) {
-    if (encumbranceHolders.stream().noneMatch(h -> h.getFundId() != null)) {
+    if (encumbranceHolders.stream().noneMatch(h -> h.getFundDistribution() != null && h.getFundId() != null)) {
       return succeededFuture();
     }
     return getLedgerIds(encumbranceHolders, requestContext)
       .compose(ledgerIds -> getLedgers(ledgerIds, encumbranceHolders, requestContext))
       .compose(ledgers -> getFiscalYear(ledgers, encumbranceHolders, requestContext))
       .compose(fiscalYear -> getBudgets(fiscalYear, encumbranceHolders, requestContext))
-      .compose(v -> withConversion(encumbranceHolders, requestContext));
+      .compose(v -> withConversion(encumbranceHolders, requestContext))
+      .onSuccess(v -> logger.info("withFinances :: success retrieving finance data"))
+      .onFailure(t -> logger.error("withFinances :: error retrieving finance data", t));
   }
 
   public Future<List<String>> getLedgerIds(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
@@ -79,7 +89,9 @@ public class FinanceHoldersBuilder {
           .map(Fund::getLedgerId)
           .distinct()
           .toList();
-      });
+      })
+      .onSuccess(funds -> logger.info("getLedgerIds :: success"))
+      .onFailure(t -> logger.error("getLedgerIds :: error - fundIds: {}", fundIds, t));
   }
 
   protected Future<Void> withConversion(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
@@ -144,12 +156,24 @@ public class FinanceHoldersBuilder {
   }
 
   private Future<Void> getBudgets(FiscalYear fiscalYear, List<? extends EncumbranceRelationsHolder> encumbranceHolders,
-      RequestContext requestContext) {
+    RequestContext requestContext) {
     List<String> fundIds = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getFundId)
       .filter(Objects::nonNull)
       .distinct()
       .toList();
+    var futures = ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ_15)
+      .map(ids -> getBudgetsChunk(ids, fiscalYear, requestContext))
+      .toList();
+    return collectResultsOnSuccess(futures)
+      .map(lists -> lists.stream().flatMap(Collection::stream).toList())
+      .map(budgets -> {
+        mapHoldersToBudgets(budgets, encumbranceHolders);
+        return null;
+      });
+  }
+
+  private Future<List<Budget>> getBudgetsChunk(List<String> fundIds, FiscalYear fiscalYear, RequestContext requestContext) {
     String query = convertFieldListToCqlQuery(fundIds, "fundId", true) +
       String.format(" AND fiscalYearId == %s AND budgetStatus == Active", fiscalYear.getId());
     return budgetService.getBudgetsByQuery(query, requestContext)
@@ -165,8 +189,7 @@ public class FinanceHoldersBuilder {
               new Parameter().withKey("fiscalYearCode").withValue(fiscalYear.getCode())
             )));
         }
-        mapHoldersToBudgets(budgets, encumbranceHolders);
-        return null;
+        return budgets;
       });
   }
 

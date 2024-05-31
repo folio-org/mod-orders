@@ -10,6 +10,7 @@ import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.Ledger;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -97,9 +98,22 @@ public class FinanceHoldersBuilderTest {
       .withCost(new Cost().withCurrency("EUR"))
       .withFundDistribution(Collections.singletonList(distribution3));
 
-    holder1 = new EncumbranceRelationsHolder().withPoLine(line1).withFundDistribution(distribution1);
-    holder2 = new EncumbranceRelationsHolder().withPoLine(line2).withFundDistribution(distribution2);
-    holder3 = new EncumbranceRelationsHolder().withPoLine(line3).withFundDistribution(distribution3);
+    Transaction newEncumbrance1 = new Transaction();
+    Transaction newEncumbrance2 = new Transaction();
+    Transaction newEncumbrance3 = new Transaction();
+
+    holder1 = new EncumbranceRelationsHolder()
+      .withPoLine(line1)
+      .withFundDistribution(distribution1)
+      .withNewEncumbrance(newEncumbrance1);
+    holder2 = new EncumbranceRelationsHolder()
+      .withPoLine(line2)
+      .withFundDistribution(distribution2)
+      .withNewEncumbrance(newEncumbrance2);
+    holder3 = new EncumbranceRelationsHolder()
+      .withPoLine(line3)
+      .withFundDistribution(distribution3)
+      .withNewEncumbrance(newEncumbrance3);
   }
 
   @AfterEach
@@ -194,8 +208,8 @@ public class FinanceHoldersBuilderTest {
 
   @Test
   void shouldNotFailIfHoldersHaveNoFund() {
-    EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder();
-    EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder();
+    EncumbranceRelationsHolder holder1 = new EncumbranceRelationsHolder().withFundDistribution(new FundDistribution());
+    EncumbranceRelationsHolder holder2 = new EncumbranceRelationsHolder().withFundDistribution(new FundDistribution());
     List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2);
 
     Future<Void> f = financeHoldersBuilder.withFinances(holders, requestContext);

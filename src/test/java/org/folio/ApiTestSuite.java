@@ -51,6 +51,7 @@ import org.folio.service.consortium.ConsortiumConfigurationServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
+import org.folio.service.finance.FinanceHoldersBuilderTest;
 import org.folio.service.finance.FiscalYearServiceTest;
 import org.folio.service.finance.FundServiceTest;
 import org.folio.service.finance.budget.BudgetRestrictionServiceTest;
@@ -509,5 +510,9 @@ public class ApiTestSuite {
 
   @Nested
   class BaseApiTestNested extends BaseApiTest {
+  }
+
+  @Nested
+  class FinanceHoldersBuilderTestNested extends FinanceHoldersBuilderTest {
   }
 }
