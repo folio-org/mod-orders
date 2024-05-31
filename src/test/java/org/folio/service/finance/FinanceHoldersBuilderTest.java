@@ -80,15 +80,17 @@ public class FinanceHoldersBuilderTest {
   public void initMocks(){
     mockitoMocks = MockitoAnnotations.openMocks(this);
 
-    FundDistribution distribution1 = new FundDistribution().withFundId(UUID.randomUUID().toString());
+    FundDistribution distribution1 = new FundDistribution().withFundId(UUID.randomUUID().toString()).withCode("FUND1");
 
     CompositePoLine line1 = new CompositePoLine().withId(UUID.randomUUID().toString())
+      .withPoLineNumber("1")
       .withCost(new Cost().withCurrency("USD"))
       .withFundDistribution(Collections.singletonList(distribution1));
 
-    FundDistribution distribution2 = new FundDistribution().withFundId(UUID.randomUUID().toString());
+    FundDistribution distribution2 = new FundDistribution().withFundId(UUID.randomUUID().toString()).withCode("FUND2");
 
     CompositePoLine line2 = new CompositePoLine().withId(UUID.randomUUID().toString())
+      .withPoLineNumber("2")
       .withCost(new Cost().withCurrency("USD"))
       .withFundDistribution(Collections.singletonList(distribution2));
 
@@ -254,9 +256,12 @@ public class FinanceHoldersBuilderTest {
     assertEquals(422, httpException.getCode());
     Error error = httpException.getError();
     assertEquals(BUDGET_NOT_FOUND_FOR_FISCAL_YEAR.getCode(), error.getCode());
-    assertEquals(fund2.getId(), error.getParameters().get(0).getValue());
-    assertEquals(fiscalYear1.getId(), error.getParameters().get(1).getValue());
-    assertEquals(fiscalYear1.getCode(), error.getParameters().get(2).getValue());
+    assertEquals(List.of(fund2.getId()).toString(), error.getParameters().get(0).getValue());
+    assertEquals("[FUND2]", error.getParameters().get(1).getValue());
+    assertEquals(List.of(holder2.getPoLineId()).toString(), error.getParameters().get(2).getValue());
+    assertEquals("[2]", error.getParameters().get(3).getValue());
+    assertEquals(fiscalYear1.getId(), error.getParameters().get(4).getValue());
+    assertEquals(fiscalYear1.getCode(), error.getParameters().get(5).getValue());
   }
 
   @Test

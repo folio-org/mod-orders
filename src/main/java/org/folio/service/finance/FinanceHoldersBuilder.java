@@ -95,7 +95,7 @@ public class FinanceHoldersBuilder {
   }
 
   protected Future<Void> withConversion(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
-    RequestContext requestContext) {
+      RequestContext requestContext) {
     String fyCurrency = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getCurrency)
       .filter(Objects::nonNull)
@@ -105,27 +105,27 @@ public class FinanceHoldersBuilder {
       return succeededFuture();
     }
     return requestContext.getContext().executeBlocking(() -> {
-        Map<String, List<EncumbranceRelationsHolder>> currencyHolderMap = encumbranceHolders.stream()
-          .filter(holder -> Objects.nonNull(holder.getPoLine()))
-          .collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
+      Map<String, List<EncumbranceRelationsHolder>> currencyHolderMap = encumbranceHolders.stream()
+        .filter(holder -> Objects.nonNull(holder.getPoLine()))
+        .collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
 
-        currencyHolderMap.forEach((poLineCurrency, encumbranceRelationsHolders) -> {
-          Double exchangeRate = encumbranceRelationsHolders.stream()
-            .map(EncumbranceRelationsHolder::getPoLine)
-            .map(CompositePoLine::getCost)
-            .map(Cost::getExchangeRate)
-            .filter(Objects::nonNull)
-            .findFirst()
-            .orElse(null);
+      currencyHolderMap.forEach((poLineCurrency, encumbranceRelationsHolders) -> {
+        Double exchangeRate = encumbranceRelationsHolders.stream()
+          .map(EncumbranceRelationsHolder::getPoLine)
+          .map(CompositePoLine::getCost)
+          .map(Cost::getExchangeRate)
+          .filter(Objects::nonNull)
+          .findFirst()
+          .orElse(null);
 
-          ConversionQuery conversionQuery = getConversionQuery(exchangeRate, poLineCurrency, fyCurrency);
-          ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
-          CurrencyConversion conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
-          encumbranceRelationsHolders.forEach(holder -> holder.withPoLineToFyConversion(conversion));
-        });
-        return null;
-      })
-      .mapEmpty();
+        ConversionQuery conversionQuery = getConversionQuery(exchangeRate, poLineCurrency, fyCurrency);
+        ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
+        CurrencyConversion conversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
+        encumbranceRelationsHolders.forEach(holder -> holder.withPoLineToFyConversion(conversion));
+      });
+      return null;
+    })
+    .mapEmpty();
   }
 
   private void populateLedgerIds(List<Fund> funds, List<? extends EncumbranceRelationsHolder> encumbranceHolders) {
@@ -156,7 +156,7 @@ public class FinanceHoldersBuilder {
   }
 
   private Future<Void> getBudgets(FiscalYear fiscalYear, List<? extends EncumbranceRelationsHolder> encumbranceHolders,
-    RequestContext requestContext) {
+      RequestContext requestContext) {
     List<String> fundIds = encumbranceHolders.stream()
       .map(EncumbranceRelationsHolder::getFundId)
       .filter(Objects::nonNull)
@@ -168,6 +168,37 @@ public class FinanceHoldersBuilder {
     return collectResultsOnSuccess(futures)
       .map(lists -> lists.stream().flatMap(Collection::stream).toList())
       .map(budgets -> {
+        if (budgets.size() < fundIds.size()) {
+          List<? extends EncumbranceRelationsHolder> holdersOfFundsNotFound = encumbranceHolders.stream()
+            .filter(h -> budgets.stream().noneMatch(b -> h.getFundId().equals(b.getFundId())))
+            .distinct()
+            .toList();
+          List<String> idsOfFundsNotFound = holdersOfFundsNotFound.stream()
+            .map(EncumbranceRelationsHolder::getFundId)
+            .toList();
+          List<String> codesOfFundsNotFound = holdersOfFundsNotFound.stream()
+            .map(h -> h.getFundDistribution().getCode())
+            .distinct()
+            .toList();
+          List<String> poLineIdsOfFundsNotFound = holdersOfFundsNotFound.stream()
+            .map(EncumbranceRelationsHolder::getPoLineId)
+            .distinct()
+            .toList();
+          List<String> poLineNumbersOfFundsNotFound = holdersOfFundsNotFound.stream()
+            .map(h -> h.getPoLine().getPoLineNumber())
+            .distinct()
+            .filter(Objects::nonNull)
+            .toList();
+          throw new HttpException(422, BUDGET_NOT_FOUND_FOR_FISCAL_YEAR.toError()
+            .withParameters(List.of(
+              new Parameter().withKey("fundIds").withValue(idsOfFundsNotFound.toString()),
+              new Parameter().withKey("fundCodes").withValue(codesOfFundsNotFound.toString()),
+              new Parameter().withKey("poLineIds").withValue(poLineIdsOfFundsNotFound.toString()),
+              new Parameter().withKey("poLineNumbers").withValue(poLineNumbersOfFundsNotFound.toString()),
+              new Parameter().withKey("fiscalYearId").withValue(fiscalYear.getId()),
+              new Parameter().withKey("fiscalYearCode").withValue(fiscalYear.getCode())
+            )));
+        }
         mapHoldersToBudgets(budgets, encumbranceHolders);
         return null;
       });
@@ -176,21 +207,7 @@ public class FinanceHoldersBuilder {
   private Future<List<Budget>> getBudgetsChunk(List<String> fundIds, FiscalYear fiscalYear, RequestContext requestContext) {
     String query = convertFieldListToCqlQuery(fundIds, "fundId", true) +
       String.format(" AND fiscalYearId == %s AND budgetStatus == Active", fiscalYear.getId());
-    return budgetService.getBudgetsByQuery(query, requestContext)
-      .map(budgets -> {
-        if (budgets.size() < fundIds.size()) {
-          List<String> idsOfFundsNotFound = fundIds.stream()
-            .filter(fundId -> budgets.stream().noneMatch(b -> fundId.equals(b.getFundId())))
-            .toList();
-          throw new HttpException(422, BUDGET_NOT_FOUND_FOR_FISCAL_YEAR.toError()
-            .withParameters(List.of(
-              new Parameter().withKey("fundId").withValue(idsOfFundsNotFound.get(0)),
-              new Parameter().withKey("fiscalYearId").withValue(fiscalYear.getId()),
-              new Parameter().withKey("fiscalYearCode").withValue(fiscalYear.getCode())
-            )));
-        }
-        return budgets;
-      });
+    return budgetService.getBudgetsByQuery(query, requestContext);
   }
 
   private void mapRestrictEncumbranceToHolders(List<Ledger> ledgers,
