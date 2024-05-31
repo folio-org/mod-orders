@@ -13,8 +13,11 @@ import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.finance.Budget;
+import org.folio.rest.acq.model.finance.BudgetCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -26,19 +29,15 @@ import io.vertx.core.Future;
 import one.util.streamex.StreamEx;
 
 public class BudgetService {
+  private static final Logger logger = LogManager.getLogger();
 
-  private static final String ENDPOINT = "/finance/funds/{id}/budget";
+  private static final String BUDGETS_ENDPOINT = "/finance/budgets";
+  private static final String FUND_BUDGET_ENDPOINT = "/finance/funds/{id}/budget";
 
   private final RestClient restClient;
 
   public BudgetService(RestClient restClient) {
     this.restClient = restClient;
-  }
-
-  private Future<List<List<Budget>>> getBudgetsByChunks(Collection<String> fundIds, RequestContext requestContext) {
-    return collectResultsOnSuccess(StreamEx.ofSubLists(new ArrayList<>(fundIds), MAX_IDS_FOR_GET_RQ_15)
-      .map(fIds -> fetchBudgetsByFundIds(fIds, requestContext))
-      .toList());
   }
 
   public Future<List<Budget>> fetchBudgetsByFundIds(List<String> fundIds, RequestContext requestContext) {
@@ -51,14 +50,8 @@ public class BudgetService {
       .map(CompositeFuture::list);
   }
 
-  public Future<List<Budget>> getBudgets(Collection<String> fundIds, RequestContext requestContext) {
-    return getBudgetsByChunks(fundIds, requestContext).map(lists -> lists.stream()
-      .flatMap(Collection::stream)
-      .collect(Collectors.toList()));
-  }
-
   public Future<Budget> getActiveBudgetByFundId(String fundId, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(ENDPOINT).withId(fundId).withQueryParameter("status", "Active");
+    RequestEntry requestEntry = new RequestEntry(FUND_BUDGET_ENDPOINT).withId(fundId).withQueryParameter("status", "Active");
     return restClient.get(requestEntry, Budget.class, requestContext)
        .recover(t -> {
         Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
@@ -69,5 +62,16 @@ public class BudgetService {
         }
         throw new CompletionException(cause);
       });
+  }
+
+  public Future<List<Budget>> getBudgetsByQuery(String query, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(BUDGETS_ENDPOINT)
+      .withQuery(query)
+      .withOffset(0)
+      .withLimit(Integer.MAX_VALUE);
+    return restClient.get(requestEntry, BudgetCollection.class, requestContext)
+      .map(BudgetCollection::getBudgets)
+      .onSuccess(budgets -> logger.info("getBudgetsByQuery :: Successfully retrieved budgets"))
+      .onFailure(t -> logger.error("getBudgetsByQuery :: Failed to retrieve budgets", t));
   }
 }
