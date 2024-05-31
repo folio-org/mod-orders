@@ -2,15 +2,18 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 
+import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import io.vertx.sqlclient.impl.Connection;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.OrdersPiecesBatchDeleteApplicationJson;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
@@ -68,6 +71,11 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   }
 
   @Override
+  public void deleteOrdersPiecesBatch(OrdersPiecesBatchDeleteApplicationJson entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    pieceDeleteFlowManager.batchDeletePiece(entity.getIds(),entity.getDeleteHolding(),new RequestContext(vertxContext, okapiHeaders));
+  }
+
+  @Override
   @Validate
   public void getOrdersPiecesById(String id, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
@@ -98,9 +106,4 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
-  @Override
-  @Validate
-  public void deleteOrdersPiecesBatch(PieceCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceDeleteFlowManager.batchDeletePiece(entity, new RequestContext(vertxContext, okapiHeaders));
-  }
 }

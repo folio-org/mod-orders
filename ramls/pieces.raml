@@ -49,10 +49,20 @@ resourceTypes:
         default: false
   /batch:
     delete:
-      description: Batch delete pieces
+      description: Batch delete pieces with optional deletion of related holdings
       body:
         application/json:
-          type: piece-collection
+          type: object
+          properties:
+            ids:
+              type: array
+              items:
+                type: string
+                description: ID of a piece to be deleted
+            deleteHolding:
+              type: boolean
+              description: "Flag to determine if related holdings should also be deleted"
+              default: false
       responses:
         204:
           description: "Batch delete of pieces successfully completed"
@@ -78,7 +88,7 @@ resourceTypes:
             application/json:
               type: errors
             text/plain:
-              example: "Internal server error - due to misconfiguration."
+              example: "Internal server realization error - due to misconfiguration."
   /{id}:
     uriParameters:
       id:

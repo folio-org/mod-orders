@@ -1,5 +1,6 @@
 package org.folio.service.pieces.flows.delete;
 
+import static io.vertx.core.Future.*;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.clearServiceInteractions;
@@ -393,10 +394,10 @@ public class PieceDeleteFlowManagerTest {
       .withPurchaseOrderId(orderId).withId(lineId).withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
     Title title = new Title().withId(titleId);
-    List<Piece> ids = new ArrayList<>();
-    ids.add(piece);
-    PieceCollection pieceCollection = new PieceCollection();
-    pieceCollection.withPieces(ids);
+    List<Piece> pieces = new ArrayList<>();
+    pieces.add(piece);
+    List<String> ids = new ArrayList<>();
+    ids.add(piece.getId());
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
@@ -424,7 +425,7 @@ public class PieceDeleteFlowManagerTest {
     final ArgumentCaptor<PieceDeletionHolder> pieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
     doReturn(succeededFuture(null)).when(pieceDeleteFlowPoLineService).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
     //When
-    pieceDeleteFlowManager.batchDeletePiece(pieceCollection, requestContext).result();
+    pieceDeleteFlowManager.batchDeletePiece(ids,false ,requestContext).result();
     verify(pieceStorageService).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
     verify(inventoryItemManager, times(0)).deleteItem(itemId, true, requestContext);
     verify(pieceStorageService, times(1)).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
