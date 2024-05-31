@@ -169,32 +169,32 @@ public class FinanceHoldersBuilder {
       .map(lists -> lists.stream().flatMap(Collection::stream).toList())
       .map(budgets -> {
         if (budgets.size() < fundIds.size()) {
-          List<? extends EncumbranceRelationsHolder> holdersOfFundsNotFound = encumbranceHolders.stream()
+          List<? extends EncumbranceRelationsHolder> holdersOfMissingBudgets = encumbranceHolders.stream()
             .filter(h -> budgets.stream().noneMatch(b -> h.getFundId().equals(b.getFundId())))
             .distinct()
             .toList();
-          List<String> idsOfFundsNotFound = holdersOfFundsNotFound.stream()
+          List<String> fundIdsOfMissingBudgets = holdersOfMissingBudgets.stream()
             .map(EncumbranceRelationsHolder::getFundId)
             .toList();
-          List<String> codesOfFundsNotFound = holdersOfFundsNotFound.stream()
+          List<String> fundCodesOfMissingBudgets = holdersOfMissingBudgets.stream()
             .map(h -> h.getFundDistribution().getCode())
             .distinct()
             .toList();
-          List<String> poLineIdsOfFundsNotFound = holdersOfFundsNotFound.stream()
+          List<String> poLineIdsOfMissingBudgets = holdersOfMissingBudgets.stream()
             .map(EncumbranceRelationsHolder::getPoLineId)
             .distinct()
             .toList();
-          List<String> poLineNumbersOfFundsNotFound = holdersOfFundsNotFound.stream()
+          List<String> poLineNumbersOfMissingBudgets = holdersOfMissingBudgets.stream()
             .map(h -> h.getPoLine().getPoLineNumber())
             .distinct()
             .filter(Objects::nonNull)
             .toList();
           throw new HttpException(422, BUDGET_NOT_FOUND_FOR_FISCAL_YEAR.toError()
             .withParameters(List.of(
-              new Parameter().withKey("fundIds").withValue(idsOfFundsNotFound.toString()),
-              new Parameter().withKey("fundCodes").withValue(codesOfFundsNotFound.toString()),
-              new Parameter().withKey("poLineIds").withValue(poLineIdsOfFundsNotFound.toString()),
-              new Parameter().withKey("poLineNumbers").withValue(poLineNumbersOfFundsNotFound.toString()),
+              new Parameter().withKey("fundIds").withValue(fundIdsOfMissingBudgets.toString()),
+              new Parameter().withKey("fundCodes").withValue(fundCodesOfMissingBudgets.toString()),
+              new Parameter().withKey("poLineIds").withValue(poLineIdsOfMissingBudgets.toString()),
+              new Parameter().withKey("poLineNumbers").withValue(poLineNumbersOfMissingBudgets.toString()),
               new Parameter().withKey("fiscalYearId").withValue(fiscalYear.getId()),
               new Parameter().withKey("fiscalYearCode").withValue(fiscalYear.getCode())
             )));
