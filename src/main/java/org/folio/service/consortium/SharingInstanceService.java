@@ -7,13 +7,15 @@ import org.apache.logging.log4j.Logger;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
 import org.folio.models.consortium.SharingStatus;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ConsortiumException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.tools.utils.TenantTool;
 
 import java.util.UUID;
+
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 
 /**
  * The `SharingInstanceService` class manages the creation of shadow instances
@@ -41,13 +43,12 @@ public class SharingInstanceService {
    * @param requestContext          the request context
    * @return a Future that resolves with the created SharingInstance
    */
-  public Future<SharingInstance> createShadowInstance(String instanceId, String targetTenantId,
+  public Future<SharingInstance> createShadowInstance(String instanceId,
                                                       ConsortiumConfiguration consortiumConfiguration,
                                                       RequestContext requestContext) {
-    SharingInstance sharingInstance = new SharingInstance(UUID.fromString(instanceId),
-      consortiumConfiguration.centralTenantId(), targetTenantId);
-    RequestContext consortiaRequestContext = RequestContextUtil.createContextWithNewTenantId(requestContext,
-      consortiumConfiguration.centralTenantId());
+    var targetTenantId = TenantTool.tenantId(requestContext.getHeaders());
+    var sharingInstance = new SharingInstance(UUID.fromString(instanceId), consortiumConfiguration.centralTenantId(), targetTenantId);
+    var consortiaRequestContext = createContextWithNewTenantId(requestContext, consortiumConfiguration.centralTenantId());
     return shareInstance(consortiumConfiguration.consortiumId(), sharingInstance, consortiaRequestContext);
   }
 

@@ -208,7 +208,7 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title), anyBoolean(), eq(requestContext), eq(requestContext));
 
     doReturn(succeededFuture(sharingInstance))
-      .when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(String.class), eq(requestContext));
+      .when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), eq(requestContext));
     doReturn(succeededFuture(holdingId))
       .when(inventoryHoldingManager).createHoldingAndReturnId(eq(title.getInstanceId()), eq(piece.getLocationId()), eq(requestContext));
     doReturn(succeededFuture(itemId)).when(inventoryItemManager).openOrderCreateItemRecord(any(CompositePoLine.class), eq(holdingId), eq(requestContext));
