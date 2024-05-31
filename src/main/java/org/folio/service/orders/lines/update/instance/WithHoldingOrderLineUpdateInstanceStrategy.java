@@ -60,7 +60,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     PoLine poLine = holder.getStoragePoLine();
 
     return switch (replaceInstanceRef.getHoldingsOperation()) {
-      case MOVE -> moveHoldings(poLine, newInstanceId, requestContext);
+      case MOVE -> moveHoldings(holder, newInstanceId, requestContext);
       case FIND_OR_CREATE -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
         .compose(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), poLine, requestContext));
       case CREATE -> createHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
@@ -70,10 +70,11 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   }
 
 
-  private Future<Void> moveHoldings(PoLine poLine, String newInstanceId, RequestContext requestContext) {
+  private Future<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
+    PoLine poLine = holder.getStoragePoLine();
     CompositePoLine compPOL = PoLineCommonUtil.convertToCompositePoLine(poLine);
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
-      .map(pieces -> getHoldingsByTenants(poLine, pieces, requestContext))
+      .map(pieces -> getHoldingsByTenants(holder, pieces, requestContext))
       .compose(holdingsByTenant -> {
           var updateHoldings = holdingsByTenant.entrySet()
             .stream()
@@ -88,18 +89,19 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       );
   }
 
-  private Map<String, Future<List<JsonObject>>> getHoldingsByTenants(PoLine poLine, List<Piece> pieces, RequestContext requestContext) {
+  private Map<String, Future<List<JsonObject>>> getHoldingsByTenants(OrderLineUpdateInstanceHolder holder, List<Piece> pieces, RequestContext requestContext) {
+    PoLine poLine = holder.getStoragePoLine();
     Map<String, List<String>> holdingsByTenant = new HashMap<>();
     for (var piece : pieces) {
       String holdingId = piece.getHoldingId();
       if (holdingId != null) {
-        putHolding(piece.getReceivingTenantId(), holdingsByTenant, holdingId);
+        putHolding(holder, piece.getReceivingTenantId(), holdingsByTenant, holdingId);
       }
     }
     for (var location : poLine.getLocations()) {
       String holdingId = location.getHoldingId();
       if (holdingId != null) {
-        putHolding(location.getTenantId(), holdingsByTenant, holdingId);
+        putHolding(holder, location.getTenantId(), holdingsByTenant, holdingId);
       }
     }
     return holdingsByTenant.entrySet()
@@ -113,10 +115,11 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       ));
   }
 
-  private void putHolding(String tenantId, Map<String, List<String>> holdingsByTenant, String holdingId) {
+  private void putHolding(OrderLineUpdateInstanceHolder holder, String tenantId, Map<String, List<String>> holdingsByTenant, String holdingId) {
     List<String> list = holdingsByTenant.computeIfAbsent(tenantId, k -> new ArrayList<>());
     if (!list.contains(holdingId)) {
       list.add(holdingId);
+      holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, holdingId);
     }
   }
 
