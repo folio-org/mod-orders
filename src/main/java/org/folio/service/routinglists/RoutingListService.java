@@ -5,9 +5,14 @@ import static org.folio.orders.utils.ResourcePathResolver.ROUTING_LISTS;
 import static org.folio.orders.utils.ResourcePathResolver.TEMPLATE_REQUEST;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
@@ -129,6 +134,7 @@ public class RoutingListService {
   private Future<TemplateProcessingRequest> getUsersAndCreateTemplate(RoutingList routingList, RequestContext requestContext) {
     return getAddressTypeId(requestContext)
       .compose(addressTypId -> userService.getUsersByIds(routingList.getUserIds(), requestContext)
+        .map(users -> sortUsersOrder(routingList, users))
         .map(users -> createTemplateRequest(routingList, users, addressTypId)));
   }
 
@@ -144,6 +150,19 @@ public class RoutingListService {
         }
         return settings.get(0).getValue();
       });
+  }
+
+  private UserCollection sortUsersOrder(RoutingList routingList, UserCollection userCollection) {
+    Map<UUID, Integer> userIdToIndex = routingList.getUserIds().stream()
+      .filter(Objects::nonNull)
+      .collect(Collectors.toMap(UUID::fromString, routingList.getUserIds()::indexOf));
+
+    // Sorting the users based on the index of their UUIDs in the routing list
+    List<UserCollection.User> sortedUsers = new ArrayList<>(userCollection.getUsers());
+    sortedUsers.sort(Comparator.comparingInt(user -> userIdToIndex.getOrDefault(user.getId(), Integer.MAX_VALUE)));
+
+    userCollection.withUsers(sortedUsers);
+    return userCollection;
   }
 
   private TemplateProcessingRequest createTemplateRequest(RoutingList routingList, UserCollection users, String addressTypeId) {
