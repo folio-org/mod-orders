@@ -58,6 +58,10 @@ public class FinanceHoldersBuilder {
     this.ledgerService = ledgerService;
   }
 
+  /**
+   * Populate the encumbrance holders with the following data based on the fund ids in the holders:
+   * ledger ids, ledgers, fiscal year, budgets, currency conversion.
+   */
   public Future<Void> withFinances(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
       RequestContext requestContext) {
     if (encumbranceHolders.stream().noneMatch(h -> h.getFundDistribution() != null && h.getFundId() != null)) {
@@ -72,6 +76,9 @@ public class FinanceHoldersBuilder {
       .onFailure(t -> logger.error("withFinances :: error retrieving finance data", t));
   }
 
+  /**
+   * Populate the ledger ids in the encumbrance holders based on the fund ids in the holders.
+   */
   public Future<List<String>> getLedgerIds(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
       RequestContext requestContext) {
     List<String> fundIds = encumbranceHolders.stream()
