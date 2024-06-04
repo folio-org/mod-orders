@@ -10,6 +10,7 @@ import org.folio.config.ApplicationConfig;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
+import org.folio.rest.jaxrs.model.BindPiecesResult;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -1000,15 +1001,19 @@ public class CheckinReceivingApiTest {
     addMockEntry(PIECES_STORAGE, bindingPiece2);
     addMockEntry(TITLES, getTitle(poLine));
 
+    var pieceIds = List.of(bindingPiece1.getId(), bindingPiece2.getId());
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
       .withBindItem(getMinimalContentBindItem())
-      .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId()));
+      .withBindPieceIds(pieceIds);
 
     var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(BindPiecesResult.class);
 
-    assertThat(response.as(ReceivingResults.class).getReceivingResults().get(0).getProcessedSuccessfully(), is(2));
+    assertThat(response.getPoLineId(), is(poLine.getId()));
+    assertThat(response.getBoundPieceIds(), is(pieceIds));
+    assertThat(response.getItemId(), notNullValue());
 
     var pieceUpdates = getPieceUpdates();
     assertThat(pieceUpdates, notNullValue());
@@ -1154,12 +1159,13 @@ public class CheckinReceivingApiTest {
     addMockEntry(TITLES, getTitle(poLine));
 
     var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(BindPiecesResult.class);
 
-    assertThat(response.as(ReceivingResults.class).getReceivingResults().get(0).getProcessedSuccessfully(), is(1));
+    assertThat(response.getPoLineId(), is(poLine.getId()));
+    assertThat(response.getBoundPieceIds(), is(List.of(bindingPiece.getId())));
 
     var pieceUpdates = getPieceUpdates();
-
     assertThat(pieceUpdates, notNullValue());
     assertThat(pieceUpdates, hasSize(bindPiecesCollection.getBindPieceIds().size()));
 
