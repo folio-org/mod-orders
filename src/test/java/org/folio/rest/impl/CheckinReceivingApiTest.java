@@ -1163,7 +1163,7 @@ public class CheckinReceivingApiTest {
       .as(BindPiecesResult.class);
 
     assertThat(response.getPoLineId(), is(poLine.getId()));
-    assertThat(response.getBindingResults().stream().map(BindingResult::getPieceId), is(List.of(bindingPiece.getId())));
+    assertThat(response.getBoundPieceIds(), is(List.of(bindingPiece.getId())));
 
     var pieceUpdates = getPieceUpdates();
     assertThat(pieceUpdates, notNullValue());
