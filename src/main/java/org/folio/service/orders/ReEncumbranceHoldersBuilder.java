@@ -16,13 +16,10 @@ import javax.money.convert.ConversionQuery;
 import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
 
-import org.folio.completablefuture.AsyncUtil;
+import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.ReEncumbranceHolder;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.finance.Budget;
 import org.folio.rest.acq.model.finance.Encumbrance;
-import org.folio.rest.acq.model.finance.Fund;
-import org.folio.rest.acq.model.finance.Ledger;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -32,6 +29,7 @@ import org.folio.rest.jaxrs.model.EncumbranceRollover;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.finance.FinanceHoldersBuilder;
 import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
@@ -43,28 +41,19 @@ import org.javamoney.moneta.Money;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
-public class ReEncumbranceHoldersBuilder {
+public class ReEncumbranceHoldersBuilder extends FinanceHoldersBuilder {
 
   private static final String GET_ORDER_TRANSACTIONS_QUERY_TEMPLATE = "fiscalYearId==%s AND encumbrance.sourcePurchaseOrderId==%s";
 
-  private final BudgetService budgetService;
-  private final LedgerService ledgerService;
-  private final FundService fundService;
-  private final ExchangeRateProviderResolver exchangeRateProviderResolver;
-  private final FiscalYearService fiscalYearService;
   private final LedgerRolloverService ledgerRolloverService;
   private final TransactionService transactionService;
   private final FundsDistributionService fundsDistributionService;
 
   public ReEncumbranceHoldersBuilder(BudgetService budgetService, LedgerService ledgerService, FundService fundService,
-                                     ExchangeRateProviderResolver exchangeRateProviderResolver, FiscalYearService fiscalYearService,
-                                     LedgerRolloverService ledgerRolloverService, TransactionService transactionService,
-                                     FundsDistributionService fundsDistributionService) {
-    this.budgetService = budgetService;
-    this.ledgerService = ledgerService;
-    this.fundService = fundService;
-    this.exchangeRateProviderResolver = exchangeRateProviderResolver;
-    this.fiscalYearService = fiscalYearService;
+      ExchangeRateProviderResolver exchangeRateProviderResolver, FiscalYearService fiscalYearService,
+      LedgerRolloverService ledgerRolloverService, TransactionService transactionService,
+      FundsDistributionService fundsDistributionService) {
+    super(fundService, fiscalYearService, exchangeRateProviderResolver, budgetService, ledgerService);
     this.ledgerRolloverService = ledgerRolloverService;
     this.transactionService = transactionService;
     this.fundsDistributionService = fundsDistributionService;
@@ -79,78 +68,6 @@ public class ReEncumbranceHoldersBuilder {
           .withPoLine(compositePoLine)
           .withPurchaseOrder(compPO)))
       .collect(toList());
-  }
-
-  public Future<List<ReEncumbranceHolder>> withFundsData(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
-    if (holders.isEmpty()) {
-      return Future.succeededFuture(holders);
-    }
-
-    var fundIds = holders.stream()
-            .map(ReEncumbranceHolder::getFundId)
-            .distinct()
-            .collect(toList());
-
-    return fundService.getFunds(fundIds, requestContext)
-            .map(funds -> withFundsData(holders, funds));
-  }
-
-  public Future<List<ReEncumbranceHolder>> withLedgersData(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
-    List<String> ledgerIds = holders.stream()
-      .map(ReEncumbranceHolder::getLedgerId)
-      .filter(Objects::nonNull)
-       .distinct()
-      .collect(toList());
-    if (ledgerIds.isEmpty()) {
-      return Future.succeededFuture(holders);
-    }
-    return ledgerService.getLedgersByIds(ledgerIds, requestContext)
-      .map(ledgers -> {
-        Map<String, Boolean> idLedgerMap = ledgers.stream()
-          .collect(toMap(Ledger::getId, Ledger::getRestrictEncumbrance));
-        return holders.stream()
-                .map(holder -> {
-                  String ledgerId = holder.getLedgerId();
-                  return holder.withRestrictEncumbrances(idLedgerMap.getOrDefault(ledgerId, false));
-                })
-                .collect(toList());
-
-      });
-  }
-
-  public Future<List<ReEncumbranceHolder>> withCurrentFiscalYearData(List<ReEncumbranceHolder> holders,
-                                                                                RequestContext requestContext) {
-    return holders.stream()
-            .map(ReEncumbranceHolder::getLedgerId)
-            .filter(Objects::nonNull)
-            .findFirst().map(ledgerId -> fiscalYearService.getCurrentFiscalYear(ledgerId, requestContext)
-              .map(fiscalYear -> holders.stream()
-                  .map(holder -> holder.withCurrentFiscalYearId(fiscalYear.getId()).withCurrency(fiscalYear.getCurrency()))
-                  .collect(toList())))
-            .orElseGet(() ->  Future.succeededFuture(holders));
-
-  }
-
-  public Future<List<ReEncumbranceHolder>> withBudgets(List<ReEncumbranceHolder> holders,
-      RequestContext requestContext) {
-    List<String> fundIds = holders.stream()
-      .map(ReEncumbranceHolder::getFundId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(toList());
-    if (fundIds.isEmpty()) {
-      return Future.succeededFuture(holders);
-    }
-    return budgetService.fetchBudgetsByFundIds(fundIds, requestContext)
-      .map(budgets -> {
-        Map<String, Budget> idBudgetMap = budgets.stream()
-          .collect(toMap(Budget::getFundId, Function.identity()));
-        return holders.stream()
-                .map(holder -> holder.withBudget(idBudgetMap.get(Optional.of(holder)
-                        .map(ReEncumbranceHolder::getFundId)
-                        .orElse(null))))
-                .collect(toList());
-      });
   }
 
   public Future<List<ReEncumbranceHolder>> withRollovers(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
@@ -170,26 +87,29 @@ public class ReEncumbranceHoldersBuilder {
       .map(rollovers -> withRollovers(rollovers, holders));
   }
 
-  public Future<List<ReEncumbranceHolder>> withConversions(List<ReEncumbranceHolder> reEncumbranceHolders,
-                                                                      RequestContext requestContext) {
+  @Override
+  protected Future<Void> withConversion(List<? extends EncumbranceRelationsHolder> encumbranceHolders,
+      RequestContext requestContext) {
+    List<ReEncumbranceHolder> reEncumbranceHolders = encumbranceHolders.stream()
+      .map(h -> (ReEncumbranceHolder)h)
+      .toList();
     Optional<String> fyCurrency = reEncumbranceHolders.stream()
-        .map(ReEncumbranceHolder::getCurrency)
-        .filter(Objects::nonNull)
-        .findFirst();
+      .map(ReEncumbranceHolder::getCurrency)
+      .filter(Objects::nonNull)
+      .findFirst();
     if (fyCurrency.isEmpty()) {
-      return Future.succeededFuture(reEncumbranceHolders);
+      return Future.succeededFuture(null);
     }
-    return AsyncUtil.executeBlocking(requestContext.getContext(), false, () -> {
-
+    return requestContext.getContext().executeBlocking(() -> {
       Map<String, List<ReEncumbranceHolder>> currencyHoldersMap = reEncumbranceHolders.stream()
-        .collect(groupingBy(reEncumbranceHolder -> reEncumbranceHolder.getPoLine().getCost().getCurrency()));
+        .collect(groupingBy(holder -> holder.getPoLine().getCost().getCurrency()));
       currencyHoldersMap.forEach((poLineCurrency, holders) -> {
         Double exchangeRate = holders.stream()
-                .map(ReEncumbranceHolder::getPoLine)
-                .map(CompositePoLine::getCost)
-                .map(Cost::getExchangeRate)
-                .filter(Objects::nonNull)
-                .findFirst().orElse(null);
+          .map(ReEncumbranceHolder::getPoLine)
+          .map(CompositePoLine::getCost)
+          .map(Cost::getExchangeRate)
+          .filter(Objects::nonNull)
+          .findFirst().orElse(null);
         ConversionQuery poLineToFYConversionQuery = HelperUtils.getConversionQuery(exchangeRate, poLineCurrency, fyCurrency.get());
         ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(poLineToFYConversionQuery, requestContext);
         CurrencyConversion poLineToFYConversion = exchangeRateProvider.getCurrencyConversion(poLineToFYConversionQuery);
@@ -201,9 +121,8 @@ public class ReEncumbranceHoldersBuilder {
         CurrencyConversion fyToPoLineConversion = exchangeRateProvider.getCurrencyConversion(fyToPoLineConversionQuery);
         holders.forEach(holder -> holder.withPoLineToFyConversion(poLineToFYConversion).withFyToPoLineConversion(fyToPoLineConversion));
       });
-      return reEncumbranceHolders;
+      return null;
     });
-
   }
 
   public Future<List<ReEncumbranceHolder>> withPreviousFyEncumbrances(List<ReEncumbranceHolder> holders,
@@ -228,12 +147,6 @@ public class ReEncumbranceHoldersBuilder {
 
   public List<ReEncumbranceHolder> withEncumbranceRollover(List<ReEncumbranceHolder> holders) {
     return holders.stream().map(this::withEncumbranceRollover).collect(toList());
-  }
-
-  private List<ReEncumbranceHolder> withFundsData(List<ReEncumbranceHolder> reEncumbranceHolders, List<Fund> funds) {
-    Map<String, String> fundLedgerIdsMap = funds.stream()
-            .collect(toMap(Fund::getId, Fund::getLedgerId));
-    return reEncumbranceHolders.stream().map(holder -> holder.withLedgerId(fundLedgerIdsMap.get(holder.getFundId()))).collect(toList());
   }
 
   private List<ReEncumbranceHolder> withRollovers(List<LedgerFiscalYearRollover> rollovers,

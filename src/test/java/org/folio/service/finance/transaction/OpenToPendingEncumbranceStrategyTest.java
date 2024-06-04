@@ -102,10 +102,7 @@ public class OpenToPendingEncumbranceStrategyTest {
         .withCurrentFiscalYearId(UUID.randomUUID().toString()));
 
       doReturn(new ArrayList<EncumbranceRelationsHolder>()).when(encumbranceRelationsHoldersBuilder).buildBaseHolders(any());
-      doReturn(succeededFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withBudgets(any(), any());
-      doReturn(succeededFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withLedgersData(any(),any());
-      doReturn(succeededFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withFiscalYearData(any(), any());
-      doReturn(succeededFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withConversion(any(), any());
+      doReturn(succeededFuture(new ArrayList<EncumbranceRelationsHolder>())).when(encumbranceRelationsHoldersBuilder).withFinances(any(), any());
       doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withExistingTransactions(any(), any(), any());
       doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
 
