@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.ROLLOVER_NOT_COMPLETED;
 import static org.folio.rest.core.exceptions.ErrorCodes.ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND;
 
@@ -86,10 +85,9 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
     if (reEncumbranceHolders.isEmpty()) {
       return Future.succeededFuture(orderRetrieveHolder);
     }
-    return reEncumbranceHoldersBuilder.withFundsData(reEncumbranceHolders, requestContext)
-      .compose(holderList -> {
-        if (holderList.stream()
-          .anyMatch(holder -> Objects.isNull(holder.getLedgerId()))) {
+    return reEncumbranceHoldersBuilder.getLedgerIds(reEncumbranceHolders, requestContext)
+      .compose(lIds -> {
+        if (reEncumbranceHolders.stream().anyMatch(holder -> Objects.isNull(holder.getLedgerId()))) {
           return Future.succeededFuture(orderRetrieveHolder.withNeedReEncumber(true));
         }
 
@@ -112,15 +110,11 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   public Future<Void> reEncumber(String orderId, RequestContext requestContext) {
     return purchaseOrderStorageService.getCompositeOrderById(orderId, requestContext)
       .map(reEncumbranceHoldersBuilder::buildReEncumbranceHoldersWithOrdersData)
-      .compose(holders -> reEncumbranceHoldersBuilder.withFundsData(holders, requestContext))
-      .map(this::checkAllFundsFound)
-      .compose(holders -> reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext))
-      .compose(holders -> reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext))
+      .compose(holders -> reEncumbranceHoldersBuilder.withFinances(holders, requestContext)
+        .map(v -> holders))
       .compose(holders -> reEncumbranceHoldersBuilder.withRollovers(holders, requestContext))
       .map(reEncumbranceHoldersBuilder::withEncumbranceRollover)
       .compose(holders -> checkRolloverHappensForAllLedgers(holders, requestContext))
-      .compose(holders -> reEncumbranceHoldersBuilder.withBudgets(holders, requestContext))
-      .compose(holders -> reEncumbranceHoldersBuilder.withConversions(holders, requestContext))
       .compose(holders -> reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext))
       .map(this::filterNeedReEncumbranceHolders)
       .map(this::ensureReEncumbranceHoldersExist)
@@ -130,18 +124,6 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
       .map(this::updateLinkToEncumbrances)
       .compose(holders -> deleteRolloverErrors(orderId, requestContext).map(aVoid -> holders))
       .compose(holders -> updatePoLines(holders, requestContext));
-  }
-
-  private List<ReEncumbranceHolder> checkAllFundsFound(List<ReEncumbranceHolder> holders) {
-    List<Parameter> parameters =  holders.stream()
-            .filter(holder -> Objects.isNull(holder.getLedgerId()))
-            .map(ReEncumbranceHolder::getFundId)
-            .map(id -> new Parameter().withValue(id).withKey("fund"))
-            .toList();
-    if (parameters.isEmpty()) {
-      return holders;
-    }
-    throw new HttpException(404, FUNDS_NOT_FOUND.toError().withParameters(parameters));
   }
 
   private Future<List<ReEncumbranceHolder>> checkRolloverHappensForAllLedgers(List<ReEncumbranceHolder> holders,

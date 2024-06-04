@@ -112,7 +112,6 @@ public enum ErrorCodes {
   FORBIDDEN_DELETE_USED_VALUE("forbiddenDeleteUsedValue", "Deleting the value used is prohibited"),
   ERROR_REMOVING_INVOICE_LINE_ENCUMBRANCES("errorRemovingInvoiceLineEncumbrances", "Error removing invoice line encumbrance links after deleting the encumbrances: %s"),
   PO_LINE_HAS_RELATED_APPROVED_INVOICE_ERROR("poLineHasRelatedApprovedInvoice", "A related invoice has the APPROVED status, invoice line ids: %s"),
-  MULTIPLE_FISCAL_YEARS("multipleFiscalYears", "Order line fund distributions have active budgets in multiple fiscal years."),
   INSTANCE_INVALID_PRODUCT_ID_ERROR("instanceInvalidProductIdError", "Instance connection could not be changed, the chosen instance contains an invalid Product ID."),
   FUND_LOCATION_RESTRICTION_VIOLATION("fundLocationRestrictionViolation", "One of the locations is restricted to be used by all funds."),
   ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND("encumbrancesForReEncumberNotFound", "The encumbrances were correctly created during the rollover or have already been updated."),
@@ -126,7 +125,8 @@ public enum ErrorCodes {
   ROUTING_LIST_UNIQUE_NAME_VIOLATION("routingListUniqueNameViolation", "Routing list with the same name already exists"),
   ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE("orderFormatIncorrectForBindaryActive", "When PoLine is bindery active, its format must be 'P/E Mix' or 'Physical Resource'"),
   CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE("createInventoryIncorrectForBindaryActive", "When PoLine is bindery active, Create Inventory must be 'Instance, Holding, Item'"),
-  RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE("receivingWorkflowIncorrectForBindaryActive", "When PoLine is bindery active, its receiving workflow must be set to 'Independent order and receipt quantity'");
+  RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE("receivingWorkflowIncorrectForBindaryActive", "When PoLine is bindery active, its receiving workflow must be set to 'Independent order and receipt quantity'"),
+  BUDGET_NOT_FOUND_FOR_FISCAL_YEAR("budgetNotFoundForFiscalYear", "Could not find an active budget for a fund with the current fiscal year of another fund in the fund distribution");
 
   private final String code;
   private final String description;

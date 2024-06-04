@@ -30,6 +30,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.service.FundsDistributionService;
 import org.folio.service.finance.budget.BudgetRestrictionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,10 +56,16 @@ public class ClosedToOpenEncumbranceStrategyTest {
   BudgetRestrictionService budgetRestrictionService;
   @Mock
   private RequestContext requestContext;
+  private AutoCloseable mockitoMocks;
 
   @BeforeEach
   public void initMocks() {
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
+  }
+
+  @AfterEach
+  public void resetMocks() throws Exception {
+    mockitoMocks.close();
   }
 
   @Test
@@ -79,12 +86,8 @@ public class ClosedToOpenEncumbranceStrategyTest {
     encumbranceRelationsHolders.add(new EncumbranceRelationsHolder()
       .withFundDistribution(new FundDistribution()));
     doReturn(encumbranceRelationsHolders).when(encumbranceRelationsHoldersBuilder).buildBaseHolders(any());
-    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withBudgets(any(), any());
-    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withLedgersData(any(),any());
-    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withFiscalYearData(any(), any());
-    doReturn(succeededFuture(encumbranceRelationsHolders)).when(encumbranceRelationsHoldersBuilder).withConversion(any(), any());
+    doReturn(succeededFuture()).when(encumbranceRelationsHoldersBuilder).withFinances(any(), any());
 
-    doReturn(encumbranceRelationsHolders).when(encumbranceRelationsHoldersBuilder).withKnownTransactions(any(), any());
     doReturn(encumbranceRelationsHolders).when(fundsDistributionService).distributeFunds(any());
     doReturn(succeededFuture(null)).when(encumbranceService).createOrUpdateEncumbrances(any(), any());
 
