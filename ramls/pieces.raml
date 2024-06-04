@@ -15,6 +15,19 @@ types:
   UUID:
     type: string
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+  BatchDeletePayload:
+     type: object
+     properties:
+       ids:
+         type: array
+         items:
+           type: string
+         description: List of IDs to be deleted
+       deleteHoldings:
+         type: boolean
+         description: Specifies whether associated holdings should also be deleted
+         required: false
+         default: false
 
 traits:
   pageable: !include raml-util/traits/pageable.raml
@@ -49,46 +62,40 @@ resourceTypes:
         default: false
   /batch:
     delete:
-      description: Batch delete pieces with optional deletion of related holdings
+      description: Deletes multiple pieces optionally including related holdings.
       body:
         application/json:
-          type: object
-          properties:
-            ids:
-              type: array
-              items:
-                type: string
-                description: ID of a piece to be deleted
-            deleteHolding:
-              type: boolean
-              description: "Flag to determine if related holdings should also be deleted"
-              default: false
+          type: string
+          example: |
+            {
+              "ids": ["123", "456", "789"],
+              "deleteHoldings": false
+            }
       responses:
         204:
-          description: "Batch delete of pieces successfully completed"
+          description: "Pieces records successfully deleted"
         400:
-          description: "Bad request"
+          description: "Bad request due to invalid data format or validation error"
           body:
             application/json:
               example:
-               strict: false
-               value: !include examples/errors_400.sample
+                strict: false
+                value: !include examples/errors_400.sample
             text/plain:
-              example: "unable to delete Piece -- Bad request"
+              example: "unable to delete Pieces -- Bad request"
         404:
-          description: "One or more pieces not found"
+          description: "One or more specified IDs do not exist"
           body:
             application/json:
-              type: errors
-            text/plain:
-              example: "Error - one or more pieces not found."
         500:
-          description: "Internal server error, e.g. due to misconfiguration"
+          description: "Internal server error due to a misconfiguration or server fault"
           body:
             application/json:
-              type: errors
+              example:
+                strict: false
+                value: !include examples/errors_500.sample
             text/plain:
-              example: "Internal server realization error - due to misconfiguration."
+              example: "unable to delete Pieces -- Internal server error"
   /{id}:
     uriParameters:
       id:

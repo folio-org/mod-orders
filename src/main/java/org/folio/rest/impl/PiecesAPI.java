@@ -7,15 +7,14 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
-import io.vertx.sqlclient.impl.Connection;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.BatchDeletePayload;
 import org.folio.rest.jaxrs.model.OrdersPiecesBatchDeleteApplicationJson;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
@@ -71,8 +70,11 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
   }
 
   @Override
-  public void deleteOrdersPiecesBatch(OrdersPiecesBatchDeleteApplicationJson entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceDeleteFlowManager.batchDeletePiece(entity.getIds(),entity.getDeleteHolding(),new RequestContext(vertxContext, okapiHeaders));
+  public void deleteOrdersPiecesBatch(String entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    JsonObject json = new JsonObject(entity);
+    List<String> ids = json.getJsonArray("ids").getList();
+    boolean deleteHoldings = json.getBoolean("deleteHoldings", false);
+    pieceDeleteFlowManager.batchDeletePiece(ids, deleteHoldings, new RequestContext(vertxContext, okapiHeaders));
   }
 
   @Override

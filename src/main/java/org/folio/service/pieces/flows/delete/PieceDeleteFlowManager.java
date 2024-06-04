@@ -87,7 +87,6 @@ public class PieceDeleteFlowManager {
     List<Future> deleteFutures = ids.stream()
       .map(id -> deletePiece(id, deleteHolding, requestContext))
       .collect(Collectors.toList());
-
     return CompositeFuture.all(deleteFutures)
       .map(empty -> null);
   }

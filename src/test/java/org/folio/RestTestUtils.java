@@ -59,6 +59,22 @@ public class RestTestUtils {
     return response;
   }
 
+  public static Response verifyDeleteResponse(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+    return  RestAssured
+      .with()
+      .header(X_OKAPI_URL)
+      .header(X_OKAPI_TOKEN)
+      .headers(headers)
+      .contentType(APPLICATION_JSON)
+      .body(body)
+      .when()
+      .delete(url)
+      .then()
+      .statusCode(expectedCode)
+      .contentType(expectedContentType)
+      .extract()
+      .response();
+  }
 
   public static Response verifyPut(String url, JsonObject body, String expectedContentType, int expectedCode) {
     return verifyPut(url, body.encodePrettily(), expectedContentType, expectedCode);
