@@ -11,7 +11,6 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
 import org.folio.rest.jaxrs.model.BindPiecesResult;
-import org.folio.rest.jaxrs.model.BindingResult;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -1013,7 +1012,7 @@ public class CheckinReceivingApiTest {
       .as(BindPiecesResult.class);
 
     assertThat(response.getPoLineId(), is(poLine.getId()));
-    assertThat(response.getBindingResults().stream().map(BindingResult::getPieceId), is(pieceIds));
+    assertThat(response.getBoundPieceIds(), is(pieceIds));
     assertThat(response.getItemId(), notNullValue());
 
     var pieceUpdates = getPieceUpdates();
