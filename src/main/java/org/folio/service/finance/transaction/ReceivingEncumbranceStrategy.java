@@ -47,13 +47,10 @@ public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy
       .onSuccess(holders -> LOG.debug("End processing encumbrances for piece add/delete"));
   }
 
-  public Future<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(List<EncumbranceRelationsHolder> encumbranceRelationsHolders,
-                  CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
-    return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
-      .compose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
-      .compose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
-      .compose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
-      .compose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poFromStorage, requestContext));
+  public Future<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(List<EncumbranceRelationsHolder> holders,
+      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+    return encumbranceRelationsHoldersBuilder.withFinances(holders, requestContext)
+      .compose(v -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poFromStorage, requestContext));
   }
 
   @Override

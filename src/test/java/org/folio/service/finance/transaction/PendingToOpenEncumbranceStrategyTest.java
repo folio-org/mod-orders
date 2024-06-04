@@ -14,6 +14,7 @@ package org.folio.service.finance.transaction;
   import static org.junit.jupiter.api.Assertions.assertNull;
   import static org.junit.jupiter.api.Assertions.assertTrue;
   import static org.mockito.ArgumentMatchers.any;
+  import static org.mockito.ArgumentMatchers.anyCollection;
   import static org.mockito.ArgumentMatchers.anyList;
   import static org.mockito.ArgumentMatchers.anyString;
   import static org.mockito.ArgumentMatchers.argThat;
@@ -22,6 +23,7 @@ package org.folio.service.finance.transaction;
   import static org.mockito.Mockito.doReturn;
   import static org.mockito.Mockito.times;
   import static org.mockito.Mockito.verify;
+  import static org.mockito.Mockito.when;
 
   import java.util.List;
   import java.util.UUID;
@@ -166,21 +168,19 @@ public class PendingToOpenEncumbranceStrategyTest {
     Budget budget2 = new Budget().withId(UUID.randomUUID().toString())
       .withFundId(fundId2)
       .withFiscalYearId(fiscalYearId);
-    doReturn(succeededFuture(List.of(budget1, budget2)))
-      .when(budgetService).getBudgets(anyList(), eq(requestContext));
-
     Fund fund1 = new Fund().withId(fundId1).withLedgerId(UUID.randomUUID().toString());
     Fund fund2 = new Fund().withId(fundId2).withLedgerId(UUID.randomUUID().toString());
-    doReturn(succeededFuture(List.of(fund1, fund2)))
-      .when(fundService).getAllFunds(anyList(), eq(requestContext));
-
     Ledger ledger = new Ledger().withId(fund1.getLedgerId()).withRestrictEncumbrance(true);
-    doReturn(succeededFuture(List.of(ledger)))
-      .when(ledgerService).getLedgersByIds(anyList(), eq(requestContext));
-
     FiscalYear fiscalYear = new FiscalYear().withId(fiscalYearId).withCurrency("USD");
-    doReturn(succeededFuture(fiscalYear))
-      .when(fiscalYearService).getFiscalYearById(anyString(), eq(requestContext));
+
+    doReturn(Future.succeededFuture(List.of(fund1, fund2)))
+      .when(fundService).getAllFunds(anyCollection(), any());
+    doReturn(Future.succeededFuture(List.of(ledger)))
+      .when(ledgerService).getLedgersByIds(anyCollection(), any());
+    doReturn(Future.succeededFuture(fiscalYear))
+      .when(fiscalYearService).getCurrentFiscalYear(anyString(), any());
+    doReturn(Future.succeededFuture(List.of(budget1, budget2)))
+      .when(budgetService).getBudgetsByQuery(anyString(), any());
 
     InvoiceLine invoiceLine = new InvoiceLine()
       .withId(invoiceLineId)
