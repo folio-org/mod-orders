@@ -6,6 +6,7 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.helper.BaseHelper.ORDER_ID;
+import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
@@ -381,7 +382,7 @@ public class PurchaseOrderLineHelper {
    */
   public void updateEstimatedPrice(CompositePoLine compPoLine) {
     Cost cost = compPoLine.getCost();
-    cost.setPoLineEstimatedPrice(HelperUtils.calculateEstimatedPrice(cost).getNumber().doubleValue());
+    cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
   }
 
 
