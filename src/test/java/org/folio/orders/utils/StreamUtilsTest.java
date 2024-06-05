@@ -46,20 +46,20 @@ public class StreamUtilsTest {
   }
 
   @Test
-  void testList2mapKey() {
+  void testListToMapKey() {
     List<String> list = List.of("1", "22", "3");
 
-    Map<Integer, String> map = StreamUtils.list2map(list, String::length);
+    Map<Integer, String> map = StreamUtils.listToMap(list, String::length);
     assertEquals(2, map.size());
     assertEquals("1", map.get(1));
     assertEquals("22", map.get(2));
   }
 
   @Test
-  void testList2mapKeyValue() {
+  void testListToMapKeyValue() {
     List<String> list = List.of("1", "22", "3");
 
-    Map<Integer, String> map = StreamUtils.list2map(list, String::length, s -> s + "x");
+    Map<Integer, String> map = StreamUtils.listToMap(list, String::length, s -> s + "x");
     assertEquals(2, map.size());
     assertEquals("1x", map.get(1));
     assertEquals("22x", map.get(2));

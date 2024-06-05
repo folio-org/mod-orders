@@ -39,11 +39,11 @@ public class StreamUtils {
     return collection.stream().map(mapper).collect(Collectors.toSet());
   }
 
-  public static <T, K> Map<K, T> list2map(Collection<T> collection, Function<T, K> toKey) {
-    return list2map(collection, toKey, Function.identity());
+  public static <T, K> Map<K, T> listToMap(Collection<T> collection, Function<T, K> toKey) {
+    return listToMap(collection, toKey, Function.identity());
   }
 
-  public static <T, K, V> Map<K, V> list2map(Collection<T> collection, Function<T, K> toKey, Function<T, V> toValue) {
+  public static <T, K, V> Map<K, V> listToMap(Collection<T> collection, Function<T, K> toKey, Function<T, V> toValue) {
     return collection.stream().collect(Collectors.toMap(toKey, toValue, (a, b) -> a));
   }
 

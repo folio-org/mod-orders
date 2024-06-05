@@ -6,6 +6,7 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.helper.BaseHelper.ORDER_ID;
+import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
@@ -635,7 +636,7 @@ public class PurchaseOrderLineHelper {
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
     return purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
       .map(poLines -> {
-        boolean isValid = poLines.getTotalRecords() < HelperUtils.getPoLineLimit(tenantConfiguration);
+        boolean isValid = poLines.getTotalRecords() < getPoLineLimit(tenantConfiguration);
         if (!isValid) {
           return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
         }

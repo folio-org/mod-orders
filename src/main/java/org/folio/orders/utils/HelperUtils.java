@@ -317,9 +317,13 @@ public class HelperUtils {
       .sum();
   }
 
-  /*
-  Almost same as collectResultsOnSuccess with addition that each future itself returns a list and
-  this implementation combines all elements of all lists into the single list.
+  /**
+   * Almost same as collectResultsOnSuccess with addition that each future itself returns a list and
+   * this implementation combines all elements of all lists into the single list.
+   * @param futures The list of futures to be combined
+   * @return Single list containing all elements returned from all futures
+   * @param <E> element type
+   * @param <T> list type
    */
   public static <E, T extends List<E>> Future<List<E>> combineResultListsOnSuccess(Collection<Future<T>> futures) {
     return collectResultsOnSuccess(futures)
