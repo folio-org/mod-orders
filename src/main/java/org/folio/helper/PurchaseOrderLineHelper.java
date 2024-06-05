@@ -6,9 +6,6 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.helper.BaseHelper.ORDER_ID;
-import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.convertToPoLine;
-import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
@@ -224,7 +221,7 @@ public class PurchaseOrderLineHelper {
     return GenericCompositeFuture.join(new ArrayList<>(subObjFuts))
       .compose(v -> generateLineNumber(compOrder, requestContext))
       .map(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
-      .compose(v -> updateSearchLocations(compPoLine, requestContext))
+      .compose(v -> purchaseOrderLineService.updateSearchLocations(compPoLine, requestContext))
       .map(v -> line.put(SEARCH_LOCATION_IDS, compPoLine.getSearchLocationIds()))
       .compose(v -> createPoLineSummary(compPoLine, line, requestContext));
   }
@@ -355,7 +352,7 @@ public class PurchaseOrderLineHelper {
   public Future<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
 
-    updateSearchLocations(compOrderLine, requestContext)
+    purchaseOrderLineService.updateSearchLocations(compOrderLine, requestContext)
       .compose(v -> purchaseOrderLineService.updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext))
       .compose(poLine -> purchaseOrderLineService.updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
       .onSuccess(json -> promise.complete())
@@ -383,7 +380,7 @@ public class PurchaseOrderLineHelper {
    */
   public void updateEstimatedPrice(CompositePoLine compPoLine) {
     Cost cost = compPoLine.getCost();
-    cost.setPoLineEstimatedPrice(calculateEstimatedPrice(cost).getNumber().doubleValue());
+    cost.setPoLineEstimatedPrice(HelperUtils.calculateEstimatedPrice(cost).getNumber().doubleValue());
   }
 
 
@@ -549,12 +546,6 @@ public class PurchaseOrderLineHelper {
     return futures;
   }
 
-  private Future<Void> updateSearchLocations(CompositePoLine compositePoLine, RequestContext requestContext) {
-    return purchaseOrderLineService.retrieveSearchLocationIds(convertToPoLine(compositePoLine), requestContext)
-      .map(compositePoLine::withSearchLocationIds)
-      .mapEmpty();
-  }
-
   private List<Future<CompositePoLine>> processPoLinesCreation(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
     RequestContext requestContext) {
     return getNewPoLines(compOrder, poLinesFromStorage)
@@ -644,7 +635,7 @@ public class PurchaseOrderLineHelper {
     String query = PURCHASE_ORDER_ID + "==" + compPOL.getPurchaseOrderId();
     return purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
       .map(poLines -> {
-        boolean isValid = poLines.getTotalRecords() < getPoLineLimit(tenantConfiguration);
+        boolean isValid = poLines.getTotalRecords() < HelperUtils.getPoLineLimit(tenantConfiguration);
         if (!isValid) {
           return List.of(ErrorCodes.POL_LINES_LIMIT_EXCEEDED.toError());
         }

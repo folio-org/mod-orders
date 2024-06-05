@@ -78,10 +78,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.ApiTestSuite;
 import org.folio.Instance;
 import org.folio.models.consortium.ConsortiumConfiguration;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -748,10 +748,10 @@ public class InventoryManagerTest {
     doReturn(succeededFuture(holdings2)).when(restClient).getAsJsonObject(any(RequestEntry.class), RequestContextMatcher.matchTenant("T2"));
 
     // when
-    var future = inventoryHoldingManager.getHoldingsForAllLocationTenants(poLine, requestContext);
+    var holdingsByTenants = inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext);
 
     // then
-    vertxTestContext.assertComplete(future)
+    vertxTestContext.assertComplete(HelperUtils.combineResultListsOnSuccess(holdingsByTenants.values()))
       .onComplete(result -> {
         List<JsonObject> holdings = result.result();
         assertEquals(3, holdings.size());

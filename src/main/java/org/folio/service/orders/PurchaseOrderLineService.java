@@ -14,7 +14,6 @@ import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.orders.utils.ProductIdUtils.buildSetOfProductIdsFromCompositePoLines;
 import static org.folio.service.orders.utils.ProductIdUtils.isISBN;
 import static org.folio.service.orders.utils.ProductIdUtils.extractQualifier;
@@ -22,7 +21,6 @@ import static org.folio.service.orders.utils.ProductIdUtils.removeISBNDuplicates
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -501,27 +499,8 @@ public class PurchaseOrderLineService {
       });
   }
 
-  public Future<List<String>> retrieveSearchLocationIds(PoLine poLine, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(poLine.getLocations())) {
-      return Future.succeededFuture(Collections.emptyList());
-    }
-
-    var holdingIds = StreamEx.of(poLine.getLocations()).map(Location::getHoldingId).nonNull().toList();
-    var locationIds = StreamEx.of(poLine.getLocations()).map(Location::getLocationId).nonNull().toList();
-    if (CollectionUtils.isEmpty(holdingIds)) {
-      return Future.succeededFuture(new ArrayList<>(locationIds));
-    }
-
-    /*
-     * Possible scenarios where holding can be removed but the operation is not yet complete, and this would
-     * result in halting the entire flow. To avoid this, we do not compare the number of holdingIds with
-     * the final result from the inventory.
-     */
-    return inventoryHoldingManager.getHoldingsByIdsWithoutVerification(holdingIds, requestContext)
-      .map(holdings -> StreamEx.of(holdings).map(holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID))
-        .nonNull().toList())
-      .map(holdingsPermanentLocationIds -> StreamEx.of(locationIds).append(holdingsPermanentLocationIds)
-        .distinct().toList());
+  public Future<Void> updateSearchLocations(CompositePoLine poLine, RequestContext requestContext) {
+    return updateSearchLocations(HelperUtils.convertToPoLine(poLine), requestContext);
   }
 
   private Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
@@ -529,5 +508,22 @@ public class PurchaseOrderLineService {
       .map(poLine::withSearchLocationIds)
       .mapEmpty();
   }
-}
 
+  private Future<List<String>> retrieveSearchLocationIds(PoLine poLine, RequestContext requestContext) {
+    List<Location> locations = poLine.getLocations();
+    if (CollectionUtils.isEmpty(locations)) {
+      return Future.succeededFuture(List.of());
+    }
+
+    var locationIds = StreamEx.of(locations).map(Location::getLocationId).nonNull().toList();
+
+    /*
+     * Possible scenarios where holding can be removed but the operation is not yet complete, and this would
+     * result in halting the entire flow. To avoid this, we do not compare the number of holdingIds with
+     * the final result from the inventory.
+     */
+    return inventoryHoldingManager.getLocationIdsFromHoldings(locations, requestContext)
+      .map(holdingsPermanentLocationIds -> StreamEx.of(locationIds).append(holdingsPermanentLocationIds)
+        .distinct().toList());
+  }
+}
