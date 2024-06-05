@@ -1992,7 +1992,6 @@
         "inventory-storage.items.collection.get",
         "inventory-storage.items.item.post",
         "inventory-storage.items.item.delete",
-        "inventory-storage.locations.collection.get",
         "inventory.items.item.put",
         "inventory-storage.loan-types.collection.get",
         "inventory-storage.contributor-name-types.collection.get",
