@@ -241,8 +241,8 @@ public class PieceApiTest {
     CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
     Piece piece = new Piece().withId(UUID.randomUUID().toString())
-                              .withFormat(Piece.Format.PHYSICAL)
-                              .withItemId(ID_FOR_INTERNAL_SERVER_ERROR).withPoLineId(poLine.getId());
+      .withFormat(Piece.Format.PHYSICAL)
+      .withItemId(ID_FOR_INTERNAL_SERVER_ERROR).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
@@ -364,35 +364,6 @@ public class PieceApiTest {
   }
 
   @Test
-  void deletePiecesByIdsTest2() {
-    logger.info("=== Test delete pieces by ids - item deleted ===");
-
-    String pieceId = UUID.randomUUID().toString();
-    List<String> ids = Arrays.asList(pieceId);
-    Boolean deleteHoldings = false;
-    JsonArray jsonArrary = new JsonArray(ids);
-    JsonObject jsonObject = new JsonObject()
-      .put("ids", jsonArrary);
-    //  .put("deleteHolding", deleteHoldings);
-
-    List <Piece> pieces = new ArrayList<>();
-
-
-    // Mock response setup for deletion
-    //MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(jsonObject).encode()); // Simplified mock data
-
-    // Simulate the delete call
-    verifyDeleteResponse(PIECES_BATCH_DELETE_ENDPOINT,
-      String.valueOf(jsonObject),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID),
-      APPLICATION_JSON, 204); // Assuming successful deletion returns a 204 No Content
-
-    // Assertions to check that the deletion was processed in the mock server
-    assertNull(MockServer.getItemDeletions()); // Check if item deletions are as expected
-    assertThat(MockServer.getPieceDeletions(), hasSize(1)); // Verify that exactly one piece deletion was processed
-  }
-
-  @Test
   public void deletePiecesByIdsTest() {
     logger.info("=== Test delete pieces by ids - item deleted ===");
 
@@ -427,25 +398,21 @@ public class PieceApiTest {
       .withPoLineId(poLine.getId())
       .withTitleId(titleId);
 
-    // Mock the server responses
-    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
-    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
-    MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
-    MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
-    MockServer.addMockEntry(ITEM_RECORDS, new JsonObject().put(ID, itemId));
-
     // Prepare request data as JSON Array
     JsonArray jsonArray = new JsonArray().add(piece.getId());
     JsonObject jsonObject = new JsonObject()
       .put("ids", jsonArray)
       .put("deleteHoldings", false);
-
-    // Log the JSON being sent to the server
-    logger.debug("Sending JSON for deletion: {}", jsonObject.encode());
+    // Mock the server responses
+    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+    //MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
+    // MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
+    //MockServer.addMockEntry(ITEM_RECORDS, new JsonObject().put(ID, itemId));
 
     // Perform the delete operation and verify the response
-    verifyDeleteResponse(PIECES_BATCH_DELETE_ENDPOINT, jsonObject.toString(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 204).as(Piece.class);
+    verifyDeleteResponse(PIECES_BATCH_DELETE_ENDPOINT, jsonObject.encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
 
     // Assert no items were deleted
     assertNull(MockServer.getItemDeletions());

@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.BatchDeletePayload;
-import org.folio.rest.jaxrs.model.OrdersPiecesBatchDeleteApplicationJson;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
 import org.folio.service.pieces.PieceStorageService;
