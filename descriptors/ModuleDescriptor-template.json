@@ -1186,7 +1186,7 @@
     },
     {
       "id": "holdings-storage",
-      "version": "4.2 5.0 6.0"
+      "version": "4.2 5.0 6.0 7.0"
     },
     {
       "id": "orders-storage.po-number",
@@ -1992,6 +1992,7 @@
         "inventory-storage.items.collection.get",
         "inventory-storage.items.item.post",
         "inventory-storage.items.item.delete",
+        "inventory-storage.locations.collection.get",
         "inventory.items.item.put",
         "inventory-storage.loan-types.collection.get",
         "inventory-storage.contributor-name-types.collection.get",
