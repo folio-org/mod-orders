@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.RequestContextUtil;
+import org.folio.orders.utils.StreamUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -22,7 +23,6 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
-import org.folio.service.orders.utils.HelperUtils.BiFunctionReturningFuture;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
@@ -138,42 +137,31 @@ public class InventoryHoldingManager {
   }
 
   public Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext) {
-    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByHoldingIds);
+    return getHoldingsByIdsWithoutVerification(holdingIds, requestContext)
+      .map(holdings -> {
+        if (holdings.size() == holdingIds.size()) {
+          return holdings;
+        }
+        List<Parameter> parameters = holdingIds.stream()
+          .filter(id -> holdings.stream()
+            .noneMatch(holding -> holding.getString(ID).equals(id)))
+          .map(id -> new Parameter().withValue(id).withKey("holdings"))
+          .toList();
+        throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION, parameters);
+      });
+  }
+
+  private Future<List<JsonObject>> getHoldingsByIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
+    return collectResultsOnSuccess(
+      ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15)
+        .map(ids -> fetchHoldingsByHoldingIds(ids, requestContext)).toList()
+    )
+      .map(lists -> lists.stream()
+        .flatMap(Collection::stream)
+        .toList());
   }
 
   private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext) {
-    return fetchHoldingsByHoldingIds(holdingIds, requestContext, holdings -> {
-      if (holdings.size() == holdingIds.size()) {
-        return holdings;
-      }
-      List<Parameter> parameters = holdingIds.stream()
-        .filter(id -> holdings.stream()
-          .noneMatch(holding -> holding.getString(ID).equals(id)))
-        .map(id -> new Parameter().withValue(id).withKey("holdings"))
-        .collect(Collectors.toList());
-      throw new HttpException(404, PARTIALLY_RETURNED_COLLECTION.toError().withParameters(parameters));
-    });
-  }
-
-  public Future<List<JsonObject>> getHoldingsByIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
-    return getHoldingsByIds(holdingIds, requestContext, this::fetchHoldingsByHoldingIdsWithoutVerification);
-  }
-
-  private Future<List<JsonObject>> fetchHoldingsByHoldingIdsWithoutVerification(List<String> holdingIds, RequestContext requestContext) {
-    return fetchHoldingsByHoldingIds(holdingIds, requestContext, UnaryOperator.identity());
-  }
-
-  private Future<List<JsonObject>> getHoldingsByIds(List<String> holdingIds, RequestContext requestContext,
-                                                    BiFunctionReturningFuture<List<String>, RequestContext, List<JsonObject>> biFunction) {
-    return collectResultsOnSuccess(
-      ofSubLists(new ArrayList<>(holdingIds), MAX_IDS_FOR_GET_RQ_15).map(ids -> biFunction.apply(ids, requestContext)).toList())
-      .map(lists -> lists.stream()
-        .flatMap(Collection::stream)
-        .collect(Collectors.toList()));
-  }
-
-  private Future<List<JsonObject>> fetchHoldingsByHoldingIds(List<String> holdingIds, RequestContext requestContext,
-                                                             UnaryOperator<List<JsonObject>> unaryOperator) {
     String query = convertIdsToCqlQuery(holdingIds);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS))
       .withQuery(query).withOffset(0).withLimit(MAX_IDS_FOR_GET_RQ_15);
@@ -181,8 +169,7 @@ public class InventoryHoldingManager {
       .map(jsonHoldings -> jsonHoldings.getJsonArray(HOLDINGS_RECORDS)
         .stream()
         .map(JsonObject.class::cast)
-        .collect(toList()))
-      .map(unaryOperator);
+        .toList());
   }
 
   public Future<JsonObject> getHoldingById(String holdingId, boolean skipNotFoundException, RequestContext requestContext) {
@@ -307,15 +294,6 @@ public class InventoryHoldingManager {
     return Future.succeededFuture();
   }
 
-  public Future<List<JsonObject>> getHoldingsForAllLocationTenants(CompositePoLine poLine, RequestContext requestContext) {
-    var holdingsByTenants = getHoldingsByLocationTenants(poLine, requestContext);
-    return GenericCompositeFuture.all(new ArrayList<>(holdingsByTenants.values()))
-      .map(ar -> holdingsByTenants.values().stream()
-        .flatMap(future -> future.result().stream())
-        .toList()
-      );
-  }
-
   public Map<String, Future<List<JsonObject>>> getHoldingsByLocationTenants(CompositePoLine poLine, RequestContext requestContext) {
     String currentTenantId = TenantTool.tenantId(requestContext.getHeaders());
     Map<String, List<String>> holdingsByTenant = poLine.getLocations()
@@ -344,6 +322,27 @@ public class InventoryHoldingManager {
         var cause = new Parameter().withKey("cause").withValue(failure.getMessage());
         throw new HttpException(404, HOLDINGS_BY_ID_NOT_FOUND, List.of(param, cause));
       });
+  }
+
+  public Future<List<String>> getLocationIdsFromHoldings(List<Location> locations, RequestContext requestContext) {
+    var holdingLocations = StreamUtils.filter(locations, location -> location.getHoldingId() != null);
+    if (holdingLocations.isEmpty()) {
+      return Future.succeededFuture(List.of());
+    }
+    Map<String, List<String>> holdingIdsByTenant = StreamUtils.groupBy(
+      holdingLocations,
+      Location::getTenantId,
+      Location::getHoldingId
+    );
+    return HelperUtils.combineResultListsOnSuccess(
+      holdingIdsByTenant.entrySet()
+        .stream()
+        .map(entry -> {
+          var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+          return getHoldingsByIdsWithoutVerification(entry.getValue(), locationContext);
+        })
+        .toList()
+    ).map(holdings -> StreamUtils.map(holdings, holding -> holding.getString(HOLDING_PERMANENT_LOCATION_ID)));
   }
 
 }

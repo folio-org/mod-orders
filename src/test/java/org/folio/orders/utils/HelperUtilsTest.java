@@ -1,5 +1,17 @@
 package org.folio.orders.utils;
 
+import io.vertx.core.Future;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.jaxrs.model.CloseReason;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.junit.jupiter.api.Test;
+
+import javax.money.convert.ConversionQuery;
+import java.util.List;
+import java.util.UUID;
+
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.isNotFound;
 import static org.folio.rest.core.exceptions.ErrorCodes.PREFIX_NOT_FOUND;
@@ -12,29 +24,27 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
-import java.util.UUID;
-
-import javax.money.convert.ConversionQuery;
-
-import org.folio.rest.core.exceptions.ErrorCodes;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.jaxrs.model.CloseReason;
-import org.folio.rest.jaxrs.model.Cost;
-import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.junit.jupiter.api.Test;
-
 public class HelperUtilsTest {
 
   @Test
-  public void testShouldReturnEmptyString(){
+  void testShouldReturnEmptyString() {
     String act = HelperUtils.combineCqlExpressions("");
     assertThat(act, is(emptyOrNullString()));
   }
 
   @Test
-  void testShouldReturnBooleanWhenIsNotFound(){
+  void testCombineResultListsOnSuccess() {
+    var f1 = Future.succeededFuture(List.of(1, 2, 3));
+    var f2 = Future.succeededFuture(List.of(4, 5, 6));
+    var f3 = Future.succeededFuture(List.of(7, 8, 9));
+    Future<List<Integer>> listFuture = HelperUtils.combineResultListsOnSuccess(List.of(f1, f2, f3));
+    listFuture.onSuccess(
+      combined -> assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9), combined)
+    );
+  }
+
+  @Test
+  void testShouldReturnBooleanWhenIsNotFound() {
     var actual = isNotFound(new HttpException(404, PREFIX_NOT_FOUND));
     assertTrue(actual);
     var actual2 = isNotFound(new Throwable(new HttpException(401, PREFIX_NOT_FOUND)));
@@ -42,7 +52,7 @@ public class HelperUtilsTest {
   }
 
   @Test
-  public void testShouldReturnConversionQueryWithRateKeyForGetConversionQueryWithExchangeRate(){
+  void testShouldReturnConversionQueryWithRateKeyForGetConversionQueryWithExchangeRate() {
     ConversionQuery conversionQuery = HelperUtils.getConversionQuery(2.0d, "USD", "EUR");
     assertThat(conversionQuery.get(RATE_KEY, Double.class), is(2.0d));
     assertThat(conversionQuery.getBaseCurrency().getCurrencyCode(), is("USD"));
@@ -50,7 +60,7 @@ public class HelperUtilsTest {
   }
 
   @Test
-  public void testShouldBuildQueryWithoutExchangeRate(){
+  void testShouldBuildQueryWithoutExchangeRate() {
     String systemCurrency = "USD";
     Cost costOneTime = new Cost().withListUnitPrice(595d).withQuantityPhysical(1).withCurrency("EUR").withPoLineEstimatedPrice(595d);
     PoLine poLineOneTime = new PoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(UUID.randomUUID().toString()).withCost(costOneTime);
@@ -59,7 +69,8 @@ public class HelperUtilsTest {
     assertNull(actQuery.get(RATE_KEY, Double.class));
   }
 
-  @Test void testOrderStatusToBeCancelled() {
+  @Test
+  void testOrderStatusToBeCancelled() {
     PurchaseOrder purchaseOrder = new PurchaseOrder();
     purchaseOrder.setId(UUID.randomUUID().toString());
     purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);

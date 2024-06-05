@@ -7,7 +7,6 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.convertToPoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
@@ -224,7 +223,7 @@ public class PurchaseOrderLineHelper {
     return GenericCompositeFuture.join(new ArrayList<>(subObjFuts))
       .compose(v -> generateLineNumber(compOrder, requestContext))
       .map(lineNumber -> line.put(PO_LINE_NUMBER, lineNumber))
-      .compose(v -> updateSearchLocations(compPoLine, requestContext))
+      .compose(v -> purchaseOrderLineService.updateSearchLocations(compPoLine, requestContext))
       .map(v -> line.put(SEARCH_LOCATION_IDS, compPoLine.getSearchLocationIds()))
       .compose(v -> createPoLineSummary(compPoLine, line, requestContext));
   }
@@ -355,7 +354,7 @@ public class PurchaseOrderLineHelper {
   public Future<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
     Promise<Void> promise = Promise.promise();
 
-    updateSearchLocations(compOrderLine, requestContext)
+    purchaseOrderLineService.updateSearchLocations(compOrderLine, requestContext)
       .compose(v -> purchaseOrderLineService.updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext))
       .compose(poLine -> purchaseOrderLineService.updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
       .onSuccess(json -> promise.complete())
@@ -547,12 +546,6 @@ public class PurchaseOrderLineHelper {
       }
     }
     return futures;
-  }
-
-  private Future<Void> updateSearchLocations(CompositePoLine compositePoLine, RequestContext requestContext) {
-    return purchaseOrderLineService.retrieveSearchLocationIds(convertToPoLine(compositePoLine), requestContext)
-      .map(compositePoLine::withSearchLocationIds)
-      .mapEmpty();
   }
 
   private List<Future<CompositePoLine>> processPoLinesCreation(CompositePurchaseOrder compOrder, List<PoLine> poLinesFromStorage,
