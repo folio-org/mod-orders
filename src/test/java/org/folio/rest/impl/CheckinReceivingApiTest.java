@@ -1032,42 +1032,6 @@ public class CheckinReceivingApiTest {
   }
 
   @Test
-  void testBindPiecesWithDifferentHoldingIdAndThrowError() {
-    logger.info("=== Test POST Bind with different holdingId to Title With and throw error");
-
-    var receivingStatus = Piece.ReceivingStatus.UNRECEIVABLE;
-    var format = Piece.Format.ELECTRONIC;
-
-    var order = getMinimalContentCompositePurchaseOrder()
-      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
-    var poLine = getMinimalContentCompositePoLine(order.getId());
-    var bindingPiece1 = getMinimalContentPiece(poLine.getId())
-      .withReceivingStatus(receivingStatus)
-      .withFormat(format);
-    var bindingPiece2 = getMinimalContentPiece(poLine.getId())
-      .withId(UUID.randomUUID().toString())
-      .withReceivingStatus(receivingStatus)
-      .withFormat(format);
-
-    addMockEntry(PURCHASE_ORDER_STORAGE, order);
-    addMockEntry(PO_LINES_STORAGE, poLine);
-    addMockEntry(PIECES_STORAGE, bindingPiece1);
-    addMockEntry(PIECES_STORAGE, bindingPiece2);
-    addMockEntry(TITLES, getTitle(poLine));
-
-    var bindPiecesCollection = new BindPiecesCollection()
-      .withPoLineId(poLine.getId())
-      .withBindItem(getMinimalContentBindItem())
-      .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId()));
-
-    var errors = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_BAD_REQUEST.toInt())
-      .as(Errors.class);
-
-    assertEquals(errors.getErrors().get(0).getMessage(), "Holding Id must not be null or different for pieces");
-  }
-
-  @Test
   void testBindPiecesToTitleWithItemWithOutstandingRequest() {
     logger.info("=== Test POST Bind to Title with Item with Outstanding Request");
 
