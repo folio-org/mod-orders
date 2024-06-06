@@ -19,7 +19,6 @@ import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.FundDistributionUtilsTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.orders.utils.PoLineCommonUtilTest;
-import org.folio.orders.utils.StreamUtilsTest;
 import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorTest;
 import org.folio.rest.core.ResponseUtilTest;
 import org.folio.rest.core.RestClientTest;
@@ -243,10 +242,6 @@ public class ApiTestSuite {
 
   @Nested
   class FundDistributionUtilsTestNested extends FundDistributionUtilsTest {
-  }
-
-  @Nested
-  class StreamUtilsTestNested extends StreamUtilsTest {
   }
 
   @Nested
