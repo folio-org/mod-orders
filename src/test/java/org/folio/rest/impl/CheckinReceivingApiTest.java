@@ -119,7 +119,6 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.hasValue;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -1006,6 +1005,7 @@ public class CheckinReceivingApiTest {
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
       .withBindItem(getMinimalContentBindItem()
+        .withLocationId(null)
         .withHoldingId(holdingId))
       .withBindPieceIds(pieceIds);
 
@@ -1077,7 +1077,7 @@ public class CheckinReceivingApiTest {
       String pieceId = piece.getId();
       return Objects.equals(bindingPiece.getId(), pieceId);
     }).toList();
-    assertThat(pieceList.size(), is(2));
+    assertThat(pieceList.size(), is(1));
 
     var createdHoldings = getCreatedHoldings();
     assertThat(createdHoldings, notNullValue());
@@ -1101,6 +1101,7 @@ public class CheckinReceivingApiTest {
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
       .withBindItem(getMinimalContentBindItem()
+        .withLocationId(null)
         .withHoldingId(UUID.randomUUID().toString()))
       .withBindPieceIds(List.of(bindingPiece.getId()));
 
@@ -1134,6 +1135,7 @@ public class CheckinReceivingApiTest {
       .withPoLineId(poLine.getId())
       .withBindItem(getMinimalContentBindItem()
         .withTenantId("differentTenantId")
+        .withLocationId(null)
         .withHoldingId(UUID.randomUUID().toString()))
       .withBindPieceIds(List.of(bindingPiece.getId()))
       .withRequestsAction(BindPiecesCollection.RequestsAction.TRANSFER);
@@ -1167,6 +1169,7 @@ public class CheckinReceivingApiTest {
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
       .withBindItem(getMinimalContentBindItem()
+        .withLocationId(null)
         .withHoldingId(UUID.randomUUID().toString()))
       .withBindPieceIds(List.of(bindingPiece.getId()))
       .withRequestsAction(BindPiecesCollection.RequestsAction.TRANSFER);
