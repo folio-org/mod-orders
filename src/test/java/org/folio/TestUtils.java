@@ -197,7 +197,7 @@ public final class TestUtils {
       .withCallNumber("TK5105.88815 . A58 2004 FT MEADE")
       .withMaterialTypeId("1a54b431-2e4f-452d-9cae-9cee66c9a892")
       .withPermanentLoanTypeId("2b94c631-fca9-4892-a730-03ee529ffe27")
-      .withPermanentLocationId("fcd64ce1-6995-48f0-840e-89ffa2288371");
+      .withLocationId("fcd64ce1-6995-48f0-840e-89ffa2288371");
   }
   public static String encodePrettily(Object entity) {
     return JsonObject.mapFrom(entity).encodePrettily();

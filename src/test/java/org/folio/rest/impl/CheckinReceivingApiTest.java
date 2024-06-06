@@ -1035,7 +1035,6 @@ public class CheckinReceivingApiTest {
   void testBindPiecesWithDifferentHoldingIdAndThrowError() {
     logger.info("=== Test POST Bind with different holdingId to Title With and throw error");
 
-    var holdingId = "849241fa-4a14-4df5-b951-846dcd6cfc4d";
     var receivingStatus = Piece.ReceivingStatus.UNRECEIVABLE;
     var format = Piece.Format.ELECTRONIC;
 
@@ -1043,12 +1042,10 @@ public class CheckinReceivingApiTest {
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     var poLine = getMinimalContentCompositePoLine(order.getId());
     var bindingPiece1 = getMinimalContentPiece(poLine.getId())
-      .withHoldingId(holdingId)
       .withReceivingStatus(receivingStatus)
       .withFormat(format);
     var bindingPiece2 = getMinimalContentPiece(poLine.getId())
       .withId(UUID.randomUUID().toString())
-      .withHoldingId("64ee33f2-b2b5-4912-942a-50ddea063663")
       .withReceivingStatus(receivingStatus)
       .withFormat(format);
 
