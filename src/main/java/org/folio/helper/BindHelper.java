@@ -16,8 +16,6 @@ import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
 import org.folio.rest.jaxrs.model.BindPiecesResult;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.Error;
-import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.Title;
@@ -167,14 +165,10 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<BindPiecesHolder> createItemForPieces(BindPiecesHolder holder, RequestContext requestContext) {
     var bindPiecesCollection = holder.getBindPiecesCollection();
     var poLineId = holder.getPoLineId();
-    var holdingIds = holder.getPieces()
-      .map(Piece::getHoldingId).distinct().toList();
-    validateHoldingIds(holdingIds, bindPiecesCollection);
     logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
-
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
-      .compose(compPOL -> createInventoryObjects(compPOL, holdingIds.get(0), bindPiecesCollection.getBindItem(), requestContext))
+      .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getBindItem(), requestContext))
       .map(newItemId -> {
         // Move requests if requestsAction is TRANSFER, otherwise do nothing
         if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
@@ -187,32 +181,27 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       });
   }
 
-  private void validateHoldingIds(List<String> holdingIds, BindPiecesCollection bindPiecesCollection) {
-    if (holdingIds.size() != 1) {
-      var holdingParam = new Parameter().withKey("holdingIds").withValue(holdingIds.toString());
-      var pieceParam = new Parameter().withKey("pieceIds").withValue(bindPiecesCollection.getBindPieceIds().toString());
-      var error = new Error().withParameters(List.of(holdingParam, pieceParam))
-        .withMessage("Holding Id must not be null or different for pieces");
-      throw new HttpException(400, error);
-    }
-  }
-
-  private Future<String> createInventoryObjects(CompositePoLine compPOL, String holdingId, BindItem bindItem, RequestContext requestContext) {
+  private Future<String> createInventoryObjects(CompositePoLine compPOL, BindItem bindItem, RequestContext requestContext) {
     var locationContext = createContextWithNewTenantId(requestContext, bindItem.getTenantId());
-    return createShadowInstanceAndHoldingIfNeeded(compPOL, bindItem, holdingId, locationContext, requestContext)
-      .compose(targetHoldingId -> inventoryItemManager.createBindItem(compPOL, targetHoldingId, bindItem, locationContext));
+    return handleInstance(compPOL.getInstanceId(), bindItem.getTenantId(), locationContext, requestContext)
+      .compose(instanceId -> handleHolding(bindItem, instanceId, locationContext))
+      .compose(holdingId -> inventoryItemManager.createBindItem(compPOL, holdingId, bindItem, locationContext));
   }
 
-  private Future<String> createShadowInstanceAndHoldingIfNeeded(CompositePoLine compPOL, BindItem bindItem, String holdingId,
-                                                                RequestContext locationContext, RequestContext requestContext) {
-    // No need to create inventory objects if BindItem tenantId is not different
-    var targetTenantId = bindItem.getTenantId();
+  private Future<String> handleInstance(String instanceId, String targetTenantId,
+                                      RequestContext locationContext, RequestContext requestContext) {
     if (StringUtils.isEmpty(targetTenantId) || targetTenantId.equals(TenantTool.tenantId(requestContext.getHeaders()))) {
-      return Future.succeededFuture(holdingId);
+      return Future.succeededFuture(instanceId);
     }
-    var instanceId = compPOL.getInstanceId();
     return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, locationContext)
-      .compose(s -> inventoryHoldingManager.createHoldingAndReturnId(instanceId, bindItem.getPermanentLocationId(), locationContext));
+      .map(s -> instanceId);
+  }
+
+  private Future<String> handleHolding(BindItem bindItem, String instanceId, RequestContext locationContext) {
+    if (bindItem.getHoldingId() != null) {
+      return Future.succeededFuture(bindItem.getHoldingId());
+    }
+    return inventoryHoldingManager.createHoldingAndReturnId(instanceId, bindItem.getLocationId(), locationContext);
   }
 
   private Future<BindPiecesHolder> storeUpdatedPieces(BindPiecesHolder holder, RequestContext requestContext) {
