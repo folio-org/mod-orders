@@ -1,5 +1,9 @@
 ## 12.8.0 - Unreleased
 
+## 12.7.4 - Released (Poppy R2 2023)
+### Bug Fixes
+* [MODORDERS-1121](https://folio-org.atlassian.net/browse/MODORDERS-1121) - Order lines search results do not display fund code for orders created by data import
+
 ## 12.7.3 - Released (Poppy R2 2023)
 This release focused on fixing Data Import organization feature and electronic format orders for certain quantity
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.7.2...v12.7.3)
