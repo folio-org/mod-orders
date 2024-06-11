@@ -135,7 +135,7 @@ public class InventoryItemManager {
   }
 
   public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
-    if (piece.getItemId() == null || piece.getPoLineId() == null) {
+    if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
       return Future.succeededFuture();
     }
     String itemId = piece.getItemId();

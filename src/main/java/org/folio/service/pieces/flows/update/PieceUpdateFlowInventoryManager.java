@@ -107,7 +107,7 @@ public class PieceUpdateFlowInventoryManager {
   private Future<String> handleItem(PieceUpdateHolder holder, RequestContext requestContext) {
     CompositePoLine poLineToSave = holder.getPoLineToSave();
     Piece pieceToUpdate = holder.getPieceToUpdate();
-    if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave)) {
+    if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave) || pieceToUpdate.getIsBound()) {
         return Future.succeededFuture();
     }
     return inventoryItemManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext)
