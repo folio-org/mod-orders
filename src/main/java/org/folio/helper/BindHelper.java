@@ -168,7 +168,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
-      .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getBindItem(), requestContext))
+      .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getInstanceId(), bindPiecesCollection.getBindItem(), requestContext))
       .map(newItemId -> {
         // Move requests if requestsAction is TRANSFER, otherwise do nothing
         if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
@@ -181,10 +181,13 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       });
   }
 
-  private Future<String> createInventoryObjects(CompositePoLine compPOL, BindItem bindItem, RequestContext requestContext) {
+  private Future<String> createInventoryObjects(CompositePoLine compPOL, String instanceId, BindItem bindItem, RequestContext requestContext) {
+    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
+      instanceId = compPOL.getInstanceId();
+    }
     var locationContext = createContextWithNewTenantId(requestContext, bindItem.getTenantId());
-    return handleInstance(compPOL.getInstanceId(), bindItem.getTenantId(), locationContext, requestContext)
-      .compose(instanceId -> handleHolding(bindItem, instanceId, locationContext))
+    return handleInstance(instanceId, bindItem.getTenantId(), locationContext, requestContext)
+      .compose(instId -> handleHolding(bindItem, instId, locationContext))
       .compose(holdingId -> inventoryItemManager.createBindItem(compPOL, holdingId, bindItem, locationContext));
   }
 
