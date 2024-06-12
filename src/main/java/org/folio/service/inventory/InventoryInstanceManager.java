@@ -361,7 +361,8 @@ public class InventoryInstanceManager {
                                                            List<Location> locations, RequestContext requestContext) {
     return findTenantsWithoutShadowCopies(instanceId, consortiumConfiguration, locations, requestContext)
       .map(tenantIds -> tenantIds.stream()
-        .map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration, requestContext))
+        .map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration,
+            RequestContextUtil.createContextWithNewTenantId(requestContext, targetTenantId)))
         .toList())
       .compose(HelperUtils::collectResultsOnSuccess)
       .map(sharingInstances -> instanceId);
