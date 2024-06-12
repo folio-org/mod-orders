@@ -359,20 +359,21 @@ public class InventoryInstanceManager {
 
   private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
                                                            List<Location> locations, RequestContext requestContext) {
-    return findTenantsWithUnsharedInstance(instanceId, locations, requestContext)
+    return findTenantsWithoutShadowCopies(instanceId, consortiumConfiguration, locations, requestContext)
       .map(tenantIds -> tenantIds.stream()
-        .filter(targetTenantId -> !StringUtils.equals(targetTenantId, consortiumConfiguration.centralTenantId()))
         .map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration, requestContext))
         .toList())
       .compose(HelperUtils::collectResultsOnSuccess)
       .map(sharingInstances -> instanceId);
   }
 
-  private Future<List<String>> findTenantsWithUnsharedInstance(String instanceId, List<Location> locations, RequestContext requestContext) {
+  private Future<List<String>> findTenantsWithoutShadowCopies(String instanceId, ConsortiumConfiguration consortiumConfiguration,
+                                                              List<Location> locations, RequestContext requestContext) {
     List<Future<Optional<String>>> tenantIdFutures = locations.stream()
       .map(Location::getTenantId)
       .distinct()
       .filter(Objects::nonNull)
+      .filter(tenantId -> !StringUtils.equals(tenantId, consortiumConfiguration.centralTenantId()))
       .map(tenantId -> RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
       .map(
         clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
@@ -386,7 +387,10 @@ public class InventoryInstanceManager {
       )
       .toList();
     return collectResultsOnSuccess(tenantIdFutures)
-      .map(tenantIds -> tenantIds.stream().flatMap(Optional::stream).toList());
+      .map(tenantIds -> {
+        logger.info("findTenantsWithUnsharedInstance:: use {} tenants to create shadow instance copies in", tenantIds);
+        return tenantIds.stream().flatMap(Optional::stream).toList();
+      });
   }
 
   public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
