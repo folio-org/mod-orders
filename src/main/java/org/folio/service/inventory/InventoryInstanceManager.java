@@ -361,6 +361,7 @@ public class InventoryInstanceManager {
                                                            List<Location> locations, RequestContext requestContext) {
     return findTenantsWithUnsharedInstance(instanceId, locations, requestContext)
       .map(tenantIds -> tenantIds.stream()
+        .filter(targetTenantId -> !StringUtils.equals(targetTenantId, consortiumConfiguration.centralTenantId()))
         .map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration, requestContext))
         .toList())
       .compose(HelperUtils::collectResultsOnSuccess)
