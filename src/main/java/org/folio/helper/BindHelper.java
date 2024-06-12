@@ -239,7 +239,8 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   @Override
   protected boolean isRevertToOnOrder(Piece piece) {
-    return false;
+    // Set to true for piece validation while fetching
+    return true;
   }
 
   @Override
