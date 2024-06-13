@@ -85,6 +85,7 @@ public enum ErrorCodes {
   REQUEST_FOUND("thereAreRequestsOnItem", "There are requests on item"),
   REQUESTS_ACTION_REQUIRED("requestsActionRequired", "There are circulation requests on items and requestsAction should be populated"),
   PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS("piecesHaveDifferentReceivingTenantIds", "All pieces do not have the same receivingTenantId"),
+  PIECES_MUST_HAVE_RECEIVED_STATUS("piecesMustHaveReceivedStatus", "All pieces must have received status in order to be bound"),
   BUDGET_EXPENSE_CLASS_NOT_FOUND("budgetExpenseClassNotFound", "Budget expense class not found"),
   INACTIVE_EXPENSE_CLASS("inactiveExpenseClass", "Expense class is Inactive"),
   HOLDINGS_BY_INSTANCE_AND_LOCATION_NOT_FOUND("holdingsByInstanceAndLocationNotFoundError", "Holdings by instance id %s and location id %s not found"),

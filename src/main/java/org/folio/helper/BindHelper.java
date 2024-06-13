@@ -72,8 +72,8 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private Future<BindPiecesResult> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
-    //   1. Get piece records from storage
-    return retrievePieceRecords(requestContext)
+    //   1. Get valid piece records from storage
+    return getValidPieces(requestContext)
       // 2. Generate holder object to include necessary data
       .map(piecesGroupedByPoLine -> generateHolder(piecesGroupedByPoLine, bindPiecesCollection))
       // 3. Check if there are any open requests for items
@@ -96,6 +96,18 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return new BindPiecesHolder()
       .withBindPiecesCollection(bindPiecesCollection)
       .withPiecesGroupedByPoLine(piecesGroupedByPoLine);
+  }
+
+  private Future<Map<String, List<Piece>>> getValidPieces(RequestContext requestContext) {
+    return retrievePieceRecords(requestContext)
+      .map(piecesGroupedByPoLine -> {
+        var areAllPiecesReceived = extractAllPieces(piecesGroupedByPoLine)
+          .allMatch(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus()));
+        if (areAllPiecesReceived) {
+          return piecesGroupedByPoLine;
+        }
+        throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_MUST_HAVE_RECEIVED_STATUS);
+      });
   }
 
   private Future<BindPiecesHolder> checkRequestsForPieceItems(BindPiecesHolder holder, RequestContext requestContext) {
