@@ -22,17 +22,17 @@ import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
@@ -359,7 +359,7 @@ public class InventoryInstanceManager {
 
   private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
                                                            List<Location> locations, RequestContext requestContext) {
-    return findTenantsWithoutShadowCopies(instanceId, consortiumConfiguration, locations, requestContext)
+    return getTenantIdsWithoutShadowInstances(instanceId, consortiumConfiguration, locations, requestContext)
       .map(tenantIds -> tenantIds.stream()
         .map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration,
             RequestContextUtil.createContextWithNewTenantId(requestContext, targetTenantId)))
@@ -368,29 +368,22 @@ public class InventoryInstanceManager {
       .map(sharingInstances -> instanceId);
   }
 
-  private Future<List<String>> findTenantsWithoutShadowCopies(String instanceId, ConsortiumConfiguration consortiumConfiguration,
-                                                              List<Location> locations, RequestContext requestContext) {
-    List<Future<Optional<String>>> tenantIdFutures = locations.stream()
-      .map(Location::getTenantId)
-      .distinct()
-      .filter(Objects::nonNull)
-      .filter(tenantId -> !StringUtils.equals(tenantId, consortiumConfiguration.centralTenantId()))
-      .map(tenantId -> RequestContextUtil.createContextWithNewTenantId(requestContext, tenantId))
-      .map(
-        clonedRequestContext -> getInstanceById(instanceId, false, clonedRequestContext)
-          .map(instance -> Optional.<String>empty())
-          .recover(throwable -> {
-            if (throwable instanceof HttpException httpException && httpException.getCode() == 404) {
-              return Future.succeededFuture(Optional.of(TenantTool.tenantId(clonedRequestContext.getHeaders())));
-            }
-            return Future.failedFuture(throwable);
-          })
-      )
-      .toList();
-    return collectResultsOnSuccess(tenantIdFutures)
-      .map(tenantIds -> {
-        logger.info("findTenantsWithUnsharedInstance:: use {} tenants to create shadow instance copies in", tenantIds);
-        return tenantIds.stream().flatMap(Optional::stream).toList();
+  private Future<Collection<String>> getTenantIdsWithoutShadowInstances(String instanceId, ConsortiumConfiguration consortiumConfiguration,
+                                                                        List<Location> locations, RequestContext requestContext) {
+    return sharingInstanceService.getSharingInstances(instanceId, consortiumConfiguration, requestContext)
+      .map(instancesCollection -> {
+        List<String> tenantIdsWithSharingInstances = instancesCollection.getSharingInstances().stream()
+          .flatMap(sharing ->
+            Stream.of(sharing.targetTenantId(), sharing.sourceTenantId()))
+          .filter(tenantId -> !tenantId.equals(consortiumConfiguration.centralTenantId()))
+          .toList();
+        List<String> locationTenantIds = locations.stream()
+          .map(Location::getTenantId)
+          .filter(StringUtils::isNotBlank)
+          .toList();
+        Collection<String> tenantIdsToShare = CollectionUtils.subtract(locationTenantIds, tenantIdsWithSharingInstances);
+        logger.info("List of tenants where shadow instances should be created: {}", tenantIdsToShare);
+        return tenantIdsToShare;
       });
   }
 
