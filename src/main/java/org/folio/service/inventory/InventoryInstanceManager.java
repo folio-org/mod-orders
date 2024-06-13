@@ -373,16 +373,14 @@ public class InventoryInstanceManager {
     return sharingInstanceService.getSharingInstances(instanceId, consortiumConfiguration, requestContext)
       .map(instancesCollection -> {
         List<String> tenantIdsWithSharingInstances = instancesCollection.getSharingInstances().stream()
-          .flatMap(sharing ->
-            Stream.of(sharing.targetTenantId(), sharing.sourceTenantId()))
-          .filter(tenantId -> !tenantId.equals(consortiumConfiguration.centralTenantId()))
+          .flatMap(sharing -> Stream.of(sharing.targetTenantId(), sharing.sourceTenantId()))
           .toList();
         List<String> locationTenantIds = locations.stream()
           .map(Location::getTenantId)
           .filter(StringUtils::isNotBlank)
           .toList();
         Collection<String> tenantIdsToShare = CollectionUtils.subtract(locationTenantIds, tenantIdsWithSharingInstances);
-        logger.info("List of tenants where shadow instances should be created: {}", tenantIdsToShare);
+        logger.info("List of tenants where shadow instances should be created: {}, instanceId: {}", tenantIdsToShare, instanceId);
         return tenantIdsToShare;
       });
   }
