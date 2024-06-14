@@ -542,6 +542,11 @@ public class HelperUtils {
     return json.getString(ID);
   }
 
+  public static String extractCreatedDate(JsonObject json) {
+    return json.getJsonObject(CommonFields.METADATA.getValue())
+      .getString(CommonFields.CREATED_DATE.getValue());
+  }
+
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLineList) {
     List<CompositePoLine> compositePoLines = new ArrayList<>(poLineList.size());
     if (CollectionUtils.isNotEmpty(poLineList)) {

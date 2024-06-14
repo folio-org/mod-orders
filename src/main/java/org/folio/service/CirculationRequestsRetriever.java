@@ -19,8 +19,8 @@ import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOI
 import static org.folio.service.inventory.InventoryUtils.REQUESTS;
 import static org.folio.service.inventory.util.RequestFields.COLLECTION_RECORDS;
 import static org.folio.service.inventory.util.RequestFields.COLLECTION_TOTAL;
-import static org.folio.service.inventory.util.RequestFields.ID_KEY;
-import static org.folio.service.inventory.util.RequestFields.ITEM_ID_KEY;
+import static org.folio.service.inventory.util.RequestFields.REQUESTER_ID;
+import static org.folio.service.inventory.util.RequestFields.ITEM_ID;
 
 public class CirculationRequestsRetriever {
 
@@ -41,23 +41,21 @@ public class CirculationRequestsRetriever {
   }
 
   public Future<Map<String, Long>> getNumbersOfRequestsByItemIds(List<String> itemIds, RequestContext requestContext) {
-    return getRequestsByIds(itemIds, requestContext)
+    return getRequestsByItemIds(itemIds, requestContext)
       .map(jsonList -> jsonList.stream()
-        .collect(Collectors.groupingBy(json -> json.getString(ITEM_ID_KEY.getValue()), Collectors.counting()))
+        .collect(Collectors.groupingBy(json -> json.getString(ITEM_ID.getValue()), Collectors.counting()))
       );
   }
 
-  public Future<List<String>> getRequestIdsByItemIds(List<String> itemIds, RequestContext requestContext) {
-    return getRequestsByIds(itemIds, requestContext)
+  public Future<Map<String, List<JsonObject>>> getRequesterIdsToRequestsByItemIds(List<String> itemIds, RequestContext requestContext) {
+    return getRequestsByItemIds(itemIds, requestContext)
       .map(jsonList -> jsonList.stream()
-        .map(json -> json.getString(ID_KEY.getValue()))
-        .toList()
-      );
+        .collect(Collectors.groupingBy(json -> json.getString(REQUESTER_ID.getValue()))));
   }
 
-  private Future<List<JsonObject>> getRequestsByIds(List<String> itemIds, RequestContext requestContext) {
+  private Future<List<JsonObject>> getRequestsByItemIds(List<String> itemIds, RequestContext requestContext) {
     var futures = StreamEx.ofSubLists(itemIds, MAX_IDS_FOR_GET_RQ_15)
-      .map(ids -> String.format("(%s and status=\"%s*\")", convertIdsToCqlQuery(ids, ITEM_ID_KEY.getValue()), OUTSTANDING_REQUEST_STATUS_PREFIX))
+      .map(ids -> String.format("(%s and status=\"%s*\")", convertIdsToCqlQuery(ids, ITEM_ID.getValue()), OUTSTANDING_REQUEST_STATUS_PREFIX))
       .map(query -> new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
         .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE))
       .map(entry -> restClient.getAsJsonObject(entry, requestContext))
