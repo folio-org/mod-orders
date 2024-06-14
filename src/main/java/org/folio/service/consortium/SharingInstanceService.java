@@ -80,8 +80,8 @@ public class SharingInstanceService {
    * @return list with shared instances
    */
   public Future<SharingInstanceCollection> getSharingInstances(String instanceId,
-                                                    ConsortiumConfiguration consortiumConfiguration,
-                                                    RequestContext requestContext) {
+                                                               ConsortiumConfiguration consortiumConfiguration,
+                                                               RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(SHARE_INSTANCE_ENDPOINT)
       .withId(consortiumConfiguration.consortiumId())
       .withQueryParameter(INSTANCE_IDENTIFIER, instanceId)
