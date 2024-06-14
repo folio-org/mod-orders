@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
+import org.folio.models.consortium.SharingInstanceCollection;
 import org.folio.models.consortium.SharingStatus;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.ConsortiumException;
@@ -28,6 +29,9 @@ public class SharingInstanceService {
 
   private static final String SHARE_INSTANCE_ENDPOINT = "/consortia/{id}/sharing/instances";
   private static final String SHARING_INSTANCE_ERROR = "Error during sharing Instance for sourceTenantId: %s, targetTenantId: %s, instanceIdentifier: %s, error: %s";
+  private static final String INSTANCE_IDENTIFIER = "instanceIdentifier";
+  private static final String STATUS = "status";
+  private static final String COMPLETE_SHARING_INSTANCE_STATUS = "COMPLETE";
 
   private final RestClient restClient;
 
@@ -65,6 +69,25 @@ public class SharingInstanceService {
           return Future.failedFuture(new ConsortiumException(message));
         }
       });
+  }
+
+  /**
+   * Gets sharing instances. The result will include information in which tenants instances already existed.
+   *
+   * @param instanceId  the instance id
+   * @param consortiumConfiguration the consortium configuration
+   * @param requestContext the request context
+   * @return list with shared instances
+   */
+  public Future<SharingInstanceCollection> getSharingInstances(String instanceId,
+                                                               ConsortiumConfiguration consortiumConfiguration,
+                                                               RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(SHARE_INSTANCE_ENDPOINT)
+      .withId(consortiumConfiguration.consortiumId())
+      .withQueryParameter(INSTANCE_IDENTIFIER, instanceId)
+      .withQueryParameter(STATUS, COMPLETE_SHARING_INSTANCE_STATUS)
+      .withLimit(Integer.MAX_VALUE);
+    return restClient.get(requestEntry, SharingInstanceCollection.class, requestContext);
   }
 
 }
