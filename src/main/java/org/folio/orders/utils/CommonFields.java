@@ -2,6 +2,7 @@ package org.folio.orders.utils;
 
 public enum CommonFields {
 
+  ID("id"),
   METADATA("metadata"),
   CREATED_DATE("createdDate");
 
