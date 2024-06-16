@@ -20,6 +20,7 @@ import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.service.inventory.InventoryUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,16 +34,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ACCESSION_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SUPPRESS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
@@ -176,7 +167,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
     Promise<Boolean> promise = Promise.promise();
     CheckInPiece checkinPiece = getByPiece(piece);
-    checkinItem(item, checkinPiece, locationContext)
+    InventoryUtils.updateItemWithCheckinPieceFields(item, checkinPiece);
+    inventoryItemManager.updateItem(item, locationContext)
       // Update Piece record object with check-in details if item updated
       // successfully
       .map(v -> {
@@ -198,6 +190,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     piece.setDisplaySummary(checkinPiece.getDisplaySummary());
     piece.setComment(checkinPiece.getComment());
 
+    if (StringUtils.isNotEmpty(checkinPiece.getReceivingTenantId())) {
+      piece.setReceivingTenantId(checkinPiece.getReceivingTenantId());
+    }
     if (StringUtils.isNotEmpty(checkinPiece.getLocationId())) {
       piece.setLocationId(checkinPiece.getLocationId());
     }
@@ -289,39 +284,6 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     return orderClosedStatusesMap;
   }
 
-  private Future<Void> checkinItem(JsonObject itemRecord, CheckInPiece checkinPiece, RequestContext locationContext) {
-
-    // Update item record with checkIn details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
-
-    if (StringUtils.isNotEmpty(checkinPiece.getDisplaySummary())) {
-      itemRecord.put(ITEM_DISPLAY_SUMMARY, checkinPiece.getDisplaySummary());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getEnumeration())) {
-      itemRecord.put(ITEM_ENUMERATION, checkinPiece.getEnumeration());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getCopyNumber())) {
-      itemRecord.put(COPY_NUMBER, checkinPiece.getCopyNumber());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getChronology())) {
-      itemRecord.put(ITEM_CHRONOLOGY, checkinPiece.getChronology());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
-      itemRecord.put(ITEM_BARCODE, checkinPiece.getBarcode());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getAccessionNumber())) {
-      itemRecord.put(ITEM_ACCESSION_NUMBER, checkinPiece.getAccessionNumber());
-    }
-    if (StringUtils.isNotEmpty(checkinPiece.getCallNumber())) {
-      itemRecord.put(ITEM_LEVEL_CALL_NUMBER, checkinPiece.getCallNumber());
-    }
-    if (checkinPiece.getDiscoverySuppress() != null) {
-      itemRecord.put(ITEM_DISCOVERY_SUPPRESS, checkinPiece.getDiscoverySuppress());
-    }
-
-    return inventoryItemManager.updateItem(itemRecord, locationContext);
-  }
-
   @Override
   protected String getLocationId(Piece piece) {
     return getByPiece(piece).getLocationId();
@@ -330,6 +292,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   @Override
   protected String getHoldingId(Piece piece) {
     return getByPiece(piece).getHoldingId();
+  }
+
+  @Override
+  protected String getReceivingTenantId(Piece piece) {
+    return getByPiece(piece).getReceivingTenantId();
   }
 
   @Override

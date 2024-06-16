@@ -34,6 +34,7 @@ import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
@@ -103,6 +104,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected InventoryHoldingManager inventoryHoldingManager;
   @Autowired
   protected InventoryItemManager inventoryItemManager;
+  @Autowired
+  protected InventoryInstanceManager inventoryInstanceManager;
   @Autowired
   protected PieceStorageService pieceStorageService;
   @Autowired
@@ -396,6 +399,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     return false;
   }
 
+  protected abstract String getReceivingTenantId(Piece piece);
+
   protected abstract String getHoldingId(Piece piece);
 
   protected abstract String getLocationId(Piece piece);
@@ -506,11 +511,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       return Future.succeededFuture(true);
     }
 
+    String receivingTenantId = getReceivingTenantId(piece);
     String locationId = getLocationId(piece);
     String holdingId = getHoldingId(piece);
+    logger.info("createHoldingsForChangedLocations:: receivingTenantId: {} locationId: {} holdingId: {}",
+      receivingTenantId, locationId, holdingId);
     Location location = new Location().withLocationId(locationId).withHoldingId(holdingId);
-    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
-    return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, locationContext)
+    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, receivingTenantId);
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext)
+      .compose(instance -> inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, locationContext))
       .compose(createdHoldingId -> {
         processedHoldings.put(holdingKey, createdHoldingId);
         piece.setHoldingId(createdHoldingId);

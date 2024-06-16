@@ -258,4 +258,10 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   protected String getLocationId(Piece piece) {
     return "";
   }
+
+  @Override
+  protected String getReceivingTenantId(Piece piece) {
+    return StringUtils.EMPTY;
+  }
+
 }
