@@ -40,7 +40,7 @@ public class InventoryItemRequestService {
     this.circulationRequestsRetriever = circulationRequestsRetriever;
   }
 
-  public Future<List<String>> getItemsWithActiveRequests(List<String> itemIds, RequestContext requestContext) {
+  public Future<List<String>> getItemIdsWithActiveRequests(List<String> itemIds, RequestContext requestContext) {
     if (logger.isDebugEnabled()) {
       logger.debug("getItemsWithActiveRequests:: Filtering itemIds with active requests: {}", itemIds);
     }
@@ -51,17 +51,17 @@ public class InventoryItemRequestService {
         .toList());
   }
 
-  public Future<Void> cancelItemsRequests(List<String> itemIds, RequestContext requestContext) {
+  public Future<Void> cancelItemRequests(List<String> itemIds, RequestContext requestContext) {
     return circulationRequestsRetriever.getRequesterIdsToRequestsByItemIds(itemIds, requestContext)
       .compose(requesterToRequestsMap -> {
         var requestsToCancel = requesterToRequestsMap.values().stream()
           .flatMap(Collection::stream)
           .toList();
-        return handleItemsRequests(requestsToCancel, request -> cancelRequest(request, requestContext));
+        return handleItemRequests(requestsToCancel, request -> cancelRequest(request, requestContext));
       });
   }
 
-  public Future<Void> transferItemsRequests(List<String> originItemIds, String destinationItemId, RequestContext requestContext) {
+  public Future<Void> transferItemRequests(List<String> originItemIds, String destinationItemId, RequestContext requestContext) {
     return circulationRequestsRetriever.getRequesterIdsToRequestsByItemIds(originItemIds, requestContext)
       .compose(requesterToRequestsMap -> {
         var requestsToCancel = new ArrayList<JsonObject>();
@@ -74,12 +74,12 @@ public class InventoryItemRequestService {
           });
         }
 
-        return handleItemsRequests(requestsToTransfer, request -> transferRequest(request, destinationItemId, requestContext))
-          .compose(v -> handleItemsRequests(requestsToCancel, request -> cancelRequest(request, requestContext)));
+        return handleItemRequests(requestsToTransfer, request -> transferRequest(request, destinationItemId, requestContext))
+          .compose(v -> handleItemRequests(requestsToCancel, request -> cancelRequest(request, requestContext)));
       });
   }
 
-  private Future<Void> handleItemsRequests(List<JsonObject> requests, Function<JsonObject, Future<Void>> handler) {
+  private Future<Void> handleItemRequests(List<JsonObject> requests, Function<JsonObject, Future<Void>> handler) {
     return GenericCompositeFuture.all(
       requests.stream()
         .map(handler)

@@ -116,7 +116,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       tenantToItem.entrySet().stream()
         .map(entry -> {
         var locationContext = createContextWithNewTenantId(requestContext, entry.getKey());
-        return inventoryItemRequestService.getItemsWithActiveRequests(entry.getValue(), locationContext)
+        return inventoryItemRequestService.getItemIdsWithActiveRequests(entry.getValue(), locationContext)
           .compose(items -> validateItemsForRequestTransfer(tenantToItem.keySet(), items, holder.getBindPiecesCollection()));
         })
         .toList())
@@ -185,7 +185,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
         // Move requests if requestsAction is TRANSFER, otherwise do nothing
         if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
           var itemIds = holder.getPieces().map(Piece::getItemId).toList();
-          inventoryItemRequestService.transferItemsRequests(itemIds, newItemId, requestContext);
+          inventoryItemRequestService.transferItemRequests(itemIds, newItemId, requestContext);
         }
         // Set new item ids for pieces and holder
         holder.getPieces().forEach(piece -> piece.setItemId(newItemId));

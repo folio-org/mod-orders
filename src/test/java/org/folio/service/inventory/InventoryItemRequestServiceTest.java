@@ -125,7 +125,7 @@ public class InventoryItemRequestServiceTest {
 
     doReturn(Future.succeededFuture(itemReqMap)).when(circulationRequestsRetriever).getNumbersOfRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<List<String>> future = inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext);
+    Future<List<String>> future = inventoryItemRequestService.getItemIdsWithActiveRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -144,7 +144,7 @@ public class InventoryItemRequestServiceTest {
 
     doReturn(Future.succeededFuture(itemReqMap)).when(circulationRequestsRetriever).getNumbersOfRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<List<String>> future = inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext);
+    Future<List<String>> future = inventoryItemRequestService.getItemIdsWithActiveRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -163,7 +163,7 @@ public class InventoryItemRequestServiceTest {
     doReturn(Future.succeededFuture()).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestService.cancelItemsRequests(itemIds, requestContext);
+    Future<Void> future = inventoryItemRequestService.cancelItemRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -180,7 +180,7 @@ public class InventoryItemRequestServiceTest {
     doReturn(Future.succeededFuture()).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
     doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestService.cancelItemsRequests(itemIds, requestContext);
+    Future<Void> future = inventoryItemRequestService.cancelItemRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -199,7 +199,7 @@ public class InventoryItemRequestServiceTest {
     doReturn(Future.succeededFuture()).when(restClient).postJsonObject(any(RequestEntry.class), eq(jsonObject), eq(requestContext));
     doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestService.transferItemsRequests(itemIds, destItemId, requestContext);
+    Future<Void> future = inventoryItemRequestService.transferItemRequests(itemIds, destItemId, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -219,7 +219,7 @@ public class InventoryItemRequestServiceTest {
     doReturn(Future.succeededFuture()).when(restClient).postJsonObject(any(RequestEntry.class), eq(jsonObject), eq(requestContext));
     doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestService.transferItemsRequests(itemIds, destItemId, requestContext);
+    Future<Void> future = inventoryItemRequestService.transferItemRequests(itemIds, destItemId, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -251,7 +251,7 @@ public class InventoryItemRequestServiceTest {
     doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
 
     // One requester will now have two requests, old one will be cancelled
-    Future<Void> future = inventoryItemRequestService.transferItemsRequests(itemIds, destItemId, requestContext);
+    Future<Void> future = inventoryItemRequestService.transferItemRequests(itemIds, destItemId, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
