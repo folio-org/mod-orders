@@ -4,13 +4,17 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 
@@ -31,6 +35,16 @@ import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDEN
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLICATION;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLISHER;
+import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_ACCESSION_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SUPPRESS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 public class InventoryUtils {
 
@@ -177,6 +191,85 @@ public class InventoryUtils {
         .withContributor(jsonObject.getString(CONTRIBUTOR_NAME))
         .withContributorNameTypeId(jsonObject.getString(CONTRIBUTOR_NAME_TYPE_ID)))
       .toList();
+  }
+
+  public static void updateItemWithPieceFields(JsonObject item, Piece piece) {
+    if (StringUtils.isNotEmpty(piece.getDisplaySummary())) {
+      item.put(ITEM_DISPLAY_SUMMARY, piece.getDisplaySummary());
+    }
+    if (StringUtils.isNotEmpty(piece.getEnumeration())) {
+      item.put(ITEM_ENUMERATION, piece.getEnumeration());
+    }
+    if (StringUtils.isNotEmpty(piece.getCopyNumber())) {
+      item.put(COPY_NUMBER, piece.getCopyNumber());
+    }
+    if (StringUtils.isNotEmpty(piece.getChronology())) {
+      item.put(ITEM_CHRONOLOGY, piece.getChronology());
+    }
+    if (StringUtils.isNotEmpty(piece.getBarcode())) {
+      item.put(ITEM_BARCODE, piece.getBarcode());
+    }
+    if (StringUtils.isNotEmpty(piece.getAccessionNumber())) {
+      item.put(ITEM_ACCESSION_NUMBER, piece.getAccessionNumber());
+    }
+    if (StringUtils.isNotEmpty(piece.getCallNumber())) {
+      item.put(ITEM_LEVEL_CALL_NUMBER, piece.getCallNumber());
+    }
+    if (piece.getDiscoverySuppress() != null) {
+      item.put(ITEM_DISCOVERY_SUPPRESS, piece.getDiscoverySuppress());
+    }
+  }
+
+  public static void updateItemWithCheckinPieceFields(JsonObject item, CheckInPiece checkinPiece) {
+    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
+
+    if (StringUtils.isNotEmpty(checkinPiece.getDisplaySummary())) {
+      item.put(ITEM_DISPLAY_SUMMARY, checkinPiece.getDisplaySummary());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getEnumeration())) {
+      item.put(ITEM_ENUMERATION, checkinPiece.getEnumeration());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getCopyNumber())) {
+      item.put(COPY_NUMBER, checkinPiece.getCopyNumber());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getChronology())) {
+      item.put(ITEM_CHRONOLOGY, checkinPiece.getChronology());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getBarcode())) {
+      item.put(ITEM_BARCODE, checkinPiece.getBarcode());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getAccessionNumber())) {
+      item.put(ITEM_ACCESSION_NUMBER, checkinPiece.getAccessionNumber());
+    }
+    if (StringUtils.isNotEmpty(checkinPiece.getCallNumber())) {
+      item.put(ITEM_LEVEL_CALL_NUMBER, checkinPiece.getCallNumber());
+    }
+    if (checkinPiece.getDiscoverySuppress() != null) {
+      item.put(ITEM_DISCOVERY_SUPPRESS, checkinPiece.getDiscoverySuppress());
+    }
+  }
+
+  public static void updateItemWithReceivedItemFields(JsonObject item, ReceivedItem receivedItem) {
+    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
+
+    if (StringUtils.isNotEmpty(receivedItem.getDisplaySummary())) {
+      item.put(ITEM_DISPLAY_SUMMARY, receivedItem.getDisplaySummary());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getEnumeration())) {
+      item.put(ITEM_ENUMERATION, receivedItem.getEnumeration());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getCopyNumber())) {
+      item.put(COPY_NUMBER, receivedItem.getCopyNumber());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getChronology())) {
+      item.put(ITEM_CHRONOLOGY, receivedItem.getChronology());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
+      item.put(ITEM_BARCODE, receivedItem.getBarcode());
+    }
+    if (StringUtils.isNotEmpty(receivedItem.getCallNumber())) {
+      item.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
+    }
   }
 
 }

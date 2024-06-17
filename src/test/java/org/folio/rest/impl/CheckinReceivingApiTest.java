@@ -671,6 +671,53 @@ public class CheckinReceivingApiTest {
   }
 
   @Test
+  void testPostCheckinForNewTenant() {
+    logger.info("=== Test POST check-in - New Tenant ===");
+
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    poLine.setIsPackage(true);
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    poLine.setPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
+
+    String locationForPhysical = UUID.randomUUID().toString();
+
+    String titleIdForPhysical = UUID.randomUUID().toString();
+    MockServer.addMockTitleWithId(poLine, titleIdForPhysical);
+    String titleIdForElectronic = UUID.randomUUID().toString();
+    MockServer.addMockTitleWithId(poLine, titleIdForElectronic);
+
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
+      .withLocationId(locationForPhysical)
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(titleIdForPhysical)
+      .withItemId(UUID.randomUUID().toString());
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, physicalPiece);
+
+    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeCheckedIn()
+      .withCheckedIn(1)
+      .withPoLineId(poLine.getId())
+      .withCheckInPieces(List.of(
+        new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER))
+      ));
+
+    CheckinCollection request = new CheckinCollection()
+      .withToBeCheckedIn(toBeCheckedInList)
+      .withTotalRecords(2);
+
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setReceivingTenantId("test");
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPiece.getId());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(locationForPhysical);
+
+    checkResultWithErrors(request, 0);
+  }
+
+  @Test
   void testPostCheckinMultipleTitlesError() {
     logger.info("=== Test POST check-in multiple titles error for non-packages ===");
 

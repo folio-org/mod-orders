@@ -267,6 +267,10 @@ public class ApiTestSuite {
   }
 
   @Nested
+  class InventoryUtilsTestNested extends InventoryUtilsTest {
+  }
+
+  @Nested
   class InventoryItemRequestServiceTestNested extends InventoryItemRequestServiceTest {
   }
 

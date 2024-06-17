@@ -47,6 +47,7 @@ import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
@@ -313,6 +314,10 @@ public class CheckinHelperTest {
     @Bean
     InventoryHoldingManager inventoryHoldingManager() {
       return mock(InventoryHoldingManager.class);
+    }
+    @Bean
+    InventoryInstanceManager inventoryInstanceManager() {
+      return mock(InventoryInstanceManager.class);
     }
     @Bean
     PurchaseOrderLineService purchaseOrderLineService() {
