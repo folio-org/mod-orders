@@ -143,4 +143,10 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
   protected String getLocationId(Piece piece) {
     return StringUtils.EMPTY;
   }
+
+  @Override
+  protected String getReceivingTenantId(Piece piece) {
+    return StringUtils.EMPTY;
+  }
+
 }
