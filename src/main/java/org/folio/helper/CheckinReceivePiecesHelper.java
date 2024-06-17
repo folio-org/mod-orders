@@ -518,7 +518,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       receivingTenantId, locationId, holdingId);
     Location location = new Location().withLocationId(locationId).withHoldingId(holdingId);
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, receivingTenantId);
-    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext)
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, locationContext)
       .compose(instance -> inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, locationContext))
       .compose(createdHoldingId -> {
         processedHoldings.put(holdingKey, createdHoldingId);
@@ -631,6 +631,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       if (title == null)
         continue;
 
+      // holdingUpdateOnCheckinReceiveRequired
       if (holdingUpdateOnCheckinReceiveRequired(piece, poLine) && !isRevertToOnOrder(piece)) {
         String holdingKey = buildProcessedHoldingKey(piece, title.getInstanceId());
         String holdingId = processedHoldings.get(holdingKey);
