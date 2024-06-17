@@ -21,6 +21,7 @@ import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.service.ProtectionService;
+import org.folio.service.inventory.InventoryUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
@@ -32,14 +33,6 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ResourcePathResolver.RECEIVING_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
@@ -179,7 +172,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   @Override
   protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
     ReceivedItem receivedItem = getByPiece(piece);
-    return receiveItem(item, receivedItem, locationContext)
+    InventoryUtils.updateItemWithReceivedItemFields(item, receivedItem);
+    return inventoryItemManager.updateItem(item, locationContext)
       // Update Piece record object with receiving details if item updated
       // successfully
       .map(v -> {
@@ -232,39 +226,6 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     }
   }
 
-  /**
-   * Returns list of item records for specified id's.
-   *
-   * @param itemRecord   item record
-   * @param receivedItem item details specified by user upon receiving flow
-   * @return future with list of item records
-   */
-  private Future<Void> receiveItem(JsonObject itemRecord, ReceivedItem receivedItem, RequestContext locationContext) {
-    // Update item record with receiving details
-    itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
-
-    if (StringUtils.isNotEmpty(receivedItem.getDisplaySummary())) {
-      itemRecord.put(ITEM_DISPLAY_SUMMARY, receivedItem.getDisplaySummary());
-    }
-    if (StringUtils.isNotEmpty(receivedItem.getEnumeration())) {
-      itemRecord.put(ITEM_ENUMERATION, receivedItem.getEnumeration());
-    }
-    if (StringUtils.isNotEmpty(receivedItem.getCopyNumber())) {
-      itemRecord.put(COPY_NUMBER, receivedItem.getCopyNumber());
-    }
-    if (StringUtils.isNotEmpty(receivedItem.getChronology())) {
-      itemRecord.put(ITEM_CHRONOLOGY, receivedItem.getChronology());
-    }
-    if (StringUtils.isNotEmpty(receivedItem.getBarcode())) {
-      itemRecord.put(ITEM_BARCODE, receivedItem.getBarcode());
-    }
-    if (StringUtils.isNotEmpty(receivedItem.getCallNumber())) {
-      itemRecord.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
-    }
-
-    return inventoryItemManager.updateItem(itemRecord, locationContext);
-  }
-
   @Override
   protected String getLocationId(Piece piece) {
     return getByPiece(piece).getLocationId();
@@ -273,6 +234,11 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   @Override
   protected String getHoldingId(Piece piece) {
     return getByPiece(piece).getHoldingId();
+  }
+
+  @Override
+  protected String getReceivingTenantId(Piece piece) {
+    return StringUtils.EMPTY;
   }
 
   @Override
