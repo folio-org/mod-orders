@@ -2,13 +2,14 @@ package org.folio.service.inventory.util;
 
 public enum RequestFields {
 
-  ID_KEY("id"),
-  ITEM_ID_KEY("itemId"),
-  DESTINATION_KEY("destinationItemId"),
+  ITEM_ID("itemId"),
+  REQUESTER_ID("itemId"),
+  STATUS("status"),
+  DESTINATION_ITEM_ID("destinationItemId"),
   COLLECTION_RECORDS("requests"),
   COLLECTION_TOTAL("totalRecords");
 
-  private String value;
+  private final String value;
 
   RequestFields(String value) {
     this.value = value;

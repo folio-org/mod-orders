@@ -72,8 +72,8 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private Future<BindPiecesResult> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
-    //   1. Get piece records from storage
-    return retrievePieceRecords(requestContext)
+    //   1. Get valid piece records from storage
+    return getValidPieces(requestContext)
       // 2. Generate holder object to include necessary data
       .map(piecesGroupedByPoLine -> generateHolder(piecesGroupedByPoLine, bindPiecesCollection))
       // 3. Check if there are any open requests for items
@@ -98,13 +98,25 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .withPiecesGroupedByPoLine(piecesGroupedByPoLine);
   }
 
+  private Future<Map<String, List<Piece>>> getValidPieces(RequestContext requestContext) {
+    return retrievePieceRecords(requestContext)
+      .map(piecesGroupedByPoLine -> {
+        var areAllPiecesReceived = extractAllPieces(piecesGroupedByPoLine)
+          .allMatch(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus()));
+        if (areAllPiecesReceived) {
+          return piecesGroupedByPoLine;
+        }
+        throw new HttpException(RestConstants.VALIDATION_ERROR, ErrorCodes.PIECES_MUST_HAVE_RECEIVED_STATUS);
+      });
+  }
+
   private Future<BindPiecesHolder> checkRequestsForPieceItems(BindPiecesHolder holder, RequestContext requestContext) {
     var tenantToItem = mapTenantIdsToItemIds(holder.getPiecesGroupedByPoLine(), requestContext);
     return GenericCompositeFuture.all(
       tenantToItem.entrySet().stream()
         .map(entry -> {
         var locationContext = createContextWithNewTenantId(requestContext, entry.getKey());
-        return inventoryItemRequestService.getItemsWithActiveRequests(entry.getValue(), locationContext)
+        return inventoryItemRequestService.getItemIdsWithActiveRequests(entry.getValue(), locationContext)
           .compose(items -> validateItemsForRequestTransfer(tenantToItem.keySet(), items, holder.getBindPiecesCollection()));
         })
         .toList())
@@ -168,12 +180,12 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
-      .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getBindItem(), requestContext))
+      .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getInstanceId(), bindPiecesCollection.getBindItem(), requestContext))
       .map(newItemId -> {
         // Move requests if requestsAction is TRANSFER, otherwise do nothing
         if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
           var itemIds = holder.getPieces().map(Piece::getItemId).toList();
-          inventoryItemRequestService.transferItemsRequests(itemIds, newItemId, requestContext);
+          inventoryItemRequestService.transferItemRequests(itemIds, newItemId, requestContext);
         }
         // Set new item ids for pieces and holder
         holder.getPieces().forEach(piece -> piece.setItemId(newItemId));
@@ -181,10 +193,13 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       });
   }
 
-  private Future<String> createInventoryObjects(CompositePoLine compPOL, BindItem bindItem, RequestContext requestContext) {
+  private Future<String> createInventoryObjects(CompositePoLine compPOL, String instanceId, BindItem bindItem, RequestContext requestContext) {
+    if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
+      instanceId = compPOL.getInstanceId();
+    }
     var locationContext = createContextWithNewTenantId(requestContext, bindItem.getTenantId());
-    return handleInstance(compPOL.getInstanceId(), bindItem.getTenantId(), locationContext, requestContext)
-      .compose(instanceId -> handleHolding(bindItem, instanceId, locationContext))
+    return handleInstance(instanceId, bindItem.getTenantId(), locationContext, requestContext)
+      .compose(instId -> handleHolding(bindItem, instId, locationContext))
       .compose(holdingId -> inventoryItemManager.createBindItem(compPOL, holdingId, bindItem, locationContext));
   }
 
@@ -236,7 +251,8 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   @Override
   protected boolean isRevertToOnOrder(Piece piece) {
-    return false;
+    // Set to true for piece validation while fetching
+    return true;
   }
 
   @Override

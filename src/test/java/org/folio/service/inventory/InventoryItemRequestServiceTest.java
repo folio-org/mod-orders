@@ -20,6 +20,8 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,9 +41,15 @@ import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
+import static org.folio.orders.utils.CommonFields.CREATED_DATE;
+import static org.folio.orders.utils.CommonFields.ID;
+import static org.folio.orders.utils.CommonFields.METADATA;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.folio.service.inventory.util.RequestFields.DESTINATION_KEY;
+import static org.folio.service.inventory.util.RequestFields.DESTINATION_ITEM_ID;
+import static org.folio.service.inventory.util.RequestFields.ITEM_ID;
+import static org.folio.service.inventory.util.RequestFields.REQUESTER_ID;
+import static org.folio.service.inventory.util.RequestFields.STATUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,6 +63,8 @@ import static org.mockito.Mockito.verify;
 
 @ExtendWith(VertxExtension.class)
 public class InventoryItemRequestServiceTest {
+
+  private final JsonObject sampleMetadata = JsonObject.of(CREATED_DATE.getValue(), Instant.now().toString());
 
   @Autowired
   RestClient restClient;
@@ -115,7 +125,7 @@ public class InventoryItemRequestServiceTest {
 
     doReturn(Future.succeededFuture(itemReqMap)).when(circulationRequestsRetriever).getNumbersOfRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<List<String>> future = inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext);
+    Future<List<String>> future = inventoryItemRequestService.getItemIdsWithActiveRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -134,7 +144,7 @@ public class InventoryItemRequestServiceTest {
 
     doReturn(Future.succeededFuture(itemReqMap)).when(circulationRequestsRetriever).getNumbersOfRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<List<String>> future = inventoryItemRequestService.getItemsWithActiveRequests(itemIds, requestContext);
+    Future<List<String>> future = inventoryItemRequestService.getItemIdsWithActiveRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -147,49 +157,49 @@ public class InventoryItemRequestServiceTest {
 
   @Test
   void cancelSingleItemRequest(VertxTestContext vertxTestContext) {
-    String itemId = UUID.randomUUID().toString();
-    String reqId = UUID.randomUUID().toString();
+    var itemIds = generateUUIDs(1);
+    var reqMap = generateRequests(itemIds);
 
-    doReturn(Future.succeededFuture()).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
-    doReturn(Future.succeededFuture(List.of(reqId))).when(circulationRequestsRetriever).getRequestIdsByItemIds(anyList(), eq(requestContext));
+    doReturn(Future.succeededFuture()).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+    doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestService.cancelItemsRequests(List.of(itemId), requestContext);
+    Future<Void> future = inventoryItemRequestService.cancelItemRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
-      verify(restClient, times(1)).delete(any(RequestEntry.class), any(RequestContext.class));
+      verify(restClient, times(1)).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
       vertxTestContext.completeNow();
     });
   }
 
   @Test
   void cancelManyItemRequests(VertxTestContext vertxTestContext) {
-    List<String> itemIds = generateUUIDs(10);
-    List<String> reqIds = generateUUIDs(10);
+    var itemIds = generateUUIDs(10);
+    var reqMap = generateRequests(itemIds);
 
-    doReturn(Future.succeededFuture()).when(restClient).delete(any(RequestEntry.class), eq(requestContext));
-    doReturn(Future.succeededFuture(reqIds)).when(circulationRequestsRetriever).getRequestIdsByItemIds(anyList(), eq(requestContext));
+    doReturn(Future.succeededFuture()).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+    doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestService.cancelItemsRequests(itemIds, requestContext);
+    Future<Void> future = inventoryItemRequestService.cancelItemRequests(itemIds, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
-      verify(restClient, times(10)).delete(any(RequestEntry.class), eq(requestContext));
+      verify(restClient, times(10)).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
       vertxTestContext.completeNow();
     });
   }
 
   @Test
   void transferSingleItemRequest(VertxTestContext vertxTestContext) {
-    String itemId = UUID.randomUUID().toString();
-    String reqId = UUID.randomUUID().toString();
+    var itemIds = generateUUIDs(1);
+    var reqMap = generateRequests(itemIds);
     String destItemId = UUID.randomUUID().toString();
-    JsonObject jsonObject =  JsonObject.of(DESTINATION_KEY.getValue(), destItemId);
+    JsonObject jsonObject =  JsonObject.of(DESTINATION_ITEM_ID.getValue(), destItemId);
 
     doReturn(Future.succeededFuture()).when(restClient).postJsonObject(any(RequestEntry.class), eq(jsonObject), eq(requestContext));
-    doReturn(Future.succeededFuture(List.of(reqId))).when(circulationRequestsRetriever).getRequestIdsByItemIds(anyList(), eq(requestContext));
+    doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestService.transferItemsRequests(List.of(itemId), destItemId, requestContext);
+    Future<Void> future = inventoryItemRequestService.transferItemRequests(itemIds, destItemId, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
@@ -200,19 +210,54 @@ public class InventoryItemRequestServiceTest {
 
   @Test
   void transferManyItemRequests(VertxTestContext vertxTestContext) {
-    List<String> itemIds = generateUUIDs(10);
-    List<String> reqIds = generateUUIDs(10);
+    var itemIds = generateUUIDs(10);
+    var reqMap = generateRequests(itemIds);
+
     String destItemId = UUID.randomUUID().toString();
-    JsonObject jsonObject =  JsonObject.of(DESTINATION_KEY.getValue(), destItemId);
+    JsonObject jsonObject =  JsonObject.of(DESTINATION_ITEM_ID.getValue(), destItemId);
 
     doReturn(Future.succeededFuture()).when(restClient).postJsonObject(any(RequestEntry.class), eq(jsonObject), eq(requestContext));
-    doReturn(Future.succeededFuture(reqIds)).when(circulationRequestsRetriever).getRequestIdsByItemIds(anyList(), eq(requestContext));
+    doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
 
-    Future<Void> future = inventoryItemRequestService.transferItemsRequests(itemIds, destItemId, requestContext);
+    Future<Void> future = inventoryItemRequestService.transferItemRequests(itemIds, destItemId, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
       verify(restClient, times(10)).postJsonObject(any(RequestEntry.class), eq(jsonObject), eq(requestContext));
+      vertxTestContext.completeNow();
+    });
+  }
+
+  @Test
+  void transferManyItemRequestsAndCancelOne(VertxTestContext vertxTestContext) {
+    var itemIds = generateUUIDs(10);
+    var reqMap = generateRequests(itemIds);
+
+    // Add request for a different item with same requester
+    var entries = reqMap.entrySet().stream().toList();
+    var reqEntry = entries.get(0);
+    var newRequest = new JsonObject()
+      .put(ID.getValue(), UUID.randomUUID().toString())
+      .put(ITEM_ID.getValue(), UUID.randomUUID().toString())
+      .put(METADATA.getValue(), JsonObject.of(CREATED_DATE.getValue(), Instant.now().plus(1, ChronoUnit.DAYS).toString()))
+      .put(REQUESTER_ID.getValue(), reqEntry.getKey());
+    reqEntry.getValue().add(newRequest);
+
+    String destItemId = UUID.randomUUID().toString();
+    JsonObject jsonObject =  JsonObject.of(DESTINATION_ITEM_ID.getValue(), destItemId);
+
+    doReturn(Future.succeededFuture()).when(restClient).postJsonObject(any(RequestEntry.class), eq(jsonObject), eq(requestContext));
+    doReturn(Future.succeededFuture()).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
+    doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
+
+    // One requester will now have two requests, old one will be cancelled
+    Future<Void> future = inventoryItemRequestService.transferItemRequests(itemIds, destItemId, requestContext);
+
+    vertxTestContext.assertComplete(future).onComplete(f -> {
+      assertTrue(f.succeeded());
+      newRequest.put(STATUS.getValue(), "Closed - Cancelled");
+      verify(restClient, times(10)).postJsonObject(any(RequestEntry.class), eq(jsonObject), eq(requestContext));
+      verify(restClient, times(1)).put(any(RequestEntry.class), eq(newRequest), eq(requestContext));
       vertxTestContext.completeNow();
     });
   }
@@ -225,6 +270,20 @@ public class InventoryItemRequestServiceTest {
     return ids;
   }
 
+  private Map<String, List<JsonObject>> generateRequests(List<String> itemIds) {
+    Map<String, List<JsonObject>> reqMap = new HashMap<>();
+    for (var itemId : itemIds) {
+      var requesterId = UUID.randomUUID().toString();
+      var requests = new ArrayList<JsonObject>();
+      requests.add(new JsonObject()
+        .put(ID.getValue(), UUID.randomUUID().toString())
+        .put(ITEM_ID.getValue(), itemId)
+        .put(METADATA.getValue(), sampleMetadata)
+        .put(REQUESTER_ID.getValue(), requesterId));
+      reqMap.put(UUID.randomUUID().toString(), requests);
+    }
+    return reqMap;
+  }
 
   /**
    * Define unit test specific beans to override actual ones
