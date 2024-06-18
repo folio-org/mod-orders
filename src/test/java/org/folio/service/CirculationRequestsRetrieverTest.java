@@ -19,6 +19,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -153,11 +154,13 @@ public class CirculationRequestsRetrieverTest {
 
     doReturn(Future.succeededFuture(mockData)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
 
-    Future<List<String>> future = circulationRequestsRetriever.getRequestIdsByItemIds(MOCK_ITEM_IDS, requestContext);
+    Future<Map<String, List<JsonObject>>> future = circulationRequestsRetriever.getRequesterIdsToRequestsByItemIds(MOCK_ITEM_IDS, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
-      assertEquals(7, f.result().size());
+      var reqMap = f.result();
+      assertEquals(2, reqMap.size());
+      assertEquals(7, reqMap.values().stream().mapToInt(Collection::size).sum());
       verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
       vertxTestContext.completeNow();
     });

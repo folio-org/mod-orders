@@ -19,6 +19,7 @@ import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.FundDistributionUtilsTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.orders.utils.PoLineCommonUtilTest;
+import org.folio.orders.utils.StreamUtilsTest;
 import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorTest;
 import org.folio.rest.core.ResponseUtilTest;
 import org.folio.rest.core.RestClientTest;
@@ -66,10 +67,7 @@ import org.folio.service.finance.transaction.OpenToPendingEncumbranceStrategyTes
 import org.folio.service.finance.transaction.PendingToOpenEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.PendingToPendingEncumbranceStrategyTest;
 import org.folio.service.finance.transaction.TransactionServiceTest;
-import org.folio.service.inventory.HoldingsSummaryServiceTest;
-import org.folio.service.inventory.InventoryItemRequestServiceTest;
-import org.folio.service.inventory.InventoryItemStatusSyncServiceTest;
-import org.folio.service.inventory.InventoryManagerTest;
+import org.folio.service.inventory.*;
 import org.folio.service.invoice.InvoiceLineServiceTest;
 import org.folio.service.orders.AcquisitionsUnitsServiceTest;
 import org.folio.service.orders.CombinedOrderDataPopulateServiceTest;
@@ -245,6 +243,10 @@ public class ApiTestSuite {
   }
 
   @Nested
+  class StreamUtilsTestNested extends StreamUtilsTest {
+  }
+
+  @Nested
   class HelperUtilsTestNested extends HelperUtilsTest {
   }
 
@@ -265,11 +267,19 @@ public class ApiTestSuite {
   }
 
   @Nested
+  class InventoryUtilsTestNested extends InventoryUtilsTest {
+  }
+
+  @Nested
   class InventoryItemRequestServiceTestNested extends InventoryItemRequestServiceTest {
   }
 
   @Nested
   class InventoryItemSyncServiceTestNested extends InventoryItemStatusSyncServiceTest {
+  }
+
+  @Nested
+  class InventoryInstanceManagerTestNested extends InventoryInstanceManagerTest {
   }
 
   @Nested

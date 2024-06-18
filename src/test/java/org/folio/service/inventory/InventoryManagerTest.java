@@ -1,6 +1,5 @@
 package org.folio.service.inventory;
 
-import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.stream.Collectors.toList;
 import static org.folio.TestConfig.autowireDependencies;
@@ -31,26 +30,17 @@ import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
-import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
 import static org.folio.service.inventory.InventoryUtils.DEFAULT_LOAN_TYPE_NAME;
 import static org.folio.service.inventory.InventoryUtils.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_INSTANCE_ID;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryUtils.ITEMS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ACCESSION_NUMBER;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_BARCODE;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SUPPRESS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_LEVEL_CALL_NUMBER;
 import static org.folio.service.inventory.InventoryUtils.LOAN_TYPES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -77,11 +67,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.ApiTestSuite;
 import org.folio.Instance;
 import org.folio.models.consortium.ConsortiumConfiguration;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -130,7 +119,6 @@ public class InventoryManagerTest {
   public static final String HOLDING_INSTANCE_ID_2_HOLDING = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d48";
   private static final String TILES_PATH = BASE_MOCK_DATA_PATH + "titles/";
   private static final String COMPOSITE_LINES_PATH = BASE_MOCK_DATA_PATH + "compositeLines/";
-  private static final String PO_LINE_MIN_CONTENT_PATH = COMP_PO_LINES_MOCK_DATA_PATH + "minimalContent.json";
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instances.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
@@ -422,72 +410,6 @@ public class InventoryManagerTest {
   }
 
   @Test
-  void testUpdateItemWithPieceFields() {
-    // given
-    Piece piece = new Piece();
-    piece.setEnumeration("enumeration");
-    piece.setCopyNumber("copy number");
-    piece.setChronology("chronology");
-    piece.setBarcode("barcode");
-    piece.setAccessionNumber("accession number");
-    piece.setCallNumber("call number");
-    piece.setDiscoverySuppress(true);
-
-    String oldValue = "old value";
-    JsonObject item = new JsonObject(new HashMap<>(Map.of(
-      ITEM_ENUMERATION, oldValue,
-      COPY_NUMBER, oldValue,
-      ITEM_CHRONOLOGY, oldValue,
-      ITEM_BARCODE, oldValue,
-      ITEM_ACCESSION_NUMBER, oldValue,
-      ITEM_LEVEL_CALL_NUMBER, oldValue,
-      ITEM_DISCOVERY_SUPPRESS, false
-    )));
-
-    // when
-    inventoryItemManager.updateItemWithPieceFields(piece, item);
-
-    // then
-    assertEquals(piece.getDisplaySummary(), item.getString(ITEM_DISPLAY_SUMMARY));
-    assertEquals(piece.getEnumeration(), item.getString(ITEM_ENUMERATION));
-    assertEquals(piece.getCopyNumber(), item.getString(COPY_NUMBER));
-    assertEquals(piece.getChronology(), item.getString(ITEM_CHRONOLOGY));
-    assertEquals(piece.getBarcode(), item.getString(ITEM_BARCODE));
-    assertEquals(piece.getAccessionNumber(), item.getString(ITEM_ACCESSION_NUMBER));
-    assertEquals(piece.getCallNumber(), item.getString(ITEM_LEVEL_CALL_NUMBER));
-    assertEquals(piece.getDiscoverySuppress(), item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
-  }
-
-  @Test
-  void testUpdateItemWithPieceFields_notOverwrite() {
-    // given
-    Piece piece = new Piece();
-
-    String oldValue = "old value";
-    JsonObject item = new JsonObject(new HashMap<>(Map.of(
-      ITEM_ENUMERATION, oldValue,
-      COPY_NUMBER, oldValue,
-      ITEM_CHRONOLOGY, oldValue,
-      ITEM_BARCODE, oldValue,
-      ITEM_ACCESSION_NUMBER, oldValue,
-      ITEM_LEVEL_CALL_NUMBER, oldValue,
-      ITEM_DISCOVERY_SUPPRESS, false
-    )));
-
-    // when
-    inventoryItemManager.updateItemWithPieceFields(piece, item);
-
-    // then
-    assertEquals(oldValue, item.getString(ITEM_ENUMERATION));
-    assertEquals(oldValue, item.getString(COPY_NUMBER));
-    assertEquals(oldValue, item.getString(ITEM_CHRONOLOGY));
-    assertEquals(oldValue, item.getString(ITEM_BARCODE));
-    assertEquals(oldValue, item.getString(ITEM_ACCESSION_NUMBER));
-    assertEquals(oldValue, item.getString(ITEM_LEVEL_CALL_NUMBER));
-    assertFalse(item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
-  }
-
-  @Test
   void shouldCheckIfTheHoldingExistsWhenHoldingIdSpecifiedAndIfExistThenReturnHoldingIdFromLocation() throws IOException {
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
     JsonObject holdingExp = getFirstObjectFromResponse(holdingsCollection, HOLDINGS_RECORDS);
@@ -748,10 +670,10 @@ public class InventoryManagerTest {
     doReturn(succeededFuture(holdings2)).when(restClient).getAsJsonObject(any(RequestEntry.class), RequestContextMatcher.matchTenant("T2"));
 
     // when
-    var future = inventoryHoldingManager.getHoldingsForAllLocationTenants(poLine, requestContext);
+    var holdingsByTenants = inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext);
 
     // then
-    vertxTestContext.assertComplete(future)
+    vertxTestContext.assertComplete(HelperUtils.combineResultListsOnSuccess(holdingsByTenants.values()))
       .onComplete(result -> {
         List<JsonObject> holdings = result.result();
         assertEquals(3, holdings.size());
@@ -903,21 +825,6 @@ public class InventoryManagerTest {
     inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, requestContext).result();
 
     verify(sharingInstanceService).createShadowInstance(instanceId, configuration.get(), requestContext);
-  }
-
-  @Test
-  void shouldShareInstanceAmongTenants() {
-    String instanceId = UUID.randomUUID().toString();
-    CompositePoLine compositePoLine = getMockAsJson(PO_LINE_MIN_CONTENT_PATH).mapTo(CompositePoLine.class);
-    compositePoLine.setInstanceId(instanceId);
-    compositePoLine.setLocations(Collections.singletonList(new Location().withTenantId(RandomStringUtils.random(4))));
-    Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
-    doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
-    doReturn(failedFuture(new HttpException(404, "instance not found"))).when(restClient).getAsJsonObject(any(RequestEntry.class), anyBoolean(), any(RequestContext.class));
-
-    inventoryInstanceManager.openOrderHandleInstance(compositePoLine, false, requestContext).result();
-
-    verify(inventoryInstanceManager, times(1)).getInstanceById(eq(instanceId), eq(false), any(RequestContext.class));
   }
 
   /**

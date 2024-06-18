@@ -2003,6 +2003,7 @@
         "organizations-storage.organizations.item.get",
         "isbn-utils.convert-to-13.get",
         "user-tenants.collection.get",
+        "consortia.sharing-instances.collection.get",
         "consortia.sharing-instances.item.post"
       ],
       "visible": false
@@ -2070,6 +2071,7 @@
         "tags.collection.get",
         "tags.item.post",
         "user-tenants.collection.get",
+        "consortia.sharing-instances.collection.get",
         "consortia.sharing-instances.item.post"
       ],
       "visible": false

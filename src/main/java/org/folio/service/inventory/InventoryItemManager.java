@@ -135,18 +135,18 @@ public class InventoryItemManager {
   }
 
   public Future<Void> updateItemWithPieceFields(Piece piece, RequestContext requestContext) {
-    if (piece.getItemId() == null || piece.getPoLineId() == null) {
+    if (piece.getItemId() == null || piece.getPoLineId() == null || piece.getIsBound()) {
       return Future.succeededFuture();
     }
     String itemId = piece.getItemId();
     String poLineId = piece.getPoLineId();
     return getItemRecordById(itemId, true, requestContext)
       .compose(item -> {
-        if (poLineId != null && item != null && !item.isEmpty()) {
-          updateItemWithPieceFields(piece, item);
-          return updateItem(item, requestContext);
+        if (poLineId == null || item == null || item.isEmpty()) {
+          return Future.succeededFuture();
         }
-        return Future.succeededFuture();
+        InventoryUtils.updateItemWithPieceFields(item, piece);
+        return updateItem(item, requestContext);
       });
   }
 
@@ -336,11 +336,8 @@ public class InventoryItemManager {
     }
     String holdingId = piece.getHoldingId();
     return buildElectronicItemRecordJsonObject(compPOL, holdingId, requestContext)
-      .map(item -> {
-        updateItemWithPieceFields(piece, item);
-        return item;
-      })
       .compose(item -> {
+        InventoryUtils.updateItemWithPieceFields(item, piece);
         logger.debug("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
         return createItemRecords(item, quantity, requestContext);
       });
@@ -366,11 +363,8 @@ public class InventoryItemManager {
     }
     String holdingId = piece.getHoldingId();
     return buildPhysicalItemRecordJsonObject(compPOL, holdingId, requestContext)
-      .map(item -> {
-        updateItemWithPieceFields(piece, item);
-        return item;
-      })
       .compose(item -> {
+        InventoryUtils.updateItemWithPieceFields(item, piece);
         logger.debug("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
         return createItemRecords(item, quantity, requestContext);
       });
@@ -440,33 +434,6 @@ public class InventoryItemManager {
         .map(JsonObject.class::cast)
         .collect(toList()))
       .orElseGet(List::of);
-  }
-
-  void updateItemWithPieceFields(Piece piece, JsonObject item) {
-    if (StringUtils.isNotEmpty(piece.getDisplaySummary())) {
-      item.put(ITEM_DISPLAY_SUMMARY, piece.getDisplaySummary());
-    }
-    if (StringUtils.isNotEmpty(piece.getEnumeration())) {
-      item.put(ITEM_ENUMERATION, piece.getEnumeration());
-    }
-    if (StringUtils.isNotEmpty(piece.getCopyNumber())) {
-      item.put(COPY_NUMBER, piece.getCopyNumber());
-    }
-    if (StringUtils.isNotEmpty(piece.getChronology())) {
-      item.put(ITEM_CHRONOLOGY, piece.getChronology());
-    }
-    if (StringUtils.isNotEmpty(piece.getBarcode())) {
-      item.put(ITEM_BARCODE, piece.getBarcode());
-    }
-    if (StringUtils.isNotEmpty(piece.getAccessionNumber())) {
-      item.put(ITEM_ACCESSION_NUMBER, piece.getAccessionNumber());
-    }
-    if (StringUtils.isNotEmpty(piece.getCallNumber())) {
-      item.put(ITEM_LEVEL_CALL_NUMBER, piece.getCallNumber());
-    }
-    if (piece.getDiscoverySuppress() != null) {
-      item.put(ITEM_DISCOVERY_SUPPRESS, piece.getDiscoverySuppress());
-    }
   }
 
 }

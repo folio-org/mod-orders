@@ -85,6 +85,7 @@ public enum ErrorCodes {
   REQUEST_FOUND("thereAreRequestsOnItem", "There are requests on item"),
   REQUESTS_ACTION_REQUIRED("requestsActionRequired", "There are circulation requests on items and requestsAction should be populated"),
   PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS("piecesHaveDifferentReceivingTenantIds", "All pieces do not have the same receivingTenantId"),
+  PIECES_MUST_HAVE_RECEIVED_STATUS("piecesMustHaveReceivedStatus", "All pieces must have received status in order to be bound"),
   BUDGET_EXPENSE_CLASS_NOT_FOUND("budgetExpenseClassNotFound", "Budget expense class not found"),
   INACTIVE_EXPENSE_CLASS("inactiveExpenseClass", "Expense class is Inactive"),
   HOLDINGS_BY_INSTANCE_AND_LOCATION_NOT_FOUND("holdingsByInstanceAndLocationNotFoundError", "Holdings by instance id %s and location id %s not found"),
@@ -126,6 +127,7 @@ public enum ErrorCodes {
   ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE("orderFormatIncorrectForBindaryActive", "When PoLine is bindery active, its format must be 'P/E Mix' or 'Physical Resource'"),
   CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE("createInventoryIncorrectForBindaryActive", "When PoLine is bindery active, Create Inventory must be 'Instance, Holding, Item'"),
   RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE("receivingWorkflowIncorrectForBindaryActive", "When PoLine is bindery active, its receiving workflow must be set to 'Independent order and receipt quantity'"),
+  BIND_ITEM_MUST_INCLUDE_EITHER_HOLDING_ID_OR_LOCATION_ID("bindItemMustIncludeEitherHoldingIdOrLocationId", "During binding pieces, the bindItem object must have either holdingId or locationId field populated"),
   BUDGET_NOT_FOUND_FOR_FISCAL_YEAR("budgetNotFoundForFiscalYear", "Could not find an active budget for a fund with the current fiscal year of another fund in the fund distribution");
 
   private final String code;

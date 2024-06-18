@@ -92,8 +92,8 @@ public class PurchaseOrderLineHelperTest {
       .withSequenceNumbers(List.of("1"));
     doReturn(succeededFuture(JsonObject.mapFrom(seqNumbers)))
       .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    doReturn(succeededFuture(List.of()))
-      .when(purchaseOrderLineService).retrieveSearchLocationIds(any(PoLine.class), eq(requestContext));
+    doReturn(succeededFuture())
+      .when(purchaseOrderLineService).updateSearchLocations(any(CompositePoLine.class), eq(requestContext));
     doAnswer((Answer<Future<PoLine>>) invocation -> {
       PoLine pol = invocation.getArgument(1);
       return succeededFuture(pol);
@@ -137,8 +137,8 @@ public class PurchaseOrderLineHelperTest {
       .withSequenceNumbers(List.of("1"));
     doReturn(succeededFuture(JsonObject.mapFrom(seqNumbers)))
       .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
-    doReturn(succeededFuture(List.of()))
-      .when(purchaseOrderLineService).retrieveSearchLocationIds(any(PoLine.class), eq(requestContext));
+    doReturn(succeededFuture())
+      .when(purchaseOrderLineService).updateSearchLocations(any(CompositePoLine.class), eq(requestContext));
     doAnswer((Answer<Future<PoLine>>) invocation -> {
       PoLine pol = invocation.getArgument(1);
       return succeededFuture(pol);

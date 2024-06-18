@@ -87,6 +87,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_UPDATE_FAILED;
 import static org.folio.rest.core.exceptions.ErrorCodes.LOC_NOT_PROVIDED;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS;
+import static org.folio.rest.core.exceptions.ErrorCodes.PIECES_MUST_HAVE_RECEIVED_STATUS;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_ALREADY_RECEIVED;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.PIECE_NOT_RETRIEVED;
@@ -671,6 +672,53 @@ public class CheckinReceivingApiTest {
   }
 
   @Test
+  void testPostCheckinForNewTenant() {
+    logger.info("=== Test POST check-in - New Tenant ===");
+
+    CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
+    CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
+    poLine.setIsPackage(true);
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    poLine.setPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
+
+    String locationForPhysical = UUID.randomUUID().toString();
+
+    String titleIdForPhysical = UUID.randomUUID().toString();
+    MockServer.addMockTitleWithId(poLine, titleIdForPhysical);
+    String titleIdForElectronic = UUID.randomUUID().toString();
+    MockServer.addMockTitleWithId(poLine, titleIdForElectronic);
+
+    Piece physicalPiece = getMinimalContentPiece(poLine.getId()).withReceivingStatus(Piece.ReceivingStatus.CLAIM_DELAYED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.PHYSICAL)
+      .withLocationId(locationForPhysical)
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(titleIdForPhysical)
+      .withItemId(UUID.randomUUID().toString());
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, physicalPiece);
+
+    List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
+    toBeCheckedInList.add(new ToBeCheckedIn()
+      .withCheckedIn(1)
+      .withPoLineId(poLine.getId())
+      .withCheckInPieces(List.of(
+        new CheckInPiece().withItemStatus(CheckInPiece.ItemStatus.ON_ORDER))
+      ));
+
+    CheckinCollection request = new CheckinCollection()
+      .withToBeCheckedIn(toBeCheckedInList)
+      .withTotalRecords(2);
+
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setReceivingTenantId("test");
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPiece.getId());
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(locationForPhysical);
+
+    checkResultWithErrors(request, 0);
+  }
+
+  @Test
   void testPostCheckinMultipleTitlesError() {
     logger.info("=== Test POST check-in multiple titles error for non-packages ===");
 
@@ -1004,7 +1052,9 @@ public class CheckinReceivingApiTest {
     var pieceIds = List.of(bindingPiece1.getId(), bindingPiece2.getId());
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
-      .withBindItem(getMinimalContentBindItem())
+      .withBindItem(getMinimalContentBindItem()
+        .withLocationId(null)
+        .withHoldingId(holdingId))
       .withBindPieceIds(pieceIds);
 
     var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
@@ -1032,42 +1082,55 @@ public class CheckinReceivingApiTest {
   }
 
   @Test
-  void testBindPiecesWithDifferentHoldingIdAndThrowError() {
-    logger.info("=== Test POST Bind with different holdingId to Title With and throw error");
+  void testBindPiecesWithLocationIdOnly() {
+    logger.info("=== Test POST Bind to Title With Item using locationId");
 
-    var holdingId = "849241fa-4a14-4df5-b951-846dcd6cfc4d";
     var receivingStatus = Piece.ReceivingStatus.UNRECEIVABLE;
     var format = Piece.Format.ELECTRONIC;
-
     var order = getMinimalContentCompositePurchaseOrder()
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     var poLine = getMinimalContentCompositePoLine(order.getId());
-    var bindingPiece1 = getMinimalContentPiece(poLine.getId())
-      .withHoldingId(holdingId)
-      .withReceivingStatus(receivingStatus)
-      .withFormat(format);
-    var bindingPiece2 = getMinimalContentPiece(poLine.getId())
-      .withId(UUID.randomUUID().toString())
-      .withHoldingId("64ee33f2-b2b5-4912-942a-50ddea063663")
+    var bindingPiece = getMinimalContentPiece(poLine.getId())
       .withReceivingStatus(receivingStatus)
       .withFormat(format);
 
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, poLine);
-    addMockEntry(PIECES_STORAGE, bindingPiece1);
-    addMockEntry(PIECES_STORAGE, bindingPiece2);
+    addMockEntry(PIECES_STORAGE, bindingPiece);
     addMockEntry(TITLES, getTitle(poLine));
 
+
+    var locationId = UUID.randomUUID().toString();
+    var pieceIds = List.of(bindingPiece.getId());
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
-      .withBindItem(getMinimalContentBindItem())
-      .withBindPieceIds(List.of(bindingPiece1.getId(), bindingPiece2.getId()));
+      .withBindItem(getMinimalContentBindItem()
+        .withLocationId(locationId))
+      .withBindPieceIds(pieceIds);
 
-    var errors = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
-      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_BAD_REQUEST.toInt())
-      .as(Errors.class);
+    var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(BindPiecesResult.class);
 
-    assertEquals(errors.getErrors().get(0).getMessage(), "Holding Id must not be null or different for pieces");
+    assertThat(response.getPoLineId(), is(poLine.getId()));
+    assertThat(response.getBoundPieceIds(), is(pieceIds));
+    assertThat(response.getItemId(), notNullValue());
+
+    var pieceUpdates = getPieceUpdates();
+    assertThat(pieceUpdates, notNullValue());
+    assertThat(pieceUpdates, hasSize(bindPiecesCollection.getBindPieceIds().size()));
+
+    var pieceList = pieceUpdates.stream().filter(pol -> {
+      Piece piece = pol.mapTo(Piece.class);
+      String pieceId = piece.getId();
+      return Objects.equals(bindingPiece.getId(), pieceId);
+    }).toList();
+    assertThat(pieceList.size(), is(1));
+
+    var createdHoldings = getCreatedHoldings();
+    assertThat(createdHoldings, notNullValue());
+    assertThat(createdHoldings, hasSize(1));
+    assertThat(createdHoldings.get(0).getString(HOLDING_PERMANENT_LOCATION_ID), is(locationId));
   }
 
   @Test
@@ -1085,7 +1148,9 @@ public class CheckinReceivingApiTest {
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
-      .withBindItem(getMinimalContentBindItem())
+      .withBindItem(getMinimalContentBindItem()
+        .withLocationId(null)
+        .withHoldingId(UUID.randomUUID().toString()))
       .withBindPieceIds(List.of(bindingPiece.getId()));
 
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
@@ -1117,7 +1182,9 @@ public class CheckinReceivingApiTest {
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
       .withBindItem(getMinimalContentBindItem()
-        .withTenantId("differentTenantId"))
+        .withTenantId("differentTenantId")
+        .withLocationId(null)
+        .withHoldingId(UUID.randomUUID().toString()))
       .withBindPieceIds(List.of(bindingPiece.getId()))
       .withRequestsAction(BindPiecesCollection.RequestsAction.TRANSFER);
 
@@ -1149,7 +1216,9 @@ public class CheckinReceivingApiTest {
       .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
-      .withBindItem(getMinimalContentBindItem())
+      .withBindItem(getMinimalContentBindItem()
+        .withLocationId(null)
+        .withHoldingId(UUID.randomUUID().toString()))
       .withBindPieceIds(List.of(bindingPiece.getId()))
       .withRequestsAction(BindPiecesCollection.RequestsAction.TRANSFER);
 
@@ -1175,6 +1244,40 @@ public class CheckinReceivingApiTest {
       .toList();
 
     assertThat(pieceList.size(), is(1));
+  }
+
+  @Test
+  void testBindExpectedPieces() {
+    logger.info("=== Test POST Bind to Title with Expected Piece ");
+
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId())
+      .withLocations(List.of(new Location().withHoldingId(UUID.randomUUID().toString())
+        .withQuantityPhysical(1).withQuantity(1)));
+    var bindingPiece = getMinimalContentPiece(poLine.getId())
+      .withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98") // Present in mockdata/itemRequests/itemRequests.json
+      .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+      .withFormat(org.folio.rest.jaxrs.model.Piece.Format.ELECTRONIC);
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(getMinimalContentBindItem()
+        .withLocationId(null)
+        .withHoldingId(UUID.randomUUID().toString()))
+      .withBindPieceIds(List.of(bindingPiece.getId()))
+      .withRequestsAction(BindPiecesCollection.RequestsAction.TRANSFER);
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    var errors = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, VALIDATION_ERROR)
+      .as(Errors.class)
+      .getErrors();
+
+    assertThat(errors.get(0).getMessage(), equalTo(PIECES_MUST_HAVE_RECEIVED_STATUS.getDescription()));
   }
 
   @Test
