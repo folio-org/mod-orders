@@ -3,7 +3,7 @@ package org.folio.service.inventory.util;
 public enum RequestFields {
 
   ITEM_ID("itemId"),
-  REQUESTER_ID("itemId"),
+  REQUESTER_ID("requesterId"),
   STATUS("status"),
   DESTINATION_ITEM_ID("destinationItemId"),
   COLLECTION_RECORDS("requests"),
