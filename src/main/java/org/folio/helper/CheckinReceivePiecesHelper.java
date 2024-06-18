@@ -637,7 +637,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         String holdingId = processedHoldings.get(holdingKey);
         item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
       }
-      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, piece.getReceivingTenantId());
+      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates).map(results -> {
@@ -784,7 +784,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected Map<String, List<String>> mapTenantIdsToItemIds(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
     return extractAllPieces(piecesGroupedByPoLine)
       .filter(piece -> StringUtils.isNotEmpty(piece.getItemId()))
-      .groupingBy(piece -> Optional.ofNullable(piece.getReceivingTenantId())
+      .groupingBy(piece -> Optional.ofNullable(getReceivingTenantId(piece))
           .orElse(TenantTool.tenantId(requestContext.getHeaders())),
         mapping(Piece::getItemId, toList()));
   }

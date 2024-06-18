@@ -238,7 +238,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   @Override
   protected String getReceivingTenantId(Piece piece) {
-    return StringUtils.EMPTY;
+    return piece.getReceivingTenantId();
   }
 
   @Override
