@@ -101,6 +101,7 @@ import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.addMockTitles;
 import static org.folio.rest.impl.MockServer.getCreatedHoldings;
+import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
@@ -110,6 +111,7 @@ import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.jaxrs.model.ProcessingStatus.Type.SUCCESS;
 import static org.folio.rest.jaxrs.model.ReceivedItem.ItemStatus.ON_ORDER;
 import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
+import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_ACCESSION_NUMBER;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SUPPRESS;
@@ -1064,6 +1066,7 @@ public class CheckinReceivingApiTest {
     assertThat(response.getPoLineId(), is(poLine.getId()));
     assertThat(response.getBoundPieceIds(), is(pieceIds));
     assertThat(response.getItemId(), notNullValue());
+    var newItemId = response.getItemId();
 
     var pieceUpdates = getPieceUpdates();
     assertThat(pieceUpdates, notNullValue());
@@ -1079,6 +1082,14 @@ public class CheckinReceivingApiTest {
     var createdHoldings = getCreatedHoldings();
     assertThat(createdHoldings, nullValue());
 
+    var createdItems = getCreatedItems();
+    assertThat(createdItems, notNullValue());
+    createdItems.forEach(item -> {
+      var id = item.getString(ID);
+      if (Objects.equals(newItemId, id)) {
+        assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.IN_PROCESS.value()));
+      }
+    });
   }
 
   @Test
