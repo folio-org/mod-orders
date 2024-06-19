@@ -149,7 +149,7 @@ public class CirculationRequestsRetrieverTest {
   }
 
   @Test
-  void getRequestsByItemIdsTest(VertxTestContext vertxTestContext) {
+  void getRequesterIdsToRequestsByItemIdsTest(VertxTestContext vertxTestContext) {
     JsonObject mockData = getMockAsJson(REQUESTS_PATH, REQUESTS_MOCK);
 
     doReturn(Future.succeededFuture(mockData)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
@@ -159,7 +159,7 @@ public class CirculationRequestsRetrieverTest {
     vertxTestContext.assertComplete(future).onComplete(f -> {
       assertTrue(f.succeeded());
       var reqMap = f.result();
-      assertEquals(2, reqMap.size());
+      assertEquals(5, reqMap.size());
       assertEquals(7, reqMap.values().stream().mapToInt(Collection::size).sum());
       verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
       vertxTestContext.completeNow();
