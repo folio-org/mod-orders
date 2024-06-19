@@ -277,7 +277,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   @Override
   protected String getReceivingTenantId(Piece piece) {
-    return StringUtils.EMPTY;
+    return piece.getReceivingTenantId();
   }
 
 }
