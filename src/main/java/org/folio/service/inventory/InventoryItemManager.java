@@ -390,7 +390,7 @@ public class InventoryItemManager {
   public Future<String> createBindItem(CompositePoLine compPOL, String holdingId, BindItem bindItem, RequestContext locationContext) {
     JsonObject item = new JsonObject()
       .put(ITEM_HOLDINGS_RECORD_ID, holdingId)
-      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()))
+      .put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.IN_PROCESS.value()))
       .put(ITEM_BARCODE, bindItem.getBarcode())
       .put(ITEM_LEVEL_CALL_NUMBER, bindItem.getCallNumber())
       .put(ITEM_PERMANENT_LOAN_TYPE_ID, bindItem.getPermanentLoanTypeId())
