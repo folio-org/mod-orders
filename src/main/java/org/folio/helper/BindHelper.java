@@ -222,7 +222,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       inventoryItemRequestService.transferItemRequests(itemIds, newItemId, requestContext)
         .onFailure(throwable -> {
           logger.error("Failed to transfer item requests", throwable);
-          throw new RuntimeException("Failed to transfer item requests", throwable);
+          throw new IllegalStateException("Failed to transfer item requests", throwable);
         });
     }
   }
