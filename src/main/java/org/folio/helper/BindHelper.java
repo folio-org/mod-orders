@@ -183,7 +183,10 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getInstanceId(), bindPiecesCollection.getBindItem(), requestContext))
       .map(newItemId -> {
         // Move requests if requestsAction is TRANSFER, otherwise do nothing
-        transferRequestsIfNeed(holder, newItemId, requestContext);
+        if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
+          var itemIds = holder.getPieces().map(Piece::getItemId).toList();
+          inventoryItemRequestService.transferItemRequests(itemIds, newItemId, requestContext);
+        }
         // Set new item ids for pieces and holder
         holder.getPieces().forEach(piece -> piece.setItemId(newItemId));
         return holder.withBindItemId(newItemId);
@@ -214,17 +217,6 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       return Future.succeededFuture(bindItem.getHoldingId());
     }
     return inventoryHoldingManager.createHoldingAndReturnId(instanceId, bindItem.getLocationId(), locationContext);
-  }
-
-  private void transferRequestsIfNeed(BindPiecesHolder bindPiecesHolder, String newItemId, RequestContext requestContext) {
-    if (TRANSFER.equals(bindPiecesHolder.getBindPiecesCollection().getRequestsAction())) {
-      var itemIds = bindPiecesHolder.getPieces().map(Piece::getItemId).toList();
-      inventoryItemRequestService.transferItemRequests(itemIds, newItemId, requestContext)
-        .onFailure(throwable -> {
-          logger.error("Failed to transfer item requests", throwable);
-          throw new IllegalStateException("Failed to transfer item requests", throwable);
-        });
-    }
   }
 
   private Future<BindPiecesHolder> storeUpdatedPieces(BindPiecesHolder holder, RequestContext requestContext) {
