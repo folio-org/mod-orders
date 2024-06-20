@@ -3183,6 +3183,19 @@ public class PurchaseOrdersApiTest {
 
   }
 
+  @Test
+  void testCreateOrderPopulateSearchLocationIds() throws IOException {
+    logger.info("=== Check that searchLocationIds array is populated from locationIds array ===");
+    String body = getMockData(ORDER_WITH_PO_LINES_JSON);
+    final CompositePurchaseOrder resp = verifyPostResponse(COMPOSITE_ORDERS_PATH, body,
+      prepareHeaders(NON_EXIST_CONFIG_X_OKAPI_TENANT, X_OKAPI_USER_ID), APPLICATION_JSON, 201).as(CompositePurchaseOrder.class);
+
+    resp.getCompositePoLines().forEach(line -> {
+      assertEquals(line.getLocations().size(), line.getSearchLocationIds().size());
+      assertEquals(line.getLocations().get(0).getLocationId(), line.getSearchLocationIds().get(0));
+    });
+  }
+
   private CompositePurchaseOrder prepareCompositeOrderOpenRequest(CompositePurchaseOrder po) {
     CompositePurchaseOrder compositeOrderPutRequest = new CompositePurchaseOrder();
     compositeOrderPutRequest.setId(ORDER_WITHOUT_MATERIAL_TYPES_ID);

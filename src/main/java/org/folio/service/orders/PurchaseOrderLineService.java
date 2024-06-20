@@ -499,18 +499,19 @@ public class PurchaseOrderLineService {
       });
   }
 
-  public Future<Void> updateSearchLocations(CompositePoLine poLine, RequestContext requestContext) {
-    return updateSearchLocations(HelperUtils.convertToPoLine(poLine), requestContext);
+  public Future<Void> updateSearchLocations(CompositePoLine compositePoLine, RequestContext requestContext) {
+    return retrieveSearchLocationIds(compositePoLine.getLocations(), requestContext)
+      .map(compositePoLine::withSearchLocationIds)
+      .mapEmpty();
   }
 
   private Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
-    return retrieveSearchLocationIds(poLine, requestContext)
+    return retrieveSearchLocationIds(poLine.getLocations(), requestContext)
       .map(poLine::withSearchLocationIds)
       .mapEmpty();
   }
 
-  private Future<List<String>> retrieveSearchLocationIds(PoLine poLine, RequestContext requestContext) {
-    List<Location> locations = poLine.getLocations();
+  private Future<List<String>> retrieveSearchLocationIds(List<Location> locations, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(locations)) {
       return Future.succeededFuture(List.of());
     }
