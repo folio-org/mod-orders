@@ -1103,6 +1103,7 @@
             "acquisitions-units-storage.memberships.collection.get",
             "circulation.requests.collection.get",
             "circulation.requests.item.move.post",
+            "circulation.requests.item.put",
             "inventory-storage.holdings-sources.collection.get",
             "inventory-storage.holdings.item.post",
             "user-tenants.collection.get",

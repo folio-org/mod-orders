@@ -12,7 +12,6 @@ import org.folio.service.CirculationRequestsRetriever;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -49,16 +48,6 @@ public class InventoryItemRequestService {
         .filter(e -> e.getValue() > 0)
         .map(Map.Entry::getKey)
         .toList());
-  }
-
-  public Future<Void> cancelItemRequests(List<String> itemIds, RequestContext requestContext) {
-    return circulationRequestsRetriever.getRequesterIdsToRequestsByItemIds(itemIds, requestContext)
-      .compose(requesterToRequestsMap -> {
-        var requestsToCancel = requesterToRequestsMap.values().stream()
-          .flatMap(Collection::stream)
-          .toList();
-        return handleItemRequests(requestsToCancel, request -> cancelRequest(request, requestContext));
-      });
   }
 
   public Future<Void> transferItemRequests(List<String> originItemIds, String destinationItemId, RequestContext requestContext) {
