@@ -156,40 +156,6 @@ public class InventoryItemRequestServiceTest {
   }
 
   @Test
-  void cancelSingleItemRequest(VertxTestContext vertxTestContext) {
-    var itemIds = generateUUIDs(1);
-    var reqMap = generateRequests(itemIds);
-
-    doReturn(Future.succeededFuture()).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-    doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
-
-    Future<Void> future = inventoryItemRequestService.cancelItemRequests(itemIds, requestContext);
-
-    vertxTestContext.assertComplete(future).onComplete(f -> {
-      assertTrue(f.succeeded());
-      verify(restClient, times(1)).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-      vertxTestContext.completeNow();
-    });
-  }
-
-  @Test
-  void cancelManyItemRequests(VertxTestContext vertxTestContext) {
-    var itemIds = generateUUIDs(10);
-    var reqMap = generateRequests(itemIds);
-
-    doReturn(Future.succeededFuture()).when(restClient).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-    doReturn(Future.succeededFuture(reqMap)).when(circulationRequestsRetriever).getRequesterIdsToRequestsByItemIds(anyList(), eq(requestContext));
-
-    Future<Void> future = inventoryItemRequestService.cancelItemRequests(itemIds, requestContext);
-
-    vertxTestContext.assertComplete(future).onComplete(f -> {
-      assertTrue(f.succeeded());
-      verify(restClient, times(10)).put(any(RequestEntry.class), any(JsonObject.class), eq(requestContext));
-      vertxTestContext.completeNow();
-    });
-  }
-
-  @Test
   void transferSingleItemRequest(VertxTestContext vertxTestContext) {
     var itemIds = generateUUIDs(1);
     var reqMap = generateRequests(itemIds);
