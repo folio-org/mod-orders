@@ -1098,14 +1098,16 @@
             "orders-storage.purchase-orders.item.put",
             "orders-storage.titles.collection.get",
             "orders-storage.titles.item.put",
+            "inventory.items.item.put",
+            "inventory.items.collection.get",
             "inventory-storage.items.item.post",
+            "inventory-storage.holdings-sources.collection.get",
+            "inventory-storage.holdings.item.post",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get",
             "circulation.requests.collection.get",
             "circulation.requests.item.move.post",
             "circulation.requests.item.put",
-            "inventory-storage.holdings-sources.collection.get",
-            "inventory-storage.holdings.item.post",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
           ]
