@@ -5,12 +5,14 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.orders.utils.CommonFields;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CirculationRequest;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.RequestsCollection;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.pieces.PieceStorageService;
 
 import java.util.List;
@@ -79,7 +81,8 @@ public class CirculationRequestsRetriever {
           var totalRecords = json.getInteger(COLLECTION_TOTAL.getValue());
           var requests = json.getJsonArray(COLLECTION_RECORDS.getValue());
           return IntStream.range(0, totalRecords)
-            .mapToObj(requests::getJsonObject);
+            .mapToObj(requests::getJsonObject)
+            .map(request -> request.put(CommonFields.TENANT_ID.getValue(), TenantTool.tenantId(requestContext.getHeaders())));
         })
         .toList());
   }
