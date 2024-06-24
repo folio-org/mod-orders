@@ -850,8 +850,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CirculationRequestsRetriever circulationRequestsRetriever(RestClient restClient) {
-    return new CirculationRequestsRetriever(restClient);
+  CirculationRequestsRetriever circulationRequestsRetriever(PieceStorageService pieceStorageService, RestClient restClient) {
+    return new CirculationRequestsRetriever(pieceStorageService, restClient);
   }
 
 }

@@ -11,6 +11,7 @@ documentation:
 types:
   piece: !include acq-models/mod-orders-storage/schemas/piece.json
   piece-collection: !include acq-models/mod-orders-storage/schemas/piece_collection.json
+  requests-collection: !include acq-models/mod-orders/schemas/circulationRequestsCollection.json
   errors: !include raml-util/schemas/errors.schema
   UUID:
     type: string
@@ -142,3 +143,20 @@ resourceTypes:
                 value: !include examples/errors_500.sample
             text/plain:
               example: "unable to delete Piece -- Internal server error, e.g. due to misconfiguration"
+  /circulation-requests:
+    get:
+      description: Return a collection of circulation requests by Piece IDs
+      queryParameters:
+        pieceIds:
+          displayName: IDs of the pieces associated with the requests
+          type: string[]
+          description: IDs of the pieces associated with the requests
+          example: [7e74f1f1-f19e-482e-a02a-669fd632c5e0, afd0c802-2d9c-49ed-be89-770b7ef564b5]
+          required: true
+        status:
+          displayName: Status by which the requests should be filtered
+          type: string
+          description: Status by which the requests should be filtered
+          example: Open - In transit
+          required: true
+

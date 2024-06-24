@@ -9,6 +9,8 @@ import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.PieceCollection;
+import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,7 +56,6 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(VertxExtension.class)
 public class CirculationRequestsRetrieverTest {
 
-
   private static final String REQUESTS_PATH = BASE_MOCK_DATA_PATH + "requests/";
   private static final String REQUESTS_MOCK = "requests";
   private static final List<String> MOCK_ITEM_IDS = List.of(
@@ -63,8 +64,19 @@ public class CirculationRequestsRetrieverTest {
     "24645dbd-2dd9-429c-ac24-44cae19adae4"
   );
 
+  private static final String PIECES_PATH = BASE_MOCK_DATA_PATH + "pieces/";
+  private static final String PIECES_MOCK = "pieces-for-requests";
+  private static final List<String> MOCK_PIECE_IDS = List.of(
+    "05a95f03-eb00-4248-9f2e-2bd05957ff04",
+    "05a95f03-eb00-4248-9f2e-2bd05957ff05",
+    "05a95f03-eb00-4248-9f2e-2bd05957ff06"
+  );
+
   @Autowired
   RestClient restClient;
+
+  @Autowired
+  PieceStorageService pieceStorageService;
 
   @Autowired
   CirculationRequestsRetriever circulationRequestsRetriever;
@@ -166,6 +178,28 @@ public class CirculationRequestsRetrieverTest {
     });
   }
 
+  @Test
+  void getRequesterIdsToRequestsByPieceIdsTest(VertxTestContext vertxTestContext) {
+    var requestsMockData = getMockAsJson(REQUESTS_PATH, REQUESTS_MOCK);
+    var piecesMockData = getMockAsJson(PIECES_PATH, PIECES_MOCK).mapTo(PieceCollection.class);
+    var status = "Open - In transit";
+
+    doReturn(Future.succeededFuture(requestsMockData)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    doReturn(Future.succeededFuture(piecesMockData.getPieces())).when(pieceStorageService).getPiecesByIds(eq(MOCK_PIECE_IDS), eq(requestContext));
+
+    var future = circulationRequestsRetriever.getRequesterIdsToRequestsByPieceIds(MOCK_PIECE_IDS, status, requestContext);
+
+    vertxTestContext.assertComplete(future).onComplete(f -> {
+      assertTrue(f.succeeded());
+      var requestsCollection = f.result();
+      assertEquals(7, requestsCollection.getTotalRecords());
+      assertEquals(7, requestsCollection.getCirculationRequests().size());
+      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+      verify(pieceStorageService, times(1)).getPiecesByIds(eq(MOCK_PIECE_IDS), eq(requestContext));
+      vertxTestContext.completeNow();
+    });
+  }
+
 
   /**
    * Define unit test specific beans to override actual ones
@@ -178,8 +212,13 @@ public class CirculationRequestsRetrieverTest {
     }
 
     @Bean
-    public CirculationRequestsRetriever circulationRequestsRetriever(RestClient restClient) {
-      return new CirculationRequestsRetriever(restClient);
+    public PieceStorageService pieceStorageService(RestClient restClient) {
+      return spy(new PieceStorageService(restClient));
+    }
+
+    @Bean
+    public CirculationRequestsRetriever circulationRequestsRetriever(PieceStorageService pieceStorageService, RestClient restClient) {
+      return new CirculationRequestsRetriever(pieceStorageService, restClient);
     }
 
   }
