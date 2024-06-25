@@ -27,7 +27,6 @@ import io.vertx.core.Future;
 
 public class PieceStorageService {
   private static final Logger logger = LogManager.getLogger(PieceStorageService.class);
-
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   private static final String PIECES_BY_HOLDING_ID_QUERY = "holdingId==%s";
   private static final String PIECE_STORAGE_ENDPOINT = resourcesPath(PIECES_STORAGE);

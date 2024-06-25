@@ -18,10 +18,12 @@ import static org.hamcrest.Matchers.is;
 
 import java.util.Map;
 
+import jakarta.validation.Payload;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.events.handlers.HandlersTestHelper;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.tools.parser.JsonPathParser;
 import org.hamcrest.Matchers;
 
@@ -169,6 +171,23 @@ public class RestTestUtils {
     HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
 
     return response;
+  }
+
+  public static Response verifyDeleteResponse(String url, String body, Headers headers, String expectedContentType, int expectedCode) {
+    return  RestAssured
+            .with()
+            .header(X_OKAPI_URL)
+            .header(X_OKAPI_TOKEN)
+            .headers(headers)
+            .contentType(APPLICATION_JSON)
+            .body(body)
+            .when()
+            .delete(url)
+            .then()
+            .statusCode(expectedCode)
+            .contentType(expectedContentType)
+            .extract()
+            .response();
   }
 
   public static void checkPreventProtectedFieldsModificationRule(String path, JsonObject compPO, Map<String, Object> updatedFields) {
