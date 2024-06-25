@@ -2,6 +2,10 @@ package org.folio.service.pieces.flows.delete;
 
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import io.vertx.core.CompositeFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceDeletionHolder;
@@ -77,6 +81,14 @@ public class PieceDeleteFlowManager {
     return Boolean.TRUE.equals(comPOL.getIsPackage()) || Boolean.TRUE.equals(comPOL.getCheckinItems())
       ? Future.succeededFuture()
       : pieceDeleteFlowPoLineService.updatePoLine(holder, requestContext);
+  }
+
+  public Future<List<Void>> batchDeletePiece (List <String> ids, boolean deleteHolding ,RequestContext requestContext) {
+    List<Future> deleteFutures = ids.stream()
+      .map(id -> deletePiece(id, deleteHolding, requestContext))
+      .collect(Collectors.toList());
+    return CompositeFuture.all(deleteFutures)
+      .map(empty -> null);
   }
 
 }

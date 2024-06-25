@@ -6,7 +6,7 @@ protocols: [ HTTP, HTTPS ]
 
 documentation:
   - title: Orders Business Logic API
-    content: <b>API for managing pieces</b>
+    content: <b>API for managing pieces including batch operations for deletion.</b>
 
 types:
   piece: !include acq-models/mod-orders-storage/schemas/piece.json
@@ -15,6 +15,19 @@ types:
   UUID:
     type: string
     pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+  BatchDeletePayload:
+     type: object
+     properties:
+       ids:
+         type: array
+         items:
+           type: string
+         description: List of IDs to be deleted
+       deleteHoldings:
+         type: boolean
+         description: Specifies whether associated holdings should also be deleted
+         required: false
+         default: false
 
 traits:
   pageable: !include raml-util/traits/pageable.raml
@@ -47,6 +60,42 @@ resourceTypes:
         example: true
         required: false
         default: false
+  /batch:
+    delete:
+      description: Deletes multiple pieces optionally including related holdings.
+      body:
+        application/json:
+          type: string
+          example: |
+            {
+              "ids": ["123", "456", "789"],
+              "deleteHoldings": false
+            }
+      responses:
+        204:
+          description: "Pieces records successfully deleted"
+        400:
+          description: "Bad request due to invalid data format or validation error"
+          body:
+            application/json:
+              example:
+                strict: false
+                value: !include examples/errors_400.sample
+            text/plain:
+              example: "unable to delete Pieces -- Bad request"
+        404:
+          description: "One or more specified IDs do not exist"
+          body:
+            application/json:
+        500:
+          description: "Internal server error due to a misconfiguration or server fault"
+          body:
+            application/json:
+              example:
+                strict: false
+                value: !include examples/errors_500.sample
+            text/plain:
+              example: "unable to delete Pieces -- Internal server error"
   /{id}:
     uriParameters:
       id:

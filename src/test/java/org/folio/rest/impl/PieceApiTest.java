@@ -33,6 +33,8 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +42,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import io.restassured.http.Header;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -55,6 +58,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.junit.jupiter.api.AfterAll;
@@ -70,6 +74,8 @@ public class PieceApiTest {
   private static final String PIECES_ID_PATH = PIECES_ENDPOINT + "/%s";
   static final String CONSISTENT_RECEIVED_STATUS_PIECE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private JsonObject pieceJsonReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
+  public static final String PIECES_BATCH_DELETE_ENDPOINT = "orders/pieces/batch";
+
 
   private static boolean runningOnOwn;
 
@@ -235,8 +241,8 @@ public class PieceApiTest {
     CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
       .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
     Piece piece = new Piece().withId(UUID.randomUUID().toString())
-                              .withFormat(Piece.Format.PHYSICAL)
-                              .withItemId(ID_FOR_INTERNAL_SERVER_ERROR).withPoLineId(poLine.getId());
+      .withFormat(Piece.Format.PHYSICAL)
+      .withItemId(ID_FOR_INTERNAL_SERVER_ERROR).withPoLineId(poLine.getId());
     order.setCompositePoLines(Collections.singletonList(poLine));
     MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
     MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
@@ -355,5 +361,63 @@ public class PieceApiTest {
   void deletePieceInternalErrorOnStorageTest() {
     logger.info("=== Test delete piece by id - internal error from storage 500 ===");
     verifyDeleteResponse(String.format(PIECES_ID_PATH, ID_FOR_INTERNAL_SERVER_ERROR), APPLICATION_JSON, 500);
+  }
+
+  @Test
+  public void deletePiecesByIdsTest() {
+    logger.info("=== Test delete pieces by ids - item deleted ===");
+
+    // Create unique IDs for the components
+    String itemId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    String orderId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
+    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    Cost cost = new Cost().withQuantityElectronic(1);
+
+    // Setup the PO Line
+    CompositePoLine poLine = new CompositePoLine().withId(lineId)
+      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withLocations(Collections.singletonList(loc))
+      .withCost(cost)
+      .withPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
+
+    order.setCompositePoLines(Collections.singletonList(poLine));
+
+    // Create a title
+    Title title = new Title().withId(titleId).withTitle("title name");
+
+    // Setup the piece
+    Piece piece = new Piece().withId(UUID.randomUUID().toString())
+      .withFormat(Piece.Format.PHYSICAL)
+      .withHoldingId(holdingId)
+      .withItemId(itemId)
+      .withPoLineId(poLine.getId())
+      .withTitleId(titleId);
+
+    // Prepare request data as JSON Array
+    JsonArray jsonArray = new JsonArray().add(piece.getId());
+    JsonObject jsonObject = new JsonObject()
+      .put("ids", jsonArray)
+      .put("deleteHoldings", false);
+    // Mock the server responses
+    MockServer.addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
+    MockServer.addMockEntry(PO_LINES_STORAGE, JsonObject.mapFrom(poLine));
+    //MockServer.addMockEntry(PURCHASE_ORDER_STORAGE, JsonObject.mapFrom(order));
+    // MockServer.addMockEntry(TITLES, JsonObject.mapFrom(title));
+    //MockServer.addMockEntry(ITEM_RECORDS, new JsonObject().put(ID, itemId));
+
+    // Perform the delete operation and verify the response
+    verifyDeleteResponse(PIECES_BATCH_DELETE_ENDPOINT, jsonObject.encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON, 400);
+
+    // Assert no items were deleted
+    assertNull(MockServer.getItemDeletions());
+
+    // Assert that exactly one piece was deleted
+    assertThat(MockServer.getPieceDeletions(), hasSize(1));
   }
 }
