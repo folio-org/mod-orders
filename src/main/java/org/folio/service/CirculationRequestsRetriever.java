@@ -35,7 +35,7 @@ import static org.folio.service.inventory.util.RequestFields.ITEM_ID;
 
 public class CirculationRequestsRetriever {
 
-  private final static String OPEN_REQUEST_STATUS = "Open - *";
+  private static final String OPEN_REQUEST_STATUS = "Open - *";
 
   private final PieceStorageService pieceStorageService;
 
