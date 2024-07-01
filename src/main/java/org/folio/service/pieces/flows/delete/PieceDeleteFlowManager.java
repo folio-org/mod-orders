@@ -1,6 +1,7 @@
 package org.folio.service.pieces.flows.delete;
 
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -60,7 +61,8 @@ public class PieceDeleteFlowManager {
       return Future.succeededFuture();
     }
 
-    return circulationRequestsRetriever.getNumberOfRequestsByItemId(piece.getItemId(), requestContext)
+    var locationContext = createContextWithNewTenantId(requestContext, holder.getPieceToDelete().getReceivingTenantId());
+    return circulationRequestsRetriever.getNumberOfRequestsByItemId(piece.getItemId(), locationContext)
       .compose(totalRequests -> {
         if (totalRequests != null && totalRequests > 0) {
           logger.error("isDeletePieceRequestValid:: {} Request(s) were found for the given item {} when deleting piece {}",

@@ -615,6 +615,15 @@
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put"
           ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/orders/pieces-requests",
+          "permissionsRequired": ["orders.pieces.collection.get"],
+          "modulePermissions": [
+            "orders-storage.pieces.collection.get",
+            "circulation.requests.collection.get"
+          ]
         }
       ]
     },

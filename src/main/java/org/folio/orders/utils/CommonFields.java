@@ -4,7 +4,8 @@ public enum CommonFields {
 
   ID("id"),
   METADATA("metadata"),
-  CREATED_DATE("createdDate");
+  CREATED_DATE("createdDate"),
+  TENANT_ID("tenantId");
 
   private final String value;
 

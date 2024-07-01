@@ -65,7 +65,7 @@ public class SharingInstanceService {
           return Future.succeededFuture(response);
         } else {
           String message = String.format(SHARING_INSTANCE_ERROR, sharingInstance.sourceTenantId(), sharingInstance.targetTenantId(),
-            sharingInstance.instanceIdentifier(), sharingInstance.error());
+            sharingInstance.instanceIdentifier(), response.error());
           return Future.failedFuture(new ConsortiumException(message));
         }
       });
