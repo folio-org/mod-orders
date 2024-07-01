@@ -14,6 +14,7 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
+import org.folio.rest.jaxrs.resource.OrdersPiecesRequests;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowManager;
@@ -28,7 +29,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-public class PiecesAPI extends BaseApi implements OrdersPieces {
+public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequests {
 
   private static final Logger logger = LogManager.getLogger();
   @Autowired
@@ -101,12 +102,12 @@ public class PiecesAPI extends BaseApi implements OrdersPieces {
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
-
   @Override
-  public void getOrdersPiecesCirculationRequests(List<String> pieceIds, String status, Map<String, String> okapiHeaders,
+  public void getOrdersPiecesRequests(List<String> pieceIds, String status, Map<String, String> okapiHeaders,
                                                  Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     circulationRequestsRetriever.getRequesterIdsToRequestsByPieceIds(pieceIds, status, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(requests -> asyncResultHandler.handle(succeededFuture(buildOkResponse(requests))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
+
 }

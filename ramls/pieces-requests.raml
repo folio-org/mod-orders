@@ -1,0 +1,33 @@
+#%RAML 1.0
+title: Pieces Requests
+baseUri: https://github.com/folio-org/mod-orders
+version: v1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Endpoint for fetching Circulation Requests for Pieces
+    content: <b>Endpoint for fetching Circulation Requests for Pieces</b>
+
+types:
+  requests-collection: !include acq-models/mod-orders/schemas/circulationRequestsCollection.json
+  errors: !include raml-util/schemas/errors.schema
+  UUID:
+    type: string
+    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+
+/orders/pieces-requests:
+  get:
+    description: Return a collection of circulation requests by Piece IDs
+    queryParameters:
+      pieceIds:
+        displayName: IDs of the pieces associated with the requests
+        type: string[]
+        description: IDs of the pieces associated with the requests
+        example: [ 7e74f1f1-f19e-482e-a02a-669fd632c5e0, afd0c802-2d9c-49ed-be89-770b7ef564b5 ]
+        required: true
+      status:
+        displayName: Status by which the requests should be filtered
+        type: string
+        description: Status by which the requests should be filtered
+        example: Open - In transit
+        required: true

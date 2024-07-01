@@ -618,7 +618,7 @@
         },
         {
           "methods": ["GET"],
-          "pathPattern": "/orders/pieces/circulation-requests",
+          "pathPattern": "/orders/pieces-requests",
           "permissionsRequired": ["orders.pieces.collection.get"],
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
