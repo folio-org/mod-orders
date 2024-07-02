@@ -501,6 +501,7 @@ public class PurchaseOrderHelper {
     compPO.setTotalItems(null);
     compPO.setTotalEncumbered(null);
     compPO.setTotalExpended(null);
+    compPO.setTotalCredited(null);
     compPO.setNeedReEncumber(null);
     JsonObject purchaseOrder = JsonObject.mapFrom(compPO);
     purchaseOrder.remove(COMPOSITE_PO_LINES);

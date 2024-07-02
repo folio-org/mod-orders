@@ -17,8 +17,7 @@ import io.vertx.core.Future;
 
 public class TransactionsTotalFieldsPopulateService implements CompositeOrderDynamicDataPopulateService {
   private static final Logger log = LogManager.getLogger(TransactionsTotalFieldsPopulateService.class);
-  private static final ToDoubleFunction<Transaction> GET_AMOUNT_EXPENDED_FUNCTION = transaction -> transaction.getEncumbrance()
-    .getAmountExpended();
+
   private final TransactionService transactionService;
 
   public TransactionsTotalFieldsPopulateService(TransactionService transactionService) {
@@ -31,7 +30,7 @@ public class TransactionsTotalFieldsPopulateService implements CompositeOrderDyn
     return Optional.of(holder)
       .map(CompositeOrderRetrieveHolder::getFiscalYear)
       .map(s -> withTotalFields(holder, requestContext))
-      .orElseGet(() ->  Future.succeededFuture(holder.withTotalExpended(0d).withTotalEncumbered(0d)))
+      .orElseGet(() ->  Future.succeededFuture(holder.withTotalExpended(0d).withTotalCredited(0d).withTotalEncumbered(0d)))
       .onFailure(v -> log.error("Failed at {}.{}", this.getClass().getName(), Thread.currentThread().getStackTrace()[0]));
   }
 
@@ -39,7 +38,9 @@ public class TransactionsTotalFieldsPopulateService implements CompositeOrderDyn
       RequestContext requestContext) {
     return getCurrentEncumbrances(holder, requestContext).map(transactions -> {
       holder.withTotalEncumbered(getTransactionsTotal(transactions, Transaction::getAmount));
-      return holder.withTotalExpended(getTransactionsTotal(transactions, GET_AMOUNT_EXPENDED_FUNCTION));
+      return holder
+        .withTotalExpended(getTransactionsTotal(transactions, transaction -> transaction.getEncumbrance().getAmountExpended()))
+        .withTotalCredited(getTransactionsTotal(transactions, transaction -> transaction.getEncumbrance().getAmountCredited()));
     });
   }
 

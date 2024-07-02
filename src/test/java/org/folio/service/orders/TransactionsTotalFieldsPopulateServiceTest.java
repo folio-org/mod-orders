@@ -52,13 +52,13 @@ public class TransactionsTotalFieldsPopulateServiceTest {
             .withPaymentEncumbranceId(transaction1.getId())
             .withAmount(14.11d)
             .withCurrency("USD")
-            .withEncumbrance(new Encumbrance().withAmountExpended(13.45));
+            .withEncumbrance(new Encumbrance().withAmountExpended(13.45).withAmountCredited(1.23));
     Transaction notPaidEncumbrance = new Transaction()
             .withTransactionType(Transaction.TransactionType.ENCUMBRANCE)
             .withPaymentEncumbranceId(transaction2.getId())
             .withAmount(13.43d)
             .withCurrency("USD")
-            .withEncumbrance(new Encumbrance().withAmountExpended(0d));
+            .withEncumbrance(new Encumbrance().withAmountExpended(0d).withAmountCredited(0d));
 
     List<Transaction> transactions = List.of(paidEncumbrance, notPaidEncumbrance);
 
@@ -69,6 +69,7 @@ public class TransactionsTotalFieldsPopulateServiceTest {
 
     assertEquals(27.54, resultHolder.getOrder().getTotalEncumbered());
     assertEquals(13.45, resultHolder.getOrder().getTotalExpended());
+    assertEquals(1.23, resultHolder.getOrder().getTotalCredited());
   }
 
   @Test
