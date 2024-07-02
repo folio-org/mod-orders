@@ -44,6 +44,7 @@ import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.finance.budget.BudgetRestrictionService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
+import org.folio.service.finance.transaction.FinanceUtils;
 import org.folio.service.finance.transaction.TransactionService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
@@ -234,7 +235,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
         if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.REMAINING) {
           amount = Money.of(fromEncumbrance.getAmount(), fromEncumbrance.getCurrency());
         } else if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.EXPENDED){
-          amount = Money.of(fromEncumbrance.getEncumbrance().getAmountExpended(), fromEncumbrance.getCurrency());
+          amount = Money.of(FinanceUtils.getEncumbranceExpended(fromEncumbrance), fromEncumbrance.getCurrency());
         } else {
           amount = Money.of(fromEncumbrance.getEncumbrance().getInitialAmountEncumbered(), fromEncumbrance.getCurrency());
         }

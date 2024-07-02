@@ -159,6 +159,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
         newTransaction.setMetadata(JsonObject.mapFrom(existingTransaction.getMetadata()).mapTo(Metadata.class));
         newTransaction.getEncumbrance()
           .withAmountExpended(existingTransaction.getEncumbrance().getAmountExpended())
+          .withAmountCredited(existingTransaction.getEncumbrance().getAmountCredited())
           .withAmountAwaitingPayment(existingTransaction.getEncumbrance().getAmountAwaitingPayment());
         if (existingTransaction.getEncumbrance().getStatus() == Encumbrance.Status.RELEASED)
           newTransaction.getEncumbrance().setStatus(Encumbrance.Status.RELEASED);

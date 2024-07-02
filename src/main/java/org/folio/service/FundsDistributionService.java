@@ -1,13 +1,13 @@
 package org.folio.service;
 
 import static javax.money.Monetary.getDefaultRounding;
-import static org.folio.orders.utils.HelperUtils.calculateEncumbranceEffectiveAmount;
 
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.money.CurrencyUnit;
@@ -21,6 +21,7 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.service.finance.transaction.FinanceUtils;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryFunctions;
 import org.javamoney.moneta.function.MonetaryOperators;
@@ -29,52 +30,62 @@ public class FundsDistributionService {
 
   public <T extends EncumbranceRelationsHolder> List<T> distributeFunds(List<T> holders) {
     Map<CompositePoLine, List<EncumbranceRelationsHolder>> lineHoldersMap = holders.stream()
-        .filter(holder -> Objects.nonNull(holder.getPoLine()))
-        .collect(Collectors.groupingBy(EncumbranceRelationsHolder::getPoLine));
+      .filter(holder -> Objects.nonNull(holder.getPoLine()))
+      .collect(Collectors.groupingBy(EncumbranceRelationsHolder::getPoLine));
 
     lineHoldersMap.forEach((poLine, encumbranceRelationsHolders) -> {
       poLine.getCost().setPoLineEstimatedPrice(HelperUtils.calculateEstimatedPrice(poLine.getCost()).getNumber().doubleValue());
       CurrencyUnit poLineCurrency = Monetary.getCurrency(poLine.getCost().getCurrency());
       CurrencyConversion conversion = encumbranceRelationsHolders.stream()
-          .map(EncumbranceRelationsHolder::getPoLineToFyConversion).findFirst().get();
+        .map(EncumbranceRelationsHolder::getPoLineToFyConversion).findFirst().get();
 
       MonetaryAmount expectedTotal = Money.of(poLine.getCost().getPoLineEstimatedPrice(), poLineCurrency)
-          .with(conversion)
-          .with(getDefaultRounding());
+        .with(conversion)
+        .with(getDefaultRounding());
       MonetaryAmount calculatedTotal = encumbranceRelationsHolders.stream()
-          .map(EncumbranceRelationsHolder::getFundDistribution)
-          .map(fundDistribution -> getDistributionAmount(fundDistribution, expectedTotal, poLineCurrency, conversion))
-          .reduce((money, money2) -> Money.from(MonetaryFunctions.sum(money, money2)))
-          .orElseGet(() -> Money.zero(poLineCurrency));
+        .map(EncumbranceRelationsHolder::getFundDistribution)
+        .map(fundDistribution -> getDistributionAmount(fundDistribution, expectedTotal, poLineCurrency, conversion))
+        .reduce((money, money2) -> Money.from(MonetaryFunctions.sum(money, money2)))
+        .orElseGet(() -> Money.zero(poLineCurrency));
 
       MonetaryAmount remainder = expectedTotal.abs()
-          .subtract(calculatedTotal.abs());
+        .subtract(calculatedTotal.abs());
       int remainderSignum = remainder.signum();
       MonetaryAmount smallestUnit = getSmallestUnit(expectedTotal, remainderSignum);
 
-      for (ListIterator<EncumbranceRelationsHolder> iterator = getIterator(encumbranceRelationsHolders, remainderSignum); isIteratorHasNext(iterator, remainderSignum);) {
+      for (var iterator = getIterator(encumbranceRelationsHolders, remainderSignum); isIteratorHasNext(iterator, remainderSignum); ) {
 
-        final EncumbranceRelationsHolder holder = iteratorNext(iterator, remainderSignum);
-          CurrencyUnit fyCurrency = Monetary.getCurrency(holder.getCurrency());
-          MonetaryAmount initialAmount = getDistributionAmount(holder.getFundDistribution(), expectedTotal, poLineCurrency, conversion);
+        EncumbranceRelationsHolder holder = iteratorNext(iterator, remainderSignum);
+        CurrencyUnit fyCurrency = Monetary.getCurrency(holder.getCurrency());
+        MonetaryAmount initialAmount = getDistributionAmount(holder.getFundDistribution(), expectedTotal, poLineCurrency, conversion);
 
-          if (FundDistribution.DistributionType.PERCENTAGE.equals(holder.getFundDistribution().getDistributionType()) && !remainder.isZero()) {
-            initialAmount = initialAmount.add(smallestUnit);
-            remainder = remainder.abs().subtract(smallestUnit.abs()).multiply(remainderSignum);
-          }
+        if (holder.getFundDistribution().getDistributionType() == FundDistribution.DistributionType.PERCENTAGE && !remainder.isZero()) {
+          initialAmount = initialAmount.add(smallestUnit);
+          remainder = remainder.abs().subtract(smallestUnit.abs()).multiply(remainderSignum);
+        }
 
-          MonetaryAmount expended = Optional.of(holder).map(EncumbranceRelationsHolder::getNewEncumbrance).map(Transaction::getEncumbrance).map(Encumbrance::getAmountExpended).map(aDouble -> Money.of(aDouble, fyCurrency))
-              .orElse(Money.zero(fyCurrency));
-          MonetaryAmount awaitingPayment = Optional.of(holder).map(EncumbranceRelationsHolder::getNewEncumbrance).map(Transaction::getEncumbrance).map(Encumbrance::getAmountAwaitingPayment)
-              .map(aDouble -> Money.of(aDouble, fyCurrency)).orElse(Money.zero(fyCurrency));
-          MonetaryAmount amount = calculateEncumbranceEffectiveAmount(initialAmount, expended, awaitingPayment, fyCurrency);
+        MonetaryAmount expended = getOrZero(holder, fyCurrency, FinanceUtils::getExpended);
+        MonetaryAmount awaitingPayment = getOrZero(holder, fyCurrency, Encumbrance::getAmountAwaitingPayment);
 
-          holder.getNewEncumbrance().setAmount(amount.getNumber().doubleValue());
-          holder.getNewEncumbrance().getEncumbrance().setInitialAmountEncumbered(initialAmount.getNumber().doubleValue());
+        MonetaryAmount amount = FinanceUtils.calculateEncumbranceEffectiveAmount(initialAmount, expended, awaitingPayment, fyCurrency);
+
+        holder.getNewEncumbrance().setAmount(amount.getNumber().doubleValue());
+        holder.getNewEncumbrance().getEncumbrance().setInitialAmountEncumbered(initialAmount.getNumber().doubleValue());
 
       }
     });
     return holders;
+  }
+
+  public static MonetaryAmount getOrZero(EncumbranceRelationsHolder holder,
+                                         CurrencyUnit fyCurrency,
+                                         Function<Encumbrance, Double> getAmount) {
+    return Optional.of(holder)
+      .map(EncumbranceRelationsHolder::getNewEncumbrance)
+      .map(Transaction::getEncumbrance)
+      .map(getAmount)
+      .map(doubleAmount -> Money.of(doubleAmount, fyCurrency))
+      .orElse(Money.zero(fyCurrency));
   }
 
 
