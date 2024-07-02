@@ -81,8 +81,7 @@ public class CirculationRequestsRetriever {
           var totalRecords = json.getInteger(COLLECTION_TOTAL.getValue());
           var requests = json.getJsonArray(COLLECTION_RECORDS.getValue());
           return IntStream.range(0, totalRecords)
-            .mapToObj(requests::getJsonObject)
-            .map(request -> request.put(CommonFields.TENANT_ID.getValue(), TenantTool.tenantId(requestContext.getHeaders())));
+            .mapToObj(requests::getJsonObject);
         })
         .toList());
   }
@@ -92,9 +91,14 @@ public class CirculationRequestsRetriever {
     return pieceStorageService.getPiecesByIds(pieceIds, requestContext)
       // 2. Convert list of pieces to a map where we map tenants to items that are in this tenant
       .map(pieces -> getLocationContextToItems(pieces, requestContext))
-      // 3. For each tenant fetch its items -> resulting in a list of Future<List<JsonObject>>
+      // 3.1 For each tenant fetch its items -> resulting in a list of Future<List<JsonObject>>
       .map(ctxToItemsMap -> StreamEx.of(ctxToItemsMap.entrySet())
-        .map(ctxToItems -> getRequestsByItemIds(ctxToItems.getValue(), status, ctxToItems.getKey())).toList())
+        .map(ctxToItems -> getRequestsByItemIds(ctxToItems.getValue(), status, ctxToItems.getKey())
+          // 3.2 Include tenantId in each request for its associated tenant
+          .map(requests -> requests.stream()
+            .map(request -> request.put(CommonFields.TENANT_ID.getValue(), TenantTool.tenantId(ctxToItems.getKey().getHeaders())))
+            .toList()))
+        .toList())
       // 4. Put the list of futures in a composite one and flatMap all futures into a single list
       .compose(requests -> GenericCompositeFuture.all(requests)
         .map(cf -> StreamEx.of(cf.<List<JsonObject>>list()).toFlatList(Function.identity())))
