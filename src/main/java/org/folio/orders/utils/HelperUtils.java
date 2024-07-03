@@ -35,7 +35,6 @@ import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
-import org.javamoney.moneta.function.MonetaryFunctions;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import javax.money.CurrencyUnit;
@@ -284,15 +283,6 @@ public class HelperUtils {
       total = total.add(Money.of(cost.getAdditionalCost(), currency));
     }
     return total;
-  }
-
-  public static double calculateEncumbranceEffectiveAmount(double initialAmount, double expended, double awaitingPayment, CurrencyUnit fiscalYearCurrency) {
-    return calculateEncumbranceEffectiveAmount(Money.of(initialAmount, fiscalYearCurrency), Money.of(expended, fiscalYearCurrency),
-      Money.of(awaitingPayment, fiscalYearCurrency), fiscalYearCurrency).getNumber().doubleValue();
-  }
-
-  public static MonetaryAmount calculateEncumbranceEffectiveAmount(MonetaryAmount initialAmount, MonetaryAmount expended, MonetaryAmount awaitingPayment, CurrencyUnit fiscalYearCurrency) {
-    return MonetaryFunctions.max().apply(initialAmount.subtract(expended).subtract(awaitingPayment), Money.zero(fiscalYearCurrency));
   }
 
   public static int getPhysicalLocationsQuantity(List<Location> locations) {

@@ -61,6 +61,7 @@ public class BudgetRestrictionService {
   }
 
   private boolean isRemainingAmountExceed(Budget budget, MonetaryAmount newEncumberedAmount) {
+    // im check
     // [remaining amount we can encumber] = (totalFunding * allowableEncumbrance) - unavailable
     // where unavailable = awaitingPayment + encumbered + expenditure
     CurrencyUnit currency = newEncumberedAmount.getCurrency();

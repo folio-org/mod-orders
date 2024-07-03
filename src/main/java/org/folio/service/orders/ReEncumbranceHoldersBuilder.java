@@ -207,7 +207,8 @@ public class ReEncumbranceHoldersBuilder extends FinanceHoldersBuilder {
         toEncumbrance.getEncumbrance()
           .withStatus(Encumbrance.Status.UNRELEASED)
           .withAmountAwaitingPayment(0d)
-          .withAmountExpended(0d);
+          .withAmountExpended(0d)
+          .withAmountCredited(0d);
 
         holder.withNewEncumbrance(toEncumbrance);
       });
