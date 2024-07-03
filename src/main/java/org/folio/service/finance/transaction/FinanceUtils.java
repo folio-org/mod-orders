@@ -32,11 +32,13 @@ public class FinanceUtils {
 
   public static double calculateEncumbranceEffectiveAmount(double initialAmount,
                                                            double expended,
+                                                           double credited,
                                                            double awaitingPayment,
                                                            CurrencyUnit fiscalYearCurrency) {
     return calculateEncumbranceEffectiveAmount(
       Money.of(initialAmount, fiscalYearCurrency),
       Money.of(expended, fiscalYearCurrency),
+      Money.of(credited, fiscalYearCurrency),
       Money.of(awaitingPayment, fiscalYearCurrency),
       fiscalYearCurrency
     ).getNumber().doubleValue();
@@ -44,10 +46,11 @@ public class FinanceUtils {
 
   public static MonetaryAmount calculateEncumbranceEffectiveAmount(MonetaryAmount initialAmount,
                                                                    MonetaryAmount expended,
+                                                                   MonetaryAmount credited,
                                                                    MonetaryAmount awaitingPayment,
                                                                    CurrencyUnit fiscalYearCurrency) {
     return MonetaryFunctions.max().apply(
-      initialAmount.subtract(expended).subtract(awaitingPayment),
+      initialAmount.subtract(expended).add(credited).subtract(awaitingPayment),
       Money.zero(fiscalYearCurrency)
     );
   }

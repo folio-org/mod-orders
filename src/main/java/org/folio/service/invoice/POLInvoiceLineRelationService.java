@@ -122,8 +122,13 @@ public class POLInvoiceLineRelationService {
 
     forCreate.stream().findFirst().ifPresent(transaction -> {
       Encumbrance encumbrance = transaction.getEncumbrance();
-      double encumbranceAmount = FinanceUtils.calculateEncumbranceEffectiveAmount(encumbrance.getInitialAmountEncumbered(),
-        amountExpended - amountCredited, amountAwaitingPayment, Monetary.getCurrency(currency));
+      double encumbranceAmount = FinanceUtils.calculateEncumbranceEffectiveAmount(
+        encumbrance.getInitialAmountEncumbered(),
+        amountExpended,
+        amountCredited,
+        amountAwaitingPayment,
+        Monetary.getCurrency(currency)
+      );
       var encumbranceStatus = isReleaseEncumbranceEnabled && encumbranceAmount == 0d ?
         Encumbrance.Status.RELEASED : Encumbrance.Status.UNRELEASED;
       transaction

@@ -64,10 +64,17 @@ public class FundsDistributionService {
           remainder = remainder.abs().subtract(smallestUnit.abs()).multiply(remainderSignum);
         }
 
-        MonetaryAmount expended = getOrZero(holder, fyCurrency, FinanceUtils::getExpended);
-        MonetaryAmount awaitingPayment = getOrZero(holder, fyCurrency, Encumbrance::getAmountAwaitingPayment);
+        MonetaryAmount expended = extractAmount(holder, fyCurrency, Encumbrance::getAmountExpended);
+        MonetaryAmount credited = extractAmount(holder, fyCurrency, Encumbrance::getAmountCredited);
+        MonetaryAmount awaitingPayment = extractAmount(holder, fyCurrency, Encumbrance::getAmountAwaitingPayment);
 
-        MonetaryAmount amount = FinanceUtils.calculateEncumbranceEffectiveAmount(initialAmount, expended, awaitingPayment, fyCurrency);
+        MonetaryAmount amount = FinanceUtils.calculateEncumbranceEffectiveAmount(
+          initialAmount,
+          expended,
+          credited,
+          awaitingPayment,
+          fyCurrency
+        );
 
         holder.getNewEncumbrance().setAmount(amount.getNumber().doubleValue());
         holder.getNewEncumbrance().getEncumbrance().setInitialAmountEncumbered(initialAmount.getNumber().doubleValue());
@@ -77,9 +84,9 @@ public class FundsDistributionService {
     return holders;
   }
 
-  public static MonetaryAmount getOrZero(EncumbranceRelationsHolder holder,
-                                         CurrencyUnit fyCurrency,
-                                         Function<Encumbrance, Double> getAmount) {
+  public static MonetaryAmount extractAmount(EncumbranceRelationsHolder holder,
+                                             CurrencyUnit fyCurrency,
+                                             Function<Encumbrance, Double> getAmount) {
     return Optional.of(holder)
       .map(EncumbranceRelationsHolder::getNewEncumbrance)
       .map(Transaction::getEncumbrance)
