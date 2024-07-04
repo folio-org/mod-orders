@@ -19,7 +19,7 @@ public class TransactionValidator {
   }
 
   public static void validateEncumbranceForDeletion(Transaction transaction) {
-    if (FinanceUtils.getEncumbranceExpended(transaction) > 0) {
+    if (FinanceUtils.calculateEncumbranceTotalAmount(transaction) > 0) {
       String transactionId = transaction.getId();
       logger.info("Tried to delete transaction {} but it has an expended amount.", transactionId);
       Parameter parameter = new Parameter().withKey("id").withValue(transactionId);

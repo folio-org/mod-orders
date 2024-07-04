@@ -15,11 +15,8 @@ import java.util.function.Function;
 @UtilityClass
 public class FinanceUtils {
 
-  public static double getEncumbranceExpended(Transaction transaction) {
-    return getExpended(transaction.getEncumbrance());
-  }
-
-  public static double getExpended(Encumbrance encumbrance) {
+  public static double calculateEncumbranceTotalAmount(Transaction transaction) {
+    Encumbrance encumbrance = transaction.getEncumbrance();
     return encumbrance == null ? 0 : encumbrance.getAmountExpended() - encumbrance.getAmountCredited();
   }
 

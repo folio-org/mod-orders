@@ -235,7 +235,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
         if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.REMAINING) {
           amount = Money.of(fromEncumbrance.getAmount(), fromEncumbrance.getCurrency());
         } else if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.EXPENDED){
-          amount = Money.of(FinanceUtils.getEncumbranceExpended(fromEncumbrance), fromEncumbrance.getCurrency());
+          amount = Money.of(FinanceUtils.calculateEncumbranceTotalAmount(fromEncumbrance), fromEncumbrance.getCurrency());
         } else {
           amount = Money.of(fromEncumbrance.getEncumbrance().getInitialAmountEncumbered(), fromEncumbrance.getCurrency());
         }
