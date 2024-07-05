@@ -3138,7 +3138,7 @@ public class PurchaseOrdersApiTest {
     Encumbrance encumbrance = new Encumbrance().withOrderType(Encumbrance.OrderType.ONE_TIME)
       .withStatus(Encumbrance.Status.UNRELEASED).withSourcePoLineId(poLineId1).withReEncumber(false)
       .withSubscription(false).withSourcePurchaseOrderId(purchaseOrderId).withInitialAmountEncumbered(10.00)
-      .withAmountAwaitingPayment(0.0).withAmountExpended(0.0);
+      .withAmountAwaitingPayment(0d).withAmountExpended(0d).withAmountCredited(0d);
     Metadata metadata = new Metadata().withCreatedByUserId("00000001-1111-5555-9999-999999999999")
       .withUpdatedByUsername("00000001-1111-5555-9999-999999999999").withCreatedDate(new Date(2020, 05, 29, 11, 30))
       .withUpdatedDate(new Date(2020, 05, 30, 11, 30));

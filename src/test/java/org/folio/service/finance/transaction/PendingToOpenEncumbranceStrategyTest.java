@@ -336,7 +336,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       .withSourcePoLineId(poLine.getId())
       .withOrderType(Encumbrance.OrderType.fromValue(order.getOrderType().value()))
       .withInitialAmountEncumbered(10d)
-      .withAmountExpended(10d)
+      .withAmountExpended(18d)
+      .withAmountCredited(8d)
       .withOrderStatus(Encumbrance.OrderStatus.OPEN)
       .withStatus(Encumbrance.Status.RELEASED);
     Transaction released = new Transaction()

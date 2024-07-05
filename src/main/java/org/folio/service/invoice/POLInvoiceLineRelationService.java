@@ -5,7 +5,7 @@ import org.apache.http.HttpStatus;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.models.EncumbrancesProcessingHolder;
 import org.folio.models.PoLineInvoiceLineHolder;
-import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.StreamUtils;
 import org.folio.orders.utils.validators.TransactionValidator;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -17,10 +17,10 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
 
 import io.vertx.core.Future;
+import org.folio.service.finance.transaction.FinanceUtils;
 import org.folio.service.finance.transaction.PendingPaymentService;
 
 import javax.money.Monetary;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -112,32 +112,46 @@ public class POLInvoiceLineRelationService {
 
   private void copyAmountsAndRecalculateNewEncumbrance(List<Transaction> forCreate, List<Transaction> forDelete, List<InvoiceLine> invoiceLines, String currency) {
     // Update encumbrances when an order line is linked to a paid invoice
-    double amountExpended = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountExpended())
-      .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue();
-    double amountAwaitingPayment = forDelete.stream().map(encumbrance -> encumbrance.getEncumbrance().getAmountAwaitingPayment())
-      .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue();
+    double amountExpended = FinanceUtils.sumAmounts(forDelete, Encumbrance::getAmountExpended);
+    double amountCredited = FinanceUtils.sumAmounts(forDelete, Encumbrance::getAmountCredited);
+    double amountAwaitingPayment = FinanceUtils.sumAmounts(forDelete, Encumbrance::getAmountAwaitingPayment);
+
     boolean isReleaseEncumbranceEnabled = filterInvoiceLinesByStatuses(invoiceLines, List.of(InvoiceLine.InvoiceLineStatus.PAID))
       .stream()
       .anyMatch(InvoiceLine::getReleaseEncumbrance);
 
     forCreate.stream().findFirst().ifPresent(transaction -> {
       Encumbrance encumbrance = transaction.getEncumbrance();
-      double encumbranceAmount = HelperUtils.calculateEncumbranceEffectiveAmount(encumbrance.getInitialAmountEncumbered(),
-        amountExpended, amountAwaitingPayment, Monetary.getCurrency(currency));
+      double encumbranceAmount = FinanceUtils.calculateEncumbranceEffectiveAmount(
+        encumbrance.getInitialAmountEncumbered(),
+        amountExpended,
+        amountCredited,
+        amountAwaitingPayment,
+        Monetary.getCurrency(currency)
+      );
       var encumbranceStatus = isReleaseEncumbranceEnabled && encumbranceAmount == 0d ?
         Encumbrance.Status.RELEASED : Encumbrance.Status.UNRELEASED;
-      transaction.withAmount(encumbranceAmount).withEncumbrance(encumbrance.withAmountExpended(amountExpended)
-        .withAmountAwaitingPayment(amountAwaitingPayment).withStatus(encumbranceStatus));
+      transaction
+        .withAmount(encumbranceAmount)
+        .withEncumbrance(
+          encumbrance
+            .withAmountExpended(amountExpended)
+            .withAmountCredited(amountCredited)
+            .withAmountAwaitingPayment(amountAwaitingPayment)
+            .withStatus(encumbranceStatus)
+        );
     });
   }
 
   private boolean isFundDistributionNotChanged(PoLineInvoiceLineHolder holder) {
-    return CollectionUtils.isEqualCollection(getFundIdsFromFundDistribution(holder.getPoLineFromRequest().getFundDistribution()),
-      getFundIdsFromFundDistribution(holder.getPoLineFromStorage().getFundDistribution()));
+    return CollectionUtils.isEqualCollection(
+      getFundIdsFromFundDistribution(holder.getPoLineFromRequest().getFundDistribution()),
+      getFundIdsFromFundDistribution(holder.getPoLineFromStorage().getFundDistribution())
+    );
   }
 
   private List<String> getFundIdsFromFundDistribution(List<FundDistribution> fundDistributions) {
-    return fundDistributions.stream().map(FundDistribution::getFundId).collect(Collectors.toList());
+    return StreamUtils.map(fundDistributions, FundDistribution::getFundId);
   }
 
   public static void validateInvoiceLineStatuses(List<InvoiceLine> invoiceLines) {

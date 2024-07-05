@@ -241,7 +241,8 @@ public class EncumbranceRelationsHoldersBuilderTest {
                              .withSourcePurchaseOrderId(order.getId())
                              .withSourcePoLineId(line1.getId())
                              .withInitialAmountEncumbered(68d)
-                             .withAmountExpended(10d)
+                             .withAmountExpended(18d)
+                             .withAmountCredited(8d)
                              .withAmountAwaitingPayment(20d)
             )
       .withMetadata(new Metadata());
@@ -261,6 +262,8 @@ public class EncumbranceRelationsHoldersBuilderTest {
     assertEquals(encumbranceFromStorage.getId(), holder1.getNewEncumbrance().getId());
     assertEquals(encumbranceFromStorage.getEncumbrance().getAmountExpended(),
                  holder1.getNewEncumbrance().getEncumbrance().getAmountExpended());
+    assertEquals(encumbranceFromStorage.getEncumbrance().getAmountCredited(),
+                 holder1.getNewEncumbrance().getEncumbrance().getAmountCredited());
     assertEquals(encumbranceFromStorage.getEncumbrance().getAmountAwaitingPayment(),
                  holder1.getNewEncumbrance().getEncumbrance().getAmountAwaitingPayment());
     assertNull(holder2.getOldEncumbrance());
@@ -284,7 +287,8 @@ public class EncumbranceRelationsHoldersBuilderTest {
                              .withSourcePurchaseOrderId(order.getId())
                              .withSourcePoLineId(line1.getId())
                              .withInitialAmountEncumbered(68d)
-                             .withAmountExpended(10d)
+                             .withAmountExpended(18d)
+                             .withAmountCredited(8d)
                              .withAmountAwaitingPayment(20d)
         );
 
@@ -301,7 +305,8 @@ public class EncumbranceRelationsHoldersBuilderTest {
                              .withSourcePurchaseOrderId(order.getId())
                              .withSourcePoLineId(line1.getId())
                              .withInitialAmountEncumbered(68d)
-                             .withAmountExpended(10d)
+                             .withAmountExpended(18d)
+                             .withAmountCredited(8d)
                              .withAmountAwaitingPayment(20d)
         );
 
