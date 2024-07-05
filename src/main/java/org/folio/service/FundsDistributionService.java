@@ -84,7 +84,7 @@ public class FundsDistributionService {
     return holders;
   }
 
-  public static MonetaryAmount extractAmount(EncumbranceRelationsHolder holder,
+  private MonetaryAmount extractAmount(EncumbranceRelationsHolder holder,
                                              CurrencyUnit fyCurrency,
                                              Function<Encumbrance, Double> getAmount) {
     return Optional.of(holder)
