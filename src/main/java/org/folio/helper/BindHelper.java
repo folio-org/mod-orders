@@ -4,7 +4,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.models.ItemFields;
+import org.folio.model.ItemFields;
 import org.folio.models.pieces.BindPiecesHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -55,6 +55,12 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
         bindPiecesCollection.getPoLineId(), bindPiecesCollection.getBindPieceIds().size());
   }
 
+  public BindHelper(String pieceId, Map<String, String> okapiHeaders, Context ctx) {
+    super(okapiHeaders, ctx);
+    piecesByLineId = null;
+    logger.debug("Piece {} is going to have binding removed", pieceId);
+  }
+
   private Map<String, Map<String, BindPiecesCollection>> groupBindPieceByPoLineId(BindPiecesCollection bindPiecesCollection) {
     String poLineId = bindPiecesCollection.getPoLineId();
     Map<String, BindPiecesCollection> bindPieceMap = bindPiecesCollection.getBindPieceIds().stream()
@@ -64,6 +70,15 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       ));
 
     return Map.of(poLineId, bindPieceMap);
+  }
+
+  public Future<Void> removeBinding(String pieceId, RequestContext requestContext) {
+    return removeForbiddenEntities(requestContext)
+      .compose(v -> pieceStorageService.getPieceById(pieceId, requestContext))
+      .map(piece -> piece.withBindItemId(null).withIsBound(false))
+      .map(piece -> Map.of(piece.getPoLineId(), List.of(piece)))
+      .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
+      .mapEmpty();
   }
 
   public Future<BindPiecesResult> bindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
@@ -188,7 +203,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
           inventoryItemRequestService.transferItemRequests(itemIds, newItemId, requestContext);
         }
         // Set new item ids for pieces and holder
-        holder.getPieces().forEach(piece -> piece.setItemId(newItemId));
+        holder.getPieces().forEach(piece -> piece.setBindItemId(newItemId));
         return holder.withBindItemId(newItemId);
       });
   }
@@ -225,7 +240,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private Future<BindPiecesHolder> updateTitleWithBindItems(BindPiecesHolder holder, RequestContext requestContext) {
-    var itemIds = holder.getPieces().map(Piece::getItemId).distinct().toList();
+    var itemIds = holder.getPieces().map(Piece::getBindItemId).distinct().toList();
     return titlesService.getTitlesByQuery(String.format(TITLE_BY_POLINE_QUERY, holder.getPoLineId()), requestContext)
       .map(titles -> updateTitle(titles, itemIds, requestContext))
       .map(v -> holder);
