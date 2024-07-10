@@ -60,10 +60,16 @@ public class TemplateProcessingRequest {
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private RoutingList routingList;
     @JsonProperty
+    private String title;
+    @JsonProperty
     private List<User> users;
 
     public RoutingList getRoutingList() {
       return routingList;
+    }
+
+    public String getTitle() {
+      return title;
     }
 
     public List<User> getUsers() {
@@ -72,6 +78,11 @@ public class TemplateProcessingRequest {
 
     public Context withRoutingList(RoutingList routingList) {
       this.routingList = routingList;
+      return this;
+    }
+
+    public Context withTitle(String title) {
+      this.title = title;
       return this;
     }
 

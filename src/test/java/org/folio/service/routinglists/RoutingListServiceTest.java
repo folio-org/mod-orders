@@ -143,6 +143,7 @@ public class RoutingListServiceTest {
     var settingCollection = new SettingCollection().withSettings(List.of(setting));
 
     doReturn(succeededFuture(routingList)).when(restClient).get(any(RequestEntry.class), eq(RoutingList.class), any());
+    doReturn(succeededFuture(samplePoLine)).when(poLineService).getOrderLineById(any(), any());
     doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any());
     doReturn(succeededFuture(settingCollection)).when(restClient).get(any(RequestEntry.class), eq(SettingCollection.class), any());
     doReturn(succeededFuture(new JsonObject())).when(restClient).postJsonObject(any(RequestEntry.class), eq(expectedTemplateRequest), any());
@@ -161,6 +162,7 @@ public class RoutingListServiceTest {
     var users = new JsonObject(getMockData(USERS_MOCK_DATA_PATH + "user_collection.json")).mapTo(UserCollection.class);
 
     doReturn(succeededFuture(routingList)).when(restClient).get(any(RequestEntry.class), eq(RoutingList.class), any());
+    doReturn(succeededFuture(samplePoLine)).when(poLineService).getOrderLineById(any(), any());
     doReturn(succeededFuture(users)).when(userService).getUsersByIds(eq(routingList.getUserIds()), any());
     doReturn(succeededFuture(new SettingCollection().withSettings(new ArrayList<>())))
       .when(restClient).get(any(RequestEntry.class), eq(SettingCollection.class), any());

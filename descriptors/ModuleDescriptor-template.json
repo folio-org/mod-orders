@@ -1081,6 +1081,7 @@
           "permissionsRequired": ["orders.routing-lists-template.item.get"],
           "modulePermissions": [
             "orders-storage.routing-lists.item.get",
+            "orders-storage.po-lines.item.get",
             "orders-storage.settings.collection.get",
             "users.collection.get",
             "template-request.post"
