@@ -25,6 +25,7 @@ import org.folio.service.inventory.InventoryItemRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -55,10 +56,8 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
         bindPiecesCollection.getPoLineId(), bindPiecesCollection.getBindPieceIds().size());
   }
 
-  public BindHelper(String pieceId, Map<String, String> okapiHeaders, Context ctx) {
+  public BindHelper(Map<String, String> okapiHeaders, Context ctx) {
     super(okapiHeaders, ctx);
-    piecesByLineId = null;
-    logger.debug("Piece {} is going to have binding removed", pieceId);
   }
 
   private Map<String, Map<String, BindPiecesCollection>> groupBindPieceByPoLineId(BindPiecesCollection bindPiecesCollection) {
@@ -73,12 +72,19 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   public Future<Void> removeBinding(String pieceId, RequestContext requestContext) {
-    return removeForbiddenEntities(requestContext)
-      .compose(v -> pieceStorageService.getPieceById(pieceId, requestContext))
-      .map(piece -> piece.withBindItemId(null).withIsBound(false))
-      .map(piece -> Map.of(piece.getPoLineId(), List.of(piece)))
-      .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      .mapEmpty();
+    logger.debug("removeBinding:: Removing binding for piece: {}", pieceId);
+    return pieceStorageService.getPieceById(pieceId, requestContext)
+      .compose(piece -> {
+        // Populate piecesByLineId to accommodate helper methods
+        piecesByLineId = Map.of(piece.getPoLineId(), Collections.singletonMap(piece.getId(), null));
+        // Remove binding for the piece
+        piece.withBindItemId(null).withIsBound(false);
+        // Update piece record
+        return removeForbiddenEntities(requestContext)
+          .compose(v -> getValidPieces(requestContext))
+          .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
+          .mapEmpty();
+      });
   }
 
   public Future<BindPiecesResult> bindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {

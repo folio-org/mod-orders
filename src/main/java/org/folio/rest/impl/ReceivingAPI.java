@@ -82,9 +82,9 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
   @Override
   public void deleteOrdersBindPiecesById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.info("Removing binding for piece: {}", id);
-    BindHelper helper = new BindHelper(id, okapiHeaders, vertxContext);
+    BindHelper helper = new BindHelper(okapiHeaders, vertxContext);
     helper.removeBinding(id, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
+      .onSuccess(s -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 

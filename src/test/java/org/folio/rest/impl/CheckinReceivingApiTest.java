@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -55,12 +56,14 @@ import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.RestTestUtils.verifyDeleteResponse;
 import static org.folio.RestTestUtils.verifyPostResponse;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ORDERS_BIND_ENDPOINT;
+import static org.folio.TestConstants.ORDERS_BIND_ID_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_EXPECT_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
@@ -118,6 +121,7 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SU
 import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.equalTo;
@@ -1289,6 +1293,61 @@ public class CheckinReceivingApiTest {
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(PIECES_MUST_HAVE_RECEIVED_STATUS.getDescription()));
+  }
+
+  @Test
+  void testRemovePieceBinding() {
+    logger.info("=== Test DELETE Remove binding");
+
+    var holdingId = "849241fa-4a14-4df5-b951-846dcd6cfc4d";
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId());
+    var bindingPiece = getMinimalContentPiece(poLine.getId())
+      .withHoldingId(holdingId)
+      .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
+      .withFormat(Piece.Format.PHYSICAL);
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindingPiece);
+    addMockEntry(TITLES, getTitle(poLine));
+
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(getMinimalContentBindItem()
+        .withLocationId(null)
+        .withHoldingId(holdingId))
+      .withBindPieceIds(List.of(bindingPiece.getId()));
+
+    var bindResponse = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(BindPiecesResult.class);
+
+    assertThat(bindResponse.getPoLineId(), is(poLine.getId()));
+    assertThat(bindResponse.getBoundPieceIds(), contains(bindingPiece.getId()));
+    assertThat(bindResponse.getItemId(), notNullValue());
+
+    var url = String.format(ORDERS_BIND_ID_ENDPOINT, bindingPiece.getId());
+    verifyDeleteResponse(url, "", HttpStatus.HTTP_NO_CONTENT.toInt());
+
+    var pieceUpdates = getPieceUpdates();
+    assertThat(pieceUpdates, notNullValue());
+    assertThat(pieceUpdates, hasSize(2));
+
+    var pieceList = pieceUpdates.stream()
+      .map(json -> json.mapTo(Piece.class))
+      .filter(piece -> Objects.equals(bindingPiece.getId(), piece.getId()))
+      .sorted(Comparator.comparing(Piece::getIsBound))
+      .toList();
+
+    assertThat(pieceList.size(), is(2));
+    var pieceBefore = pieceList.get(1);
+    assertThat(pieceBefore.getIsBound(), is(true));
+    assertThat(pieceBefore.getBindItemId(), notNullValue());
+    var pieceAfter = pieceList.get(0);
+    assertThat(pieceAfter.getIsBound(), is(false));
+    assertThat(pieceAfter.getBindItemId(), nullValue());
   }
 
   @Test
