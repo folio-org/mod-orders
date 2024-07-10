@@ -20,6 +20,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
@@ -214,11 +215,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         .stream()
         .map(item -> inventoryItemManager.updateItem(item, requestContext)
           .otherwise(ex -> {
-            Parameter parameter = new Parameter().withKey("itemId").withValue(item.getString(ID));
+            var itemIdParam = new Parameter().withKey("itemId").withValue(item.getString(ID));
             if (ex.getCause() instanceof HttpException httpException) {
-              parameter.withAdditionalProperty("originalError", httpException.getError().getMessage());
+              itemIdParam.withAdditionalProperty("originalError", httpException.getError().getMessage());
             }
-            parameters.add(parameter);
+            var tenantIdParam = new Parameter().withKey("tenantId").withValue(TenantTool.tenantId(requestContext.getHeaders()));
+            parameters.add(itemIdParam);
+            parameters.add(tenantIdParam);
             return null;
           }))
         .toList()
