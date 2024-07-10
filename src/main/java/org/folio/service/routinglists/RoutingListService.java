@@ -31,6 +31,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.RoutingList;
 import org.folio.rest.jaxrs.model.RoutingListCollection;
 import org.folio.service.UserService;
@@ -122,7 +123,8 @@ public class RoutingListService {
   public Future<JsonObject> processTemplateRequest(String routingListId, RequestContext requestContext) {
     logger.debug("processTemplateRequest: Tying to process template request for routingListId={}", routingListId);
     return getRoutingListById(routingListId, requestContext)
-      .compose(routingList -> getUsersAndCreateTemplate(routingList, requestContext))
+      .compose(routingList -> poLineService.getOrderLineById(routingList.getPoLineId(), requestContext)
+        .compose(poLine -> getUsersAndCreateTemplate(routingList, poLine, requestContext)))
       .compose(templateProcessingRequest -> postTemplateRequest(templateProcessingRequest, requestContext));
   }
 
@@ -131,11 +133,11 @@ public class RoutingListService {
     return restClient.get(requestEntry, RoutingList.class, requestContext);
   }
 
-  private Future<TemplateProcessingRequest> getUsersAndCreateTemplate(RoutingList routingList, RequestContext requestContext) {
+  private Future<TemplateProcessingRequest> getUsersAndCreateTemplate(RoutingList routingList, PoLine poLine, RequestContext requestContext) {
     return getAddressTypeId(requestContext)
       .compose(addressTypId -> userService.getUsersByIds(routingList.getUserIds(), requestContext)
         .map(users -> sortUsersOrder(routingList, users))
-        .map(users -> createTemplateRequest(routingList, users, addressTypId)));
+        .map(users -> createTemplateRequest(routingList, poLine, users, addressTypId)));
   }
 
   private Future<String> getAddressTypeId(RequestContext requestContext) {
@@ -165,14 +167,16 @@ public class RoutingListService {
     return userCollection;
   }
 
-  private TemplateProcessingRequest createTemplateRequest(RoutingList routingList, UserCollection users, String addressTypeId) {
+  private TemplateProcessingRequest createTemplateRequest(RoutingList routingList, PoLine poLine,
+                                                          UserCollection users, String addressTypeId) {
     var templateRequest = createBaseTemplateRequest();
     templateRequest.withContext(new TemplateProcessingRequest.Context()
       .withRoutingList(fillRoutingListForContext(routingList))
+      .withTitle(poLine.getTitleOrPackage())
       .withUsers(fillUsersForContext(users, addressTypeId)));
 
-    logger.info("createTemplateRequest:: TemplateProcessingRequest object created for routing list name: {}",
-      templateRequest.getContext().getRoutingList().getName());
+    logger.info("createTemplateRequest:: TemplateProcessingRequest object created for routing list name: {} and title: {}",
+      templateRequest.getContext().getRoutingList().getName(), poLine.getTitleOrPackage());
     return templateRequest;
   }
 

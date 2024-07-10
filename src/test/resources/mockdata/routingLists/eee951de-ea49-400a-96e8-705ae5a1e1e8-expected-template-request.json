@@ -3,6 +3,7 @@
   "lang": "en",
   "outputFormat": "text/html",
   "context": {
+    "title": "Title",
     "routingList": {
       "name": "Mars expedition",
       "notes": "Future note",
