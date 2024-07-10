@@ -31,6 +31,7 @@ import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeExpected;
 import org.junit.jupiter.api.AfterAll;
@@ -111,6 +112,7 @@ import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.impl.MockServer.getUpdatedTitles;
 import static org.folio.rest.jaxrs.model.ProcessingStatus.Type.SUCCESS;
 import static org.folio.rest.jaxrs.model.ReceivedItem.ItemStatus.ON_ORDER;
 import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
@@ -1039,12 +1041,15 @@ public class CheckinReceivingApiTest {
     var order = getMinimalContentCompositePurchaseOrder()
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     var poLine = getMinimalContentCompositePoLine(order.getId());
+    var title = getTitle(poLine);
     var bindingPiece1 = getMinimalContentPiece(poLine.getId())
+      .withTitleId(title.getId())
       .withHoldingId(holdingId)
       .withReceivingStatus(receivingStatus)
       .withFormat(format);
     var bindingPiece2 = getMinimalContentPiece(poLine.getId())
       .withId(UUID.randomUUID().toString())
+      .withTitleId(title.getId())
       .withHoldingId(holdingId)
       .withReceivingStatus(receivingStatus)
       .withFormat(format);
@@ -1053,7 +1058,7 @@ public class CheckinReceivingApiTest {
     addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, bindingPiece1);
     addMockEntry(PIECES_STORAGE, bindingPiece2);
-    addMockEntry(TITLES, getTitle(poLine));
+    addMockEntry(TITLES, title);
 
     var pieceIds = List.of(bindingPiece1.getId(), bindingPiece2.getId());
     var bindPiecesCollection = new BindPiecesCollection()
@@ -1076,12 +1081,28 @@ public class CheckinReceivingApiTest {
     assertThat(pieceUpdates, notNullValue());
     assertThat(pieceUpdates, hasSize(bindPiecesCollection.getBindPieceIds().size()));
 
-    var pieceList = pieceUpdates.stream().filter(pol -> {
-      Piece piece = pol.mapTo(Piece.class);
-      String pieceId = piece.getId();
-      return Objects.equals(bindingPiece1.getId(), pieceId) || Objects.equals(bindingPiece2.getId(), pieceId);
-    }).toList();
+    var pieceList = pieceUpdates.stream()
+      .map(json -> json.mapTo(Piece.class))
+      .filter(piece -> pieceIds.contains(piece.getId()))
+      .filter(piece -> piece.getBindItemId().equals(newItemId))
+      .toList();
     assertThat(pieceList.size(), is(2));
+
+    var titleUpdates = getUpdatedTitles();
+    assertThat(titleUpdates, notNullValue());
+    assertThat(titleUpdates, hasSize(1));
+
+    var updatedTitleOpt = titleUpdates.stream()
+      .map(json -> json.mapTo(Title.class))
+      .filter(updatedTitle -> updatedTitle.getId().equals(pieceList.get(0).getTitleId()))
+      .filter(updatedTitle -> updatedTitle.getId().equals(pieceList.get(1).getTitleId()))
+      .findFirst();
+
+    assertThat(updatedTitleOpt.isPresent(), is(true));
+    var titleBindItemIds = updatedTitleOpt.get().getBindItemIds();
+    assertThat(titleBindItemIds, hasSize(1));
+    assertThat(titleBindItemIds.get(0), is(newItemId));
+
 
     var createdHoldings = getCreatedHoldings();
     assertThat(createdHoldings, nullValue());
