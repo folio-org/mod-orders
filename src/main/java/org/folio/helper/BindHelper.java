@@ -75,15 +75,30 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     logger.debug("removeBinding:: Removing binding for piece: {}", pieceId);
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .compose(piece -> {
-        // Populate piecesByLineId to accommodate helper methods
-        piecesByLineId = Map.of(piece.getPoLineId(), Collections.singletonMap(piece.getId(), null));
-        // Remove binding for the piece
+        var bindItemId = piece.getBindItemId();
         piece.withBindItemId(null).withIsBound(false);
-        // Update piece record
-        return removeForbiddenEntities(requestContext)
+        return removeForbiddenEntities(piece, requestContext)
           .compose(v -> getValidPieces(requestContext))
           .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-          .mapEmpty();
+          .compose(piecesGroupedByPoLine -> clearTitleBindItemsIfNeeded(piece.getTitleId(), bindItemId, requestContext));
+      });
+  }
+
+  private Future<Void> removeForbiddenEntities(Piece piece, RequestContext requestContext) {
+    // Populate piecesByLineId used by removeForbiddenEntities and parent helper methods
+    piecesByLineId = Map.of(piece.getPoLineId(), Collections.singletonMap(piece.getId(), null));
+    return removeForbiddenEntities(requestContext);
+  }
+
+  private Future<Void> clearTitleBindItemsIfNeeded(String titleId, String bindItemId, RequestContext requestContext) {
+    String query = String.format("titleId==%s and bindItemId==%s and isBound==true", titleId, bindItemId);
+    return pieceStorageService.getPieces(0, 0, query, requestContext)
+      .compose(pieceCollection -> {
+        if (pieceCollection.getTotalRecords() != 0) {
+          return Future.succeededFuture();
+        }
+        return titlesService.getTitleById(titleId, requestContext)
+          .compose(title -> titlesService.saveTitle(title.withBindItemIds(List.of()), requestContext));
       });
   }
 
