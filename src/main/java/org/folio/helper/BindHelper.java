@@ -94,7 +94,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     String query = String.format("titleId==%s and bindItemId==%s and isBound==true", titleId, bindItemId);
     return pieceStorageService.getPieces(0, 0, query, requestContext)
       .compose(pieceCollection -> {
-        if (pieceCollection.getTotalRecords() != 0) {
+        var totalRecords = pieceCollection.getTotalRecords();
+        logger.info("clearTitleBindItemsIfNeeded:: Found {} pieces associated with bind item {}", bindItemId, totalRecords);
+        if (totalRecords != 0) {
           return Future.succeededFuture();
         }
         return titlesService.getTitleById(titleId, requestContext)
