@@ -95,12 +95,17 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return pieceStorageService.getPieces(0, 0, query, requestContext)
       .compose(pieceCollection -> {
         var totalRecords = pieceCollection.getTotalRecords();
-        logger.info("clearTitleBindItemsIfNeeded:: Found {} pieces associated with bind item {}", bindItemId, totalRecords);
         if (totalRecords != 0) {
+          logger.info("clearTitleBindItemsIfNeeded:: Found '{}' piece(s) associated with bind item '{}'", totalRecords, bindItemId);
           return Future.succeededFuture();
         }
+        logger.info("clearTitleBindItemsIfNeeded:: Removing bind item '{}' from title '{}' as no associated piece(s) to the item was found", bindItemId, titleId);
         return titlesService.getTitleById(titleId, requestContext)
-          .compose(title -> titlesService.saveTitle(title.withBindItemIds(List.of()), requestContext));
+          .compose(title -> {
+            List<String> bindItemIds = new ArrayList<>(title.getBindItemIds());
+            bindItemIds.remove(bindItemId);
+            return titlesService.saveTitle(title.withBindItemIds(bindItemIds), requestContext);
+          });
       });
   }
 
