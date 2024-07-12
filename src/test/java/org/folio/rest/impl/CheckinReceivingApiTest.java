@@ -31,6 +31,7 @@ import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeExpected;
 import org.junit.jupiter.api.AfterAll;
@@ -42,6 +43,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -55,12 +57,14 @@ import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
+import static org.folio.RestTestUtils.verifyDeleteResponse;
 import static org.folio.RestTestUtils.verifyPostResponse;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ORDERS_BIND_ENDPOINT;
+import static org.folio.TestConstants.ORDERS_BIND_ID_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_EXPECT_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
@@ -108,6 +112,7 @@ import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.impl.MockServer.getUpdatedTitles;
 import static org.folio.rest.jaxrs.model.ProcessingStatus.Type.SUCCESS;
 import static org.folio.rest.jaxrs.model.ReceivedItem.ItemStatus.ON_ORDER;
 import static org.folio.service.inventory.InventoryItemManager.COPY_NUMBER;
@@ -1035,12 +1040,15 @@ public class CheckinReceivingApiTest {
     var order = getMinimalContentCompositePurchaseOrder()
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     var poLine = getMinimalContentCompositePoLine(order.getId());
+    var title = getTitle(poLine);
     var bindingPiece1 = getMinimalContentPiece(poLine.getId())
+      .withTitleId(title.getId())
       .withHoldingId(holdingId)
       .withReceivingStatus(receivingStatus)
       .withFormat(format);
     var bindingPiece2 = getMinimalContentPiece(poLine.getId())
       .withId(UUID.randomUUID().toString())
+      .withTitleId(title.getId())
       .withHoldingId(holdingId)
       .withReceivingStatus(receivingStatus)
       .withFormat(format);
@@ -1049,7 +1057,7 @@ public class CheckinReceivingApiTest {
     addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, bindingPiece1);
     addMockEntry(PIECES_STORAGE, bindingPiece2);
-    addMockEntry(TITLES, getTitle(poLine));
+    addMockEntry(TITLES, title);
 
     var pieceIds = List.of(bindingPiece1.getId(), bindingPiece2.getId());
     var bindPiecesCollection = new BindPiecesCollection()
@@ -1072,12 +1080,27 @@ public class CheckinReceivingApiTest {
     assertThat(pieceUpdates, notNullValue());
     assertThat(pieceUpdates, hasSize(bindPiecesCollection.getBindPieceIds().size()));
 
-    var pieceList = pieceUpdates.stream().filter(pol -> {
-      Piece piece = pol.mapTo(Piece.class);
-      String pieceId = piece.getId();
-      return Objects.equals(bindingPiece1.getId(), pieceId) || Objects.equals(bindingPiece2.getId(), pieceId);
-    }).toList();
+    var pieceList = pieceUpdates.stream()
+      .map(json -> json.mapTo(Piece.class))
+      .filter(piece -> pieceIds.contains(piece.getId()))
+      .filter(piece -> piece.getBindItemId().equals(newItemId))
+      .toList();
     assertThat(pieceList.size(), is(2));
+
+    var titleUpdates = getUpdatedTitles();
+    assertThat(titleUpdates, notNullValue());
+    assertThat(titleUpdates, hasSize(1));
+
+    var updatedTitleOpt = titleUpdates.stream()
+      .map(json -> json.mapTo(Title.class))
+      .filter(updatedTitle -> updatedTitle.getId().equals(pieceList.get(0).getTitleId()))
+      .filter(updatedTitle -> updatedTitle.getId().equals(pieceList.get(1).getTitleId()))
+      .findFirst();
+
+    assertThat(updatedTitleOpt.isPresent(), is(true));
+    var titleBindItemIds = updatedTitleOpt.get().getBindItemIds();
+    assertThat(titleBindItemIds, hasSize(1));
+    assertThat(titleBindItemIds.get(0), is(newItemId));
 
     var createdHoldings = getCreatedHoldings();
     assertThat(createdHoldings, nullValue());
@@ -1289,6 +1312,74 @@ public class CheckinReceivingApiTest {
       .getErrors();
 
     assertThat(errors.get(0).getMessage(), equalTo(PIECES_MUST_HAVE_RECEIVED_STATUS.getDescription()));
+  }
+
+  @Test
+  void testRemovePieceBinding() {
+    logger.info("=== Test DELETE Remove binding");
+
+    var holdingId = "849241fa-4a14-4df5-b951-846dcd6cfc4d";
+    var order = getMinimalContentCompositePurchaseOrder()
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    var poLine = getMinimalContentCompositePoLine(order.getId());
+    var title = getTitle(poLine);
+    var bindPiece1 = getMinimalContentPiece(poLine.getId())
+      .withTitleId(title.getId())
+      .withHoldingId(holdingId)
+      .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
+      .withFormat(Piece.Format.PHYSICAL);
+    var bindPiece2 = getMinimalContentPiece(poLine.getId())
+      .withId(UUID.randomUUID().toString())
+      .withTitleId(title.getId())
+      .withHoldingId(holdingId)
+      .withReceivingStatus(Piece.ReceivingStatus.RECEIVED)
+      .withFormat(Piece.Format.PHYSICAL);
+    var bindPieceIds = List.of(bindPiece1.getId(), bindPiece2.getId());
+
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, bindPiece1);
+    addMockEntry(PIECES_STORAGE, bindPiece2);
+    addMockEntry(TITLES, title);
+
+    var bindPiecesCollection = new BindPiecesCollection()
+      .withPoLineId(poLine.getId())
+      .withBindItem(getMinimalContentBindItem()
+        .withLocationId(null)
+        .withHoldingId(holdingId))
+      .withBindPieceIds(bindPieceIds);
+
+    var bindResponse = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, HttpStatus.HTTP_OK.toInt())
+      .as(BindPiecesResult.class);
+
+    assertThat(bindResponse.getPoLineId(), is(poLine.getId()));
+    assertThat(bindResponse.getBoundPieceIds(), hasSize(2));
+    assertThat(bindResponse.getBoundPieceIds(), is(bindPieceIds));
+    assertThat(bindResponse.getItemId(), notNullValue());
+
+    var bindItemId = bindResponse.getItemId();
+    var url = String.format(ORDERS_BIND_ID_ENDPOINT, bindPiece1.getId());
+    verifyDeleteResponse(url, "", HttpStatus.HTTP_NO_CONTENT.toInt());
+
+    var pieceUpdates = getPieceUpdates();
+    assertThat(pieceUpdates, notNullValue());
+    assertThat(pieceUpdates, hasSize(3));
+
+    var pieceList = pieceUpdates.stream()
+      .map(json -> json.mapTo(Piece.class))
+      .filter(piece -> Objects.equals(bindPiece1.getId(), piece.getId()))
+      .sorted(Comparator.comparing(Piece::getIsBound))
+      .toList();
+    assertThat(pieceList.size(), is(2));
+
+    var pieceBefore = pieceList.get(1);
+    assertThat(pieceBefore.getIsBound(), is(true));
+    assertThat(pieceBefore.getBindItemId(), notNullValue());
+
+    var pieceAfter = pieceList.get(0);
+    assertThat(pieceAfter.getIsBound(), is(false));
+    assertThat(pieceAfter.getBindItemId(), nullValue());
   }
 
   @Test

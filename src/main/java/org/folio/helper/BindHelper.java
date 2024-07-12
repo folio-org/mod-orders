@@ -25,6 +25,7 @@ import org.folio.service.inventory.InventoryItemRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,10 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
         bindPiecesCollection.getPoLineId(), bindPiecesCollection.getBindPieceIds().size());
   }
 
+  public BindHelper(Map<String, String> okapiHeaders, Context ctx) {
+    super(okapiHeaders, ctx);
+  }
+
   private Map<String, Map<String, BindPiecesCollection>> groupBindPieceByPoLineId(BindPiecesCollection bindPiecesCollection) {
     String poLineId = bindPiecesCollection.getPoLineId();
     Map<String, BindPiecesCollection> bindPieceMap = bindPiecesCollection.getBindPieceIds().stream()
@@ -64,6 +69,44 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
       ));
 
     return Map.of(poLineId, bindPieceMap);
+  }
+
+  public Future<Void> removeBinding(String pieceId, RequestContext requestContext) {
+    logger.debug("removeBinding:: Removing binding for piece: {}", pieceId);
+    return pieceStorageService.getPieceById(pieceId, requestContext)
+      .compose(piece -> {
+        var bindItemId = piece.getBindItemId();
+        piece.withBindItemId(null).withIsBound(false);
+        return removeForbiddenEntities(piece, requestContext)
+          .compose(v -> getValidPieces(requestContext))
+          .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
+          .compose(piecesGroupedByPoLine -> clearTitleBindItemsIfNeeded(piece.getTitleId(), bindItemId, requestContext));
+      });
+  }
+
+  private Future<Void> removeForbiddenEntities(Piece piece, RequestContext requestContext) {
+    // Populate piecesByLineId used by removeForbiddenEntities and parent helper methods
+    piecesByLineId = Map.of(piece.getPoLineId(), Collections.singletonMap(piece.getId(), null));
+    return removeForbiddenEntities(requestContext);
+  }
+
+  private Future<Void> clearTitleBindItemsIfNeeded(String titleId, String bindItemId, RequestContext requestContext) {
+    String query = String.format("titleId==%s and bindItemId==%s and isBound==true", titleId, bindItemId);
+    return pieceStorageService.getPieces(0, 0, query, requestContext)
+      .compose(pieceCollection -> {
+        var totalRecords = pieceCollection.getTotalRecords();
+        if (totalRecords != 0) {
+          logger.info("clearTitleBindItemsIfNeeded:: Found '{}' piece(s) associated with bind item '{}'", totalRecords, bindItemId);
+          return Future.succeededFuture();
+        }
+        logger.info("clearTitleBindItemsIfNeeded:: Removing bind item '{}' from title '{}' as no associated piece(s) to the item was found", bindItemId, titleId);
+        return titlesService.getTitleById(titleId, requestContext)
+          .compose(title -> {
+            List<String> bindItemIds = new ArrayList<>(title.getBindItemIds());
+            bindItemIds.remove(bindItemId);
+            return titlesService.saveTitle(title.withBindItemIds(bindItemIds), requestContext);
+          });
+      });
   }
 
   public Future<BindPiecesResult> bindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
@@ -188,7 +231,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
           inventoryItemRequestService.transferItemRequests(itemIds, newItemId, requestContext);
         }
         // Set new item ids for pieces and holder
-        holder.getPieces().forEach(piece -> piece.setItemId(newItemId));
+        holder.getPieces().forEach(piece -> piece.setBindItemId(newItemId));
         return holder.withBindItemId(newItemId);
       });
   }
@@ -225,7 +268,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private Future<BindPiecesHolder> updateTitleWithBindItems(BindPiecesHolder holder, RequestContext requestContext) {
-    var itemIds = holder.getPieces().map(Piece::getItemId).distinct().toList();
+    var itemIds = holder.getPieces().map(Piece::getBindItemId).distinct().toList();
     return titlesService.getTitlesByQuery(String.format(TITLE_BY_POLINE_QUERY, holder.getPoLineId()), requestContext)
       .map(titles -> updateTitle(titles, itemIds, requestContext))
       .map(v -> holder);

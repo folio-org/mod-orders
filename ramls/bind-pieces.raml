@@ -36,3 +36,11 @@ resourceTypes:
   is: [validate]
   post:
     description: bind pieces to item and connect that item to title
+  /{id}:
+    uriParameters:
+      id:
+        description: The UUID of a piece record
+        type: UUID
+    is: [ validate ]
+    delete:
+      description: Remove binding for a piece with given {id}
