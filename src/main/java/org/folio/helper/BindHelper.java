@@ -78,7 +78,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
         var bindItemId = piece.getBindItemId();
         piece.withBindItemId(null).withIsBound(false);
         return removeForbiddenEntities(piece, requestContext)
-          .compose(v -> getValidPieces(requestContext))
+          .map(v -> Collections.<String, List<Piece>>singletonMap(null, List.of(piece)))
           .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
           .compose(piecesGroupedByPoLine -> clearTitleBindItemsIfNeeded(piece.getTitleId(), bindItemId, requestContext));
       });
