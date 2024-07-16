@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,7 +29,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.FundDistribution;
-import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.tools.utils.TenantTool;
@@ -187,7 +185,7 @@ public class OpenCompositeOrderFlowValidator {
 
     String currentTenantId = TenantTool.tenantId(requestContext.getHeaders());
 
-    var locationsForCurrentTenant = getCurrentTenantLocations(poLine, currentTenantId);
+    var polLocations = getPOLineLocations(poLine, currentTenantId);
     var holdingsByTenants = inventoryHoldingManager.getHoldingsByLocationTenants(poLine, requestContext);
 
     return GenericCompositeFuture.all(new ArrayList<>(holdingsByTenants.values())).map(ar -> {
@@ -196,10 +194,10 @@ public class OpenCompositeOrderFlowValidator {
         .flatMap(List::stream)
         .toList();
 
-      logger.info("extractRestrictedLocations:: '{}' restrictedFund(s) is being checked against locationsForCurrentTenant: {} and locationsFromHoldings: {}",
-        restrictedFunds.size(), locationsForCurrentTenant, locationsFromHoldings);
+      logger.info("extractRestrictedLocations:: '{}' restrictedFund(s) is being checked against polLocations: {} and locationsFromHoldings: {}",
+        restrictedFunds.size(), polLocations, locationsFromHoldings);
 
-      var allowedLocations = CollectionUtils.union(locationsForCurrentTenant, locationsFromHoldings);
+      var allowedLocations = CollectionUtils.union(polLocations, locationsFromHoldings);
 
       Set<String> restrictedLocationsIds = new HashSet<>();
       restrictedFunds.forEach(fund -> extractRestrictedFundLocations(fund, currentTenantId, allowedLocations, restrictedLocationsIds));
@@ -207,12 +205,11 @@ public class OpenCompositeOrderFlowValidator {
     });
   }
 
-  private static List<String> getCurrentTenantLocations(CompositePoLine poLine, String currentTenantId) {
+  private static List<String> getPOLineLocations(CompositePoLine poLine, String currentTenantId) {
     return poLine.getLocations()
       .stream()
-      .map(Location::getLocationId)
-      .filter(Objects::nonNull)
-      .map(location -> getTenantLocation(currentTenantId, location))
+      .filter(location -> StringUtils.isNotEmpty(location.getLocationId()))
+      .map(location -> getTenantLocation(ObjectUtils.defaultIfNull(location.getTenantId(), currentTenantId), location.getLocationId()))
       .toList();
   }
 
