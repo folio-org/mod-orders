@@ -1121,6 +1121,23 @@
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
           ]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/orders/bind-pieces/{id}",
+          "permissionsRequired": [
+            "orders.bind-pieces.item.delete"
+          ],
+          "modulePermissions": [
+            "orders-storage.pieces.collection.get",
+            "orders-storage.pieces.item.get",
+            "orders-storage.pieces.item.put",
+            "orders-storage.titles.collection.get",
+            "orders-storage.titles.item.put",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get",
+            "user-tenants.collection.get"
+          ]
         }
       ]
     },
@@ -1899,6 +1916,20 @@
       "displayName" : "bind-pieces collection post",
       "description" : "Bind pieces collection post"
     },
+    {
+      "permissionName": "orders.bind-pieces.item.delete",
+      "displayName" : "bind-pieces item delete",
+      "description" : "Remove Binding from piece"
+    },
+    {
+      "permissionName": "orders.bind-pieces.all",
+      "displayName" : "All bind pieces perms",
+      "description" : "All permissions for the bind pieces",
+      "subPermissions" : [
+        "orders.bind-pieces.collection.post",
+        "orders.bind-pieces.item.delete"
+      ]
+    },
 
     {
       "permissionName": "orders.all",
@@ -1936,7 +1967,7 @@
         "orders.acquisition-methods.all",
         "orders.export-history.all",
         "orders.routing-lists.all",
-        "orders.bind-pieces.collection.post"
+        "orders.bind-pieces.all"
       ]
     },
     {
