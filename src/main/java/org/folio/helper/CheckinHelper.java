@@ -62,6 +62,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
+    logger.info("### MODORDERS-1141 processCheckInPieces\nrequestContext: {}\ncheckinCollection: {}\n",
+      requestContext, checkinCollection);
+
     // 1. Get piece records from storage
     return createItemsWithPieceUpdate(checkinCollection, requestContext)
       // 2. Filter locationId
