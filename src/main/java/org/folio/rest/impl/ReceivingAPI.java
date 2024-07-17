@@ -53,8 +53,15 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
   @Validate
   public void postOrdersCheckIn(CheckinCollection entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Checkin {} items", entity.getTotalRecords());
+    logger.info("""
+      ### MODORDERS-1141 postOrdersCheckIn
+      entity: {},
+      okapiHeaders: {}
+      """,
+      entity, okapiHeaders);
+
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext);
+
     helper.checkinPieces(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));

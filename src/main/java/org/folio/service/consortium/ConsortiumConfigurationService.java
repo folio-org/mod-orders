@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -74,6 +75,15 @@ public class ConsortiumConfigurationService {
     if (StringUtils.isBlank(location.getTenantId())) {
       return Future.succeededFuture(requestContext);
     }
+
+    logger.info("""
+      ### MODORDERS-1141 cloneRequestContextIfNeeded
+      requestContext: {},
+      location: {},
+      """,
+      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily(),
+      JsonObject.mapFrom(location).encodePrettily());
+
     return getConsortiumConfiguration(requestContext)
       .map(config -> config.isEmpty() ? requestContext : RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId()));
   }
