@@ -58,7 +58,8 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
       entity: {},
       okapiHeaders: {}
       """,
-      JsonObject.mapFrom(entity), okapiHeaders);
+      JsonObject.mapFrom(entity).encodePrettily(),
+      JsonObject.mapFrom(okapiHeaders).encodePrettily());
 
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext);
 

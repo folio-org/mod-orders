@@ -79,9 +79,9 @@ public class ConsortiumConfigurationService {
     logger.info("""
       ### MODORDERS-1141 cloneRequestContextIfNeeded
       requestContext: {},
-      location: {},
+      location: {}
       """,
-      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily(),
+      JsonObject.mapFrom(requestContext).encodePrettily(),
       JsonObject.mapFrom(location).encodePrettily());
 
     return getConsortiumConfiguration(requestContext)

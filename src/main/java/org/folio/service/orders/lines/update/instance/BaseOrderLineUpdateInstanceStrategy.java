@@ -1,6 +1,7 @@
 package org.folio.service.orders.lines.update.instance;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -55,7 +56,9 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
               poLine: {},
               requestContext: {}
               """,
-              isDeleteAbandonedHoldings, poLine, requestContext);
+              isDeleteAbandonedHoldings,
+              JsonObject.mapFrom(poLine).encodePrettily(),
+              JsonObject.mapFrom(requestContext).encodePrettily());
 
             var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
             return deleteHoldingWithoutItems(location.getHoldingId(), locationContext);
