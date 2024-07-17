@@ -285,10 +285,11 @@ public class OrderLineUpdateInstanceHandlerTest {
       return new OrderLinePatchOperationService(restClient, orderLineUpdateInstanceStrategyResolver, purchaseOrderLineService, inventoryCache, inventoryInstanceManager);
     }
 
-    @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
+    @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
+                                                                                     InventoryItemManager inventoryItemManager,
                                                                                      InventoryHoldingManager inventoryHoldingManager,
                                                                                      PieceStorageService pieceStorageService) {
-      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryItemManager, inventoryHoldingManager, pieceStorageService);
+      return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager, pieceStorageService);
     }
 
     @Bean OrderLineUpdateInstanceStrategyResolver updateInstanceStrategyResolver(OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy,

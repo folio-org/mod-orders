@@ -8,16 +8,20 @@ import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
 
 public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUpdateInstanceStrategy {
 
+  InventoryInstanceManager inventoryInstanceManager;
   InventoryItemManager inventoryItemManager;
   InventoryHoldingManager inventoryHoldingManager;
 
-  protected BaseOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
+  protected BaseOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
+                                                InventoryItemManager inventoryItemManager,
                                                 InventoryHoldingManager inventoryHoldingManager) {
+    this.inventoryInstanceManager = inventoryInstanceManager;
     this.inventoryItemManager = inventoryItemManager;
     this.inventoryHoldingManager = inventoryHoldingManager;
   }
