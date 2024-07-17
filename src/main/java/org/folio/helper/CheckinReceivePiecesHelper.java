@@ -2,7 +2,6 @@ package org.folio.helper;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
@@ -375,10 +374,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           piecesRecords.get(poLine.getId()).removeIf(piece -> isMissingLocation(poLine, piece));
         }
 
-        logger.info("filterMissingLocations:: tenant: {}, piecesRecords: {}",
-          TenantTool.tenantId(requestContext.getHeaders()),
-          Json.encodePrettily(piecesRecords));
-
         return piecesRecords;
       });
   }
@@ -649,11 +644,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       logger.info("""
           receivingTenantId: {}
           item: {}
-          piece: {}
           """,
         receivingTenantId,
-        item.encodePrettily(),
-        Json.encodePrettily(piece));
+        item.encodePrettily());
 
       var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, receivingTenantId);
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));

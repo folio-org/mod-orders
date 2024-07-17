@@ -3,7 +3,6 @@ package org.folio.helper;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
@@ -21,7 +20,6 @@ import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.inventory.InventoryUtils;
 
 import java.util.ArrayList;
@@ -64,10 +62,6 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
-    logger.info("processCheckInPieces:: tenant: {}, checkinCollection: {}",
-      TenantTool.tenantId(requestContext.getHeaders()),
-      Json.encodePrettily(checkinCollection));
-
     // 1. Get piece records from storage
     return createItemsWithPieceUpdate(checkinCollection, requestContext)
       // 2. Filter locationId
