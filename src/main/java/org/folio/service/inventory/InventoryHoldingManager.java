@@ -273,15 +273,19 @@ public class InventoryHoldingManager {
     }
   }
 
-  public Future<String> createHolding(String instanceId, Location location, RequestContext requestContext) {
+  public Future<String> createHolding(String newInstanceId, Location location, RequestContext requestContext) {
+    logger.info("createHolding:: Going to create new holding for new instanceId: {} in tenant: {}",
+      newInstanceId, TenantTool.tenantId(requestContext.getHeaders()));
     if (Objects.isNull(location.getLocationId())) {
+      logger.info("createHolding:: Location already has holdingId populated: {}, use it to fetch permanent location",
+        location.getHoldingId());
       return getHoldingById(location.getHoldingId(), true, requestContext)
         .compose(holding -> {
           String locationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-          return createHoldingAndReturnId(instanceId, locationId, requestContext);
+          return createHoldingAndReturnId(newInstanceId, locationId, requestContext);
         });
     } else {
-      return createHoldingAndReturnId(instanceId, location.getLocationId(), requestContext);
+      return createHoldingAndReturnId(newInstanceId, location.getLocationId(), requestContext);
     }
   }
 
