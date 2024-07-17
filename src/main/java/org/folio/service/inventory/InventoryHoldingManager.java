@@ -178,10 +178,6 @@ public class InventoryHoldingManager {
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
         .withId(holdingId);
 
-      logger.info("getHoldingById:: requestContext: {}, requestEntry: {}",
-        Json.encodePrettily(requestContext),
-        Json.encodePrettily(requestEntry));
-
       return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
     }
     return Future.succeededFuture(new JsonObject());

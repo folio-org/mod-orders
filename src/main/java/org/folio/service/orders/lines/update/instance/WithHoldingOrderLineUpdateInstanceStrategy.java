@@ -155,18 +155,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                           String newInstanceId,
                                                           Location location,
                                                           RequestContext requestContext) {
-    logger.info("""
-        findOrCreateHoldingsAndUpdateItems::
-        requestContext: {}
-        holder: {}
-        newInstanceId: {}
-        location: {}
-        """,
-      Json.encodePrettily(requestContext),
-      Json.encodePrettily(holder),
-      newInstanceId,
-      Json.encodePrettily(location));
-
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
@@ -196,12 +184,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                     String newInstanceId,
                                                     Location location,
                                                     RequestContext requestContext) {
-    logger.info("createHoldingsAndUpdateItems:: requestContext: {}, holder: {}, newInstanceId: {}, location: {}",
-      Json.encodePrettily(requestContext),
-      Json.encodePrettily(holder),
-      newInstanceId,
-      Json.encodePrettily(location));
-
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());

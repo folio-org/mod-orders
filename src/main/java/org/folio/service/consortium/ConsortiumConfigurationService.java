@@ -76,10 +76,6 @@ public class ConsortiumConfigurationService {
       return Future.succeededFuture(requestContext);
     }
 
-    logger.info("cloneRequestContextIfNeeded:: requestContext: {}, location: {}",
-      Json.encodePrettily(requestContext),
-      Json.encodePrettily(location));
-
     return getConsortiumConfiguration(requestContext)
       .map(config -> config.isEmpty() ? requestContext : RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId()));
   }

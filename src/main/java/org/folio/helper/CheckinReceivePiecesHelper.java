@@ -375,8 +375,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           piecesRecords.get(poLine.getId()).removeIf(piece -> isMissingLocation(poLine, piece));
         }
 
-        logger.info("filterMissingLocations:: requestContext: {}, piecesRecords: {}",
-          Json.encodePrettily(requestContext),
+        logger.info("filterMissingLocations:: tenant: {}, piecesRecords: {}",
+          TenantTool.tenantId(requestContext.getHeaders()),
           Json.encodePrettily(piecesRecords));
 
         return piecesRecords;
@@ -475,11 +475,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<Void> processHoldingsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
                                              PoLineAndTitleById poLinesAndTitlesById,
                                              RequestContext requestContext) {
-    logger.info("processHoldingsUpdate:: requestContext: {}, piecesGroupedByPoLine: {}, poLinesAndTitlesById: {}",
-      Json.encodePrettily(requestContext),
-      Json.encodePrettily(piecesGroupedByPoLine),
-      Json.encodePrettily(poLinesAndTitlesById));
-
     List<Future<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
     extractAllPieces(piecesGroupedByPoLine)
       .forEach(piece -> {
@@ -652,19 +647,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       var receivingTenantId = getReceivingTenantId(piece);
 
       logger.info("""
-          processItemsUpdate::
-          requestContext: {}
-          piecesByItemId: {}
-          items: {}
-          poLinesAndTitlesById: {}
           receivingTenantId: {}
           item: {}
           piece: {}
           """,
-        Json.encodePrettily(requestContext),
-        Json.encodePrettily(piecesByItemId),
-        Json.encodePrettily(items),
-        Json.encodePrettily(poLinesAndTitlesById),
         receivingTenantId,
         item.encodePrettily(),
         Json.encodePrettily(piece));
