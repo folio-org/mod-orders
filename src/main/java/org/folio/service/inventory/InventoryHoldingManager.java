@@ -277,8 +277,7 @@ public class InventoryHoldingManager {
     logger.info("createHolding:: Going to create new holding for new instanceId: {} in tenant: {}",
       newInstanceId, TenantTool.tenantId(requestContext.getHeaders()));
     if (Objects.isNull(location.getLocationId())) {
-      logger.info("createHolding:: Location already has holdingId populated: {}, use it to fetch permanent location",
-        location.getHoldingId());
+      logger.info("createHolding:: Fetching permanentLocationId for holdingId: {}", location.getHoldingId());
       return getHoldingById(location.getHoldingId(), true, requestContext)
         .compose(holding -> {
           String locationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
