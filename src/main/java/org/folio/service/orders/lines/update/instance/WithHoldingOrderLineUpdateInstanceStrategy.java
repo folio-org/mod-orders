@@ -167,7 +167,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       JsonObject.mapFrom(holder).encodePrettily(),
       newInstanceId,
       JsonObject.mapFrom(location).encodePrettily(),
-      JsonObject.mapFrom(requestContext).encodePrettily());
+      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily());
 
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
     return inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, locationContext)
@@ -209,7 +209,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       JsonObject.mapFrom(holder).encodePrettily(),
       newInstanceId,
       JsonObject.mapFrom(location).encodePrettily(),
-      JsonObject.mapFrom(requestContext).encodePrettily());
+      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily());
 
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
     return inventoryHoldingManager.createHolding(newInstanceId, location, locationContext)

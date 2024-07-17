@@ -58,7 +58,7 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
               """,
               isDeleteAbandonedHoldings,
               JsonObject.mapFrom(poLine).encodePrettily(),
-              JsonObject.mapFrom(requestContext).encodePrettily());
+              JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily());
 
             var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
             return deleteHoldingWithoutItems(location.getHoldingId(), locationContext);

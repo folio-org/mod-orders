@@ -81,7 +81,7 @@ public class ConsortiumConfigurationService {
       requestContext: {},
       location: {}
       """,
-      JsonObject.mapFrom(requestContext).encodePrettily(),
+      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily(),
       JsonObject.mapFrom(location).encodePrettily());
 
     return getConsortiumConfiguration(requestContext)
