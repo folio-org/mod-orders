@@ -74,6 +74,10 @@ public class ConsortiumConfigurationService {
     if (StringUtils.isBlank(location.getTenantId())) {
       return Future.succeededFuture(requestContext);
     }
+
+    logger.info("### MODORDERS-1141 cloneRequestContextIfNeeded\nrequestContext: {}\nlocation: {}\n",
+      requestContext, location);
+
     return getConsortiumConfiguration(requestContext)
       .map(config -> config.isEmpty() ? requestContext : RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId()));
   }

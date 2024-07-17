@@ -5,6 +5,8 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -39,6 +41,8 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_REC
 
 
 public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
+
+  private static final Logger logger = LogManager.getLogger();
 
   private static final String HOLDINGS_ITEMS = "holdingsItems";
   private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
@@ -150,6 +154,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                           String newInstanceId,
                                                           Location location,
                                                           RequestContext requestContext) {
+    logger.info("### MODORDERS-1141 findOrCreateHoldingsAndUpdateItems\nholder: {}\nnewInstanceId: {}\nlocation: {}\nrequestContext: {}\n",
+      holder, newInstanceId, location, requestContext);
+
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
@@ -179,6 +186,9 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                     String newInstanceId,
                                                     Location location,
                                                     RequestContext requestContext) {
+    logger.info("### MODORDERS-1141 createHoldingsAndUpdateItems\nholder: {}\nnewInstanceId: {}\nlocation: {}\nrequestContext: {}\n",
+      holder, newInstanceId, location, requestContext);
+
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());

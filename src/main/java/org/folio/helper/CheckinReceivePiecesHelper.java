@@ -373,6 +373,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         for (PoLine poLine : poLines) {
           piecesRecords.get(poLine.getId()).removeIf(piece -> isMissingLocation(poLine, piece));
         }
+
+        logger.info("### MODORDERS-1141 filterMissingLocations\nrequestContext: {}\npiecesRecords: {}\n",
+          requestContext, piecesRecords);
+
         return piecesRecords;
       });
   }
@@ -469,6 +473,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<Void> processHoldingsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
                                              PoLineAndTitleById poLinesAndTitlesById,
                                              RequestContext requestContext) {
+    logger.info("### MODORDERS-1141 processHoldingsUpdate\nrequestContext: {}\npiecesGroupedByPoLine: {}\npoLinesAndTitlesById: {}\n",
+      requestContext, piecesGroupedByPoLine, poLinesAndTitlesById);
+
     List<Future<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
     extractAllPieces(piecesGroupedByPoLine)
       .forEach(piece -> {
@@ -637,7 +644,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         String holdingId = processedHoldings.get(holdingKey);
         item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
       }
-      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
+
+      var receivingTenantId = getReceivingTenantId(piece);
+
+      logger.info("### MODORDERS-1141 processItemsUpdate\nrequestContext: {}\npiecesGroupedByPoLine: {}\npoLinesAndTitlesById: {}\nreceivingTenantId: {}\n",
+        requestContext, piecesGroupedByPoLine, poLinesAndTitlesById, receivingTenantId);
+
+      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, receivingTenantId);
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates).map(results -> {
