@@ -3,6 +3,7 @@ package org.folio.helper;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
@@ -62,8 +63,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
-    logger.info("### MODORDERS-1141 processCheckInPieces\nrequestContext: {}\ncheckinCollection: {}\n",
-      requestContext, checkinCollection);
+    logger.info("processCheckInPieces:: requestContext: {}, checkinCollection: {}",
+      Json.encodePrettily(requestContext),
+      Json.encodePrettily(checkinCollection));
 
     // 1. Get piece records from storage
     return createItemsWithPieceUpdate(checkinCollection, requestContext)

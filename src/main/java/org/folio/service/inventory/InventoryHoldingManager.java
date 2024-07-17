@@ -2,6 +2,7 @@ package org.folio.service.inventory;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -176,6 +177,11 @@ public class InventoryHoldingManager {
     if (StringUtils.isNotEmpty(holdingId)) {
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
         .withId(holdingId);
+
+      logger.info("getHoldingById:: requestContext: {}, requestEntry: {}",
+        Json.encodePrettily(requestContext),
+        Json.encodePrettily(requestEntry));
+
       return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
     }
     return Future.succeededFuture(new JsonObject());

@@ -1,6 +1,7 @@
 package org.folio.service.orders.lines.update.instance;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
@@ -154,8 +155,17 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                           String newInstanceId,
                                                           Location location,
                                                           RequestContext requestContext) {
-    logger.info("### MODORDERS-1141 findOrCreateHoldingsAndUpdateItems\nholder: {}\nnewInstanceId: {}\nlocation: {}\nrequestContext: {}\n",
-      holder, newInstanceId, location, requestContext);
+    logger.info("""
+        findOrCreateHoldingsAndUpdateItems::
+        requestContext: {}
+        holder: {}
+        newInstanceId: {}
+        location: {}
+        """,
+      Json.encodePrettily(requestContext),
+      Json.encodePrettily(holder),
+      newInstanceId,
+      Json.encodePrettily(location));
 
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
@@ -186,8 +196,11 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                     String newInstanceId,
                                                     Location location,
                                                     RequestContext requestContext) {
-    logger.info("### MODORDERS-1141 createHoldingsAndUpdateItems\nholder: {}\nnewInstanceId: {}\nlocation: {}\nrequestContext: {}\n",
-      holder, newInstanceId, location, requestContext);
+    logger.info("createHoldingsAndUpdateItems:: requestContext: {}, holder: {}, newInstanceId: {}, location: {}",
+      Json.encodePrettily(requestContext),
+      Json.encodePrettily(holder),
+      newInstanceId,
+      Json.encodePrettily(location));
 
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();

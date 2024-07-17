@@ -2,6 +2,7 @@ package org.folio.helper;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
@@ -374,8 +375,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           piecesRecords.get(poLine.getId()).removeIf(piece -> isMissingLocation(poLine, piece));
         }
 
-        logger.info("### MODORDERS-1141 filterMissingLocations\nrequestContext: {}\npiecesRecords: {}\n",
-          requestContext, piecesRecords);
+        logger.info("filterMissingLocations:: requestContext: {}, piecesRecords: {}",
+          Json.encodePrettily(requestContext),
+          Json.encodePrettily(piecesRecords));
 
         return piecesRecords;
       });
@@ -473,8 +475,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<Void> processHoldingsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
                                              PoLineAndTitleById poLinesAndTitlesById,
                                              RequestContext requestContext) {
-    logger.info("### MODORDERS-1141 processHoldingsUpdate\nrequestContext: {}\npiecesGroupedByPoLine: {}\npoLinesAndTitlesById: {}\n",
-      requestContext, piecesGroupedByPoLine, poLinesAndTitlesById);
+    logger.info("processHoldingsUpdate:: requestContext: {}, piecesGroupedByPoLine: {}, poLinesAndTitlesById: {}",
+      Json.encodePrettily(requestContext),
+      Json.encodePrettily(piecesGroupedByPoLine),
+      Json.encodePrettily(poLinesAndTitlesById));
 
     List<Future<Boolean>> futuresForHoldingsUpdates = new ArrayList<>();
     extractAllPieces(piecesGroupedByPoLine)
@@ -647,8 +651,23 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
       var receivingTenantId = getReceivingTenantId(piece);
 
-      logger.info("### MODORDERS-1141 processItemsUpdate\nrequestContext: {}\npiecesGroupedByPoLine: {}\npoLinesAndTitlesById: {}\nreceivingTenantId: {}\n",
-        requestContext, piecesGroupedByPoLine, poLinesAndTitlesById, receivingTenantId);
+      logger.info("""
+          processItemsUpdate::
+          requestContext: {}
+          piecesByItemId: {}
+          items: {}
+          poLinesAndTitlesById: {}
+          receivingTenantId: {}
+          item: {}
+          piece: {}
+          """,
+        Json.encodePrettily(requestContext),
+        Json.encodePrettily(piecesByItemId),
+        Json.encodePrettily(items),
+        Json.encodePrettily(poLinesAndTitlesById),
+        receivingTenantId,
+        item.encodePrettily(),
+        Json.encodePrettily(piece));
 
       var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, receivingTenantId);
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
