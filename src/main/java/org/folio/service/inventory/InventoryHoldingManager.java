@@ -275,8 +275,9 @@ public class InventoryHoldingManager {
   }
 
   public Future<String> createHolding(String newInstanceId, Location location, RequestContext requestContext) {
+    var tenantId = TenantTool.tenantId(requestContext.getHeaders());
     logger.info("createHolding:: Going to create new holding for new instanceId: {} in tenant: {}",
-      newInstanceId, TenantTool.tenantId(requestContext.getHeaders()));
+      newInstanceId, tenantId);
     if (Objects.isNull(location.getLocationId())) {
       logger.info("createHolding:: Fetching permanentLocationId for holdingId: {}", location.getHoldingId());
       return getHoldingById(location.getHoldingId(), true, requestContext)

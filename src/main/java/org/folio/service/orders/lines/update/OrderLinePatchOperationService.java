@@ -85,9 +85,9 @@ public class OrderLinePatchOperationService {
         return handleUpdateInstance(orderLineUpdateInstanceHolder, requestContext)
           .compose(v -> sendPatchOrderLineRequest(orderLineUpdateInstanceHolder, lineId, requestContext));
       })
-      .onFailure(t -> {
-        logger.error("Error when sending patch request to order lines endpoint for lineId {}", lineId, t);
-      });
+      .onFailure(t ->
+        logger.error("Error when sending patch request to order lines endpoint for lineId {}", lineId, t)
+      );
   }
 
   public Future<Void> handleUpdateInstance(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {
