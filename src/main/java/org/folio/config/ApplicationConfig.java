@@ -793,16 +793,18 @@ public class ApplicationConfig {
       purchaseOrderLineService, inventoryCache, inventoryInstanceManager);
   }
 
-  @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
+  @Bean OrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
+                                                                                   InventoryItemManager inventoryItemManager,
                                                                                    InventoryHoldingManager inventoryHoldingManager,
                                                                                    PieceStorageService pieceStorageService) {
-    return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryItemManager, inventoryHoldingManager, pieceStorageService);
+    return new WithHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager, pieceStorageService);
   }
 
   @Bean
-  OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
+  OrderLineUpdateInstanceStrategy withoutHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
+                                                                                InventoryItemManager inventoryItemManager,
                                                                                 InventoryHoldingManager inventoryHoldingManager) {
-    return new WithoutHoldingOrderLineUpdateInstanceStrategy(inventoryItemManager, inventoryHoldingManager);
+    return new WithoutHoldingOrderLineUpdateInstanceStrategy(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager);
   }
 
   @Bean

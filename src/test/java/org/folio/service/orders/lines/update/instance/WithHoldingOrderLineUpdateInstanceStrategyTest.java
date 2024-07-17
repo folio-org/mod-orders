@@ -37,6 +37,7 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterEach;
@@ -60,6 +61,8 @@ import io.vertx.junit5.VertxTestContext;
 public class WithHoldingOrderLineUpdateInstanceStrategyTest {
   @InjectMocks
   private WithHoldingOrderLineUpdateInstanceStrategy withHoldingOrderLineUpdateInstanceStrategy;
+  @Mock
+  private InventoryInstanceManager inventoryInstanceManager;
   @Mock
   private InventoryItemManager inventoryItemManager;
   @Mock
@@ -122,11 +125,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     doReturn(succeededFuture(holdings)).when(inventoryHoldingManager).getHoldingsByIds(eq(holdingIds), eq(requestContext));
     doReturn(succeededFuture(null)).when(inventoryHoldingManager).updateInstanceForHoldingRecords(eq(holdings), eq(instanceId), eq(requestContext));
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
+    verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     verify(inventoryHoldingManager, times(1)).getHoldingsByIds(holdingIds, requestContext);
     verify(inventoryHoldingManager, times(1)).updateInstanceForHoldingRecords(holdings, instanceId, requestContext);
   }

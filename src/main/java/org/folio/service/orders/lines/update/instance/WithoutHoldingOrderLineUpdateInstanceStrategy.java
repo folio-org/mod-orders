@@ -6,13 +6,15 @@ import org.folio.rest.acq.model.StoragePatchOrderLineRequest;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 
 public class WithoutHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
 
-  public WithoutHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
+  public WithoutHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
+                                                       InventoryItemManager inventoryItemManager,
                                                        InventoryHoldingManager inventoryHoldingManager) {
-    super(inventoryItemManager, inventoryHoldingManager);
+    super(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager);
   }
 
   Future<Void> processHoldings(OrderLineUpdateInstanceHolder holder, RequestContext requestContext) {

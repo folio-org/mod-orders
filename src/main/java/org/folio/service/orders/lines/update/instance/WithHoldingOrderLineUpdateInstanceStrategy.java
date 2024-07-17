@@ -22,6 +22,7 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.PieceStorageService;
 
@@ -43,10 +44,11 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
   private final PieceStorageService pieceStorageService;
 
-  public WithHoldingOrderLineUpdateInstanceStrategy(InventoryItemManager inventoryItemManager,
+  public WithHoldingOrderLineUpdateInstanceStrategy(InventoryInstanceManager inventoryInstanceManager,
+                                                    InventoryItemManager inventoryItemManager,
                                                     InventoryHoldingManager inventoryHoldingManager,
                                                     PieceStorageService pieceStorageService) {
-    super(inventoryItemManager, inventoryHoldingManager);
+    super(inventoryInstanceManager, inventoryItemManager, inventoryHoldingManager);
     this.pieceStorageService = pieceStorageService;
   }
 
@@ -82,7 +84,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
             .map(entry -> entry.getValue().compose(holdings -> {
               removeHoldingUnrecognizedFields(holdings);
               var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
-              return inventoryHoldingManager.updateInstanceForHoldingRecords(holdings, newInstanceId, locationContext);
+              return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
+                .compose(instance -> inventoryHoldingManager.updateInstanceForHoldingRecords(holdings, newInstanceId, locationContext));
             }))
             .toList();
           return GenericCompositeFuture.all(updateHoldings).mapEmpty();

@@ -176,6 +176,7 @@ public class InventoryHoldingManager {
     if (StringUtils.isNotEmpty(holdingId)) {
       RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(HOLDINGS_RECORDS_BY_ID_ENDPOINT))
         .withId(holdingId);
+
       return restClient.getAsJsonObject(requestEntry, skipNotFoundException, requestContext);
     }
     return Future.succeededFuture(new JsonObject());
@@ -273,15 +274,19 @@ public class InventoryHoldingManager {
     }
   }
 
-  public Future<String> createHolding(String instanceId, Location location, RequestContext requestContext) {
+  public Future<String> createHolding(String newInstanceId, Location location, RequestContext requestContext) {
+    var tenantId = TenantTool.tenantId(requestContext.getHeaders());
+    logger.info("createHolding:: Going to create new holding for new instanceId: {} in tenant: {}",
+      newInstanceId, tenantId);
     if (Objects.isNull(location.getLocationId())) {
+      logger.info("createHolding:: Fetching permanentLocationId for holdingId: {}", location.getHoldingId());
       return getHoldingById(location.getHoldingId(), true, requestContext)
         .compose(holding -> {
           String locationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-          return createHoldingAndReturnId(instanceId, locationId, requestContext);
+          return createHoldingAndReturnId(newInstanceId, locationId, requestContext);
         });
     } else {
-      return createHoldingAndReturnId(instanceId, location.getLocationId(), requestContext);
+      return createHoldingAndReturnId(newInstanceId, location.getLocationId(), requestContext);
     }
   }
 
