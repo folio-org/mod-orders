@@ -373,7 +373,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         for (PoLine poLine : poLines) {
           piecesRecords.get(poLine.getId()).removeIf(piece -> isMissingLocation(poLine, piece));
         }
-
         return piecesRecords;
       });
   }
@@ -639,16 +638,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
       }
 
-      var receivingTenantId = getReceivingTenantId(piece);
-
-      logger.info("""
-          receivingTenantId: {}
-          item: {}
-          """,
-        receivingTenantId,
-        item.encodePrettily());
-
-      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, receivingTenantId);
+      var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates).map(results -> {

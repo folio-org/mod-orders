@@ -229,10 +229,7 @@ public class RestClient {
         }
         promise.complete(jsonObject);
       })
-      .onFailure(t -> {
-        log.error("Failed getting entity, endpoint: {}, requestContext: {}", endpoint, Json.encode(requestContext), t);
-        handleGetMethodErrorResponse(promise, t, skipError404);
-      });
+      .onFailure(t -> handleGetMethodErrorResponse(promise, t, skipError404));
     return promise.future();
   }
 
