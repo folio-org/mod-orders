@@ -637,7 +637,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         String holdingId = processedHoldings.get(holdingKey);
         item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
       }
-
       var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
     }

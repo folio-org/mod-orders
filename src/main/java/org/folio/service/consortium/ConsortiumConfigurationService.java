@@ -75,7 +75,6 @@ public class ConsortiumConfigurationService {
     if (StringUtils.isBlank(location.getTenantId())) {
       return Future.succeededFuture(requestContext);
     }
-
     return getConsortiumConfiguration(requestContext)
       .map(config -> config.isEmpty() ? requestContext : RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId()));
   }

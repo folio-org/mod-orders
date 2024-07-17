@@ -2,7 +2,6 @@ package org.folio.service.inventory;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
