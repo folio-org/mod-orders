@@ -21,6 +21,7 @@ import org.folio.rest.jaxrs.model.ProcessingStatus;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.inventory.InventoryUtils;
 
 import java.util.ArrayList;
@@ -63,8 +64,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
-    logger.info("processCheckInPieces:: requestContext: {}, checkinCollection: {}",
-      Json.encodePrettily(requestContext),
+    logger.info("processCheckInPieces:: tenant: {}, checkinCollection: {}",
+      TenantTool.tenantId(requestContext.getHeaders()),
       Json.encodePrettily(checkinCollection));
 
     // 1. Get piece records from storage
