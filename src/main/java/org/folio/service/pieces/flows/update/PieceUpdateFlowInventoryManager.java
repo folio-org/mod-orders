@@ -114,6 +114,18 @@ public class PieceUpdateFlowInventoryManager {
       .compose(jsonItem -> {
         if (jsonItem != null && !jsonItem.isEmpty()) {
           updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate);
+
+          logger.info("""
+            ### MODORDERS-1141 handleItem
+            poLineToSave: {},
+            pieceToUpdate: {},
+            jsonItem: {}
+            """,
+            JsonObject.mapFrom(poLineToSave).encodePrettily(),
+            JsonObject.mapFrom(pieceToUpdate).encodePrettily(),
+            JsonObject.mapFrom(jsonItem).encodePrettily()
+          );
+
           return inventoryItemManager.updateItem(jsonItem, requestContext)
             .map(v -> jsonItem.getString(ID));
         }

@@ -115,6 +115,15 @@ public class PieceUpdateFlowManager {
         List<Piece> piecesToUpdate = List.of(holder.getPieceToUpdate());
         CompositePoLine poLineToSave = holder.getPoLineToSave();
         poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
+
+        logger.info("""
+          ### MODORDERS-1141 updatePoLine
+          originPoLine: {},
+          poLineToSave: {}
+          """,
+          JsonObject.mapFrom(originPoLine).encodePrettily(),
+          JsonObject.mapFrom(poLineToSave).encodePrettily());
+
         return purchaseOrderLineService.saveOrderLine(poLineToSave, requestContext);
       }).compose(v -> {
         if (!Boolean.TRUE.equals(originPoLine.getIsPackage()) &&
