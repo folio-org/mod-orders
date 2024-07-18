@@ -2,6 +2,8 @@ package org.folio.service.pieces.flows.create;
 
 import java.util.Optional;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -17,6 +19,8 @@ import io.vertx.core.Future;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 
 public class PieceCreateFlowInventoryManager {
+
+  private static final Logger logger = LogManager.getLogger(PieceCreateFlowInventoryManager.class);
 
   private final TitlesService titlesService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
@@ -35,7 +39,15 @@ public class PieceCreateFlowInventoryManager {
     return updateInventoryInstanceForPoLine(compPOL, piece, locationContext, requestContext)
       .compose(instanceId -> handleHolding(compPOL, piece, instanceId, locationContext))
       .compose(holdingId -> handleItem(compPOL, createItem, piece, locationContext))
-      .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
+      .map(itemId -> {
+        logger.info("""
+            ### MODORDERS-1141 processInventory
+            itemId: {},
+            """,
+            itemId);
+
+        return Optional.ofNullable(itemId).map(piece::withItemId);
+      })
       .mapEmpty();
   }
 

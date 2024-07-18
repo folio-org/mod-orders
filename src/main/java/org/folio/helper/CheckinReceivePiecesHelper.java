@@ -451,7 +451,17 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     return getPoLineAndTitleById(poLineIds, requestContext)
       .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
         .compose(v -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
-        .compose(items -> processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext))
+        .compose(items -> {
+          items.forEach(v ->
+            logger.info("""
+              ### MODORDERS-1141 updateInventoryItemsAndHoldings-getPoLineAndTitleById
+              item: {},
+              """,
+              v.encodePrettily())
+          );
+
+          return processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext);
+        })
       );
   }
 
@@ -630,6 +640,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
                                                               List<JsonObject> items,
                                                               PoLineAndTitleById poLinesAndTitlesById,
                                                               RequestContext requestContext) {
+    logger.info("""
+      ### MODORDERS-1141 processInventory-1
+      no items: {}
+      """, items.isEmpty());
+
     List<Future<Boolean>> futuresForItemsUpdates = new ArrayList<>();
 
     if (piecesByItemId.isEmpty()) {
@@ -648,6 +663,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       if (title == null)
         continue;
 
+      logger.info("""
+        ### MODORDERS-1141 processInventory-2
+        items (before): {}
+        """, item.encodePrettily());
+
       // holdingUpdateOnCheckinReceiveRequired
       if (holdingUpdateOnCheckinReceiveRequired(piece, poLine) && !isRevertToOnOrder(piece)) {
         String holdingKey = buildProcessedHoldingKey(piece, title.getInstanceId());
@@ -657,15 +677,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
 
       logger.info("""
-            ### MODORDERS-1141 processReceiveItems - 4
-            locationContext: {},
-            piece: {},
-            item: {}
-            """,
-        JsonObject.mapFrom(locationContext.getHeaders()).encodePrettily(),
-        JsonObject.mapFrom(piece).encodePrettily(),
-        item.encodePrettily()
-      );
+        ### MODORDERS-1141 processInventory-3
+        items (after): {}
+        """, item.encodePrettily());
 
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
     }
