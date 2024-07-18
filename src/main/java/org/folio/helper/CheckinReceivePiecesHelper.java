@@ -460,9 +460,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         .compose(v -> {
           logger.info("""
             ### MODORDERS-1141 updateInventoryItemsAndHoldings-3
-            poLineAndTitleById: {}
+            poLineById: {},
+            titleById: {}
             """,
-            JsonObject.mapFrom(poLineAndTitleById).encodePrettily()
+            JsonObject.mapFrom(poLineAndTitleById.poLineById).encodePrettily(),
+            JsonObject.mapFrom(poLineAndTitleById.titleById).encodePrettily()
           );
 
           return getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext);
