@@ -441,12 +441,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
     List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
-    logger.info("""
-            ### MODORDERS-1141 updateInventoryItemsAndHoldings
-            poLineIds: {},
-            """,
-      JsonObject.mapFrom(poLineIds).encodePrettily()
-    );
+    poLineIds.forEach(v ->
+      logger.info("""
+          ### MODORDERS-1141 updateInventoryItemsAndHoldings
+          poLineId: {}
+          """, v
+    ));
 
     return getPoLineAndTitleById(poLineIds, requestContext)
       .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
@@ -662,7 +662,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
             piece: {},
             item: {}
             """,
-        JsonObject.mapFrom(locationContext).encodePrettily(),
+        JsonObject.mapFrom(locationContext.getHeaders()).encodePrettily(),
         JsonObject.mapFrom(piece).encodePrettily(),
         item.encodePrettily()
       );

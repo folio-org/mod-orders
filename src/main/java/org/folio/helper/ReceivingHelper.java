@@ -226,7 +226,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
             piece: {},
             item: {}
             """,
-      JsonObject.mapFrom(locationContext).encodePrettily(),
+      JsonObject.mapFrom(locationContext.getHeaders()).encodePrettily(),
       JsonObject.mapFrom(piece).encodePrettily(),
       item.encodePrettily()
     );
