@@ -124,7 +124,20 @@ public class InventoryItemManager {
   }
 
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(item.getString(ID));
+    var baseEndpoint = INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT);
+
+    logger.info("""
+            ### MODORDERS-1141 updateItem
+            requestContext: {},
+            baseEndpoint: {},
+            item: {}
+            """,
+      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily(),
+      baseEndpoint,
+      item.encodePrettily()
+    );
+
+    RequestEntry requestEntry = new RequestEntry(baseEndpoint).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
   }
 

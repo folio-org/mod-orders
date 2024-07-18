@@ -66,24 +66,71 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .compose(vVoid -> processReceiveItems(receivingCollection, requestContext));
   }
 
-  private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
+  private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection,
+                                                       RequestContext requestContext) {
     // 1. Get piece records from storage
     return retrievePieceRecords(requestContext)
       // 2. Filter locationId
-      .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
+      .compose(piecesByPoLineIds -> {
+        logger.info("""
+            ### MODORDERS-1141 processReceiveItems - 2
+            piecesByPoLineIds: {},
+            """,
+          JsonObject.mapFrom(piecesByPoLineIds).encodePrettily()
+        );
+
+        return filterMissingLocations(piecesByPoLineIds, requestContext);
+      })
       // 3. Update items in the Inventory if required
-      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, requestContext))
+      .compose(pieces -> {
+        logger.info("""
+            ### MODORDERS-1141 processReceiveItems - 3
+            pieces: {},
+            """,
+          JsonObject.mapFrom(pieces).encodePrettily()
+        );
+
+        return updateInventoryItemsAndHoldings(pieces, requestContext);
+      })
       // 4. Update piece records with receiving details which do not have associated item
-      .map(this::updatePieceRecordsWithoutItems)
+      .map(pieces -> {
+        logger.info("""
+            ### MODORDERS-1141 processReceiveItems - 4
+            pieces: {},
+            """,
+          JsonObject.mapFrom(pieces).encodePrettily()
+        );
+
+        return this.updatePieceRecordsWithoutItems(pieces);
+      })
       // 5. Update received piece records in the storage
-      .compose(piecesByPoLineIds -> storeUpdatedPieceRecords(piecesByPoLineIds, requestContext))
+      .compose(piecesByPoLineIds -> {
+        logger.info("""
+            ### MODORDERS-1141 processReceiveItems - 5
+            piecesByPoLineIds: {},
+            """,
+          JsonObject.mapFrom(piecesByPoLineIds).encodePrettily()
+        );
+
+        return storeUpdatedPieceRecords(piecesByPoLineIds, requestContext);
+      })
       // 6. Update PO Line status
-      .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(piecesByPoLineIds, requestContext))
+      .compose(piecesByPoLineIds -> {
+        logger.info("""
+            ### MODORDERS-1141 processReceiveItems - 6
+            piecesByPoLineIds: {},
+            """,
+          JsonObject.mapFrom(piecesByPoLineIds).encodePrettily()
+        );
+
+        return updateOrderAndPoLinesStatus(piecesByPoLineIds, requestContext);
+      })
       // 7. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
 
-  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                                       RequestContext requestContext) {
     return updateOrderAndPoLinesStatus(
       piecesGroupedByPoLine,
       requestContext,
@@ -124,7 +171,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .onFailure(t -> logger.error("Error happened retrieving receiving history", t));
   }
 
-  private ReceivingResults prepareResponseBody(ReceivingCollection receivingCollection, Map<String, List<Piece>> piecesGroupedByPoLine) {
+  private ReceivingResults prepareResponseBody(ReceivingCollection receivingCollection,
+                                               Map<String, List<Piece>> piecesGroupedByPoLine) {
     ReceivingResults results = new ReceivingResults();
     results.setTotalRecords(receivingCollection.getTotalRecords());
     for (ToBeReceived toBeReceived : receivingCollection.getToBeReceived()) {
@@ -170,7 +218,19 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece,
+                                                               RequestContext locationContext) {
+    logger.info("""
+            ### MODORDERS-1141 receiveInventoryItemAndUpdatePiece
+            locationContext: {},
+            piece: {},
+            item: {}
+            """,
+      JsonObject.mapFrom(locationContext).encodePrettily(),
+      JsonObject.mapFrom(piece).encodePrettily(),
+      item.encodePrettily()
+    );
+
     ReceivedItem receivedItem = getByPiece(piece);
     InventoryUtils.updateItemWithReceivedItemFields(item, receivedItem);
     return inventoryItemManager.updateItem(item, locationContext)

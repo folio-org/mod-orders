@@ -149,6 +149,16 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
             .sum();
           logger.debug("{} piece record(s) retrieved from storage for {} PO line(s)", piecesQty, poLinesQty);
         }
+
+        logger.info("""
+          ### MODORDERS-1141 retrievePieceRecords
+          okapiHeaders: {}
+          piecesByPoLine: {},
+          """,
+          JsonObject.mapFrom(okapiHeaders).encodePrettily(),
+          JsonObject.mapFrom(piecesByPoLine).encodePrettily()
+        );
+
         return piecesByPoLine;
       });
   }
@@ -431,6 +441,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
     List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
+    logger.info("""
+            ### MODORDERS-1141 updateInventoryItemsAndHoldings
+            poLineIds: {},
+            """,
+      JsonObject.mapFrom(poLineIds).encodePrettily()
+    );
+
     return getPoLineAndTitleById(poLineIds, requestContext)
       .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
         .compose(v -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
@@ -638,6 +655,18 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
       }
       var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
+
+      logger.info("""
+            ### MODORDERS-1141 processReceiveItems - 4
+            locationContext: {},
+            piece: {},
+            item: {}
+            """,
+        JsonObject.mapFrom(locationContext).encodePrettily(),
+        JsonObject.mapFrom(piece).encodePrettily(),
+        item.encodePrettily()
+      );
+
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates).map(results -> {
