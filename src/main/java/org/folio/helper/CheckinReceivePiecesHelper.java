@@ -441,28 +441,44 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
     List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
+    logger.info("""
+      ### MODORDERS-1141 updateInventoryItemsAndHoldings-1
+      piecesByItemId: {}
+      """,
+      JsonObject.mapFrom(piecesByItemId).encodePrettily()
+    );
+
     poLineIds.forEach(v ->
       logger.info("""
-          ### MODORDERS-1141 updateInventoryItemsAndHoldings
+          ### MODORDERS-1141 updateInventoryItemsAndHoldings-2
           poLineId: {}
           """, v
     ));
 
-    return getPoLineAndTitleById(poLineIds, requestContext)
-      .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
-        .compose(v -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
+    return getPoLineAndTitleById(poLineIds, requestContext).compose(poLineAndTitleById ->
+      processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
+        .compose(v -> {
+          logger.info("""
+            ### MODORDERS-1141 updateInventoryItemsAndHoldings-3
+            poLineAndTitleById: {}
+            """,
+            JsonObject.mapFrom(poLineAndTitleById).encodePrettily()
+          );
+
+          return getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext);
+        })
         .compose(items -> {
-          items.forEach(v ->
+          items.forEach(vv ->
             logger.info("""
               ### MODORDERS-1141 updateInventoryItemsAndHoldings-getPoLineAndTitleById
               item: {},
               """,
-              v.encodePrettily())
+              vv.encodePrettily())
           );
 
-          return processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext);
-        })
-      );
+        return processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext);
+      })
+    );
   }
 
   /**
@@ -574,16 +590,44 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<List<JsonObject>> getItemRecords(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                   Map<String, Piece> piecesByItemId,
                                                   RequestContext requestContext) {
+    logger.info("""
+      ### MODORDERS-1141 getItemRecords-1
+      piecesGroupedByPoLine: {},
+      piecesByItemId: {},
+      requestContext: {}
+      """,
+      JsonObject.mapFrom(piecesGroupedByPoLine).encodePrettily(),
+      JsonObject.mapFrom(piecesByItemId).encodePrettily(),
+      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily()
+    );
+
     // Split all id lists by maximum number of id's for get query
     return collectResultsOnSuccess(
       mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext).entrySet().stream()
-        .flatMap(entry ->
-          StreamEx.ofSubLists(entry.getValue(), MAX_IDS_FOR_GET_RQ_15)
+        .flatMap(entry -> {
+          logger.info("""
+            ### MODORDERS-1141 getItemRecords-2
+            entry: {}
+            """,
+            entry
+          );
+
+          return StreamEx.ofSubLists(entry.getValue(), MAX_IDS_FOR_GET_RQ_15)
             .map(ids -> {
               var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+
+              logger.info("""
+                ### MODORDERS-1141 getItemRecords-3
+                ids: {},
+                locationContext: {}
+                """,
+                ids,
+                JsonObject.mapFrom(locationContext.getHeaders()).encodePrettily()
+              );
+
               return getItemRecordsByIds(ids, piecesByItemId, locationContext);
-            })
-        )
+            });
+        })
         .toList())
       .map(lists -> StreamEx.of(lists).toFlatList(items -> items));
   }
