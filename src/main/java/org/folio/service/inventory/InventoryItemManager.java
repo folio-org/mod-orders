@@ -155,10 +155,29 @@ public class InventoryItemManager {
     String poLineId = piece.getPoLineId();
     return getItemRecordById(itemId, true, requestContext)
       .compose(item -> {
+        logger.info("""
+          ### MODORDERS-1141 updateItemWithPieceFields-1
+          piece: {},
+          item: {}
+          """,
+          JsonObject.mapFrom(piece).encodePrettily(),
+          JsonObject.mapFrom(item).encodePrettily()
+        );
+
         if (poLineId == null || item == null || item.isEmpty()) {
           return Future.succeededFuture();
         }
         InventoryUtils.updateItemWithPieceFields(item, piece);
+
+        logger.info("""
+          ### MODORDERS-1141 updateItemWithPieceFields-2
+              piece: {},
+          item: {}
+          """,
+          JsonObject.mapFrom(piece).encodePrettily(),
+          JsonObject.mapFrom(item).encodePrettily()
+        );
+
         return updateItem(item, requestContext);
       });
   }
