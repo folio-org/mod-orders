@@ -525,8 +525,23 @@ public class PurchaseOrderLineService {
   }
 
   private Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
+    logger.info("""
+            ### MODORDERS-1141 updateSearchLocations-1
+            poline (before): {},
+            """,
+      JsonObject.mapFrom(poLine).encodePrettily());
+
     return retrieveSearchLocationIds(poLine.getLocations(), requestContext)
       .map(poLine::withSearchLocationIds)
+      .map(poline -> {
+        logger.info("""
+            ### MODORDERS-1141 updateSearchLocations-2
+            poline (after): {},
+            """,
+          JsonObject.mapFrom(poline).encodePrettily());
+
+        return poline;
+      })
       .mapEmpty();
   }
 
