@@ -113,12 +113,31 @@ public class PurchaseOrderLineService {
 
   public Future<Void> saveOrderLine(PoLine poLine, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(poLine.getId());
+
+    logger.info("""
+          ### MODORDERS-1141 saveOrderLine
+          poLine: {}
+          endpoint: {}
+          """,
+      JsonObject.mapFrom(poLine).encodePrettily(),
+      BY_ID_ENDPOINT
+    );
+
     return updateSearchLocations(poLine, requestContext)
       .compose(v -> restClient.put(requestEntry, poLine, requestContext));
   }
 
   public Future<Void> saveOrderLine(CompositePoLine compositePoLine, RequestContext requestContext) {
     PoLine poLine = HelperUtils.convertToPoLine(compositePoLine);
+
+    logger.info("""
+          ### MODORDERS-1141 saveOrderLine
+          compositePoLine: {},
+          poLine: {}
+          """,
+      JsonObject.mapFrom(compositePoLine).encodePrettily(),
+      JsonObject.mapFrom(poLine).encodePrettily());
+
     return saveOrderLine(poLine, requestContext);
   }
 
