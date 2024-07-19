@@ -4,6 +4,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import jakarta.validation.constraints.NotNull;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -11,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
@@ -30,6 +32,7 @@ import org.folio.service.consortium.SharingInstanceService;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -43,6 +46,7 @@ import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.orders.utils.HelperUtils.isProductIdsExist;
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_CONTRIBUTOR_NAME_TYPE;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_INSTANCE_STATUS;
@@ -162,6 +166,9 @@ public class InventoryInstanceManager {
    * @return future with Instance Id
    */
   private Future<String> getInstanceRecord(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    if (compPOL.getInstanceId() != null) {
+      return Future.succeededFuture(compPOL.getInstanceId());
+    }
     // proceed with new Instance Record creation if no productId is provided
     if (!isProductIdsExist(compPOL) || isInstanceMatchingDisabled) {
       return createInstanceRecord(compPOL, requestContext);
@@ -330,7 +337,7 @@ public class InventoryInstanceManager {
 
     Future<Void> contributorNameTypeIdFuture = verifyContributorNameTypesExist(title.getContributors(), requestContext);
 
-    return CompositeFuture.join(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture)
+    return GenericCompositeFuture.join(List.of(instanceTypeFuture, statusFuture, contributorNameTypeIdFuture))
       .map(cf -> buildInstanceRecordJsonObject(title, lookupObj))
       .compose(instanceJson -> createInstance(instanceJson, requestContext));
   }
@@ -342,27 +349,19 @@ public class InventoryInstanceManager {
 
   public Future<CompositePoLine> openOrderHandleInstance(CompositePoLine compPOL, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(configuration -> {
-        Future<String> instanceIdFuture;
-        if (compPOL.getInstanceId() != null) {
-          instanceIdFuture = Future.succeededFuture(compPOL.getInstanceId());
-        } else {
-          instanceIdFuture = getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext);
-        }
-        if (configuration.isEmpty()) {
-          return instanceIdFuture;
-        }
-        return instanceIdFuture
-          .compose(instanceId -> shareInstanceAmongTenantsIfNeeded(instanceId, configuration.get(), compPOL.getLocations(), requestContext));
-      }).map(compPOL::withInstanceId);
+      .compose(configuration ->
+        getInstanceRecord(compPOL, isInstanceMatchingDisabled, requestContext)
+          .compose(instanceId -> configuration
+            .map(consortiumConfiguration -> shareInstanceAmongTenantsIfNeeded(instanceId, consortiumConfiguration, compPOL.getLocations(), requestContext))
+            .orElse(Future.succeededFuture(instanceId))))
+      .map(compPOL::withInstanceId);
   }
 
   private Future<String> shareInstanceAmongTenantsIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration,
                                                            List<Location> locations, RequestContext requestContext) {
     return getTenantIdsWithoutShadowInstances(instanceId, consortiumConfiguration, locations, requestContext)
       .map(tenantIds -> tenantIds.stream()
-        .map(targetTenantId -> sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration,
-            RequestContextUtil.createContextWithNewTenantId(requestContext, targetTenantId)))
+        .map(tenantId -> createShadowInstanceIfNeeded(instanceId, consortiumConfiguration, createContextWithNewTenantId(requestContext, tenantId)))
         .toList())
       .compose(HelperUtils::collectResultsOnSuccess)
       .map(sharingInstances -> instanceId);
@@ -391,24 +390,26 @@ public class InventoryInstanceManager {
 
   public Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> {
-        if (consortiumConfiguration.isEmpty()) {
-          logger.debug("createShadowInstanceIfNeeded:: Skipping creating shadow instance for non ECS mode.");
+      .compose(consortiumConfiguration -> createShadowInstanceIfNeeded(instanceId, consortiumConfiguration.orElse(null), requestContext));
+  }
+
+  private Future<SharingInstance> createShadowInstanceIfNeeded(String instanceId, ConsortiumConfiguration consortiumConfiguration, RequestContext requestContext) {
+    if (consortiumConfiguration == null) {
+      logger.debug("createShadowInstanceIfNeeded:: Skipping creating shadow instance for non ECS mode.");
+      return Future.succeededFuture();
+    }
+    if (StringUtils.isBlank(instanceId)) {
+      logger.info("createShadowInstanceIfNeeded:: Provided instanceId is blank, skip creating of shadow instance.");
+      return Future.succeededFuture();
+    }
+    return getInstanceById(instanceId, true, requestContext)
+      .compose(instance -> {
+        if (Objects.nonNull(instance) && !instance.isEmpty()) {
+          logger.info("createShadowInstanceIfNeeded:: Shadow instance already exists, skipping...");
           return Future.succeededFuture();
         }
-        if (StringUtils.isBlank(instanceId)) {
-          logger.info("createShadowInstanceIfNeeded:: Provided instanceId is blank, skip creating of shadow instance.");
-          return Future.succeededFuture();
-        }
-        return getInstanceById(instanceId, true, requestContext)
-          .compose(instance -> {
-            if (Objects.nonNull(instance) && !instance.isEmpty()) {
-              logger.info("createShadowInstanceIfNeeded:: Shadow instance already exists, skipping...");
-              return Future.succeededFuture();
-            }
-            logger.info("createShadowInstanceIfNeeded:: Creating shadow instance with instanceId: {}", instanceId);
-            return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration.get(), requestContext);
-          });
+        logger.info("createShadowInstanceIfNeeded:: Creating shadow instance with instanceId: {}", instanceId);
+        return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration, requestContext);
       });
   }
 
