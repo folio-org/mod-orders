@@ -1,6 +1,5 @@
 package org.folio.service.inventory;
 
-import io.vertx.core.json.JsonObject;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.models.consortium.SharingInstance;
 import org.folio.models.consortium.SharingInstanceCollection;
@@ -26,11 +25,9 @@ import java.util.UUID;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.models.ItemFields.ID;
 import static org.folio.rest.impl.PurchaseOrderLinesApiTest.COMP_PO_LINES_MOCK_DATA_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
