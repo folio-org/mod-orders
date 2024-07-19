@@ -161,7 +161,7 @@ public class InventoryItemManager {
           item: {}
           """,
           JsonObject.mapFrom(piece).encodePrettily(),
-          JsonObject.mapFrom(item).encodePrettily()
+          item != null ? item.encodePrettily() : null
         );
 
         if (poLineId == null || item == null || item.isEmpty()) {
@@ -175,7 +175,7 @@ public class InventoryItemManager {
           item: {}
           """,
           JsonObject.mapFrom(piece).encodePrettily(),
-          JsonObject.mapFrom(item).encodePrettily()
+          item.encodePrettily()
         );
 
         return updateItem(item, requestContext);
