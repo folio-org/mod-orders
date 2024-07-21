@@ -50,16 +50,6 @@ public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUp
           .stream()
           .filter(location -> StringUtils.isNotEmpty(location.getHoldingId()))
           .map(location -> {
-            logger.info("""
-              ### MODORDERS-1141 deleteAbandonedHoldings
-              isDeleteAbandonedHoldings: {},
-              poLine: {},
-              requestContext: {}
-              """,
-              isDeleteAbandonedHoldings,
-              JsonObject.mapFrom(poLine).encodePrettily(),
-              JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily());
-
             var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
             return deleteHoldingWithoutItems(location.getHoldingId(), locationContext);
           }).toList()

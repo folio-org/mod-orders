@@ -65,61 +65,16 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
     // 1. Get piece records from storage
     return createItemsWithPieceUpdate(checkinCollection, requestContext)
       // 2. Filter locationId
-      .compose(piecesByPoLineIds -> {
-        logger.info("""
-            ### MODORDERS-1141 processCheckInPieces - 2
-            piecesByPoLineIds: {},
-            """,
-          JsonObject.mapFrom(piecesByPoLineIds).encodePrettily()
-        );
-
-        return filterMissingLocations(piecesByPoLineIds, requestContext);
-      })
+      .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
-      .compose(pieces -> {
-        logger.info("""
-            ### MODORDERS-1141 processCheckInPieces - 3
-            pieces: {},
-            """,
-          JsonObject.mapFrom(pieces).encodePrettily()
-        );
-
-        return updateInventoryItemsAndHoldings(pieces, requestContext);
-      })
+      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, requestContext))
       // 4. Update piece records with checkIn details which do not have
       // associated item
-      .map(pieces -> {
-        logger.info("""
-            ### MODORDERS-1141 processCheckInPieces - 4
-            pieces: {},
-            """,
-          JsonObject.mapFrom(pieces).encodePrettily()
-        );
-
-        return this.updatePieceRecordsWithoutItems(pieces);
-      })
+      .map(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
-      .compose(piecesGroupedByPoLine -> {
-        logger.info("""
-            ### MODORDERS-1141 processCheckInPieces - 5
-            piecesGroupedByPoLine: {},
-            """,
-          JsonObject.mapFrom(piecesGroupedByPoLine).encodePrettily()
-        );
-
-        return storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext);
-      })
+      .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
       // 6. Update PO Line status
-      .compose(piecesGroupedByPoLine -> {
-        logger.info("""
-            ### MODORDERS-1141 processCheckInPieces - 6
-            piecesGroupedByPoLine: {},
-            """,
-          JsonObject.mapFrom(piecesGroupedByPoLine).encodePrettily()
-        );
-
-        return updateOrderAndPoLinesStatus(piecesGroupedByPoLine, checkinCollection, requestContext);
-      })
+      .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(piecesGroupedByPoLine, checkinCollection, requestContext))
       // 7. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }

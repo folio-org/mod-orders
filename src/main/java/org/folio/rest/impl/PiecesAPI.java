@@ -84,21 +84,6 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
   @Validate
   public void putOrdersPiecesById(String pieceId, boolean createItem, boolean deleteHolding, Piece piece,
                                   Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("""
-      ### MODORDERS-1141 putOrdersPiecesById
-      pieceId: {},
-      createItem: {},
-      deleteHolding: {},
-      piece: {},
-      okapiHeaders: {}
-      """,
-      pieceId,
-      createItem,
-      deleteHolding,
-      JsonObject.mapFrom(piece).encodePrettily(),
-      JsonObject.mapFrom(okapiHeaders).encodePrettily()
-    );
-
     if (StringUtils.isEmpty(piece.getId())) {
       piece.setId(pieceId);
     }

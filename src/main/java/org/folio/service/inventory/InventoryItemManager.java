@@ -125,18 +125,6 @@ public class InventoryItemManager {
 
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {
     var baseEndpoint = INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT);
-
-    logger.info("""
-            ### MODORDERS-1141 updateItem
-            requestContext: {},
-            baseEndpoint: {},
-            item: {}
-            """,
-      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily(),
-      baseEndpoint,
-      item.encodePrettily()
-    );
-
     RequestEntry requestEntry = new RequestEntry(baseEndpoint).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
   }
@@ -155,29 +143,10 @@ public class InventoryItemManager {
     String poLineId = piece.getPoLineId();
     return getItemRecordById(itemId, true, requestContext)
       .compose(item -> {
-        logger.info("""
-          ### MODORDERS-1141 updateItemWithPieceFields-1
-          piece: {},
-          item: {}
-          """,
-          JsonObject.mapFrom(piece).encodePrettily(),
-          item != null ? item.encodePrettily() : null
-        );
-
         if (poLineId == null || item == null || item.isEmpty()) {
           return Future.succeededFuture();
         }
         InventoryUtils.updateItemWithPieceFields(item, piece);
-
-        logger.info("""
-          ### MODORDERS-1141 updateItemWithPieceFields-2
-              piece: {},
-          item: {}
-          """,
-          JsonObject.mapFrom(piece).encodePrettily(),
-          item.encodePrettily()
-        );
-
         return updateItem(item, requestContext);
       });
   }

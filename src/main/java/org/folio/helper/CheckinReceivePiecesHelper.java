@@ -150,15 +150,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           logger.debug("{} piece record(s) retrieved from storage for {} PO line(s)", piecesQty, poLinesQty);
         }
 
-        logger.info("""
-          ### MODORDERS-1141 retrievePieceRecords
-          okapiHeaders: {}
-          piecesByPoLine: {},
-          """,
-          JsonObject.mapFrom(okapiHeaders).encodePrettily(),
-          JsonObject.mapFrom(piecesByPoLine).encodePrettily()
-        );
-
         return piecesByPoLine;
       });
   }
@@ -441,45 +432,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
     List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
-    logger.info("""
-      ### MODORDERS-1141 updateInventoryItemsAndHoldings-1
-      piecesByItemId: {}
-      """,
-      JsonObject.mapFrom(piecesByItemId).encodePrettily()
-    );
-
-    poLineIds.forEach(v ->
-      logger.info("""
-          ### MODORDERS-1141 updateInventoryItemsAndHoldings-2
-          poLineId: {}
-          """, v
-    ));
-
     return getPoLineAndTitleById(poLineIds, requestContext).compose(poLineAndTitleById ->
       processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
-        .compose(v -> {
-          logger.info("""
-            ### MODORDERS-1141 updateInventoryItemsAndHoldings-3
-            poLineById: {},
-            titleById: {}
-            """,
-            JsonObject.mapFrom(poLineAndTitleById.poLineById).encodePrettily(),
-            JsonObject.mapFrom(poLineAndTitleById.titleById).encodePrettily()
-          );
-
-          return getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext);
-        })
-        .compose(items -> {
-          items.forEach(vv ->
-            logger.info("""
-              ### MODORDERS-1141 updateInventoryItemsAndHoldings-getPoLineAndTitleById
-              item: {},
-              """,
-              vv.encodePrettily())
-          );
-
-        return processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext);
-      })
+        .compose(v -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
+        .compose(items -> processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext))
     );
   }
 
@@ -592,44 +548,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private Future<List<JsonObject>> getItemRecords(Map<String, List<Piece>> piecesGroupedByPoLine,
                                                   Map<String, Piece> piecesByItemId,
                                                   RequestContext requestContext) {
-    logger.info("""
-      ### MODORDERS-1141 getItemRecords-1
-      piecesGroupedByPoLine: {},
-      piecesByItemId: {},
-      requestContext: {}
-      """,
-      JsonObject.mapFrom(piecesGroupedByPoLine).encodePrettily(),
-      JsonObject.mapFrom(piecesByItemId).encodePrettily(),
-      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily()
-    );
-
     // Split all id lists by maximum number of id's for get query
     return collectResultsOnSuccess(
       mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext).entrySet().stream()
-        .flatMap(entry -> {
-          logger.info("""
-            ### MODORDERS-1141 getItemRecords-2
-            entry: {}
-            """,
-            entry
-          );
+        .flatMap(entry -> StreamEx.ofSubLists(entry.getValue(), MAX_IDS_FOR_GET_RQ_15)
+          .map(ids -> {
+            var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
 
-          return StreamEx.ofSubLists(entry.getValue(), MAX_IDS_FOR_GET_RQ_15)
-            .map(ids -> {
-              var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
-
-              logger.info("""
-                ### MODORDERS-1141 getItemRecords-3
-                ids: {},
-                locationContext: {}
-                """,
-                ids,
-                JsonObject.mapFrom(locationContext.getHeaders()).encodePrettily()
-              );
-
-              return getItemRecordsByIds(ids, piecesByItemId, locationContext);
-            });
-        })
+            return getItemRecordsByIds(ids, piecesByItemId, locationContext);
+          }))
         .toList())
       .map(lists -> StreamEx.of(lists).toFlatList(items -> items));
   }
@@ -686,11 +613,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
                                                               List<JsonObject> items,
                                                               PoLineAndTitleById poLinesAndTitlesById,
                                                               RequestContext requestContext) {
-    logger.info("""
-      ### MODORDERS-1141 processInventory-1
-      no items: {}
-      """, items.isEmpty());
-
     List<Future<Boolean>> futuresForItemsUpdates = new ArrayList<>();
 
     if (piecesByItemId.isEmpty()) {
@@ -709,11 +631,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       if (title == null)
         continue;
 
-      logger.info("""
-        ### MODORDERS-1141 processInventory-2
-        items (before): {}
-        """, item.encodePrettily());
-
       // holdingUpdateOnCheckinReceiveRequired
       if (holdingUpdateOnCheckinReceiveRequired(piece, poLine) && !isRevertToOnOrder(piece)) {
         String holdingKey = buildProcessedHoldingKey(piece, title.getInstanceId());
@@ -721,11 +638,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
       }
       var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
-
-      logger.info("""
-        ### MODORDERS-1141 processInventory-3
-        items (after): {}
-        """, item.encodePrettily());
 
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
     }

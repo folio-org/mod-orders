@@ -156,19 +156,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                           RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
-
-    logger.info("""
-      ### MODORDERS-1141 findOrCreateHoldingsAndUpdateItems
-      holder: {},
-      newInstanceId: {},
-      location: {},
-      requestContext: {}
-      """,
-      JsonObject.mapFrom(holder).encodePrettily(),
-      newInstanceId,
-      JsonObject.mapFrom(location).encodePrettily(),
-      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily());
-
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
     return inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, locationContext)
       .compose(newHoldingId -> {
@@ -198,19 +185,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                     RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
-
-    logger.info("""
-      ### MODORDERS-1141 createHoldingsAndUpdateItems
-      holder: {},
-      newInstanceId: {},
-      location: {},
-      requestContext: {}
-      """,
-      JsonObject.mapFrom(holder).encodePrettily(),
-      newInstanceId,
-      JsonObject.mapFrom(location).encodePrettily(),
-      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily());
-
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
     return inventoryHoldingManager.createHolding(newInstanceId, location, locationContext)
       .compose(newHoldingId -> {

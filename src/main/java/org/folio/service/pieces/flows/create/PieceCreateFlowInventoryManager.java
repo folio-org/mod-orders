@@ -39,15 +39,7 @@ public class PieceCreateFlowInventoryManager {
     return updateInventoryInstanceForPoLine(compPOL, piece, locationContext, requestContext)
       .compose(instanceId -> handleHolding(compPOL, piece, instanceId, locationContext))
       .compose(holdingId -> handleItem(compPOL, createItem, piece, locationContext))
-      .map(itemId -> {
-        logger.info("""
-            ### MODORDERS-1141 processInventory
-            itemId: {},
-            """,
-            itemId);
-
-        return Optional.ofNullable(itemId).map(piece::withItemId);
-      })
+      .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
       .mapEmpty();
   }
 

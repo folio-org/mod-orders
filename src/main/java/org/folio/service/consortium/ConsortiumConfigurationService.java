@@ -76,14 +76,6 @@ public class ConsortiumConfigurationService {
       return Future.succeededFuture(requestContext);
     }
 
-    logger.info("""
-      ### MODORDERS-1141 cloneRequestContextIfNeeded
-      requestContext: {},
-      location: {}
-      """,
-      JsonObject.mapFrom(requestContext.getHeaders()).encodePrettily(),
-      JsonObject.mapFrom(location).encodePrettily());
-
     return getConsortiumConfiguration(requestContext)
       .map(config -> config.isEmpty() ? requestContext : RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId()));
   }

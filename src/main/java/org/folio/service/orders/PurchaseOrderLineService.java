@@ -113,31 +113,12 @@ public class PurchaseOrderLineService {
 
   public Future<Void> saveOrderLine(PoLine poLine, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(poLine.getId());
-
-    logger.info("""
-          ### MODORDERS-1141 saveOrderLine
-          poLine: {}
-          endpoint: {}
-          """,
-      JsonObject.mapFrom(poLine).encodePrettily(),
-      BY_ID_ENDPOINT
-    );
-
     return updateSearchLocations(poLine, requestContext)
       .compose(v -> restClient.put(requestEntry, poLine, requestContext));
   }
 
   public Future<Void> saveOrderLine(CompositePoLine compositePoLine, RequestContext requestContext) {
     PoLine poLine = HelperUtils.convertToPoLine(compositePoLine);
-
-    logger.info("""
-          ### MODORDERS-1141 saveOrderLine
-          compositePoLine: {},
-          poLine: {}
-          """,
-      JsonObject.mapFrom(compositePoLine).encodePrettily(),
-      JsonObject.mapFrom(poLine).encodePrettily());
-
     return saveOrderLine(poLine, requestContext);
   }
 
@@ -525,23 +506,9 @@ public class PurchaseOrderLineService {
   }
 
   private Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
-    logger.info("""
-            ### MODORDERS-1141 updateSearchLocations-1
-            poline (before): {},
-            """,
-      JsonObject.mapFrom(poLine).encodePrettily());
-
     return retrieveSearchLocationIds(poLine.getLocations(), requestContext)
       .map(poLine::withSearchLocationIds)
-      .map(poline -> {
-        logger.info("""
-            ### MODORDERS-1141 updateSearchLocations-2
-            poline (after): {},
-            """,
-          JsonObject.mapFrom(poline).encodePrettily());
-
-        return poline;
-      })
+      .map(poline -> poline)
       .mapEmpty();
   }
 

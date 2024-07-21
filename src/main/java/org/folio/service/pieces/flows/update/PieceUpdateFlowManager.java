@@ -89,19 +89,7 @@ public class PieceUpdateFlowManager {
         }
         return false;
       })
-      .compose(verifyReceiptStatus -> {
-        logger.info("""
-          ### MODORDERS-1141 updatePiece-1
-          getPieceToUpdate: {},
-          verifyReceiptStatus: {}
-          """,
-          JsonObject.mapFrom(holder.getPieceToUpdate()).encodePrettily(),
-          verifyReceiptStatus
-        );
-
-         return pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext)
-            .map(verifyReceiptStatus);
-      })
+      .compose(verifyReceiptStatus -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext).map(verifyReceiptStatus))
       .map(verifyReceiptStatus -> {
         if (Boolean.TRUE.equals(verifyReceiptStatus)) {
           JsonObject messageToEventBus = new JsonObject();
@@ -126,26 +114,10 @@ public class PieceUpdateFlowManager {
         List<Piece> piecesToUpdate = List.of(holder.getPieceToUpdate());
         CompositePoLine poLineToSave = holder.getPoLineToSave();
         poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
-
-        logger.info("""
-          ### MODORDERS-1141 updatePoLine-1
-          originPoLine: {},
-          poLineToSave: {}
-          """,
-          JsonObject.mapFrom(originPoLine).encodePrettily(),
-          JsonObject.mapFrom(poLineToSave).encodePrettily());
-
         return purchaseOrderLineService.saveOrderLine(poLineToSave, requestContext);
       }).compose(v -> {
         if (!Boolean.TRUE.equals(originPoLine.getIsPackage()) &&
           !Boolean.TRUE.equals(originPoLine.getCheckinItems())) {
-
-          logger.info("""
-            ### MODORDERS-1141 updatePoLine-2
-            holder: {},
-            """,
-            JsonObject.mapFrom(holder).encodePrettily());
-
           return updatePoLineService.updatePoLine(holder, requestContext);
         }
         return Future.succeededFuture();
