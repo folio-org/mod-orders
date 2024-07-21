@@ -1,10 +1,7 @@
 package org.folio.service.orders.lines.update.instance;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.RequestContextUtil;
@@ -16,8 +13,6 @@ import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.lines.update.OrderLineUpdateInstanceStrategy;
 
 public abstract class BaseOrderLineUpdateInstanceStrategy implements OrderLineUpdateInstanceStrategy {
-
-  private static final Logger logger = LogManager.getLogger(BaseOrderLineUpdateInstanceStrategy.class);
 
   InventoryInstanceManager inventoryInstanceManager;
   InventoryItemManager inventoryItemManager;
