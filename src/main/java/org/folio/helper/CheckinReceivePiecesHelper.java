@@ -550,12 +550,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     // Split all id lists by maximum number of id's for get query
     return collectResultsOnSuccess(
       mapTenantIdsToItemIds(piecesGroupedByPoLine, requestContext).entrySet().stream()
-        .flatMap(entry -> StreamEx.ofSubLists(entry.getValue(), MAX_IDS_FOR_GET_RQ_15)
-          .map(ids -> {
-            var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
-
-            return getItemRecordsByIds(ids, piecesByItemId, locationContext);
-          }))
+        .flatMap(entry ->
+          StreamEx.ofSubLists(entry.getValue(), MAX_IDS_FOR_GET_RQ_15)
+            .map(ids -> {
+              var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
+              return getItemRecordsByIds(ids, piecesByItemId, locationContext);
+            })
+        )
         .toList())
       .map(lists -> StreamEx.of(lists).toFlatList(items -> items));
   }
@@ -637,7 +638,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
       }
       var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
-
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates).map(results -> {

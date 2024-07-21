@@ -273,6 +273,7 @@ public class MockServer {
   public static final String HOLDINGS_OLD_NEW_PATH = BASE_MOCK_DATA_PATH + "holdingsRecords/holdingRecords-old-new.json";
   public static final String LISTED_PRINT_MONOGRAPH_ENCUMBRANCES_PATH = BASE_MOCK_DATA_PATH +
     "encumbrances/encumbrance_for_print_monograph.json";
+  public static final String ECS_PATH = BASE_MOCK_DATA_PATH + "ecs";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";

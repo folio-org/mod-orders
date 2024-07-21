@@ -80,6 +80,7 @@ import static org.folio.orders.events.handlers.HandlersTestHelper.verifyCheckinO
 import static org.folio.orders.events.handlers.HandlersTestHelper.verifyOrderStatusUpdateEvent;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
+import static org.folio.orders.utils.ResourcePathResolver.ITEMS_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
@@ -682,11 +683,24 @@ public class CheckinReceivingApiTest {
   void testPostCheckinForNewTenant() {
     logger.info("=== Test POST check-in - New Tenant ===");
 
+    String tenant = "test";
+
     CompositePurchaseOrder order = getMinimalContentCompositePurchaseOrder();
     CompositePoLine poLine = getMinimalContentCompositePoLine(order.getId());
     poLine.setIsPackage(true);
     poLine.setOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
     poLine.setPhysical(new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE_HOLDING_ITEM));
+    Location location = new Location()
+      .withTenantId(tenant)
+      .withQuantity(1)
+      .withQuantityPhysical(1);
+    poLine.setLocations(List.of(location));
+
+    var itemId = UUID.randomUUID().toString();
+
+    JsonObject minimalItem = new JsonObject()
+      .put("id", itemId)
+      .put("purchaseOrderLineIdentifier", poLine.getId());
 
     String locationForPhysical = UUID.randomUUID().toString();
 
@@ -700,9 +714,10 @@ public class CheckinReceivingApiTest {
       .withLocationId(locationForPhysical)
       .withId(UUID.randomUUID().toString())
       .withTitleId(titleIdForPhysical)
-      .withItemId(UUID.randomUUID().toString());
+      .withItemId(itemId);
 
     addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
+    addMockEntry(ITEMS_STORAGE, minimalItem);
     addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, physicalPiece);
 
@@ -718,7 +733,7 @@ public class CheckinReceivingApiTest {
       .withToBeCheckedIn(toBeCheckedInList)
       .withTotalRecords(2);
 
-    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setReceivingTenantId("test");
+    request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setReceivingTenantId(tenant);
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setId(physicalPiece.getId());
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(0).setLocationId(locationForPhysical);
 

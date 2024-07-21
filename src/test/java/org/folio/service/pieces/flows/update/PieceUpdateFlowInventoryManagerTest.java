@@ -43,6 +43,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.pieces.ItemRecreateInventoryService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitlesService;
@@ -581,10 +582,11 @@ public class PieceUpdateFlowInventoryManagerTest {
     @Bean
     PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager(TitlesService titlesService,
                                                                     PieceUpdateInventoryService pieceUpdateInventoryService,
+                                                                    ItemRecreateInventoryService itemRecreateInventoryService,
                                                                     InventoryItemManager inventoryItemManager,
                                                                     InventoryHoldingManager inventoryHoldingManager) {
       return new PieceUpdateFlowInventoryManager(titlesService, pieceUpdateInventoryService,
-        inventoryItemManager, inventoryHoldingManager);
+        itemRecreateInventoryService, inventoryItemManager, inventoryHoldingManager);
     }
   }
 }
