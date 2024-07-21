@@ -5,6 +5,7 @@ import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -12,12 +13,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.pieces.ItemRecreateInventoryService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
@@ -32,15 +35,18 @@ public class PieceUpdateFlowInventoryManager {
 
   private final TitlesService titlesService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
+  private final ItemRecreateInventoryService itemRecreateInventoryService;
   private final InventoryItemManager inventoryItemManager;
   private final InventoryHoldingManager inventoryHoldingManager;
 
   public PieceUpdateFlowInventoryManager(TitlesService titlesService,
                                          PieceUpdateInventoryService pieceUpdateInventoryService,
+                                         ItemRecreateInventoryService itemRecreateInventoryService,
                                          InventoryItemManager inventoryItemManager,
                                          InventoryHoldingManager inventoryHoldingManager) {
     this.titlesService = titlesService;
     this.pieceUpdateInventoryService = pieceUpdateInventoryService;
+    this.itemRecreateInventoryService = itemRecreateInventoryService;
     this.inventoryItemManager = inventoryItemManager;
     this.inventoryHoldingManager = inventoryHoldingManager;
   }
@@ -105,34 +111,39 @@ public class PieceUpdateFlowInventoryManager {
   }
 
   private Future<String> handleItem(PieceUpdateHolder holder, RequestContext requestContext) {
-    CompositePoLine poLineToSave = holder.getPoLineToSave();
-    Piece pieceToUpdate = holder.getPieceToUpdate();
-    if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave) || pieceToUpdate.getIsBound()) {
-        return Future.succeededFuture();
+    var poLineToSave = holder.getPoLineToSave();
+    var pieceToUpdate = holder.getPieceToUpdate();
+    if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave) ||
+      pieceToUpdate.getIsBound()) {
+      return Future.succeededFuture();
     }
-    return inventoryItemManager.getItemRecordById(pieceToUpdate.getItemId(), true, requestContext)
+
+    var itemId = pieceToUpdate.getItemId();
+    var srcTenantId = holder.getOriginPoLine().getLocations().get(0).getTenantId();
+    var dstTenantId = pieceToUpdate.getReceivingTenantId();
+    var srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, srcTenantId);
+    var dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, dstTenantId);
+
+    logger.info("handleItem:: updating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'",
+      itemId, srcTenantId, dstTenantId
+    );
+
+    return inventoryItemManager.getItemRecordById(itemId, true, srcLocCtx)
       .compose(jsonItem -> {
         if (jsonItem != null && !jsonItem.isEmpty()) {
           updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate);
-
-          logger.info("""
-            ### MODORDERS-1141 handleItem
-            poLineToSave: {},
-            pieceToUpdate: {},
-            jsonItem: {}
-            """,
-            JsonObject.mapFrom(poLineToSave).encodePrettily(),
-            JsonObject.mapFrom(pieceToUpdate).encodePrettily(),
-            JsonObject.mapFrom(jsonItem).encodePrettily()
-          );
-
-          return inventoryItemManager.updateItem(jsonItem, requestContext)
-            .map(v -> jsonItem.getString(ID));
+          if (Objects.nonNull(pieceToUpdate.getReceivingStatus()) && !srcTenantId.equals(dstTenantId)) {
+            return itemRecreateInventoryService.recreateItemInDestinationTenant(holder, srcLocCtx, dstLocCtx);
+          } else {
+            return inventoryItemManager.updateItem(jsonItem, requestContext).map(v -> jsonItem.getString(ID));
+          }
         }
 
-        return holder.isCreateItem() && pieceToUpdate.getHoldingId() != null
-          ? pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext)
-          : Future.succeededFuture();
+        if (holder.isCreateItem() && pieceToUpdate.getHoldingId() != null) {
+          return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);
+        } else {
+          return Future.succeededFuture();
+        }
       });
   }
 
