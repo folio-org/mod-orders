@@ -124,8 +124,7 @@ public class InventoryItemManager {
   }
 
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {
-    var baseEndpoint = INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT);
-    RequestEntry requestEntry = new RequestEntry(baseEndpoint).withId(item.getString(ID));
+    RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
   }
 

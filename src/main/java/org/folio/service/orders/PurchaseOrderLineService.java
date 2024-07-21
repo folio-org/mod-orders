@@ -508,7 +508,6 @@ public class PurchaseOrderLineService {
   private Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
     return retrieveSearchLocationIds(poLine.getLocations(), requestContext)
       .map(poLine::withSearchLocationIds)
-      .map(poline -> poline)
       .mapEmpty();
   }
 

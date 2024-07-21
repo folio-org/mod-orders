@@ -149,7 +149,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
             .sum();
           logger.debug("{} piece record(s) retrieved from storage for {} PO line(s)", piecesQty, poLinesQty);
         }
-
         return piecesByPoLine;
       });
   }
@@ -432,11 +431,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
     List<String> poLineIds = new ArrayList<>(piecesGroupedByPoLine.keySet());
 
-    return getPoLineAndTitleById(poLineIds, requestContext).compose(poLineAndTitleById ->
-      processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
+    return getPoLineAndTitleById(poLineIds, requestContext)
+      .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
         .compose(v -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
         .compose(items -> processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext))
-    );
+      );
   }
 
   /**

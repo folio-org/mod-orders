@@ -66,8 +66,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .compose(vVoid -> processReceiveItems(receivingCollection, requestContext));
   }
 
-  private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection,
-                                                       RequestContext requestContext) {
+  private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     // 1. Get piece records from storage
     return retrievePieceRecords(requestContext)
       // 2. Filter locationId
@@ -75,7 +74,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       // 3. Update items in the Inventory if required
       .compose(pieces -> updateInventoryItemsAndHoldings(pieces, requestContext))
       // 4. Update piece records with receiving details which do not have associated item
-      .map(pieces -> this.updatePieceRecordsWithoutItems(pieces))
+      .map(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage
       .compose(piecesByPoLineIds -> storeUpdatedPieceRecords(piecesByPoLineIds, requestContext))
       // 6. Update PO Line status
@@ -84,8 +83,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .map(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
 
-  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
-                                                                       RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
     return updateOrderAndPoLinesStatus(
       piecesGroupedByPoLine,
       requestContext,
@@ -126,8 +124,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       .onFailure(t -> logger.error("Error happened retrieving receiving history", t));
   }
 
-  private ReceivingResults prepareResponseBody(ReceivingCollection receivingCollection,
-                                               Map<String, List<Piece>> piecesGroupedByPoLine) {
+  private ReceivingResults prepareResponseBody(ReceivingCollection receivingCollection, Map<String, List<Piece>> piecesGroupedByPoLine) {
     ReceivingResults results = new ReceivingResults();
     results.setTotalRecords(receivingCollection.getTotalRecords());
     for (ToBeReceived toBeReceived : receivingCollection.getToBeReceived()) {
@@ -173,8 +170,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece,
-                                                               RequestContext locationContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
     ReceivedItem receivedItem = getByPiece(piece);
     InventoryUtils.updateItemWithReceivedItemFields(item, receivedItem);
     return inventoryItemManager.updateItem(item, locationContext)

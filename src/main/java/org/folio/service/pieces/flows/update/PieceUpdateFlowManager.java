@@ -89,7 +89,8 @@ public class PieceUpdateFlowManager {
         }
         return false;
       })
-      .compose(verifyReceiptStatus -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext).map(verifyReceiptStatus))
+      .compose(verifyReceiptStatus -> pieceStorageService.updatePiece(holder.getPieceToUpdate(), requestContext)
+        .map(verifyReceiptStatus))
       .map(verifyReceiptStatus -> {
         if (Boolean.TRUE.equals(verifyReceiptStatus)) {
           JsonObject messageToEventBus = new JsonObject();
