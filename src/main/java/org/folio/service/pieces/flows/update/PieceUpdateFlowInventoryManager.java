@@ -104,7 +104,7 @@ public class PieceUpdateFlowInventoryManager {
       .map(holdingId -> {
         if (holdingId != null) {
           pieceToUpdate.withLocationId(null).setHoldingId(holdingId);
-          location.withLocationId(null).withTenantId(location.getTenantId()).setHoldingId(holdingId);
+          location.withLocationId(null).setHoldingId(holdingId);
         }
         return location;
       });
