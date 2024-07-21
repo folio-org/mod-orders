@@ -113,33 +113,56 @@ public class PieceUpdateFlowInventoryManager {
   private Future<String> handleItem(PieceUpdateHolder holder, RequestContext requestContext) {
     var poLineToSave = holder.getPoLineToSave();
     var pieceToUpdate = holder.getPieceToUpdate();
-    if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave) ||
-      pieceToUpdate.getIsBound()) {
+    if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave) || pieceToUpdate.getIsBound()) {
       return Future.succeededFuture();
     }
 
-    var itemId = pieceToUpdate.getItemId();
-    var srcTenantId = holder.getOriginPoLine().getLocations().get(0).getTenantId();
-    var dstTenantId = pieceToUpdate.getReceivingTenantId();
-    var srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, srcTenantId);
-    var dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, dstTenantId);
+    String srcTenantId;
+    String dstTenantId;
+    RequestContext srcLocCtx;
+    RequestContext dstLocCtx;
+    var locations = holder.getOriginPoLine().getLocations();
+    if (!locations.isEmpty()) {
+      var location = locations.get(0);
+      if (Objects.nonNull(location.getTenantId())) {
+        srcTenantId = location.getTenantId();
+        srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, srcTenantId);
+      } else {
+        srcTenantId = null;
+        srcLocCtx = requestContext;
+      }
+    } else {
+      srcTenantId = null;
+      srcLocCtx = requestContext;
+    }
 
-    logger.info("handleItem:: updating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'",
-      itemId, srcTenantId, dstTenantId
-    );
+    if (Objects.nonNull(pieceToUpdate.getReceivingTenantId())) {
+      dstTenantId = pieceToUpdate.getReceivingTenantId();
+      dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, dstTenantId);
+    } else {
+      dstTenantId = null;
+      dstLocCtx = null;
+    }
+
+    var itemId = pieceToUpdate.getItemId();
 
     return inventoryItemManager.getItemRecordById(itemId, true, srcLocCtx)
       .compose(jsonItem -> {
         if (jsonItem != null && !jsonItem.isEmpty()) {
           updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate);
-          if (Objects.nonNull(pieceToUpdate.getReceivingStatus()) && !srcTenantId.equals(dstTenantId)) {
+          if (Objects.nonNull(srcTenantId) && Objects.nonNull(dstTenantId) && !srcTenantId.equals(dstTenantId)) {
+            logger.info("handleItem:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'",
+              itemId, srcTenantId, dstTenantId
+            );
             return itemRecreateInventoryService.recreateItemInDestinationTenant(holder, srcLocCtx, dstLocCtx);
           } else {
+            logger.info("handleItem:: updating item by id '{}'", itemId);
             return inventoryItemManager.updateItem(jsonItem, requestContext).map(v -> jsonItem.getString(ID));
           }
         }
 
         if (holder.isCreateItem() && pieceToUpdate.getHoldingId() != null) {
+          logger.info("handleItem:: creating item by id '{}'", itemId);
           return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);
         } else {
           return Future.succeededFuture();

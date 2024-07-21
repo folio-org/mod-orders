@@ -35,11 +35,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -73,9 +71,7 @@ public class PieceApiTest {
   private static final Logger logger = LogManager.getLogger();
 
   public static final String PIECES_ENDPOINT = "/orders/pieces";
-  public static final String PO_LINE_ENDPOINT = "/orders/order-lines";
   private static final String PIECES_ID_PATH = PIECES_ENDPOINT + "/%s";
-  private static final String PO_LINE_ID_PATH = PO_LINE_ENDPOINT + "/%s";
   static final String CONSISTENT_RECEIVED_STATUS_PIECE_UUID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
   private JsonObject pieceJsonReqData = getMockAsJson(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
 
@@ -173,7 +169,6 @@ public class PieceApiTest {
 
     var purchaseOrderId = "8137de83-76c0-4d3e-bf73-416de5e780fa";
     var pieceId = "aaecf1f7-28dc-4940-bfd4-be0e26afde95";
-    var poLineId = "391e39b1-f891-4d92-ab14-b5760bdac937";
 
     var purchaseOrderMock = getMockData(String.format("%s/%s/consortium_purchase_order.json", ECS_PATH, purchaseOrderId));
     var titlesMock = getMockData(String.format("%s/%s/consortium_titles.json", ECS_PATH, purchaseOrderId));
@@ -205,15 +200,7 @@ public class PieceApiTest {
     var piecesResponseBody = verifyGet(String.format(PIECES_ID_PATH, pieceId),headers, APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
     var piecesResponse = piecesResponseBody.as(Piece.class);
 
-    assertThat(piecesResponse.getId(), notNullValue());
-
-    var poLineResponseBody = verifyGet(String.format(PO_LINE_ID_PATH, poLineId),headers, APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
-    var poLineResponse = poLineResponseBody.as(PoLine.class);
-
-    var hasUniversityTenantIdForEveryLocation = poLineResponse.getLocations().stream()
-      .allMatch(v -> Objects.nonNull(v.getTenantId()) && v.getTenantId().equals("university"));
-
-    assertTrue(hasUniversityTenantIdForEveryLocation);
+    assertThat(piecesResponse.getItemId(), notNullValue());
 
     // Message sent to event bus
     HandlersTestHelper.verifyReceiptStatusUpdateEvent(1);

@@ -72,6 +72,8 @@ public class PieceUpdateFlowInventoryManagerTest {
   @Autowired
   PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
+  ItemRecreateInventoryService itemRecreateInventoryService;
+  @Autowired
   InventoryItemManager inventoryItemManager;
   @Autowired
   InventoryHoldingManager inventoryHoldingManager;
@@ -110,7 +112,7 @@ public class PieceUpdateFlowInventoryManagerTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    Mockito.reset(titlesService, inventoryItemManager, inventoryHoldingManager, pieceUpdateInventoryService);
+    Mockito.reset(titlesService, inventoryItemManager, inventoryHoldingManager, pieceUpdateInventoryService, itemRecreateInventoryService);
   }
 
   @Test
@@ -577,6 +579,10 @@ public class PieceUpdateFlowInventoryManagerTest {
 
     @Bean PieceUpdateInventoryService pieceUpdateInventoryService() {
       return mock(PieceUpdateInventoryService.class);
+    }
+
+    @Bean ItemRecreateInventoryService itemRecreateInventoryService() {
+      return mock(ItemRecreateInventoryService.class);
     }
 
     @Bean
