@@ -5,6 +5,7 @@ import org.folio.models.consortium.SharingInstance;
 import org.folio.models.consortium.SharingInstanceCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.tools.utils.TenantTool;
@@ -102,6 +103,7 @@ public class InventoryInstanceManagerTest {
       new Location().withTenantId(MEMBER_TENANT_2)));
     Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(CENTRAL_TENANT, UUID.randomUUID().toString()));
     doReturn(succeededFuture(configuration)).when(consortiumConfigurationService).getConsortiumConfiguration(requestContext);
+    doReturn(succeededFuture(null)).when(restClient).getAsJsonObject(any(RequestEntry.class), eq(true), any(RequestContext.class));
 
     SharingInstanceCollection collection = new SharingInstanceCollection();
     SharingInstance sharingInstance = new SharingInstance(UUID.fromString(instanceId), MEMBER_TENANT_1, CENTRAL_TENANT);
