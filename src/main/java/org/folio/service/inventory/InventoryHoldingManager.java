@@ -249,6 +249,7 @@ public class InventoryHoldingManager {
   }
 
   public Future<String> getOrCreateHoldingRecordByInstanceAndLocation(String instanceId, Location location, RequestContext requestContext) {
+    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
     if (Objects.isNull(location.getLocationId())) {
       return getHoldingById(location.getHoldingId(), true, requestContext)
         .compose(holding -> {
@@ -259,7 +260,7 @@ public class InventoryHoldingManager {
                 String holdingId = jsonHolding.getString(ID);
                 return Future.succeededFuture(holdingId);
               }
-              return createHoldingAndReturnId(instanceId, locationId, requestContext);
+              return createHoldingAndReturnId(instanceId, locationId, locationContext);
             });
         });
     } else {
@@ -269,24 +270,27 @@ public class InventoryHoldingManager {
             String holdingId = jsonHolding.getString(ID);
             return Future.succeededFuture(holdingId);
           }
-          return createHoldingAndReturnId(instanceId, location.getLocationId(), requestContext);
+          return createHoldingAndReturnId(instanceId, location.getLocationId(), locationContext);
         });
     }
   }
 
   public Future<String> createHolding(String newInstanceId, Location location, RequestContext requestContext) {
-    var tenantId = TenantTool.tenantId(requestContext.getHeaders());
+    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
+    var centralTenantId = TenantTool.tenantId(requestContext.getHeaders());
+    var locationTenantId = TenantTool.tenantId(locationContext.getHeaders());
     logger.info("createHolding:: Going to create new holding for new instanceId: {} in tenant: {}",
-      newInstanceId, tenantId);
+      newInstanceId, locationTenantId);
     if (Objects.isNull(location.getLocationId())) {
-      logger.info("createHolding:: Fetching permanentLocationId for holdingId: {}", location.getHoldingId());
+      logger.info("createHolding:: Fetching permanentLocationId for holdingId: {} from tenant: {}",
+        location.getHoldingId(), centralTenantId);
       return getHoldingById(location.getHoldingId(), true, requestContext)
         .compose(holding -> {
           String locationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
-          return createHoldingAndReturnId(newInstanceId, locationId, requestContext);
+          return createHoldingAndReturnId(newInstanceId, locationId, locationContext);
         });
     } else {
-      return createHoldingAndReturnId(newInstanceId, location.getLocationId(), requestContext);
+      return createHoldingAndReturnId(newInstanceId, location.getLocationId(), locationContext);
     }
   }
 

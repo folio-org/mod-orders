@@ -36,8 +36,8 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     OrderTemplatesHelper orderTemplatesHelper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     orderTemplatesHelper.createOrderTemplate(entity)
       .onSuccess(template -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new order template: {}", JsonObject.mapFrom(template)
+        if (logger.isDebugEnabled()) {
+          logger.debug("Successfully created new order template: {}", JsonObject.mapFrom(template)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(
@@ -53,8 +53,8 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.getOrderTemplates(query, offset, limit)
       .onSuccess(templates -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved order templates collection: {}", JsonObject.mapFrom(templates).encodePrettily());
+        if (logger.isDebugEnabled()) {
+          logger.debug("Successfully retrieved order templates collection: {}", JsonObject.mapFrom(templates).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(templates)));
       })
@@ -101,8 +101,8 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.getOrderTemplateById(id)
       .onSuccess(template -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved order template: {}", JsonObject.mapFrom(template)
+        if (logger.isDebugEnabled()) {
+          logger.debug("Successfully retrieved order template: {}", JsonObject.mapFrom(template)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(template)));

@@ -152,13 +152,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                           RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
-    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
-    return inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, locationContext)
+    return inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, requestContext)
       .compose(newHoldingId -> {
         holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
         if (Objects.equals(holdingId, newHoldingId)) {
           return Future.succeededFuture();
         }
+        var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
         return updateItemsHolding(holdingId, newHoldingId, poLine.getId(), locationContext);
       });
   }
@@ -181,10 +181,10 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                                     RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
-    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
-    return inventoryHoldingManager.createHolding(newInstanceId, location, locationContext)
+    return inventoryHoldingManager.createHolding(newInstanceId, location, requestContext)
       .compose(newHoldingId -> {
         holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
+        var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
         return updateItemsHolding(holdingId, newHoldingId, poLine.getId(), locationContext);
       });
   }

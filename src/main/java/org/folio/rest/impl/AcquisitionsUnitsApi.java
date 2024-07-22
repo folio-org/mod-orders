@@ -63,8 +63,8 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
     acquisitionsUnitsService.getAcquisitionsUnits(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(units -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions units: {}", JsonObject.mapFrom(units).encodePrettily());
+        if (logger.isDebugEnabled()) {
+          logger.debug("Successfully retrieved acquisitions units: {}", JsonObject.mapFrom(units).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(units)));
       })
@@ -96,8 +96,8 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
 
     acquisitionsUnitsService.getAcquisitionsUnit(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(unit -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions unit: {}", JsonObject.mapFrom(unit).encodePrettily());
+        if (logger.isDebugEnabled()) {
+          logger.debug("Successfully retrieved acquisitions unit: {}", JsonObject.mapFrom(unit).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(unit)));
       })
@@ -141,8 +141,8 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
                                               Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(memberships -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions units memberships: {}", JsonObject.mapFrom(memberships).encodePrettily());
+        if (logger.isDebugEnabled()) {
+          logger.debug("Successfully retrieved acquisitions units memberships: {}", JsonObject.mapFrom(memberships).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(memberships)));
       })
@@ -170,8 +170,8 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
   public void getAcquisitionsUnitsMembershipsById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     acquisitionsUnitsService.getAcquisitionsUnitsMembership(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(membership -> {
-        if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
+        if (logger.isDebugEnabled()) {
+          logger.debug("Successfully retrieved acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(membership)));
       })
