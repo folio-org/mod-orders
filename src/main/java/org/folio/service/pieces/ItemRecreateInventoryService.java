@@ -10,7 +10,6 @@ import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -116,7 +115,7 @@ public class ItemRecreateInventoryService {
                                                                String holdingId, RequestContext requestContext) {
     var isUpdatePossible = isUpdatePossibleVsHolding.getKey();
     var holding = isUpdatePossibleVsHolding.getValue();
-    if (isUpdatePossible && !holding.isEmpty()) {
+    if (Boolean.TRUE.equals(isUpdatePossible) && !holding.isEmpty()) {
       var permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
 
       return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
@@ -126,8 +125,7 @@ public class ItemRecreateInventoryService {
   }
 
   private List<Piece> skipPieceToProcess(Piece piece, List<Piece> pieces) {
-    return pieces.stream().filter(pieceEntry -> !pieceEntry.getId().equals(piece.getId())).collect(
-      Collectors.toList());
+    return pieces.stream().filter(pieceEntry -> !pieceEntry.getId().equals(piece.getId())).toList();
   }
 
   private Future<JsonObject> getOnOrderItemForPiece(Piece piece, RequestContext requestContext) {
