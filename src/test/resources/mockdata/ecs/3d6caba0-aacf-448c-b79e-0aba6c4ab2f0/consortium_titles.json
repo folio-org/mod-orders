@@ -1,0 +1,21 @@
+{
+  "id": "73e77f12-0468-4763-a0d7-a5658ad3ca1d",
+  "title": "MODORDERS-1141 Bob Test 9",
+  "metadata": {
+    "createdDate": "2024-07-22T06:32:46.005Z",
+    "updatedDate": "2024-07-22T06:33:03.956Z",
+    "createdByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c",
+    "updatedByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c"
+  },
+  "poLineId": "41319d67-9860-4ecf-b604-1d34c21063d9",
+  "acqUnitIds": [],
+  "instanceId": "33de01c9-ab9e-49e3-b9c4-466dc7821d96",
+  "productIds": [],
+  "bindItemIds": [],
+  "contributors": [],
+  "poLineNumber": "10016-1",
+  "claimingActive": false,
+  "isAcknowledged": false,
+  "claimingInterval": 45,
+  "subscriptionInterval": 0
+}

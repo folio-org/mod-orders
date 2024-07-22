@@ -20,11 +20,16 @@ import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.orders.utils.ResourcePathResolver.HOLDINGS_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.INSTANCE_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.ITEMS_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.REQUEST_FOUND;
+import static org.folio.rest.impl.MockServer.CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC;
+import static org.folio.rest.impl.MockServer.CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL;
 import static org.folio.rest.impl.MockServer.ECS_PATH;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
@@ -44,6 +49,7 @@ import java.util.concurrent.TimeoutException;
 
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
+import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -65,6 +71,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class PieceApiTest {
 
@@ -163,21 +172,24 @@ public class PieceApiTest {
     HandlersTestHelper.verifyReceiptStatusUpdateEvent(1);
   }
 
-  @Test
-  void testPutPiecesByIdECSTest() throws Exception {
-    logger.info("=== Test update piece by id ECS - valid Id 204 ===");
+  private static Stream<Arguments> testPutPiecesByIdEcsTestArgs() {
+    return Stream.of(
+      Arguments.of(CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL, "aaecf1f7-28dc-4940-bfd4-be0e26afde95", true),
+      Arguments.of(CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC, "59bc6581-f1e9-46ff-8c7f-78aa9e324c4a", false)
+    );
+  }
 
-    var purchaseOrderId = "8137de83-76c0-4d3e-bf73-416de5e780fa";
-    var pieceId = "aaecf1f7-28dc-4940-bfd4-be0e26afde95";
+  @ParameterizedTest
+  @MethodSource("testPutPiecesByIdEcsTestArgs")
+  void testPutPiecesByIdEcsTest(String purchaseOrderId, String pieceId, boolean mockItem) throws Exception {
+    logger.info("=== Test update piece by id ECS - valid Id 204 ===");
 
     var purchaseOrderMock = getMockData(String.format("%s/%s/consortium_purchase_order.json", ECS_PATH, purchaseOrderId));
     var titlesMock = getMockData(String.format("%s/%s/consortium_titles.json", ECS_PATH, purchaseOrderId));
     var poLineMock = getMockData(String.format("%s/%s/consortium_po_line.json", ECS_PATH, purchaseOrderId));
     var piecesMock = getMockData(String.format("%s/%s/consortium_pieces.json", ECS_PATH, purchaseOrderId));
-
-    var purchaseOrderStorage = new JsonObject(purchaseOrderMock).mapTo(PurchaseOrder.class);
-    var titlesStorage = new JsonObject(titlesMock).mapTo(Title.class);
-    var poLineStorage = new JsonObject(poLineMock).mapTo(PoLine.class);
+    var instanceMock = getMockData(String.format("%s/%s/university_instance.json", ECS_PATH, purchaseOrderId));
+    var holdingsMock = getMockData(String.format("%s/%s/university_holdings_record.json", ECS_PATH, purchaseOrderId));
 
     var piecesStorage = new JsonObject(piecesMock);
     piecesStorage.put(ID, pieceId);
@@ -187,20 +199,30 @@ public class PieceApiTest {
     piecesRequest.put(ID, pieceId);
     piecesRequest.put("receivingStatus", "Received");
 
-    addMockEntry(PURCHASE_ORDER_STORAGE, purchaseOrderStorage);
-    addMockEntry(TITLES, titlesStorage);
-    addMockEntry(PO_LINES_STORAGE, poLineStorage);
+    addMockEntry(PURCHASE_ORDER_STORAGE, new JsonObject(purchaseOrderMock).mapTo(PurchaseOrder.class));
+    addMockEntry(TITLES, new JsonObject(titlesMock).mapTo(Title.class));
+    addMockEntry(PO_LINES_STORAGE, new JsonObject(poLineMock).mapTo(PoLine.class));
     addMockEntry(PIECES_STORAGE, piecesStorage);
+    addMockEntry(INSTANCE_STORAGE, new JsonObject(instanceMock));
+    addMockEntry(HOLDINGS_STORAGE, new JsonObject(holdingsMock));
+
+    if (mockItem) {
+      var itemMock = getMockData(String.format("%s/%s/university_item.json", ECS_PATH, purchaseOrderId));
+      var itemStorage = new JsonObject(itemMock);
+      addMockEntry(ITEMS_STORAGE, itemStorage);
+    }
 
     var headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_ECS, X_OKAPI_USER_ID);
-
     var piecesRequestBody = JsonObject.mapFrom(piecesRequest).encode();
+
     verifyPut(String.format(PIECES_ID_PATH, pieceId), piecesRequestBody, headers, "", HttpStatus.HTTP_NO_CONTENT.toInt());
 
     var piecesResponseBody = verifyGet(String.format(PIECES_ID_PATH, pieceId),headers, APPLICATION_JSON, HttpStatus.HTTP_OK.toInt());
     var piecesResponse = piecesResponseBody.as(Piece.class);
 
-    assertThat(piecesResponse.getItemId(), notNullValue());
+    if (purchaseOrderId.equals(CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL)) {
+      assertThat(piecesResponse.getItemId(), notNullValue());
+    }
 
     // Message sent to event bus
     HandlersTestHelper.verifyReceiptStatusUpdateEvent(1);

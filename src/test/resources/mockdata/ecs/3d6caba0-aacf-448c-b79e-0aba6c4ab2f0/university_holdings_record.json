@@ -1,0 +1,23 @@
+{
+  "id": "5e255564-7461-4478-b671-df4e4021802b",
+  "hrid": "ho00000000008",
+  "notes": [],
+  "_version": 1,
+  "metadata": {
+    "createdDate": "2024-07-22T06:33:03.488Z",
+    "updatedDate": "2024-07-22T06:33:03.488Z",
+    "createdByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c",
+    "updatedByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c"
+  },
+  "sourceId": "f32d531e-df79-46b3-8932-cdd35f7a2264",
+  "formerIds": [],
+  "instanceId": "33de01c9-ab9e-49e3-b9c4-466dc7821d96",
+  "electronicAccess": [],
+  "holdingsStatements": [],
+  "statisticalCodeIds": [],
+  "administrativeNotes": [],
+  "effectiveLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+  "permanentLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+  "holdingsStatementsForIndexes": [],
+  "holdingsStatementsForSupplements": []
+}

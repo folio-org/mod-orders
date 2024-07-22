@@ -52,6 +52,8 @@ public class ResourcePathResolver {
   public static final String ROUTING_LISTS = "routingLists";
   public static final String ORDER_SETTINGS = "orderSettings";
   public static final String USERS = "users";
+  public static final String INSTANCE_STORAGE = "instance";
+  public static final String HOLDINGS_STORAGE = "holdings";
   public static final String ITEMS_STORAGE = "items";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
@@ -97,6 +99,8 @@ public class ResourcePathResolver {
     apis.put(USERS, "/users");
     apis.put(ORDER_SETTINGS, "/orders-storage/settings");
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
+    apis.put(INSTANCE_STORAGE, "/inventory/instances");
+    apis.put(HOLDINGS_STORAGE, "/holdings-storage/holdings");
     apis.put(ITEMS_STORAGE, "/inventory/items");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);

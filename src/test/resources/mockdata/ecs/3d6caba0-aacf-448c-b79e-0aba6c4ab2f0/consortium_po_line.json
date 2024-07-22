@@ -1,12 +1,11 @@
 {
-  "id": "391e39b1-f891-4d92-ab14-b5760bdac937",
+  "id": "41319d67-9860-4ecf-b604-1d34c21063d9",
   "cost": {
     "currency": "USD",
     "discountType": "percentage",
-    "listUnitPrice": 1,
-    "quantityPhysical": 1,
     "quantityElectronic": 1,
-    "poLineEstimatedPrice": 1
+    "poLineEstimatedPrice": 1.0,
+    "listUnitPriceElectronic": 1.0
   },
   "rush": false,
   "alerts": [],
@@ -19,32 +18,34 @@
     "subscriptionInterval": 0
   },
   "metadata": {
-    "createdDate": "2024-07-19T17:43:09.591Z",
-    "updatedDate": "2024-07-19T17:43:25.231Z",
-    "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
-    "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
+    "createdDate": "2024-07-22T06:32:45.985Z",
+    "updatedDate": "2024-07-22T06:33:03.922Z",
+    "createdByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c",
+    "updatedByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c"
   },
-  "physical": {
-    "volumes": [],
+  "eresource": {
+    "trial": false,
+    "activated": false,
     "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
-    "createInventory": "Instance, Holding, Item",
-    "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+    "accessProvider": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+    "createInventory": "Instance, Holding"
   },
   "isPackage": false,
   "locations": [
     {
       "quantity": 1,
       "tenantId": "university",
-      "holdingId": "873e87d4-0c17-430a-81ed-93ffbb8f0d8e",
-      "quantityPhysical": 1
+      "holdingId": "5e255564-7461-4478-b671-df4e4021802b",
+      "quantityPhysical": 0,
+      "quantityElectronic": 1
     }
   ],
   "collection": false,
-  "instanceId": "fd2712a1-4306-4611-baa5-10c81913f643",
-  "orderFormat": "Physical Resource",
+  "instanceId": "33de01c9-ab9e-49e3-b9c4-466dc7821d96",
+  "orderFormat": "Electronic Resource",
   "checkinItems": false,
   "contributors": [],
-  "poLineNumber": "10136-1",
+  "poLineNumber": "10016-1",
   "vendorDetail": {
     "instructions": "",
     "vendorAccount": "1234",
@@ -54,14 +55,14 @@
   "receiptStatus": "Awaiting Receipt",
   "claimingActive": false,
   "reportingCodes": [],
-  "titleOrPackage": "MODORDERS-1141 Bob test 28",
+  "titleOrPackage": "MODORDERS-1141 Bob test 9",
   "automaticExport": false,
-  "purchaseOrderId": "8137de83-76c0-4d3e-bf73-416de5e780fa",
+  "purchaseOrderId": "3d6caba0-aacf-448c-b79e-0aba6c4ab2f0",
   "claimingInterval": 45,
   "fundDistribution": [],
   "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
   "searchLocationIds": [
-    "7b434c63-b6d6-42eb-b071-add43ac69624"
+    "fcd64ce1-6995-48f0-840e-89ffa2288371"
   ],
   "donorOrganizationIds": [],
   "cancellationRestriction": true

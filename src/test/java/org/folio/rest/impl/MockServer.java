@@ -313,6 +313,8 @@ public class MockServer {
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
   public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
+  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL = "8137de83-76c0-4d3e-bf73-416de5e780fa";
+  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC = "3d6caba0-aacf-448c-b79e-0aba6c4ab2f0";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -1207,6 +1209,7 @@ public class MockServer {
       try {
         JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
         JsonArray jsonArray = items.getJsonArray(ITEMS);
+        appendEcsItems(jsonArray);
 
         if (query.startsWith("id==")) {
           List<String> itemIds = extractIdsFromQuery(query);
@@ -1246,6 +1249,10 @@ public class MockServer {
     }
   }
 
+  private static void appendEcsItems(JsonArray jsonArray) throws IOException {
+    jsonArray.add(new JsonObject(getMockData(String.format("%s/%s/university_item.json", ECS_PATH, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL))));
+  }
+
   private void handleGetInventoryItemRecordById(RoutingContext ctx) {
     logger.info("handleGetInventoryItemRecordById got: " + ctx.request().path());
 
@@ -1260,6 +1267,7 @@ public class MockServer {
       try {
         JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
         JsonArray jsonArray = items.getJsonArray(ITEMS);
+        appendEcsItems(jsonArray);
 
         final Iterator<Object> iterator = jsonArray.iterator();
           while (iterator.hasNext()) {
