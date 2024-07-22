@@ -1,0 +1,28 @@
+{
+  "id": "5bb7a68f-3753-47b3-ab22-476274743456",
+  "hrid": "it00000000068",
+  "notes": [],
+  "status": {
+    "date": "2024-07-22T10:34:49.772+00:00",
+    "name": "On order"
+  },
+  "_version": 1,
+  "metadata": {
+    "createdDate": "2024-07-22T10:34:49.771Z",
+    "updatedDate": "2024-07-22T10:34:49.771Z",
+    "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
+    "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
+  },
+  "formerIds": [],
+  "yearCaption": [],
+  "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+  "circulationNotes": [],
+  "electronicAccess": [],
+  "holdingsRecordId": "e5e5dbcf-4d4e-4c48-993f-af15b8bef5ed",
+  "statisticalCodeIds": [],
+  "administrativeNotes": [],
+  "effectiveLocationId": "7b434c63-b6d6-42eb-b071-add43ac69624",
+  "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+  "purchaseOrderLineIdentifier": "952bc8b4-9735-47f5-9a57-5376f5f6bd15",
+  "effectiveCallNumberComponents": {}
+}

@@ -1,5 +1,5 @@
 {
-  "id": "3d6caba0-aacf-448c-b79e-0aba6c4ab2f0",
+  "id": "01c8d44a-dc73-4bca-a4d1-ef28bdfb9275",
   "tags": {
     "tagList": [
       "amazon"
@@ -14,18 +14,18 @@
   "approved": true,
   "manualPo": false,
   "metadata": {
-    "createdDate": "2024-07-22T06:31:11.620Z",
-    "updatedDate": "2024-07-22T06:33:04.007Z",
-    "createdByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c",
-    "updatedByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c"
+    "createdDate": "2024-07-22T10:28:35.610Z",
+    "updatedDate": "2024-07-22T10:34:50.066Z",
+    "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
+    "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
   },
-  "poNumber": "10016",
+  "poNumber": "10152",
   "template": "4dee318b-f5b3-40dc-be93-cc89b8c45b6f",
   "orderType": "One-Time",
   "acqUnitIds": [],
   "reEncumber": false,
-  "dateOrdered": "2024-07-22T06:33:02.119+00:00",
-  "approvalDate": "2024-07-22T06:33:02.119+00:00",
-  "approvedById": "122b3d2b-4788-4f1e-9117-56daa91cb75c",
+  "dateOrdered": "2024-07-22T10:34:48.506+00:00",
+  "approvalDate": "2024-07-22T10:34:48.506+00:00",
+  "approvedById": "98a2b51b-0550-4d8e-9915-f7642a24328b",
   "workflowStatus": "Open"
 }

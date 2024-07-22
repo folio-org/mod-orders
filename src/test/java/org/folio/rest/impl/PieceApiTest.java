@@ -30,9 +30,15 @@ import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.REQUEST_FOUND;
 import static org.folio.rest.impl.MockServer.CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC;
 import static org.folio.rest.impl.MockServer.CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL;
-import static org.folio.rest.impl.MockServer.ECS_PATH;
+import static org.folio.rest.impl.MockServer.ECS_CONSORTIUM_PIECES_JSON;
+import static org.folio.rest.impl.MockServer.ECS_CONSORTIUM_PO_LINE_JSON;
+import static org.folio.rest.impl.MockServer.ECS_CONSORTIUM_PURCHASE_ORDER_JSON;
+import static org.folio.rest.impl.MockServer.ECS_CONSORTIUM_TITLES_JSON;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
+import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_HOLDINGS_RECORD_JSON;
+import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_INSTANCE_JSON;
+import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_ITEM_JSON;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -175,7 +181,7 @@ public class PieceApiTest {
   private static Stream<Arguments> testPutPiecesByIdEcsTestArgs() {
     return Stream.of(
       Arguments.of(CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL, "aaecf1f7-28dc-4940-bfd4-be0e26afde95", true),
-      Arguments.of(CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC, "59bc6581-f1e9-46ff-8c7f-78aa9e324c4a", false)
+      Arguments.of(CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC, "8cf0c835-9ad5-4cfb-8bd9-7fa78e65f7c3", true)
     );
   }
 
@@ -184,12 +190,12 @@ public class PieceApiTest {
   void testPutPiecesByIdEcsTest(String purchaseOrderId, String pieceId, boolean mockItem) throws Exception {
     logger.info("=== Test update piece by id ECS - valid Id 204 ===");
 
-    var purchaseOrderMock = getMockData(String.format("%s/%s/consortium_purchase_order.json", ECS_PATH, purchaseOrderId));
-    var titlesMock = getMockData(String.format("%s/%s/consortium_titles.json", ECS_PATH, purchaseOrderId));
-    var poLineMock = getMockData(String.format("%s/%s/consortium_po_line.json", ECS_PATH, purchaseOrderId));
-    var piecesMock = getMockData(String.format("%s/%s/consortium_pieces.json", ECS_PATH, purchaseOrderId));
-    var instanceMock = getMockData(String.format("%s/%s/university_instance.json", ECS_PATH, purchaseOrderId));
-    var holdingsMock = getMockData(String.format("%s/%s/university_holdings_record.json", ECS_PATH, purchaseOrderId));
+    var purchaseOrderMock = getMockData(String.format(ECS_CONSORTIUM_PURCHASE_ORDER_JSON, purchaseOrderId));
+    var poLineMock = getMockData(String.format(ECS_CONSORTIUM_PO_LINE_JSON, purchaseOrderId));
+    var titlesMock = getMockData(String.format(ECS_CONSORTIUM_TITLES_JSON, purchaseOrderId));
+    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, purchaseOrderId));
+    var instanceMock = getMockData(String.format(ECS_UNIVERSITY_INSTANCE_JSON, purchaseOrderId));
+    var holdingsMock = getMockData(String.format(ECS_UNIVERSITY_HOLDINGS_RECORD_JSON, purchaseOrderId));
 
     var piecesStorage = new JsonObject(piecesMock);
     piecesStorage.put(ID, pieceId);
@@ -207,7 +213,7 @@ public class PieceApiTest {
     addMockEntry(HOLDINGS_STORAGE, new JsonObject(holdingsMock));
 
     if (mockItem) {
-      var itemMock = getMockData(String.format("%s/%s/university_item.json", ECS_PATH, purchaseOrderId));
+      var itemMock = getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, purchaseOrderId));
       var itemStorage = new JsonObject(itemMock);
       addMockEntry(ITEMS_STORAGE, itemStorage);
     }

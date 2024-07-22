@@ -1,11 +1,11 @@
 {
-  "id": "41319d67-9860-4ecf-b604-1d34c21063d9",
+  "id": "952bc8b4-9735-47f5-9a57-5376f5f6bd15",
   "cost": {
     "currency": "USD",
     "discountType": "percentage",
     "quantityElectronic": 1,
-    "poLineEstimatedPrice": 1.0,
-    "listUnitPriceElectronic": 1.0
+    "poLineEstimatedPrice": 1,
+    "listUnitPriceElectronic": 1
   },
   "rush": false,
   "alerts": [],
@@ -18,34 +18,34 @@
     "subscriptionInterval": 0
   },
   "metadata": {
-    "createdDate": "2024-07-22T06:32:45.985Z",
-    "updatedDate": "2024-07-22T06:33:03.922Z",
-    "createdByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c",
-    "updatedByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c"
+    "createdDate": "2024-07-22T10:34:00.342Z",
+    "updatedDate": "2024-07-22T10:34:50.017Z",
+    "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
+    "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
   },
   "eresource": {
     "trial": false,
     "activated": false,
     "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
     "accessProvider": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
-    "createInventory": "Instance, Holding"
+    "createInventory": "Instance, Holding, Item"
   },
   "isPackage": false,
   "locations": [
     {
       "quantity": 1,
       "tenantId": "university",
-      "holdingId": "5e255564-7461-4478-b671-df4e4021802b",
+      "holdingId": "e5e5dbcf-4d4e-4c48-993f-af15b8bef5ed",
       "quantityPhysical": 0,
       "quantityElectronic": 1
     }
   ],
   "collection": false,
-  "instanceId": "33de01c9-ab9e-49e3-b9c4-466dc7821d96",
+  "instanceId": "b0fee84e-07c2-44ba-ab79-3a77ec341d52",
   "orderFormat": "Electronic Resource",
   "checkinItems": false,
   "contributors": [],
-  "poLineNumber": "10016-1",
+  "poLineNumber": "10152-1",
   "vendorDetail": {
     "instructions": "",
     "vendorAccount": "1234",
@@ -55,14 +55,14 @@
   "receiptStatus": "Awaiting Receipt",
   "claimingActive": false,
   "reportingCodes": [],
-  "titleOrPackage": "MODORDERS-1141 Bob test 9",
+  "titleOrPackage": "MODORDERS-1141 Bob test 31",
   "automaticExport": false,
-  "purchaseOrderId": "3d6caba0-aacf-448c-b79e-0aba6c4ab2f0",
+  "purchaseOrderId": "01c8d44a-dc73-4bca-a4d1-ef28bdfb9275",
   "claimingInterval": 45,
   "fundDistribution": [],
   "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
   "searchLocationIds": [
-    "fcd64ce1-6995-48f0-840e-89ffa2288371"
+    "7b434c63-b6d6-42eb-b071-add43ac69624"
   ],
   "donorOrganizationIds": [],
   "cancellationRestriction": true

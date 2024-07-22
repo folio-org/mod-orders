@@ -8,6 +8,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
@@ -25,8 +26,8 @@ import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
 public class ItemRecreateInventoryService {
 
+  protected static final int ITEM_QUANTITY = 1;
   private static final Logger logger = LogManager.getLogger(ItemRecreateInventoryService.class);
-  private static final int ITEM_QUANTITY = 1;
 
   private final InventoryItemManager inventoryItemManager;
   private final InventoryHoldingManager inventoryHoldingManager;
@@ -79,27 +80,27 @@ public class ItemRecreateInventoryService {
         .orElse(Future.succeededFuture()));
   }
 
-  private Future<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext requestContext) {
-    if (piece == null || piece.getHoldingId() == null) {
+  public Future<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext requestContext) {
+    if (Objects.isNull(piece) || Objects.isNull(piece.getHoldingId())) {
       return Future.succeededFuture();
     }
 
     var holdingId = piece.getHoldingId();
 
     return inventoryHoldingManager.getHoldingById(holdingId, true, requestContext)
-      .compose(holding -> getUpdatePossibleForHolding(holding, holdingId, piece, requestContext, requestContext))
+      .compose(holding -> getUpdatePossibleForHolding(holding, holdingId, piece, requestContext))
       .compose(isUpdatePossibleVsHolding -> deleteHoldingIfPossible(isUpdatePossibleVsHolding, holdingId, requestContext));
   }
 
   private Future<Pair<Boolean, JsonObject>> getUpdatePossibleForHolding(JsonObject holding, String holdingId, Piece piece,
-                                                                        RequestContext locationContext, RequestContext requestContext) {
-    if (holding == null || holding.isEmpty()) {
+                                                                        RequestContext requestContext) {
+    if (Objects.isNull(holding) || holding.isEmpty()) {
       return Future.succeededFuture(Pair.of(false, new JsonObject()));
     }
 
     return pieceStorageService.getPiecesByHoldingId(holdingId, requestContext)
       .map(pieces -> skipPieceToProcess(piece, pieces))
-      .compose(existingPieces -> inventoryItemManager.getItemsByHoldingId(holdingId, locationContext)
+      .compose(existingPieces -> inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
         .map(existingItems -> {
           var remainingPieces = skipPieceToProcess(piece, existingPieces);
           if (CollectionUtils.isEmpty(remainingPieces) && CollectionUtils.isEmpty(existingItems)) {
@@ -112,13 +113,13 @@ public class ItemRecreateInventoryService {
   }
 
   private Future<Pair<String, String>> deleteHoldingIfPossible(Pair<Boolean, JsonObject> isUpdatePossibleVsHolding,
-                                                               String holdingId, RequestContext locationContext) {
+                                                               String holdingId, RequestContext requestContext) {
     var isUpdatePossible = isUpdatePossibleVsHolding.getKey();
     var holding = isUpdatePossibleVsHolding.getValue();
     if (isUpdatePossible && !holding.isEmpty()) {
       var permanentLocationId = holding.getString(HOLDING_PERMANENT_LOCATION_ID);
 
-      return inventoryHoldingManager.deleteHoldingById(holdingId, true, locationContext)
+      return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
         .map(v -> Pair.of(holdingId, permanentLocationId));
     }
     return Future.succeededFuture();

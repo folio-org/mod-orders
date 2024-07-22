@@ -1,0 +1,20 @@
+{
+  "id": "8cf0c835-9ad5-4cfb-8bd9-7fa78e65f7c3",
+  "format": "Electronic",
+  "itemId": "5bb7a68f-3753-47b3-ab22-476274743456",
+  "isBound": false,
+  "titleId": "119a0a40-4494-465d-b5c0-d1171e9fb2cd",
+  "metadata": {
+    "createdDate": "2024-07-22T10:34:49.975Z",
+    "updatedDate": "2024-07-22T10:34:49.975Z",
+    "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
+    "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
+  },
+  "poLineId": "952bc8b4-9735-47f5-9a57-5376f5f6bd15",
+  "holdingId": "e5e5dbcf-4d4e-4c48-993f-af15b8bef5ed",
+  "displayToPublic": false,
+  "receivingStatus": "Expected",
+  "displayOnHolding": false,
+  "receivingTenantId": "college",
+  "statusUpdatedDate": "2024-07-22T10:34:49.975+00:00"
+}
