@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import java.util.stream.Stream;
 import org.folio.ApiTestSuite;
 import org.folio.models.pieces.PieceCreationHolder;
 import org.folio.rest.core.models.RequestContext;
@@ -43,7 +44,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -177,6 +180,53 @@ public class PieceCreateFlowPoLineServiceTest {
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
     verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+  }
+
+  private static Stream<Arguments> shouldSetReceivingTenantIdFromPieceArgs() {
+    return Stream.of(
+      // For location update
+      Arguments.of(PoLine.OrderFormat.PHYSICAL_RESOURCE, Piece.Format.PHYSICAL,  1, 0,false),
+      Arguments.of(PoLine.OrderFormat.ELECTRONIC_RESOURCE, Piece.Format.ELECTRONIC, 0, 1, false),
+      Arguments.of(PoLine.OrderFormat.P_E_MIX, Piece.Format.PHYSICAL, 1, 0, false),
+      // For location addition
+      Arguments.of(PoLine.OrderFormat.PHYSICAL_RESOURCE, Piece.Format.PHYSICAL, 1, 0, true),
+      Arguments.of(PoLine.OrderFormat.ELECTRONIC_RESOURCE, Piece.Format.ELECTRONIC, 0, 1, true),
+      Arguments.of(PoLine.OrderFormat.P_E_MIX, Piece.Format.PHYSICAL, 1, 0, true)
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("shouldSetReceivingTenantIdFromPieceArgs")
+  void shouldSetReceivingTenantIdFromPieceForBothLocationUpdateAndAddition(PoLine.OrderFormat orderFormat, Piece.Format pieceFormat, int physicalCount, int electronicCount, boolean locationUpdateRequired) {
+    var purchaseOrderId = UUID.randomUUID().toString();
+    var poLineId = UUID.randomUUID().toString();
+    var pieceId = UUID.randomUUID().toString();
+    var receivingTenantId = "test";
+
+    var location = new Location().withHoldingId(UUID.randomUUID().toString()).withLocationId(UUID.randomUUID().toString())
+      .withQuantityPhysical(physicalCount).withQuantityElectronic(electronicCount).withQuantity(1).withTenantId(receivingTenantId);
+
+    var piece = new Piece().withId(pieceId).withPoLineId(poLineId).withFormat(pieceFormat).withReceivingTenantId(receivingTenantId);
+    if (Boolean.FALSE.equals(locationUpdateRequired)) {
+      piece = piece.withHoldingId(location.getHoldingId());
+    } else {
+      piece = piece.withHoldingId(UUID.randomUUID().toString());
+    }
+
+    var purchaseOrder = new PurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(OPEN);
+    var cost = new Cost().withQuantityPhysical(1).withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD").withPoLineEstimatedPrice(1d);
+    var poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(purchaseOrderId).withOrderFormat(orderFormat).withId(poLineId).withLocations(List.of(location)).withCost(cost);
+    var holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
+
+    holder.withOrderInformation(purchaseOrder, poLine);
+
+    // When
+    pieceCreateFlowPoLineService.poLineUpdateQuantity(holder);
+
+    // Then
+    var poLineToSave = holder.getPoLineToSave();
+
+    assertEquals(receivingTenantId, poLineToSave.getLocations().get(0).getTenantId());
   }
 
   @Test

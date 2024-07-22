@@ -588,10 +588,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  ItemRecreateInventoryService pieceRecreateInventoryService(InventoryItemManager inventoryItemManager,
-                                                             InventoryHoldingManager inventoryHoldingManager,
-                                                             PieceStorageService pieceStorageService) {
-    return new ItemRecreateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService);
+  ItemRecreateInventoryService pieceRecreateInventoryService(InventoryItemManager inventoryItemManager) {
+    return new ItemRecreateInventoryService(inventoryItemManager);
   }
 
   @Bean

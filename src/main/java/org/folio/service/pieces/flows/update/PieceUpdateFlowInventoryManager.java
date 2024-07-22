@@ -5,7 +5,6 @@ import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 
-import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -13,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
-import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
@@ -117,44 +115,19 @@ public class PieceUpdateFlowInventoryManager {
       return Future.succeededFuture();
     }
 
-    String srcTenantId;
-    String dstTenantId;
-    RequestContext srcLocCtx;
-    RequestContext dstLocCtx;
-    var locations = holder.getOriginPoLine().getLocations();
-    if (!locations.isEmpty()) {
-      var location = locations.get(0);
-      if (Objects.nonNull(location.getTenantId())) {
-        srcTenantId = location.getTenantId();
-        srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, srcTenantId);
-      } else {
-        srcTenantId = null;
-        srcLocCtx = requestContext;
-      }
-    } else {
-      srcTenantId = null;
-      srcLocCtx = requestContext;
-    }
-
-    if (Objects.nonNull(pieceToUpdate.getReceivingTenantId())) {
-      dstTenantId = pieceToUpdate.getReceivingTenantId();
-      dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, dstTenantId);
-    } else {
-      dstTenantId = null;
-      dstLocCtx = null;
-    }
-
+    var srcConfig = PieceUpdateFlowUtil.createItemRecreateSrcConfig(holder.getOriginPoLine(), requestContext);
+    var dstConfig = PieceUpdateFlowUtil.createItemRecreateDstConfig(pieceToUpdate, requestContext);
     var itemId = pieceToUpdate.getItemId();
 
-    return inventoryItemManager.getItemRecordById(itemId, true, srcLocCtx)
+    return inventoryItemManager.getItemRecordById(itemId, true, srcConfig.context())
       .compose(jsonItem -> {
         if (jsonItem != null && !jsonItem.isEmpty()) {
           updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate);
-          if (Objects.nonNull(srcTenantId) && Objects.nonNull(dstTenantId) && !srcTenantId.equals(dstTenantId)) {
+          if (PieceUpdateFlowUtil.allowItemRecreation(srcConfig, dstConfig)) {
             logger.info("handleItem:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'",
-              itemId, srcTenantId, dstTenantId
+              itemId, srcConfig.tenantId(), dstConfig.tenantId()
             );
-            return itemRecreateInventoryService.recreateItemInDestinationTenant(holder, srcLocCtx, dstLocCtx);
+            return itemRecreateInventoryService.recreateItemInDestinationTenant(holder, srcConfig.context(), dstConfig.context());
           } else {
             logger.info("handleItem:: updating item by id '{}'", itemId);
             return inventoryItemManager.updateItem(jsonItem, requestContext).map(v -> jsonItem.getString(ID));

@@ -32,7 +32,7 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
     if (CollectionUtils.isNotEmpty(locationsToUpdate)) {
       Location loc = locationsToUpdate.get(0);
       Cost cost = lineToSave.getCost();
-      if (Objects.nonNull(piece.getReceivingStatus())) {
+      if (Objects.nonNull(piece.getReceivingTenantId())) {
         loc.setTenantId(piece.getReceivingTenantId());
       }
       if (piece.getFormat() == Piece.Format.ELECTRONIC) {
@@ -52,7 +52,7 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
       Location locationToAdd = new Location().withLocationId(piece.getLocationId()).withHoldingId(piece.getHoldingId())
         .withQuantity(qty);
       Cost cost = lineToSave.getCost();
-      if (Objects.nonNull(piece.getReceivingStatus())) {
+      if (Objects.nonNull(piece.getReceivingTenantId())) {
         locationToAdd.setTenantId(piece.getReceivingTenantId());
       }
       if (piece.getFormat() == Piece.Format.ELECTRONIC) {
