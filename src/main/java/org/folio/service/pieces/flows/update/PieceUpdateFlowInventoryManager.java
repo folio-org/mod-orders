@@ -115,15 +115,15 @@ public class PieceUpdateFlowInventoryManager {
       return Future.succeededFuture();
     }
 
-    var srcConfig = PieceUpdateFlowUtil.createItemRecreateSrcConfig(holder.getOriginPoLine(), requestContext);
-    var dstConfig = PieceUpdateFlowUtil.createItemRecreateDstConfig(pieceToUpdate, requestContext);
+    var srcConfig = PieceUpdateFlowUtil.constructItemRecreateSrcConfig(holder.getOriginPoLine(), requestContext);
+    var dstConfig = PieceUpdateFlowUtil.constructItemRecreateDstConfig(pieceToUpdate, requestContext);
     var itemId = pieceToUpdate.getItemId();
 
     return inventoryItemManager.getItemRecordById(itemId, true, srcConfig.context())
       .compose(jsonItem -> {
         if (jsonItem != null && !jsonItem.isEmpty()) {
           updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate);
-          if (PieceUpdateFlowUtil.allowItemRecreation(srcConfig, dstConfig)) {
+          if (PieceUpdateFlowUtil.allowItemRecreate(srcConfig, dstConfig)) {
             logger.info("handleItem:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'",
               itemId, srcConfig.tenantId(), dstConfig.tenantId()
             );

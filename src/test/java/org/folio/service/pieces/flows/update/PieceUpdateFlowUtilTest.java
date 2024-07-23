@@ -74,104 +74,104 @@ class PieceUpdateFlowUtilTest {
   }
 
   @Test
-  void testCreateItemRecreateSrcConfigWithLocationAndWithUniversityTenantId() throws IOException {
+  void testConstructItemRecreateSrcConfigWithLocationUniversityTenantId() throws IOException {
     var exceptedSrcTenantId = "university";
 
     var poLineMock = getMockData(String.format(ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var poLine = new JsonObject(poLineMock).mapTo(CompositePoLine.class);
-    var srcConfig = PieceUpdateFlowUtil.createItemRecreateSrcConfig(poLine, requestContext);
+    var srcConfig = PieceUpdateFlowUtil.constructItemRecreateSrcConfig(poLine, requestContext);
 
     assertEquals(exceptedSrcTenantId, srcConfig.tenantId());
     assertEquals(exceptedSrcTenantId, TenantTool.tenantId(srcConfig.context().getHeaders()));
   }
 
   @Test
-  void testCreateItemRecreateSrcConfigWithoutLocation() throws IOException {
+  void testConstructItemRecreateSrcConfigWithEmptyLocation() throws IOException {
     var exceptedSrcTenantId = TenantTool.tenantId(requestContext.getHeaders());
 
     var poLineMock = getMockData(String.format(ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var poLine = new JsonObject(poLineMock).mapTo(CompositePoLine.class);
     poLine.setLocations(List.of());
-    var srcConfig = PieceUpdateFlowUtil.createItemRecreateSrcConfig(poLine, requestContext);
+    var srcConfig = PieceUpdateFlowUtil.constructItemRecreateSrcConfig(poLine, requestContext);
 
     Assertions.assertNull(srcConfig.tenantId());
     Assertions.assertEquals(exceptedSrcTenantId, TenantTool.tenantId(srcConfig.context().getHeaders()));
   }
 
   @Test
-  void testCreateItemRecreateSrcConfigWithLocationAndWithoutTenantId() throws IOException {
+  void testConstructItemRecreateSrcConfigWithNullLocationTenantId() throws IOException {
     var exceptedSrcTenantId = TenantTool.tenantId(requestContext.getHeaders());
 
     var poLineMock = getMockData(String.format(ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var poLine = new JsonObject(poLineMock).mapTo(CompositePoLine.class);
     poLine.getLocations().get(0).setTenantId(null);
-    var srcConfig = PieceUpdateFlowUtil.createItemRecreateSrcConfig(poLine, requestContext);
+    var srcConfig = PieceUpdateFlowUtil.constructItemRecreateSrcConfig(poLine, requestContext);
 
     Assertions.assertNull(srcConfig.tenantId());
     Assertions.assertEquals(exceptedSrcTenantId, TenantTool.tenantId(srcConfig.context().getHeaders()));
   }
 
   @Test
-  void testCreateEscItemRecreateDstConfigWithPieceReceivingTenantId() throws IOException {
+  void testConstructItemRecreateDstConfigWithPieceReceivingTenantId() throws IOException {
     var exceptedDstTenantId = "college";
 
     var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var piece = new JsonObject(piecesMock).mapTo(Piece.class);
-    var dstConfig = PieceUpdateFlowUtil.createItemRecreateDstConfig(piece, requestContext);
+    var dstConfig = PieceUpdateFlowUtil.constructItemRecreateDstConfig(piece, requestContext);
 
     Assertions.assertEquals(exceptedDstTenantId, dstConfig.tenantId());
     Assertions.assertEquals(exceptedDstTenantId, TenantTool.tenantId(dstConfig.context().getHeaders()));
   }
 
   @Test
-  void testCreateEscItemRecreateDstConfigWithoutPieceReceivingTenantId() throws IOException {
+  void testConstructItemRecreateDstConfigWithNullPieceReceivingTenantId() throws IOException {
     var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var piece = new JsonObject(piecesMock).mapTo(Piece.class);
     piece.setReceivingTenantId(null);
-    var dstConfig = PieceUpdateFlowUtil.createItemRecreateDstConfig(piece, requestContext);
+    var dstConfig = PieceUpdateFlowUtil.constructItemRecreateDstConfig(piece, requestContext);
 
     Assertions.assertNull(dstConfig.tenantId());
     Assertions.assertNull(dstConfig.context());
   }
 
   @Test
-  void testAllowItemRecreationTrue() throws IOException {
+  void testAllowItemRecreateTrue() throws IOException {
     var poLineMock = getMockData(String.format(ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
 
     var poLine = new JsonObject(poLineMock).mapTo(CompositePoLine.class);
     var piece = new JsonObject(piecesMock).mapTo(Piece.class);
-    var srcConfig = PieceUpdateFlowUtil.createItemRecreateSrcConfig(poLine, requestContext);
-    var dstConfig = PieceUpdateFlowUtil.createItemRecreateDstConfig(piece, requestContext);
+    var srcConfig = PieceUpdateFlowUtil.constructItemRecreateSrcConfig(poLine, requestContext);
+    var dstConfig = PieceUpdateFlowUtil.constructItemRecreateDstConfig(piece, requestContext);
 
-    Assertions.assertTrue(PieceUpdateFlowUtil.allowItemRecreation(srcConfig, dstConfig));
+    Assertions.assertTrue(PieceUpdateFlowUtil.allowItemRecreate(srcConfig, dstConfig));
   }
 
   @Test
-  void testAllowItemRecreationFalseSameTenant() throws IOException {
+  void testAllowItemRecreateFalseWithSameTenant() throws IOException {
     var poLineMock = getMockData(String.format(ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
 
     var poLine = new JsonObject(poLineMock).mapTo(CompositePoLine.class);
     var piece = new JsonObject(piecesMock).mapTo(Piece.class);
     piece.setReceivingTenantId(poLine.getLocations().get(0).getTenantId());
-    var srcConfig = PieceUpdateFlowUtil.createItemRecreateSrcConfig(poLine, requestContext);
-    var dstConfig = PieceUpdateFlowUtil.createItemRecreateDstConfig(piece, requestContext);
+    var srcConfig = PieceUpdateFlowUtil.constructItemRecreateSrcConfig(poLine, requestContext);
+    var dstConfig = PieceUpdateFlowUtil.constructItemRecreateDstConfig(piece, requestContext);
 
-    Assertions.assertFalse(PieceUpdateFlowUtil.allowItemRecreation(srcConfig, dstConfig));
+    Assertions.assertFalse(PieceUpdateFlowUtil.allowItemRecreate(srcConfig, dstConfig));
   }
 
   @Test
-  void testAllowItemRecreationFalseNullTenant() throws IOException {
+  void testAllowItemRecreateFalseWithNullTenant() throws IOException {
     var poLineMock = getMockData(String.format(ECS_CONSORTIUM_PO_LINE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
     var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
 
     var poLine = new JsonObject(poLineMock).mapTo(CompositePoLine.class);
     var piece = new JsonObject(piecesMock).mapTo(Piece.class);
     piece.setReceivingTenantId(null);
-    var srcConfig = PieceUpdateFlowUtil.createItemRecreateSrcConfig(poLine, requestContext);
-    var dstConfig = PieceUpdateFlowUtil.createItemRecreateDstConfig(piece, requestContext);
+    var srcConfig = PieceUpdateFlowUtil.constructItemRecreateSrcConfig(poLine, requestContext);
+    var dstConfig = PieceUpdateFlowUtil.constructItemRecreateDstConfig(piece, requestContext);
 
-    Assertions.assertFalse(PieceUpdateFlowUtil.allowItemRecreation(srcConfig, dstConfig));
+    Assertions.assertFalse(PieceUpdateFlowUtil.allowItemRecreate(srcConfig, dstConfig));
   }
 }

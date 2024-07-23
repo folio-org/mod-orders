@@ -11,7 +11,7 @@ import org.folio.rest.jaxrs.model.Piece;
 @UtilityClass
 public class PieceUpdateFlowUtil {
 
-  static ItemRecreateConfig createItemRecreateSrcConfig(CompositePoLine poLine, RequestContext requestContext) {
+  static ItemRecreateConfig constructItemRecreateSrcConfig(CompositePoLine poLine, RequestContext requestContext) {
     var locations = poLine.getLocations();
     if (locations.isEmpty()) {
       return new ItemRecreateConfig(null,  requestContext);
@@ -26,7 +26,7 @@ public class PieceUpdateFlowUtil {
     return new ItemRecreateConfig(srcTenantId, createContextWithNewTenantId(requestContext, srcTenantId));
   }
 
-  static ItemRecreateConfig createItemRecreateDstConfig(Piece pieceToUpdate, RequestContext requestContext) {
+  static ItemRecreateConfig constructItemRecreateDstConfig(Piece pieceToUpdate, RequestContext requestContext) {
     if (Objects.isNull(pieceToUpdate.getReceivingTenantId())) {
       return new ItemRecreateConfig(null, null);
     }
@@ -35,7 +35,7 @@ public class PieceUpdateFlowUtil {
     return new ItemRecreateConfig(dstTenantId, createContextWithNewTenantId(requestContext, dstTenantId));
   }
 
-  static boolean allowItemRecreation(ItemRecreateConfig srcConfig, ItemRecreateConfig dstConfig) {
+  static boolean allowItemRecreate(ItemRecreateConfig srcConfig, ItemRecreateConfig dstConfig) {
     return Objects.nonNull(srcConfig.tenantId()) && Objects.nonNull(dstConfig.tenantId())
       && !srcConfig.tenantId().equals(dstConfig.tenantId());
   }
