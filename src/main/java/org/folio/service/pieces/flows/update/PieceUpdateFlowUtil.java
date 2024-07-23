@@ -5,34 +5,18 @@ import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTena
 import java.util.Objects;
 import lombok.experimental.UtilityClass;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
 
 @UtilityClass
 public class PieceUpdateFlowUtil {
 
-  static ItemRecreateConfig constructItemRecreateSrcConfig(CompositePoLine poLine, RequestContext requestContext) {
-    var locations = poLine.getLocations();
-    if (locations.isEmpty()) {
-      return new ItemRecreateConfig(null,  requestContext);
+  static ItemRecreateConfig constructItemRecreateConfig(Piece piece, RequestContext requestContext, boolean reuseInitialRequestContext) {
+    if (Objects.isNull(piece.getReceivingTenantId())) {
+      return new ItemRecreateConfig(null, reuseInitialRequestContext ? requestContext : null);
     }
 
-    var location = locations.get(0);
-    if (Objects.isNull(location.getTenantId())) {
-      return new ItemRecreateConfig(null, requestContext);
-    }
-
-    var srcTenantId = location.getTenantId();
-    return new ItemRecreateConfig(srcTenantId, createContextWithNewTenantId(requestContext, srcTenantId));
-  }
-
-  static ItemRecreateConfig constructItemRecreateDstConfig(Piece pieceToUpdate, RequestContext requestContext) {
-    if (Objects.isNull(pieceToUpdate.getReceivingTenantId())) {
-      return new ItemRecreateConfig(null, null);
-    }
-
-    var dstTenantId = pieceToUpdate.getReceivingTenantId();
-    return new ItemRecreateConfig(dstTenantId, createContextWithNewTenantId(requestContext, dstTenantId));
+    var tenantId = piece.getReceivingTenantId();
+    return new ItemRecreateConfig(tenantId, createContextWithNewTenantId(requestContext, tenantId));
   }
 
   static boolean allowItemRecreate(ItemRecreateConfig srcConfig, ItemRecreateConfig dstConfig) {

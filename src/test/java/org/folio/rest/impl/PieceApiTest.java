@@ -197,13 +197,10 @@ public class PieceApiTest {
     var instanceMock = getMockData(String.format(ECS_UNIVERSITY_INSTANCE_JSON, purchaseOrderId));
     var holdingsMock = getMockData(String.format(ECS_UNIVERSITY_HOLDINGS_RECORD_JSON, purchaseOrderId));
 
-    var piecesStorage = new JsonObject(piecesMock);
-    piecesStorage.put(ID, pieceId);
-    piecesStorage.put("receivingStatus", "Expected");
-
-    var piecesRequest = new JsonObject(piecesMock);
-    piecesRequest.put(ID, pieceId);
-    piecesRequest.put("receivingStatus", "Received");
+    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class);
+    var piecesRequest = new JsonObject(piecesMock).mapTo(Piece.class);
+    piecesRequest.setReceivingStatus(Piece.ReceivingStatus.RECEIVED);
+    piecesRequest.setReceivingTenantId("college");
 
     addMockEntry(PURCHASE_ORDER_STORAGE, new JsonObject(purchaseOrderMock).mapTo(PurchaseOrder.class));
     addMockEntry(TITLES, new JsonObject(titlesMock).mapTo(Title.class));
@@ -212,7 +209,7 @@ public class PieceApiTest {
     addMockEntry(INSTANCES, new JsonObject(instanceMock));
     addMockEntry(HOLDINGS_RECORDS, new JsonObject(holdingsMock));
 
-    if (mockItem) {
+    if (mockItem) { // In case we need to test electronic resources without item in the inventory
       var itemMock = getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, purchaseOrderId));
       var itemStorage = new JsonObject(itemMock);
       addMockEntry(ITEMS, itemStorage);

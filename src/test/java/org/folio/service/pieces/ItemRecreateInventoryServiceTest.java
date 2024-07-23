@@ -110,7 +110,7 @@ public class ItemRecreateInventoryServiceTest {
     itemRecreateInventoryService.recreateItemInDestinationTenant(pieceHolder, srcLocCtx ,dstLocCtx).result();
 
     verify(inventoryItemManager, times(1))
-      .recreateMissingPhysicalItems(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
+      .createMissingPhysicalItems(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
   }
 
   @Test
@@ -133,7 +133,7 @@ public class ItemRecreateInventoryServiceTest {
     itemRecreateInventoryService.recreateItemInDestinationTenant(pieceHolder, srcLocCtx, dstLocCtx).result();
 
     verify(inventoryItemManager, times(1))
-      .recreateMissingElectronicItems(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
+      .createMissingElectronicItems(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
   }
 
   private static class ContextConfiguration {

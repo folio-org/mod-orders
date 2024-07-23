@@ -324,6 +324,7 @@ public class InventoryItemManager {
 
   /**
    * Creates Items in the inventory based on the PO line data.
+   * If an itemId exists on Piece, itemId will be reused.
    *
    * @param compPOL  PO line to create Instance Record for
    * @param piece    base piece to build item
@@ -338,29 +339,8 @@ public class InventoryItemManager {
     return buildElectronicItemRecordJsonObject(compPOL, holdingId, requestContext)
       .compose(item -> {
         InventoryUtils.updateItemWithPieceFields(item, piece);
-        logger.debug("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
-        return createItemRecords(item, quantity, requestContext);
-      });
-  }
-
-  /**
-   * Recreates Items in the inventory based on the PO line data  with the same Item id.
-   *
-   * @param compPOL  PO line to create Instance Record for
-   * @param piece    base piece to build item
-   * @param quantity expected number of items to create
-   * @return id of newly created Instance Record
-   */
-  public Future<List<String>> recreateMissingElectronicItems(CompositePoLine compPOL, Piece piece, int quantity, RequestContext requestContext) {
-    if (quantity <= 0) {
-      return Future.succeededFuture(List.of());
-    }
-    String holdingId = piece.getHoldingId();
-    return buildElectronicItemRecordJsonObject(compPOL, holdingId, requestContext)
-      .compose(item -> {
-        InventoryUtils.updateItemWithPieceFields(item, piece);
         item.put(ID, piece.getItemId());
-        logger.debug("Posting {} electronic item(s) for PO Line with '{}' id and '{}' item id", quantity, compPOL.getId(), piece.getItemId());
+        logger.info("Posting {} electronic item(s) for PO Line with '{}' id", quantity, compPOL.getId());
         return createItemRecords(item, quantity, requestContext);
       });
   }
@@ -372,6 +352,7 @@ public class InventoryItemManager {
 
   /**
    * Creates Items in the inventory based on the PO line data.
+   * If an itemId exists on Piece, itemId will be reused.
    *
    * @param compPOL  PO line to create Instance Record for
    * @param piece    base piece to build item
@@ -387,30 +368,8 @@ public class InventoryItemManager {
     return buildPhysicalItemRecordJsonObject(compPOL, holdingId, requestContext)
       .compose(item -> {
         InventoryUtils.updateItemWithPieceFields(item, piece);
-        logger.debug("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
-        return createItemRecords(item, quantity, requestContext);
-      });
-  }
-
-  /**
-   * Recreates Items in the inventory based on the PO line data with the same Item id.
-   *
-   * @param compPOL  PO line to create Instance Record for
-   * @param piece    base piece to build item
-   * @param quantity expected number of items to create
-   * @return id of newly created Instance Record
-   */
-  public Future<List<String>> recreateMissingPhysicalItems(CompositePoLine compPOL, Piece piece, int quantity,
-                                                           RequestContext requestContext) {
-    if (quantity <= 0) {
-      return Future.succeededFuture(List.of());
-    }
-    String holdingId = piece.getHoldingId();
-    return buildPhysicalItemRecordJsonObject(compPOL, holdingId, requestContext)
-      .compose(item -> {
-        InventoryUtils.updateItemWithPieceFields(item, piece);
         item.put(ID, piece.getItemId());
-        logger.debug("Posting {} physical item(s) for PO Line with '{}' id and '{}' item id", quantity, compPOL.getId(), piece.getItemId());
+        logger.info("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
         return createItemRecords(item, quantity, requestContext);
       });
   }

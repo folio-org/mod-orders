@@ -4,8 +4,8 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+import java.util.List;
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -33,30 +33,27 @@ public class ItemRecreateInventoryService {
     // Example Case: Member Tenant 1 (University) -> Member Tenant 2 (College)
     // Create Item in Member Tenant 2 with the same Item Id
     // Delete Item in Member Tenant 1 by Item Id
-    var itemFuture = Promise.<String>promise();
     var piece = holder.getPieceToUpdate();
     var compPol = holder.getPoLineToSave();
 
     try {
       logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
 
+      Future<List<String>> itemFuture;
       if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPol)) {
-        inventoryItemManager.recreateMissingElectronicItems(compPol, piece, ITEM_QUANTITY, dstLocCtx)
-          .onSuccess(idS -> itemFuture.complete(idS.get(0)))
-          .onFailure(itemFuture::fail);
+        itemFuture = inventoryItemManager.createMissingElectronicItems(compPol, piece, ITEM_QUANTITY, dstLocCtx);
       } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPol)) {
-        inventoryItemManager.recreateMissingPhysicalItems(compPol, piece, ITEM_QUANTITY, dstLocCtx)
-          .onSuccess(idS -> itemFuture.complete(idS.get(0)))
-          .onFailure(itemFuture::fail);
+        itemFuture = inventoryItemManager.createMissingPhysicalItems(compPol, piece, ITEM_QUANTITY, dstLocCtx);
       } else {
-        itemFuture.complete(null);
+        return Future.succeededFuture(null);
       }
-    } catch (Exception e) {
-      itemFuture.fail(e);
-    }
 
-    return itemFuture.future()
-      .compose(itemId -> deleteItem(piece, srcLocCtx).map(voidResult -> itemId));
+      return itemFuture
+        .map(itemIds -> itemIds.stream().findFirst().orElseThrow())
+        .compose(itemId -> deleteItem(piece, srcLocCtx).map(voidResult -> itemId));
+    } catch (Exception e) {
+      return Future.failedFuture(e);
+    }
   }
 
   private Future<Void> deleteItem(Piece piece, RequestContext requestContext) {
