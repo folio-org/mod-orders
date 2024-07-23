@@ -80,7 +80,6 @@ import static org.folio.orders.events.handlers.HandlersTestHelper.verifyCheckinO
 import static org.folio.orders.events.handlers.HandlersTestHelper.verifyOrderStatusUpdateEvent;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
-import static org.folio.orders.utils.ResourcePathResolver.ITEMS_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
@@ -123,6 +122,7 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_CHRONOLOGY;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_DISCOVERY_SUPPRESS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_DISPLAY_SUMMARY;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_ENUMERATION;
+import static org.folio.service.inventory.InventoryUtils.ITEMS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.emptyString;
@@ -717,7 +717,7 @@ public class CheckinReceivingApiTest {
       .withItemId(itemId);
 
     addMockEntry(PURCHASE_ORDER_STORAGE, order.withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN));
-    addMockEntry(ITEMS_STORAGE, minimalItem);
+    addMockEntry(ITEMS, minimalItem);
     addMockEntry(PO_LINES_STORAGE, poLine);
     addMockEntry(PIECES_STORAGE, physicalPiece);
 

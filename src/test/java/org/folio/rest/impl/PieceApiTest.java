@@ -20,9 +20,6 @@ import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
-import static org.folio.orders.utils.ResourcePathResolver.HOLDINGS_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.INSTANCE_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.ITEMS_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
@@ -40,6 +37,9 @@ import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_HOLDINGS_RECORD_JSON
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_INSTANCE_JSON;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_ITEM_JSON;
 import static org.folio.rest.impl.MockServer.addMockEntry;
+import static org.folio.service.inventory.InventoryUtils.HOLDINGS_RECORDS;
+import static org.folio.service.inventory.InventoryUtils.INSTANCES;
+import static org.folio.service.inventory.InventoryUtils.ITEMS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -209,13 +209,13 @@ public class PieceApiTest {
     addMockEntry(TITLES, new JsonObject(titlesMock).mapTo(Title.class));
     addMockEntry(PO_LINES_STORAGE, new JsonObject(poLineMock).mapTo(PoLine.class));
     addMockEntry(PIECES_STORAGE, piecesStorage);
-    addMockEntry(INSTANCE_STORAGE, new JsonObject(instanceMock));
-    addMockEntry(HOLDINGS_STORAGE, new JsonObject(holdingsMock));
+    addMockEntry(INSTANCES, new JsonObject(instanceMock));
+    addMockEntry(HOLDINGS_RECORDS, new JsonObject(holdingsMock));
 
     if (mockItem) {
       var itemMock = getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, purchaseOrderId));
       var itemStorage = new JsonObject(itemMock);
-      addMockEntry(ITEMS_STORAGE, itemStorage);
+      addMockEntry(ITEMS, itemStorage);
     }
 
     var headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_ECS, X_OKAPI_USER_ID);
