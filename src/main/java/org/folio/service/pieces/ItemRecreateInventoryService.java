@@ -6,6 +6,7 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -36,24 +37,20 @@ public class ItemRecreateInventoryService {
     var piece = holder.getPieceToUpdate();
     var compPol = holder.getPoLineToSave();
 
-    try {
-      logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
+    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
 
-      Future<List<String>> itemFuture;
-      if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPol)) {
-        itemFuture = inventoryItemManager.createMissingElectronicItems(compPol, piece, ITEM_QUANTITY, dstLocCtx);
-      } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPol)) {
-        itemFuture = inventoryItemManager.createMissingPhysicalItems(compPol, piece, ITEM_QUANTITY, dstLocCtx);
-      } else {
-        return Future.succeededFuture(null);
-      }
-
-      return itemFuture
-        .map(itemIds -> itemIds.stream().findFirst().orElseThrow())
-        .compose(itemId -> deleteItem(piece, srcLocCtx).map(voidResult -> itemId));
-    } catch (Exception e) {
-      return Future.failedFuture(e);
+    Future<List<String>> itemFuture;
+    if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPol)) {
+      itemFuture = inventoryItemManager.createMissingElectronicItems(compPol, piece, ITEM_QUANTITY, dstLocCtx);
+    } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPol)) {
+      itemFuture = inventoryItemManager.createMissingPhysicalItems(compPol, piece, ITEM_QUANTITY, dstLocCtx);
+    } else {
+      itemFuture = Future.succeededFuture(List.of());
     }
+
+    return itemFuture
+      .map(itemIds -> itemIds.stream().findFirst().orElseThrow(() -> new NoSuchElementException("Recreated Item Id could not be found")))
+      .compose(itemId -> deleteItem(piece, srcLocCtx).map(voidResult -> itemId));
   }
 
   private Future<Void> deleteItem(Piece piece, RequestContext requestContext) {

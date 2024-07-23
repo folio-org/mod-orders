@@ -5,6 +5,7 @@ import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -115,15 +116,15 @@ public class PieceUpdateFlowInventoryManager {
       return Future.succeededFuture();
     }
 
-    var srcConfig = PieceUpdateFlowUtil.constructItemRecreateConfig(holder.getPieceFromStorage(), requestContext, true);
-    var dstConfig = PieceUpdateFlowUtil.constructItemRecreateConfig(pieceToUpdate, requestContext, false);
+    var srcConfig = constructItemRecreateConfig(holder.getPieceFromStorage(), requestContext, true);
+    var dstConfig = constructItemRecreateConfig(pieceToUpdate, requestContext, false);
     var itemId = pieceToUpdate.getItemId();
 
     return inventoryItemManager.getItemRecordById(itemId, true, srcConfig.context())
       .compose(jsonItem -> {
         if (jsonItem != null && !jsonItem.isEmpty()) {
           updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate);
-          if (PieceUpdateFlowUtil.allowItemRecreate(srcConfig, dstConfig)) {
+          if (allowItemRecreate(srcConfig, dstConfig)) {
             logger.info("handleItem:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'",
               itemId, srcConfig.tenantId(), dstConfig.tenantId()
             );
@@ -149,5 +150,21 @@ public class PieceUpdateFlowInventoryManager {
     }
     item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
   }
+
+  ItemRecreateConfig constructItemRecreateConfig(Piece piece, RequestContext requestContext, boolean reuseInitialRequestContext) {
+    if (Objects.isNull(piece.getReceivingTenantId())) {
+      return new PieceUpdateFlowInventoryManager.ItemRecreateConfig(null, reuseInitialRequestContext ? requestContext : null);
+    }
+
+    var tenantId = piece.getReceivingTenantId();
+    return new PieceUpdateFlowInventoryManager.ItemRecreateConfig(tenantId, createContextWithNewTenantId(requestContext, tenantId));
+  }
+
+  boolean allowItemRecreate(PieceUpdateFlowInventoryManager.ItemRecreateConfig srcConfig, PieceUpdateFlowInventoryManager.ItemRecreateConfig dstConfig) {
+    return Objects.nonNull(srcConfig.tenantId()) && Objects.nonNull(dstConfig.tenantId())
+      && !srcConfig.tenantId().equals(dstConfig.tenantId());
+  }
+
+  public record ItemRecreateConfig(String tenantId, RequestContext context) {}
 
 }
