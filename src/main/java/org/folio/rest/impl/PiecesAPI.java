@@ -88,8 +88,6 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
       piece.setId(pieceId);
     }
 
-    logger.info("putOrdersPiecesById:: piece: {}", JsonObject.mapFrom(piece).encodePrettily());
-
     pieceUpdateFlowManager.updatePiece(piece, createItem, deleteHolding, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
