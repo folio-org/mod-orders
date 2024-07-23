@@ -1,0 +1,41 @@
+{
+  "id": "33de01c9-ab9e-49e3-b9c4-466dc7821d96",
+  "hrid": "in00000000013",
+  "tags": {
+    "tagList": []
+  },
+  "notes": [],
+  "title": "MODORDERS-1141 Bob Test 9",
+  "series": [],
+  "source": "CONSORTIUM-FOLIO",
+  "_version": 1,
+  "editions": [],
+  "metadata": {
+    "createdDate": "2024-07-22T06:33:03.042Z",
+    "updatedDate": "2024-07-22T06:33:03.042Z",
+    "createdByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c",
+    "updatedByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c"
+  },
+  "statusId": "daf2681c-25af-4202-a3fa-e58fdf806183",
+  "subjects": [],
+  "languages": [],
+  "identifiers": [],
+  "publication": [],
+  "contributors": [],
+  "instanceTypeId": "30fffe0e-e985-4144-b2e2-1e8179bdb41f",
+  "previouslyHeld": false,
+  "classifications": [],
+  "instanceFormats": [],
+  "electronicAccess": [],
+  "holdingsRecords2": [],
+  "publicationRange": [],
+  "alternativeTitles": [],
+  "discoverySuppress": false,
+  "instanceFormatIds": [],
+  "statusUpdatedDate": "2024-07-22T06:33:03.042+0000",
+  "statisticalCodeIds": [],
+  "administrativeNotes": [],
+  "physicalDescriptions": [],
+  "publicationFrequency": [],
+  "natureOfContentTermIds": []
+}

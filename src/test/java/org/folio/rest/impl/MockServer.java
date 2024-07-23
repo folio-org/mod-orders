@@ -273,6 +273,13 @@ public class MockServer {
   public static final String HOLDINGS_OLD_NEW_PATH = BASE_MOCK_DATA_PATH + "holdingsRecords/holdingRecords-old-new.json";
   public static final String LISTED_PRINT_MONOGRAPH_ENCUMBRANCES_PATH = BASE_MOCK_DATA_PATH +
     "encumbrances/encumbrance_for_print_monograph.json";
+  public static final String ECS_CONSORTIUM_PURCHASE_ORDER_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/consortium_purchase_order.json";
+  public static final String ECS_CONSORTIUM_PO_LINE_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/consortium_po_line.json";
+  public static final String ECS_CONSORTIUM_TITLES_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/consortium_titles.json";
+  public static final String ECS_CONSORTIUM_PIECES_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/consortium_pieces.json";
+  public static final String ECS_UNIVERSITY_INSTANCE_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_instance.json";
+  public static final String ECS_UNIVERSITY_HOLDINGS_RECORD_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_holdings_record.json";
+  public static final String ECS_UNIVERSITY_ITEM_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
@@ -312,6 +319,8 @@ public class MockServer {
   public static final String IF_EQUAL_STR = "==";
   private static final String ITEM_HOLDINGS_RECORD_ID = "holdingsRecordId";
   public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
+  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL = "8137de83-76c0-4d3e-bf73-416de5e780fa";
+  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC = "01c8d44a-dc73-4bca-a4d1-ef28bdfb9275";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -1206,6 +1215,7 @@ public class MockServer {
       try {
         JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
         JsonArray jsonArray = items.getJsonArray(ITEMS);
+        appendEcsItems(jsonArray);
 
         if (query.startsWith("id==")) {
           List<String> itemIds = extractIdsFromQuery(query);
@@ -1245,6 +1255,11 @@ public class MockServer {
     }
   }
 
+  private static void appendEcsItems(JsonArray jsonArray) throws IOException {
+    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL))));
+    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC))));
+  }
+
   private void handleGetInventoryItemRecordById(RoutingContext ctx) {
     logger.info("handleGetInventoryItemRecordById got: " + ctx.request().path());
 
@@ -1259,6 +1274,7 @@ public class MockServer {
       try {
         JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
         JsonArray jsonArray = items.getJsonArray(ITEMS);
+        appendEcsItems(jsonArray);
 
         final Iterator<Object> iterator = jsonArray.iterator();
           while (iterator.hasNext()) {

@@ -72,6 +72,7 @@ public final class TestConstants {
   public static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaWt1X2FkbWluIiwidXNlcl9pZCI6ImJmZTI2MjM0LTMzNjktNTdhYS05ZjhhLWU2ZWVhY2M0YTgzYiIsImlhdCI6MTU4MzE1Nzg5OCwidGVuYW50IjoiZGlrdSJ9.Mk7u4KaCywSuYtBgCT44oGcVC0C8jUMY9KjsUnug48I");
   public static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
   public static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_1");
+  public static final Header EXIST_CONFIG_X_OKAPI_TENANT_ECS = new Header(OKAPI_HEADER_TENANT, "consortium");
   public static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invalid_config");
   public static final Header EMPTY_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, EMPTY_CONFIG_TENANT);
   public static final String PROTECTED_READ_ONLY_TENANT = "protected_read";

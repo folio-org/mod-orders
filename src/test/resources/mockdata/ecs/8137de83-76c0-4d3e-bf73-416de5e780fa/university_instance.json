@@ -1,0 +1,41 @@
+{
+  "id": "fd2712a1-4306-4611-baa5-10c81913f643",
+  "hrid": "in00000000114",
+  "tags": {
+    "tagList": []
+  },
+  "notes": [],
+  "title": "MODORDERS-1141 Bob test 28",
+  "series": [],
+  "source": "CONSORTIUM-FOLIO",
+  "_version": 1,
+  "editions": [],
+  "metadata": {
+    "createdDate": "2024-07-19T17:43:24.476Z",
+    "updatedDate": "2024-07-19T17:43:24.476Z",
+    "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
+    "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
+  },
+  "statusId": "daf2681c-25af-4202-a3fa-e58fdf806183",
+  "subjects": [],
+  "languages": [],
+  "identifiers": [],
+  "publication": [],
+  "contributors": [],
+  "instanceTypeId": "30fffe0e-e985-4144-b2e2-1e8179bdb41f",
+  "previouslyHeld": false,
+  "classifications": [],
+  "instanceFormats": [],
+  "electronicAccess": [],
+  "holdingsRecords2": [],
+  "publicationRange": [],
+  "alternativeTitles": [],
+  "discoverySuppress": false,
+  "instanceFormatIds": [],
+  "statusUpdatedDate": "2024-07-19T17:43:24.477+0000",
+  "statisticalCodeIds": [],
+  "administrativeNotes": [],
+  "physicalDescriptions": [],
+  "publicationFrequency": [],
+  "natureOfContentTermIds": []
+}

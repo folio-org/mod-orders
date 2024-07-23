@@ -97,6 +97,7 @@ import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpd
 import org.folio.service.organization.OrganizationService;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceDeleteInventoryService;
+import org.folio.service.pieces.ItemRecreateInventoryService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
@@ -587,6 +588,11 @@ public class ApplicationConfig {
   }
 
   @Bean
+  ItemRecreateInventoryService pieceRecreateInventoryService(InventoryItemManager inventoryItemManager) {
+    return new ItemRecreateInventoryService(inventoryItemManager);
+  }
+
+  @Bean
   PieceDeleteInventoryService pieceDeleteInventoryService(InventoryItemManager inventoryItemManager) {
     return new PieceDeleteInventoryService(inventoryItemManager);
   }
@@ -642,9 +648,10 @@ public class ApplicationConfig {
   @Bean
   PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager(TitlesService titlesService,
                                                                   PieceUpdateInventoryService pieceUpdateInventoryService,
+                                                                  ItemRecreateInventoryService itemRecreateInventoryService,
                                                                   InventoryItemManager inventoryItemManager,
                                                                   InventoryHoldingManager inventoryHoldingManager) {
-    return new PieceUpdateFlowInventoryManager(titlesService, pieceUpdateInventoryService, inventoryItemManager, inventoryHoldingManager);
+    return new PieceUpdateFlowInventoryManager(titlesService, pieceUpdateInventoryService, itemRecreateInventoryService, inventoryItemManager, inventoryHoldingManager);
   }
 
   @Bean

@@ -1,0 +1,20 @@
+{
+  "id": "aaecf1f7-28dc-4940-bfd4-be0e26afde95",
+  "format": "Physical",
+  "itemId": "2d4b8528-ebb8-46b6-87a9-56e667c3f5b6",
+  "isBound": false,
+  "titleId": "c5323420-d0a5-4d5f-b4d6-fe1fa1ba0443",
+  "metadata": {
+    "createdDate": "2024-07-19T17:43:25.152Z",
+    "updatedDate": "2024-07-19T17:43:25.152Z",
+    "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
+    "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
+  },
+  "poLineId": "391e39b1-f891-4d92-ab14-b5760bdac937",
+  "holdingId": "873e87d4-0c17-430a-81ed-93ffbb8f0d8e",
+  "displayToPublic": false,
+  "receivingStatus": "Expected",
+  "displayOnHolding": false,
+  "receivingTenantId": "university",
+  "statusUpdatedDate": "2024-07-19T17:43:25.154+00:00"
+}
