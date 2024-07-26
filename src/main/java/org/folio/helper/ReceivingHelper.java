@@ -96,7 +96,8 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       piecesFromStorage,
       piecesGroupedByPoLine,
       requestContext,
-      poLines -> updateOrderStatus(poLines, requestContext));
+      poLines -> updateOrderStatus(poLines, requestContext)
+    );
   }
 
   private void updateOrderStatus(List<PoLine> poLines, RequestContext requestContext) {

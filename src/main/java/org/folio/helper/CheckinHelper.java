@@ -250,7 +250,8 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       piecesFromStorage,
       piecesGroupedByPoLine,
       requestContext,
-      poLines -> updateOrderStatus(poLines, checkinCollection, requestContext));
+      poLines -> updateOrderStatus(poLines, checkinCollection, requestContext)
+    );
   }
 
   private void updateOrderStatus(List<PoLine> poLines, CheckinCollection checkinCollection, RequestContext requestContext) {

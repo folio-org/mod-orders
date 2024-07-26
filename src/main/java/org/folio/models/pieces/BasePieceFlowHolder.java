@@ -13,7 +13,7 @@ public abstract class BasePieceFlowHolder {
   private CompositePurchaseOrder originPurchaseOrder;
   private CompositePurchaseOrder purchaseOrderToSave;
 
-  private CompositePoLine compositePoLineToSaveOnly;
+  private CompositePoLine compositePoLineToSave;
   private Title title;
 
   public BasePieceFlowHolder() {
@@ -33,7 +33,7 @@ public abstract class BasePieceFlowHolder {
   }
 
   public BasePieceFlowHolder withPoLineOnly(CompositePoLine compositePoLineToSave) {
-    this.compositePoLineToSaveOnly = compositePoLineToSave;
+    this.compositePoLineToSave = compositePoLineToSave;
     return this;
   }
 
@@ -54,8 +54,8 @@ public abstract class BasePieceFlowHolder {
   }
 
   public CompositePoLine getPoLineToSave() {
-    if (this.compositePoLineToSaveOnly != null) {
-      return this.compositePoLineToSaveOnly;
+    if (this.compositePoLineToSave != null) {
+      return this.compositePoLineToSave;
     }
     return purchaseOrderToSave.getCompositePoLines().get(0);
   }

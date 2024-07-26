@@ -288,7 +288,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         poLinesToUpdate.add(updateRelatedPoLineDetails(poLine,
           piecesFromStorage.get(poLine.getId()),
           piecesGroupedByPoLine.get(poLine.getId()),
-          getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine)));
+          successfullyProcessedPieces));
       }
 
       if (CollectionUtils.isEmpty(poLinesToUpdate)) {
@@ -298,7 +298,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
       return purchaseOrderLineService.saveOrderLines(poLinesToUpdate, requestContext)
         .map(aVoid -> {
-          logger.info("{} out of {} PO Line(s) updated with new status", poLines.size(), piecesGroupedByPoLine.size());
+          logger.info("{} out of {} PO Line(s) updated with new status in batch", poLines.size(), piecesGroupedByPoLine.size());
 
           updateOrderStatus.accept(poLines);
           return null;
@@ -329,6 +329,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     ReceiptStatus receiptStatus = calculatePoLineReceiptStatus(byPoLine, successfullyProcessed, poLine);
     purchaseOrderLineService.updatePoLineReceiptStatusWithoutSave(poLine, receiptStatus);
 
+    // the same check as in PieceUpdateFlowManager::updatePoLine
     if (Boolean.TRUE.equals(poLine.getIsPackage()) || Boolean.TRUE.equals(poLine.getCheckinItems())) {
       logger.info("updateRelatedPoLineDetails:: Skipping updating POL '{}' if it package or has independent receiving flow", poLine.getId());
       return poLine;
