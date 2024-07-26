@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.models.pieces.PiecesHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -67,10 +68,15 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
+    PiecesHolder holder = new PiecesHolder();
+
     // 1. Get piece records from storage
     return retrievePieceRecords(requestContext)
       // 2. Filter locationId
-      .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
+      .compose(piecesFromStorage -> {
+        holder.withPiecesFromStorage(piecesFromStorage);
+        return filterMissingLocations(piecesFromStorage, requestContext);
+      })
       // 3. Update items in the Inventory if required
       .compose(pieces -> updateInventoryItemsAndHoldings(pieces, requestContext))
       // 4. Update piece records with receiving details which do not have associated item
@@ -78,17 +84,19 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
       // 5. Update received piece records in the storage
       .compose(piecesByPoLineIds -> storeUpdatedPieceRecords(piecesByPoLineIds, requestContext))
       // 6. Update PO Line status
-      .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(piecesByPoLineIds, requestContext))
+      .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesByPoLineIds, requestContext))
       // 7. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
 
-  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesFromStorage,
+                                                                       Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                                       RequestContext requestContext) {
     return updateOrderAndPoLinesStatus(
+      piecesFromStorage,
       piecesGroupedByPoLine,
       requestContext,
-      poLines -> updateOrderStatus(poLines, requestContext)
-    );
+      poLines -> updateOrderStatus(poLines, requestContext));
   }
 
   private void updateOrderStatus(List<PoLine> poLines, RequestContext requestContext) {

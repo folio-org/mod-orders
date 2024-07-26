@@ -9,6 +9,7 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.folio.models.pieces.PiecesHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
@@ -62,8 +63,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
+    PiecesHolder holder = new PiecesHolder();
     // 1. Get piece records from storage
-    return createItemsWithPieceUpdate(checkinCollection, requestContext)
+    return createItemsWithPieceUpdate(checkinCollection, holder, requestContext)
       // 2. Filter locationId
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
@@ -74,17 +76,18 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       // 5. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
       // 6. Update PO Line status
-      .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(piecesGroupedByPoLine, checkinCollection, requestContext))
+      .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesGroupedByPoLine, checkinCollection, requestContext))
       // 7. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
-  private Future<Map<String, List<Piece>>> createItemsWithPieceUpdate(CheckinCollection checkinCollection, RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> createItemsWithPieceUpdate(CheckinCollection checkinCollection, PiecesHolder holder, RequestContext requestContext) {
     Map<String, List<CheckInPiece>> poLineIdVsCheckInPiece = getItemCreateNeededCheckinPieces(checkinCollection);
     List<Future<Pair<String, Piece>>> futures = new ArrayList<>();
     return retrievePieceRecords(requestContext)
-      .map(piecesGroupedByPoLine -> {
-        piecesGroupedByPoLine.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
+      .map(piecesFromStorage -> {
+        holder.withPiecesFromStorage(piecesFromStorage);
+        piecesFromStorage.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
           .forEach(checkInPiece -> pieces.forEach(piece -> {
             if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
               futures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
@@ -240,13 +243,14 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       });
   }
 
-  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine,
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesFromStorage,
+                                                                       Map<String, List<Piece>> piecesGroupedByPoLine,
                                                                        CheckinCollection checkinCollection, RequestContext requestContext) {
     return updateOrderAndPoLinesStatus(
+      piecesFromStorage,
       piecesGroupedByPoLine,
       requestContext,
-      poLines -> updateOrderStatus(poLines, checkinCollection, requestContext)
-    );
+      poLines -> updateOrderStatus(poLines, checkinCollection, requestContext));
   }
 
   private void updateOrderStatus(List<PoLine> poLines, CheckinCollection checkinCollection, RequestContext requestContext) {

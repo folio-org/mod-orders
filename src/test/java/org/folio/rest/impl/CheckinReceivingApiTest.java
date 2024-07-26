@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import io.restassured.response.Response;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -110,6 +111,7 @@ import static org.folio.rest.impl.MockServer.getItemUpdates;
 import static org.folio.rest.impl.MockServer.getItemsSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
+import static org.folio.rest.impl.MockServer.getPoLineBatchUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.getUpdatedTitles;
@@ -313,35 +315,35 @@ public class CheckinReceivingApiTest {
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
     assertThat(itemsSearches, not(nullValue()));
     assertThat(itemUpdates, not(nullValue()));
     assertThat(polSearches, not(nullValue()));
-    assertThat(polUpdates, not(nullValue()));
+    assertThat(polBatchUpdates, not(nullValue()));
 
-    // The piece searches should be made 2 times: 1st time to get piece record,
-    // 2nd time to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(2));
+    // The piece searches should be made once - to get piece records
+    assertThat(pieceSearches, hasSize(1));
     assertThat(pieceUpdates, hasSize(1));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
     assertThat(polSearches, hasSize(1));
-    assertThat(polUpdates, hasSize(1));
+    assertThat(polBatchUpdates, hasSize(1));
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ON_ORDER.value()));
     });
-    polUpdates.forEach(pol -> {
-      PoLine poLine = pol.mapTo(PoLine.class);
+    JsonArray poLinesJson = polBatchUpdates.get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine poLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
       assertThat(poLine.getCheckinItems(), is(true));
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.AWAITING_RECEIPT));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
-    });
+    }
 
     // Verify message is sent via event bus
     verifyCheckinOrderStatusUpdateEvent(1);
@@ -474,10 +476,10 @@ public class CheckinReceivingApiTest {
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(UUID.randomUUID().toString());
 
     checkResultWithErrors(request, 0);
-    assertThat(getPieceSearches(), hasSize(2));
+    assertThat(getPieceSearches(), hasSize(1));
     assertThat(getPieceUpdates(), hasSize(2));
     assertThat(getPoLineSearches(), hasSize(1));
-    assertThat(getPoLineUpdates(), hasSize(1));
+    assertThat(getPoLineBatchUpdates(), hasSize(1));
     verifyCheckinOrderStatusUpdateEvent(1);
 
 
@@ -490,10 +492,10 @@ public class CheckinReceivingApiTest {
     MockServer.addMockTitles(Collections.singletonList(poLine));
 
     checkResultWithErrors(request, 1);
-    assertThat(getPieceSearches(), hasSize(2));
+    assertThat(getPieceSearches(), hasSize(1));
     assertThat(getPieceUpdates(), hasSize(1));
     assertThat(getPoLineSearches(), hasSize(1));
-    assertThat(getPoLineUpdates(), hasSize(1));
+    assertThat(getPoLineBatchUpdates(), hasSize(1));
     verifyCheckinOrderStatusUpdateEvent(1);
 
 
@@ -532,24 +534,25 @@ public class CheckinReceivingApiTest {
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
     assertThat(itemsSearches, not(nullValue()));
     assertThat(itemUpdates, not(nullValue()));
     assertThat(polSearches, not(nullValue()));
-    assertThat(polUpdates, not(nullValue()));
+    assertThat(polBatchUpdates, not(nullValue()));
 
     int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
-    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
+    // The piece searches should be made 1 time: to get all required piece records,
+    // to calculate expected PO Line status an additional request is not sent now
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
     assertThat(pieceUpdates, hasSize(receivingRq.getTotalRecords()));
     assertThat(itemsSearches, hasSize(expectedSearchRqQty));
     assertThat(itemUpdates, hasSize(receivingRq.getTotalRecords()));
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
-    assertThat(polUpdates, hasSize(pieceIdsByPol.size()));
+    assertThat(polBatchUpdates, hasSize(pieceIdsByPol.size()));
 
     itemUpdates.forEach(item -> {
       assertThat(item.getString(ITEM_BARCODE), not(is(emptyString())));
@@ -557,11 +560,12 @@ public class CheckinReceivingApiTest {
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.IN_PROCESS.value()));
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), not(is(emptyString())));
     });
-    polUpdates.forEach(pol -> {
-      PoLine poLine = pol.mapTo(PoLine.class);
+    JsonArray poLinesJson = polBatchUpdates.get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine poLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.FULLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
-    });
+    }
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
@@ -855,28 +859,29 @@ public class CheckinReceivingApiTest {
     List<JsonObject> pieceSearches = getPieceSearches();
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
     assertThat(getItemsSearches(), is(nullValue()));
     assertThat(getItemUpdates(), is(nullValue()));
     assertThat(polSearches, not(nullValue()));
-    assertThat(polUpdates, not(nullValue()));
+    assertThat(polBatchUpdates, not(nullValue()));
 
     int expectedSearchRqQty = Math.floorDiv(receiving.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
-    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
+    // The piece searches should be made once - to get all required piece records
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
     assertThat(pieceUpdates, hasSize(receiving.getTotalRecords()));
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
-    assertThat(polUpdates, hasSize(pieceIdsByPol.size()));
+    assertThat(polBatchUpdates, hasSize(pieceIdsByPol.size()));
 
-    polUpdates.forEach(pol -> {
-      PoLine poLine = pol.mapTo(PoLine.class);
+    JsonArray poLinesJson = polBatchUpdates.get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine poLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
-    });
+    }
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
@@ -918,9 +923,9 @@ public class CheckinReceivingApiTest {
       PIECE_UPDATE_FAILED.getCode()));
 
     List<JsonObject> itemUpdates = getItemUpdates();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
     assertThat(getPoLineSearches(), hasSize(1));
-    assertThat(polUpdates, hasSize(1));
+    assertThat(polBatchUpdates, hasSize(1));
     assertThat(itemUpdates, hasSize(6));
 
     itemUpdates.forEach(item -> {
@@ -928,11 +933,12 @@ public class CheckinReceivingApiTest {
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.IN_PROCESS.value()));
     });
 
-    polUpdates.forEach(pol -> {
-      PoLine poLine = pol.mapTo(PoLine.class);
+    JsonArray poLinesJson = polBatchUpdates.get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine poLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
-    });
+    }
 
     verifyProperQuantityOfHoldingsCreated(receivingRq);
 
@@ -986,8 +992,11 @@ public class CheckinReceivingApiTest {
       assertThat(piece.getComment(), is("test"));
     });
 
-    PoLine updatedPoLine = getPoLineUpdates().get(0).mapTo(PoLine.class);
-    assertEquals(PoLine.ReceiptStatus.FULLY_RECEIVED, updatedPoLine.getReceiptStatus());
+    JsonArray poLinesJson = getPoLineBatchUpdates().get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine updatedPoLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
+      assertThat(updatedPoLine.getReceiptStatus(), is(PoLine.ReceiptStatus.FULLY_RECEIVED));
+    }
   }
 
   private void verifyProperQuantityOfHoldingsCreated(ReceivingCollection receivingRq) throws IOException {
@@ -1492,35 +1501,36 @@ public class CheckinReceivingApiTest {
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
     assertThat(itemsSearches, not(nullValue()));
     assertThat(itemUpdates, not(nullValue()));
     assertThat(polSearches, not(nullValue()));
-    assertThat(polUpdates, not(nullValue()));
+    assertThat(polBatchUpdates, not(nullValue()));
 
-    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd times to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(2));
+    // The piece searches should be made 1 time - to get all required piece records
+    assertThat(pieceSearches, hasSize(1));
     // In total 4 pieces required update
     assertThat(pieceUpdates, hasSize(4));
     assertThat(itemsSearches, hasSize(1));
     // There are 3 piece records with item id's
     assertThat(itemUpdates, hasSize(3));
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
-    assertThat(polUpdates, hasSize(pieceIdsByPol.size()));
+    assertThat(polBatchUpdates, hasSize(pieceIdsByPol.size()));
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));
     });
-    polUpdates.forEach(pol -> {
-      PoLine poLine = pol.mapTo(PoLine.class);
+    JsonArray poLinesJson = polBatchUpdates.get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine poLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
-    });
+    }
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);
@@ -1547,33 +1557,34 @@ public class CheckinReceivingApiTest {
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
     assertThat(itemsSearches, not(nullValue()));
     assertThat(itemUpdates, not(nullValue()));
     assertThat(polSearches, not(nullValue()));
-    assertThat(polUpdates, not(nullValue()));
+    assertThat(polBatchUpdates, not(nullValue()));
 
-    // The piece searches should be made 2 times: 1st time to get piece record, 2nd times to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(2));
+    // The piece searches should be made once: - to get piece record
+    assertThat(pieceSearches, hasSize(1));
     assertThat(pieceUpdates, hasSize(1));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
     assertThat(polSearches, hasSize(1));
-    assertThat(polUpdates, hasSize(1));
+    assertThat(polBatchUpdates, hasSize(1));
 
     itemUpdates.forEach(item -> {
       assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
       assertThat(item.getString(ITEM_LEVEL_CALL_NUMBER), is(nullValue()));
       assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));
     });
-    polUpdates.forEach(pol -> {
-      PoLine poLine = pol.mapTo(PoLine.class);
+    JsonArray poLinesJson = polBatchUpdates.get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine poLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.AWAITING_RECEIPT));
       assertThat(poLine.getReceiptDate(), is(nullValue()));
-    });
+    }
 
     // Verify messages sent via event bus
     verifyOrderStatusUpdateEvent(1);

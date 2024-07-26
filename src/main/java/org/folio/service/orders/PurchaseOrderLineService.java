@@ -423,10 +423,10 @@ public class PurchaseOrderLineService {
       });
   }
 
-  public Future<String> updatePoLineReceiptStatus(PoLine poLine, PoLine.ReceiptStatus status, RequestContext requestContext) {
+  public boolean updatePoLineReceiptStatusWithoutSave(PoLine poLine, PoLine.ReceiptStatus status) {
 
     if (status == null || poLine.getReceiptStatus() == status) {
-      return Future.succeededFuture();
+      return false;
     }
 
     // Update receipt date and receipt status
@@ -442,10 +442,7 @@ public class PurchaseOrderLineService {
     }
 
     poLine.setReceiptStatus(status);
-    // Update PO Line in storage
-    return restClient.put(resourceByIdPath(PO_LINES_STORAGE, poLine.getId()), JsonObject.mapFrom(poLine), requestContext)
-      .map(v -> poLine.getId())
-      .onFailure(e -> logger.error("The PO Line '{}' cannot be updated with new receipt status", poLine.getId(), e));
+    return true;
   }
 
   public Future<Void> validateAndNormalizeISBN(List<CompositePoLine> compositePoLines, RequestContext requestContext) {

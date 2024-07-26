@@ -34,9 +34,8 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
 
   @Override
   public Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
-    boolean isLineUpdated = poLineUpdateQuantity(holder);
+    boolean isLineUpdated = updatePoLineWithoutSave(holder);
     if (isLineUpdated) {
-      updateEstimatedPrice(holder.getPoLineToSave());
       return purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext);
     } else {
       return Future.succeededFuture();
@@ -51,15 +50,36 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
     List<Location> locationsToUpdate = PieceUtil.findOrderPieceLineLocation(pieceFromStorage, lineToSave);
     if (CollectionUtils.isNotEmpty(locationsToUpdate)) {
       PieceDeletionHolder pieceDeletionHolder = new PieceDeletionHolder().withPieceToDelete(pieceFromStorage);
-      pieceDeletionHolder.withOrderInformation(pieceUpdateHolder.getPurchaseOrderToSave());
+      if (pieceUpdateHolder.getPurchaseOrderToSave() != null) {
+        pieceDeletionHolder.withOrderInformation(pieceUpdateHolder.getPurchaseOrderToSave());
+      } else {
+        pieceDeletionHolder.withPoLineOnly(lineToSave);
+      }
       boolean isDecreased = pieceDeleteFlowPoLineService.poLineUpdateQuantity(pieceDeletionHolder);
       if (isDecreased) {
         PieceCreationHolder pieceCreationHolder = new PieceCreationHolder().withPieceToCreate(pieceToUpdate);
-        pieceCreationHolder.withOrderInformation(pieceDeletionHolder.getPurchaseOrderToSave());
+        if (pieceDeletionHolder.getPurchaseOrderToSave() != null) {
+          pieceCreationHolder.withOrderInformation(pieceDeletionHolder.getPurchaseOrderToSave());
+        } else {
+          pieceCreationHolder.withPoLineOnly(lineToSave);
+        }
         pieceCreateFlowPoLineService.poLineUpdateQuantity(pieceCreationHolder);
-        pieceUpdateHolder.withOrderInformation(pieceCreationHolder.getPurchaseOrderToSave());
+        if (pieceCreationHolder.getPurchaseOrderToSave() != null) {
+          pieceUpdateHolder.withOrderInformation(pieceCreationHolder.getPurchaseOrderToSave());
+        } else {
+          pieceUpdateHolder.withPoLineOnly(lineToSave);
+        }
         return true;
       }
+    }
+    return false;
+  }
+
+  public boolean updatePoLineWithoutSave(PieceUpdateHolder holder) {
+    boolean isLineUpdated = poLineUpdateQuantity(holder);
+    if (isLineUpdated) {
+      updateEstimatedPrice(holder.getPoLineToSave());
+      return true;
     }
     return false;
   }
