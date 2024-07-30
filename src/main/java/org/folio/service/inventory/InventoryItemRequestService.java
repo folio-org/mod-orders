@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import static org.folio.orders.utils.HelperUtils.extractCreatedDate;
 import static org.folio.orders.utils.HelperUtils.extractId;
@@ -63,25 +62,18 @@ public class InventoryItemRequestService {
           });
         }
 
-        return handleItemRequests(requestsToTransfer, request -> transferRequest(request, destinationItemId, requestContext))
-          .compose(v -> handleItemRequests(requestsToCancel, request -> cancelRequest(request, requestContext)));
+        // Move requests to new item sequentially and then cancel unnecessary ones
+        return transferRequests(requestsToTransfer, destinationItemId, requestContext)
+          .compose(v -> cancelRequests(requestsToCancel, requestContext));
       });
   }
 
-  private Future<Void> handleItemRequests(List<JsonObject> requests, Function<JsonObject, Future<Void>> handler) {
-    return GenericCompositeFuture.all(
-      requests.stream()
-        .map(handler)
-        .toList())
-      .mapEmpty();
-  }
-
-  private Future<Void> cancelRequest(JsonObject request, RequestContext requestContext) {
-    String reqId = extractId(request);
-    request.put(STATUS.getValue(), REQUEST_CANCEL_STATUS);
-    RequestEntry requestEntry = new RequestEntry(String.format(REQUEST_ENDPOINT, reqId));
-    logger.info("cancelRequest:: Cancelling Request with id='{}'", reqId);
-    return restClient.put(requestEntry, request, requestContext);
+  private Future<Void> transferRequests(List<JsonObject> requests, String destinationItemId, RequestContext requestContext) {
+    return requests.stream().reduce(
+      Future.succeededFuture(),
+      (transfers, request) -> transfers.compose(v -> transferRequest(request, destinationItemId, requestContext)),
+      (transfers1, transfers2) -> transfers1.compose(v -> transfers2)
+    );
   }
 
   private Future<Void> transferRequest(JsonObject request, String itemId, RequestContext requestContext) {
@@ -91,6 +83,22 @@ public class InventoryItemRequestService {
     logger.info("transferRequest:: Moving Request with id='{}' to item with id='{}'", reqId, itemId);
     return restClient.postJsonObject(requestEntry, jsonObject, requestContext)
       .mapEmpty();
+  }
+
+  private Future<Void> cancelRequests(List<JsonObject> requests, RequestContext requestContext) {
+    return GenericCompositeFuture.all(
+        requests.stream()
+          .map(request -> cancelRequest(request, requestContext))
+          .toList())
+      .mapEmpty();
+  }
+
+  private Future<Void> cancelRequest(JsonObject request, RequestContext requestContext) {
+    String reqId = extractId(request);
+    request.put(STATUS.getValue(), REQUEST_CANCEL_STATUS);
+    RequestEntry requestEntry = new RequestEntry(String.format(REQUEST_ENDPOINT, reqId));
+    logger.info("cancelRequest:: Cancelling Request with id='{}'", reqId);
+    return restClient.put(requestEntry, request, requestContext);
   }
 
   private int compareRequests(JsonObject r1, JsonObject r2) {
