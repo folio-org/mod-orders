@@ -364,11 +364,14 @@ public class OrderRolloverService {
   }
 
   private BigDecimal calculateTotalInitialAmountEncumbered(PoLineEncumbrancesHolder holder) {
+    logger.info("calculateTotalInitialAmountEncumbered:: holder: {}", JsonObject.mapFrom(holder).encodePrettily());
     BigDecimal totalAmountBeforeConversion = holder.getEncumbrances().stream()
                        .map(Transaction::getEncumbrance)
                        .map(Encumbrance::getInitialAmountEncumbered)
                        .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
+    logger.info("calculateTotalInitialAmountEncumbered:: totalAmountBeforeConversion: {}", totalAmountBeforeConversion);
     Number totalAmountAfterConversion = amountWithConversion(totalAmountBeforeConversion, holder).getNumber();
+    logger.info("calculateTotalInitialAmountEncumbered:: totalAmountAfterConversion: {}", totalAmountAfterConversion);
     return BigDecimal.valueOf(totalAmountAfterConversion.doubleValue());
   }
 

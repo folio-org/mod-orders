@@ -64,13 +64,14 @@ public class HelperUtilsTest {
   @Test
   void testShouldBuildQueryWithoutExchangeRate() {
     String systemCurrency = "USD";
+    String expectedCurrency = "EUR";
     Cost costOneTime =
-      new Cost().withListUnitPrice(595d).withQuantityPhysical(1).withCurrency("EUR").withPoLineEstimatedPrice(595d);
+      new Cost().withListUnitPrice(595d).withQuantityPhysical(1).withCurrency(expectedCurrency).withPoLineEstimatedPrice(595d);
     PoLine poLineOneTime =
       new PoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(UUID.randomUUID().toString())
         .withCost(costOneTime);
     ConversionQuery actQuery = HelperUtils.buildConversionQuery(poLineOneTime, systemCurrency);
-    assertEquals(actQuery.getCurrency().getCurrencyCode(), systemCurrency);
+    assertEquals(actQuery.getCurrency().getCurrencyCode(), expectedCurrency);
     assertNull(actQuery.get(RATE_KEY, Double.class));
   }
 

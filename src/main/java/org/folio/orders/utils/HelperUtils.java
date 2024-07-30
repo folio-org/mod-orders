@@ -519,7 +519,7 @@ public class HelperUtils {
     Cost cost = poLine.getCost();
     if (cost.getExchangeRate() != null) {
       logger.info("buildConversionQuery:: POL id {}, cost with exchange rate: {}",
-        poLine.getId(), poLine.getCost());
+        poLine.getId(), JsonObject.mapFrom(poLine.getCost()).encodePrettily());
       return ConversionQueryBuilder.of()
         .setBaseCurrency(termCurrency)
         .setTermCurrency(cost.getCurrency())
@@ -527,10 +527,10 @@ public class HelperUtils {
         .build();
     }
     logger.info("buildConversionQuery:: POL id {}, cost without exchange rate: {}",
-      poLine.getId(), poLine.getCost());
+      poLine.getId(), JsonObject.mapFrom(poLine.getCost()).encodePrettily());
     return ConversionQueryBuilder.of()
-      .setBaseCurrency(cost.getCurrency())
-      .setTermCurrency(termCurrency)
+      .setBaseCurrency(termCurrency)
+      .setTermCurrency(cost.getCurrency())
       .build();
   }
 
