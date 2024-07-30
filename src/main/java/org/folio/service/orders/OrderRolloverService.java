@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.getCurrencyFromTransactionByPoLineId;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
@@ -371,14 +372,15 @@ public class OrderRolloverService {
     return BigDecimal.valueOf(totalAmountAfterConversion.doubleValue());
   }
 
-  private CurrencyConversion retrieveCurrencyConversion(String systemCurrency, PoLine poLine, RequestContext requestContext) {
-    ConversionQuery conversionQuery = HelperUtils.buildConversionQuery(poLine, systemCurrency);
+  private CurrencyConversion retrieveCurrencyConversion(String termCurrency, PoLine poLine, RequestContext requestContext) {
+    ConversionQuery conversionQuery = HelperUtils.buildConversionQuery(poLine, termCurrency);
     ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
     return exchangeRateProvider.getCurrencyConversion(conversionQuery);
   }
 
   private MonetaryAmount amountWithConversion(BigDecimal totalInitialAmountEncumbered, PoLineEncumbrancesHolder holder) {
-    return Money.of(totalInitialAmountEncumbered, holder.getPoLine().getCost().getCurrency())
+    String encumbranceTransactionCurrency = getCurrencyFromTransactionByPoLineId(holder.getEncumbrances(), holder.getPoLine(), null);
+    return Money.of(totalInitialAmountEncumbered, encumbranceTransactionCurrency)
       .with(holder.getCurrencyConversion())
       .with(Monetary.getDefaultRounding());
   }
@@ -387,7 +389,8 @@ public class OrderRolloverService {
                                                                         List<Transaction> encumbrances, RequestContext requestContext) {
     List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders = new ArrayList<>();
     poLines.forEach(poLine -> {
-      CurrencyConversion currencyConversion = retrieveCurrencyConversion(systemCurrency, poLine, requestContext);
+      String termCurrency = getCurrencyFromTransactionByPoLineId(encumbrances, poLine, systemCurrency);
+      CurrencyConversion currencyConversion = retrieveCurrencyConversion(termCurrency, poLine, requestContext);
       PoLineEncumbrancesHolder holder = new PoLineEncumbrancesHolder(poLine).withCurrencyConversion(currencyConversion);
       extractPoLineEncumbrances(poLine, encumbrances).forEach(encumbrance -> {
         holder.addEncumbrance(encumbrance);

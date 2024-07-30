@@ -17,6 +17,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.helper.BaseHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.NoInventoryRecordException;
 import org.folio.rest.core.models.RequestContext;
@@ -502,14 +503,27 @@ public class HelperUtils {
     return conversionQuery;
   }
 
-  public static ConversionQuery buildConversionQuery(PoLine poLine, String systemCurrency) {
+  public static String getCurrencyFromTransactionByPoLineId(List<Transaction> encumbrances, PoLine poLine, String systemCurrency) {
+    return encumbrances.stream()
+      .filter(v -> v.getEncumbrance().getSourcePoLineId().equals(poLine.getId()))
+      .findFirst()
+      .map(Transaction::getCurrency)
+      .orElse(systemCurrency);
+  }
+
+  public static ConversionQuery buildConversionQuery(PoLine poLine, String termCurrency) {
     Cost cost = poLine.getCost();
     if (cost.getExchangeRate() != null) {
-      return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency())
-        .setTermCurrency(systemCurrency)
-        .set(RATE_KEY, cost.getExchangeRate()).build();
+      return ConversionQueryBuilder.of()
+        .setBaseCurrency(termCurrency)
+        .setTermCurrency(cost.getCurrency())
+        .set(RATE_KEY, cost.getExchangeRate())
+        .build();
     }
-    return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency()).setTermCurrency(systemCurrency).build();
+    return ConversionQueryBuilder.of()
+      .setBaseCurrency(cost.getCurrency())
+      .setTermCurrency(termCurrency)
+      .build();
   }
 
   /**
