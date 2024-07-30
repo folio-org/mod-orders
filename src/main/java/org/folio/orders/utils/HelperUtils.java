@@ -14,6 +14,8 @@ import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.helper.BaseHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
@@ -74,6 +76,8 @@ import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIR
 import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 
 public class HelperUtils {
+
+  private static final Logger logger = LogManager.getLogger();
 
   public static final String ID = "id";
   public static final String FUND_ID = "fundId";
@@ -514,12 +518,16 @@ public class HelperUtils {
   public static ConversionQuery buildConversionQuery(PoLine poLine, String termCurrency) {
     Cost cost = poLine.getCost();
     if (cost.getExchangeRate() != null) {
+      logger.info("buildConversionQuery:: POL id {}, cost with exchange rate: {}",
+        poLine.getId(), poLine.getCost());
       return ConversionQueryBuilder.of()
         .setBaseCurrency(termCurrency)
         .setTermCurrency(cost.getCurrency())
         .set(RATE_KEY, cost.getExchangeRate())
         .build();
     }
+    logger.info("buildConversionQuery:: POL id {}, cost without exchange rate: {}",
+      poLine.getId(), poLine.getCost());
     return ConversionQueryBuilder.of()
       .setBaseCurrency(cost.getCurrency())
       .setTermCurrency(termCurrency)
