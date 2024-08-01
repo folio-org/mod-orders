@@ -50,6 +50,8 @@ import org.folio.service.TagServiceTest;
 import org.folio.service.UserServiceTest;
 import org.folio.service.consortium.ConsortiumConfigurationServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
+import org.folio.service.exchange.ExchangeRateProviderResolverTest;
+import org.folio.service.exchange.ManualCurrencyConversionTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.FinanceHoldersBuilderTest;
@@ -76,6 +78,7 @@ import org.folio.service.orders.CompositePoLineValidationServiceTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
 import org.folio.service.orders.OrderInvoiceRelationServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
+import org.folio.service.orders.OrderRolloverCurrencyServiceTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderStorageServiceTest;
@@ -259,6 +262,14 @@ public class ApiTestSuite {
   }
 
   @Nested
+  class ManualCurrencyConversionTestNested extends ManualCurrencyConversionTest {
+  }
+
+  @Nested
+  class ExchangeRateProviderResolverTestNested extends ExchangeRateProviderResolverTest {
+  }
+
+  @Nested
   class RestClientTestNested extends RestClientTest {
   }
 
@@ -296,6 +307,10 @@ public class ApiTestSuite {
 
   @Nested
   class OrderRolloverServiceTestNested extends OrderRolloverServiceTest {
+  }
+
+  @Nested
+  class OrderRolloverCurrencyServiceTestNested extends OrderRolloverCurrencyServiceTest {
   }
 
   @Nested

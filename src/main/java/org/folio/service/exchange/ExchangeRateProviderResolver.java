@@ -21,7 +21,6 @@ public class ExchangeRateProviderResolver {
     } else {
       operationMode  = ManualExchangeRateProvider.OperationMode.MULTIPLY;
     }
-
     ExchangeRateProvider exchangeRateProvider = Optional.ofNullable(conversionQuery)
             .map(query -> query.get(RATE_KEY, Double.class))
             .map(rate -> (ExchangeRateProvider) new ManualExchangeRateProvider(operationMode))

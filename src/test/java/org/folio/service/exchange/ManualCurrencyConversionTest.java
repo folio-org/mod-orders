@@ -1,9 +1,9 @@
 package org.folio.service.exchange;
 
-
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
+import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 
 import io.vertx.core.Context;
@@ -20,6 +20,7 @@ import javax.money.convert.CurrencyConversion;
 import javax.money.convert.ExchangeRateProvider;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestContext;
+
 import org.javamoney.moneta.Money;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -28,14 +29,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 
 @ExtendWith(VertxExtension.class)
-class ManualCurrencyConversionTest {
+public class ManualCurrencyConversionTest {
 
-  @InjectMocks
+  @Autowired
   private ExchangeRateProviderResolver exchangeRateProviderResolver;
 
   private final Context ctx = getFirstContextFromVertx(getVertx());
@@ -59,6 +61,7 @@ class ManualCurrencyConversionTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
+    initSpringContext(ContextConfiguration.class);
   }
 
   @ParameterizedTest
@@ -111,5 +114,12 @@ class ManualCurrencyConversionTest {
     Number totalAmountAfterConversion = manualCurrencyConversion.apply(totalAmountBeforeConversion).getNumber();
 
     Assertions.assertEquals(totalAmount, totalAmountAfterConversion.doubleValue());
+  }
+
+  private static class ContextConfiguration {
+    @Bean
+    ExchangeRateProviderResolver exchangeRateProviderResolver() {
+      return new ExchangeRateProviderResolver();
+    }
   }
 }

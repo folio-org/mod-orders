@@ -56,7 +56,7 @@ public class ManualExchangeRateProvider implements ExchangeRateProvider {
       throw new HttpException(500, "Rate must be provided in provider : " + this.getClass().getSimpleName());
     }
     var exchangeRate = conversionQuery.get(RATE_KEY, Double.class);
-    logger.info("getExchangeRateFromService:: exchangeRate: {}", exchangeRate);
+    logger.info("getExchangeRate:: exchangeRate: {}", exchangeRate);
     builder.setFactor(DefaultNumberValue.of(exchangeRate));
     return builder.build();
   }

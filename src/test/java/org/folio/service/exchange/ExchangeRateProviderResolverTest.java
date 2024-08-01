@@ -3,6 +3,7 @@ package org.folio.service.exchange;
 import static org.folio.TestConfig.autowireDependencies;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
+import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 
 import io.vertx.core.Context;
@@ -22,14 +23,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 
 @ExtendWith(VertxExtension.class)
-class ExchangeRateProviderResolverTest {
+public class ExchangeRateProviderResolverTest {
 
-  @InjectMocks
+  @Autowired
   private ExchangeRateProviderResolver exchangeRateProviderResolver;
 
   private final Context ctx = getFirstContextFromVertx(getVertx());
@@ -53,6 +55,7 @@ class ExchangeRateProviderResolverTest {
       ApiTestSuite.before();
       runningOnOwn = true;
     }
+    initSpringContext(ContextConfiguration.class);
   }
 
   @Test
@@ -112,4 +115,10 @@ class ExchangeRateProviderResolverTest {
     Assertions.assertNotNull(exchangeRateProvider);
   }
 
+  private static class ContextConfiguration {
+    @Bean
+    ExchangeRateProviderResolver exchangeRateProviderResolver() {
+      return new ExchangeRateProviderResolver();
+    }
+  }
 }
