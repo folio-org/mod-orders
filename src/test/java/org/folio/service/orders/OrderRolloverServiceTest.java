@@ -269,7 +269,6 @@ public class OrderRolloverServiceTest {
     String polCurrency = systemCurrency;
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
     ManualExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
-    when(exchangeRateProvider.getOperationMode()).thenReturn(ManualExchangeRateProvider.OperationMode.DIVIDE);
     ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
@@ -383,7 +382,6 @@ public class OrderRolloverServiceTest {
     String polCurrency = systemCurrency;
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
     ManualExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
-    when(exchangeRateProvider.getOperationMode()).thenReturn(ManualExchangeRateProvider.OperationMode.DIVIDE);
     ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
@@ -510,7 +508,6 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
     ManualExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
-    when(exchangeRateProvider.getOperationMode()).thenReturn(ManualExchangeRateProvider.OperationMode.DIVIDE);
     ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 

@@ -52,8 +52,8 @@ public class PoLineEncumbrancesHolder {
     return currencyConversion;
   }
 
-  // System currency is reference currency that will be used to
-  // create encumbrance transactions in the Finance app
+  // System currency is the reference currency that will
+  // be used to create encumbrance transactions in the Finance app
   public String getSystemCurrency() {
     return systemCurrency;
   }
