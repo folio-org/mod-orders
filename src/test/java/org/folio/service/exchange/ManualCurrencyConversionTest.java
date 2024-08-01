@@ -86,7 +86,7 @@ public class ManualCurrencyConversionTest {
         .build();
     }
 
-    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
+    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext, operationMode);
     CurrencyConversion currencyConversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
     MonetaryAmount totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(currencyConversion).with(Monetary.getDefaultRounding());
     ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, manualExchangeRateProvider, ConversionContext.of(), operationMode);

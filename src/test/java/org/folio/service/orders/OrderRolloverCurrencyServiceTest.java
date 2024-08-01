@@ -37,7 +37,6 @@ import org.folio.service.finance.rollover.LedgerRolloverProgressService;
 import org.folio.service.finance.transaction.TransactionService;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -138,8 +137,7 @@ public class OrderRolloverCurrencyServiceTest {
       Assertions.assertEquals(BigDecimal.valueOf(totalAmount), totalAmountAfterConversion);
     } else {
       Assertions.assertNotNull(totalAmountAfterConversion);
-      // For dynamic exchange rates this cannot be asserted to be always true
-      Assumptions.assumeTrue(totalAmount <= totalAmountAfterConversion.doubleValue());
+      Assertions.assertTrue(totalAmount <= Math.round(totalAmountAfterConversion.doubleValue()));
     }
   }
 

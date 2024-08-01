@@ -272,7 +272,7 @@ public class OrderRolloverServiceTest {
     ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
-    doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext));
+    doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext), any(ManualExchangeRateProvider.OperationMode.class));
     doReturn(manualCurrencyConversion).when(exchangeRateProvider).getCurrencyConversion(any(ConversionQuery.class));
     doReturn(exchangeRate).when(exchangeRateProvider).getExchangeRate(any(ConversionQuery.class));
     when(exchangeRate.getContext()).thenReturn(ConversionContext.of());
@@ -385,7 +385,7 @@ public class OrderRolloverServiceTest {
     ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
-    doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext));
+    doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext), any(ManualExchangeRateProvider.OperationMode.class));
     doReturn(manualCurrencyConversion).when(exchangeRateProvider).getCurrencyConversion(any(ConversionQuery.class));
     doReturn(exchangeRate).when(exchangeRateProvider).getExchangeRate(any(ConversionQuery.class));
     when(exchangeRate.getContext()).thenReturn(ConversionContext.of());
@@ -511,7 +511,7 @@ public class OrderRolloverServiceTest {
     ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
-    doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext));
+    doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext), any(ManualExchangeRateProvider.OperationMode.class));
     doReturn(manualCurrencyConversion).when(exchangeRateProvider).getCurrencyConversion(any(ConversionQuery.class));
     doReturn(exchangeRate).when(exchangeRateProvider).getExchangeRate(any(ConversionQuery.class));
     when(exchangeRate.getContext()).thenReturn(ConversionContext.of());

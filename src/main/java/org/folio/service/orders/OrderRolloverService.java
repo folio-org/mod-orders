@@ -57,6 +57,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.exchange.ManualExchangeRateProvider;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
@@ -379,7 +380,7 @@ public class OrderRolloverService {
     String toCurrency = cost.getCurrency();
     Double exchangeRate = cost.getExchangeRate();
     ConversionQuery conversionQuery = HelperUtils.getConversionQuery(exchangeRate, fromCurrency, toCurrency);
-    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
+    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext, ManualExchangeRateProvider.OperationMode.DIVIDE);
     return exchangeRateProvider.getCurrencyConversion(conversionQuery);
   }
 
