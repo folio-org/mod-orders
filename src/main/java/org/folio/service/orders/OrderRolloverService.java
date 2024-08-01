@@ -6,7 +6,6 @@ import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.calculateCostUnitsTotal;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.getCurrencyFromTransactionByPoLineId;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError.ErrorType.ORDER_ROLLOVER;
@@ -58,6 +57,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
+import org.folio.service.exchange.ManualExchangeRateProvider;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
@@ -363,27 +363,29 @@ public class OrderRolloverService {
     return totalMonetaryCurrEncumbranceInitialAmount.subtract(costUnitsTotal).with(Monetary.getDefaultRounding());
   }
 
-  private BigDecimal calculateTotalInitialAmountEncumbered(PoLineEncumbrancesHolder holder) {
-    logger.info("calculateTotalInitialAmountEncumbered:: holder: {}", JsonObject.mapFrom(holder).encodePrettily());
+  protected BigDecimal calculateTotalInitialAmountEncumbered(PoLineEncumbrancesHolder holder) {
     BigDecimal totalAmountBeforeConversion = holder.getEncumbrances().stream()
                        .map(Transaction::getEncumbrance)
                        .map(Encumbrance::getInitialAmountEncumbered)
                        .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
-    logger.info("calculateTotalInitialAmountEncumbered:: totalAmountBeforeConversion: {}", totalAmountBeforeConversion);
+    Cost cost = holder.getPoLine().getCost();
+    logger.info("buildPoLineEncumbrancesHolders:: initiating currency conversion: {}->{}", holder.getSystemCurrency(), cost.getCurrency());
+    logger.info("calculateTotalInitialAmountEncumbered:: totalAmountBeforeConversion: {}", totalAmountBeforeConversion.doubleValue());
     Number totalAmountAfterConversion = amountWithConversion(totalAmountBeforeConversion, holder).getNumber();
-    logger.info("calculateTotalInitialAmountEncumbered:: totalAmountAfterConversion: {}", totalAmountAfterConversion);
+    logger.info("calculateTotalInitialAmountEncumbered:: totalAmountAfterConversion: {}", totalAmountAfterConversion.doubleValue());
     return BigDecimal.valueOf(totalAmountAfterConversion.doubleValue());
   }
 
-  private CurrencyConversion retrieveCurrencyConversion(String termCurrency, PoLine poLine, RequestContext requestContext) {
-    ConversionQuery conversionQuery = HelperUtils.buildConversionQuery(poLine, termCurrency);
-    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
+  protected CurrencyConversion retrieveCurrencyConversion(String fromCurrency, Cost cost, RequestContext requestContext) {
+    String toCurrency = cost.getCurrency();
+    Double exchangeRate = cost.getExchangeRate();
+    ConversionQuery conversionQuery = HelperUtils.getConversionQuery(exchangeRate, fromCurrency, toCurrency);
+    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext, ManualExchangeRateProvider.OperationMode.DIVIDE);
     return exchangeRateProvider.getCurrencyConversion(conversionQuery);
   }
 
   private MonetaryAmount amountWithConversion(BigDecimal totalInitialAmountEncumbered, PoLineEncumbrancesHolder holder) {
-    String encumbranceTransactionCurrency = getCurrencyFromTransactionByPoLineId(holder.getEncumbrances(), holder.getPoLine(), null);
-    return Money.of(totalInitialAmountEncumbered, encumbranceTransactionCurrency)
+    return Money.of(totalInitialAmountEncumbered, holder.getSystemCurrency())
       .with(holder.getCurrencyConversion())
       .with(Monetary.getDefaultRounding());
   }
@@ -392,9 +394,10 @@ public class OrderRolloverService {
                                                                         List<Transaction> encumbrances, RequestContext requestContext) {
     List<PoLineEncumbrancesHolder> poLineEncumbrancesHolders = new ArrayList<>();
     poLines.forEach(poLine -> {
-      String termCurrency = getCurrencyFromTransactionByPoLineId(encumbrances, poLine, systemCurrency);
-      CurrencyConversion currencyConversion = retrieveCurrencyConversion(termCurrency, poLine, requestContext);
-      PoLineEncumbrancesHolder holder = new PoLineEncumbrancesHolder(poLine).withCurrencyConversion(currencyConversion);
+      CurrencyConversion currencyConversion = retrieveCurrencyConversion(systemCurrency, poLine.getCost(), requestContext);
+      PoLineEncumbrancesHolder holder = new PoLineEncumbrancesHolder(poLine)
+        .withCurrencyConversion(currencyConversion)
+        .withSystemCurrency(systemCurrency);
       extractPoLineEncumbrances(poLine, encumbrances).forEach(encumbrance -> {
         holder.addEncumbrance(encumbrance);
         poLineEncumbrancesHolders.add(holder);

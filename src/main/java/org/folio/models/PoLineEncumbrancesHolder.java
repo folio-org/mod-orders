@@ -12,6 +12,7 @@ public class PoLineEncumbrancesHolder {
   private final PoLine poLine;
   private CurrencyConversion currencyConversion;
   private List<Transaction> encumbrances;
+  private String systemCurrency;
 
   public PoLineEncumbrancesHolder(PoLine poLine) {
     this.poLine = poLine;
@@ -33,6 +34,11 @@ public class PoLineEncumbrancesHolder {
     return this;
   }
 
+  public PoLineEncumbrancesHolder withSystemCurrency(String systemCurrency) {
+    this.systemCurrency = systemCurrency;
+    return this;
+  }
+
 
   public PoLine getPoLine() {
     return this.poLine;
@@ -44,5 +50,11 @@ public class PoLineEncumbrancesHolder {
 
   public CurrencyConversion getCurrencyConversion() {
     return currencyConversion;
+  }
+
+  // System currency is reference currency that will be used to
+  // create encumbrance transactions in the Finance app
+  public String getSystemCurrency() {
+    return systemCurrency;
   }
 }

@@ -13,12 +13,16 @@ public class ExchangeRateProviderResolver {
   private final Logger logger = LogManager.getLogger();
   public static final String RATE_KEY = "factor";
 
-  public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext){
+  public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext) {
+    return resolve(conversionQuery, requestContext, ManualExchangeRateProvider.OperationMode.MULTIPLY);
+  }
+
+  public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext, ManualExchangeRateProvider.OperationMode operationMode) {
     ExchangeRateProvider exchangeRateProvider = Optional.ofNullable(conversionQuery)
             .map(query -> query.get(RATE_KEY, Double.class))
-            .map(rate -> (ExchangeRateProvider) new ManualExchangeRateProvider())
+            .map(rate -> (ExchangeRateProvider) new ManualExchangeRateProvider(operationMode))
             .orElseGet(() -> new FinanceApiExchangeRateProvider(requestContext));
-    logger.debug("Created ExchangeRateProvider name: {}", exchangeRateProvider.getContext().getProviderName());
+    logger.info("Created ExchangeRateProvider name: {}, operationMode: {}", exchangeRateProvider.getContext().getProviderName(), operationMode);
     return exchangeRateProvider;
   }
 }

@@ -19,7 +19,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.helper.BaseHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.NoInventoryRecordException;
 import org.folio.rest.core.models.RequestContext;
@@ -73,7 +72,6 @@ import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
-import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 
 public class HelperUtils {
 
@@ -505,33 +503,6 @@ public class HelperUtils {
         .setTermCurrency(toCurrency).build();
     }
     return conversionQuery;
-  }
-
-  public static String getCurrencyFromTransactionByPoLineId(List<Transaction> encumbrances, PoLine poLine, String systemCurrency) {
-    return encumbrances.stream()
-      .filter(v -> v.getEncumbrance().getSourcePoLineId().equals(poLine.getId()))
-      .findFirst()
-      .map(Transaction::getCurrency)
-      .orElse(systemCurrency);
-  }
-
-  public static ConversionQuery buildConversionQuery(PoLine poLine, String termCurrency) {
-    Cost cost = poLine.getCost();
-    if (cost.getExchangeRate() != null) {
-      logger.info("buildConversionQuery:: POL id {}, cost with exchange rate: {}",
-        poLine.getId(), JsonObject.mapFrom(poLine.getCost()).encodePrettily());
-      return ConversionQueryBuilder.of()
-        .setBaseCurrency(termCurrency)
-        .setTermCurrency(cost.getCurrency())
-        .set(RATE_KEY, cost.getExchangeRate())
-        .build();
-    }
-    logger.info("buildConversionQuery:: POL id {}, cost without exchange rate: {}",
-      poLine.getId(), JsonObject.mapFrom(poLine.getCost()).encodePrettily());
-    return ConversionQueryBuilder.of()
-      .setBaseCurrency(termCurrency)
-      .setTermCurrency(cost.getCurrency())
-      .build();
   }
 
   /**

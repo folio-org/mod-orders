@@ -13,12 +13,17 @@ import javax.money.convert.ProviderContext;
 import javax.money.convert.ProviderContextBuilder;
 import javax.money.convert.RateType;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.spring.SpringContextUtil;
 import org.javamoney.moneta.convert.ExchangeRateBuilder;
 import org.javamoney.moneta.spi.DefaultNumberValue;
 
 public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
+
+  private final Logger logger = LogManager.getLogger();
+
   private static final ProviderContext CONTEXT;
 
   static {
@@ -37,6 +42,7 @@ public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
   @Override
   public ExchangeRate getExchangeRate(ConversionQuery conversionQuery) {
     var exchangeRate = getExchangeRateFromService(conversionQuery);
+    logger.info("getExchangeRateFromService:: Exchange rate: {}", exchangeRate.getExchangeRate());
 
     ExchangeRateBuilder builder = new ExchangeRateBuilder(ConversionContext.of());
     builder.setBase(conversionQuery.getBaseCurrency());
