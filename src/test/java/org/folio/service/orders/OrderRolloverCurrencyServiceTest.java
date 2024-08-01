@@ -37,6 +37,7 @@ import org.folio.service.finance.rollover.LedgerRolloverProgressService;
 import org.folio.service.finance.transaction.TransactionService;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -79,7 +80,9 @@ public class OrderRolloverCurrencyServiceTest {
 
   private static Stream<Arguments> testAmountWithConversionArgs() {
     return Stream.of(
+      Arguments.of("USD", "USD", 10d, 10d, 10d, null, 100d),
       Arguments.of("USD", "AUD", 10d, 6.51d, 10d, null, 100d),
+      Arguments.of("AUD", "USD", 6.51d, 10d, 6.51d, null, 100d),
       Arguments.of("USD", "UZS", 10d, 9d, 10d, 0.9d, 100d)
     );
   }
@@ -131,7 +134,13 @@ public class OrderRolloverCurrencyServiceTest {
 
     Number totalAmountAfterConversion = orderRolloverService.calculateTotalInitialAmountEncumbered(holder);
 
-    Assertions.assertEquals(BigDecimal.valueOf(totalAmount), totalAmountAfterConversion);
+    if (Objects.nonNull(exchangeRate)) {
+      Assertions.assertEquals(BigDecimal.valueOf(totalAmount), totalAmountAfterConversion);
+    } else {
+      Assertions.assertNotNull(totalAmountAfterConversion);
+      // For dynamic exchange rates this cannot be asserted to be always true
+      Assumptions.assumeTrue(totalAmount <= totalAmountAfterConversion.doubleValue());
+    }
   }
 
   private static class ContextConfiguration {

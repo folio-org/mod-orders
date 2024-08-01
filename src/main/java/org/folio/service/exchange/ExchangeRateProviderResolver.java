@@ -1,5 +1,6 @@
 package org.folio.service.exchange;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import javax.money.convert.ConversionQuery;
@@ -14,10 +15,13 @@ public class ExchangeRateProviderResolver {
   public static final String RATE_KEY = "factor";
 
   public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext) {
-    return resolve(conversionQuery, requestContext, ManualExchangeRateProvider.OperationMode.MULTIPLY);
-  }
+    ManualExchangeRateProvider.OperationMode operationMode;
+    if (Objects.nonNull(conversionQuery) && Objects.nonNull(conversionQuery.get(RATE_KEY, Double.class))) {
+      operationMode = ManualExchangeRateProvider.OperationMode.DIVIDE;
+    } else {
+      operationMode  = ManualExchangeRateProvider.OperationMode.MULTIPLY;
+    }
 
-  public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext, ManualExchangeRateProvider.OperationMode operationMode) {
     ExchangeRateProvider exchangeRateProvider = Optional.ofNullable(conversionQuery)
             .map(query -> query.get(RATE_KEY, Double.class))
             .map(rate -> (ExchangeRateProvider) new ManualExchangeRateProvider(operationMode))

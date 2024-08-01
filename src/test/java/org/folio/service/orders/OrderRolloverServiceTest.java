@@ -36,7 +36,6 @@ import javax.money.convert.ConversionContext;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 import javax.money.convert.ExchangeRate;
-import javax.money.convert.ExchangeRateProvider;
 
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
@@ -269,8 +268,9 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
     String polCurrency = systemCurrency;
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
-    ExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
-    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of());
+    ManualExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
+    when(exchangeRateProvider.getOperationMode()).thenReturn(ManualExchangeRateProvider.OperationMode.DIVIDE);
+    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
     doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext));
@@ -382,8 +382,9 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
     String polCurrency = systemCurrency;
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
-    ExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
-    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of());
+    ManualExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
+    when(exchangeRateProvider.getOperationMode()).thenReturn(ManualExchangeRateProvider.OperationMode.DIVIDE);
+    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
     doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext));
@@ -508,8 +509,9 @@ public class OrderRolloverServiceTest {
     double exchangeEurToUsdRate = 0.82858d;
     doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
     ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
-    ExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
-    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of());
+    ManualExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
+    when(exchangeRateProvider.getOperationMode()).thenReturn(ManualExchangeRateProvider.OperationMode.DIVIDE);
+    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
     ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
     doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext));

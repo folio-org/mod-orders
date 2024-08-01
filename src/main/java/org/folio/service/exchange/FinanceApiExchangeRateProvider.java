@@ -42,7 +42,7 @@ public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
   @Override
   public ExchangeRate getExchangeRate(ConversionQuery conversionQuery) {
     var exchangeRate = getExchangeRateFromService(conversionQuery);
-    logger.info("getExchangeRateFromService:: Exchange rate: {}", exchangeRate.getExchangeRate());
+    logger.info("getExchangeRateFromService:: exchangeRate: {}", exchangeRate.getExchangeRate());
 
     ExchangeRateBuilder builder = new ExchangeRateBuilder(ConversionContext.of());
     builder.setBase(conversionQuery.getBaseCurrency());
