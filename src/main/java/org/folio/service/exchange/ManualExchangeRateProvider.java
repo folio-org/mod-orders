@@ -12,14 +12,12 @@ import javax.money.convert.ProviderContext;
 import javax.money.convert.ProviderContextBuilder;
 import javax.money.convert.RateType;
 
-import lombok.Getter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.exceptions.HttpException;
 import org.javamoney.moneta.convert.ExchangeRateBuilder;
 import org.javamoney.moneta.spi.DefaultNumberValue;
 
-@Getter
 public class ManualExchangeRateProvider implements ExchangeRateProvider {
 
   private static final ProviderContext CONTEXT;
