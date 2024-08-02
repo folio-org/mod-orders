@@ -62,8 +62,8 @@ public class ManualCurrencyConversionTest {
   }
 
   @ParameterizedTest
-  @EnumSource(ManualExchangeRateProvider.OperationMode.class)
-  void testApplyWithOperationModes(ManualExchangeRateProvider.OperationMode operationMode) {
+  @EnumSource(ManualCurrencyConversion.OperationMode.class)
+  void testApplyWithOperationModes(ManualCurrencyConversion.OperationMode operationMode) {
     var totalAmount = 6.51d;
     var fromCurrency = "USD";
     var toCurrency = "AUD";
@@ -71,7 +71,7 @@ public class ManualCurrencyConversionTest {
     var manualExchangeRateProvider = new ManualExchangeRateProvider();
 
     ConversionQuery conversionQuery;
-    if (operationMode == ManualExchangeRateProvider.OperationMode.MULTIPLY) {
+    if (operationMode == ManualCurrencyConversion.OperationMode.MULTIPLY) {
       conversionQuery = ConversionQueryBuilder.of()
         .setBaseCurrency(fromCurrency)
         .setTermCurrency(toCurrency)
@@ -109,7 +109,7 @@ public class ManualCurrencyConversionTest {
     var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
     var currencyConversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
     var totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(currencyConversion).with(Monetary.getDefaultRounding());
-    var manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, manualExchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
+    var manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, manualExchangeRateProvider, ConversionContext.of(), ManualCurrencyConversion.OperationMode.DIVIDE);
     var totalAmountAfterConversion = manualCurrencyConversion.apply(totalAmountBeforeConversion).getNumber();
 
     Assertions.assertEquals(totalAmount, totalAmountAfterConversion.doubleValue());

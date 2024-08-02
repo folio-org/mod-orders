@@ -23,19 +23,14 @@ public class ManualExchangeRateProvider implements ExchangeRateProvider {
   private static final ProviderContext CONTEXT;
   private static final Logger logger = LogManager.getLogger();
 
-  private final OperationMode operationMode;
+  private final ManualCurrencyConversion.OperationMode operationMode;
 
   public ManualExchangeRateProvider() {
-    this.operationMode = OperationMode.MULTIPLY;
+    this.operationMode = ManualCurrencyConversion.OperationMode.MULTIPLY;
   }
 
-  public ManualExchangeRateProvider(OperationMode operationMode) {
+  public ManualExchangeRateProvider(ManualCurrencyConversion.OperationMode operationMode) {
     this.operationMode = operationMode;
-  }
-
-  public enum OperationMode {
-    MULTIPLY,
-    DIVIDE
   }
 
   static {

@@ -78,7 +78,6 @@ import org.folio.service.orders.CompositePoLineValidationServiceTest;
 import org.folio.service.orders.FundsDistributionServiceTest;
 import org.folio.service.orders.OrderInvoiceRelationServiceTest;
 import org.folio.service.orders.OrderReEncumberServiceTest;
-import org.folio.service.orders.OrderRolloverCurrencyServiceTest;
 import org.folio.service.orders.OrderRolloverServiceTest;
 import org.folio.service.orders.PurchaseOrderLineServiceTest;
 import org.folio.service.orders.PurchaseOrderStorageServiceTest;
@@ -307,10 +306,6 @@ public class ApiTestSuite {
 
   @Nested
   class OrderRolloverServiceTestNested extends OrderRolloverServiceTest {
-  }
-
-  @Nested
-  class OrderRolloverCurrencyServiceTestNested extends OrderRolloverCurrencyServiceTest {
   }
 
   @Nested

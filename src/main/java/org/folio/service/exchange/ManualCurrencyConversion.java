@@ -16,21 +16,26 @@ import org.javamoney.moneta.spi.AbstractCurrencyConversion;
 public class ManualCurrencyConversion extends AbstractCurrencyConversion {
   private final ExchangeRateProvider rateProvider;
   private final ConversionQuery conversionQuery;
-  private final ManualExchangeRateProvider.OperationMode operationMode;
+  private final OperationMode operationMode;
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider, ConversionContext conversionContext) {
     super(conversionQuery.getCurrency(), conversionContext);
     this.conversionQuery = conversionQuery;
     this.rateProvider = rateProvider;
-    this.operationMode = ManualExchangeRateProvider.OperationMode.MULTIPLY;
+    this.operationMode = OperationMode.MULTIPLY;
   }
 
   public ManualCurrencyConversion(ConversionQuery conversionQuery, ExchangeRateProvider rateProvider, ConversionContext conversionContext,
-                                  ManualExchangeRateProvider.OperationMode operationMode) {
+                                  OperationMode operationMode) {
     super(conversionQuery.getCurrency(), conversionContext);
     this.conversionQuery = conversionQuery;
     this.rateProvider = rateProvider;
     this.operationMode = operationMode;
+  }
+
+  public enum OperationMode {
+    MULTIPLY,
+    DIVIDE
   }
 
   @Override
@@ -53,7 +58,7 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
     // Add support for reverse conversion for cases when just a single manual exchange rate is set in the POL
     // i.e. ECB dynamic rates would be: AUD -> USD will use ~0.66, USD -> AUD will use ~1.55
     // but in case of manual exchange rate this second exchange rate is not provided
-    if (this.operationMode == ManualExchangeRateProvider.OperationMode.MULTIPLY) {
+    if (this.operationMode == OperationMode.MULTIPLY) {
       return super.apply(amount);
     }
     if (super.getCurrency().equals(Objects.requireNonNull(amount).getCurrency())) {

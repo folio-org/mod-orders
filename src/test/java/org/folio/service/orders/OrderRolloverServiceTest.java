@@ -9,7 +9,6 @@ import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,10 +18,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -31,12 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.money.Monetary;
-import javax.money.convert.ConversionContext;
-import javax.money.convert.ConversionQuery;
-import javax.money.convert.ConversionQueryBuilder;
-import javax.money.convert.ExchangeRate;
+import java.util.stream.Stream;
 
+import org.folio.models.PoLineEncumbrancesHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.acq.model.finance.LedgerFiscalYearRolloverError;
@@ -54,17 +48,19 @@ import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
-import org.folio.service.exchange.ManualCurrencyConversion;
-import org.folio.service.exchange.ManualExchangeRateProvider;
 import org.folio.service.finance.FundService;
 import org.folio.service.finance.rollover.LedgerRolloverErrorService;
 import org.folio.service.finance.rollover.LedgerRolloverProgressService;
 import org.folio.service.finance.transaction.TransactionService;
-import org.javamoney.moneta.spi.DefaultNumberValue;
+import org.folio.utils.CurrencyConversionMockHelper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Captor;
@@ -188,6 +184,9 @@ public class OrderRolloverServiceTest {
     String expClassId2 = UUID.randomUUID().toString();
     String expClassId3 = UUID.randomUUID().toString();
 
+    Double fundAmount = 100d;
+    Double nopExchangeRate = 1.0d;
+
     EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
     EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
@@ -205,11 +204,11 @@ public class OrderRolloverServiceTest {
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
       new Fund().withId(fundId3).withLedgerId(ledgerId));
 
-    FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(100d)
+    FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(fundAmount)
       .withEncumbrance(prevEncumbrId1);
-    FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(100d)
+    FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(fundAmount)
       .withEncumbrance(prevEncumbrId2).withExpenseClassId(expClassId2);
-    FundDistribution fundDistributionOngoing3 = new FundDistribution().withFundId(fundId3).withValue(100d)
+    FundDistribution fundDistributionOngoing3 = new FundDistribution().withFundId(fundId3).withValue(fundAmount)
       .withEncumbrance(prevEncumbrId3).withExpenseClassId(expClassId3);
 
     Cost costOneTime = new Cost().withListUnitPrice(100d).withQuantityPhysical(1).withCurrency(systemCurrency).withPoLineEstimatedPrice(100d);
@@ -264,21 +263,8 @@ public class OrderRolloverServiceTest {
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    double exchangeEurToUsdRate = 1.0d;
-    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
-    String polCurrency = systemCurrency;
-    ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
-    ManualExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
-    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
-    ExchangeRate exchangeRate = mock(ExchangeRate.class);
-
-    doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext), any(ManualExchangeRateProvider.OperationMode.class));
-    doReturn(manualCurrencyConversion).when(exchangeRateProvider).getCurrencyConversion(any(ConversionQuery.class));
-    doReturn(exchangeRate).when(exchangeRateProvider).getExchangeRate(any(ConversionQuery.class));
-    when(exchangeRate.getContext()).thenReturn(ConversionContext.of());
-    when(exchangeRate.getCurrency()).thenReturn(Monetary.getCurrency(systemCurrency));
-    when(exchangeRate.getBaseCurrency()).thenReturn(Monetary.getCurrency(polCurrency));
-    when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
+    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, exchangeRateProviderResolver, requestContext);
+    conversionHelper.mockExchangeRateProviderResolver(CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API, systemCurrency, systemCurrency, nopExchangeRate);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
@@ -313,6 +299,8 @@ public class OrderRolloverServiceTest {
     String prevEncumbrId2 = UUID.randomUUID().toString();
     String currEncumbrId1 = UUID.randomUUID().toString();
     String expClassId2 = UUID.randomUUID().toString();
+
+    Double nopExchangeRate = 1.0d;
 
     EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
@@ -377,21 +365,8 @@ public class OrderRolloverServiceTest {
     List<Transaction> encumbrances = List.of(transactionOneTime);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    double exchangeEurToUsdRate = 1.0d;
-    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
-    String polCurrency = systemCurrency;
-    ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
-    ManualExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
-    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
-    ExchangeRate exchangeRate = mock(ExchangeRate.class);
-
-    doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext), any(ManualExchangeRateProvider.OperationMode.class));
-    doReturn(manualCurrencyConversion).when(exchangeRateProvider).getCurrencyConversion(any(ConversionQuery.class));
-    doReturn(exchangeRate).when(exchangeRateProvider).getExchangeRate(any(ConversionQuery.class));
-    when(exchangeRate.getContext()).thenReturn(ConversionContext.of());
-    when(exchangeRate.getCurrency()).thenReturn(Monetary.getCurrency(systemCurrency));
-    when(exchangeRate.getBaseCurrency()).thenReturn(Monetary.getCurrency(polCurrency));
-    when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
+    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, exchangeRateProviderResolver, requestContext);
+    conversionHelper.mockExchangeRateProviderResolver(CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API, systemCurrency, systemCurrency, nopExchangeRate);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
@@ -428,6 +403,13 @@ public class OrderRolloverServiceTest {
     String expClassId2 = UUID.randomUUID().toString();
     String expClassId3 = UUID.randomUUID().toString();
 
+    String polCurrency = "AUD";
+    Double poLineAmount = 10.00d;
+    Double transactionAmount = 6.51d;
+    Double exchangeAudToUsdRate = 1.536d;
+    Double fundAmount = 100d;
+    Double rolloverAdjustmentAmount = 0.0d;
+
     EncumbranceRollover ongoingEncumbranceBasedOnExpended = new EncumbranceRollover()
       .withOrderType(EncumbranceRollover.OrderType.ONGOING).withBasedOn(EncumbranceRollover.BasedOn.EXPENDED);
     EncumbranceRollover oneTimeEncumbrance = new EncumbranceRollover()
@@ -445,23 +427,22 @@ public class OrderRolloverServiceTest {
     List<Fund> funds = List.of(new Fund().withId(fundId1).withLedgerId(ledgerId), new Fund().withId(fundId2).withLedgerId(ledgerId),
       new Fund().withId(fundId3).withLedgerId(ledgerId));
 
-    FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(100d)
+    FundDistribution fundDistributionOneTime = new FundDistribution().withFundId(fundId1).withValue(fundAmount)
       .withEncumbrance(prevEncumbrId1);
-    FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(100d)
+    FundDistribution fundDistributionOngoing2 = new FundDistribution().withFundId(fundId2).withValue(fundAmount)
       .withEncumbrance(prevEncumbrId2).withExpenseClassId(expClassId2);
-    FundDistribution fundDistributionOngoing3 = new FundDistribution().withFundId(fundId3).withValue(100d)
+    FundDistribution fundDistributionOngoing3 = new FundDistribution().withFundId(fundId3).withValue(fundAmount)
       .withEncumbrance(prevEncumbrId3).withExpenseClassId(expClassId3);
 
-    String polCurrency = "EUR";
-    Cost costOneTime = new Cost().withListUnitPrice(24.99d).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(24.99d);
+    Cost costOneTime = new Cost().withListUnitPrice(poLineAmount).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(poLineAmount);
     PoLine poLineOneTime = new PoLine().withId(poLineId1).withPurchaseOrderId(orderId1).withCost(costOneTime)
       .withFundDistribution(List.of(fundDistributionOneTime));
 
-    Cost costOngoing2 = new Cost().withListUnitPrice(24.99d).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(24.99d);
+    Cost costOngoing2 = new Cost().withListUnitPrice(poLineAmount).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(poLineAmount);
     PoLine poLineOngoing2 = new PoLine().withId(poLineId2).withPurchaseOrderId(orderId2).withCost(costOngoing2)
       .withFundDistribution(List.of(fundDistributionOngoing2));
 
-    Cost costOngoing3 = new Cost().withListUnitPrice(24.99d).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(24.99d);
+    Cost costOngoing3 = new Cost().withListUnitPrice(poLineAmount).withQuantityPhysical(1).withCurrency(polCurrency).withPoLineEstimatedPrice(poLineAmount);
     PoLine poLineOngoing3 = new PoLine().withId(poLineId3).withPurchaseOrderId(orderId3).withCost(costOngoing3)
       .withFundDistribution(List.of(fundDistributionOngoing3));
     List<PoLine> poLines = List.of(poLineOneTime, poLineOngoing2, poLineOngoing3);
@@ -489,35 +470,23 @@ public class OrderRolloverServiceTest {
     doReturn(succeededFuture()).when(ledgerRolloverProgressService).updateRolloverProgress(progress.withOrdersRolloverStatus(RolloverStatus.SUCCESS), requestContext);
 
     Encumbrance encumbranceOneTime = new Encumbrance().withSourcePurchaseOrderId(orderId1).withSourcePoLineId(poLineId1)
-      .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(30.16d);
+      .withOrderType(Encumbrance.OrderType.ONE_TIME).withInitialAmountEncumbered(transactionAmount);
     Transaction transactionOneTime = new Transaction().withId(currEncumbrId1).withFromFundId(fundId1)
-      .withEncumbrance(encumbranceOneTime).withCurrency(systemCurrency);
+      .withEncumbrance(encumbranceOneTime);
     Encumbrance encumbranceOngoing2 = new Encumbrance().withSourcePurchaseOrderId(orderId2).withSourcePoLineId(poLineId2)
-      .withOrderType(Encumbrance.OrderType.ONGOING).withInitialAmountEncumbered(30.16d);
+      .withOrderType(Encumbrance.OrderType.ONGOING).withInitialAmountEncumbered(transactionAmount);
     Transaction transactionOngoing2 = new Transaction().withId(currEncumbrId2).withFromFundId(fundId2)
-      .withEncumbrance(encumbranceOngoing2).withExpenseClassId(expClassId2).withCurrency(systemCurrency);
+      .withEncumbrance(encumbranceOngoing2).withExpenseClassId(expClassId2);
     Encumbrance encumbranceOngoing3 = new Encumbrance().withSourcePurchaseOrderId(orderId3).withSourcePoLineId(poLineId3)
-      .withOrderType(Encumbrance.OrderType.ONGOING).withInitialAmountEncumbered(30.16d);
+      .withOrderType(Encumbrance.OrderType.ONGOING).withInitialAmountEncumbered(transactionAmount);
     Transaction transactionOngoing3 = new Transaction().withId(currEncumbrId3).withFromFundId(fundId3)
-      .withEncumbrance(encumbranceOngoing3).withExpenseClassId(expClassId3).withCurrency(systemCurrency);
+      .withEncumbrance(encumbranceOngoing3).withExpenseClassId(expClassId3);
 
     List<Transaction> encumbrances = List.of(transactionOneTime, transactionOngoing2, transactionOngoing3);
     doReturn(succeededFuture(encumbrances)).when(transactionService).getTransactions(anyString(), any());
 
-    double exchangeEurToUsdRate = 0.82858d;
-    doReturn(succeededFuture(systemCurrency)).when(configurationEntriesCache).getSystemCurrency(requestContext);
-    ConversionQuery actQuery = ConversionQueryBuilder.of().setBaseCurrency(polCurrency).setTermCurrency(systemCurrency).set(RATE_KEY, exchangeEurToUsdRate).build();
-    ManualExchangeRateProvider exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
-    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(actQuery, exchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
-    ExchangeRate exchangeRate = mock(ExchangeRate.class);
-
-    doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext), any(ManualExchangeRateProvider.OperationMode.class));
-    doReturn(manualCurrencyConversion).when(exchangeRateProvider).getCurrencyConversion(any(ConversionQuery.class));
-    doReturn(exchangeRate).when(exchangeRateProvider).getExchangeRate(any(ConversionQuery.class));
-    when(exchangeRate.getContext()).thenReturn(ConversionContext.of());
-    when(exchangeRate.getCurrency()).thenReturn(Monetary.getCurrency(systemCurrency));
-    when(exchangeRate.getBaseCurrency()).thenReturn(Monetary.getCurrency(polCurrency));
-    when(exchangeRate.getFactor()).thenReturn(new DefaultNumberValue(exchangeEurToUsdRate));
+    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, exchangeRateProviderResolver, requestContext);
+    conversionHelper.mockExchangeRateProviderResolver(CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API, systemCurrency, polCurrency, exchangeAudToUsdRate);
 
     Future<Void> future = orderRolloverService.startRollover(ledgerFiscalYearRollover, progress, requestContext);
     vertxTestContext.assertComplete(future)
@@ -526,19 +495,16 @@ public class OrderRolloverServiceTest {
         assertThat(fundDistributionOngoing2.getEncumbrance(), equalTo(currEncumbrId2));
         assertThat(fundDistributionOngoing3.getEncumbrance(), equalTo(currEncumbrId3));
 
-        assertThat(BigDecimal.valueOf(costOneTime.getPoLineEstimatedPrice()), equalTo(new BigDecimal("30.16")));
-        assertThat(BigDecimal.valueOf(costOngoing2.getPoLineEstimatedPrice()), equalTo(new BigDecimal("30.16")));
-        assertThat(BigDecimal.valueOf(costOngoing3.getPoLineEstimatedPrice()), equalTo(new BigDecimal("30.16")));
+        assertThat(BigDecimal.valueOf(costOneTime.getPoLineEstimatedPrice()), equalTo(BigDecimal.valueOf(poLineAmount)));
+        assertThat(BigDecimal.valueOf(costOngoing2.getPoLineEstimatedPrice()), equalTo(BigDecimal.valueOf(poLineAmount)));
+        assertThat(BigDecimal.valueOf(costOngoing3.getPoLineEstimatedPrice()), equalTo(BigDecimal.valueOf(poLineAmount)));
 
-        assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(5.17d));
-        assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(5.17d));
-        assertThat(costOngoing3.getFyroAdjustmentAmount(), equalTo(5.17d));
+        assertThat(costOneTime.getFyroAdjustmentAmount(), equalTo(rolloverAdjustmentAmount));
+        assertThat(costOngoing2.getFyroAdjustmentAmount(), equalTo(rolloverAdjustmentAmount));
+        assertThat(costOngoing3.getFyroAdjustmentAmount(), equalTo(rolloverAdjustmentAmount));
         vertxTestContext.completeNow();
       })
       .onFailure(vertxTestContext::failNow);
-
-
-
   }
 
   @Test
@@ -692,4 +658,70 @@ public class OrderRolloverServiceTest {
       });
   }
 
+  private static Stream<Arguments> shouldConvertTotalAmountUsingCorrectExchangeRateProviderArgs() {
+    // FINANCE_API uses multiplication and 2 exchanges rates, e.g. USD->AUD using 1.536 and AUD->USD using 0.651
+    // MANUAL uses division and 1 exchange rate (the initial exchange on the POL used to create an Encumbrance Transaction)
+    return Stream.of(
+      Arguments.of("USD", "USD", 10d, 10d, 10d, 1d, 100d, CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API),
+      Arguments.of("USD", "AUD", 10d, 6.51d, 10d, 1.536d, 100d, CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API),
+      Arguments.of("AUD", "USD", 6.51d, 10d, 6.51d, 0.651d, 100d, CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API),
+      Arguments.of("USD", "UZS", 10d, 9d, 10d, 0.9d, 100d, CurrencyConversionMockHelper.ExchangeRateProviderMode.MANUAL)
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("shouldConvertTotalAmountUsingCorrectExchangeRateProviderArgs")
+  @DisplayName("Should convert total amount using correct exchange rate provider")
+  void shouldConvertTotalAmountUsingCorrectExchangeRateProviderMode(String fromCurrency, String toCurrency, Double poLineEstimatedPrice, Double initialAmountEncumbered,
+                                                                    Double totalAmount, Double exchangeRateAmount, Double fundAllocation,
+                                                                    CurrencyConversionMockHelper.ExchangeRateProviderMode exchangeRateProviderMode) {
+    var purchaseOrderId = UUID.randomUUID().toString();
+    var poLineId = UUID.randomUUID().toString();
+    var transactionId = UUID.randomUUID().toString();
+    var encumbranceId = UUID.randomUUID().toString();
+    var fundId = UUID.randomUUID().toString();
+
+    var fundDistribution = new FundDistribution()
+      .withFundId(fundId)
+      .withValue(fundAllocation)
+      .withDistributionType(DistributionType.PERCENTAGE);
+    var cost = new Cost()
+      .withCurrency(toCurrency)
+      .withPoLineEstimatedPrice(poLineEstimatedPrice);
+    if (exchangeRateProviderMode == CurrencyConversionMockHelper.ExchangeRateProviderMode.MANUAL) {
+      cost.setExchangeRate(exchangeRateAmount);
+    }
+
+    var poLine = new PoLine()
+      .withId(encumbranceId)
+      .withId(poLineId)
+      .withPurchaseOrderId(purchaseOrderId)
+      .withCost(cost)
+      .withFundDistribution(singletonList(fundDistribution));
+
+    var encumbrance = new Encumbrance()
+      .withSourcePurchaseOrderId(purchaseOrderId)
+      .withSourcePoLineId(poLineId)
+      .withOrderType(Encumbrance.OrderType.ONE_TIME)
+      .withInitialAmountEncumbered(initialAmountEncumbered);
+    var transaction = new Transaction()
+      .withId(transactionId)
+      .withFromFundId(fundId)
+      .withCurrency(fromCurrency)
+      .withEncumbrance(encumbrance);
+
+    var conversionHelper = new CurrencyConversionMockHelper(configurationEntriesCache, exchangeRateProviderResolver, requestContext);
+    conversionHelper.mockExchangeRateProviderResolver(exchangeRateProviderMode, fromCurrency, toCurrency, exchangeRateAmount);
+
+    var currencyConversion = orderRolloverService.retrieveCurrencyConversion(fromCurrency, poLine.getCost(), requestContext);
+
+    var holder = new PoLineEncumbrancesHolder(poLine)
+      .withEncumbrances(singletonList(transaction))
+      .withCurrencyConversion(currencyConversion)
+      .withSystemCurrency(fromCurrency);
+
+    var totalAmountAfterConversion = orderRolloverService.calculateTotalInitialAmountEncumbered(holder);
+
+    Assertions.assertEquals(BigDecimal.valueOf(totalAmount), totalAmountAfterConversion);
+  }
 }

@@ -16,10 +16,10 @@ public class ExchangeRateProviderResolver {
   private final Logger logger = LogManager.getLogger();
 
   public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext) {
-    return resolve(conversionQuery, requestContext, ManualExchangeRateProvider.OperationMode.MULTIPLY);
+    return resolve(conversionQuery, requestContext, ManualCurrencyConversion.OperationMode.MULTIPLY);
   }
 
-  public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext, ManualExchangeRateProvider.OperationMode operationMode) {
+  public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext, ManualCurrencyConversion.OperationMode operationMode) {
     ExchangeRateProvider exchangeRateProvider = Optional.ofNullable(conversionQuery)
             .map(query -> query.get(RATE_KEY, Double.class))
             .map(rate -> (ExchangeRateProvider) new ManualExchangeRateProvider(operationMode))
