@@ -21,8 +21,8 @@ import org.javamoney.moneta.spi.DefaultNumberValue;
 public class ManualExchangeRateProvider implements ExchangeRateProvider {
 
   private static final ProviderContext CONTEXT;
+  private static final Logger logger = LogManager.getLogger();
 
-  private final Logger logger = LogManager.getLogger();
   private final OperationMode operationMode;
 
   public ManualExchangeRateProvider() {

@@ -12,12 +12,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import javax.money.Monetary;
-import javax.money.MonetaryAmount;
 import javax.money.convert.ConversionContext;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
-import javax.money.convert.CurrencyConversion;
-import javax.money.convert.ExchangeRateProvider;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestContext;
 
@@ -67,11 +64,12 @@ public class ManualCurrencyConversionTest {
   @ParameterizedTest
   @EnumSource(ManualExchangeRateProvider.OperationMode.class)
   void testApplyWithOperationModes(ManualExchangeRateProvider.OperationMode operationMode) {
-    Double totalAmount = 6.51d;
-    String fromCurrency = "USD";
-    String toCurrency = "AUD";
+    var totalAmount = 6.51d;
+    var fromCurrency = "USD";
+    var toCurrency = "AUD";
 
-    ManualExchangeRateProvider manualExchangeRateProvider = new ManualExchangeRateProvider();
+    var manualExchangeRateProvider = new ManualExchangeRateProvider();
+
     ConversionQuery conversionQuery;
     if (operationMode == ManualExchangeRateProvider.OperationMode.MULTIPLY) {
       conversionQuery = ConversionQueryBuilder.of()
@@ -86,32 +84,33 @@ public class ManualCurrencyConversionTest {
         .build();
     }
 
-    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext, operationMode);
-    CurrencyConversion currencyConversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
-    MonetaryAmount totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(currencyConversion).with(Monetary.getDefaultRounding());
-    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, manualExchangeRateProvider, ConversionContext.of(), operationMode);
-    Number totalAmountAfterConversion = manualCurrencyConversion.apply(totalAmountBeforeConversion).getNumber();
+    var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext, operationMode);
+    var currencyConversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
+    var totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(currencyConversion).with(Monetary.getDefaultRounding());
+    var manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, manualExchangeRateProvider, ConversionContext.of(), operationMode);
+    var totalAmountAfterConversion = manualCurrencyConversion.apply(totalAmountBeforeConversion).getNumber();
 
     Assertions.assertTrue(totalAmountAfterConversion.doubleValue() > 0);
   }
 
   @Test
   void testApplyWithSameCurrencies() {
-    Double totalAmount = 10d;
-    String fromCurrency = "USD";
-    String toCurrency = "USD";
+    var totalAmount = 10d;
+    var fromCurrency = "USD";
+    var toCurrency = "USD";
 
-    ManualExchangeRateProvider manualExchangeRateProvider = new ManualExchangeRateProvider();
-    ConversionQuery conversionQuery = ConversionQueryBuilder.of()
+    var manualExchangeRateProvider = new ManualExchangeRateProvider();
+
+    var conversionQuery = ConversionQueryBuilder.of()
       .setBaseCurrency(fromCurrency)
       .setTermCurrency(toCurrency)
       .build();
 
-    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
-    CurrencyConversion currencyConversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
-    MonetaryAmount totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(currencyConversion).with(Monetary.getDefaultRounding());
-    ManualCurrencyConversion manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, manualExchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
-    Number totalAmountAfterConversion = manualCurrencyConversion.apply(totalAmountBeforeConversion).getNumber();
+    var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
+    var currencyConversion = exchangeRateProvider.getCurrencyConversion(conversionQuery);
+    var totalAmountBeforeConversion = Money.of(totalAmount, fromCurrency).with(currencyConversion).with(Monetary.getDefaultRounding());
+    var manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, manualExchangeRateProvider, ConversionContext.of(), ManualExchangeRateProvider.OperationMode.DIVIDE);
+    var totalAmountAfterConversion = manualCurrencyConversion.apply(totalAmountBeforeConversion).getNumber();
 
     Assertions.assertEquals(totalAmount, totalAmountAfterConversion.doubleValue());
   }

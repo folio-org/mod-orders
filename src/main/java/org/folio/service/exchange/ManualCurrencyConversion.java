@@ -2,7 +2,6 @@ package org.folio.service.exchange;
 
 import java.util.Objects;
 import javax.money.MonetaryAmount;
-import javax.money.NumberValue;
 import javax.money.convert.ConversionContext;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
@@ -60,17 +59,14 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
     if (super.getCurrency().equals(Objects.requireNonNull(amount).getCurrency())) {
       return amount;
     } else {
-      ExchangeRate rate = this.getExchangeRate(amount);
-      if (!Objects.isNull(rate) && amount.getCurrency().equals(rate.getBaseCurrency())) {
-        NumberValue factor = rate.getFactor();
-        factor = this.roundFactor(amount, factor);
-        Integer scale = rate.getContext().get("exchangeRateScale", Integer.class);
-        return !Objects.isNull(scale) && scale >= 0
-          ? amount.divide(factor).getFactory().setCurrency(rate.getCurrency()).create().with(MonetaryOperators.rounding(scale))
-          : amount.divide(factor).getFactory().setCurrency(rate.getCurrency()).create();
-      } else {
+      var rate = this.getExchangeRate(amount);
+      if (Objects.isNull(rate) || !amount.getCurrency().equals(rate.getBaseCurrency())) {
         throw new CurrencyConversionException(amount.getCurrency(), super.getCurrency(), null);
       }
+      var factor = this.roundFactor(amount, rate.getFactor());
+      var scale = rate.getContext().get("exchangeRateScale", Integer.class);
+      amount = amount.divide(factor).getFactory().setCurrency(rate.getCurrency()).create();
+      return Objects.nonNull(scale) && scale >= 0 ? amount.with(MonetaryOperators.rounding(scale)) : amount;
     }
   }
 

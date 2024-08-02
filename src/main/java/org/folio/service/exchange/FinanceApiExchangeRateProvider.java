@@ -22,9 +22,8 @@ import org.javamoney.moneta.spi.DefaultNumberValue;
 
 public class FinanceApiExchangeRateProvider implements ExchangeRateProvider {
 
-  private final Logger logger = LogManager.getLogger();
-
   private static final ProviderContext CONTEXT;
+  private static final Logger logger = LogManager.getLogger();
 
   static {
     CONTEXT = ProviderContextBuilder.of("FRE", RateType.DEFERRED, RateType.ANY).set("providerDescription", "ThunderJet Finance API Exchange Rate Service").build();

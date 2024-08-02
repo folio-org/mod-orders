@@ -369,7 +369,7 @@ public class OrderRolloverService {
                        .map(Encumbrance::getInitialAmountEncumbered)
                        .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
     Cost cost = holder.getPoLine().getCost();
-    logger.info("buildPoLineEncumbrancesHolders:: initiating currency conversion: {}->{}", holder.getSystemCurrency(), cost.getCurrency());
+    logger.info("calculateTotalInitialAmountEncumbered:: initiating currency conversion: {}->{}", holder.getSystemCurrency(), cost.getCurrency());
     logger.info("calculateTotalInitialAmountEncumbered:: totalAmountBeforeConversion: {}", totalAmountBeforeConversion.doubleValue());
     Number totalAmountAfterConversion = amountWithConversion(totalAmountBeforeConversion, holder).getNumber();
     logger.info("calculateTotalInitialAmountEncumbered:: totalAmountAfterConversion: {}", totalAmountAfterConversion.doubleValue());

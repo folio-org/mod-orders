@@ -17,7 +17,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
-import javax.money.convert.CurrencyConversion;
 import org.folio.ApiTestSuite;
 import org.folio.dao.FailedLedgerRolloverPoLineDao;
 import org.folio.models.PoLineEncumbrancesHolder;
@@ -89,49 +88,49 @@ public class OrderRolloverCurrencyServiceTest {
   @ParameterizedTest
   @MethodSource("testAmountWithConversionArgs")
   void testAmountWithConversion(String fromCurrency, String toCurrency, Double poLineEstimatedPrice, Double initialAmountEncumbered, Double totalAmount, Double exchangeRate, Double fundAllocation) {
-    String purchaseOrderId = UUID.randomUUID().toString();
-    String poLineId = UUID.randomUUID().toString();
-    String transactionId = UUID.randomUUID().toString();
-    String encumbranceId = UUID.randomUUID().toString();
-    String fundId = UUID.randomUUID().toString();
+    var purchaseOrderId = UUID.randomUUID().toString();
+    var poLineId = UUID.randomUUID().toString();
+    var transactionId = UUID.randomUUID().toString();
+    var encumbranceId = UUID.randomUUID().toString();
+    var fundId = UUID.randomUUID().toString();
 
-    FundDistribution fundDistribution = new FundDistribution()
+    var fundDistribution = new FundDistribution()
       .withFundId(fundId)
       .withValue(fundAllocation)
       .withDistributionType(DistributionType.PERCENTAGE);
-    Cost cost = new Cost()
+    var cost = new Cost()
       .withCurrency(toCurrency)
       .withPoLineEstimatedPrice(poLineEstimatedPrice);
     if (Objects.nonNull(exchangeRate)) {
       cost.setExchangeRate(exchangeRate);
     }
 
-    PoLine poLine = new PoLine()
+    var poLine = new PoLine()
       .withId(encumbranceId)
       .withId(poLineId)
       .withPurchaseOrderId(purchaseOrderId)
       .withCost(cost)
       .withFundDistribution(singletonList(fundDistribution));
 
-    Encumbrance encumbrance = new Encumbrance()
+    var encumbrance = new Encumbrance()
       .withSourcePurchaseOrderId(purchaseOrderId)
       .withSourcePoLineId(poLineId)
       .withOrderType(Encumbrance.OrderType.ONE_TIME)
       .withInitialAmountEncumbered(initialAmountEncumbered);
-    Transaction transaction = new Transaction()
+    var transaction = new Transaction()
       .withId(transactionId)
       .withFromFundId(fundId)
       .withCurrency(fromCurrency)
       .withEncumbrance(encumbrance);
 
-    CurrencyConversion currencyConversion = orderRolloverService.retrieveCurrencyConversion(fromCurrency, poLine.getCost(), requestContext);
+    var currencyConversion = orderRolloverService.retrieveCurrencyConversion(fromCurrency, poLine.getCost(), requestContext);
 
-    PoLineEncumbrancesHolder holder = new PoLineEncumbrancesHolder(poLine)
+    var holder = new PoLineEncumbrancesHolder(poLine)
       .withEncumbrances(singletonList(transaction))
       .withCurrencyConversion(currencyConversion)
       .withSystemCurrency(fromCurrency);
 
-    Number totalAmountAfterConversion = orderRolloverService.calculateTotalInitialAmountEncumbered(holder);
+    var totalAmountAfterConversion = orderRolloverService.calculateTotalInitialAmountEncumbered(holder);
 
     if (Objects.nonNull(exchangeRate)) {
       Assertions.assertEquals(BigDecimal.valueOf(totalAmount), totalAmountAfterConversion);

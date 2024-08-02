@@ -11,7 +11,6 @@ import io.vertx.junit5.VertxExtension;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
 import javax.money.convert.ExchangeRate;
 import javax.money.convert.ExchangeRateProvider;
@@ -60,15 +59,15 @@ public class ExchangeRateProviderResolverTest {
 
   @Test
   void testResolveWithDynamicExchangeRate() {
-    String fromCurrency = "USD";
-    String toCurrency = "AUD";
+    var fromCurrency = "USD";
+    var toCurrency = "AUD";
 
-    ConversionQuery conversionQuery = ConversionQueryBuilder.of()
+    var conversionQuery = ConversionQueryBuilder.of()
       .setBaseCurrency(fromCurrency)
       .setTermCurrency(toCurrency)
       .build();
 
-    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
+    var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
 
     Assertions.assertNotNull(exchangeRateProvider);
 
@@ -84,21 +83,21 @@ public class ExchangeRateProviderResolverTest {
 
   @Test
   void testResolveWithManualExchangeRate() {
-    String fromCurrency = "USD";
-    String toCurrency = "AUD";
-    Double exchangeRateValue = 0.66d;
+    var fromCurrency = "USD";
+    var toCurrency = "AUD";
+    var exchangeRateValue = 0.66d;
 
-    ConversionQuery conversionQuery = ConversionQueryBuilder.of()
+    var conversionQuery = ConversionQueryBuilder.of()
       .setBaseCurrency(fromCurrency)
       .setTermCurrency(toCurrency)
       .set(ExchangeRateProviderResolver.RATE_KEY, exchangeRateValue)
       .build();
 
-    ExchangeRateProvider exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
+    var exchangeRateProvider = exchangeRateProviderResolver.resolve(conversionQuery, requestContext);
 
     Assertions.assertNotNull(exchangeRateProvider);
 
-    ExchangeRate exchangeRate = exchangeRateProvider.getExchangeRate(conversionQuery);
+    var exchangeRate = exchangeRateProvider.getExchangeRate(conversionQuery);
 
     Assertions.assertNotNull(exchangeRate);
     Assertions.assertNotNull(exchangeRateProvider.getCurrencyConversion(conversionQuery));
