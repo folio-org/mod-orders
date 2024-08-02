@@ -50,6 +50,8 @@ import org.folio.service.TagServiceTest;
 import org.folio.service.UserServiceTest;
 import org.folio.service.consortium.ConsortiumConfigurationServiceTest;
 import org.folio.service.consortium.SharingInstanceServiceTest;
+import org.folio.service.exchange.ExchangeRateProviderResolverTest;
+import org.folio.service.exchange.ManualCurrencyConversionTest;
 import org.folio.service.exchange.ManualExchangeRateProviderTest;
 import org.folio.service.expenceclass.ExpenseClassValidationServiceTest;
 import org.folio.service.finance.FinanceHoldersBuilderTest;
@@ -256,6 +258,14 @@ public class ApiTestSuite {
 
   @Nested
   class ManualExchangeRateProviderTestNested extends ManualExchangeRateProviderTest {
+  }
+
+  @Nested
+  class ManualCurrencyConversionTestNested extends ManualCurrencyConversionTest {
+  }
+
+  @Nested
+  class ExchangeRateProviderResolverTestNested extends ExchangeRateProviderResolverTest {
   }
 
   @Nested
