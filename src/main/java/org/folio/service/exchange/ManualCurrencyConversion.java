@@ -56,8 +56,10 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
   @Override
   public MonetaryAmount apply(MonetaryAmount amount) {
     // Add support for reverse conversion for cases when just a single manual exchange rate is set in the POL
-    // i.e. ECB dynamic rates would be: AUD -> USD will use ~0.66, USD -> AUD will use ~1.55
-    // but in case of manual exchange rate this second exchange rate is not provided
+    // for example ECB/IMF exchange rate for encumbrance transaction creation (AUD->USD) will be 0.651
+    // while during rollover POL total amount (USD->AUD) will use 1.536 from the sum of all encumbrance transactions
+    // but in case of manual exchange rate set on the POL, this second exchange rate is not provided and during
+    // rollover total amount will be calculated using this same exchange rate
     if (this.operationMode == OperationMode.MULTIPLY) {
       return super.apply(amount);
     }

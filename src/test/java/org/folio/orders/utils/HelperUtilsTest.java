@@ -64,7 +64,7 @@ public class HelperUtilsTest {
   }
 
   @Test
-  void testShouldConversionQueryWithoutExchangeRate() {
+  void testShouldReturnConversionQueryWithoutExchangeRate() {
     String fromCurrency = "USD";
     String toCurrency = "AUD";
 
