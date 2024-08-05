@@ -53,13 +53,19 @@ public class ManualCurrencyConversion extends AbstractCurrencyConversion {
     return new ManualCurrencyConversion(this.conversionQuery, this.rateProvider, conversionContext);
   }
 
+  /**
+   * Apply conversion calculation using either MULTIPLY (default) or DIVIDE operation modes.
+   * The default operation mode MULTIPLY applies multiplication operation on the total amount before conversion using
+   * either of the two exchange rates, e.g. AUD->USD ECB/IMF exchange rate is 0.66 while for USD->AUD it is 1.536
+   * The newer DIVIDE operation mode adds support for reverse conversion for cases when just a single, manual
+   * exchange rate is present (set in the POL), and so in this case the only way is to convert back
+   * by the same exchange rate in a division operation.
+   *
+   * @param amount Before conversion
+   * @return amount After conversion
+   */
   @Override
   public MonetaryAmount apply(MonetaryAmount amount) {
-    // Add support for reverse conversion for cases when just a single manual exchange rate is set in the POL
-    // for example ECB/IMF exchange rate for encumbrance transaction creation (AUD->USD) will be 0.651
-    // while during rollover POL total amount (USD->AUD) will use 1.536 from the sum of all encumbrance transactions
-    // but in case of manual exchange rate set on the POL, this second exchange rate is not provided and during
-    // rollover total amount will be calculated using this same exchange rate
     if (this.operationMode == OperationMode.MULTIPLY) {
       return super.apply(amount);
     }
