@@ -46,20 +46,19 @@ public class CurrencyConversionMockHelper {
 
     ExchangeRateProvider exchangeRateProvider;
     ManualCurrencyConversion manualCurrencyConversion;
-    ExchangeRate exchangeRate;
     if (exchangeRateProviderMode == ExchangeRateProviderMode.MANUAL) {
       ConversionQuery conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency).setTermCurrency(toCurrency).set(RATE_KEY, exchangeRateAmount).build();
       exchangeRateProvider = Mockito.mock(ManualExchangeRateProvider.class);
       manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, exchangeRateProvider, ConversionContext.of(), ManualCurrencyConversion.OperationMode.DIVIDE);
-      exchangeRate = mock(ExchangeRate.class);
     } else if (exchangeRateProviderMode == ExchangeRateProviderMode.FINANCE_API) {
       ConversionQuery conversionQuery = ConversionQueryBuilder.of().setBaseCurrency(fromCurrency).setTermCurrency(toCurrency).build();
       exchangeRateProvider = Mockito.mock(FinanceApiExchangeRateProvider.class);
       manualCurrencyConversion = new ManualCurrencyConversion(conversionQuery, exchangeRateProvider, ConversionContext.of());
-      exchangeRate = mock(ExchangeRate.class);
     } else {
       throw new IllegalStateException("Unsupported ExchangeRateProviderMode");
     }
+
+    ExchangeRate exchangeRate = mock(ExchangeRate.class);
 
     doReturn(exchangeRateProvider).when(exchangeRateProviderResolver).resolve(any(ConversionQuery.class), eq(requestContext), any(ManualCurrencyConversion.OperationMode.class));
     doReturn(manualCurrencyConversion).when(exchangeRateProvider).getCurrencyConversion(any(ConversionQuery.class));

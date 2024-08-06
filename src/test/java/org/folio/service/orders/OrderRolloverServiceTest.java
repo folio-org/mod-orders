@@ -659,7 +659,7 @@ public class OrderRolloverServiceTest {
   }
 
   private static Stream<Arguments> shouldConvertTotalAmountUsingCorrectExchangeRateProviderArgs() {
-    // FINANCE_API uses multiplication and 2 exchanges rates, e.g. USD->AUD using 1.536 and AUD->USD using 0.651
+    // FINANCE_API uses multiplication and 2 ECB/IMF exchanges rates, e.g. USD->AUD using 1.536 and AUD->USD using 0.651
     // MANUAL uses division and 1 exchange rate (the initial exchange on the POL used to create an Encumbrance Transaction)
     return Stream.of(
       Arguments.of("USD", "USD", 10d, 10d, 10d, 1d, 100d, CurrencyConversionMockHelper.ExchangeRateProviderMode.FINANCE_API),
