@@ -70,7 +70,6 @@ import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
 import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
-import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
 
 public class HelperUtils {
 
@@ -500,16 +499,6 @@ public class HelperUtils {
         .setTermCurrency(toCurrency).build();
     }
     return conversionQuery;
-  }
-
-  public static ConversionQuery buildConversionQuery(PoLine poLine, String systemCurrency) {
-    Cost cost = poLine.getCost();
-    if (cost.getExchangeRate() != null) {
-      return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency())
-        .setTermCurrency(systemCurrency)
-        .set(RATE_KEY, cost.getExchangeRate()).build();
-    }
-    return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency()).setTermCurrency(systemCurrency).build();
   }
 
   /**
