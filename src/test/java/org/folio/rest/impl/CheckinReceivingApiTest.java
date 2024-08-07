@@ -193,7 +193,7 @@ public class CheckinReceivingApiTest {
     List<JsonObject> pieceSearches = getPieceSearches();
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polUpdates = getPoLineBatchUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
@@ -204,18 +204,18 @@ public class CheckinReceivingApiTest {
 
     int expectedSearchRqQty = Math.floorDiv(checkInRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
-    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
-    assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
     assertThat(pieceUpdates, hasSize(checkInRq.getTotalRecords()));
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
     assertThat(polUpdates, hasSize(pieceIdsByPol.size()));
 
-    polUpdates.forEach(pol -> {
-      PoLine poLine = pol.mapTo(PoLine.class);
+    JsonArray poLinesJson = polUpdates.get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine poLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
       assertThat(poLine.getCheckinItems(), is(true));
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
-    });
+    }
 
     // Verify message is sent via event bus
     verifyCheckinOrderStatusUpdateEvent(1);
@@ -248,7 +248,7 @@ public class CheckinReceivingApiTest {
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polUpdates = getPoLineBatchUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
@@ -257,7 +257,7 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    assertThat(pieceSearches, hasSize(2));
+    assertThat(pieceSearches, hasSize(1));
     assertThat(pieceUpdates, hasSize(2));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
@@ -282,12 +282,13 @@ public class CheckinReceivingApiTest {
       assertEquals(piece.getDiscoverySuppress(), item.getBoolean(ITEM_DISCOVERY_SUPPRESS));
     }
 
-    polUpdates.forEach(pol -> {
-      PoLine poLine = pol.mapTo(PoLine.class);
+    JsonArray poLinesJson = polUpdates.get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine poLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
       assertThat(poLine.getCheckinItems(), is(true));
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.PARTIALLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
-    });
+    }
 
     // Verify message is sent via event bus
     verifyCheckinOrderStatusUpdateEvent(1);
