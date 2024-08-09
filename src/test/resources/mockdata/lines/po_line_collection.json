@@ -1026,8 +1026,67 @@
         "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1",
         "createdDate": "2014-07-06T00:00:00.000"
       }
+    },
+    {
+      "id": "4f2a5e1a-d48a-477e-a601-119faf8c8cc2",
+      "cost": {
+        "currency": "USD",
+        "discountType": "percentage",
+        "listUnitPrice": 100.0,
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 100.0
+      },
+      "rush": false,
+      "alerts": [],
+      "claims": [],
+      "source": "User",
+      "details": {
+        "productIds": [],
+        "isAcknowledged": false,
+        "isBinderyActive": false,
+        "subscriptionInterval": 0
+      },
+      "physical": {
+        "volumes": [],
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "isPackage": false,
+      "locations": [
+        {
+          "quantity": 1,
+          "holdingId": "9ff4d72a-f7a3-4153-9f71-ea3f7655883a",
+          "quantityPhysical": 1
+        }
+      ],
+      "collection": false,
+      "instanceId": "ca128a01-2d08-49fa-ad73-21e189d6212e",
+      "orderFormat": "Physical Resource",
+      "checkinItems": false,
+      "contributors": [],
+      "poLineNumber": "10014-1",
+      "vendorDetail": {
+        "instructions": "",
+        "vendorAccount": "1234",
+        "referenceNumbers": []
+      },
+      "paymentStatus": "Awaiting Payment",
+      "receiptStatus": "Awaiting Receipt",
+      "claimingActive": false,
+      "reportingCodes": [],
+      "titleOrPackage": "Test 1",
+      "automaticExport": false,
+      "purchaseOrderId": "61dbe35b-7a14-4a5f-bb62-49da02030779",
+      "claimingInterval": 45,
+      "fundDistribution": [],
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+      "searchLocationIds": [
+        "fcd64ce1-6995-48f0-840e-89ffa2288371"
+      ],
+      "donorOrganizationIds": [],
+      "cancellationRestriction": true
     }
-
   ],
-  "totalRecords": 10
+  "totalRecords": 11
 }

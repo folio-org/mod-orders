@@ -1,0 +1,21 @@
+{
+  "pieces": [
+    {
+      "id": "dda9a9d6-0a40-4207-90a8-fe7db55f2991",
+      "format": "Physical",
+      "itemId": "dbf14ec1-aa94-4343-ab13-123c6ea2cf29",
+      "isBound": false,
+      "titleId": "c0b42546-09f7-4e70-9d03-d8560f78f20e",
+      "poLineId": "4f2a5e1a-d48a-477e-a601-119faf8c8cc2",
+      "holdingId": "1e6106b7-17a1-45e3-9c5b-00d4763c3c43",
+      "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+      "receivedDate": "2024-08-09T17:12:50.325+00:00",
+      "displaySummary": "Test 1",
+      "displayToPublic": false,
+      "receivingStatus": "Received",
+      "displayOnHolding": false,
+      "statusUpdatedDate": "2024-08-09T17:12:50.325+00:00"
+    }
+  ],
+  "totalRecords": 1
+}
