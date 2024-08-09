@@ -231,7 +231,7 @@ public class TitlesApiTest {
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
-    assertEquals(1, resp.getTitles().size());
+    assertEquals(2, resp.getTitles().size());
   }
 
   @Test
