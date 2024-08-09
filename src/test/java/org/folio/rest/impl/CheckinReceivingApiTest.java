@@ -204,7 +204,8 @@ public class CheckinReceivingApiTest {
 
     int expectedSearchRqQty = Math.floorDiv(checkInRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
-    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
+    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
     assertThat(pieceUpdates, hasSize(checkInRq.getTotalRecords()));
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
     assertThat(polUpdates, hasSize(pieceIdsByPol.size()));
@@ -257,7 +258,7 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polUpdates, not(nullValue()));
 
-    assertThat(pieceSearches, hasSize(1));
+    assertThat(getPieceSearches(), hasSize(2));
     assertThat(pieceUpdates, hasSize(2));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
@@ -325,8 +326,9 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polBatchUpdates, not(nullValue()));
 
-    // The piece searches should be made once - to get piece records
-    assertThat(pieceSearches, hasSize(1));
+    // The piece searches should be made 2 times: 1st time to get piece record,
+    // 2nd time to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(2));
     assertThat(pieceUpdates, hasSize(1));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
@@ -477,7 +479,7 @@ public class CheckinReceivingApiTest {
     request.getToBeCheckedIn().get(0).getCheckInPieces().get(1).setLocationId(UUID.randomUUID().toString());
 
     checkResultWithErrors(request, 0);
-    assertThat(getPieceSearches(), hasSize(1));
+    assertThat(getPieceSearches(), hasSize(2));
     assertThat(getPieceUpdates(), hasSize(2));
     assertThat(getPoLineSearches(), hasSize(1));
     assertThat(getPoLineBatchUpdates(), hasSize(1));
@@ -493,7 +495,7 @@ public class CheckinReceivingApiTest {
     MockServer.addMockTitles(Collections.singletonList(poLine));
 
     checkResultWithErrors(request, 1);
-    assertThat(getPieceSearches(), hasSize(1));
+    assertThat(getPieceSearches(), hasSize(2));
     assertThat(getPieceUpdates(), hasSize(1));
     assertThat(getPoLineSearches(), hasSize(1));
     assertThat(getPoLineBatchUpdates(), hasSize(1));
@@ -546,9 +548,8 @@ public class CheckinReceivingApiTest {
 
     int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
-    // The piece searches should be made 1 time: to get all required piece records,
-    // to calculate expected PO Line status an additional request is not sent now
-    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
+    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
     assertThat(pieceUpdates, hasSize(receivingRq.getTotalRecords()));
     assertThat(itemsSearches, hasSize(expectedSearchRqQty));
     assertThat(itemUpdates, hasSize(receivingRq.getTotalRecords()));
@@ -848,12 +849,20 @@ public class CheckinReceivingApiTest {
     CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(4).mapTo(CompositePoLine.class);
     MockServer.addMockTitles(Collections.singletonList(poLines));
 
+    // 10 pieces in total with PoLineId daa9cfd1-b330-4b65-8c2a-3663aaae5130
+    // 5/10 are received, 5 are expected but not received, expected receipt status is "Partially Received"
     ReceivingCollection receiving = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-electronic-5-of-10-resources-no-items.json").mapTo(ReceivingCollection.class);
 
     ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receiving).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     assertThat(results.getTotalRecords(), equalTo(receiving.getTotalRecords()));
+
+    ReceivingResult receivingResult = results.getReceivingResults().get(0);
+
+    assertThat(receivingResult.getPoLineId(), not(is(emptyString())));
+    assertThat(receivingResult.getProcessedSuccessfully(), is(5));
+    assertThat(receivingResult.getProcessedWithError(), is(0));
 
     Map<String, Set<String>> pieceIdsByPol = verifyReceivingSuccessRs(results);
 
@@ -871,8 +880,8 @@ public class CheckinReceivingApiTest {
 
     int expectedSearchRqQty = Math.floorDiv(receiving.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
-    // The piece searches should be made once - to get all required piece records
-    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
+    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
     assertThat(pieceUpdates, hasSize(receiving.getTotalRecords()));
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
     assertThat(polBatchUpdates, hasSize(pieceIdsByPol.size()));
@@ -1511,8 +1520,8 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polBatchUpdates, not(nullValue()));
 
-    // The piece searches should be made 1 time - to get all required piece records
-    assertThat(pieceSearches, hasSize(1));
+    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd times to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(2));
     // In total 4 pieces required update
     assertThat(pieceUpdates, hasSize(4));
     assertThat(itemsSearches, hasSize(1));
@@ -1567,8 +1576,8 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
     assertThat(polBatchUpdates, not(nullValue()));
 
-    // The piece searches should be made once: - to get piece record
-    assertThat(pieceSearches, hasSize(1));
+    // The piece searches should be made 2 times: 1st time to get piece record, 2nd times to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(2));
     assertThat(pieceUpdates, hasSize(1));
     assertThat(itemsSearches, hasSize(1));
     assertThat(itemUpdates, hasSize(1));
