@@ -13,7 +13,22 @@
           "qualifier": "(paperback)"
         }
       ]
+    },
+    {
+      "id": "c0b42546-09f7-4e70-9d03-d8560f78f20e",
+      "title": "Test 1",
+      "poLineId": "4f2a5e1a-d48a-477e-a601-119faf8c8cc2",
+      "acqUnitIds": [],
+      "instanceId": "ca128a01-2d08-49fa-ad73-21e189d6212e",
+      "productIds": [],
+      "bindItemIds": [],
+      "contributors": [],
+      "poLineNumber": "10014-1",
+      "claimingActive": false,
+      "isAcknowledged": false,
+      "claimingInterval": 45,
+      "subscriptionInterval": 0
     }
   ],
-  "totalRecords": 1
+  "totalRecords": 2
 }

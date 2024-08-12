@@ -52,6 +52,7 @@ import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
+import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -70,6 +71,8 @@ public class CheckinHelperTest {
   InventoryItemManager inventoryItemManager;
   @Autowired
   PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
+  @Autowired
+  PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
 
   private Map<String, String> okapiHeadersMock;
   private RequestContext requestContext;
@@ -289,6 +292,11 @@ public class CheckinHelperTest {
     @Bean
     PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager() {
       return mock(PieceCreateFlowInventoryManager.class);
+    }
+
+    @Bean
+    PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService() {
+      return mock(PieceUpdateFlowPoLineService.class);
     }
 
     @Bean ConfigurationEntriesService configurationEntriesService() {

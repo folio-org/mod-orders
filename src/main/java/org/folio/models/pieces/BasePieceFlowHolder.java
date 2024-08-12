@@ -12,6 +12,8 @@ import org.folio.rest.jaxrs.model.Title;
 public abstract class BasePieceFlowHolder {
   private CompositePurchaseOrder originPurchaseOrder;
   private CompositePurchaseOrder purchaseOrderToSave;
+
+  private CompositePoLine compositePoLineToSave;
   private Title title;
 
   public BasePieceFlowHolder() {
@@ -27,6 +29,11 @@ public abstract class BasePieceFlowHolder {
   public BasePieceFlowHolder withOrderInformation(PurchaseOrder originPurchaseOrder, PoLine originPoLine) {
     this.originPurchaseOrder = HelperUtils.convertToCompositePurchaseOrder(originPurchaseOrder, List.of(originPoLine));
     this.purchaseOrderToSave = HelperUtils.clone(CompositePurchaseOrder.class, this.originPurchaseOrder);
+    return this;
+  }
+
+  public BasePieceFlowHolder withPoLineOnly(CompositePoLine compositePoLineToSave) {
+    this.compositePoLineToSave = compositePoLineToSave;
     return this;
   }
 
@@ -47,6 +54,9 @@ public abstract class BasePieceFlowHolder {
   }
 
   public CompositePoLine getPoLineToSave() {
+    if (this.compositePoLineToSave != null) {
+      return this.compositePoLineToSave;
+    }
     return purchaseOrderToSave.getCompositePoLines().get(0);
   }
 

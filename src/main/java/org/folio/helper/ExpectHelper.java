@@ -5,6 +5,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.models.pieces.PiecesHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ExpectCollection;
 import org.folio.rest.jaxrs.model.ExpectPiece;
@@ -45,20 +46,27 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
   }
 
   private Future<ReceivingResults> processExpectPieces(ExpectCollection expectCollection, RequestContext requestContext) {
+    PiecesHolder holder = new PiecesHolder();
     // 1. Get piece records from storage
     return retrievePieceRecords(requestContext)
       // 2. Update piece status to Expected
-      .map(this::updatePieceRecords)
+      .map(piecesFromStorage -> {
+        holder.withPiecesFromStorage(piecesFromStorage);
+        return updatePieceRecords(piecesFromStorage);
+      })
       // 3. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
       // 4. Update PO Line status
-      .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(piecesByPoLineIds, requestContext))
+      .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesByPoLineIds, requestContext))
       // 5. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(expectCollection, piecesGroupedByPoLine));
   }
 
-  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext) {
+  private Future<Map<String, List<Piece>>> updateOrderAndPoLinesStatus(Map<String, List<Piece>> piecesFromStorage,
+                                                                       Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                                       RequestContext requestContext) {
     return updateOrderAndPoLinesStatus(
+      piecesFromStorage,
       piecesGroupedByPoLine,
       requestContext,
       poLines -> {}
