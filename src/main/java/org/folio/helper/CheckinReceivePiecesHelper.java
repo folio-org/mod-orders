@@ -287,6 +287,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           continue;
         }
 
+        // Method call getPiecesByPoLine() is required to retrieve all pieces for given POL by id as
+        // piecesFromStorage only contains the processed pieces which is not enough for correct Receipt Status calculation
         Future<PoLine> poLineToUpdateFuture = getPiecesByPoLine(poLine.getId(), requestContext)
           .map(pieces -> updateRelatedPoLineDetails(poLine, piecesFromStorage.get(poLine.getId()), pieces, successfullyProcessedPieces));
 
