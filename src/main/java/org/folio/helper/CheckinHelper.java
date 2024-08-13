@@ -5,6 +5,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.Objects;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -69,7 +70,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       // 2. Filter locationId
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
       // 3. Update items in the Inventory if required
-      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, requestContext))
+      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, holder, requestContext))
       // 4. Update piece records with checkIn details which do not have
       // associated item
       .map(this::updatePieceRecordsWithoutItems)
@@ -82,29 +83,49 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private Future<Map<String, List<Piece>>> createItemsWithPieceUpdate(CheckinCollection checkinCollection, PiecesHolder holder, RequestContext requestContext) {
-    Map<String, List<CheckInPiece>> poLineIdVsCheckInPiece = getItemCreateNeededCheckinPieces(checkinCollection);
-    List<Future<Pair<String, Piece>>> futures = new ArrayList<>();
+    var poLineIdCheckInPieceMap = getItemCreateNeededCheckinPieces(checkinCollection);
+    var pieceFutures = new ArrayList<Future<PiecesHolder.PiecePoLineDto>>();
     return retrievePieceRecords(requestContext)
       .map(piecesFromStorage -> {
         holder.withPiecesFromStorage(piecesFromStorage);
-        piecesFromStorage.forEach((poLineId, pieces) -> poLineIdVsCheckInPiece.get(poLineId)
+        piecesFromStorage.forEach((poLineId, pieces) -> poLineIdCheckInPieceMap.get(poLineId)
           .forEach(checkInPiece -> pieces.forEach(piece -> {
+            var srcTenantId = piece.getReceivingTenantId();
+            var dstTenantId = checkInPiece.getReceivingTenantId();
             if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
-              futures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
+              pieceFutures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
                 .map(PoLineCommonUtil::convertToCompositePoLine)
-                .compose(compPOL -> pieceCreateFlowInventoryManager.processInventory(compPOL, piece,
-                  checkInPiece.getCreateItem(), requestContext))
-                .map(aVoid -> Pair.of(poLineId, piece)));
+                .compose(compPol -> pieceCreateFlowInventoryManager.processInventory(compPol, piece, checkInPiece.getCreateItem(), requestContext))
+                .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece)));
+            } else if (checkInPiece.getId().equals(piece.getId()) && Objects.nonNull(srcTenantId) && Objects.nonNull(dstTenantId) && !srcTenantId.equals(dstTenantId)) {
+              pieceFutures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
+                .map(PoLineCommonUtil::convertToCompositePoLine)
+                .map(compPol -> new PiecesHolder.PiecePoLineDto(compPol, piece, checkInPiece)));
             } else {
-              futures.add(Future.succeededFuture(Pair.of(poLineId, piece)));
+              pieceFutures.add(Future.succeededFuture(new PiecesHolder.PiecePoLineDto(poLineId, piece)));
             }
           })));
         return null;
       })
-      .compose(v -> collectResultsOnSuccess(futures).map(poLineIdVsPieceList -> StreamEx.of(poLineIdVsPieceList)
-        .distinct()
-        .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists)
-          .collect(toList()))))));
+      .compose(v1 -> collectResultsOnSuccess(pieceFutures)
+        .map(piecePoLineDtoList -> {
+          prepareItemsToRecreate(holder, piecePoLineDtoList);
+          return StreamEx.of(piecePoLineDtoList)
+            .map(v2 -> Pair.of(v2.getPoLineId(), v2.getPieceFromStorage()))
+            .distinct()
+            .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists).collect(toList()))));
+        }));
+  }
+
+  private static void prepareItemsToRecreate(PiecesHolder holder, List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
+    var itemRecreateDtoMap = new HashMap<String, PiecesHolder.PiecePoLineDto>();
+    piecePoLineDtoList.stream()
+      .filter(v2 -> Objects.nonNull(v2.getPieceFromStorage().getReceivingTenantId())
+        && Objects.nonNull(v2.getCheckInPiece())
+        && Objects.nonNull(v2.getCheckInPiece().getReceivingTenantId()))
+      .forEach(v2 -> itemRecreateDtoMap.put(v2.getPoLineId(), v2));
+
+    holder.withItemsToRecreate(itemRecreateDtoMap);
   }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,

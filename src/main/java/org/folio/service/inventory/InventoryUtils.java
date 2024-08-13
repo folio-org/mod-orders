@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
@@ -24,6 +25,7 @@ import java.util.Map;
 
 import static java.util.Map.entry;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_HOLDINGS_SOURCE_ID;
 import static org.folio.rest.core.exceptions.ErrorCodes.MISSING_LOAN_TYPE;
 import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME;
@@ -272,4 +274,25 @@ public class InventoryUtils {
     }
   }
 
+  public static ItemRecreateConfig constructItemRecreateConfig(Piece piece, RequestContext requestContext, boolean reuseInitialRequestContext) {
+    if (Objects.isNull(piece.getReceivingTenantId())) {
+      return new ItemRecreateConfig(null, reuseInitialRequestContext ? requestContext : null);
+    }
+    var tenantId = piece.getReceivingTenantId();
+    return new ItemRecreateConfig(tenantId, createContextWithNewTenantId(requestContext, tenantId));
+  }
+
+  public static ItemRecreateConfig constructItemRecreateConfig(String receivingTenantId, RequestContext requestContext, boolean reuseInitialRequestContext) {
+    if (Objects.isNull(receivingTenantId)) {
+      return new ItemRecreateConfig(null, reuseInitialRequestContext ? requestContext : null);
+    }
+    return new ItemRecreateConfig(receivingTenantId, createContextWithNewTenantId(requestContext, receivingTenantId));
+  }
+
+  public static boolean allowItemRecreate(ItemRecreateConfig srcConfig, ItemRecreateConfig dstConfig) {
+    return Objects.nonNull(srcConfig.tenantId()) && Objects.nonNull(dstConfig.tenantId())
+      && !srcConfig.tenantId().equals(dstConfig.tenantId());
+  }
+
+  public record ItemRecreateConfig(String tenantId, RequestContext context) {}
 }

@@ -12,8 +12,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.ItemStatus;
-import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
@@ -30,13 +30,10 @@ public class ItemRecreateInventoryService {
   }
 
   // Return an Id of the recreated Item
-  public Future<String> recreateItemInDestinationTenant(PieceUpdateHolder holder, RequestContext srcLocCtx, RequestContext dstLocCtx) {
+  public Future<String> recreateItemInDestinationTenant(CompositePoLine compPol, Piece piece, RequestContext srcLocCtx, RequestContext dstLocCtx) {
     // Example Case: Member Tenant 1 (University) -> Member Tenant 2 (College)
     // Create Item in Member Tenant 2 with the same Item Id
     // Delete Item in Member Tenant 1 by Item Id
-    var piece = holder.getPieceToUpdate();
-    var compPol = holder.getPoLineToSave();
-
     logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
 
     Future<List<String>> itemFuture;

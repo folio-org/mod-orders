@@ -9,9 +9,6 @@ import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.ID;
-import static org.folio.TestUtils.getMockData;
-import static org.folio.rest.impl.MockServer.CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL;
-import static org.folio.rest.impl.MockServer.ECS_CONSORTIUM_PIECES_JSON;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
@@ -25,7 +22,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +41,6 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.ItemRecreateInventoryService;
@@ -54,7 +49,6 @@ import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -563,104 +557,6 @@ public class PieceUpdateFlowInventoryManagerTest {
     verify(inventoryItemManager, times(1)).getItemRecordById(null, true, requestContext);
     verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPoLineToSave(), requestContext);
     verify(inventoryItemManager, times(0)).updateItem(item, requestContext);
-  }
-
-  @Test
-  void testConstructItemRecreateConfigSrcWithReceivingTenantId() throws IOException {
-    var exceptedSrcTenantId = "university";
-
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class);
-    var srcConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesStorage, requestContext, true);
-
-    assertEquals(exceptedSrcTenantId, srcConfig.tenantId());
-    assertEquals(exceptedSrcTenantId, TenantTool.tenantId(srcConfig.context().getHeaders()));
-  }
-
-  @Test
-  void testConstructItemRecreateConfigSrcWithNullReceivingTenantId() throws IOException {
-    var exceptedSrcTenantId = TenantTool.tenantId(requestContext.getHeaders());
-
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(null);
-    var srcConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesStorage, requestContext, true);
-
-    Assertions.assertNull(srcConfig.tenantId());
-    Assertions.assertEquals(exceptedSrcTenantId, TenantTool.tenantId(srcConfig.context().getHeaders()));
-  }
-
-  @Test
-  void testConstructItemRecreateConfigDstWithReceivingTenantId() throws IOException {
-    var exceptedDstTenantId = "college";
-
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(exceptedDstTenantId);
-    var dstConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesStorage, requestContext, false);
-
-    Assertions.assertEquals(exceptedDstTenantId, dstConfig.tenantId());
-    Assertions.assertEquals(exceptedDstTenantId, TenantTool.tenantId(dstConfig.context().getHeaders()));
-  }
-
-  @Test
-  void testConstructItemRecreateConfigDstWithNullReceivingTenantId() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(null);
-    var dstConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesStorage, requestContext, false);
-
-    Assertions.assertNull(dstConfig.tenantId());
-    Assertions.assertNull(dstConfig.context());
-  }
-
-  @Test
-  void testAllowItemRecreateTrue() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-
-    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class);
-    var piecesRequest = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId("college");
-
-    var srcConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesStorage, requestContext, true);
-    var dstConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesRequest, requestContext, false);
-
-    Assertions.assertTrue(pieceUpdateFlowInventoryManager.allowItemRecreate(srcConfig, dstConfig));
-  }
-
-  @Test
-  void testAllowItemRecreateFalseWithSameTenant() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-
-    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class);
-    var piecesRequest = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId("university");
-
-    var srcConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesStorage, requestContext, true);
-    var dstConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesRequest, requestContext, false);
-
-    Assertions.assertFalse(pieceUpdateFlowInventoryManager.allowItemRecreate(srcConfig, dstConfig));
-  }
-
-  @Test
-  void testAllowItemRecreateFalseWithNullSrcTenant() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-
-    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class);
-    var piecesRequest = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(null);
-
-    var srcConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesStorage, requestContext, true);
-    var dstConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesRequest, requestContext, false);
-
-    Assertions.assertFalse(pieceUpdateFlowInventoryManager.allowItemRecreate(srcConfig, dstConfig));
-  }
-
-  @Test
-  void testAllowItemRecreateFalseWithNullDstTenant() throws IOException {
-    var piecesMock = getMockData(String.format(ECS_CONSORTIUM_PIECES_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL));
-
-    var piecesStorage = new JsonObject(piecesMock).mapTo(Piece.class).withReceivingTenantId(null);
-    var piecesRequest = new JsonObject(piecesMock).mapTo(Piece.class);
-
-    var srcConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesStorage, requestContext, true);
-    var dstConfig = pieceUpdateFlowInventoryManager.constructItemRecreateConfig(piecesRequest, requestContext, false);
-
-    Assertions.assertFalse(pieceUpdateFlowInventoryManager.allowItemRecreate(srcConfig, dstConfig));
   }
 
   private static class ContextConfiguration {
