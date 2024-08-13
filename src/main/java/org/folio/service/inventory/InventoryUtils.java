@@ -274,14 +274,6 @@ public class InventoryUtils {
     }
   }
 
-  public static ItemRecreateConfig constructItemRecreateConfig(Piece piece, RequestContext requestContext, boolean reuseInitialRequestContext) {
-    if (Objects.isNull(piece.getReceivingTenantId())) {
-      return new ItemRecreateConfig(null, reuseInitialRequestContext ? requestContext : null);
-    }
-    var tenantId = piece.getReceivingTenantId();
-    return new ItemRecreateConfig(tenantId, createContextWithNewTenantId(requestContext, tenantId));
-  }
-
   public static ItemRecreateConfig constructItemRecreateConfig(String receivingTenantId, RequestContext requestContext, boolean reuseInitialRequestContext) {
     if (Objects.isNull(receivingTenantId)) {
       return new ItemRecreateConfig(null, reuseInitialRequestContext ? requestContext : null);

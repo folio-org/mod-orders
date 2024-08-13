@@ -115,11 +115,9 @@ public class PieceUpdateFlowInventoryManager {
     if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave) || pieceToUpdate.getIsBound()) {
       return Future.succeededFuture();
     }
-
-    var srcConfig = InventoryUtils.constructItemRecreateConfig(holder.getPieceFromStorage(), requestContext, true);
-    var dstConfig = InventoryUtils.constructItemRecreateConfig(pieceToUpdate, requestContext, false);
+    var srcConfig = InventoryUtils.constructItemRecreateConfig(holder.getPieceFromStorage().getReceivingTenantId(), requestContext, true);
+    var dstConfig = InventoryUtils.constructItemRecreateConfig(pieceToUpdate.getReceivingTenantId(), requestContext, false);
     var itemId = pieceToUpdate.getItemId();
-
     return inventoryItemManager.getItemRecordById(itemId, true, srcConfig.context())
       .compose(jsonItem -> {
         if (jsonItem != null && !jsonItem.isEmpty()) {
@@ -132,7 +130,6 @@ public class PieceUpdateFlowInventoryManager {
             return inventoryItemManager.updateItem(jsonItem, requestContext).map(v -> jsonItem.getString(ID));
           }
         }
-
         if (holder.isCreateItem() && pieceToUpdate.getHoldingId() != null) {
           logger.info("handleItem:: creating item by id '{}'", itemId);
           return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);

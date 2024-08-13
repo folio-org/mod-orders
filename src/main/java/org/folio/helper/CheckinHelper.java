@@ -110,22 +110,22 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
       .compose(v1 -> collectResultsOnSuccess(pieceFutures)
         .map(piecePoLineDtoList -> {
           prepareItemsToRecreate(holder, piecePoLineDtoList);
-          return StreamEx.of(piecePoLineDtoList)
-            .map(v2 -> Pair.of(v2.getPoLineId(), v2.getPieceFromStorage()))
-            .distinct()
-            .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists).collect(toList()))));
+          return createPoLineIdPiecePair(piecePoLineDtoList);
         }));
   }
 
   private static void prepareItemsToRecreate(PiecesHolder holder, List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
     var itemRecreateDtoMap = new HashMap<String, PiecesHolder.PiecePoLineDto>();
     piecePoLineDtoList.stream()
-      .filter(v2 -> Objects.nonNull(v2.getPieceFromStorage().getReceivingTenantId())
-        && Objects.nonNull(v2.getCheckInPiece())
-        && Objects.nonNull(v2.getCheckInPiece().getReceivingTenantId()))
-      .forEach(v2 -> itemRecreateDtoMap.put(v2.getPoLineId(), v2));
-
+      .filter(PiecesHolder.PiecePoLineDto::isRecreateItem)
+      .forEach(dto -> itemRecreateDtoMap.put(dto.getPoLineId(), dto));
     holder.withItemsToRecreate(itemRecreateDtoMap);
+  }
+
+  private static Map<String, List<Piece>> createPoLineIdPiecePair(List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
+    return StreamEx.of(piecePoLineDtoList)
+      .map(v2 -> Pair.of(v2.getPoLineId(), v2.getPieceFromStorage())).distinct()
+      .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists).collect(toList()))));
   }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,
