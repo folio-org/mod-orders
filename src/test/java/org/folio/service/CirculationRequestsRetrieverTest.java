@@ -7,6 +7,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PieceCollection;
@@ -194,6 +195,28 @@ public class CirculationRequestsRetrieverTest {
       var requestsCollection = f.result();
       assertEquals(7, requestsCollection.getTotalRecords());
       assertEquals(7, requestsCollection.getCirculationRequests().size());
+      verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+      verify(pieceStorageService, times(1)).getPiecesByIds(eq(MOCK_PIECE_IDS), eq(requestContext));
+      vertxTestContext.completeNow();
+    });
+  }
+
+  @Test
+  void getEmptyRequestersIdToRequestsByPieceIdsTestWhenAuthorizationProblem(VertxTestContext vertxTestContext) {
+    var piecesMockData = getMockAsJson(PIECES_PATH, PIECES_MOCK).mapTo(PieceCollection.class);
+    var status = "Open - In transit";
+
+    doReturn(Future.failedFuture(new HttpException(403, "Invalid token: User with id 5d753594-016a-460c-aa0b-a4a174b92e9b does not exist")))
+      .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    doReturn(Future.succeededFuture(piecesMockData.getPieces())).when(pieceStorageService).getPiecesByIds(eq(MOCK_PIECE_IDS), eq(requestContext));
+
+    var future = circulationRequestsRetriever.getRequesterIdsToRequestsByPieceIds(MOCK_PIECE_IDS, status, requestContext);
+
+    vertxTestContext.assertComplete(future).onComplete(f -> {
+      assertTrue(f.succeeded());
+      var requestsCollection = f.result();
+      assertEquals(0, requestsCollection.getTotalRecords());
+      assertEquals(0, requestsCollection.getCirculationRequests().size());
       verify(restClient, times(1)).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
       verify(pieceStorageService, times(1)).getPiecesByIds(eq(MOCK_PIECE_IDS), eq(requestContext));
       vertxTestContext.completeNow();
