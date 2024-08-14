@@ -365,11 +365,18 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       holder.withPieceToUpdate(pieceToUpdate);
       holder.withPoLineOnly(compositePoLine);
       pieceUpdateFlowPoLineService.updatePoLineWithoutSave(holder);
+      holder.getPoLineToSave().withLocations(updatePoLineLocations(holder));
 
       return HelperUtils.convertToPoLine(compositePoLine);
     }
 
     return poLine;
+  }
+
+  private static List<Location> updatePoLineLocations(PieceUpdateHolder holder) {
+    return holder.getPoLineToSave().getLocations().stream()
+      .map(location -> location.getHoldingId() != null ? location.withLocationId(null) : location)
+      .toList();
   }
 
   /**
