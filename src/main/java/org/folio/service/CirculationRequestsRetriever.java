@@ -4,6 +4,8 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.CommonFields;
 import org.folio.rest.core.RestClient;
@@ -17,6 +19,7 @@ import org.folio.service.pieces.PieceStorageService;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -35,6 +38,7 @@ import static org.folio.service.inventory.util.RequestFields.ITEM_ID;
 
 public class CirculationRequestsRetriever {
 
+  private static final Logger logger = LogManager.getLogger();
   private static final String OPEN_REQUEST_STATUS = "Open - *";
 
   private final PieceStorageService pieceStorageService;
@@ -72,11 +76,16 @@ public class CirculationRequestsRetriever {
       .map(ids -> String.format("(%s and status=\"%s\")", convertIdsToCqlQuery(ids, ITEM_ID.getValue()), status))
       .map(query -> new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
         .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE))
-      .map(entry -> restClient.getAsJsonObject(entry, requestContext))
+      .map(entry -> restClient.getAsJsonObject(entry, requestContext)
+        .recover(throwable -> {
+          logger.error("getRequestsByItemIds:: Failed to get requests by item ids", throwable);
+          return Future.succeededFuture(null);
+        }))
       .toList();
 
     return GenericCompositeFuture.all(futures)
       .map(f -> f.<JsonObject>list().stream()
+        .filter(Objects::nonNull) // filter out null objects in case of restClient failure
         .flatMap(json -> {
           var totalRecords = json.getInteger(COLLECTION_TOTAL.getValue());
           var requests = json.getJsonArray(COLLECTION_RECORDS.getValue());
