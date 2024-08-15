@@ -631,8 +631,8 @@ public class CheckinReceivingApiTest {
   }
 
   @Test
-  void testPostCheckInPhysicalFullyReceived() {
-    logger.info("=== Test POST check-in - Check-in Fully Received physical resource ===");
+  void testPostCheckInPhysicalFullyReceivedWithChangedLocation() {
+    logger.info("=== Test POST check-in - Check-in Fully Received physical resource with changed location ===");
 
     CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(11).mapTo(CompositePoLine.class);
     MockServer.addMockTitles(Collections.singletonList(compositePoLine));
@@ -677,7 +677,11 @@ public class CheckinReceivingApiTest {
       PoLine poLine = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
       logger.info("POL location before checkIn: {}", JsonArray.of(compositePoLine.getLocations()).encodePrettily());
       logger.info("POL location after checkIn: {}", JsonArray.of(poLine.getLocations()).encodePrettily());
-      assertThat(compositePoLine.getLocations().get(0).getHoldingId(), not(poLine.getLocations().get(0).getHoldingId()));
+      Location originalPolineLocation = poLine.getLocations().get(0);
+      Location updatePolineLocation = compositePoLine.getLocations().get(0);
+      assertThat(originalPolineLocation.getLocationId(), nullValue());
+      assertThat(updatePolineLocation.getLocationId(), nullValue());
+      assertThat(originalPolineLocation.getHoldingId(), not(updatePolineLocation.getHoldingId()));
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.FULLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), not(nullValue()));
     }
