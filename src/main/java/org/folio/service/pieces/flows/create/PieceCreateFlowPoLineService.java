@@ -49,8 +49,12 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
         cost.setQuantityPhysical(prevCostQty + qty);
       }
     } else if (isLocationUpdateRequired(piece, lineToSave)) {
-      Location locationToAdd = new Location().withLocationId(piece.getLocationId()).withHoldingId(piece.getHoldingId())
-        .withQuantity(qty);
+      Location locationToAdd = new Location().withQuantity(qty);
+      if (piece.getHoldingId() != null) {
+        locationToAdd = locationToAdd.withHoldingId(piece.getHoldingId());
+      } else {
+        locationToAdd = locationToAdd.withLocationId(piece.getLocationId());
+      }
       Cost cost = lineToSave.getCost();
       if (Objects.nonNull(piece.getReceivingTenantId())) {
         locationToAdd.setTenantId(piece.getReceivingTenantId());
