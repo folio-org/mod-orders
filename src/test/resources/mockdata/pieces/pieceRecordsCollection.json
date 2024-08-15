@@ -521,7 +521,21 @@
       "displayToPublic": false,
       "receivingStatus": "Expected",
       "displayOnHolding": false
+    },
+    {
+      "id": "1cdbe858-1489-406d-90bf-c5cb00cf62ca",
+      "format": "Physical",
+      "itemId": "0efc2a06-d376-488e-8593-1a5c66fa8266",
+      "isBound": false,
+      "titleId": "fa1ef0e6-748c-4a03-97b8-5070867d9d91",
+      "poLineId": "94b00678-9df4-494a-9891-ebc7ccb76a48",
+      "holdingId": "46523917-e1c0-4cda-b0ad-84a90550cb73",
+      "displayToPublic": false,
+      "receivingStatus": "Expected",
+      "displayOnHolding": false,
+      "receivingTenantId": "university",
+      "statusUpdatedDate": "2024-08-15T06:49:19.508+00:00"
     }
   ],
-  "totalRecords": 62
+  "totalRecords": 63
 }

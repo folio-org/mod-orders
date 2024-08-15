@@ -178,7 +178,7 @@ public class PieceApiTest {
     HandlersTestHelper.verifyReceiptStatusUpdateEvent(1);
   }
 
-  private static Stream<Arguments> testPutPiecesByIdEcsTestArgs() {
+  private static Stream<Arguments> testPutPiecesByIdEcsArgs() {
     return Stream.of(
       Arguments.of(CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL, "aaecf1f7-28dc-4940-bfd4-be0e26afde95", true),
       Arguments.of(CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC, "8cf0c835-9ad5-4cfb-8bd9-7fa78e65f7c3", true)
@@ -186,8 +186,8 @@ public class PieceApiTest {
   }
 
   @ParameterizedTest
-  @MethodSource("testPutPiecesByIdEcsTestArgs")
-  void testPutPiecesByIdEcsTest(String purchaseOrderId, String pieceId, boolean mockItem) throws Exception {
+  @MethodSource("testPutPiecesByIdEcsArgs")
+  void testPutPiecesByIdEcs(String purchaseOrderId, String pieceId, boolean mockItem) throws Exception {
     logger.info("=== Test update piece by id ECS - valid Id 204 ===");
 
     var purchaseOrderMock = getMockData(String.format(ECS_CONSORTIUM_PURCHASE_ORDER_JSON, purchaseOrderId));

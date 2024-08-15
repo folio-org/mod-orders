@@ -118,6 +118,7 @@ import static org.folio.service.inventory.InventoryManagerTest.NON_EXISTED_NEW_H
 import static org.folio.service.inventory.InventoryManagerTest.OLD_LOCATION_ID;
 import static org.folio.service.inventory.InventoryManagerTest.ONLY_NEW_HOLDING_EXIST_ID;
 
+import io.vertx.core.MultiMap;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.time.Instant;
@@ -322,6 +323,7 @@ public class MockServer {
   public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL = "8137de83-76c0-4d3e-bf73-416de5e780fa";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC = "01c8d44a-dc73-4bca-a4d1-ef28bdfb9275";
+  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES = "e1472bfd-27ea-43e6-9f0e-099ced80f34f";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -1264,6 +1266,7 @@ public class MockServer {
   private static void appendEcsItems(JsonArray jsonArray) throws IOException {
     jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL))));
     jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC))));
+    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES))));
   }
 
   private void handleGetInventoryItemRecordById(RoutingContext ctx) {
@@ -1932,21 +1935,31 @@ public class MockServer {
   }
 
   private void handleGetPieces(RoutingContext ctx) {
-    logger.info("handleGetPieces got: " + ctx.request().path());
-    String query = ctx.request().getParam("query");
-    if (query.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
+    String requestPath = ctx.request().path();
+    String requestQuery = ctx.request().getParam("query");
+    MultiMap requestHeaders = ctx.request().headers();
+    logger.info("handleGetPieces requestPath: {}, requestQuery: {}, requestHeaders: {}", requestPath, requestQuery, requestHeaders);
+    if (requestQuery.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
+      logger.info("handleGetPieces (with internal server error)");
       addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, new JsonObject());
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       PieceCollection pieces;
       if (getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
-        pieces = new PieceCollection().withPieces(getMockEntries(PIECES_STORAGE, Piece.class).get());
-        pieces.setTotalRecords(pieces.getPieces().size());
+        logger.info("handleGetPieces (all records)");
+        try {
+          List<Piece> piecesList = getMockEntries(PIECES_STORAGE, Piece.class).get();
+          pieces = new PieceCollection().withPieces(piecesList);
+          pieces.setTotalRecords(pieces.getPieces().size());
+        } catch (Exception e) {
+          throw new IllegalStateException(String.format("Cannot retrieved mock data for requestPath: %s, requestQuery: %s", requestPath, requestQuery));
+        }
       } else {
         try {
-          if (query.contains("poLineId==")) {
+          if (requestQuery.contains("poLineId==")) {
+            logger.info("handleGetPieces (by poLineId)");
             List<String> conditions = StreamEx
-              .split(query, " or ")
+              .split(requestQuery, " or ")
               .flatMap(s -> StreamEx.split(s, " and "))
               .toList();
 
@@ -1964,36 +1977,35 @@ public class MockServer {
 
             String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
             pieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
-
             // Filter piece records by receiving status
             if (StringUtils.isNotEmpty(status)) {
               Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
               pieces.getPieces()
                 .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
             }
-          } else if (query.contains("id==")) {
+          } else if (requestQuery.contains("id==")) {
+            logger.info("handleGetPieces (by id)");
             pieces = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json")).mapTo(PieceCollection.class);
-//            if (query.contains("id==")) {
-              List<String> pieceIds = extractIdsFromQuery(query);
-              pieces.getPieces()
-                .removeIf(piece -> !pieceIds.contains(piece.getId()));
-              // fix consistency with titles: the piece's title id should be the same as one of the titles ids
-              // returned for the piece's po line
-              pieces.getPieces().forEach(piece -> {
-                String poLineId = piece.getPoLineId();
-                List<Title> titlesForPoLine = getTitlesByPoLineIds(List.of(poLineId))
-                  .mapTo(TitleCollection.class).getTitles();
-                if (titlesForPoLine.size() > 0 && titlesForPoLine.stream()
-                    .noneMatch(title -> title.getId().equals(piece.getTitleId())))
-                  piece.setTitleId(titlesForPoLine.get(0).getId());
-              });
+            List<String> pieceIds = extractIdsFromQuery(requestQuery);
+            pieces.getPieces().removeIf(piece -> !pieceIds.contains(piece.getId()));
+            // fix consistency with titles: the piece's title id should be the same as one of the titles ids
+            // returned for the piece's po line
+            pieces.getPieces().forEach(piece -> {
+              String poLineId = piece.getPoLineId();
+              List<Title> titlesForPoLine = getTitlesByPoLineIds(List.of(poLineId)).mapTo(TitleCollection.class).getTitles();
+              if (!titlesForPoLine.isEmpty() && titlesForPoLine.stream().noneMatch(title -> title.getId().equals(piece.getTitleId()))) {
+                piece.setTitleId(titlesForPoLine.get(0).getId());
+              }
+            });
           } else {
+            logger.info("handleGetPieces (with empty piece collection)");
             pieces = new PieceCollection();
           }
 
           pieces.setTotalRecords(pieces.getPieces().size());
 
         } catch (Exception e) {
+          logger.info("handleGetPieces (with empty piece collection on exception)");
           pieces = new PieceCollection();
           pieces.setTotalRecords(0);
         }

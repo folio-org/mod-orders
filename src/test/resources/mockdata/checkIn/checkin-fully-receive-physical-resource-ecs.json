@@ -1,0 +1,20 @@
+{
+  "toBeCheckedIn": [
+    {
+      "poLineId": "94b00678-9df4-494a-9891-ebc7ccb76a48",
+      "checkedIn": 1,
+      "checkInPieces": [
+        {
+          "id": "1cdbe858-1489-406d-90bf-c5cb00cf62ca",
+          "displaySummary": "Test 3",
+          "displayOnHolding": false,
+          "receivingTenantId": "college",
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "holdingId": null,
+          "itemStatus": "In process"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 1
+}
