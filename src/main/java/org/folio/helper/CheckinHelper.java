@@ -9,8 +9,6 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -36,7 +34,6 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
@@ -119,7 +116,6 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   private void prepareItemsToRecreate(PiecesHolder holder, List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
     var itemRecreateDtoMap = piecePoLineDtoList.stream()
       .filter(PiecesHolder.PiecePoLineDto::isRecreateItem)
-      .peek(dto -> logger.info("prepareItemsToRecreate:: grouping poLineId '{}' with itemId '{}'",dto.getPoLineId(), dto.getPieceFromStorage().getItemId()))
       .collect(groupingBy(PiecesHolder.PiecePoLineDto::getPoLineId));
     holder.withItemsToRecreate(itemRecreateDtoMap);
   }
