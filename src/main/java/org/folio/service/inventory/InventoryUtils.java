@@ -281,9 +281,8 @@ public class InventoryUtils {
     return new ItemRecreateConfig(receivingTenantId, createContextWithNewTenantId(requestContext, receivingTenantId));
   }
 
-  public static boolean allowItemRecreate(ItemRecreateConfig srcConfig, ItemRecreateConfig dstConfig) {
-    return Objects.nonNull(srcConfig.tenantId()) && Objects.nonNull(dstConfig.tenantId())
-      && !srcConfig.tenantId().equals(dstConfig.tenantId());
+  public static boolean allowItemRecreate(String srcTenantId, String dstTenantId) {
+    return Objects.nonNull(srcTenantId) && Objects.nonNull(dstTenantId) && !srcTenantId.equals(dstTenantId);
   }
 
   public record ItemRecreateConfig(String tenantId, RequestContext context) {}

@@ -503,13 +503,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     }
     var futures = new ArrayList<Future<String>>();
     piecesGroupedByPoLine.keySet().stream()
-      .map(compPolId -> holder.getItemsToRecreate().get(compPolId))
+      .map(poLineId -> holder.getItemsToRecreate().get(poLineId))
       .forEach(itemToRecreate -> {
         var piece = itemToRecreate.getPieceFromStorage();
         var checkInPiece  = itemToRecreate.getCheckInPiece();
         var srcConfig = InventoryUtils.constructItemRecreateConfig(piece.getReceivingTenantId(), requestContext, true);
         var dstConfig = InventoryUtils.constructItemRecreateConfig(checkInPiece.getReceivingTenantId(), requestContext, false);
-        if (InventoryUtils.allowItemRecreate(srcConfig, dstConfig)) {
+        if (InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId())) {
           logger.info("recreateItemRecords:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'", piece.getItemId(), srcConfig.tenantId(), dstConfig.tenantId());
           futures.add(itemRecreateInventoryService.recreateItemInDestinationTenant(itemToRecreate.getCompositePoLine(), piece, srcConfig.context(), dstConfig.context()));
         }

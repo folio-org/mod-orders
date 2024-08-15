@@ -5,7 +5,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.util.Objects;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -35,6 +34,7 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
@@ -97,7 +97,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
                 .map(PoLineCommonUtil::convertToCompositePoLine)
                 .compose(compPol -> pieceCreateFlowInventoryManager.processInventory(compPol, piece, checkInPiece.getCreateItem(), requestContext))
                 .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece)));
-            } else if (checkInPiece.getId().equals(piece.getId()) && Objects.nonNull(srcTenantId) && Objects.nonNull(dstTenantId) && !srcTenantId.equals(dstTenantId)) {
+            } else if (checkInPiece.getId().equals(piece.getId()) && InventoryUtils.allowItemRecreate(srcTenantId, dstTenantId)) {
               pieceFutures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
                 .map(PoLineCommonUtil::convertToCompositePoLine)
                 .map(compPol -> new PiecesHolder.PiecePoLineDto(compPol, piece, checkInPiece)));
@@ -107,7 +107,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
           })));
         return null;
       })
-      .compose(v1 -> collectResultsOnSuccess(pieceFutures)
+      .compose(v -> collectResultsOnSuccess(pieceFutures)
         .map(piecePoLineDtoList -> {
           prepareItemsToRecreate(holder, piecePoLineDtoList);
           return createPoLineIdPiecePair(piecePoLineDtoList);
@@ -115,17 +115,16 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private static void prepareItemsToRecreate(PiecesHolder holder, List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
-    var itemRecreateDtoMap = new HashMap<String, PiecesHolder.PiecePoLineDto>();
-    piecePoLineDtoList.stream()
+    var itemRecreateDtoMap = piecePoLineDtoList.stream()
       .filter(PiecesHolder.PiecePoLineDto::isRecreateItem)
-      .forEach(dto -> itemRecreateDtoMap.put(dto.getPoLineId(), dto));
+      .collect(toMap(PiecesHolder.PiecePoLineDto::getPoLineId, dto -> dto));
     holder.withItemsToRecreate(itemRecreateDtoMap);
   }
 
   private static Map<String, List<Piece>> createPoLineIdPiecePair(List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
     return StreamEx.of(piecePoLineDtoList)
-      .map(v2 -> Pair.of(v2.getPoLineId(), v2.getPieceFromStorage())).distinct()
-      .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists).collect(toList()))));
+      .map(dto -> Pair.of(dto.getPoLineId(), dto.getPieceFromStorage())).distinct()
+      .groupingBy(Pair::getKey, mapping(Pair::getValue, collectingAndThen(toList(), lists -> StreamEx.of(lists).toList())));
   }
 
   private ReceivingResults prepareResponseBody(CheckinCollection checkinCollection,

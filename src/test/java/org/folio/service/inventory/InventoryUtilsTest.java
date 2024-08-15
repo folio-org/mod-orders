@@ -174,7 +174,7 @@ public class InventoryUtilsTest {
     var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
     var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesRequest.getReceivingTenantId(), requestContext, false);
 
-    Assertions.assertTrue(InventoryUtils.allowItemRecreate(srcConfig, dstConfig));
+    Assertions.assertTrue(InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
   }
 
   @Test
@@ -187,7 +187,7 @@ public class InventoryUtilsTest {
     var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
     var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesRequest.getReceivingTenantId(), requestContext, false);
 
-    Assertions.assertFalse(InventoryUtils.allowItemRecreate(srcConfig, dstConfig));
+    Assertions.assertFalse(InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
   }
 
   @Test
@@ -200,7 +200,7 @@ public class InventoryUtilsTest {
     var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
     var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesRequest.getReceivingTenantId(), requestContext, false);
 
-    Assertions.assertFalse(InventoryUtils.allowItemRecreate(srcConfig, dstConfig));
+    Assertions.assertFalse(InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
   }
 
   @Test
@@ -213,6 +213,6 @@ public class InventoryUtilsTest {
     var srcConfig = InventoryUtils.constructItemRecreateConfig(piecesStorage.getReceivingTenantId(), requestContext, true);
     var dstConfig = InventoryUtils.constructItemRecreateConfig(piecesRequest.getReceivingTenantId(), requestContext, false);
 
-    Assertions.assertFalse(InventoryUtils.allowItemRecreate(srcConfig, dstConfig));
+    Assertions.assertFalse(InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId()));
   }
 }

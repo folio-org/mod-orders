@@ -122,7 +122,7 @@ public class PieceUpdateFlowInventoryManager {
       .compose(jsonItem -> {
         if (jsonItem != null && !jsonItem.isEmpty()) {
           updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate);
-          if (InventoryUtils.allowItemRecreate(srcConfig, dstConfig)) {
+          if (InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId())) {
             logger.info("handleItem:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'", itemId, srcConfig.tenantId(), dstConfig.tenantId());
             return itemRecreateInventoryService.recreateItemInDestinationTenant(holder.getPoLineToSave(), holder.getPieceToUpdate(), srcConfig.context(), dstConfig.context());
           } else {
