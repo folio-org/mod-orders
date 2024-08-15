@@ -22,6 +22,7 @@ import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
@@ -384,6 +385,32 @@ public class InventoryInstanceManager {
         Collection<String> tenantIdsToShare = CollectionUtils.subtract(locationTenantIds, tenantIdsWithSharingInstances);
         logger.info("List of tenants where shadow instances should be created: {} for instanceId: {}", tenantIdsToShare, instanceId);
         return tenantIdsToShare;
+      });
+  }
+
+  public Future<String> determineInstanceTenantId(String instanceId, RequestContext requestContext) {
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(optional -> {
+        if (optional.isEmpty()) {
+          return Future.succeededFuture(TenantTool.tenantId(requestContext.getHeaders()));
+        } else {
+          ConsortiumConfiguration consortiumConfiguration = optional.get();
+          return getSourceTenantId(instanceId, consortiumConfiguration, requestContext);
+        }
+      });
+  }
+
+  private Future<String> getSourceTenantId(String instanceId, ConsortiumConfiguration consortiumConfiguration, RequestContext requestContext) {
+    return sharingInstanceService.getSharingInstances(instanceId, consortiumConfiguration, requestContext)
+      .map(instancesCollection -> {
+        String centralTenantId = consortiumConfiguration.centralTenantId();
+        String tenantId = instancesCollection.getSharingInstances().stream()
+          .filter(instance -> !centralTenantId.equals(instance.sourceTenantId()))
+          .findFirst()
+          .map(SharingInstance::sourceTenantId)
+          .orElse(centralTenantId);
+        logger.info("Source tenant for instanceId: {} is: {}", instanceId, tenantId);
+        return tenantId;
       });
   }
 

@@ -5,6 +5,8 @@ import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -34,11 +36,14 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
 
 public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
+
+  private static final Logger logger = LogManager.getLogger(WithHoldingOrderLineUpdateInstanceStrategy.class);
 
   private static final String HOLDINGS_ITEMS = "holdingsItems";
   private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
@@ -61,19 +66,19 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
     holder.createStoragePatchOrderLineRequest(StoragePatchOrderLineRequest.PatchOrderLineOperationType.REPLACE_INSTANCE_REF, newInstanceId);
     PoLine poLine = holder.getStoragePoLine();
-
-    return switch (replaceInstanceRef.getHoldingsOperation()) {
-      case MOVE -> moveHoldings(holder, newInstanceId, requestContext);
-      case FIND_OR_CREATE -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
-        .compose(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), poLine, requestContext));
-      case CREATE -> createHoldingsAndUpdateItems(holder, newInstanceId, requestContext)
-        .compose(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), poLine, requestContext));
-      default -> Future.succeededFuture();
-    };
+    return inventoryInstanceManager.determineInstanceTenantId(newInstanceId, requestContext)
+      .compose(newInstanceTenantId -> switch (replaceInstanceRef.getHoldingsOperation()) {
+        case MOVE -> moveHoldings(holder, newInstanceId, newInstanceTenantId, requestContext);
+        case FIND_OR_CREATE -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, newInstanceTenantId, requestContext)
+          .compose(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), poLine, requestContext));
+        case CREATE -> createHoldingsAndUpdateItems(holder, newInstanceId, newInstanceTenantId, requestContext)
+          .compose(v -> deleteAbandonedHoldings(replaceInstanceRef.getDeleteAbandonedHoldings(), poLine, requestContext));
+        default -> Future.succeededFuture();
+      });
   }
 
 
-  private Future<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
+  private Future<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, String newInstanceTenantId, RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
     CompositePoLine compPOL = PoLineCommonUtil.convertToCompositePoLine(poLine);
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
@@ -83,9 +88,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
             .stream()
             .map(entry -> entry.getValue().compose(holdings -> {
               removeHoldingUnrecognizedFields(holdings);
-              var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
-              return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
-                .compose(instance -> inventoryHoldingManager.updateInstanceForHoldingRecords(holdings, newInstanceId, locationContext));
+              String holdingTenantId = entry.getKey();
+              if (Objects.equals(holdingTenantId, newInstanceTenantId)) {
+                logger.info("moveHoldings:: update holdings with new instanceId: {} in tenant: {}", newInstanceId, newInstanceTenantId);
+                var holdingsContext = createContextWithNewTenantId(requestContext, holdingTenantId);
+                return inventoryHoldingManager.updateInstanceForHoldingRecords(holdings, newInstanceId, holdingsContext);
+              }
+              return Future.succeededFuture();
             }))
             .toList();
           return GenericCompositeFuture.all(updateHoldings).mapEmpty();
@@ -135,11 +144,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   }
 
   private Future<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
-                                                          String newInstanceId, RequestContext requestContext) {
+                                                          String newInstanceId,
+                                                          String newInstanceTenantId,
+                                                          RequestContext requestContext) {
     return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
       .compose(locations -> GenericCompositeFuture.join(
           locations.stream()
-            .map(location -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext))
+            .map(location -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, newInstanceTenantId, location, requestContext))
             .toList()
         )
       )
@@ -148,27 +159,35 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
                                                           String newInstanceId,
+                                                          String newInstanceTenantId,
                                                           Location location,
                                                           RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
-    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
-    return inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, locationContext)
+    RequestContext instanceContext = createContextWithNewTenantId(requestContext, newInstanceTenantId);
+    return inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, instanceContext)
       .compose(newHoldingId -> {
         holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
         if (Objects.equals(holdingId, newHoldingId)) {
           return Future.succeededFuture();
         }
-        return updateItemsHolding(holdingId, newHoldingId, poLine.getId(), locationContext);
+        if (Objects.equals(location.getTenantId(), newInstanceTenantId)) {
+          logger.info("findOrCreateHoldingsAndUpdateItems:: update items with new holdingId: {} for new instanceId: {} in tenant: {}",
+            newHoldingId, newInstanceId, newInstanceTenantId);
+          return updateItemsHolding(holdingId, newHoldingId, poLine.getId(), requestContext);
+        }
+        return Future.succeededFuture();
       });
   }
 
   private Future<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
-                                                    String newInstanceId, RequestContext requestContext) {
+                                                    String newInstanceId,
+                                                    String newInstanceTenantId,
+                                                    RequestContext requestContext) {
     return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
       .compose(locations -> GenericCompositeFuture.join(
           locations.stream()
-            .map(location -> createHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext))
+            .map(location -> createHoldingsAndUpdateItems(holder, newInstanceId, newInstanceTenantId, location, requestContext))
             .toList()
         )
       )
@@ -177,15 +196,21 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
                                                     String newInstanceId,
+                                                    String newInstanceTenantId,
                                                     Location location,
                                                     RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
-    var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
-    return inventoryHoldingManager.createHolding(newInstanceId, location, locationContext)
+    RequestContext instanceContext = createContextWithNewTenantId(requestContext, newInstanceTenantId);
+    return inventoryHoldingManager.createHolding(newInstanceId, location, instanceContext)
       .compose(newHoldingId -> {
         holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
-        return updateItemsHolding(holdingId, newHoldingId, poLine.getId(), locationContext);
+        if (Objects.equals(location.getTenantId(), newInstanceTenantId)) {
+          logger.info("createHoldingsAndUpdateItems:: update items with new holdingId: {} for new instanceId: {} in tenant: {}",
+            newHoldingId, newInstanceId, newInstanceTenantId);
+          return updateItemsHolding(holdingId, newHoldingId, poLine.getId(), requestContext);
+        }
+        return Future.succeededFuture();
       });
   }
 
@@ -194,7 +219,10 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       .map(pieces -> {
         List<Location> pieceHoldingIds = pieces
           .stream()
-          .map(piece -> new Location().withHoldingId(piece.getHoldingId()).withLocationId(piece.getLocationId()))
+          .map(piece -> new Location()
+            .withHoldingId(piece.getHoldingId())
+            .withLocationId(piece.getLocationId())
+            .withTenantId(piece.getReceivingTenantId()))
           .collect(toList());
         List<Location> storageHoldingIds = poLine.getLocations();
 
