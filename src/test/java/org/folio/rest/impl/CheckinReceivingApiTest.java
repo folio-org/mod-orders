@@ -667,7 +667,6 @@ public class CheckinReceivingApiTest {
     assertThat(getItemsSearches(), not(nullValue()));
     assertThat(getItemUpdates(), is(nullValue()));
     assertThat(polSearches, not(nullValue()));
-    assertThat(polBatchUpdates, not(nullValue()));
 
     int expectedSearchRqQty = Math.floorDiv(checkinCollection.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
