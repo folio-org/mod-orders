@@ -1,0 +1,29 @@
+{
+  "toBeCheckedIn": [
+    {
+      "poLineId": "94b00678-9df4-494a-9891-ebc7ccb76a49",
+      "checkedIn": 2,
+      "checkInPieces": [
+        {
+          "id": "1cdbe858-1489-406d-90bf-c5cb00cf62cb",
+          "displaySummary": "Test 2-1",
+          "displayOnHolding": false,
+          "receivingTenantId": "college",
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "holdingId": null,
+          "itemStatus": "In process"
+        },
+        {
+          "id": "1cdbe858-1489-406d-90bf-c5cb00cf62cc",
+          "displaySummary": "Test 2-2",
+          "displayOnHolding": false,
+          "receivingTenantId": "college",
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "holdingId": null,
+          "itemStatus": "In process"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 2
+}

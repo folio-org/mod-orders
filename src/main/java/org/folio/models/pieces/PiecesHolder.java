@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class PiecesHolder {
   private Map<String, List<Piece>> piecesFromStorage;
-  private Map<String, PiecePoLineDto> itemsToRecreate;
+  private Map<String, List<PiecePoLineDto>> itemsToRecreate;
 
   public static class PiecePoLineDto {
     private final String poLineId;
@@ -60,7 +60,7 @@ public class PiecesHolder {
     return this.piecesFromStorage;
   }
 
-  public Map<String, PiecePoLineDto> getItemsToRecreate() {
+  public Map<String, List<PiecePoLineDto>> getItemsToRecreate() {
     return this.itemsToRecreate;
   }
 
@@ -79,7 +79,7 @@ public class PiecesHolder {
     return this;
   }
 
-  public PiecesHolder withItemsToRecreate(Map<String, PiecePoLineDto> itemsToRecreate) {
+  public PiecesHolder withItemsToRecreate(Map<String, List<PiecePoLineDto>> itemsToRecreate) {
     this.itemsToRecreate = itemsToRecreate;
     return this;
   }

@@ -282,6 +282,9 @@ public class MockServer {
   public static final String ECS_UNIVERSITY_INSTANCE_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_instance.json";
   public static final String ECS_UNIVERSITY_HOLDINGS_RECORD_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_holdings_record.json";
   public static final String ECS_UNIVERSITY_ITEM_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item.json";
+  public static final String ECS_UNIVERSITY_ITEM_SINGLE_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item_single.json";
+  public static final String ECS_UNIVERSITY_ITEM_MULTIPLE_1_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item_multiple_1.json";
+  public static final String ECS_UNIVERSITY_ITEM_MULTIPLE_2_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item_multiple_2.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
@@ -1266,7 +1269,9 @@ public class MockServer {
   private static void appendEcsItems(JsonArray jsonArray) throws IOException {
     jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL))));
     jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES))));
+    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_SINGLE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES))));
+    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_1_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES))));
+    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_2_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES))));
   }
 
   private void handleGetInventoryItemRecordById(RoutingContext ctx) {

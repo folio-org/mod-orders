@@ -9,6 +9,8 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -114,10 +116,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
         }));
   }
 
-  private static void prepareItemsToRecreate(PiecesHolder holder, List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
+  private void prepareItemsToRecreate(PiecesHolder holder, List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
     var itemRecreateDtoMap = piecePoLineDtoList.stream()
       .filter(PiecesHolder.PiecePoLineDto::isRecreateItem)
-      .collect(toMap(PiecesHolder.PiecePoLineDto::getPoLineId, dto -> dto));
+      .peek(dto -> logger.info("prepareItemsToRecreate:: grouping poLineId '{}' with itemId '{}'",dto.getPoLineId(), dto.getPieceFromStorage().getItemId()))
+      .collect(groupingBy(PiecesHolder.PiecePoLineDto::getPoLineId));
     holder.withItemsToRecreate(itemRecreateDtoMap);
   }
 
