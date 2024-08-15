@@ -9,6 +9,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.pieces.PieceUpdateHolder;
+import org.folio.models.pieces.PiecesHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
@@ -37,7 +38,9 @@ import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.ItemRecreateInventoryService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
@@ -116,6 +119,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected PieceCreateFlowInventoryManager pieceCreateFlowInventoryManager;
   @Autowired
   protected PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
+  @Autowired
+  private ItemRecreateInventoryService itemRecreateInventoryService;
   private final RestClient restClient;
 
   private List<PoLine> poLineList;
@@ -473,6 +478,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * and list of corresponding pieces as value
    */
   protected Future<Map<String, List<Piece>>> updateInventoryItemsAndHoldings(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                                             PiecesHolder holder,
                                                                              RequestContext requestContext) {
     Map<String, Piece> piecesByItemId = StreamEx.ofValues(piecesGroupedByPoLine)
       .flatMap(List::stream)
@@ -483,9 +489,38 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
     return getPoLineAndTitleById(poLineIds, requestContext)
       .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
-        .compose(v -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
+        .compose(voidResult -> recreateItemRecords(piecesGroupedByPoLine, holder, requestContext))
+        .compose(voidResult -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
         .compose(items -> processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext))
       );
+  }
+
+  protected Future<Void> recreateItemRecords(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                             PiecesHolder holder,
+                                             RequestContext requestContext) {
+    if (Objects.isNull(holder.getItemsToRecreate()) || holder.getItemsToRecreate().isEmpty()) {
+      return Future.succeededFuture();
+    }
+    var futures = new ArrayList<Future<String>>();
+    piecesGroupedByPoLine.keySet().stream()
+      .map(poLineId -> holder.getItemsToRecreate().get(poLineId))
+      .forEach(itemToRecreateList ->
+        itemToRecreateList.forEach(itemToRecreate -> {
+          var piece = itemToRecreate.getPieceFromStorage();
+          var checkInPiece  = itemToRecreate.getCheckInPiece();
+          var srcConfig = InventoryUtils.constructItemRecreateConfig(piece.getReceivingTenantId(), requestContext, true);
+          var dstConfig = InventoryUtils.constructItemRecreateConfig(checkInPiece.getReceivingTenantId(), requestContext, false);
+          if (InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId())) {
+            logger.info("recreateItemRecords:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'", piece.getItemId(), srcConfig.tenantId(), dstConfig.tenantId());
+            futures.add(itemRecreateInventoryService.recreateItemInDestinationTenant(itemToRecreate.getCompositePoLine(), piece, srcConfig.context(), dstConfig.context()));
+          }
+        }));
+    return collectResultsOnSuccess(futures)
+      .map(itemIdsRecreated -> {
+        itemIdsRecreated.forEach(itemIdRecreated -> logger.info("recreateItemRecords:: recreated item by id '{}'", itemIdRecreated));
+        return null;
+      })
+      .compose(v -> Future.succeededFuture());
   }
 
   /**

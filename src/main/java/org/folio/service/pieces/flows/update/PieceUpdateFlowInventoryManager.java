@@ -5,7 +5,6 @@ import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 
-import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -19,6 +18,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
+import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.pieces.ItemRecreateInventoryService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
@@ -115,26 +115,21 @@ public class PieceUpdateFlowInventoryManager {
     if (!DefaultPieceFlowsValidator.isCreateItemForPiecePossible(pieceToUpdate, poLineToSave) || pieceToUpdate.getIsBound()) {
       return Future.succeededFuture();
     }
-
-    var srcConfig = constructItemRecreateConfig(holder.getPieceFromStorage(), requestContext, true);
-    var dstConfig = constructItemRecreateConfig(pieceToUpdate, requestContext, false);
+    var srcConfig = InventoryUtils.constructItemRecreateConfig(holder.getPieceFromStorage().getReceivingTenantId(), requestContext, true);
+    var dstConfig = InventoryUtils.constructItemRecreateConfig(pieceToUpdate.getReceivingTenantId(), requestContext, false);
     var itemId = pieceToUpdate.getItemId();
-
     return inventoryItemManager.getItemRecordById(itemId, true, srcConfig.context())
       .compose(jsonItem -> {
         if (jsonItem != null && !jsonItem.isEmpty()) {
           updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate);
-          if (allowItemRecreate(srcConfig, dstConfig)) {
-            logger.info("handleItem:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'",
-              itemId, srcConfig.tenantId(), dstConfig.tenantId()
-            );
-            return itemRecreateInventoryService.recreateItemInDestinationTenant(holder, srcConfig.context(), dstConfig.context());
+          if (InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId())) {
+            logger.info("handleItem:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'", itemId, srcConfig.tenantId(), dstConfig.tenantId());
+            return itemRecreateInventoryService.recreateItemInDestinationTenant(holder.getPoLineToSave(), holder.getPieceToUpdate(), srcConfig.context(), dstConfig.context());
           } else {
             logger.info("handleItem:: updating item by id '{}'", itemId);
             return inventoryItemManager.updateItem(jsonItem, requestContext).map(v -> jsonItem.getString(ID));
           }
         }
-
         if (holder.isCreateItem() && pieceToUpdate.getHoldingId() != null) {
           logger.info("handleItem:: creating item by id '{}'", itemId);
           return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);
@@ -150,21 +145,4 @@ public class PieceUpdateFlowInventoryManager {
     }
     item.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
   }
-
-  ItemRecreateConfig constructItemRecreateConfig(Piece piece, RequestContext requestContext, boolean reuseInitialRequestContext) {
-    if (Objects.isNull(piece.getReceivingTenantId())) {
-      return new PieceUpdateFlowInventoryManager.ItemRecreateConfig(null, reuseInitialRequestContext ? requestContext : null);
-    }
-
-    var tenantId = piece.getReceivingTenantId();
-    return new PieceUpdateFlowInventoryManager.ItemRecreateConfig(tenantId, createContextWithNewTenantId(requestContext, tenantId));
-  }
-
-  boolean allowItemRecreate(PieceUpdateFlowInventoryManager.ItemRecreateConfig srcConfig, PieceUpdateFlowInventoryManager.ItemRecreateConfig dstConfig) {
-    return Objects.nonNull(srcConfig.tenantId()) && Objects.nonNull(dstConfig.tenantId())
-      && !srcConfig.tenantId().equals(dstConfig.tenantId());
-  }
-
-  public record ItemRecreateConfig(String tenantId, RequestContext context) {}
-
 }

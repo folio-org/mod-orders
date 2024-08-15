@@ -78,7 +78,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
         return filterMissingLocations(piecesFromStorage, requestContext);
       })
       // 3. Update items in the Inventory if required
-      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, requestContext))
+      .compose(pieces -> updateInventoryItemsAndHoldings(pieces, holder, requestContext))
       // 4. Update piece records with receiving details which do not have associated item
       .map(this::updatePieceRecordsWithoutItems)
       // 5. Update received piece records in the storage

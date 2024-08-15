@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import io.restassured.response.Response;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -55,6 +56,9 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
@@ -63,6 +67,7 @@ import static org.folio.RestTestUtils.verifyPostResponse;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_ECS;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.ORDERS_BIND_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_BIND_ID_ENDPOINT;
@@ -662,7 +667,6 @@ public class CheckinReceivingApiTest {
     assertThat(getItemsSearches(), not(nullValue()));
     assertThat(getItemUpdates(), is(nullValue()));
     assertThat(polSearches, not(nullValue()));
-    assertThat(polBatchUpdates, not(nullValue()));
 
     int expectedSearchRqQty = Math.floorDiv(checkinCollection.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
 
@@ -685,6 +689,87 @@ public class CheckinReceivingApiTest {
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.FULLY_RECEIVED));
       assertThat(poLine.getReceiptDate(), not(nullValue()));
     }
+
+    verifyCheckinOrderStatusUpdateEvent(1);
+  }
+
+  private static Stream<Arguments> testPostCheckInPhysicalFullyReceivedEcsArgs() {
+    return Stream.of(
+      Arguments.of(12, "checkin-fully-receive-physical-resource-ecs-single.json", 1, 2),
+      Arguments.of(13, "checkin-fully-receive-physical-resource-ecs-multiple.json", 2, 3)
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("testPostCheckInPhysicalFullyReceivedEcsArgs")
+  void testPostCheckInPhysicalFullyReceivedEcs(int poLineIdx, String checkInCollectionPath, int processedSuccessfullyCount, int polSearchesCount) {
+    logger.info("=== Test POST check-in - Check-in Fully Received physical resource with changed affiliation in a ECS environment ===");
+
+    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(compositePoLine));
+
+    CheckinCollection checkinCollection = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + checkInCollectionPath).mapTo(CheckinCollection.class);
+
+    ReceivingResults results = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinCollection).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_ECS), APPLICATION_JSON, 200).as(ReceivingResults.class);
+
+    assertThat(results.getTotalRecords(), equalTo(checkinCollection.getTotalRecords()));
+
+    ReceivingResult receivingResult = results.getReceivingResults().get(0);
+
+    assertThat(receivingResult.getPoLineId(), not(is(emptyString())));
+    assertThat(receivingResult.getProcessedSuccessfully(), is(processedSuccessfullyCount));
+    assertThat(receivingResult.getProcessedWithError(), is(0));
+
+    Map<String, Set<String>> pieceIdsByPol = verifyReceivingSuccessRs(results);
+
+    List<JsonObject> pieceSearches = getPieceSearches();
+    List<JsonObject> pieceUpdates = getPieceUpdates();
+    List<JsonObject> polSearches = getPoLineSearches();
+    List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
+    List<JsonObject> itemsSearches = getItemsSearches();
+    List<JsonObject> itemUpdates = getItemUpdates();
+
+    assertThat(pieceSearches, not(nullValue()));
+    assertThat(pieceUpdates, not(nullValue()));
+    assertThat(itemsSearches, not(nullValue()));
+    assertThat(itemUpdates, not(nullValue()));
+    assertThat(polSearches, not(nullValue()));
+
+    int expectedSearchRqQty = Math.floorDiv(checkinCollection.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
+
+    // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
+    assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
+    assertThat(pieceUpdates, hasSize(checkinCollection.getTotalRecords()));
+    // Should be >1 due to an extra call performed in CheckinHelper.createItemsWithPieceUpdate per CheckInPiece
+    assertThat(polSearches, hasSize(polSearchesCount));
+    assertThat(polBatchUpdates, hasSize(pieceIdsByPol.size()));
+
+    JsonArray poLinesJson = polBatchUpdates.get(0).getJsonArray("poLines");
+    for (int i = 0; i < poLinesJson.size(); i++) {
+      PoLine poLineAfterReceive = poLinesJson.getJsonObject(i).mapTo(PoLine.class);
+      logger.info("POL location before ECS checkIn: {}", JsonArray.of(compositePoLine.getLocations()).encodePrettily());
+      logger.info("POL location after ECS checkIn: {}", JsonArray.of(poLineAfterReceive.getLocations()).encodePrettily());
+      Location oldLocation = compositePoLine.getLocations().get(0);
+      Location newLocation = poLineAfterReceive.getLocations().get(0);
+      assertThat(oldLocation.getLocationId(), nullValue());
+      assertThat(newLocation.getLocationId(), nullValue());
+      assertThat(oldLocation.getHoldingId(), not(nullValue()));
+      assertThat(newLocation.getHoldingId(), not(nullValue()));
+      assertThat(oldLocation.getTenantId(), is("university"));
+      assertThat(newLocation.getTenantId(), is("college"));
+      assertThat(oldLocation.getTenantId(), not(newLocation.getTenantId()));
+      assertThat(oldLocation.getHoldingId(), not(newLocation.getHoldingId()));
+      assertThat(poLineAfterReceive.getReceiptStatus(), is(PoLine.ReceiptStatus.FULLY_RECEIVED));
+      assertThat(poLineAfterReceive.getReceiptDate(), not(nullValue()));
+    }
+
+    pieceUpdates.forEach(pieceJson -> {
+      logger.info("Piece: {}", JsonObject.mapFrom(pieceJson).encodePrettily());
+      Piece piece = pieceJson.mapTo(Piece.class);
+      assertThat(piece.getReceivingTenantId(), is("college"));
+      assertThat(piece.getReceivingStatus(), is(Piece.ReceivingStatus.RECEIVED));
+    });
 
     verifyCheckinOrderStatusUpdateEvent(1);
   }

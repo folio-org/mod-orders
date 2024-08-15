@@ -107,7 +107,7 @@ public class ItemRecreateInventoryServiceTest {
     var srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant1");
     var dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant2");
 
-    itemRecreateInventoryService.recreateItemInDestinationTenant(pieceHolder, srcLocCtx ,dstLocCtx).result();
+    itemRecreateInventoryService.recreateItemInDestinationTenant(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), srcLocCtx ,dstLocCtx).result();
 
     verify(inventoryItemManager, times(1))
       .createMissingPhysicalItems(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
@@ -130,7 +130,7 @@ public class ItemRecreateInventoryServiceTest {
     var srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant1");
     var dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant2");
 
-    itemRecreateInventoryService.recreateItemInDestinationTenant(pieceHolder, srcLocCtx, dstLocCtx).result();
+    itemRecreateInventoryService.recreateItemInDestinationTenant(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), srcLocCtx, dstLocCtx).result();
 
     verify(inventoryItemManager, times(1))
       .createMissingElectronicItems(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);

@@ -28,7 +28,37 @@
       "isAcknowledged": false,
       "claimingInterval": 45,
       "subscriptionInterval": 0
+    },
+    {
+      "id": "fa1ef0e6-748c-4a03-97b8-5070867d9d91",
+      "title": "Test 2",
+      "poLineId": "94b00678-9df4-494a-9891-ebc7ccb76a48",
+      "acqUnitIds": [],
+      "instanceId": "e76fe67f-bea4-4bff-bfd3-2bc487417556",
+      "productIds": [],
+      "bindItemIds": [],
+      "contributors": [],
+      "poLineNumber": "10008-1",
+      "claimingActive": false,
+      "isAcknowledged": false,
+      "claimingInterval": 45,
+      "subscriptionInterval": 0
+    },
+    {
+      "id": "fa1ef0e6-748c-4a03-97b8-5070867d9d92",
+      "title": "Test 3",
+      "poLineId": "94b00678-9df4-494a-9891-ebc7ccb76a49",
+      "acqUnitIds": [],
+      "instanceId": "e76fe67f-bea4-4bff-bfd3-2bc487417556",
+      "productIds": [],
+      "bindItemIds": [],
+      "contributors": [],
+      "poLineNumber": "10008-1",
+      "claimingActive": false,
+      "isAcknowledged": false,
+      "claimingInterval": 45,
+      "subscriptionInterval": 0
     }
   ],
-  "totalRecords": 2
+  "totalRecords": 3
 }
