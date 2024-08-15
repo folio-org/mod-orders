@@ -489,8 +489,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
     return getPoLineAndTitleById(poLineIds, requestContext)
       .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
-        .compose(v -> recreateItemRecords(piecesGroupedByPoLine, holder, requestContext))
-        .compose(v -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
+        .compose(voidResult -> recreateItemRecords(piecesGroupedByPoLine, holder, requestContext))
+        .compose(voidResult -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
         .compose(items -> processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext))
       );
   }

@@ -740,9 +740,8 @@ public class CheckinReceivingApiTest {
       logger.info("POL location after ECS checkIn: {}", JsonArray.of(poLineAfterReceive.getLocations()).encodePrettily());
       Location oldLocation = compositePoLine.getLocations().get(0);
       Location newLocation = poLineAfterReceive.getLocations().get(0);
-      // TODO Fix me after merge-master
-      // assertThat(oldLocation.getLocationId(), nullValue());
-      // assertThat(newLocation.getLocationId(), nullValue());
+      assertThat(oldLocation.getLocationId(), nullValue());
+      assertThat(newLocation.getLocationId(), nullValue());
       assertThat(oldLocation.getHoldingId(), not(nullValue()));
       assertThat(newLocation.getHoldingId(), not(nullValue()));
       assertThat(oldLocation.getTenantId(), not(nullValue()));
