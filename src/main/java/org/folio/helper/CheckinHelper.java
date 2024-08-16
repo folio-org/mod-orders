@@ -5,6 +5,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.Objects;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -96,7 +97,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
                 .map(PoLineCommonUtil::convertToCompositePoLine)
                 .compose(compPol -> pieceCreateFlowInventoryManager.processInventory(compPol, piece, checkInPiece.getCreateItem(), requestContext))
                 .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece)));
-            } else if (checkInPiece.getId().equals(piece.getId()) && InventoryUtils.allowItemRecreate(srcTenantId, dstTenantId)) {
+            } else if (checkInPiece.getId().equals(piece.getId()) && InventoryUtils.allowItemRecreate(srcTenantId, dstTenantId) && Objects.nonNull(piece.getItemId())) {
               pieceFutures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
                 .map(PoLineCommonUtil::convertToCompositePoLine)
                 .map(compPol -> new PiecesHolder.PiecePoLineDto(compPol, piece, checkInPiece)));
