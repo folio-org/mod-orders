@@ -124,6 +124,7 @@ public class InventoryManagerTest {
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instances.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
+  public static final String ITEM_RECORD_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/" + "itemRecord.json";
 
   @Autowired
   InventoryItemManager inventoryItemManager;
@@ -596,6 +597,27 @@ public class InventoryManagerTest {
 
     //Then
     assertEquals(BARCODE_IS_NOT_UNIQUE.getCode(), cause.getError().getCode());
+  }
+
+  @Test
+  void testShouldCreateItemWithClosedStatusWhenOrderClosed() {
+    PurchaseOrder purchaseOrder = new PurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setPurchaseOrderId(purchaseOrder.getId());
+    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+    JsonObject itemRecord = getMockAsJson(ITEM_RECORD_PATH);
+    String expItemId = itemRecord.getString("id");
+
+    doReturn(Future.succeededFuture(expItemId))
+      .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
+    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
+    doReturn(Future.succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(any(), any());
+
+    Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(line, piece, 1, requestContext);
+    assertEquals(expItemId, result.result().get(0));
   }
 
   @Test
