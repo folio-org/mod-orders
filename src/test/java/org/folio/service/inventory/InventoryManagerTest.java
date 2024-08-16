@@ -80,6 +80,7 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
@@ -551,15 +552,23 @@ public class InventoryManagerTest {
   @Test
   void testShouldProvideCorrectErrorCodeWhenItemCreatingFailed() {
     //given
+    PurchaseOrder purchaseOrder = new PurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setPurchaseOrderId(purchaseOrder.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+
     doReturn(Future.failedFuture(new HttpException(500, "Something went wrong!")))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
+    doReturn(Future.succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(any(), any());
+
     //When
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(line, piece, 1, requestContext);
     HttpException cause = (HttpException) result.cause();
+
     //Then
     assertEquals(ITEM_CREATION_FAILED.getCode(), cause.getError().getCode());
     assertEquals("Something went wrong!", cause.getError().getParameters().get(0).getValue());
@@ -568,15 +577,23 @@ public class InventoryManagerTest {
   @Test
   void testShouldProvideCorrectBarcodeNotUniqueErrorCode() {
     //given
+    PurchaseOrder purchaseOrder = new PurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setPurchaseOrderId(purchaseOrder.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+
     doReturn(Future.failedFuture(new HttpException(500, InventoryItemManager.BARCODE_ALREADY_EXIST_ERROR)))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
+    doReturn(Future.succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(any(), any());
+
     //When
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(line, piece, 1, requestContext);
     HttpException cause = (HttpException) result.cause();
+
     //Then
     assertEquals(BARCODE_IS_NOT_UNIQUE.getCode(), cause.getError().getCode());
   }
