@@ -1,10 +1,13 @@
 package org.folio.service.orders.lines.update.instance;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.models.orders.lines.update.OrderLineUpdateInstanceHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -39,6 +42,8 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_REC
 
 
 public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpdateInstanceStrategy {
+
+  private static final Logger logger = LogManager.getLogger(WithHoldingOrderLineUpdateInstanceStrategy.class);
 
   private static final String HOLDINGS_ITEMS = "holdingsItems";
   private static final String BARE_HOLDINGS_ITEMS = "bareHoldingsItems";
@@ -153,6 +158,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
+    logger.info("findOrCreateHoldingsAndUpdateItems:: start processing for new instanceId: {}, holdingId: {}, tenantId(for ECS): {}",
+      newInstanceId, holdingId, location.getTenantId());
     return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
       .compose(instance -> inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, locationContext))
       .compose(newHoldingId -> {
@@ -183,6 +190,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
+    logger.info("createHoldingsAndUpdateItems:: start processing for new instanceId: {}, holdingId: {}, tenantId(for ECS): {}",
+      newInstanceId, holdingId, location.getTenantId());
     return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
       .compose(instance -> inventoryHoldingManager.createHolding(newInstanceId, location, locationContext))
       .compose(newHoldingId -> {
@@ -203,10 +212,12 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           .collect(toList());
         List<Location> storageHoldingIds = poLine.getLocations();
 
-        return StreamEx.of(ListUtils.union(pieceHoldingIds, storageHoldingIds))
+        List<Location> result = StreamEx.of(ListUtils.union(pieceHoldingIds, storageHoldingIds))
           .distinct(location -> String.format("%s %s", location.getLocationId(), location.getHoldingId()))
           .filter(location -> Objects.nonNull(location.getHoldingId()))
           .toList();
+        logger.info("retrieveUniqueLocations:: list of result locations: {}", Json.encodePrettily(result));
+        return result;
       });
   }
 
