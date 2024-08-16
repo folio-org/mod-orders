@@ -857,6 +857,10 @@ public class InventoryManagerTest {
     public ConsortiumConfigurationService consortiumConfigurationService() {
       return mock(ConsortiumConfigurationService.class);
     }
+
+    @Bean
+    public PurchaseOrderStorageService purchaseOrderStorageService() {return mock(PurchaseOrderStorageService.class);}
+
     @Bean
     public SharingInstanceService sharingInstanceService() {
       return mock(SharingInstanceService.class);

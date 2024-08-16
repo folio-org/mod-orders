@@ -13,6 +13,7 @@ import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.core.RestClientTest.X_OKAPI_TENANT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -231,6 +232,10 @@ public class OrderLineUpdateInstanceHandlerTest {
     }
     @Bean ConsortiumConfigurationService consortiumConfigurationService (RestClient restClient) {
       return new ConsortiumConfigurationService(restClient);
+    }
+
+    @Bean PurchaseOrderStorageService purchaseOrderStorageService () {
+      return mock(PurchaseOrderStorageService.class);
     }
 
     @Bean
