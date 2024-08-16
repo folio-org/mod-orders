@@ -380,11 +380,15 @@ public class InventoryItemManager {
   }
 
   private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
+    String itemStatus = compPOL.getReceiptStatus().equals(CompositePoLine.ReceiptStatus.CANCELLED)
+      ? ReceivedItem.ItemStatus.ORDER_CLOSED.value()
+      : ReceivedItem.ItemStatus.ON_ORDER.value();
+
     return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
       .map(loanTypeId -> {
         JsonObject itemRecord = new JsonObject();
         itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
-        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ReceivedItem.ItemStatus.ON_ORDER.value()));
+        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, itemStatus));
         itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId);
         itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
         return itemRecord;
