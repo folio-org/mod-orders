@@ -20,10 +20,12 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -72,15 +74,17 @@ public class InventoryItemManager {
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final InventoryCache inventoryCache;
   private final ConsortiumConfigurationService consortiumConfigurationService;
+  private final PurchaseOrderStorageService purchaseOrderStorageService;
 
   public InventoryItemManager(RestClient restClient,
                               ConfigurationEntriesCache configurationEntriesCache,
                               InventoryCache inventoryCache,
-                              ConsortiumConfigurationService consortiumConfigurationService) {
+                              ConsortiumConfigurationService consortiumConfigurationService, PurchaseOrderStorageService purchaseOrderStorageService) {
     this.restClient = restClient;
     this.configurationEntriesCache = configurationEntriesCache;
     this.inventoryCache = inventoryCache;
     this.consortiumConfigurationService = consortiumConfigurationService;
+    this.purchaseOrderStorageService = purchaseOrderStorageService;
   }
 
 
@@ -380,19 +384,27 @@ public class InventoryItemManager {
   }
 
   private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
-    String itemStatus = compPOL.getReceiptStatus().equals(CompositePoLine.ReceiptStatus.CANCELLED)
-      ? ReceivedItem.ItemStatus.ORDER_CLOSED.value()
-      : ReceivedItem.ItemStatus.ON_ORDER.value();
-
     return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
       .map(loanTypeId -> {
         JsonObject itemRecord = new JsonObject();
         itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
-        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, itemStatus));
         itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId);
         itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
         return itemRecord;
-      });
+      })
+      .compose(itemRecord -> setItemStatus(compPOL, itemRecord, requestContext));
+  }
+
+  private Future<JsonObject> setItemStatus(CompositePoLine compPOL, JsonObject itemRecord, RequestContext requestContext) {
+    return purchaseOrderStorageService.getPurchaseOrderById(compPOL.getPurchaseOrderId(), requestContext)
+      .map(compPO -> {
+          String itemStatus = compPO.getWorkflowStatus().equals(PurchaseOrder.WorkflowStatus.CLOSED)
+            ? ReceivedItem.ItemStatus.ORDER_CLOSED.value()
+            : ReceivedItem.ItemStatus.ON_ORDER.value();
+          itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, itemStatus));
+          return itemRecord;
+        }
+      );
   }
 
   public Future<String> createBindItem(CompositePoLine compPOL, String holdingId, BindItem bindItem, RequestContext locationContext) {
