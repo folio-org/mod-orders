@@ -79,7 +79,8 @@ public class InventoryItemManager {
   public InventoryItemManager(RestClient restClient,
                               ConfigurationEntriesCache configurationEntriesCache,
                               InventoryCache inventoryCache,
-                              ConsortiumConfigurationService consortiumConfigurationService, PurchaseOrderStorageService purchaseOrderStorageService) {
+                              ConsortiumConfigurationService consortiumConfigurationService,
+                              PurchaseOrderStorageService purchaseOrderStorageService) {
     this.restClient = restClient;
     this.configurationEntriesCache = configurationEntriesCache;
     this.inventoryCache = inventoryCache;

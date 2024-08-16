@@ -44,6 +44,7 @@ import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryService;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterAll;
@@ -241,8 +242,10 @@ public class OrderLineUpdateInstanceHandlerTest {
     public InventoryItemManager inventoryItemManager(RestClient restClient,
                                                      ConfigurationEntriesCache configurationEntriesCache,
                                                      InventoryCache inventoryCache,
-                                                     ConsortiumConfigurationService consortiumConfigurationService) {
-      return new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService);
+                                                     ConsortiumConfigurationService consortiumConfigurationService,
+                                                     PurchaseOrderStorageService purchaseOrderStorageService) {
+      return new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache,
+        consortiumConfigurationService, purchaseOrderStorageService);
     }
 
     @Bean

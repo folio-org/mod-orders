@@ -86,6 +86,7 @@ import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.utils.RequestContextMatcher;
 import org.hamcrest.core.IsInstanceOf;
 import org.jetbrains.annotations.NotNull;
@@ -868,8 +869,10 @@ public class InventoryManagerTest {
     public InventoryItemManager inventoryItemManager(RestClient restClient,
                                                      ConfigurationEntriesCache configurationEntriesCache,
                                                      InventoryCache inventoryCache,
-                                                     ConsortiumConfigurationService consortiumConfigurationService) {
-      return spy(new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService));
+                                                     ConsortiumConfigurationService consortiumConfigurationService,
+                                                     PurchaseOrderStorageService purchaseOrderStorageService) {
+      return spy(new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache,
+        consortiumConfigurationService, purchaseOrderStorageService));
     }
 
     @Bean
