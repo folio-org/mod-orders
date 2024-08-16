@@ -1,0 +1,11 @@
+{
+  "holdingsRecordId" : null,
+  "permanentLoanTypeId" : null,
+  "purchaseOrderLineIdentifier" : null,
+  "status" : {
+    "name" : "Order closed"
+  },
+  "materialTypeId" : "2fa93835-ea37-479d-b133-1d2a2279fcd8",
+  "displaySummary" : "Tutorial Volume 5",
+  "id" : "522a501a-56b5-48d9-b28a-3a8f02482d97"
+}
