@@ -326,7 +326,7 @@ public class MockServer {
   public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL = "8137de83-76c0-4d3e-bf73-416de5e780fa";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC = "01c8d44a-dc73-4bca-a4d1-ef28bdfb9275";
-  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES = "e1472bfd-27ea-43e6-9f0e-099ced80f34f";
+  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();

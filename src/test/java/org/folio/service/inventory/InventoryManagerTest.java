@@ -140,6 +140,8 @@ public class InventoryManagerTest {
   private SharingInstanceService sharingInstanceService;
   @Autowired
   private ConsortiumConfigurationService consortiumConfigurationService;
+  @Autowired
+  private PurchaseOrderStorageService purchaseOrderStorageService;
 
 
   private Map<String, String> okapiHeadersMock;
