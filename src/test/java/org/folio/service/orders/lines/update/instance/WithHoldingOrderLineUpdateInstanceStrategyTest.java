@@ -226,6 +226,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
       return item;
     }).collect(toList());
 
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
         .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(0)), eq(requestContext));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
@@ -236,6 +237,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
+    verify(inventoryInstanceManager, times(2)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(0), requestContext);
     verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(1), requestContext);
     verify(inventoryItemManager, times(2)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
@@ -281,6 +283,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
     item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
 
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
       .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(0)), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
@@ -288,6 +291,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
+    verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(0), requestContext);
     verify(inventoryItemManager, times(1)).getItemsByHoldingIdAndOrderLineId(holdingId, orderLineId, requestContext);
     verify(inventoryItemManager, times(1)).updateItem(item, requestContext);
@@ -327,11 +331,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
       .withStoragePoLine(poLine)
       .withPathOrderLineRequest(patchOrderLineRequest);
 
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     doReturn(succeededFuture(holdingId)).when(inventoryHoldingManager)
       .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(0)), eq(requestContext));
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
+    verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(0), requestContext);
     verify(inventoryItemManager, never()).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
     verify(inventoryItemManager, never()).updateItem(any(JsonObject.class), any(RequestContext.class));
@@ -385,7 +391,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
       return item;
     }).collect(toList());
 
-
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
         .getOrCreateHoldingRecordByInstanceAndLocation(eq(instanceId), eq(locations.get(0)), eq(requestContext));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
@@ -401,6 +407,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     var future = withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext);
 
     vertxTestContext.assertComplete(future).onComplete(res-> {
+      verify(inventoryInstanceManager, times(2)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
       verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(0), requestContext);
       verify(inventoryHoldingManager, times(1)).getOrCreateHoldingRecordByInstanceAndLocation(instanceId, locations.get(1), requestContext);
       verify(inventoryHoldingManager, times(1)).deleteHoldingById(eq(holdingIds.get(0)), eq(true), any(RequestContext.class));
@@ -459,6 +466,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
         .createHolding(eq(instanceId), eq(locations.get(0)), eq(requestContext));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
@@ -469,6 +477,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
+    verify(inventoryInstanceManager, times(2)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     verify(inventoryHoldingManager, times(1)).createHolding(instanceId, locations.get(0), requestContext);
     verify(inventoryHoldingManager, times(1)).createHolding(instanceId, locations.get(1), requestContext);
     verify(inventoryItemManager, times(2)).getItemsByHoldingIdAndOrderLineId(anyString(), anyString(), any(RequestContext.class));
@@ -514,6 +523,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
         .createHolding(eq(instanceId), eq(locations.get(0)), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
@@ -521,6 +531,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
 
     withHoldingOrderLineUpdateInstanceStrategy.updateInstance(orderLineUpdateInstanceHolder, requestContext).result();
 
+    verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     verify(inventoryHoldingManager, times(1)).createHolding(instanceId, locations.get(0), requestContext);
     verify(inventoryItemManager, times(1)).getItemsByHoldingIdAndOrderLineId(holdingId, orderLineId, requestContext);
     verify(inventoryItemManager, times(1)).updateItem(item, requestContext);
@@ -565,6 +576,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
     OrderLineUpdateInstanceHolder orderLineUpdateInstanceHolder = new OrderLineUpdateInstanceHolder()
         .withStoragePoLine(poLine).withPathOrderLineRequest(patchOrderLineRequest);
 
+    doReturn(succeededFuture()).when(inventoryInstanceManager).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
     doReturn(succeededFuture(UUID.randomUUID().toString())).when(inventoryHoldingManager)
         .createHolding(eq(instanceId), eq(locations.get(0)), eq(requestContext));
     doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingIdAndOrderLineId(eq(holdingId), eq(orderLineId), eq(requestContext));
@@ -582,6 +594,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategyTest {
         Assertions.assertEquals("itemId", actParameter.getKey());
         Assertions.assertEquals(itemId, actParameter.getValue());
 
+        verify(inventoryInstanceManager, times(1)).createShadowInstanceIfNeeded(eq(instanceId), any(RequestContext.class));
         verify(inventoryHoldingManager, times(1)).createHolding(instanceId, locations.get(0), requestContext);
         verify(inventoryItemManager, times(1)).getItemsByHoldingIdAndOrderLineId(holdingId, orderLineId, requestContext);
         verify(inventoryItemManager, times(1)).updateItem(item, requestContext);

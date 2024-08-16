@@ -153,7 +153,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
-    return inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, locationContext)
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
+      .compose(instance -> inventoryHoldingManager.getOrCreateHoldingRecordByInstanceAndLocation(newInstanceId, location, locationContext))
       .compose(newHoldingId -> {
         holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
         if (Objects.equals(holdingId, newHoldingId)) {
@@ -182,7 +183,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
     PoLine poLine = holder.getStoragePoLine();
     String holdingId = location.getHoldingId();
     var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
-    return inventoryHoldingManager.createHolding(newInstanceId, location, locationContext)
+    return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
+      .compose(instance -> inventoryHoldingManager.createHolding(newInstanceId, location, locationContext))
       .compose(newHoldingId -> {
         holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
         return updateItemsHolding(holdingId, newHoldingId, poLine.getId(), locationContext);
@@ -194,7 +196,10 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       .map(pieces -> {
         List<Location> pieceHoldingIds = pieces
           .stream()
-          .map(piece -> new Location().withHoldingId(piece.getHoldingId()).withLocationId(piece.getLocationId()))
+          .map(piece -> new Location()
+            .withHoldingId(piece.getHoldingId())
+            .withLocationId(piece.getLocationId())
+            .withTenantId(piece.getReceivingTenantId()))
           .collect(toList());
         List<Location> storageHoldingIds = poLine.getLocations();
 
