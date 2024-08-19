@@ -90,7 +90,7 @@ public class OpenCompositeOrderHolderBuilder {
   }
 
   private List<Piece> createPiecesWithoutLocationId(CompositePoLine compPOL, List<Piece> existingPieces) {
-    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
+    if (CollectionUtils.isNotEmpty(compPOL.getLocations())) {
       return Collections.emptyList();
     }
     List<Piece> piecesToCreate = new ArrayList<>();
@@ -98,10 +98,8 @@ public class OpenCompositeOrderHolderBuilder {
     Map<Piece.Format, Integer> existingPiecesQuantities = calculateQuantityOfExistingPiecesWithoutLocation(existingPieces);
     expectedQuantitiesWithoutLocation.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existingPiecesQuantities.getOrDefault(format, 0);
-      if (remainingPiecesQuantity > 0) {
-        for (int i = 0; i < remainingPiecesQuantity; i++) {
-          piecesToCreate.add(new Piece().withFormat(format).withPoLineId(compPOL.getId()));
-        }
+      for (int i = 0; i < remainingPiecesQuantity; i++) {
+        piecesToCreate.add(new Piece().withFormat(format).withPoLineId(compPOL.getId()));
       }
     });
     return piecesToCreate;
@@ -173,15 +171,13 @@ public class OpenCompositeOrderHolderBuilder {
 
     expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
-      if (remainingPiecesQuantity > 0) {
-        for (int i = 0; i < remainingPiecesQuantity; i++) {
-          piecesToCreate.add(new Piece()
-            .withFormat(format)
-            .withLocationId(existingPieceLocationId)
-            .withPoLineId(compPOL.getId())
-            .withReceivingTenantId(locationToTenantId.get(existingPieceLocationId))
-          );
-        }
+      for (int i = 0; i < remainingPiecesQuantity; i++) {
+        piecesToCreate.add(new Piece()
+          .withFormat(format)
+          .withLocationId(existingPieceLocationId)
+          .withPoLineId(compPOL.getId())
+          .withReceivingTenantId(locationToTenantId.get(existingPieceLocationId))
+        );
       }
     });
     return piecesToCreate;
@@ -193,10 +189,8 @@ public class OpenCompositeOrderHolderBuilder {
     Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
     expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
-      if (remainingPiecesQuantity > 0) {
-        for (int i = 0; i < remainingPiecesQuantity; i++) {
-          piecesToCreate.add(new Piece().withFormat(format).withHoldingId(existingPieceHoldingId).withPoLineId(compPOL.getId()));
-        }
+      for (int i = 0; i < remainingPiecesQuantity; i++) {
+        piecesToCreate.add(new Piece().withFormat(format).withHoldingId(existingPieceHoldingId).withPoLineId(compPOL.getId()));
       }
     });
     return piecesToCreate;
@@ -226,11 +220,11 @@ public class OpenCompositeOrderHolderBuilder {
    */
   private Map<Piece.Format, Integer> calculatePiecesWithoutItemIdQuantity(CompositePoLine compPOL, List<Location> locations) {
     // Piece records are not going to be created for PO Line which is going to be checked-in
-    if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
+    if (Boolean.TRUE.equals(compPOL.getCheckinItems())) {
       return Collections.emptyMap();
     }
 
-    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
+    var quantities = new EnumMap<Piece.Format, Integer>(Piece.Format.class);
     switch (compPOL.getOrderFormat()) {
       case P_E_MIX:
         if (!isItemsUpdateRequiredForPhysical(compPOL)) {
