@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -181,15 +182,26 @@ public final class PoLineCommonUtil {
    * @return map of grouped locations where key is location id and value is list of locations with the same id
    */
   public static Map<String, List<Location>> groupLocationsByLocationId(CompositePoLine compPOL) {
+    return collectLocationsForPoLine(compPOL, Collectors.groupingBy(Location::getLocationId));
+  }
+
+  /**
+   * Map all PO Line's location to tenantIds for which the holding should be created by location identifier
+   * @param compPOL PO line with locations
+   * @return map of locations and tenantIds where key is location id and value is the tenantId of the specified location
+   */
+  public static Map<String, String> mapLocationsToTenantIds(CompositePoLine compPOL) {
+    return collectLocationsForPoLine(compPOL, Collectors.toMap(Location::getLocationId, Location::getTenantId));
+  }
+
+  private static <K, V> Map<K, V> collectLocationsForPoLine(CompositePoLine compPOL, Collector<Location, ?, Map<K, V>> collector) {
     if (CollectionUtils.isEmpty(compPOL.getLocations())) {
       return Collections.emptyMap();
     }
-
-    return compPOL.getLocations()
-                  .stream()
-                  .filter(location -> Objects.nonNull(location.getLocationId()))
-                  .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location))
-                  .collect(Collectors.groupingBy(Location::getLocationId));
+    return compPOL.getLocations().stream()
+      .filter(location -> Objects.nonNull(location.getLocationId()))
+      .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location))
+      .collect(collector);
   }
 
   /**

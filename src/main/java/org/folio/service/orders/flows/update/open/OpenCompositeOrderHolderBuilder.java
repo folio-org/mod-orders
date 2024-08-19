@@ -9,6 +9,7 @@ import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByHoldingId;
 import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId;
 import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForPhysical;
+import static org.folio.orders.utils.PoLineCommonUtil.mapLocationsToTenantIds;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,6 +77,7 @@ public class OpenCompositeOrderHolderBuilder {
   private List<Piece> getPiecesWithChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces, List<Piece> existingPieces) {
     Map<String, Map<Piece.Format, Integer>> existingPieceMap = numOfPiecesByFormatAndLocationId(existingPieces, compPOL.getId());
     Map<String, Map<Piece.Format, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, compPOL.getId());
+    Map<String, String> locationToTenantId = mapLocationsToTenantIds(compPOL);
 
     List<Piece> piecesForLocationUpdate = new ArrayList<>();
     for (Map.Entry<String, Map<Piece.Format, Integer>> entry : existingPieceMap.entrySet()) {
@@ -90,8 +92,10 @@ public class OpenCompositeOrderHolderBuilder {
               List<Piece> piecesWithUpdatedLocation = existingPieces.stream()
                 .filter(piece -> existingPieceLocationId.equals(piece.getLocationId())
                   && existPieceFormatQty.getKey() == piece.getFormat())
-                .map(piece -> piece.withLocationId(newLocationId))
-                .collect(Collectors.toList());
+                .map(piece -> piece
+                  .withLocationId(newLocationId)
+                  .withReceivingTenantId(locationToTenantId.get(newLocationId)))
+                .toList();
               piecesForLocationUpdate.addAll(piecesWithUpdatedLocation);
             }
           });
@@ -180,11 +184,18 @@ public class OpenCompositeOrderHolderBuilder {
     List<Piece> piecesToCreate = new ArrayList<>();
     Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
     Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
+    Map<String, String> locationToTenantId = mapLocationsToTenantIds(compPOL);
+
     expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
       if (remainingPiecesQuantity > 0) {
         for (int i = 0; i < remainingPiecesQuantity; i++) {
-          piecesToCreate.add(new Piece().withFormat(format).withLocationId(existingPieceLocationId).withPoLineId(compPOL.getId()));
+          piecesToCreate.add(new Piece()
+            .withFormat(format)
+            .withLocationId(existingPieceLocationId)
+            .withPoLineId(compPOL.getId())
+            .withReceivingTenantId(locationToTenantId.get(existingPieceLocationId))
+          );
         }
       }
     });
