@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.core.exceptions.HttpException;
@@ -182,7 +183,8 @@ public final class PoLineCommonUtil {
    * @return map of grouped locations where key is location id and value is list of locations with the same id
    */
   public static Map<String, List<Location>> groupLocationsByLocationId(CompositePoLine compPOL) {
-    return collectLocationsForPoLine(compPOL, Collectors.groupingBy(Location::getLocationId));
+    return collectLocationsForPoLine(compPOL)
+      .collect(Collectors.groupingBy(Location::getLocationId));
   }
 
   /**
@@ -191,18 +193,18 @@ public final class PoLineCommonUtil {
    * @return map of locations and tenantIds where key is location id and value is the tenantId of the specified location
    */
   public static Map<String, String> mapLocationsToTenantIds(CompositePoLine compPOL) {
-    return collectLocationsForPoLine(compPOL, Collectors.toMap(Location::getLocationId, Location::getTenantId));
+    return collectLocationsForPoLine(compPOL)
+      .filter(location -> Objects.nonNull(location.getTenantId()))
+      .collect(Collectors.toMap(Location::getLocationId, Location::getTenantId));
   }
 
-  private static <K, V> Map<K, V> collectLocationsForPoLine(CompositePoLine compPOL, Collector<Location, ?, Map<K, V>> collector) {
+  private static StreamEx<Location> collectLocationsForPoLine(CompositePoLine compPOL) {
     if (CollectionUtils.isEmpty(compPOL.getLocations())) {
-      return Collections.emptyMap();
+      return StreamEx.empty();
     }
-    return compPOL.getLocations().stream()
+    return StreamEx.of(compPOL.getLocations())
       .filter(location -> Objects.nonNull(location.getLocationId()))
-      .filter(location -> Objects.nonNull(location.getTenantId()))
-      .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location))
-      .collect(collector);
+      .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location));
   }
 
   /**
