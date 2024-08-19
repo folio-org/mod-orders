@@ -142,7 +142,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
                                                           String newInstanceId, RequestContext requestContext) {
-    return processLocations(holder, newInstanceId, requestContext,
+    return processLocations(holder, requestContext,
       location -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext));
   }
 
@@ -168,7 +168,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
                                                     String newInstanceId, RequestContext requestContext) {
-    return processLocations(holder, newInstanceId, requestContext,
+    return processLocations(holder, requestContext,
       location -> createHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext));
   }
 
@@ -190,7 +190,6 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   }
 
   private Future<Void> processLocations(OrderLineUpdateInstanceHolder holder,
-                                        String newInstanceId,
                                         RequestContext requestContext,
                                         Function<Location, Future<Void>> processFunction) {
     return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
@@ -198,7 +197,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         GenericCompositeFuture.all(tenantIdToLocationsMap.values().stream()
           .map(locations ->
             GenericCompositeFuture.join(locations.stream()
-              .map(processFunction::apply)
+              .map(processFunction)
               .toList())
           )
           .collect(toList()))
@@ -224,7 +223,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           .toList();
         logger.info("retrieveUniqueLocations:: list of result locations: {}", Json.encodePrettily(uniqueLocations));
         return uniqueLocations.stream()
-          .collect(Collectors.groupingBy(Location::getTenantId));
+          .collect(Collectors.groupingBy(location -> Objects.requireNonNullElse(location.getTenantId(), TenantTool.tenantId(requestContext.getHeaders()))));
       });
   }
 
