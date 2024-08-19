@@ -291,7 +291,4 @@ public final class PoLineCommonUtil {
     }
   }
 
-  public static CompositePoLine getPoLine(CompositePurchaseOrder compositePurchaseOrder) {
-    return compositePurchaseOrder.getCompositePoLines().get(0);
-  }
 }

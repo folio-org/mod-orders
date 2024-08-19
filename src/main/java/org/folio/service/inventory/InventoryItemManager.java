@@ -21,7 +21,6 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
@@ -395,7 +394,7 @@ public class InventoryItemManager {
 
   private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePurchaseOrder compPO, CompositePoLine compPOL,
                                                            String holdingId, RequestContext requestContext) {
-    String itemStatus = compPO.getWorkflowStatus().equals(PurchaseOrder.WorkflowStatus.CLOSED)
+    String itemStatus = compPO.getWorkflowStatus().equals(CompositePurchaseOrder.WorkflowStatus.CLOSED)
       ? ReceivedItem.ItemStatus.ORDER_CLOSED.value()
       : ReceivedItem.ItemStatus.ON_ORDER.value();
     return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)

@@ -519,15 +519,18 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
             logger.info("recreateItemRecords:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'", piece.getItemId(), srcConfig.tenantId(), dstConfig.tenantId());
 
             // Fetch purchase order asynchronously
-            Future<CompositePurchaseOrder> poFuture = purchaseOrderStorageService.getPurchaseOrderByIdAsJson(itemToRecreate.getPoLineId(), requestContext)
-              .map(HelperUtils::convertToCompositePurchaseOrder)
+            Future<CompositePurchaseOrder> compositePurchaseOrderFuture = purchaseOrderStorageService
+              .getCompositeOrderByPoLineId(itemToRecreate.getPoLineId(), requestContext)
               .recover(throwable -> {
-                return Future.succeededFuture(null); // Return null to continue processing other requests
+                logger.warn("recreateItemRecords:: Composite Purchase order can't be found for poLine: {}", itemToRecreate.getPoLineId());
+                return Future.succeededFuture(null);
               });
 
-            Future<String> itemFuture = poFuture.compose(purchaseOrder ->
-              itemRecreateInventoryService.recreateItemInDestinationTenant(purchaseOrder, itemToRecreate.getCompositePoLine(), piece, srcConfig.context(), dstConfig.context()));
-            futures.add(itemFuture);
+            Future<String> itemIdFuture = compositePurchaseOrderFuture
+              .compose(purchaseOrder -> itemRecreateInventoryService
+                .recreateItemInDestinationTenant(purchaseOrder, itemToRecreate.getCompositePoLine(),
+                  piece, srcConfig.context(), dstConfig.context()));
+            futures.add(itemIdFuture);
           }
         }));
     return collectResultsOnSuccess(futures)
