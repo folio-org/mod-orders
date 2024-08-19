@@ -695,8 +695,8 @@ public class CheckinReceivingApiTest {
 
   private static Stream<Arguments> testPostCheckInPhysicalFullyReceivedEcsArgs() {
     return Stream.of(
-      Arguments.of(12, "checkin-fully-receive-physical-resource-ecs-single.json", 1, 2),
-      Arguments.of(13, "checkin-fully-receive-physical-resource-ecs-multiple.json", 2, 3)
+      Arguments.of(12, "checkin-fully-receive-physical-resource-ecs-single.json", 1, 4),
+      Arguments.of(13, "checkin-fully-receive-physical-resource-ecs-multiple.json", 2, 7)
     );
   }
 
