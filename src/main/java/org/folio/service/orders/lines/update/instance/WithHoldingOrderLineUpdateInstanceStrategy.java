@@ -142,12 +142,12 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
                                                           String newInstanceId, RequestContext requestContext) {
     return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
-      .compose(locations -> GenericCompositeFuture.join(
-          locations.stream()
+      .compose(tenantIdToLocationsMap -> GenericCompositeFuture.all(
+        tenantIdToLocationsMap.values().stream()
+          .map(locations -> GenericCompositeFuture.join(locations.stream()
             .map(location -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext))
-            .toList()
-        )
-      )
+            .toList()))
+          .collect(toList())))
       .mapEmpty();
   }
 
@@ -174,12 +174,12 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
   private Future<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
                                                     String newInstanceId, RequestContext requestContext) {
     return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
-      .compose(locations -> GenericCompositeFuture.join(
-          locations.stream()
+      .compose(tenantIdToLocationsMap -> GenericCompositeFuture.all(
+        tenantIdToLocationsMap.values().stream()
+          .map(locations -> GenericCompositeFuture.join(locations.stream()
             .map(location -> createHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext))
-            .toList()
-        )
-      )
+            .toList()))
+          .collect(toList())))
       .mapEmpty();
   }
 
@@ -200,7 +200,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
       });
   }
 
-  private Future<List<Location>> retrieveUniqueLocations(PoLine poLine, RequestContext requestContext) {
+  private Future<Map<String, List<Location>>> retrieveUniqueLocations(PoLine poLine, RequestContext requestContext) {
     return pieceStorageService.getPiecesByPoLineId(PoLineCommonUtil.convertToCompositePoLine(poLine), requestContext)
       .map(pieces -> {
         List<Location> pieceHoldingIds = pieces
@@ -212,12 +212,13 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
           .collect(toList());
         List<Location> storageHoldingIds = poLine.getLocations();
 
-        List<Location> result = StreamEx.of(ListUtils.union(pieceHoldingIds, storageHoldingIds))
+        List<Location> uniqueLocations = StreamEx.of(ListUtils.union(pieceHoldingIds, storageHoldingIds))
           .distinct(location -> String.format("%s %s", location.getLocationId(), location.getHoldingId()))
           .filter(location -> Objects.nonNull(location.getHoldingId()))
           .toList();
-        logger.info("retrieveUniqueLocations:: list of result locations: {}", Json.encodePrettily(result));
-        return result;
+        logger.info("retrieveUniqueLocations:: list of result locations: {}", Json.encodePrettily(uniqueLocations));
+        return uniqueLocations.stream()
+          .collect(Collectors.groupingBy(Location::getTenantId));
       });
   }
 
