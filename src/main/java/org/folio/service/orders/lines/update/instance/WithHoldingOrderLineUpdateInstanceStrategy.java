@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
@@ -141,14 +142,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
                                                           String newInstanceId, RequestContext requestContext) {
-    return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
-      .compose(tenantIdToLocationsMap -> GenericCompositeFuture.all(
-        tenantIdToLocationsMap.values().stream()
-          .map(locations -> GenericCompositeFuture.join(locations.stream()
-            .map(location -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext))
-            .toList()))
-          .collect(toList())))
-      .mapEmpty();
+    return processLocations(holder, newInstanceId, requestContext,
+      location -> findOrCreateHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext));
   }
 
   private Future<Void> findOrCreateHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
@@ -173,14 +168,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
                                                     String newInstanceId, RequestContext requestContext) {
-    return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
-      .compose(tenantIdToLocationsMap -> GenericCompositeFuture.all(
-        tenantIdToLocationsMap.values().stream()
-          .map(locations -> GenericCompositeFuture.join(locations.stream()
-            .map(location -> createHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext))
-            .toList()))
-          .collect(toList())))
-      .mapEmpty();
+    return processLocations(holder, newInstanceId, requestContext,
+      location -> createHoldingsAndUpdateItems(holder, newInstanceId, location, requestContext));
   }
 
   private Future<Void> createHoldingsAndUpdateItems(OrderLineUpdateInstanceHolder holder,
@@ -198,6 +187,23 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
         holder.addHoldingRefsToStoragePatchOrderLineRequest(holdingId, newHoldingId);
         return updateItemsHolding(holdingId, newHoldingId, poLine.getId(), locationContext);
       });
+  }
+
+  private Future<Void> processLocations(OrderLineUpdateInstanceHolder holder,
+                                        String newInstanceId,
+                                        RequestContext requestContext,
+                                        Function<Location, Future<Void>> processFunction) {
+    return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
+      .compose(tenantIdToLocationsMap ->
+        GenericCompositeFuture.all(tenantIdToLocationsMap.values().stream()
+          .map(locations ->
+            GenericCompositeFuture.join(locations.stream()
+              .map(processFunction::apply)
+              .toList())
+          )
+          .collect(toList()))
+      )
+      .mapEmpty();
   }
 
   private Future<Map<String, List<Location>>> retrieveUniqueLocations(PoLine poLine, RequestContext requestContext) {
