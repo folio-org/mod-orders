@@ -21,6 +21,8 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -60,9 +62,11 @@ public class OpenCompositeOrderHolderBuilder {
     // For each location collect pieces that need to be created.
     groupLocationsByLocationId(compPOL)
       .forEach((lineLocationId, lineLocations) -> {
+        var tenantId = mapLocationsToTenantIds(compPOL).get(lineLocationId);
         var filteredExistingPieces = filterByLocationId(existingPieces, lineLocationId);
-        piecesToCreate.addAll(processPiecesWithItemAndLocationId(expectedPiecesWithItem, filteredExistingPieces, lineLocationId));
-        piecesToCreate.addAll(processPiecesWithoutItemAndLocationId(compPOL, filteredExistingPieces, lineLocationId, lineLocations));
+        var filteredExistingPiecesWithItem = filterByLocationId(expectedPiecesWithItem, lineLocationId);
+        piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExistingPiecesWithItem, filteredExistingPieces));
+        piecesToCreate.addAll(processPiecesWithoutItemAndLocationId(compPOL, filteredExistingPieces, lineLocationId, tenantId, lineLocations));
       });
     return piecesToCreate;
   }
@@ -115,35 +119,18 @@ public class OpenCompositeOrderHolderBuilder {
       .groupingBy(Piece::getFormat, collectingAndThen(toList(), List::size));
   }
 
-
-  private List<Piece> processPiecesWithItemAndLocationId(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
-    List<Piece> expectedPiecesWithItem = filterByLocationId(piecesWithItem, existingPieceLocationId);
-    return collectMissingPiecesWithItem(expectedPiecesWithItem, existedPieces);
-  }
-
-  private List<Piece> filterByLocationId(List<Piece> pieces, String locationId) {
-    return pieces.stream()
-      .filter(piece -> locationId.equals(piece.getLocationId()))
-      .collect(Collectors.toList());
-  }
-
   private List<Piece> buildPiecesByHoldingId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
     List<Piece> piecesToCreate = new ArrayList<>();
     // For each location collect pieces that need to be created.
     groupLocationsByHoldingId(compPOL)
       .forEach((existingPieceHoldingId, existingPieceLocations) -> {
         var filteredExistingPieces = filterByHoldingId(existingPieces, existingPieceHoldingId);
-        piecesToCreate.addAll(processPiecesWithItemAndHoldingId(expectedPiecesWithItem, filteredExistingPieces, existingPieceHoldingId));
+        var filteredExistingPiecesWithItem = filterByHoldingId(expectedPiecesWithItem, existingPieceHoldingId);
+        piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExistingPiecesWithItem, filteredExistingPieces));
         piecesToCreate.addAll(processPiecesWithoutItemAndHoldingId(compPOL, filteredExistingPieces, existingPieceHoldingId, existingPieceLocations));
       });
     return piecesToCreate;
   }
-
-  private List<Piece> processPiecesWithItemAndHoldingId(List<Piece> piecesWithItem, List<Piece> existedPieces, String existingPieceLocationId) {
-    List<Piece> expectedPiecesWithItem = filterByHoldingId(piecesWithItem, existingPieceLocationId);
-    return collectMissingPiecesWithItem(expectedPiecesWithItem, existedPieces);
-  }
-
 
   /**
    * Find pieces for which created items, but which are not yet in the storage.
@@ -159,42 +146,43 @@ public class OpenCompositeOrderHolderBuilder {
       .collect(Collectors.toList());
   }
 
+  private List<Piece> filterByLocationId(List<Piece> pieces, String locationId) {
+    return filterByField(pieces, locationId, Piece::getLocationId);
+  }
 
   private List<Piece> filterByHoldingId(List<Piece> pieces, String holdingId) {
+    return filterByField(pieces, holdingId, Piece::getHoldingId);
+  }
+
+  private List<Piece> filterByField(List<Piece> pieces, String value, Function<Piece, String> fieldExtractor) {
     return pieces.stream()
-      .filter(piece -> holdingId.equals(piece.getHoldingId()))
+      .filter(piece -> value.equals(fieldExtractor.apply(piece)))
       .collect(Collectors.toList());
   }
 
 
-  private List<Piece> processPiecesWithoutItemAndLocationId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceLocationId, List<Location> existingPieceLocations) {
-    List<Piece> piecesToCreate = new ArrayList<>();
-    Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
-    Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
-    Map<String, String> locationToTenantId = mapLocationsToTenantIds(compPOL);
-
-    expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
-      int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
-      for (int i = 0; i < remainingPiecesQuantity; i++) {
-        piecesToCreate.add(new Piece()
-          .withFormat(format)
-          .withLocationId(existingPieceLocationId)
-          .withPoLineId(compPOL.getId())
-          .withReceivingTenantId(locationToTenantId.get(existingPieceLocationId))
-        );
-      }
-    });
-    return piecesToCreate;
+  private List<Piece> processPiecesWithoutItemAndLocationId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceLocationId,
+                                                            String tenantId, List<Location> existingPieceLocations) {
+    return processPiecesWithoutItemAndLocationIdOrHoldingId(compPOL, existedPieces, existingPieceLocations,
+      () -> new Piece().withLocationId(existingPieceLocationId).withReceivingTenantId(tenantId));
   }
 
-  private List<Piece> processPiecesWithoutItemAndHoldingId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceHoldingId, List<Location> existingPieceLocations) {
-    List<Piece> piecesToCreate = new ArrayList<>();
+  private List<Piece> processPiecesWithoutItemAndHoldingId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceHoldingId,
+                                                           List<Location> existingPieceLocations) {
+    return processPiecesWithoutItemAndLocationIdOrHoldingId(compPOL, existedPieces, existingPieceLocations,
+      () -> new Piece().withHoldingId(existingPieceHoldingId));
+  }
+
+  private List<Piece> processPiecesWithoutItemAndLocationIdOrHoldingId(CompositePoLine compPOL, List<Piece> existedPieces,
+                                                                       List<Location> existingPieceLocations, Supplier<Piece> pieceSupplier) {
     Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
     Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
+
+    var piecesToCreate = new ArrayList<Piece>();
     expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
       for (int i = 0; i < remainingPiecesQuantity; i++) {
-        piecesToCreate.add(new Piece().withFormat(format).withHoldingId(existingPieceHoldingId).withPoLineId(compPOL.getId()));
+        piecesToCreate.add(pieceSupplier.get().withFormat(format).withPoLineId(compPOL.getId()));
       }
     });
     return piecesToCreate;
