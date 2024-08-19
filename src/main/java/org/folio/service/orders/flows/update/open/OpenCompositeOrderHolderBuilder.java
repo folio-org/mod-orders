@@ -41,23 +41,14 @@ public class OpenCompositeOrderHolderBuilder {
   }
 
   public Future<OpenOrderPieceHolder> buildHolder(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
-                RequestContext requestContext) {
-    OpenOrderPieceHolder holder = new OpenOrderPieceHolder(titleId);
+                                                  RequestContext requestContext) {
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
-      .map(holder::withExistingPieces)
-      .map(aHolder -> {
-        holder.withPiecesWithLocationToProcess(buildPiecesByLocationId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
-        holder.withPiecesWithHoldingToProcess(buildPiecesByHoldingId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()));
-        return null;
-      })
-      .map(aVoid -> holder.withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces())))
-      .map(aHolder -> {
-        if (CollectionUtils.isEmpty(compPOL.getLocations())) {
-          holder.withPiecesWithoutLocationId(createPiecesWithoutLocationId(compPOL, holder.getExistingPieces()));
-        }
-        return null;
-      })
-      .map(aVoid -> holder);
+      .map(pieces -> new OpenOrderPieceHolder(titleId).withExistingPieces(pieces))
+      .map(holder -> holder
+        .withPiecesWithLocationToProcess(buildPiecesByLocationId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()))
+        .withPiecesWithHoldingToProcess(buildPiecesByHoldingId(compPOL, expectedPiecesWithItem, holder.getExistingPieces()))
+        .withPiecesWithChangedLocation(getPiecesWithChangedLocation(compPOL, holder.getPiecesWithLocationToProcess(), holder.getExistingPieces()))
+        .withPiecesWithoutLocationId(createPiecesWithoutLocationId(compPOL, holder.getExistingPieces())));
   }
 
   private List<Piece> buildPiecesByLocationId(CompositePoLine compPOL, List<Piece> expectedPiecesWithItem, List<Piece> existingPieces) {
@@ -65,11 +56,9 @@ public class OpenCompositeOrderHolderBuilder {
     // For each location collect pieces that need to be created.
     groupLocationsByLocationId(compPOL)
       .forEach((lineLocationId, lineLocations) -> {
-        List<Piece> filteredExistingPieces = filterByLocationId(existingPieces, lineLocationId);
-        List<Piece> createdPiecesWithItem = processPiecesWithItemAndLocationId(expectedPiecesWithItem, filteredExistingPieces, lineLocationId);
-        piecesToCreate.addAll(createdPiecesWithItem);
-        List<Piece> piecesWithoutItem =  processPiecesWithoutItemAndLocationId(compPOL, filteredExistingPieces, lineLocationId, lineLocations);
-        piecesToCreate.addAll(piecesWithoutItem);
+        var filteredExistingPieces = filterByLocationId(existingPieces, lineLocationId);
+        piecesToCreate.addAll(processPiecesWithItemAndLocationId(expectedPiecesWithItem, filteredExistingPieces, lineLocationId));
+        piecesToCreate.addAll(processPiecesWithoutItemAndLocationId(compPOL, filteredExistingPieces, lineLocationId, lineLocations));
       });
     return piecesToCreate;
   }
@@ -79,33 +68,31 @@ public class OpenCompositeOrderHolderBuilder {
     Map<String, Map<Piece.Format, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, compPOL.getId());
     Map<String, String> locationToTenantId = mapLocationsToTenantIds(compPOL);
 
-    List<Piece> piecesForLocationUpdate = new ArrayList<>();
-    for (Map.Entry<String, Map<Piece.Format, Integer>> entry : existingPieceMap.entrySet()) {
-      String existingPieceLocationId = entry.getKey();
-      Map<Piece.Format, Integer> existingPieceQtyMap = entry.getValue();
-      for (Map.Entry<Piece.Format, Integer> existPieceFormatQty : existingPieceQtyMap.entrySet()) {
-        Map<Piece.Format, Integer> pieceLocationMap = needProcessPiecesMap.get(existingPieceLocationId);
-        if (pieceLocationMap == null) {
-          needProcessPiecesMap.forEach((newLocationId, value) -> {
-            Integer pieceQty = value.get(existPieceFormatQty.getKey());
-            if (pieceQty != null && pieceQty.equals(existPieceFormatQty.getValue())) {
-              List<Piece> piecesWithUpdatedLocation = existingPieces.stream()
-                .filter(piece -> existingPieceLocationId.equals(piece.getLocationId())
-                  && existPieceFormatQty.getKey() == piece.getFormat())
-                .map(piece -> piece
-                  .withLocationId(newLocationId)
-                  .withReceivingTenantId(locationToTenantId.get(newLocationId)))
-                .toList();
-              piecesForLocationUpdate.addAll(piecesWithUpdatedLocation);
-            }
-          });
+    var piecesForLocationUpdate = new ArrayList<Piece>();
+    existingPieceMap.forEach((existingPieceLocationId, existingPieceQtyMap) -> {
+      for (var existPieceFormatQty : existingPieceQtyMap.entrySet()) {
+        if (needProcessPiecesMap.get(existingPieceLocationId) != null) {
+          continue;
         }
+        needProcessPiecesMap.forEach((newLocationId, pieceQtyMap) -> {
+          var pieceQty = pieceQtyMap.get(existPieceFormatQty.getKey());
+          if (pieceQty == null || !pieceQty.equals(existPieceFormatQty.getValue())) {
+            return;
+          }
+          piecesForLocationUpdate.addAll(existingPieces.stream()
+            .filter(piece -> existingPieceLocationId.equals(piece.getLocationId()) && existPieceFormatQty.getKey() == piece.getFormat())
+            .map(piece -> piece.withLocationId(newLocationId).withReceivingTenantId(locationToTenantId.get(newLocationId)))
+            .toList());
+        });
       }
-    }
+    });
     return piecesForLocationUpdate;
   }
 
   private List<Piece> createPiecesWithoutLocationId(CompositePoLine compPOL, List<Piece> existingPieces) {
+    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
+      return Collections.emptyList();
+    }
     List<Piece> piecesToCreate = new ArrayList<>();
     Map<Piece.Format, Integer> expectedQuantitiesWithoutLocation = PieceUtil.calculatePiecesQuantityWithoutLocation(compPOL);
     Map<Piece.Format, Integer> existingPiecesQuantities = calculateQuantityOfExistingPiecesWithoutLocation(existingPieces);
@@ -143,11 +130,9 @@ public class OpenCompositeOrderHolderBuilder {
     // For each location collect pieces that need to be created.
     groupLocationsByHoldingId(compPOL)
       .forEach((existingPieceHoldingId, existingPieceLocations) -> {
-        List<Piece> filteredExistingPieces = filterByHoldingId(existingPieces, existingPieceHoldingId);
-        List<Piece> createdPiecesWithItem = processPiecesWithItemAndHoldingId(expectedPiecesWithItem, filteredExistingPieces, existingPieceHoldingId);
-        piecesToCreate.addAll(createdPiecesWithItem);
-        List<Piece> piecesWithoutItem = processPiecesWithoutItemAndHoldingId(compPOL, filteredExistingPieces, existingPieceHoldingId, existingPieceLocations);
-        piecesToCreate.addAll(piecesWithoutItem);
+        var filteredExistingPieces = filterByHoldingId(existingPieces, existingPieceHoldingId);
+        piecesToCreate.addAll(processPiecesWithItemAndHoldingId(expectedPiecesWithItem, filteredExistingPieces, existingPieceHoldingId));
+        piecesToCreate.addAll(processPiecesWithoutItemAndHoldingId(compPOL, filteredExistingPieces, existingPieceHoldingId, existingPieceLocations));
       });
     return piecesToCreate;
   }
@@ -235,7 +220,7 @@ public class OpenCompositeOrderHolderBuilder {
   /**
    * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
    *
-   * @param compPOL composite PO Line
+   * @param compPOL   composite PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of pieces per piece format either not required Inventory item for PO Line
    */
@@ -247,31 +232,31 @@ public class OpenCompositeOrderHolderBuilder {
 
     EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
     switch (compPOL.getOrderFormat()) {
-    case P_E_MIX:
-      if (!isItemsUpdateRequiredForPhysical(compPOL)) {
-        quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
-      }
-      if (!isItemsUpdateRequiredForEresource(compPOL)) {
-        quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
-      }
-      return quantities;
-    case PHYSICAL_RESOURCE:
-      if (!isItemsUpdateRequiredForPhysical(compPOL)) {
-        quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
-      }
-      return quantities;
-    case ELECTRONIC_RESOURCE:
-      if (!isItemsUpdateRequiredForEresource(compPOL)) {
-        quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
-      }
-      return quantities;
-    case OTHER:
-      if (!isItemsUpdateRequiredForPhysical(compPOL)) {
-        quantities.put(Piece.Format.OTHER, calculatePiecesQuantity(Piece.Format.OTHER, locations));
-      }
-      return quantities;
-    default:
-      return Collections.emptyMap();
+      case P_E_MIX:
+        if (!isItemsUpdateRequiredForPhysical(compPOL)) {
+          quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
+        }
+        if (!isItemsUpdateRequiredForEresource(compPOL)) {
+          quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
+        }
+        return quantities;
+      case PHYSICAL_RESOURCE:
+        if (!isItemsUpdateRequiredForPhysical(compPOL)) {
+          quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
+        }
+        return quantities;
+      case ELECTRONIC_RESOURCE:
+        if (!isItemsUpdateRequiredForEresource(compPOL)) {
+          quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
+        }
+        return quantities;
+      case OTHER:
+        if (!isItemsUpdateRequiredForPhysical(compPOL)) {
+          quantities.put(Piece.Format.OTHER, calculatePiecesQuantity(Piece.Format.OTHER, locations));
+        }
+        return quantities;
+      default:
+        return Collections.emptyMap();
     }
   }
 }
