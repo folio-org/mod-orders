@@ -119,6 +119,7 @@ import static org.folio.rest.impl.MockServer.getPieceUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineBatchUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
+import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.impl.MockServer.getUpdatedTitles;
 import static org.folio.rest.jaxrs.model.ProcessingStatus.Type.SUCCESS;
 import static org.folio.rest.jaxrs.model.ReceivedItem.ItemStatus.ON_ORDER;
@@ -695,14 +696,15 @@ public class CheckinReceivingApiTest {
 
   private static Stream<Arguments> testPostCheckInPhysicalFullyReceivedEcsArgs() {
     return Stream.of(
-      Arguments.of(12, "checkin-fully-receive-physical-resource-ecs-single.json", 1, 4),
-      Arguments.of(13, "checkin-fully-receive-physical-resource-ecs-multiple.json", 2, 7)
+      Arguments.of(12, "checkin-fully-receive-physical-resource-ecs-single.json", 1, 4, 1),
+      Arguments.of(13, "checkin-fully-receive-physical-resource-ecs-multiple.json", 2, 5, 1)
     );
   }
 
   @ParameterizedTest
   @MethodSource("testPostCheckInPhysicalFullyReceivedEcsArgs")
-  void testPostCheckInPhysicalFullyReceivedEcs(int poLineIdx, String checkInCollectionPath, int processedSuccessfullyCount, int polSearchesCount) {
+  void testPostCheckInPhysicalFullyReceivedEcs(int poLineIdx, String checkInCollectionPath,
+                                               int processedSuccessfullyCount, int polSearchesCount, int purchaseOrderSearchesCount) {
     logger.info("=== Test POST check-in - Check-in Fully Received physical resource with changed affiliation in a ECS environment ===");
 
     CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
@@ -726,6 +728,7 @@ public class CheckinReceivingApiTest {
     List<JsonObject> pieceSearches = getPieceSearches();
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
+    List<JsonObject> purchaseOrderSearches = getPurchaseOrderRetrievals();
     List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
     List<JsonObject> itemsSearches = getItemsSearches();
     List<JsonObject> itemUpdates = getItemUpdates();
@@ -737,12 +740,12 @@ public class CheckinReceivingApiTest {
     assertThat(polSearches, not(nullValue()));
 
     int expectedSearchRqQty = Math.floorDiv(checkinCollection.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
-
     // The piece searches should be made 2 times: 1st time to get all required piece records, 2nd time to calculate expected PO Line status
     assertThat(pieceSearches, hasSize(expectedSearchRqQty + pieceIdsByPol.size()));
     assertThat(pieceUpdates, hasSize(checkinCollection.getTotalRecords()));
     // Should be >1 due to an extra call performed in CheckinHelper.createItemsWithPieceUpdate per CheckInPiece
     assertThat(polSearches, hasSize(polSearchesCount));
+    assertThat(purchaseOrderSearches, hasSize(purchaseOrderSearchesCount));
     assertThat(polBatchUpdates, hasSize(pieceIdsByPol.size()));
 
     JsonArray poLinesJson = polBatchUpdates.get(0).getJsonArray("poLines");
