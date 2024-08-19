@@ -10,6 +10,10 @@ import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId
 import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForPhysical;
 import static org.folio.orders.utils.PoLineCommonUtil.mapLocationsToTenantIds;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -225,32 +229,16 @@ public class OpenCompositeOrderHolderBuilder {
     }
 
     var quantities = new EnumMap<Piece.Format, Integer>(Piece.Format.class);
-    switch (compPOL.getOrderFormat()) {
-      case P_E_MIX:
-        if (!isItemsUpdateRequiredForPhysical(compPOL)) {
-          quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
-        }
-        if (!isItemsUpdateRequiredForEresource(compPOL)) {
-          quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
-        }
-        return quantities;
-      case PHYSICAL_RESOURCE:
-        if (!isItemsUpdateRequiredForPhysical(compPOL)) {
-          quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
-        }
-        return quantities;
-      case ELECTRONIC_RESOURCE:
-        if (!isItemsUpdateRequiredForEresource(compPOL)) {
-          quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
-        }
-        return quantities;
-      case OTHER:
-        if (!isItemsUpdateRequiredForPhysical(compPOL)) {
-          quantities.put(Piece.Format.OTHER, calculatePiecesQuantity(Piece.Format.OTHER, locations));
-        }
-        return quantities;
-      default:
-        return Collections.emptyMap();
+    var orderFormat = compPOL.getOrderFormat();
+    if ((orderFormat == P_E_MIX || orderFormat == PHYSICAL_RESOURCE) && !isItemsUpdateRequiredForPhysical(compPOL)) {
+      quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
     }
+    if ((orderFormat == P_E_MIX || orderFormat == ELECTRONIC_RESOURCE) && !isItemsUpdateRequiredForEresource(compPOL)) {
+      quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
+    }
+    if (orderFormat == OTHER && !isItemsUpdateRequiredForPhysical(compPOL)) {
+      quantities.put(Piece.Format.OTHER, calculatePiecesQuantity(Piece.Format.OTHER, locations));
+    }
+    return quantities;
   }
 }
