@@ -17,6 +17,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
@@ -175,7 +176,8 @@ public class InventoryItemManager {
    * @param location list of location holdingId is associated with
    * @return future with list of piece objects
    */
-  public Future<List<Piece>> handleItemRecords(CompositePoLine compPOL, Location location, RequestContext requestContext) {
+  public Future<List<Piece>> handleItemRecords(CompositePurchaseOrder comPO, CompositePoLine compPOL,
+                                               Location location, RequestContext requestContext) {
     Map<Piece.Format, Integer> piecesWithItemsQuantities = HelperUtils.calculatePiecesWithItemIdQuantity(compPOL, List.of(location));
     int piecesWithItemsQty = IntStreamEx.of(piecesWithItemsQuantities.values()).sum();
     String polId = compPOL.getId();
@@ -205,11 +207,13 @@ public class InventoryItemManager {
                 List<String> existingItemIds;
                 if (pieceFormat == Piece.Format.ELECTRONIC) {
                   existingItemIds = getElectronicItemIds(compPOL, existingItems);
-                  return createMissingElectronicItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), updatedRequestContext)
+                  return createMissingElectronicItems(comPO, compPOL, pieceWithHoldingId,
+                    expectedQuantity - existingItemIds.size(), updatedRequestContext)
                     .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
                 } else {
                   existingItemIds = getPhysicalItemIds(compPOL, existingItems);
-                  return createMissingPhysicalItems(compPOL, pieceWithHoldingId, expectedQuantity - existingItemIds.size(), updatedRequestContext)
+                  return createMissingPhysicalItems(comPO, compPOL, pieceWithHoldingId,
+                    expectedQuantity - existingItemIds.size(), updatedRequestContext)
                     .map(createdItemIds -> buildPieces(location, polId, pieceFormat, createdItemIds, existingItemIds));
                 }
               });
@@ -306,18 +310,19 @@ public class InventoryItemManager {
       });
   }
 
-  public Future<String> openOrderCreateItemRecord(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
+  public Future<String> openOrderCreateItemRecord(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+                                                  String holdingId, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
     logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, holdingId);
     Promise<String> itemFuture = Promise.promise();
     try {
       Piece pieceWithHoldingId = new Piece().withHoldingId(holdingId);
       if (compPOL.getOrderFormat() == ELECTRONIC_RESOURCE) {
-        createMissingElectronicItems(compPOL, pieceWithHoldingId, ITEM_QUANTITY, requestContext)
+        createMissingElectronicItems(compPO, compPOL, pieceWithHoldingId, ITEM_QUANTITY, requestContext)
           .onSuccess(idS -> itemFuture.complete(idS.get(0)))
           .onFailure(itemFuture::fail);
       } else {
-        createMissingPhysicalItems(compPOL, pieceWithHoldingId, ITEM_QUANTITY, requestContext)
+        createMissingPhysicalItems(compPO, compPOL, pieceWithHoldingId, ITEM_QUANTITY, requestContext)
           .onSuccess(idS -> itemFuture.complete(idS.get(0)))
           .onFailure(itemFuture::fail);
       }
@@ -336,12 +341,13 @@ public class InventoryItemManager {
    * @param quantity expected number of items to create
    * @return id of newly created Instance Record
    */
-  public Future<List<String>> createMissingElectronicItems(CompositePoLine compPOL, Piece piece, int quantity, RequestContext requestContext) {
+  public Future<List<String>> createMissingElectronicItems(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+                                                           Piece piece, int quantity, RequestContext requestContext) {
     if (quantity <= 0) {
       return Future.succeededFuture(List.of());
     }
     String holdingId = piece.getHoldingId();
-    return buildElectronicItemRecordJsonObject(compPOL, holdingId, requestContext)
+    return buildElectronicItemRecordJsonObject(compPO, compPOL, holdingId, requestContext)
       .compose(item -> {
         InventoryUtils.updateItemWithPieceFields(item, piece);
         item.put(ID, piece.getItemId());
@@ -350,8 +356,9 @@ public class InventoryItemManager {
       });
   }
 
-  private Future<JsonObject> buildElectronicItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
-    return buildBaseItemRecordJsonObject(compPOL, holdingId, requestContext)
+  private Future<JsonObject> buildElectronicItemRecordJsonObject(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+                                                                 String holdingId, RequestContext requestContext) {
+    return buildBaseItemRecordJsonObject(compPO, compPOL, holdingId, requestContext)
       .map(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getEresource().getMaterialType()));
   }
 
@@ -364,13 +371,14 @@ public class InventoryItemManager {
    * @param quantity expected number of items to create
    * @return id of newly created Instance Record
    */
-  public Future<List<String>> createMissingPhysicalItems(CompositePoLine compPOL, Piece piece, int quantity,
+  public Future<List<String>> createMissingPhysicalItems(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+                                                         Piece piece, int quantity,
                                                          RequestContext requestContext) {
     if (quantity <= 0) {
       return Future.succeededFuture(List.of());
     }
     String holdingId = piece.getHoldingId();
-    return buildPhysicalItemRecordJsonObject(compPOL, holdingId, requestContext)
+    return buildPhysicalItemRecordJsonObject(compPO, compPOL, holdingId, requestContext)
       .compose(item -> {
         InventoryUtils.updateItemWithPieceFields(item, piece);
         item.put(ID, piece.getItemId());
@@ -379,33 +387,26 @@ public class InventoryItemManager {
       });
   }
 
-  private Future<JsonObject> buildPhysicalItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
-    return buildBaseItemRecordJsonObject(compPOL, holdingId, requestContext)
+  private Future<JsonObject> buildPhysicalItemRecordJsonObject(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+                                                               String holdingId, RequestContext requestContext) {
+    return buildBaseItemRecordJsonObject(compPO, compPOL, holdingId, requestContext)
       .map(itemRecord -> itemRecord.put(ITEM_MATERIAL_TYPE_ID, compPOL.getPhysical().getMaterialType()));
   }
 
-  private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePoLine compPOL, String holdingId, RequestContext requestContext) {
+  private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+                                                           String holdingId, RequestContext requestContext) {
+    String itemStatus = compPO.getWorkflowStatus().equals(PurchaseOrder.WorkflowStatus.CLOSED)
+      ? ReceivedItem.ItemStatus.ORDER_CLOSED.value()
+      : ReceivedItem.ItemStatus.ON_ORDER.value();
     return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
       .map(loanTypeId -> {
         JsonObject itemRecord = new JsonObject();
         itemRecord.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
         itemRecord.put(ITEM_PERMANENT_LOAN_TYPE_ID, loanTypeId);
         itemRecord.put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
+        itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, itemStatus));
         return itemRecord;
-      })
-      .compose(itemRecord -> setItemStatus(compPOL, itemRecord, requestContext));
-  }
-
-  private Future<JsonObject> setItemStatus(CompositePoLine compPOL, JsonObject itemRecord, RequestContext requestContext) {
-    return purchaseOrderStorageService.getPurchaseOrderById(compPOL.getPurchaseOrderId(), requestContext)
-      .map(compPO -> {
-          String itemStatus = compPO.getWorkflowStatus().equals(PurchaseOrder.WorkflowStatus.CLOSED)
-            ? ReceivedItem.ItemStatus.ORDER_CLOSED.value()
-            : ReceivedItem.ItemStatus.ON_ORDER.value();
-          itemRecord.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, itemStatus));
-          return itemRecord;
-        }
-      );
+      });
   }
 
   public Future<String> createBindItem(CompositePoLine compPOL, String holdingId, BindItem bindItem, RequestContext locationContext) {

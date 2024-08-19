@@ -290,4 +290,8 @@ public final class PoLineCommonUtil {
       throw new HttpException(400, error, parameters);
     }
   }
+
+  public static CompositePoLine getPoLine(CompositePurchaseOrder compositePurchaseOrder) {
+    return compositePurchaseOrder.getCompositePoLines().get(0);
+  }
 }

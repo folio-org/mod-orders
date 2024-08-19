@@ -23,6 +23,7 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.InventoryException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
@@ -119,7 +120,7 @@ public class OpenCompositeOrderPieceService {
       .compose(order -> titlesService.getTitleById(piece.getTitleId(), requestContext)
         .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
           .map(v -> order)))
-      .compose(order -> openOrderUpdateInventory(order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
+      .compose(order -> openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
       .compose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
 
@@ -162,7 +163,8 @@ public class OpenCompositeOrderPieceService {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public Future<Void> openOrderUpdateInventory(CompositePoLine compPOL, Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  public Future<Void> openOrderUpdateInventory(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+                                               Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
       return inventoryItemManager.updateItemWithPieceFields(piece, requestContext);
     }
@@ -170,7 +172,7 @@ public class OpenCompositeOrderPieceService {
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> titlesService.updateTitleWithInstance(title, isInstanceMatchingDisabled, locationContext, requestContext).map(title::withInstanceId))
       .compose(title -> getOrCreateHolding(compPOL, piece, title, locationContext))
-      .compose(holdingId -> updateItemsIfNeeded(compPOL, holdingId, locationContext))
+      .compose(holdingId -> updateItemsIfNeeded(compPO, compPOL, holdingId, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
       .mapEmpty();
   }
@@ -183,9 +185,10 @@ public class OpenCompositeOrderPieceService {
       .map(holdingId -> piece.withLocationId(null).withHoldingId(holdingId).getHoldingId());
   }
 
-  private Future<String> updateItemsIfNeeded(CompositePoLine compPOL, String holdingId, RequestContext locationContext) {
+  private Future<String> updateItemsIfNeeded(CompositePurchaseOrder compPO, CompositePoLine compPOL,
+                                             String holdingId, RequestContext locationContext) {
     return PoLineCommonUtil.isItemsUpdateRequired(compPOL)
-      ? inventoryItemManager.openOrderCreateItemRecord(compPOL, holdingId, locationContext)
+      ? inventoryItemManager.openOrderCreateItemRecord(compPO, compPOL, holdingId, locationContext)
       : Future.succeededFuture();
   }
 

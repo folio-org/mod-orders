@@ -15,6 +15,7 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.consortium.ConsortiumConfigurationService;
@@ -30,7 +31,8 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
     super(consortiumConfigurationService);
   }
 
-  public Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL,
+  public Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePurchaseOrder compPO,
+                                                           CompositePoLine compPOL,
                                                            InventoryItemManager inventoryItemManager,
                                                            InventoryHoldingManager inventoryHoldingManager,
                                                            RestClient restClient,
@@ -45,7 +47,7 @@ public class ProcessInventoryMixedStrategy extends ProcessInventoryStrategy {
           List<Future<List<Piece>>> pieceFutures = new ArrayList<>();
           if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
             for (Location location : compPOL.getLocations()) {
-              pieceFutures.add(inventoryItemManager.handleItemRecords(compPOL, location, requestContext));
+              pieceFutures.add(inventoryItemManager.handleItemRecords(compPO, compPOL, location, requestContext));
             }
           } else {
             pieceFutures.add(Future.succeededFuture(Collections.emptyList()));

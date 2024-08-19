@@ -19,6 +19,7 @@ import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
@@ -40,6 +41,7 @@ import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.ItemRecreateInventoryService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
@@ -121,6 +123,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
   @Autowired
   private ItemRecreateInventoryService itemRecreateInventoryService;
+  @Autowired
+  protected PurchaseOrderStorageService purchaseOrderStorageService;
+
   private final RestClient restClient;
 
   private List<PoLine> poLineList;
@@ -512,7 +517,17 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           var dstConfig = InventoryUtils.constructItemRecreateConfig(checkInPiece.getReceivingTenantId(), requestContext, false);
           if (InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId())) {
             logger.info("recreateItemRecords:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'", piece.getItemId(), srcConfig.tenantId(), dstConfig.tenantId());
-            futures.add(itemRecreateInventoryService.recreateItemInDestinationTenant(itemToRecreate.getCompositePoLine(), piece, srcConfig.context(), dstConfig.context()));
+
+            // Fetch purchase order asynchronously
+            Future<CompositePurchaseOrder> poFuture = purchaseOrderStorageService.getPurchaseOrderByIdAsJson(itemToRecreate.getPoLineId(), requestContext)
+              .map(HelperUtils::convertToCompositePurchaseOrder)
+              .recover(throwable -> {
+                return Future.succeededFuture(null); // Return null to continue processing other requests
+              });
+
+            Future<String> itemFuture = poFuture.compose(purchaseOrder ->
+              itemRecreateInventoryService.recreateItemInDestinationTenant(purchaseOrder, itemToRecreate.getCompositePoLine(), piece, srcConfig.context(), dstConfig.context()));
+            futures.add(itemFuture);
           }
         }));
     return collectResultsOnSuccess(futures)
