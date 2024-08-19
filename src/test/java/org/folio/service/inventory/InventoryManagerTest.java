@@ -80,12 +80,14 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.utils.RequestContextMatcher;
 import org.hamcrest.core.IsInstanceOf;
 import org.jetbrains.annotations.NotNull;
@@ -122,6 +124,7 @@ public class InventoryManagerTest {
   private static final String INSTANCE_RECORDS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "instances/" + "instances.json";
   public static final String LINE_ID = "c0d08448-347b-418a-8c2f-5fb50248d67e";
   public static final String HOLDING_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
+  public static final String ITEM_RECORD_PATH = BASE_MOCK_DATA_PATH + "itemsRecords/" + "itemRecord.json";
 
   @Autowired
   InventoryItemManager inventoryItemManager;
@@ -139,6 +142,8 @@ public class InventoryManagerTest {
   private SharingInstanceService sharingInstanceService;
   @Autowired
   private ConsortiumConfigurationService consortiumConfigurationService;
+  @Autowired
+  private PurchaseOrderStorageService purchaseOrderStorageService;
 
 
   private Map<String, String> okapiHeadersMock;
@@ -548,15 +553,23 @@ public class InventoryManagerTest {
   @Test
   void testShouldProvideCorrectErrorCodeWhenItemCreatingFailed() {
     //given
+    PurchaseOrder purchaseOrder = new PurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setPurchaseOrderId(purchaseOrder.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+
     doReturn(Future.failedFuture(new HttpException(500, "Something went wrong!")))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
+    doReturn(Future.succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(any(), any());
+
     //When
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(line, piece, 1, requestContext);
     HttpException cause = (HttpException) result.cause();
+
     //Then
     assertEquals(ITEM_CREATION_FAILED.getCode(), cause.getError().getCode());
     assertEquals("Something went wrong!", cause.getError().getParameters().get(0).getValue());
@@ -565,17 +578,46 @@ public class InventoryManagerTest {
   @Test
   void testShouldProvideCorrectBarcodeNotUniqueErrorCode() {
     //given
+    PurchaseOrder purchaseOrder = new PurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setPurchaseOrderId(purchaseOrder.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+
     doReturn(Future.failedFuture(new HttpException(500, InventoryItemManager.BARCODE_ALREADY_EXIST_ERROR)))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
+    doReturn(Future.succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(any(), any());
+
     //When
     Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(line, piece, 1, requestContext);
     HttpException cause = (HttpException) result.cause();
+
     //Then
     assertEquals(BARCODE_IS_NOT_UNIQUE.getCode(), cause.getError().getCode());
+  }
+
+  @Test
+  void testShouldCreateItemWithClosedStatusWhenOrderClosed() {
+    PurchaseOrder purchaseOrder = new PurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setPurchaseOrderId(purchaseOrder.getId());
+    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+    JsonObject itemRecord = getMockAsJson(ITEM_RECORD_PATH);
+    String expItemId = itemRecord.getString("id");
+
+    doReturn(Future.succeededFuture(expItemId))
+      .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
+    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
+    doReturn(Future.succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(any(), any());
+
+    Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(line, piece, 1, requestContext);
+    assertEquals(expItemId, result.result().get(0));
   }
 
   @Test
@@ -854,6 +896,10 @@ public class InventoryManagerTest {
     public ConsortiumConfigurationService consortiumConfigurationService() {
       return mock(ConsortiumConfigurationService.class);
     }
+
+    @Bean
+    public PurchaseOrderStorageService purchaseOrderStorageService() {return mock(PurchaseOrderStorageService.class);}
+
     @Bean
     public SharingInstanceService sharingInstanceService() {
       return mock(SharingInstanceService.class);
@@ -868,8 +914,10 @@ public class InventoryManagerTest {
     public InventoryItemManager inventoryItemManager(RestClient restClient,
                                                      ConfigurationEntriesCache configurationEntriesCache,
                                                      InventoryCache inventoryCache,
-                                                     ConsortiumConfigurationService consortiumConfigurationService) {
-      return spy(new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService));
+                                                     ConsortiumConfigurationService consortiumConfigurationService,
+                                                     PurchaseOrderStorageService purchaseOrderStorageService) {
+      return spy(new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache,
+        consortiumConfigurationService, purchaseOrderStorageService));
     }
 
     @Bean
