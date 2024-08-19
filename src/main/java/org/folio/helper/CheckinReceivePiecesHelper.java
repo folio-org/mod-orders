@@ -19,6 +19,7 @@ import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
@@ -40,6 +41,7 @@ import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.inventory.InventoryUtils;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.ItemRecreateInventoryService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
@@ -121,6 +123,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
   @Autowired
   private ItemRecreateInventoryService itemRecreateInventoryService;
+  @Autowired
+  protected PurchaseOrderStorageService purchaseOrderStorageService;
+
   private final RestClient restClient;
 
   private List<PoLine> poLineList;
@@ -501,26 +506,50 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     if (Objects.isNull(holder.getItemsToRecreate()) || holder.getItemsToRecreate().isEmpty()) {
       return Future.succeededFuture();
     }
-    var futures = new ArrayList<Future<String>>();
-    piecesGroupedByPoLine.keySet().stream()
-      .map(poLineId -> holder.getItemsToRecreate().get(poLineId))
-      .forEach(itemToRecreateList ->
-        itemToRecreateList.forEach(itemToRecreate -> {
-          var piece = itemToRecreate.getPieceFromStorage();
-          var checkInPiece  = itemToRecreate.getCheckInPiece();
-          var srcConfig = InventoryUtils.constructItemRecreateConfig(piece.getReceivingTenantId(), requestContext, true);
-          var dstConfig = InventoryUtils.constructItemRecreateConfig(checkInPiece.getReceivingTenantId(), requestContext, false);
-          if (InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId())) {
-            logger.info("recreateItemRecords:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'", piece.getItemId(), srcConfig.tenantId(), dstConfig.tenantId());
-            futures.add(itemRecreateInventoryService.recreateItemInDestinationTenant(itemToRecreate.getCompositePoLine(), piece, srcConfig.context(), dstConfig.context()));
-          }
-        }));
-    return collectResultsOnSuccess(futures)
-      .map(itemIdsRecreated -> {
-        itemIdsRecreated.forEach(itemIdRecreated -> logger.info("recreateItemRecords:: recreated item by id '{}'", itemIdRecreated));
-        return null;
-      })
-      .compose(v -> Future.succeededFuture());
+
+    Map<String, Future<CompositePurchaseOrder>> purchaseOrderFutures = piecesGroupedByPoLine.keySet().stream()
+      .collect(Collectors.toMap(
+        poLineId -> poLineId,
+        poLineId -> purchaseOrderStorageService.getCompositeOrderByPoLineId(poLineId, requestContext)
+          .recover(throwable -> {
+            logger.warn("recreateItemRecords:: Composite Purchase order can't be found for poLine: {}", poLineId);
+            return Future.succeededFuture(null);
+          })
+      ));
+
+    return GenericCompositeFuture.join(new ArrayList<>(purchaseOrderFutures.values())).compose(purchaseOrdersFuture -> {
+      Map<String, CompositePurchaseOrder> purchaseOrderMap = purchaseOrderFutures.entrySet().stream()
+        .collect(Collectors.toMap(
+          Map.Entry::getKey,
+          entry -> entry.getValue().result()
+        ));
+
+      List<Future<String>> futures = new ArrayList<>();
+      piecesGroupedByPoLine.keySet().stream()
+        .map(poLineId -> holder.getItemsToRecreate().get(poLineId))
+        .forEach(itemToRecreateList ->
+          itemToRecreateList.forEach(itemToRecreate -> {
+            var piece = itemToRecreate.getPieceFromStorage();
+            var checkInPiece  = itemToRecreate.getCheckInPiece();
+            var srcConfig = InventoryUtils.constructItemRecreateConfig(piece.getReceivingTenantId(), requestContext, true);
+            var dstConfig = InventoryUtils.constructItemRecreateConfig(checkInPiece.getReceivingTenantId(), requestContext, false);
+            if (InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId())) {
+              logger.info("recreateItemRecords:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'", piece.getItemId(), srcConfig.tenantId(), dstConfig.tenantId());
+              var compPO = purchaseOrderMap.get(itemToRecreate.getPoLineId());
+              var itemIdFuture = itemRecreateInventoryService.recreateItemInDestinationTenant(compPO, itemToRecreate.getCompositePoLine(),
+                piece, srcConfig.context(), dstConfig.context());
+              futures.add(itemIdFuture);
+            }
+          }));
+
+      return collectResultsOnSuccess(futures)
+        .map(itemIdsRecreated -> {
+          itemIdsRecreated.forEach(itemIdRecreated ->
+            logger.info("recreateItemRecords:: recreated item by id '{}'", itemIdRecreated));
+          return null;
+        })
+        .compose(v -> Future.succeededFuture());
+    });
   }
 
   /**

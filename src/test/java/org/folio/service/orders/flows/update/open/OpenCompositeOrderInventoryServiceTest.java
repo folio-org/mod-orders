@@ -10,6 +10,7 @@ import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -55,6 +56,7 @@ import static org.folio.TestUtils.getMockData;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.HOLDINGS_OLD_NEW_PATH;
 import static org.folio.rest.tools.utils.TenantTool.tenantId;
+import static org.folio.service.inventory.InventoryManagerTest.ORDER_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -120,6 +122,7 @@ public class OpenCompositeOrderInventoryServiceTest {
   @Test
   void shouldFoundHoldingIdByLocationId() throws IOException {
     String titleId = UUID.randomUUID().toString();
+    CompositePurchaseOrder purchaseOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     JsonObject holdingsCollection = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH));
 
@@ -127,7 +130,8 @@ public class OpenCompositeOrderInventoryServiceTest {
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), eq(requestContext));
     doReturn(succeededFuture(requestContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
-    openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
+    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, requestContext)
+      .result();
 
     assertEquals(line.getLocations().get(0).getHoldingId(), "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63");
     verify(processInventoryStrategyResolver, times(1)).getHoldingAndItemStrategy(any());
@@ -139,6 +143,7 @@ public class OpenCompositeOrderInventoryServiceTest {
 
     String titleId = UUID.randomUUID().toString();
     Location location = new Location().withLocationId(UUID.randomUUID().toString()).withTenantId(RandomStringUtils.random(4));
+    CompositePurchaseOrder purchaseOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setLocations(Collections.singletonList(location));
     RequestContext newContext = RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId());
@@ -149,7 +154,7 @@ public class OpenCompositeOrderInventoryServiceTest {
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), requestContextCaptor.capture());
     doReturn(succeededFuture(newContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
-    openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
+    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, requestContext).result();
 
     RequestContext capturedRequestContext = requestContextCaptor.getValue();
     assertEquals(location.getTenantId(), tenantId(capturedRequestContext.getHeaders()));
@@ -161,6 +166,7 @@ public class OpenCompositeOrderInventoryServiceTest {
 
     String titleId = UUID.randomUUID().toString();
     Location location = new Location().withLocationId(UUID.randomUUID().toString());
+    CompositePurchaseOrder purchaseOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     line.setLocations(Collections.singletonList(location));
     Optional<ConsortiumConfiguration> configuration = Optional.of(new ConsortiumConfiguration(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
@@ -171,7 +177,7 @@ public class OpenCompositeOrderInventoryServiceTest {
     doReturn(succeededFuture(holdingsCollection)).when(restClient).getAsJsonObject(any(), requestContextCaptor.capture());
     doReturn(succeededFuture(requestContext)).when(consortiumConfigurationService).cloneRequestContextIfNeeded(any(), any());
 
-    openCompositeOrderInventoryService.processInventory(line, titleId, false, requestContext).result();
+    openCompositeOrderInventoryService.processInventory(purchaseOrder, line, titleId, false, requestContext).result();
 
     RequestContext capturedRequestContext = requestContextCaptor.getValue();
     assertEquals(tenantId(okapiHeadersMock), tenantId(capturedRequestContext.getHeaders()));

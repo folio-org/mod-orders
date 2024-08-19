@@ -130,21 +130,21 @@ public class PieceCreateFlowInventoryManagerTest {
     doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(pieceId, requestContext);
     doReturn(succeededFuture(List.of(piece))).when(pieceStorageService).getPiecesByHoldingId(piece.getId(), requestContext);
     doReturn(succeededFuture(instanceId)).when(titlesService).updateTitleWithInstance(eq(title.getId()), eq(requestContext), eq(requestContext));
-    doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
+    doReturn(succeededFuture(itemId)).when(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, compPOL, requestContext);
     doReturn(succeededFuture(null)).when(pieceUpdateInventoryService).deleteHoldingConnectedToPiece(piece, requestContext);
 
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(piece).withCreateItem(true);
     holder.withOrderInformation(compositePurchaseOrder);
     holder.withTitleInformation(title);
 
-    pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
+    pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderToSave(), holder.getOriginPoLine(), holder.getPieceToCreate(),
       holder.isCreateItem(), requestContext).result();
 
     assertEquals(itemId, piece.getItemId());
     assertEquals(holdingId, piece.getHoldingId());
     verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
-    verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
+    verify(pieceUpdateInventoryService).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, compPOL, requestContext);
   }
 
   @Test
@@ -176,7 +176,7 @@ public class PieceCreateFlowInventoryManagerTest {
     holder.withOrderInformation(compositePurchaseOrder);
     holder.withTitleInformation(title);
 
-    pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
+    pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderToSave(), holder.getOriginPoLine(), holder.getPieceToCreate(),
       holder.isCreateItem(), requestContext).result();
 
     assertNull(piece.getItemId());
@@ -184,7 +184,7 @@ public class PieceCreateFlowInventoryManagerTest {
     assertEquals(locationId, piece.getLocationId());
     verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
-    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
+    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, compPOL, requestContext);
   }
 
 
@@ -216,7 +216,7 @@ public class PieceCreateFlowInventoryManagerTest {
     holder.withOrderInformation(compositePurchaseOrder);
     holder.withTitleInformation(title);
 
-    pieceCreateFlowInventoryManager.processInventory(holder.getOriginPoLine(), holder.getPieceToCreate(),
+    pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderToSave(), holder.getOriginPoLine(), holder.getPieceToCreate(),
       holder.isCreateItem(), requestContext).result();
 
     assertNull(piece.getItemId());
@@ -224,7 +224,7 @@ public class PieceCreateFlowInventoryManagerTest {
     assertEquals(locationId, piece.getLocationId());
     verify(titlesService).updateTitleWithInstance(piece.getTitleId(), requestContext, requestContext);
 
-    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compPOL, requestContext);
+    verify(pieceUpdateInventoryService, times(0)).manualPieceFlowCreateItemRecord(piece, compositePurchaseOrder, compPOL, requestContext);
   }
 
   private static class ContextConfiguration {
