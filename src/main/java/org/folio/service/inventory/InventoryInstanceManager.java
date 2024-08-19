@@ -22,6 +22,7 @@ import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.ProductId;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
@@ -401,13 +402,15 @@ public class InventoryInstanceManager {
       logger.info("createShadowInstanceIfNeeded:: Provided instanceId is blank, skip creating of shadow instance.");
       return Future.succeededFuture();
     }
+    var targetTenant = TenantTool.tenantId(requestContext.getHeaders());
+    logger.info("createShadowInstanceIfNeeded:: Getting instance: {} from tenant: {}", instanceId, targetTenant);
     return getInstanceById(instanceId, true, requestContext)
       .compose(instance -> {
         if (Objects.nonNull(instance) && !instance.isEmpty()) {
-          logger.info("createShadowInstanceIfNeeded:: Shadow instance already exists, skipping...");
+          logger.info("createShadowInstanceIfNeeded:: Shadow instance {} already exists in tenant: {}, skipping...", instanceId, targetTenant);
           return Future.succeededFuture();
         }
-        logger.info("createShadowInstanceIfNeeded:: Creating shadow instance with instanceId: {}", instanceId);
+        logger.info("createShadowInstanceIfNeeded:: Creating shadow instance with instanceId: {} in tenant: {}", instanceId, targetTenant);
         return sharingInstanceService.createShadowInstance(instanceId, consortiumConfiguration, requestContext);
       });
   }
