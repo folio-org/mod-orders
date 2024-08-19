@@ -200,6 +200,7 @@ public final class PoLineCommonUtil {
     }
     return compPOL.getLocations().stream()
       .filter(location -> Objects.nonNull(location.getLocationId()))
+      .filter(location -> Objects.nonNull(location.getTenantId()))
       .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location))
       .collect(collector);
   }
