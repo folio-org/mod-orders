@@ -13,6 +13,7 @@ import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.consortium.ConsortiumConfigurationService;
@@ -45,7 +46,8 @@ public abstract class ProcessInventoryStrategy {
    * @param compPOL PO line to retrieve/create Item Records for. At this step PO Line must contain instance Id
    * @return future with list of pieces with item and location id's
    */
-  protected abstract Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePoLine compPOL,
+  protected abstract Future<List<Piece>> handleHoldingsAndItemsRecords(CompositePurchaseOrder comPO,
+                                                                       CompositePoLine compPOL,
                                                                        InventoryItemManager inventoryItemManager,
                                                                        InventoryHoldingManager inventoryHoldingManager,
                                                                        RestClient restClient,
@@ -57,7 +59,8 @@ public abstract class ProcessInventoryStrategy {
    * @param compPOL Composite PO line to update Inventory for
    * @return CompletableFuture with void.
    */
-  public Future<Void> processInventory(CompositePoLine compPOL, String titleId,
+  public Future<Void> processInventory(CompositePurchaseOrder compPO,
+                                       CompositePoLine compPOL, String titleId,
                                        boolean isInstanceMatchingDisabled,
                                        InventoryItemManager inventoryItemManager,
                                        InventoryHoldingManager inventoryHoldingManager,
@@ -75,13 +78,14 @@ public abstract class ProcessInventoryStrategy {
     }
 
     return inventoryInstanceManager.openOrderHandleInstance(compPOL, isInstanceMatchingDisabled, requestContext)
-      .compose(compPOLWithInstanceId -> handleHoldingsAndItemsRecords(
-        compPOLWithInstanceId, inventoryItemManager, inventoryHoldingManager, restClient, requestContext))
+      .compose(compPOLWithInstanceId -> handleHoldingsAndItemsRecords(compPO, compPOLWithInstanceId,
+        inventoryItemManager, inventoryHoldingManager, restClient, requestContext))
       .compose(piecesWithItemId -> handlePieces(compPOL, titleId, piecesWithItemId, isInstanceMatchingDisabled,
         requestContext, openCompositeOrderPieceService));
   }
 
-  protected List<Future<List<Piece>>> updateHolding(CompositePoLine compPOL,
+  protected List<Future<List<Piece>>> updateHolding(CompositePurchaseOrder compPO,
+                                                    CompositePoLine compPOL,
                                                     InventoryItemManager inventoryItemManager,
                                                     InventoryHoldingManager inventoryHoldingManager,
                                                     RestClient restClient,
@@ -97,7 +101,7 @@ public abstract class ProcessInventoryStrategy {
               // Items are not going to be created when create inventory is "Instance, Holding"
               exchangeLocationIdWithHoldingId(location, holdingId);
               if (PoLineCommonUtil.isItemsUpdateRequired(compPOL)) {
-                return inventoryItemManager.handleItemRecords(compPOL, location, requestContext);
+                return inventoryItemManager.handleItemRecords(compPO, compPOL, location, requestContext);
               } else {
                 return Future.succeededFuture(Collections.emptyList());
               }

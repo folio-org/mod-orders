@@ -76,11 +76,11 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
@@ -316,6 +316,7 @@ public class InventoryManagerTest {
 
   @Test
   void testShouldNotHandleItemRecordsIfCheckinItemsIsTrue() {
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine reqData = getMockAsJson(COMP_PO_LINES_MOCK_DATA_PATH, "c2755a78-2f8d-47d0-a218-059a9b7391b4").mapTo(CompositePoLine.class);
     String poLineId = "c0d08448-347b-418a-8c2f-5fb50248d67e";
     reqData.setId(poLineId);
@@ -327,7 +328,7 @@ public class InventoryManagerTest {
 
     //When
     Location location = new Location().withLocationId("758258bc-ecc1-41b8-abca-f7b610822fff");
-    List<Piece> pieces = inventoryItemManager.handleItemRecords(reqData, location, requestContext).result();
+    List<Piece> pieces = inventoryItemManager.handleItemRecords(order, reqData, location, requestContext).result();
 
     assertEquals(0, pieces.size());
   }
@@ -532,7 +533,7 @@ public class InventoryManagerTest {
 
   @Test
   void testShouldCreateItemRecordForEresources()  {
-    //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     Eresource eresource = new Eresource().withMaterialType(line.getPhysical().getMaterialType())
       .withCreateInventory(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
@@ -540,59 +541,53 @@ public class InventoryManagerTest {
     line.setEresource(eresource);
     line.setOrderFormat(CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE);
     String expItemId = UUID.randomUUID().toString();
+
     doReturn(succeededFuture(Collections.singletonList(expItemId)))
-      .when(inventoryItemManager).createMissingElectronicItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
-    //When
-    Future<String> result = inventoryItemManager.openOrderCreateItemRecord(line, HOLDING_ID, requestContext);
+      .when(inventoryItemManager).createMissingElectronicItems(any(CompositePurchaseOrder.class), any(CompositePoLine.class),
+        any(Piece.class), eq(1), eq(requestContext));
+
+    Future<String> result = inventoryItemManager.openOrderCreateItemRecord(order, line, HOLDING_ID, requestContext);
     String actItemId = result.result();
-    //Then
-    verify(inventoryItemManager).createMissingElectronicItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
+
+    verify(inventoryItemManager).createMissingElectronicItems(any(CompositePurchaseOrder.class), any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
     assertEquals(expItemId, actItemId);
   }
 
   @Test
   void testShouldProvideCorrectErrorCodeWhenItemCreatingFailed() {
-    //given
-    PurchaseOrder purchaseOrder = new PurchaseOrder()
-      .withId(UUID.randomUUID().toString())
-      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    order.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    line.setPurchaseOrderId(purchaseOrder.getId());
+    line.setPurchaseOrderId(order.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
 
     doReturn(Future.failedFuture(new HttpException(500, "Something went wrong!")))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
-    doReturn(Future.succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(any(), any());
 
-    //When
-    Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(line, piece, 1, requestContext);
+    Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
     HttpException cause = (HttpException) result.cause();
 
-    //Then
     assertEquals(ITEM_CREATION_FAILED.getCode(), cause.getError().getCode());
     assertEquals("Something went wrong!", cause.getError().getParameters().get(0).getValue());
   }
 
   @Test
   void testShouldProvideCorrectBarcodeNotUniqueErrorCode() {
-    //given
-    PurchaseOrder purchaseOrder = new PurchaseOrder()
-      .withId(UUID.randomUUID().toString())
-      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    order.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    line.setPurchaseOrderId(purchaseOrder.getId());
+    line.setPurchaseOrderId(order.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
 
     doReturn(Future.failedFuture(new HttpException(500, InventoryItemManager.BARCODE_ALREADY_EXIST_ERROR)))
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), any(JsonObject.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
-    doReturn(Future.succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(any(), any());
 
     //When
-    Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(line, piece, 1, requestContext);
+    Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
     HttpException cause = (HttpException) result.cause();
 
     //Then
@@ -601,11 +596,10 @@ public class InventoryManagerTest {
 
   @Test
   void testShouldCreateItemWithClosedStatusWhenOrderClosed() {
-    PurchaseOrder purchaseOrder = new PurchaseOrder()
-      .withId(UUID.randomUUID().toString())
-      .withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    order.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
-    line.setPurchaseOrderId(purchaseOrder.getId());
+    line.setPurchaseOrderId(order.getId());
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     JsonObject itemRecord = getMockAsJson(ITEM_RECORD_PATH);
     String expItemId = itemRecord.getString("id");
@@ -614,33 +608,51 @@ public class InventoryManagerTest {
       .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
     doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
     doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
-    doReturn(Future.succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(any(), any());
 
-    Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(line, piece, 1, requestContext);
+    Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
+    assertEquals(expItemId, result.result().get(0));
+  }
+
+  @Test
+  void testShouldCreateItemWithOnOrderStatusWhenOrderNotFoundInMemberTenant() {
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    order.setWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
+    CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
+    line.setPurchaseOrderId(order.getId());
+    Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
+    JsonObject itemRecord = getMockAsJson(ITEM_RECORD_PATH);
+    String expItemId = itemRecord.getString("id");
+
+    doReturn(Future.succeededFuture(expItemId))
+      .when(restClient).postJsonObjectAndGetId(any(RequestEntry.class), eq(itemRecord), any(RequestContext.class));
+    doReturn(Future.succeededFuture(new JsonObject())).when(configurationEntriesCache).loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+    doReturn(Future.succeededFuture(new JsonObject())).when(inventoryCache).getEntryId(LOAN_TYPES, DEFAULT_LOAN_TYPE_NAME, requestContext);
+
+    Future<List<String>> result = inventoryItemManager.createMissingPhysicalItems(order, line, piece, 1, requestContext);
     assertEquals(expItemId, result.result().get(0));
   }
 
   @Test
   void testShouldCreateItemRecordForPhysical()  {
     //given
+    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine line = getMockAsJson(COMPOSITE_LINES_PATH, LINE_ID).mapTo(CompositePoLine.class);
     String expItemId = UUID.randomUUID().toString();
 
     doReturn(succeededFuture(Collections.singletonList(expItemId)))
-      .when(inventoryItemManager).createMissingPhysicalItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
-    //When
-    Future<String> result = inventoryItemManager.openOrderCreateItemRecord(line, HOLDING_ID, requestContext);
+      .when(inventoryItemManager).createMissingPhysicalItems(any(CompositePurchaseOrder.class), any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
+
+    Future<String> result = inventoryItemManager.openOrderCreateItemRecord(order, line, HOLDING_ID, requestContext);
     String actItemId = result.result();
-    //Then
-    verify(inventoryItemManager).createMissingPhysicalItems(any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
+
+    verify(inventoryItemManager).createMissingPhysicalItems(any(CompositePurchaseOrder.class), any(CompositePoLine.class), any(Piece.class), eq(1), eq(requestContext));
     assertEquals(expItemId, actItemId);
   }
 
   @Test
   void testUpdateInventoryNegativeCaseIfPOLIsNull() {
-    //When
-    Future<String> result =  inventoryItemManager.openOrderCreateItemRecord(null, UUID.randomUUID().toString(), requestContext);
-    //Then
+    Future<String> result =  inventoryItemManager.openOrderCreateItemRecord(null, null, UUID.randomUUID().toString(), requestContext);
+
     assertTrue(result.failed());
   }
 
