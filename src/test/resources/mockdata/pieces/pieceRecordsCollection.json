@@ -489,6 +489,7 @@
       "id": "05a95f03-eb00-4248-9f2e-2bd05957ff04",
       "poLineId": "6e2b169a-ebeb-4c3c-a2f2-6233ff9c59ae",
       "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "receivingStatus": "Expected",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivedDate": "2019-03-05T08:06:58.473+0000"
@@ -497,6 +498,7 @@
       "id": "06a95f03-eb00-4248-9f2e-2bd05957ff05",
       "poLineId": "1196fcd9-7607-447d-ae85-6e91883d7e4f",
       "titleId": "9a665b22-9fe5-4c95-b4ee-837a5433c95d",
+      "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
       "receivingStatus": "Expected",
       "receiptDate": "2018-10-09T00:00:00.000Z",
       "receivedDate": "2019-03-05T08:06:58.473+0000"
