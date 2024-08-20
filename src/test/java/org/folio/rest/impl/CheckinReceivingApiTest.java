@@ -359,11 +359,11 @@ public class CheckinReceivingApiTest {
   }
 
   @Test
-  void testReceiveOngoingOrder() {
+  void testReceiveOngoingOrderWithChangedLocation() {
     logger.info("=== Test POST Receive - Ongoing PO Lines");
 
-    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(9).mapTo(CompositePoLine.class);
-    MockServer.addMockTitles(Collections.singletonList(poLines));
+    CompositePoLine originalPoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(9).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(originalPoLine));
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-ongoing.json").mapTo(ReceivingCollection.class);
     receivingRq.getToBeReceived().get(0).setPoLineId(COMPOSITE_POLINE_ONGOING_ID);
@@ -378,27 +378,29 @@ public class CheckinReceivingApiTest {
     List<JsonObject> pieceSearches = getPieceSearches();
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
 
     assertThat(polSearches, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
-
-    // The piece searches should be made 1 time: 1st time to get all required piece records
-    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
+    // The piece searches should be made 2 times: 1st time to get all required piece records and second - get pieces by po line
+    assertThat(pieceSearches, hasSize(2));
     assertThat(pieceUpdates, hasSize(receivingRq.getTotalRecords()));
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
 
-    // check no status updates were performed and POL remained ongoing
-    assertThat(polUpdates, nullValue());
-    polSearches.forEach(pol -> {
+    // check no status updates were performed, but location was updated
+    assertThat(polBatchUpdates, hasSize(1));
+    polBatchUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLineCollection.class).getPoLines().get(0);
       assertThat(poLine.getCheckinItems(), is(false));
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.ONGOING));
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
+
+      Location originalPolineLocation = originalPoLine.getLocations().get(0);
+      Location updatePolineLocation = poLine.getLocations().get(0);
+      assertThat(originalPolineLocation.getLocationId(), not(updatePolineLocation.getLocationId()));
     });
 
     // Verify no status updated for ongoing order
@@ -406,11 +408,11 @@ public class CheckinReceivingApiTest {
   }
 
   @Test
-  void testReceiveCancelledOrder() {
+  void testReceiveCancelledOrderWithChangedLocation() {
     logger.info("=== Test POST Receive - Cancelled PO Lines");
 
-    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(10).mapTo(CompositePoLine.class);
-    MockServer.addMockTitles(Collections.singletonList(poLines));
+    CompositePoLine originalPoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(10).mapTo(CompositePoLine.class);
+    MockServer.addMockTitles(Collections.singletonList(originalPoLine));
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-cancelled.json").mapTo(ReceivingCollection.class);
     receivingRq.getToBeReceived().get(0).setPoLineId(COMPOSITE_POLINE_CANCELED_ID);
@@ -425,27 +427,29 @@ public class CheckinReceivingApiTest {
     List<JsonObject> pieceSearches = getPieceSearches();
     List<JsonObject> pieceUpdates = getPieceUpdates();
     List<JsonObject> polSearches = getPoLineSearches();
-    List<JsonObject> polUpdates = getPoLineUpdates();
+    List<JsonObject> polBatchUpdates = getPoLineBatchUpdates();
 
     assertThat(pieceSearches, not(nullValue()));
     assertThat(pieceUpdates, not(nullValue()));
 
     assertThat(polSearches, not(nullValue()));
 
-    int expectedSearchRqQty = Math.floorDiv(receivingRq.getTotalRecords(), MAX_IDS_FOR_GET_RQ_15) + 1;
-
-    // The piece searches should be made 1 time: 1st time to get all required piece records
-    assertThat(pieceSearches, hasSize(expectedSearchRqQty));
+    // The piece searches should be made 2 times: 1st time to get all required piece records and second - get pieces by po line
+    assertThat(pieceSearches, hasSize(2));
     assertThat(pieceUpdates, hasSize(receivingRq.getTotalRecords()));
     assertThat(polSearches, hasSize(pieceIdsByPol.size()));
 
     // check no status updates were performed and POL remained canceled
-    assertThat(polUpdates, nullValue());
-    polSearches.forEach(pol -> {
+    assertThat(polBatchUpdates, hasSize(1));
+    polBatchUpdates.forEach(pol -> {
       PoLine poLine = pol.mapTo(PoLineCollection.class).getPoLines().get(0);
       assertThat(poLine.getCheckinItems(), is(false));
       assertThat(poLine.getReceiptStatus(), is(PoLine.ReceiptStatus.CANCELLED));
       assertThat(poLine.getReceiptDate(), is(notNullValue()));
+
+      Location originalPolineLocation = originalPoLine.getLocations().get(0);
+      Location updatePolineLocation = poLine.getLocations().get(0);
+      assertThat(originalPolineLocation.getLocationId(), not(updatePolineLocation.getLocationId()));
     });
 
     // Verify no status updated for ongoing order
