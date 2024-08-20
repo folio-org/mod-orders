@@ -149,7 +149,7 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
     //When
-    openCompositeOrderPieceService.updatePieceRecord(piece, requestContext).result();
+    openCompositeOrderPieceService.updatePiece(piece, requestContext).result();
     //Then
     verify(receiptStatusPublisher, times(0)).sendEvent(eq(MessageAddress.RECEIPT_STATUS), any(JsonObject.class), eq(requestContext));
   }
@@ -172,7 +172,7 @@ public class OpenCompositeOrderPieceServiceTest {
     doReturn(succeededFuture(title)).when(titlesService).getTitleById(anyString(), eq(requestContext));
 
     //When
-    openCompositeOrderPieceService.updatePieceRecord(piece, requestContext).result();
+    openCompositeOrderPieceService.updatePiece(piece, requestContext).result();
     //Then
     verify(receiptStatusPublisher, times(1)).sendEvent(eq(MessageAddress.RECEIPT_STATUS), any(JsonObject.class), eq(requestContext));
   }
