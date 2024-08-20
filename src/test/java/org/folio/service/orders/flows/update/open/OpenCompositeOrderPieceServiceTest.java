@@ -142,11 +142,13 @@ public class OpenCompositeOrderPieceServiceTest {
     Piece piece = getMockAsJson(PIECE_PATH,"pieceRecord").mapTo(Piece.class);
     Piece pieceFromStorage = JsonObject.mapFrom(piece).mapTo(Piece.class);
     CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
+    Title title = new Title().withId(piece.getTitleId()).withTitle("test title");
 
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), eq(ProtectedOperationType.UPDATE), eq(requestContext));
     doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(eq(piece), eq(requestContext));
     doReturn(succeededFuture(order)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(piece.getPoLineId()), eq(requestContext));
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(eq(piece.getId()), eq(requestContext));
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(eq(title.getId()), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(eq(piece), eq(requestContext));
     //When
     openCompositeOrderPieceService.updatePiece(piece, requestContext).result();
