@@ -9,7 +9,8 @@ import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByHoldingId;
 import static org.folio.orders.utils.PoLineCommonUtil.groupLocationsByLocationId;
 import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isItemsUpdateRequiredForPhysical;
-import static org.folio.orders.utils.PoLineCommonUtil.mapLocationsToTenantIds;
+import static org.folio.orders.utils.PoLineCommonUtil.mapHoldingIdsToTenantIds;
+import static org.folio.orders.utils.PoLineCommonUtil.mapLocationIdsToTenantIds;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
@@ -62,7 +63,7 @@ public class OpenCompositeOrderHolderBuilder {
     // For each location collect pieces that need to be created.
     groupLocationsByLocationId(compPOL)
       .forEach((lineLocationId, lineLocations) -> {
-        var tenantId = mapLocationsToTenantIds(compPOL).get(lineLocationId);
+        var tenantId = mapLocationIdsToTenantIds(compPOL).get(lineLocationId);
         var filteredExistingPieces = filterByLocationId(existingPieces, lineLocationId);
         var filteredExistingPiecesWithItem = filterByLocationId(expectedPiecesWithItem, lineLocationId);
         piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExistingPiecesWithItem, filteredExistingPieces));
@@ -74,7 +75,7 @@ public class OpenCompositeOrderHolderBuilder {
   private List<Piece> getPiecesWithChangedLocation(CompositePoLine compPOL, List<Piece> needProcessPieces, List<Piece> existingPieces) {
     Map<String, Map<Piece.Format, Integer>> existingPieceMap = numOfPiecesByFormatAndLocationId(existingPieces, compPOL.getId());
     Map<String, Map<Piece.Format, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, compPOL.getId());
-    Map<String, String> locationToTenantId = mapLocationsToTenantIds(compPOL);
+    Map<String, String> locationToTenantId = mapLocationIdsToTenantIds(compPOL);
 
     var piecesForLocationUpdate = new ArrayList<Piece>();
     existingPieceMap.forEach((existingPieceLocationId, existingPieceQtyMap) -> {
@@ -124,10 +125,11 @@ public class OpenCompositeOrderHolderBuilder {
     // For each location collect pieces that need to be created.
     groupLocationsByHoldingId(compPOL)
       .forEach((existingPieceHoldingId, existingPieceLocations) -> {
+        var tenantId = mapHoldingIdsToTenantIds(compPOL).get(existingPieceHoldingId);
         var filteredExistingPieces = filterByHoldingId(existingPieces, existingPieceHoldingId);
         var filteredExistingPiecesWithItem = filterByHoldingId(expectedPiecesWithItem, existingPieceHoldingId);
         piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExistingPiecesWithItem, filteredExistingPieces));
-        piecesToCreate.addAll(processPiecesWithoutItemAndHoldingId(compPOL, filteredExistingPieces, existingPieceHoldingId, existingPieceLocations));
+        piecesToCreate.addAll(processPiecesWithoutItemAndHoldingId(compPOL, filteredExistingPieces, existingPieceHoldingId, tenantId, existingPieceLocations));
       });
     return piecesToCreate;
   }
@@ -163,18 +165,18 @@ public class OpenCompositeOrderHolderBuilder {
 
   private List<Piece> processPiecesWithoutItemAndLocationId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceLocationId,
                                                             String tenantId, List<Location> existingPieceLocations) {
-    return processPiecesWithoutItemAndLocationIdOrHoldingId(compPOL, existedPieces, existingPieceLocations,
-      () -> new Piece().withLocationId(existingPieceLocationId).withReceivingTenantId(tenantId));
+    return processPiecesWithoutItemAndLocationIdOrHoldingId(compPOL, existedPieces, existingPieceLocations, tenantId,
+      () -> new Piece().withLocationId(existingPieceLocationId));
   }
 
   private List<Piece> processPiecesWithoutItemAndHoldingId(CompositePoLine compPOL, List<Piece> existedPieces, String existingPieceHoldingId,
-                                                           List<Location> existingPieceLocations) {
-    return processPiecesWithoutItemAndLocationIdOrHoldingId(compPOL, existedPieces, existingPieceLocations,
+                                                           String tenantId, List<Location> existingPieceLocations) {
+    return processPiecesWithoutItemAndLocationIdOrHoldingId(compPOL, existedPieces, existingPieceLocations, tenantId,
       () -> new Piece().withHoldingId(existingPieceHoldingId));
   }
 
-  private List<Piece> processPiecesWithoutItemAndLocationIdOrHoldingId(CompositePoLine compPOL, List<Piece> existedPieces,
-                                                                       List<Location> existingPieceLocations, Supplier<Piece> pieceSupplier) {
+  private List<Piece> processPiecesWithoutItemAndLocationIdOrHoldingId(CompositePoLine compPOL, List<Piece> existedPieces,List<Location> existingPieceLocations,
+                                                                       String receivingTenantId, Supplier<Piece> pieceSupplier) {
     Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
     Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
 
@@ -182,7 +184,7 @@ public class OpenCompositeOrderHolderBuilder {
     expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
       for (int i = 0; i < remainingPiecesQuantity; i++) {
-        piecesToCreate.add(pieceSupplier.get().withFormat(format).withPoLineId(compPOL.getId()));
+        piecesToCreate.add(pieceSupplier.get().withFormat(format).withPoLineId(compPOL.getId()).withReceivingTenantId(receivingTenantId));
       }
     });
     return piecesToCreate;
