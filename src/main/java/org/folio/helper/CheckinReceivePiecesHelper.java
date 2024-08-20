@@ -88,9 +88,7 @@ import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.LATE;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.RECEIVED;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.UNRECEIVABLE;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.CANCELLED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.ONGOING;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
