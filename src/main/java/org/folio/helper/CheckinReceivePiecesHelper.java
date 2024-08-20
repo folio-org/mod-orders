@@ -280,8 +280,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     // Once all PO Lines are retrieved from storage check if receipt status
     // requires update and persist in storage
     return getPoLines(poLineIdsForUpdatedPieces, requestContext).compose(poLines -> {
-      // Calculate expected status for each PO Line and update with new one if required
-      // Skip status update if PO line status is Ongoing or Cancelled
+      // Calculate expected status and po line details for each PO Line and update with new one if required
       List<Future<PoLine>> poLinesToUpdate = new ArrayList<>();
       for (PoLine poLine : poLines) {
         List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
@@ -315,8 +314,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .map(updatedPoLines -> purchaseOrderLineService.saveOrderLines(updatedPoLines, requestContext).map(voidResult -> {
         logger.info("saveOrderLinesBatch:: {} out of {} POL updated with new status in batch", poLines.size(), piecesGroupedByPoLine.size());
 
-        List<PoLine> notCancelledOrOngoing = updatedPoLines.stream().filter(poLine -> !PoLineCommonUtil.isCancelledOrOngoingStatus(poLine)).toList();
-        updateOrderStatus.accept(notCancelledOrOngoing);
+        List<PoLine> notCancelledOrOngoingPoLines = updatedPoLines.stream()
+          .filter(poLine -> !PoLineCommonUtil.isCancelledOrOngoingStatus(poLine))
+          .toList();
+        updateOrderStatus.accept(notCancelledOrOngoingPoLines);
         return null;
       }));
   }
