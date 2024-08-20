@@ -15,6 +15,7 @@ import java.util.Map;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.helper.BaseHelper;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
@@ -71,7 +72,7 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
         // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
         purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
           .map(poLine -> {
-            if (poLine.getReceiptStatus() == ReceiptStatus.CANCELLED || poLine.getReceiptStatus() == ReceiptStatus.ONGOING) {
+            if (PoLineCommonUtil.isCancelledOrOngoingStatus(poLine)) {
               promise.complete();
               return null;
             }

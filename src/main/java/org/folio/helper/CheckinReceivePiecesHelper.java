@@ -286,11 +286,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       // Skip status update if PO line status is Ongoing or Cancelled
       List<Future<PoLine>> poLinesToUpdate = new ArrayList<>();
       for (PoLine poLine : poLines) {
-        if (poLine.getReceiptStatus() == CANCELLED || poLine.getReceiptStatus() == ONGOING) {
-          logger.info("updateOrderAndPoLinesStatus:: No pieces processed - POL with {} has status CANCELLED or ONGOING", poLine.getId());
-          continue;
-        }
-
         List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
         if (CollectionUtils.isEmpty(successfullyProcessedPieces)) {
           logger.info("updateOrderAndPoLinesStatus:: No pieces processed - nothing to update for POL with {}", poLine.getId());
@@ -322,7 +317,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .map(updatedPoLines -> purchaseOrderLineService.saveOrderLines(updatedPoLines, requestContext).map(voidResult -> {
         logger.info("saveOrderLinesBatch:: {} out of {} POL updated with new status in batch", poLines.size(), piecesGroupedByPoLine.size());
 
-        updateOrderStatus.accept(poLines);
+        List<PoLine> notCancelledOrOngoing = updatedPoLines.stream().filter(poLine -> !PoLineCommonUtil.isCancelledOrOngoingStatus(poLine)).toList();
+        updateOrderStatus.accept(notCancelledOrOngoing);
         return null;
       }));
   }
@@ -353,8 +349,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
                                             List<Piece> piecesFromStorage,
                                             List<Piece> byPoLine,
                                             List<Piece> successfullyProcessed) {
-    ReceiptStatus receiptStatus = calculatePoLineReceiptStatus(byPoLine, successfullyProcessed, poLine);
-    purchaseOrderLineService.updatePoLineReceiptStatusWithoutSave(poLine, receiptStatus);
+    if (PoLineCommonUtil.isCancelledOrOngoingStatus(poLine)) {
+      logger.info("updateRelatedPoLineDetails:: Skipping updating POL '{}' status for CANCELLED or ONGOING po lines", poLine.getId());
+    } else {
+      ReceiptStatus receiptStatus = calculatePoLineReceiptStatus(byPoLine, successfullyProcessed, poLine);
+      purchaseOrderLineService.updatePoLineReceiptStatusWithoutSave(poLine, receiptStatus);
+    }
 
     // the same check as in PieceUpdateFlowManager::updatePoLine
     if (Boolean.TRUE.equals(poLine.getIsPackage()) || Boolean.TRUE.equals(poLine.getCheckinItems())) {
