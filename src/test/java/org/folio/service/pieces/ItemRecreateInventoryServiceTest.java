@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.models.pieces.PieceUpdateHolder;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
@@ -98,6 +99,7 @@ public class ItemRecreateInventoryServiceTest {
 
     var piece = new JsonObject(piecesMock).mapTo(Piece.class);
     var purchaseOrder = new JsonObject(purchaseOrderMock).mapTo(PurchaseOrder.class);
+    var compPO = HelperUtils.convertToCompositePurchaseOrder(new JsonObject(purchaseOrderMock));
     var poLine = new JsonObject(poLineMock).mapTo(PoLine.class);
 
     var pieceHolder = (PieceUpdateHolder) new PieceUpdateHolder()
@@ -107,10 +109,11 @@ public class ItemRecreateInventoryServiceTest {
     var srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant1");
     var dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant2");
 
-    itemRecreateInventoryService.recreateItemInDestinationTenant(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), srcLocCtx ,dstLocCtx).result();
+    itemRecreateInventoryService.recreateItemInDestinationTenant(compPO, pieceHolder.getPoLineToSave(),
+      pieceHolder.getPieceToUpdate(), srcLocCtx ,dstLocCtx).result();
 
-    verify(inventoryItemManager, times(1))
-      .createMissingPhysicalItems(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
+    verify(inventoryItemManager, times(1)).createMissingPhysicalItems(compPO,
+      pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
   }
 
   @Test
@@ -121,6 +124,7 @@ public class ItemRecreateInventoryServiceTest {
 
     var piece = new JsonObject(piecesMock).mapTo(Piece.class);
     var purchaseOrder = new JsonObject(purchaseOrderMock).mapTo(PurchaseOrder.class);
+    var compPO = HelperUtils.convertToCompositePurchaseOrder(new JsonObject(purchaseOrderMock));
     var poLine = new JsonObject(poLineMock).mapTo(PoLine.class);
 
     var pieceHolder = (PieceUpdateHolder) new PieceUpdateHolder()
@@ -130,10 +134,11 @@ public class ItemRecreateInventoryServiceTest {
     var srcLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant1");
     var dstLocCtx = RequestContextUtil.createContextWithNewTenantId(requestContext, "tenant2");
 
-    itemRecreateInventoryService.recreateItemInDestinationTenant(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), srcLocCtx, dstLocCtx).result();
+    itemRecreateInventoryService.recreateItemInDestinationTenant(compPO, pieceHolder.getPoLineToSave(),
+      pieceHolder.getPieceToUpdate(), srcLocCtx, dstLocCtx).result();
 
     verify(inventoryItemManager, times(1))
-      .createMissingElectronicItems(pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
+      .createMissingElectronicItems(compPO, pieceHolder.getPoLineToSave(), pieceHolder.getPieceToUpdate(), ITEM_QUANTITY, dstLocCtx);
   }
 
   private static class ContextConfiguration {

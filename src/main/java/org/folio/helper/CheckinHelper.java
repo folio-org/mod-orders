@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.orders.events.handlers.MessageAddress;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
@@ -95,8 +96,11 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
             if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
               pieceFutures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
                 .map(PoLineCommonUtil::convertToCompositePoLine)
-                .compose(compPol -> pieceCreateFlowInventoryManager.processInventory(compPol, piece, checkInPiece.getCreateItem(), requestContext))
-                .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece)));
+                .compose(compPol -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(compPol.getPurchaseOrderId(), requestContext)
+                  .map(HelperUtils::convertToCompositePurchaseOrder)
+                  .compose(purchaseOrder -> pieceCreateFlowInventoryManager.processInventory(purchaseOrder, compPol, piece,
+                    checkInPiece.getCreateItem(), requestContext))
+                .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece))));
             } else if (checkInPiece.getId().equals(piece.getId()) && InventoryUtils.allowItemRecreate(srcTenantId, dstTenantId) && Objects.nonNull(piece.getItemId())) {
               pieceFutures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
                 .map(PoLineCommonUtil::convertToCompositePoLine)

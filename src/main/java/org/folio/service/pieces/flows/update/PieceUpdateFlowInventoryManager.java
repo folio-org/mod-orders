@@ -124,7 +124,8 @@ public class PieceUpdateFlowInventoryManager {
           updateItemWithFields(jsonItem, poLineToSave, pieceToUpdate);
           if (InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId())) {
             logger.info("handleItem:: recreating item by id '{}', srcTenantId: '{}', dstTenantId: '{}'", itemId, srcConfig.tenantId(), dstConfig.tenantId());
-            return itemRecreateInventoryService.recreateItemInDestinationTenant(holder.getPoLineToSave(), holder.getPieceToUpdate(), srcConfig.context(), dstConfig.context());
+            return itemRecreateInventoryService.recreateItemInDestinationTenant(holder.getPurchaseOrderToSave(),
+              holder.getPoLineToSave(), holder.getPieceToUpdate(), srcConfig.context(), dstConfig.context());
           } else {
             logger.info("handleItem:: updating item by id '{}'", itemId);
             return inventoryItemManager.updateItem(jsonItem, requestContext).map(v -> jsonItem.getString(ID));
@@ -132,7 +133,7 @@ public class PieceUpdateFlowInventoryManager {
         }
         if (holder.isCreateItem() && pieceToUpdate.getHoldingId() != null) {
           logger.info("handleItem:: creating item by id '{}'", itemId);
-          return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, poLineToSave, requestContext);
+          return pieceUpdateInventoryService.manualPieceFlowCreateItemRecord(pieceToUpdate, holder.getPurchaseOrderToSave(), poLineToSave, requestContext);
         } else {
           return Future.succeededFuture();
         }

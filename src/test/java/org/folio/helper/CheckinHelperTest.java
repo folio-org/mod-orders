@@ -50,6 +50,7 @@ import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.ItemRecreateInventoryService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
@@ -76,6 +77,8 @@ public class CheckinHelperTest {
   PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
   @Autowired
   ItemRecreateInventoryService itemRecreateInventoryService;
+  @Autowired
+  PurchaseOrderStorageService purchaseOrderStorageService;
 
   private Map<String, String> okapiHeadersMock;
   private RequestContext requestContext;
@@ -337,6 +340,10 @@ public class CheckinHelperTest {
     @Bean
     ItemRecreateInventoryService itemRecreateInventoryService() {
       return mock(ItemRecreateInventoryService.class);
+    }
+    @Bean
+    PurchaseOrderStorageService purchaseOrderStorageService() {
+      return mock(PurchaseOrderStorageService.class);
     }
   }
 }

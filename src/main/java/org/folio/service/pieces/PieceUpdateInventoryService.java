@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -39,24 +40,28 @@ public class PieceUpdateInventoryService {
   /**
    * Return id of created  Item
    */
-  public Future<String> manualPieceFlowCreateItemRecord(Piece piece, CompositePoLine compPOL, RequestContext requestContext) {
+  public Future<String> manualPieceFlowCreateItemRecord(Piece piece, CompositePurchaseOrder compPO,
+                                                        CompositePoLine compPOL, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
     Promise<String> itemFuture = Promise.promise();
     try {
-      logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
-        if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
-          inventoryItemManager.createMissingElectronicItems(compPOL, piece, ITEM_QUANTITY, requestContext)
-            .onSuccess(idS -> itemFuture.complete(idS.get(0)))
-            .onFailure(itemFuture::fail);
-        } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPOL)) {
-          inventoryItemManager.createMissingPhysicalItems(compPOL, piece, ITEM_QUANTITY, requestContext)
-            .onSuccess(idS -> itemFuture.complete(idS.get(0)))
-            .onFailure(itemFuture::fail);
-        }
-      else {
+      logger.debug("manualPieceFlowCreateItemRecord:: Handling {} items for PO Line and holdings with id={}",
+        ITEM_QUANTITY, piece.getHoldingId());
+      if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
+        inventoryItemManager.createMissingElectronicItems(compPO, compPOL, piece, ITEM_QUANTITY, requestContext)
+          .onSuccess(idS -> itemFuture.complete(idS.get(0)))
+          .onFailure(itemFuture::fail);
+      } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPOL)) {
+        inventoryItemManager.createMissingPhysicalItems(compPO, compPOL, piece, ITEM_QUANTITY, requestContext)
+          .onSuccess(idS -> itemFuture.complete(idS.get(0)))
+          .onFailure(itemFuture::fail);
+      } else {
+        logger.warn("manualPieceFlowCreateItemRecord:: Creating Item is not possible for piece: {}, poLine: {}",
+          piece.getId(), compPOL.getId());
         itemFuture.complete(null);
       }
     } catch (Exception e) {
+      logger.error("Error while creating item for piece:{} and comPOL: {}", piece.getId(), compPOL.getId(), e);
       itemFuture.fail(e);
     }
     return itemFuture.future();

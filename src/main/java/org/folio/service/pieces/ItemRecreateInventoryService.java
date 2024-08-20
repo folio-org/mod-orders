@@ -14,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.models.ItemStatus;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
@@ -30,7 +31,8 @@ public class ItemRecreateInventoryService {
   }
 
   // Return an Id of the recreated Item
-  public Future<String> recreateItemInDestinationTenant(CompositePoLine compPol, Piece piece, RequestContext srcLocCtx, RequestContext dstLocCtx) {
+  public Future<String> recreateItemInDestinationTenant(CompositePurchaseOrder compPO, CompositePoLine compPol,
+                                                        Piece piece, RequestContext srcLocCtx, RequestContext dstLocCtx) {
     // Example Case: Member Tenant 1 (University) -> Member Tenant 2 (College)
     // Create Item in Member Tenant 2 with the same Item Id
     // Delete Item in Member Tenant 1 by Item Id
@@ -38,9 +40,9 @@ public class ItemRecreateInventoryService {
 
     Future<List<String>> itemFuture;
     if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPol)) {
-      itemFuture = inventoryItemManager.createMissingElectronicItems(compPol, piece, ITEM_QUANTITY, dstLocCtx);
+      itemFuture = inventoryItemManager.createMissingElectronicItems(compPO, compPol, piece, ITEM_QUANTITY, dstLocCtx);
     } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPol)) {
-      itemFuture = inventoryItemManager.createMissingPhysicalItems(compPol, piece, ITEM_QUANTITY, dstLocCtx);
+      itemFuture = inventoryItemManager.createMissingPhysicalItems(compPO, compPol, piece, ITEM_QUANTITY, dstLocCtx);
     } else {
       itemFuture = Future.succeededFuture(List.of());
     }
