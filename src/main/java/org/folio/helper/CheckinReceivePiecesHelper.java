@@ -633,8 +633,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       srcTenantId, dstTenantId, location.getLocationId(), location.getHoldingId());
     return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, locationContext)
       .compose(instance -> {
-        if (srcTenantId.equals(dstTenantId)) {
-          logger.info("createHoldingsForChangedLocations:: Creating a holding if not found, instanceId: {}", instance.id());
+        if (Objects.isNull(srcTenantId) || (srcTenantId.equals(dstTenantId))) {
           return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, locationContext);
         }
         return Future.succeededFuture(null);
