@@ -648,9 +648,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       })
       .onFailure(t -> {
         String msg = Optional.ofNullable(piece.getLocationId())
-          .map(pieceLocation -> "location : " + pieceLocation)
-          .orElse("holding : " + piece.getHoldingId());
-        logger.error("createHoldingsForChangedLocations:: Cannot create holding for specified piece, msg: {}", msg);
+          .map(pieceLocation -> "locationId: " + pieceLocation)
+          .orElse("holdingId: " + piece.getHoldingId());
+        logger.error("createHoldingsForChangedLocations:: Cannot create holding for specified piece, {}", msg);
         addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
       });
   }
