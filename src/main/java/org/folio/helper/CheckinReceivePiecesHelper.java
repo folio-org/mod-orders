@@ -2,6 +2,7 @@ package org.folio.helper;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
@@ -647,7 +648,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         String msg = Optional.ofNullable(piece.getLocationId())
           .map(pieceLocation -> "locationId: " + pieceLocation)
           .orElse("holdingId: " + piece.getHoldingId());
-        logger.error("createHoldingsForChangedLocations:: Cannot create holding for specified piece, {}", msg);
+        logger.error("createHoldingsForChangedLocations:: Cannot create holding for specified piece, {}", msg, t);
         addError(piece.getPoLineId(), piece.getId(), ITEM_UPDATE_FAILED.toError());
       });
   }
