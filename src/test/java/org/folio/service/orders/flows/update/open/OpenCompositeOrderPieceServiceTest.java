@@ -264,8 +264,8 @@ public class OpenCompositeOrderPieceServiceTest {
     String locationId1 = UUID.randomUUID().toString();
     String locationId2 = UUID.randomUUID().toString();
     String titleId = UUID.randomUUID().toString();
-    Location location1 = new Location().withLocationId(locationId1).withQuantityPhysical(qty1).withQuantity(qty1);
-    Location location2 = new Location().withLocationId(locationId2).withQuantityPhysical(qty2).withQuantity(qty2);
+    Location location1 = new Location().withLocationId(locationId1).withQuantityPhysical(qty1).withQuantity(qty1).withTenantId("tenant1");
+    Location location2 = new Location().withLocationId(locationId2).withQuantityPhysical(qty2).withQuantity(qty2).withTenantId("tenant2");
     Cost cost = new Cost().withQuantityPhysical(qty1 + qty2).withQuantityElectronic(null);
     Physical physical = new Physical().withCreateInventory(Physical.CreateInventory.fromValue(createInventory));
     CompositePoLine line = new CompositePoLine().withId(lineId).withCost(cost).withLocations(List.of(location1, location2))
@@ -297,6 +297,7 @@ public class OpenCompositeOrderPieceServiceTest {
     piecesLoc1.forEach(piece -> {
       assertNull(piece.getHoldingId());
       assertNull(piece.getItemId());
+      assertEquals(location1.getTenantId(), piece.getReceivingTenantId());
       assertEquals(lineId, piece.getPoLineId());
       assertEquals(titleId, piece.getTitleId());
       assertEquals(Piece.Format.fromValue(pieceFormat), piece.getFormat());
@@ -307,6 +308,7 @@ public class OpenCompositeOrderPieceServiceTest {
     piecesLoc2.forEach(piece -> {
       assertNull(piece.getHoldingId());
       assertNull(piece.getItemId());
+      assertEquals(location2.getTenantId(), piece.getReceivingTenantId());
       assertEquals(lineId, piece.getPoLineId());
       assertEquals(titleId, piece.getTitleId());
       assertEquals(Piece.Format.fromValue(pieceFormat), piece.getFormat());

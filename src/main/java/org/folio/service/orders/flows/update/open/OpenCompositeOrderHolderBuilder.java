@@ -65,8 +65,8 @@ public class OpenCompositeOrderHolderBuilder {
       .forEach((lineLocationId, lineLocations) -> {
         var tenantId = mapLocationIdsToTenantIds(compPOL).get(lineLocationId);
         var filteredExistingPieces = filterByLocationId(existingPieces, lineLocationId);
-        var filteredExistingPiecesWithItem = filterByLocationId(expectedPiecesWithItem, lineLocationId);
-        piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExistingPiecesWithItem, filteredExistingPieces));
+        var filteredExpectedPiecesWithItem = filterByLocationId(expectedPiecesWithItem, lineLocationId);
+        piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
         piecesToCreate.addAll(processPiecesWithoutItemAndLocationId(compPOL, filteredExistingPieces, lineLocationId, tenantId, lineLocations));
       });
     return piecesToCreate;
@@ -127,8 +127,8 @@ public class OpenCompositeOrderHolderBuilder {
       .forEach((existingPieceHoldingId, existingPieceLocations) -> {
         var tenantId = mapHoldingIdsToTenantIds(compPOL).get(existingPieceHoldingId);
         var filteredExistingPieces = filterByHoldingId(existingPieces, existingPieceHoldingId);
-        var filteredExistingPiecesWithItem = filterByHoldingId(expectedPiecesWithItem, existingPieceHoldingId);
-        piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExistingPiecesWithItem, filteredExistingPieces));
+        var filteredExpectedPiecesWithItem = filterByHoldingId(expectedPiecesWithItem, existingPieceHoldingId);
+        piecesToCreate.addAll(collectMissingPiecesWithItem(filteredExpectedPiecesWithItem, filteredExistingPieces));
         piecesToCreate.addAll(processPiecesWithoutItemAndHoldingId(compPOL, filteredExistingPieces, existingPieceHoldingId, tenantId, existingPieceLocations));
       });
     return piecesToCreate;
@@ -175,7 +175,7 @@ public class OpenCompositeOrderHolderBuilder {
       () -> new Piece().withHoldingId(existingPieceHoldingId));
   }
 
-  private List<Piece> processPiecesWithoutItemAndLocationIdOrHoldingId(CompositePoLine compPOL, List<Piece> existedPieces,List<Location> existingPieceLocations,
+  private List<Piece> processPiecesWithoutItemAndLocationIdOrHoldingId(CompositePoLine compPOL, List<Piece> existedPieces, List<Location> existingPieceLocations,
                                                                        String receivingTenantId, Supplier<Piece> pieceSupplier) {
     Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
     Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
