@@ -72,12 +72,12 @@ public class OpenCompositeOrderPieceService {
    */
   public Future<List<Piece>> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
                                           boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("handlePieces:: Get pieces by poLine ID");
+    logger.debug("handlePieces:: Get pieces by poLine ID - {}", compPOL.getId());
     return openCompositeOrderHolderBuilder.buildHolder(compPOL, titleId, expectedPiecesWithItem, requestContext)
       .compose(holder -> {
         var piecesChangedLocation = holder.getPiecesWithChangedLocation();
         if (CollectionUtils.isEmpty(piecesChangedLocation) || piecesChangedLocation.size() != holder.getPiecesWithLocationToProcess().size()) {
-          return purchaseOrderStorageService.getCompositeOrderByPoLineId(compPOL.getId(), requestContext)
+          return purchaseOrderStorageService.getCompositeOrderById(compPOL.getPurchaseOrderId(), requestContext)
             .compose(order -> createPieces(holder, order, isInstanceMatchingDisabled, requestContext));
         }
         return updatePieces(holder, requestContext);
@@ -94,7 +94,7 @@ public class OpenCompositeOrderPieceService {
 
   private Future<List<Piece>> createPieces(OpenOrderPieceHolder holder, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
     logger.debug("createPieces:: Trying to create pieces");
-    var piecesToCreate = new ArrayList<>(holder.getPiecesWithLocationToProcess());
+    List<Piece> piecesToCreate = new ArrayList<>(holder.getPiecesWithLocationToProcess());
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
 
@@ -104,13 +104,13 @@ public class OpenCompositeOrderPieceService {
       .toList();
     return collectResultsOnSuccess(piecesToCreateFutures)
        .recover(th -> {
-         logger.error("createPieces:: Piece creation failed: {}", th.getMessage());
+         logger.error("createPieces:: Piece creation failed", th);
          throw new CompletionException("Piece creation error", th);
       });
   }
 
   public Future<Piece> createPiece(Piece piece, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("createPiece:: Creating piece");
+    logger.debug("createPiece:: Creating piece - {}", piece.getId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
       .compose(v -> openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
@@ -118,7 +118,7 @@ public class OpenCompositeOrderPieceService {
   }
 
   public Future<Piece> updatePiece(Piece piece, RequestContext requestContext) {
-    logger.debug("updatePiece:: Updating piece");
+    logger.debug("updatePiece:: Updating piece - {}", piece.getId());
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
       .compose(v -> inventoryItemManager.updateItemWithPieceFields(piece, requestContext))
@@ -132,8 +132,7 @@ public class OpenCompositeOrderPieceService {
         }
         return pieceStorageService.updatePiece(piece, requestContext)
           .compose(v -> {
-            logger.debug("updatePiece:: receivingStatusStorage - {}", receivingStatusStorage);
-            logger.debug("updatePiece:: receivingStatusUpdate - {}", receivingStatusUpdate);
+            logger.debug("updatePiece:: receivingStatusStorage - {}, receivingStatusUpdate - {}", receivingStatusStorage, receivingStatusUpdate);
             if (isReceivingStatusChanged) {
               var messageToEventBus = JsonObject.of("poLineIdUpdate", piece.getPoLineId());
               receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, messageToEventBus, requestContext);

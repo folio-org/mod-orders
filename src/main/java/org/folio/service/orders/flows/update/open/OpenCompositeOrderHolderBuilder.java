@@ -77,7 +77,7 @@ public class OpenCompositeOrderHolderBuilder {
     Map<String, Map<Piece.Format, Integer>> needProcessPiecesMap = numOfPiecesByFormatAndLocationId(needProcessPieces, compPOL.getId());
     Map<String, String> locationToTenantId = mapLocationIdsToTenantIds(compPOL);
 
-    var piecesForLocationUpdate = new ArrayList<Piece>();
+    List<Piece> piecesForLocationUpdate = new ArrayList<>();
     existingPieceMap.forEach((existingPieceLocationId, existingPieceQtyMap) -> {
       for (var existPieceFormatQty : existingPieceQtyMap.entrySet()) {
         if (needProcessPiecesMap.get(existingPieceLocationId) != null) {
@@ -181,7 +181,7 @@ public class OpenCompositeOrderHolderBuilder {
     Map<Piece.Format, Integer> expectedQuantitiesWithoutItem = calculatePiecesWithoutItemIdQuantity(compPOL, existingPieceLocations);
     Map<Piece.Format, Integer> existedQuantityWithoutItem = calculateQuantityOfExistingPiecesWithoutItem(existedPieces);
 
-    var piecesToCreate = new ArrayList<Piece>();
+    List<Piece> piecesToCreate = new ArrayList<Piece>();
     expectedQuantitiesWithoutItem.forEach((format, expectedQty) -> {
       int remainingPiecesQuantity = expectedQty - existedQuantityWithoutItem.getOrDefault(format, 0);
       for (int i = 0; i < remainingPiecesQuantity; i++) {
