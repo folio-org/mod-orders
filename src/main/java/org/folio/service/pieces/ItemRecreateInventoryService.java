@@ -36,8 +36,6 @@ public class ItemRecreateInventoryService {
     // Example Case: Member Tenant 1 (University) -> Member Tenant 2 (College)
     // Create Item in Member Tenant 2 with the same Item Id
     // Delete Item in Member Tenant 1 by Item Id
-    logger.debug("Handling {} items for PO Line and holdings with id={}", ITEM_QUANTITY, piece.getHoldingId());
-
     Future<List<String>> itemFuture;
     if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPol)) {
       itemFuture = inventoryItemManager.createMissingElectronicItems(compPO, compPol, piece, ITEM_QUANTITY, dstLocCtx);
