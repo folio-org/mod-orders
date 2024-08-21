@@ -53,7 +53,9 @@ public class PiecesHolder {
       return checkInPiece;
     }
 
-    public boolean isRecreateItem() { return this.recreateItem; }
+    public boolean isRecreateItem() {
+      return this.recreateItem;
+    }
   }
 
   public Map<String, List<Piece>> getPiecesFromStorage() {
