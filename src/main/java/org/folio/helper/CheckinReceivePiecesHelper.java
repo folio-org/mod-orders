@@ -88,9 +88,7 @@ import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.LATE;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.RECEIVED;
 import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.UNRECEIVABLE;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.CANCELLED;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.ONGOING;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
@@ -282,15 +280,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     // Once all PO Lines are retrieved from storage check if receipt status
     // requires update and persist in storage
     return getPoLines(poLineIdsForUpdatedPieces, requestContext).compose(poLines -> {
-      // Calculate expected status for each PO Line and update with new one if required
-      // Skip status update if PO line status is Ongoing or Cancelled
+      // Calculate expected status and po line details for each PO Line and update with new one if required
       List<Future<PoLine>> poLinesToUpdate = new ArrayList<>();
       for (PoLine poLine : poLines) {
-        if (poLine.getReceiptStatus() == CANCELLED || poLine.getReceiptStatus() == ONGOING) {
-          logger.info("updateOrderAndPoLinesStatus:: No pieces processed - POL with {} has status CANCELLED or ONGOING", poLine.getId());
-          continue;
-        }
-
         List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
         if (CollectionUtils.isEmpty(successfullyProcessedPieces)) {
           logger.info("updateOrderAndPoLinesStatus:: No pieces processed - nothing to update for POL with {}", poLine.getId());
@@ -322,7 +314,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .map(updatedPoLines -> purchaseOrderLineService.saveOrderLines(updatedPoLines, requestContext).map(voidResult -> {
         logger.info("saveOrderLinesBatch:: {} out of {} POL updated with new status in batch", poLines.size(), piecesGroupedByPoLine.size());
 
-        updateOrderStatus.accept(poLines);
+        List<PoLine> notCancelledOrOngoingPoLines = updatedPoLines.stream()
+          .filter(poLine -> !PoLineCommonUtil.isCancelledOrOngoingStatus(poLine))
+          .toList();
+        updateOrderStatus.accept(notCancelledOrOngoingPoLines);
         return null;
       }));
   }
@@ -353,8 +348,12 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
                                             List<Piece> piecesFromStorage,
                                             List<Piece> byPoLine,
                                             List<Piece> successfullyProcessed) {
-    ReceiptStatus receiptStatus = calculatePoLineReceiptStatus(byPoLine, successfullyProcessed, poLine);
-    purchaseOrderLineService.updatePoLineReceiptStatusWithoutSave(poLine, receiptStatus);
+    if (PoLineCommonUtil.isCancelledOrOngoingStatus(poLine)) {
+      logger.info("updateRelatedPoLineDetails:: Skipping updating POL '{}' status for CANCELLED or ONGOING po lines", poLine.getId());
+    } else {
+      ReceiptStatus receiptStatus = calculatePoLineReceiptStatus(byPoLine, successfullyProcessed, poLine);
+      purchaseOrderLineService.updatePoLineReceiptStatusWithoutSave(poLine, receiptStatus);
+    }
 
     // the same check as in PieceUpdateFlowManager::updatePoLine
     if (Boolean.TRUE.equals(poLine.getIsPackage()) || Boolean.TRUE.equals(poLine.getCheckinItems())) {

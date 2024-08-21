@@ -10,6 +10,7 @@ import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.ONGOING;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -318,4 +319,7 @@ public final class PoLineCommonUtil {
     }
   }
 
+  public static boolean isCancelledOrOngoingStatus(PoLine poLine) {
+    return poLine.getReceiptStatus() == PoLine.ReceiptStatus.CANCELLED || poLine.getReceiptStatus() == ONGOING;
+  }
 }
