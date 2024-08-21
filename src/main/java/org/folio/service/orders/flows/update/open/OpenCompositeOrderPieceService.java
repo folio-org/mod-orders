@@ -86,17 +86,18 @@ public class OpenCompositeOrderPieceService {
   }
 
   private Future<List<Piece>> updatePieces(OpenOrderPieceHolder holder, RequestContext requestContext) {
+    logger.debug("updatePieces:: Trying to update pieces");
     return collectResultsOnSuccess(holder.getPiecesWithChangedLocation().stream()
       .map(piece -> updatePiece(piece, requestContext))
       .toList());
   }
 
   private Future<List<Piece>> createPieces(OpenOrderPieceHolder holder, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("createPieces:: Trying to create pieces");
     var piecesToCreate = new ArrayList<>(holder.getPiecesWithLocationToProcess());
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
 
-    logger.debug("createPieces:: Trying to create pieces");
     var piecesToCreateFutures = piecesToCreate.stream()
       .map(piece -> piece.withTitleId(holder.getTitleId()))
       .map(piece -> createPiece(piece, order, isInstanceMatchingDisabled, requestContext))
@@ -117,6 +118,7 @@ public class OpenCompositeOrderPieceService {
   }
 
   public Future<Piece> updatePiece(Piece piece, RequestContext requestContext) {
+    logger.debug("updatePiece:: Updating piece");
     return titlesService.getTitleById(piece.getTitleId(), requestContext)
       .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
       .compose(v -> inventoryItemManager.updateItemWithPieceFields(piece, requestContext))

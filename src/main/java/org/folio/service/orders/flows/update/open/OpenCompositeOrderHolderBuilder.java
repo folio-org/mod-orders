@@ -144,6 +144,7 @@ public class OpenCompositeOrderHolderBuilder {
   private List<Piece> collectMissingPiecesWithItem(List<Piece> piecesWithItem, List<Piece> existingPieces) {
     return piecesWithItem.stream()
       .filter(pieceWithItem -> existingPieces.stream()
+        .filter(existingPiece -> Objects.nonNull(existingPiece.getItemId()))
         .noneMatch(existingPiece -> pieceWithItem.getItemId().equals(existingPiece.getItemId())))
       .collect(Collectors.toList());
   }
@@ -157,7 +158,7 @@ public class OpenCompositeOrderHolderBuilder {
   }
 
   private List<Piece> filterByField(List<Piece> pieces, String value, Function<Piece, String> fieldExtractor) {
-    return pieces.stream()
+    return StreamEx.of(pieces)
       .filter(piece -> value.equals(fieldExtractor.apply(piece)))
       .collect(Collectors.toList());
   }

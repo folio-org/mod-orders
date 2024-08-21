@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -577,6 +578,51 @@ public class OpenCompositeOrderPieceServiceTest {
         assertEquals(locationId, piece.getLocationId());
         assertNull(piece.getItemId());
       }
+    });
+  }
+
+  @Test
+  void shouldUpdatePieceWithLocationOfDifferentTenantAndUpdateReceivingTenantId() {
+    //given
+    var tenantId1 = "tenantId1";
+    var tenantId2 = "tenantId2";
+    var lineId = UUID.randomUUID().toString();
+    var titleId = UUID.randomUUID().toString();
+    var location1 = new Location().withLocationId(UUID.randomUUID().toString()).withTenantId(tenantId1).withQuantityPhysical(1).withQuantity(1);
+    var location2 = new Location().withLocationId(UUID.randomUUID().toString()).withTenantId(tenantId2).withQuantityPhysical(1).withQuantity(1);
+    var cost = new Cost().withQuantityPhysical(1).withQuantityElectronic(null);
+    var physical = new Physical().withCreateInventory(Physical.CreateInventory.INSTANCE);
+    var line = new CompositePoLine().withId(lineId).withCost(cost).withLocations(List.of(location2))
+      .withIsPackage(false).withPhysical(physical).withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE);
+    var compOrder = new CompositePurchaseOrder().withCompositePoLines(List.of(line));
+    var title = new Title().withId(titleId);
+    var pieceId = UUID.randomUUID().toString();
+    var pieceBefore = new Piece().withId(pieceId).withLocationId(location1.getLocationId()).withReceivingTenantId(tenantId1)
+      .withPoLineId(lineId).withTitleId(titleId).withFormat(Piece.Format.PHYSICAL);
+
+    doReturn(succeededFuture(null)).when(openCompositeOrderPieceService).openOrderUpdateInventory(any(CompositePurchaseOrder.class),
+      any(CompositePoLine.class), any(Piece.class), any(Boolean.class), eq(requestContext));
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
+    doReturn(succeededFuture(compOrder)).when(purchaseOrderStorageService).getCompositeOrderByPoLineId(eq(lineId), eq(requestContext));
+    doReturn(succeededFuture(null)).when(inventoryItemManager).updateItemWithPieceFields(any(Piece.class), eq(requestContext));
+    doReturn(succeededFuture(title)).when(titlesService).getTitleById(titleId, requestContext);
+    doReturn(succeededFuture(List.of(pieceBefore))).when(pieceStorageService).getPiecesByPoLineId(line, requestContext);
+    doReturn(succeededFuture(pieceBefore)).when(pieceStorageService).getPieceById(eq(pieceId), eq(requestContext));
+    doReturn(succeededFuture()).when(pieceStorageService).updatePiece(eq(pieceBefore), eq(requestContext));
+
+    // When
+    var updatedPieces = openCompositeOrderPieceService.handlePieces(line, titleId, List.of(), false, requestContext).result();
+    // Then
+    var piecesLoc2 = updatedPieces.stream().filter(updatedPiece -> updatedPiece.getLocationId().equals(location2.getLocationId())).toList();
+    assertEquals(1, piecesLoc2.size());
+    piecesLoc2.forEach(updatedPiece -> {
+      assertNull(updatedPiece.getHoldingId());
+      assertNull(updatedPiece.getItemId());
+      assertEquals(pieceId, updatedPiece.getId());
+      assertEquals(lineId, updatedPiece.getPoLineId());
+      assertEquals(titleId, updatedPiece.getTitleId());
+      assertEquals(tenantId2, updatedPiece.getReceivingTenantId());
+      assertEquals(Piece.Format.PHYSICAL, updatedPiece.getFormat());
     });
   }
 
