@@ -13,15 +13,16 @@ import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.ONGOING;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.core.exceptions.HttpException;
@@ -182,32 +183,58 @@ public final class PoLineCommonUtil {
    * @return map of grouped locations where key is location id and value is list of locations with the same id
    */
   public static Map<String, List<Location>> groupLocationsByLocationId(CompositePoLine compPOL) {
-    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
-      return Collections.emptyMap();
-    }
-
-    return compPOL.getLocations()
-                  .stream()
-                  .filter(location -> Objects.nonNull(location.getLocationId()))
-                  .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location))
-                  .collect(Collectors.groupingBy(Location::getLocationId));
+    return extractLocationsForPoLineByLocationId(compPOL)
+      .collect(Collectors.groupingBy(Location::getLocationId));
   }
 
   /**
-   * Group all PO Line's locations for which the holding should be created by location identifier
+   * Map all PO Line's location to tenantIds for which the holding should be created by location identifier
+   * @param compPOL PO line with locations
+   * @return map of locations and tenantIds where key is location id and value is the tenantId of the specified location
+   */
+  public static Map<String, String> mapLocationIdsToTenantIds(CompositePoLine compPOL) {
+    return extractLocationsForPoLineByLocationId(compPOL)
+      .filter(location -> Objects.nonNull(location.getTenantId()))
+      .collect(Collectors.toMap(Location::getLocationId, Location::getTenantId));
+  }
+
+  /**
+   * Group all PO Line's locations for which the holding should be created by holding identifier
    * @param compPOL PO line with locations to group
    * @return map of grouped locations where key is holding id and value is list of locations with the same id
    */
   public static Map<String, List<Location>> groupLocationsByHoldingId(CompositePoLine compPOL) {
-    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
-      return Collections.emptyMap();
-    }
-
-    return compPOL.getLocations()
-      .stream()
-      .filter(location -> Objects.nonNull(location.getHoldingId()))
-      .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location))
+    return extractLocationsForPoLineByHoldingId(compPOL)
       .collect(Collectors.groupingBy(Location::getHoldingId));
+  }
+
+  /**
+   * Map all PO Line's location to tenantIds for which the holding should be created by holding identifier
+   * @param compPOL PO line with locations
+   * @return map of locations and tenantIds where key is holding id and value is the tenantId of the specified location
+   */
+  public static Map<String, String> mapHoldingIdsToTenantIds(CompositePoLine compPOL) {
+    return extractLocationsForPoLineByHoldingId(compPOL)
+      .filter(location -> Objects.nonNull(location.getTenantId()))
+      .collect(Collectors.toMap(Location::getHoldingId, Location::getTenantId));
+  }
+
+  private static StreamEx<Location> extractLocationsForPoLineByLocationId(CompositePoLine compPOL) {
+    return extractLocationsForPoLine(compPOL, Location::getLocationId)
+      .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location));
+  }
+
+  private static StreamEx<Location> extractLocationsForPoLineByHoldingId(CompositePoLine compPOL) {
+    return extractLocationsForPoLine(compPOL, Location::getHoldingId)
+      .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location));
+  }
+
+  private static StreamEx<Location> extractLocationsForPoLine(CompositePoLine compPOL, Function<Location, String> fieldExtractor) {
+    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
+      return StreamEx.empty();
+    }
+    return StreamEx.of(compPOL.getLocations())
+      .filter(location -> Objects.nonNull(fieldExtractor.apply(location)));
   }
 
   public static List<String> getTenantsFromLocations(CompositePoLine poLine) {
