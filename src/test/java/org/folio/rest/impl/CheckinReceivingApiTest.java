@@ -61,6 +61,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static java.lang.Thread.sleep;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
 import static org.folio.RestTestUtils.verifyDeleteResponse;
@@ -711,7 +712,8 @@ public class CheckinReceivingApiTest {
 
   @ParameterizedTest
   @MethodSource("testPostCheckInPhysicalFullyReceivedEcsArgs")
-  void testPostCheckInPhysicalFullyReceivedEcs(String orderId, String checkInCollectionPath, int processedCount, int poLineCount, int orderCount, int locationCount) throws IOException {
+  void testPostCheckInPhysicalFullyReceivedEcs(String orderId, String checkInCollectionPath, int processedCount, int poLineCount, int orderCount, int locationCount)
+    throws IOException, InterruptedException {
     logger.info("=== Test POST check-in - Check-in Fully Received physical resource with changed affiliation in a ECS environment ===");
 
     PurchaseOrder purchaseOrder = new JsonObject(getMockData(String.format(ECS_CONSORTIUM_PURCHASE_ORDER_JSON, orderId))).mapTo(PurchaseOrder.class);
@@ -732,7 +734,7 @@ public class CheckinReceivingApiTest {
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_ECS), APPLICATION_JSON, 200).as(ReceivingResults.class);
 
     // Added to make the test wait for POL batch update
-    MockServer.waitForUpdates(500);
+    sleep(1000);
 
     assertThat(results.getTotalRecords(), equalTo(checkinCollection.getTotalRecords()));
 

@@ -3020,12 +3020,4 @@ public class MockServer {
       serverResponse(ctx, 404, APPLICATION_JSON, null);
     }
   }
-
-  public static void waitForUpdates(long time) {
-    try {
-      Thread.sleep(time);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
 }
