@@ -1,24 +1,26 @@
 {
   "toBeCheckedIn": [
     {
-      "poLineId": "94b00678-9df4-494a-9891-ebc7ccb76a49",
+      "poLineId": "aae3a75a-4e12-4e60-8c14-605b31d7593b",
       "checkedIn": 2,
       "checkInPieces": [
         {
-          "id": "1cdbe858-1489-406d-90bf-c5cb00cf62cb",
-          "displaySummary": "Test 2-1",
+          "id": "a977c7e7-61c3-40ec-9e17-a23263646688",
+          "displaySummary": "2",
           "displayOnHolding": false,
+          "supplement": false,
           "receivingTenantId": "college",
           "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
           "holdingId": null,
           "itemStatus": "In process"
         },
         {
-          "id": "1cdbe858-1489-406d-90bf-c5cb00cf62cc",
-          "displaySummary": "Test 2-2",
+          "id": "8853e1d5-b7db-4b01-a1cd-a0661e78fc50",
+          "displaySummary": "1",
           "displayOnHolding": false,
+          "supplement": false,
           "receivingTenantId": "college",
-          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "locationId": "f34d27c6-a8eb-461b-acd6-5dea81771e70",
           "holdingId": null,
           "itemStatus": "In process"
         }

@@ -2,7 +2,6 @@ package org.folio.helper;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.EntryStream;
 import one.util.streamex.StreamEx;
@@ -362,6 +361,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       return poLine;
     }
 
+
+    short updatedLocations = 0;
+    var compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
     for (Piece pieceToUpdate : successfullyProcessed) {
       Optional<Piece> relatedStoragePiece = piecesFromStorage.stream()
         .filter(piece -> piece.getId().equals(pieceToUpdate.getId()))
@@ -369,17 +371,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       if (relatedStoragePiece.isEmpty()) {
         continue;
       }
-      CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
       PieceUpdateHolder holder = new PieceUpdateHolder();
       holder.withPieceFromStorage(relatedStoragePiece.get());
       holder.withPieceToUpdate(pieceToUpdate);
       holder.withPoLineOnly(compositePoLine);
       pieceUpdateFlowPoLineService.updatePoLineWithoutSave(holder);
-
-      return HelperUtils.convertToPoLine(compositePoLine);
+      updatedLocations++;
     }
 
-    return poLine;
+    return updatedLocations > 0 ? HelperUtils.convertToPoLine(compositePoLine) : poLine;
   }
 
   /**
@@ -623,7 +623,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       return Future.succeededFuture(true);
     }
 
+    // Get the initial tenant on the piece from storage
     String srcTenantId = piece.getReceivingTenantId();
+    // Get the new tenant from the CheckInPiece object coming from the UI
     String dstTenantId = getReceivingTenantId(piece);
     Location location = new Location().withLocationId(getLocationId(piece)).withHoldingId(getHoldingId(piece));
     RequestContext locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, dstTenantId);
@@ -631,6 +633,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       srcTenantId, dstTenantId, location.getLocationId(), location.getHoldingId());
     return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, locationContext)
       .compose(instance -> {
+        // Does not create a holding for every piece so will be
+        // called conditionally only for cases without an affiliation change
         if (Objects.isNull(srcTenantId) || (srcTenantId.equals(dstTenantId))) {
           return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, locationContext);
         }
@@ -789,8 +793,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     String locationId = getLocationId(piece);
     String holdingId = getHoldingId(piece);
     String receivingTenantId = getReceivingTenantId(piece);
-    // In case of affiliation change current holding is irrelevant because we will create a new holding  in the
-    // destination tenant, so we need to block the creation of instances per affiliation-changed piece here
+    // In case of affiliation change current holding is irrelevant because we will create a new holding in the
+    // another tenant, so we need to block the creation of instances per affiliation-changed piece here
     if (Objects.nonNull(receivingTenantId)) {
       return receivingTenantId + instanceId;
     } else {

@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.models.ItemStatus;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -22,7 +20,6 @@ import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 public class ItemRecreateInventoryService {
 
   protected static final int ITEM_QUANTITY = 1;
-  private static final Logger logger = LogManager.getLogger(ItemRecreateInventoryService.class);
 
   private final InventoryItemManager inventoryItemManager;
 

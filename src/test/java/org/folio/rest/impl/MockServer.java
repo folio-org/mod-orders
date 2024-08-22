@@ -326,7 +326,8 @@ public class MockServer {
   public static final String ORDER_ID_DUPLICATION_ERROR_USER_ID = "b711da5e-c84f-4cb3-9978-1d00500e7707";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL = "8137de83-76c0-4d3e-bf73-416de5e780fa";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC = "01c8d44a-dc73-4bca-a4d1-ef28bdfb9275";
-  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
+  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_SINGLE_ITEM = "b25f8ef6-04c4-4290-8531-9bbcefeb8c11";
+  public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS = "0c9a0e56-3518-4f0c-bfbb-98cc47b07f6c";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -1269,9 +1270,9 @@ public class MockServer {
   private static void appendEcsItems(JsonArray jsonArray) throws IOException {
     jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL))));
     jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_SINGLE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_1_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_2_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_CHECK_IN_PIECES))));
+    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_SINGLE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_SINGLE_ITEM))));
+    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_1_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS))));
+    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_2_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS))));
   }
 
   private void handleGetInventoryItemRecordById(RoutingContext ctx) {
@@ -3017,6 +3018,14 @@ public class MockServer {
       serverResponse(ctx, 200, APPLICATION_JSON, Json.encodePrettily(organizationsClassSchema));
     } else {
       serverResponse(ctx, 404, APPLICATION_JSON, null);
+    }
+  }
+
+  public static void waitForUpdates(long time) {
+    try {
+      Thread.sleep(time);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
   }
 }

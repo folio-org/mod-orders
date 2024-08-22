@@ -98,8 +98,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
                 .map(PoLineCommonUtil::convertToCompositePoLine)
                 .compose(compPol -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(compPol.getPurchaseOrderId(), requestContext)
                   .map(HelperUtils::convertToCompositePurchaseOrder)
-                  .compose(purchaseOrder -> pieceCreateFlowInventoryManager.processInventory(purchaseOrder, compPol, piece,
-                    checkInPiece.getCreateItem(), requestContext))
+                  .compose(purchaseOrder -> pieceCreateFlowInventoryManager.processInventory(purchaseOrder, compPol, piece, checkInPiece.getCreateItem(), requestContext))
                 .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece))));
             } else if (checkInPiece.getId().equals(piece.getId()) && InventoryUtils.allowItemRecreate(srcTenantId, dstTenantId) && Objects.nonNull(piece.getItemId())) {
               pieceFutures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)

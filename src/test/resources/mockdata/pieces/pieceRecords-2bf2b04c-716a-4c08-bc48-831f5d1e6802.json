@@ -1,0 +1,22 @@
+{
+  "pieces": [
+    {
+      "id": "eee55830-33bc-458d-81e6-a27211438adc",
+      "format": "Physical",
+      "itemId": "74ad86a6-d5cb-4dbb-bb41-d8d0c389e89f",
+      "isBound": false,
+      "titleId": "59cb23e5-aeb3-4a10-9485-5d666d731870",
+      "poLineId": "2bf2b04c-716a-4c08-bc48-831f5d1e6802",
+      "holdingId": "79b51935-de14-4715-b6de-3c3a8d749208",
+      "supplement": false,
+      "displaySummary": "1",
+      "displayToPublic": false,
+      "receivingStatus": "Received",
+      "displayOnHolding": false,
+      "discoverySuppress": false,
+      "receivingTenantId": "university",
+      "statusUpdatedDate": "2024-08-22T08:12:12.196+00:00"
+    }
+  ],
+  "totalRecords": 1
+}

@@ -85,11 +85,11 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   @Validate
   public void getOrdersOrderLinesById(String lineId, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Started Invocation of POLine Request with id = {}", lineId);
+    logger.debug("Started Invocation of POLine Request with id = {}", lineId);
     helper.getCompositePoLine(lineId, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(poLine -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Received PO Line Response: {}", JsonObject.mapFrom(poLine)
+          logger.debug("Received PO Line Response: {}", JsonObject.mapFrom(poLine)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(poLine)));
@@ -110,7 +110,7 @@ public class CompositePoLineAPI extends BaseApi implements OrdersOrderLines {
   @Validate
   public void putOrdersOrderLinesById(String lineId, CompositePoLine poLine, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Handling PUT Order Line operation...");
+    logger.debug("Handling PUT Order Line operation...");
     // Set id if this is available only in path
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     if (StringUtils.isEmpty(poLine.getId())) {
