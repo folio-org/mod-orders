@@ -76,7 +76,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     return pieceStorageService.getPieceById(pieceId, requestContext)
       .compose(piece -> {
         var bindItemId = piece.getBindItemId();
-        piece.withBindItemId(null).withIsBound(false);
+        piece.withBindItemId(null).withBindItemTenantId(null).withIsBound(false);
         return removeForbiddenEntities(piece, requestContext)
           .map(v -> Collections.<String, List<Piece>>singletonMap(null, List.of(piece)))
           .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
@@ -220,10 +220,11 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   private Future<BindPiecesHolder> createItemForPieces(BindPiecesHolder holder, RequestContext requestContext) {
     var bindPiecesCollection = holder.getBindPiecesCollection();
     var poLineId = holder.getPoLineId();
+    var bindItem = bindPiecesCollection.getBindItem();
     logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
-      .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getInstanceId(), bindPiecesCollection.getBindItem(), requestContext))
+      .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getInstanceId(), bindItem, requestContext))
       .map(newItemId -> {
         // Move requests if requestsAction is TRANSFER, otherwise do nothing
         if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
@@ -231,7 +232,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
           inventoryItemRequestService.transferItemRequests(itemIds, newItemId, requestContext);
         }
         // Set new item ids for pieces and holder
-        holder.getPieces().forEach(piece -> piece.setBindItemId(newItemId));
+        holder.getPieces().forEach(piece -> piece.withBindItemTenantId(bindItem.getTenantId()).setBindItemId(newItemId));
         return holder.withBindItemId(newItemId);
       });
   }
