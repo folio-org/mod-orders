@@ -75,8 +75,8 @@ public class OpenCompositeOrderPieceService {
     logger.debug("handlePieces:: Get pieces by poLine ID - {}", compPOL.getId());
     return openCompositeOrderHolderBuilder.buildHolder(compPOL, titleId, expectedPiecesWithItem, requestContext)
       .compose(holder -> {
-        var piecesChangedLocation = holder.getPiecesWithChangedLocation();
-        if (CollectionUtils.isEmpty(piecesChangedLocation) || piecesChangedLocation.size() != holder.getPiecesWithLocationToProcess().size()) {
+        var piecesWithChangedLocation = holder.getPiecesWithChangedLocation();
+        if (CollectionUtils.isEmpty(piecesWithChangedLocation) || piecesWithChangedLocation.size() != holder.getPiecesWithLocationToProcess().size()) {
           return purchaseOrderStorageService.getCompositeOrderById(compPOL.getPurchaseOrderId(), requestContext)
             .compose(order -> createPieces(holder, order, isInstanceMatchingDisabled, requestContext));
         }
@@ -104,7 +104,7 @@ public class OpenCompositeOrderPieceService {
       .toList();
     return collectResultsOnSuccess(piecesToCreateFutures)
        .recover(th -> {
-         logger.error("createPieces:: Piece creation failed", th);
+         logger.error("Piece creation failed", th);
          throw new CompletionException("Piece creation error", th);
       });
   }
@@ -139,9 +139,9 @@ public class OpenCompositeOrderPieceService {
             }
             return Future.succeededFuture();
           })
-          .onFailure(e -> logger.error("updatePiece:: Error updating piece by id to storage {}", piece.getId(), e));
+          .onFailure(e -> logger.error("Error updating piece by id to storage {}", piece.getId(), e));
       })
-      .onFailure(e -> logger.error("updatePiece:: Error getting piece by id from storage {}", piece.getId(), e))
+      .onFailure(e -> logger.error("Error getting piece by id from storage {}", piece.getId(), e))
       .map(v -> piece);
   }
 
