@@ -1,6 +1,5 @@
 package org.folio.service.orders.flows.update.open;
 
-import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
@@ -72,89 +71,78 @@ public class OpenCompositeOrderPieceService {
    * @return void future
    */
   public Future<List<Piece>> handlePieces(CompositePoLine compPOL, String titleId, List<Piece> expectedPiecesWithItem,
-                                                     boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("Get pieces by poLine ID");
+                                          boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("handlePieces:: Get pieces by poLine ID - {}", compPOL.getId());
     return openCompositeOrderHolderBuilder.buildHolder(compPOL, titleId, expectedPiecesWithItem, requestContext)
       .compose(holder -> {
-        if (CollectionUtils.isNotEmpty(holder.getPiecesWithLocationToProcess()) &&
-                       (holder.getPiecesWithChangedLocation().size() == holder.getPiecesWithLocationToProcess().size())) {
-          return updatePieces(holder, requestContext);
-        } else {
-          return createPieces(holder, isInstanceMatchingDisabled, requestContext);
+        var piecesWithChangedLocation = holder.getPiecesWithChangedLocation();
+        if (CollectionUtils.isEmpty(piecesWithChangedLocation) || piecesWithChangedLocation.size() != holder.getPiecesWithLocationToProcess().size()) {
+          return purchaseOrderStorageService.getCompositeOrderById(compPOL.getPurchaseOrderId(), requestContext)
+            .compose(order -> createPieces(holder, order, isInstanceMatchingDisabled, requestContext));
         }
+        return updatePieces(holder, requestContext);
       })
-      .map(pieces -> {
-        int createdItemsQuantity = expectedPiecesWithItem.size();
-        validateItemsCreation(compPOL, createdItemsQuantity);
-        return pieces;
-      });
+      .map(pieces -> validateItemsCreationForPieces(pieces, compPOL, expectedPiecesWithItem.size()));
   }
 
   private Future<List<Piece>> updatePieces(OpenOrderPieceHolder holder, RequestContext requestContext) {
-    List<Future<Piece>> updateFutures = holder.getPiecesWithChangedLocation().stream()
-      .map(piece -> updatePieceRecord(piece, requestContext).map(v -> piece))
-      .collect(toList());
-    return collectResultsOnSuccess(updateFutures);
+    logger.debug("updatePieces:: Trying to update pieces");
+    return collectResultsOnSuccess(holder.getPiecesWithChangedLocation().stream()
+      .map(piece -> updatePiece(piece, requestContext))
+      .toList());
   }
 
-  private Future<List<Piece>> createPieces(OpenOrderPieceHolder holder, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+  private Future<List<Piece>> createPieces(OpenOrderPieceHolder holder, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("createPieces:: Trying to create pieces");
     List<Piece> piecesToCreate = new ArrayList<>(holder.getPiecesWithLocationToProcess());
     piecesToCreate.addAll(holder.getPiecesWithHoldingToProcess());
     piecesToCreate.addAll(holder.getPiecesWithoutLocationId());
-    piecesToCreate.forEach(piece -> piece.setTitleId(holder.getTitleId()));
-    logger.debug("Trying to create pieces");
-    List<Future<Piece>> piecesToCreateFutures = new ArrayList<>();
-    piecesToCreate.forEach(piece ->
-      piecesToCreateFutures.add(createPiece(piece, isInstanceMatchingDisabled, requestContext))
-    );
+
+    var piecesToCreateFutures = piecesToCreate.stream()
+      .map(piece -> piece.withTitleId(holder.getTitleId()))
+      .map(piece -> createPiece(piece, order, isInstanceMatchingDisabled, requestContext))
+      .toList();
     return collectResultsOnSuccess(piecesToCreateFutures)
        .recover(th -> {
-        logger.error("Piece creation error");
-        throw new CompletionException("Piece creation error", th);
+         logger.error("Piece creation failed", th);
+         throw new CompletionException("Piece creation error", th);
       });
   }
 
-  public Future<Piece> createPiece(Piece piece, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
-    logger.debug("createPiece start");
-    return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .compose(order -> titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext)
-          .map(v -> order)))
-      .compose(order -> openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
+  public Future<Piece> createPiece(Piece piece, CompositePurchaseOrder order, boolean isInstanceMatchingDisabled, RequestContext requestContext) {
+    logger.debug("createPiece:: Creating piece - {}", piece.getId());
+    return titlesService.getTitleById(piece.getTitleId(), requestContext)
+      .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.CREATE, requestContext))
+      .compose(v -> openOrderUpdateInventory(order, order.getCompositePoLines().get(0), piece, isInstanceMatchingDisabled, requestContext))
       .compose(v -> pieceStorageService.insertPiece(piece, requestContext));
   }
 
-  public Future<Void> updatePieceRecord(Piece piece, RequestContext requestContext) {
-    return purchaseOrderStorageService.getCompositeOrderByPoLineId(piece.getPoLineId(), requestContext)
-      .compose(order -> titlesService.getTitleById(piece.getTitleId(), requestContext)
-        .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext)))
+  public Future<Piece> updatePiece(Piece piece, RequestContext requestContext) {
+    logger.debug("updatePiece:: Updating piece - {}", piece.getId());
+    return titlesService.getTitleById(piece.getTitleId(), requestContext)
+      .compose(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
       .compose(v -> inventoryItemManager.updateItemWithPieceFields(piece, requestContext))
       .compose(vVoid -> pieceStorageService.getPieceById(piece.getId(), requestContext))
       .compose(pieceStorage -> {
-        Piece.ReceivingStatus receivingStatusUpdate = piece.getReceivingStatus();
-        Piece.ReceivingStatus receivingStatusStorage = pieceStorage.getReceivingStatus();
-        boolean isReceivingStatusChanged = receivingStatusStorage.compareTo(receivingStatusUpdate) != 0;
-
+        var receivingStatusUpdate = piece.getReceivingStatus();
+        var receivingStatusStorage = pieceStorage.getReceivingStatus();
+        boolean isReceivingStatusChanged = !receivingStatusStorage.equals(receivingStatusUpdate);
         if (isReceivingStatusChanged) {
           piece.setStatusUpdatedDate(new Date());
         }
-
         return pieceStorageService.updatePiece(piece, requestContext)
-          .map(ok -> {
-            JsonObject messageToEventBus = new JsonObject();
-            messageToEventBus.put("poLineIdUpdate", piece.getPoLineId());
-            logger.debug("receivingStatusStorage -- {}", receivingStatusStorage);
-            logger.debug("receivingStatusUpdate -- {}", receivingStatusUpdate);
-
+          .compose(v -> {
+            logger.debug("updatePiece:: receivingStatusStorage - {}, receivingStatusUpdate - {}", receivingStatusStorage, receivingStatusUpdate);
             if (isReceivingStatusChanged) {
+              var messageToEventBus = JsonObject.of("poLineIdUpdate", piece.getPoLineId());
               receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, messageToEventBus, requestContext);
             }
-            return null;
+            return Future.succeededFuture();
           })
           .onFailure(e -> logger.error("Error updating piece by id to storage {}", piece.getId(), e));
       })
       .onFailure(e -> logger.error("Error getting piece by id from storage {}", piece.getId(), e))
-      .mapEmpty();
+      .map(v -> piece);
   }
 
   /**
@@ -192,12 +180,12 @@ public class OpenCompositeOrderPieceService {
       : Future.succeededFuture();
   }
 
-  private void validateItemsCreation(CompositePoLine compPOL, int itemsSize) {
+  private List<Piece> validateItemsCreationForPieces(List<Piece> pieces, CompositePoLine compPOL, int itemsSize) {
     int expectedItemsQuantity = calculateInventoryItemsQuantity(compPOL);
-    if (itemsSize != expectedItemsQuantity) {
-      String message = String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
-        compPOL.getId(), expectedItemsQuantity, itemsSize);
-      throw new InventoryException(message);
+    if (itemsSize == expectedItemsQuantity) {
+      return pieces;
     }
+    throw new InventoryException(String.format("Error creating items for PO Line with '%s' id. Expected %d but %d created",
+      compPOL.getId(), expectedItemsQuantity, itemsSize));
   }
 }

@@ -1245,6 +1245,7 @@ public class CheckinReceivingApiTest {
     var holdingId = "849241fa-4a14-4df5-b951-846dcd6cfc4d";
     var receivingStatus = Piece.ReceivingStatus.UNRECEIVABLE;
     var format = Piece.Format.ELECTRONIC;
+    var tenantId = "tenantId";
 
     var order = getMinimalContentCompositePurchaseOrder()
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
@@ -1273,7 +1274,8 @@ public class CheckinReceivingApiTest {
       .withPoLineId(poLine.getId())
       .withBindItem(getMinimalContentBindItem()
         .withLocationId(null)
-        .withHoldingId(holdingId))
+        .withHoldingId(holdingId)
+        .withTenantId(tenantId))
       .withBindPieceIds(pieceIds);
 
     var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
@@ -1293,6 +1295,7 @@ public class CheckinReceivingApiTest {
       .map(json -> json.mapTo(Piece.class))
       .filter(piece -> pieceIds.contains(piece.getId()))
       .filter(piece -> piece.getBindItemId().equals(newItemId))
+      .filter(piece -> piece.getBindItemTenantId().equals(tenantId))
       .toList();
     assertThat(pieceList.size(), is(2));
 
@@ -1330,6 +1333,8 @@ public class CheckinReceivingApiTest {
 
     var receivingStatus = Piece.ReceivingStatus.UNRECEIVABLE;
     var format = Piece.Format.ELECTRONIC;
+    var tenantId = "tenantId";
+
     var order = getMinimalContentCompositePurchaseOrder()
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     var poLine = getMinimalContentCompositePoLine(order.getId());
@@ -1348,7 +1353,8 @@ public class CheckinReceivingApiTest {
     var bindPiecesCollection = new BindPiecesCollection()
       .withPoLineId(poLine.getId())
       .withBindItem(getMinimalContentBindItem()
-        .withLocationId(locationId))
+        .withLocationId(locationId)
+        .withTenantId(tenantId))
       .withBindPieceIds(pieceIds);
 
     var response = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
@@ -1366,7 +1372,8 @@ public class CheckinReceivingApiTest {
     var pieceList = pieceUpdates.stream().filter(pol -> {
       Piece piece = pol.mapTo(Piece.class);
       String pieceId = piece.getId();
-      return Objects.equals(bindingPiece.getId(), pieceId);
+      return Objects.equals(bindingPiece.getId(), pieceId)
+        && Objects.equals(piece.getBindItemTenantId(), tenantId);
     }).toList();
     assertThat(pieceList.size(), is(1));
 
@@ -1528,6 +1535,7 @@ public class CheckinReceivingApiTest {
     logger.info("=== Test DELETE Remove binding");
 
     var holdingId = "849241fa-4a14-4df5-b951-846dcd6cfc4d";
+    var tenantId = "tenantId";
     var order = getMinimalContentCompositePurchaseOrder()
       .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     var poLine = getMinimalContentCompositePoLine(order.getId());
@@ -1555,7 +1563,8 @@ public class CheckinReceivingApiTest {
       .withPoLineId(poLine.getId())
       .withBindItem(getMinimalContentBindItem()
         .withLocationId(null)
-        .withHoldingId(holdingId))
+        .withHoldingId(holdingId)
+        .withTenantId(tenantId))
       .withBindPieceIds(bindPieceIds);
 
     var bindResponse = verifyPostResponse(ORDERS_BIND_ENDPOINT, JsonObject.mapFrom(bindPiecesCollection).encode(),
@@ -1567,7 +1576,6 @@ public class CheckinReceivingApiTest {
     assertThat(bindResponse.getBoundPieceIds(), is(bindPieceIds));
     assertThat(bindResponse.getItemId(), notNullValue());
 
-    var bindItemId = bindResponse.getItemId();
     var url = String.format(ORDERS_BIND_ID_ENDPOINT, bindPiece1.getId());
     verifyDeleteResponse(url, "", HttpStatus.HTTP_NO_CONTENT.toInt());
 
@@ -1585,10 +1593,12 @@ public class CheckinReceivingApiTest {
     var pieceBefore = pieceList.get(1);
     assertThat(pieceBefore.getIsBound(), is(true));
     assertThat(pieceBefore.getBindItemId(), notNullValue());
+    assertThat(pieceBefore.getBindItemTenantId(), notNullValue());
 
     var pieceAfter = pieceList.get(0);
     assertThat(pieceAfter.getIsBound(), is(false));
     assertThat(pieceAfter.getBindItemId(), nullValue());
+    assertThat(pieceAfter.getReceivingTenantId(), nullValue());
   }
 
   @Test
