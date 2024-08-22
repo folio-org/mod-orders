@@ -48,7 +48,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     acquisitionsUnitsService.createAcquisitionsUnit(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(unit -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new acquisitions unit: {} ", JsonObject.mapFrom(unit).encodePrettily());
+          logger.debug("Successfully created new acquisitions unit: {} ", JsonObject.mapFrom(unit).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildResponseWithLocation(
           okapiHeaders.get(OKAPI_URL), resourceByIdPath(ACQUISITIONS_UNITS, unit.getId()), unit)));
@@ -64,7 +64,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     acquisitionsUnitsService.getAcquisitionsUnits(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(units -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions units: {}", JsonObject.mapFrom(units).encodePrettily());
+          logger.debug("Successfully retrieved acquisitions units: {}", JsonObject.mapFrom(units).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(units)));
       })
@@ -82,7 +82,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     } else {
       acquisitionsUnitsService.updateAcquisitionsUnit(entity.withId(id), new RequestContext(vertxContext, okapiHeaders))
         .onSuccess(units -> {
-          logger.info("Successfully updated acquisitions unit with id={}", id);
+          logger.debug("Successfully updated acquisitions unit with id={}", id);
           asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
         })
         .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
@@ -97,7 +97,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     acquisitionsUnitsService.getAcquisitionsUnit(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(unit -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions unit: {}", JsonObject.mapFrom(unit).encodePrettily());
+          logger.debug("Successfully retrieved acquisitions unit: {}", JsonObject.mapFrom(unit).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(unit)));
       })
@@ -112,7 +112,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     acquisitionsUnitsService.deleteAcquisitionsUnit(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(ok -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully deleted acquisitions unit with id={}", id);
+          logger.debug("Successfully deleted acquisitions unit with id={}", id);
         }
         asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
       })
@@ -127,7 +127,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     acquisitionsUnitsService.createAcquisitionsUnitsMembership(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(membership -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
+          logger.debug("Successfully created new acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
         }
         asyncResultHandler.handle(
           succeededFuture(buildResponseWithLocation(okapiHeaders.get(OKAPI_URL), resourceByIdPath(ACQUISITIONS_MEMBERSHIPS, membership.getId()), membership)));
@@ -142,7 +142,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(memberships -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions units memberships: {}", JsonObject.mapFrom(memberships).encodePrettily());
+          logger.debug("Successfully retrieved acquisitions units memberships: {}", JsonObject.mapFrom(memberships).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(memberships)));
       })
@@ -158,7 +158,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     } else {
       acquisitionsUnitsService.updateAcquisitionsUnitsMembership(entity.withId(id), new RequestContext(vertxContext, okapiHeaders))
         .onSuccess(membership -> {
-          logger.info("Successfully updated acquisitions units membership with id={}", id);
+          logger.debug("Successfully updated acquisitions units membership with id={}", id);
           asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
         })
         .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
@@ -171,7 +171,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
     acquisitionsUnitsService.getAcquisitionsUnitsMembership(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(membership -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
+          logger.debug("Successfully retrieved acquisitions units membership: {}", JsonObject.mapFrom(membership).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildOkResponse(membership)));
       })
@@ -185,7 +185,7 @@ public class AcquisitionsUnitsApi extends BaseApi implements AcquisitionsUnits {
    acquisitionsUnitsService.deleteAcquisitionsUnitsMembership(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(ok -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully deleted acquisitions units membership with id={}", id);
+          logger.debug("Successfully deleted acquisitions units membership with id={}", id);
         }
         asyncResultHandler.handle(succeededFuture(buildNoContentResponse()));
       })

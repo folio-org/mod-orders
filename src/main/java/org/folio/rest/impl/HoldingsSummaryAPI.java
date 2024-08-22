@@ -42,7 +42,7 @@ public class HoldingsSummaryAPI extends BaseApi implements OrdersHoldingSummary 
     holdingsSummaryService.getHoldingsSummary(holdingId, requestContext)
       .onSuccess(holdingSummary -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved : {}", JsonObject.mapFrom(holdingSummary).encodePrettily());
+          logger.debug("Successfully retrieved : {}", JsonObject.mapFrom(holdingSummary).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(this.buildOkResponse(holdingSummary)));
       })

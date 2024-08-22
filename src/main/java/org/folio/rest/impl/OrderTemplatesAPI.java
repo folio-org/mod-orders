@@ -37,7 +37,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     orderTemplatesHelper.createOrderTemplate(entity)
       .onSuccess(template -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created new order template: {}", JsonObject.mapFrom(template)
+          logger.debug("Successfully created new order template: {}", JsonObject.mapFrom(template)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(
@@ -54,7 +54,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     helper.getOrderTemplates(query, offset, limit)
       .onSuccess(templates -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved order templates collection: {}", JsonObject.mapFrom(templates).encodePrettily());
+          logger.debug("Successfully retrieved order templates collection: {}", JsonObject.mapFrom(templates).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(templates)));
       })
@@ -78,7 +78,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     } else {
       helper.updateOrderTemplate(entity.withId(id))
         .onSuccess(template -> {
-          logger.info("Successfully updated order template with id={}", id);
+          logger.debug("Successfully updated order template with id={}", id);
           asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
         })
         .onFailure(t -> handlePostPutErrorResponse(asyncResultHandler, t, helper));
@@ -102,7 +102,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     helper.getOrderTemplateById(id)
       .onSuccess(template -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved order template: {}", JsonObject.mapFrom(template)
+          logger.debug("Successfully retrieved order template: {}", JsonObject.mapFrom(template)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(template)));
@@ -118,7 +118,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     helper.deleteOrderTemplate(id)
       .onSuccess(ok -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully deleted order template with id={}", id);
+          logger.debug("Successfully deleted order template with id={}", id);
         }
         asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));
       })

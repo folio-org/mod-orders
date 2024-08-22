@@ -35,7 +35,7 @@ public class PoNumberAPI extends BaseApi implements OrdersPoNumber {
   @Validate
   public void getOrdersPoNumber(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
-    logger.info("Receiving generated poNumber ...");
+    logger.debug("Receiving generated poNumber ...");
 
     poNumberHelper.getPoNumber(new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(buildOkResponse(result))))

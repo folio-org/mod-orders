@@ -63,7 +63,7 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
     pieceCreateFlowManager.createPiece(entity, createItem, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(piece -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully created piece: {}", JsonObject.mapFrom(piece)
+          logger.debug("Successfully created piece: {}", JsonObject.mapFrom(piece)
             .encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece)));

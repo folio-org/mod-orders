@@ -42,7 +42,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
   @Validate
   public void postOrdersReceive(ReceivingCollection entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Receiving {} items", entity.getTotalRecords());
+    logger.debug("Receiving {} items", entity.getTotalRecords());
     ReceivingHelper helper = new ReceivingHelper(entity, okapiHeaders, vertxContext);
     helper.receiveItems(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
@@ -53,7 +53,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
   @Validate
   public void postOrdersCheckIn(CheckinCollection entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Checkin {} items", entity.getTotalRecords());
+    logger.debug("Checkin {} items", entity.getTotalRecords());
     CheckinHelper helper = new CheckinHelper(entity, okapiHeaders, vertxContext);
     helper.checkinPieces(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
@@ -62,7 +62,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
 
   @Override
   public void postOrdersExpect(ExpectCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Expect {} pieces", entity.getTotalRecords());
+    logger.debug("Expect {} pieces", entity.getTotalRecords());
     ExpectHelper helper = new ExpectHelper(entity, okapiHeaders, vertxContext);
     helper.expectPieces(entity, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(result -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(result))))
@@ -71,7 +71,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
 
   @Override
   public void postOrdersBindPieces(BindPiecesCollection entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Bind {} pieces", entity.getBindPieceIds());
+    logger.debug("Bind {} pieces", entity.getBindPieceIds());
     validateRequiredFields(entity);
     BindHelper helper = new BindHelper(entity, okapiHeaders, vertxContext);
     helper.bindPieces(entity, new RequestContext(vertxContext, okapiHeaders))
@@ -81,7 +81,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
 
   @Override
   public void deleteOrdersBindPiecesById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.info("Removing binding for piece: {}", id);
+    logger.debug("Removing binding for piece: {}", id);
     BindHelper helper = new BindHelper(okapiHeaders, vertxContext);
     helper.removeBinding(id, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(s -> asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse())))
@@ -98,7 +98,7 @@ public class ReceivingAPI implements OrdersReceive, OrdersCheckIn, OrdersExpect,
     helper.getReceivingHistory(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(receivingHistory -> {
         if (logger.isInfoEnabled()) {
-          logger.info("Successfully retrieved receiving history: {} ", JsonObject.mapFrom(receivingHistory).encodePrettily());
+          logger.debug("Successfully retrieved receiving history: {} ", JsonObject.mapFrom(receivingHistory).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(receivingHistory)));
       })

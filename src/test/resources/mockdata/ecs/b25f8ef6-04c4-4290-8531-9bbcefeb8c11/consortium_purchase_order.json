@@ -1,0 +1,25 @@
+{
+  "id": "b25f8ef6-04c4-4290-8531-9bbcefeb8c11",
+  "tags": {
+    "tagList": [
+      "amazon"
+    ]
+  },
+  "notes": [
+    "Check credit card statement to make sure payment shows up"
+  ],
+  "billTo": "5f8a321e-6b38-4d90-92d4-bf08f91a2242",
+  "shipTo": "f7c36792-05f7-4c8c-969d-103ac6763187",
+  "vendor": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "approved": true,
+  "manualPo": false,
+  "poNumber": "10004",
+  "template": "4dee318b-f5b3-40dc-be93-cc89b8c45b6f",
+  "orderType": "One-Time",
+  "acqUnitIds": [],
+  "reEncumber": false,
+  "dateOrdered": "2024-08-22T08:12:06.323+00:00",
+  "approvalDate": "2024-08-22T08:12:06.322+00:00",
+  "approvedById": "122b3d2b-4788-4f1e-9117-56daa91cb75c",
+  "workflowStatus": "Open"
+}
