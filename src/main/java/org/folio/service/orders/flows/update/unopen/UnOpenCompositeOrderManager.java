@@ -13,6 +13,7 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,6 +53,10 @@ import io.vertx.core.json.JsonObject;
 
 public class UnOpenCompositeOrderManager {
   private static final Logger logger = LogManager.getLogger(UnOpenCompositeOrderManager.class);
+  private static final EnumSet<CompositePoLine.PaymentStatus> SUPPORTED_PAYMENT_STATUSES =
+    EnumSet.of(CompositePoLine.PaymentStatus.AWAITING_PAYMENT, CompositePoLine.PaymentStatus.ONGOING);
+  private static final EnumSet<CompositePoLine.ReceiptStatus> SUPPORTED_RECEIPT_STATUSES =
+    EnumSet.of(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT, CompositePoLine.ReceiptStatus.ONGOING);
 
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
@@ -107,10 +112,10 @@ public class UnOpenCompositeOrderManager {
   }
 
   private void makePoLinePending(CompositePoLine poLine) {
-    if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {
+    if (SUPPORTED_PAYMENT_STATUSES.contains(poLine.getPaymentStatus())) {
       poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
     }
-    if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.AWAITING_RECEIPT) {
+    if (SUPPORTED_RECEIPT_STATUSES.contains(poLine.getReceiptStatus())) {
       poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
     }
   }
