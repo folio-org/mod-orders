@@ -13,6 +13,7 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -107,10 +108,10 @@ public class UnOpenCompositeOrderManager {
   }
 
   private void makePoLinePending(CompositePoLine poLine) {
-    if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {
+    if (EnumSet.of(CompositePoLine.PaymentStatus.AWAITING_PAYMENT, CompositePoLine.PaymentStatus.ONGOING).contains(poLine.getPaymentStatus())) {
       poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
     }
-    if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.AWAITING_RECEIPT) {
+    if (EnumSet.of(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT, CompositePoLine.ReceiptStatus.ONGOING).contains(poLine.getReceiptStatus())) {
       poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
     }
   }

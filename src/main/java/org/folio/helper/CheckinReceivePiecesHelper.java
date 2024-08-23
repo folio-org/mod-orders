@@ -361,9 +361,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       return poLine;
     }
 
-
     short updatedLocations = 0;
-    var compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
+    CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
     for (Piece pieceToUpdate : successfullyProcessed) {
       Optional<Piece> relatedStoragePiece = piecesFromStorage.stream()
         .filter(piece -> piece.getId().equals(pieceToUpdate.getId()))

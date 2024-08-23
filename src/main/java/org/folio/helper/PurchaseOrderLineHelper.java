@@ -467,7 +467,6 @@ public class PurchaseOrderLineHelper {
           throw new HttpException(422, poFromStorage.getWorkflowStatus() == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
         }
         validatePOLineProtectedFieldsChangedInPO(poFromStorage, compPO, existingPoLines);
-        logger.debug("updatePoLines start");
         return handlePoLines(compPO, existingPoLines, requestContext);
       } else {
         return updatePoLinesNumber(compPO, existingPoLines, requestContext);
