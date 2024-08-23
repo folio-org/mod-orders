@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.folio.orders.utils.HelperUtils.chainCall;
 import static org.folio.orders.utils.HelperUtils.extractCreatedDate;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
@@ -63,17 +64,9 @@ public class InventoryItemRequestService {
         }
 
         // Move requests to new item sequentially and then cancel unnecessary ones
-        return transferRequests(requestsToTransfer, destinationItemId, requestContext)
+        return chainCall(requestsToTransfer, (request) -> transferRequest(request, destinationItemId, requestContext))
           .compose(v -> cancelRequests(requestsToCancel, requestContext));
       });
-  }
-
-  private Future<Void> transferRequests(List<JsonObject> requests, String destinationItemId, RequestContext requestContext) {
-    return requests.stream().reduce(
-      Future.succeededFuture(),
-      (transfers, request) -> transfers.compose(v -> transferRequest(request, destinationItemId, requestContext)),
-      (transfers1, transfers2) -> transfers1.compose(v -> transfers2)
-    );
   }
 
   private Future<Void> transferRequest(JsonObject request, String itemId, RequestContext requestContext) {
