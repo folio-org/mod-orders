@@ -53,6 +53,10 @@ import io.vertx.core.json.JsonObject;
 
 public class UnOpenCompositeOrderManager {
   private static final Logger logger = LogManager.getLogger(UnOpenCompositeOrderManager.class);
+  private static final EnumSet<CompositePoLine.PaymentStatus> SUPPORTED_PAYMENT_STATUSES =
+    EnumSet.of(CompositePoLine.PaymentStatus.AWAITING_PAYMENT, CompositePoLine.PaymentStatus.ONGOING);
+  private static final EnumSet<CompositePoLine.ReceiptStatus> SUPPORTED_RECEIPT_STATUSES =
+    EnumSet.of(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT, CompositePoLine.ReceiptStatus.ONGOING);
 
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;
@@ -108,10 +112,10 @@ public class UnOpenCompositeOrderManager {
   }
 
   private void makePoLinePending(CompositePoLine poLine) {
-    if (EnumSet.of(CompositePoLine.PaymentStatus.AWAITING_PAYMENT, CompositePoLine.PaymentStatus.ONGOING).contains(poLine.getPaymentStatus())) {
+    if (SUPPORTED_PAYMENT_STATUSES.contains(poLine.getPaymentStatus())) {
       poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
     }
-    if (EnumSet.of(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT, CompositePoLine.ReceiptStatus.ONGOING).contains(poLine.getReceiptStatus())) {
+    if (SUPPORTED_RECEIPT_STATUSES.contains(poLine.getReceiptStatus())) {
       poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
     }
   }
