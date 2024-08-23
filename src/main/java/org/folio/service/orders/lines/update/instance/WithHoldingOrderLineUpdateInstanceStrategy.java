@@ -38,6 +38,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.HelperUtils.chainCall;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.service.inventory.InventoryItemManager.ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
 
@@ -194,12 +196,8 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
                                         Function<Location, Future<Void>> processFunction) {
     return retrieveUniqueLocations(holder.getStoragePoLine(), requestContext)
       .compose(tenantIdToLocationsMap ->
-        GenericCompositeFuture.all(tenantIdToLocationsMap.values().stream()
-          .map(locations ->
-            GenericCompositeFuture.join(locations.stream()
-              .map(processFunction)
-              .toList())
-          )
+        collectResultsOnSuccess(tenantIdToLocationsMap.values().stream()
+          .map(locations -> chainCall(locations, processFunction))
           .collect(toList()))
       )
       .mapEmpty();
