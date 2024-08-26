@@ -751,11 +751,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
       if (holdingUpdateOnCheckinReceiveRequired(piece, poLine) && !isRevertToOnOrder(piece) && !processedHoldings.isEmpty()) {
         String holdingKey = buildProcessedHoldingKey(piece, title.getInstanceId());
-        String holdingId = processedHoldings.get(holdingKey);
-        item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
-        logger.info("processItemsUpdate:: Item was processed, itemId: {}", piece.getItemId());
-      } else {
-        logger.info("processItemsUpdate:: Item processing is not required, deferred, itemId: {}", piece.getItemId());
+        if (processedHoldings.containsKey(holdingKey)) {
+          String holdingId = processedHoldings.get(holdingKey);
+          item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
+          logger.info("processItemsUpdate:: Item was processed, itemId: {}", piece.getItemId());
+        } else {
+          logger.info("processItemsUpdate:: Item processing is not required, itemId: {}", piece.getItemId());
+        }
       }
       RequestContext locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
       futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
