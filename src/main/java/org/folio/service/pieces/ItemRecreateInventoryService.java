@@ -5,9 +5,11 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.ItemStatus;
 import org.folio.rest.core.models.RequestContext;
@@ -60,13 +62,13 @@ public class ItemRecreateInventoryService {
     }
 
     return inventoryItemManager.getItemRecordById(piece.getItemId(), true, requestContext)
-      .map(item -> getItemWithStatus(item, ItemStatus.ON_ORDER.value()));
+      .map(item -> getItemWithStatus(item, EnumSet.of(ItemStatus.ON_ORDER, ItemStatus.ORDER_CLOSED)));
   }
 
-  private JsonObject getItemWithStatus(JsonObject item, String status) {
+  private JsonObject getItemWithStatus(JsonObject item, Set<ItemStatus> statuses) {
     return Optional.ofNullable(item)
       .map(itemObj -> itemObj.getJsonObject(ITEM_STATUS))
-      .filter(itemStatus -> status.equalsIgnoreCase(itemStatus.getString(ITEM_STATUS_NAME)))
+      .filter(itemStatus -> statuses.contains(ItemStatus.fromValue(itemStatus.getString(ITEM_STATUS_NAME))))
       .orElse(null);
   }
 }
