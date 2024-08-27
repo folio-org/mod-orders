@@ -493,16 +493,14 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
     return getPoLineAndTitleById(poLineIds, requestContext)
       .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
-        .compose(voidResult -> recreateItemRecords(piecesGroupedByPoLine, holder, poLineAndTitleById, requestContext))
+        .compose(voidResult -> recreateItemRecords(piecesGroupedByPoLine, holder, requestContext))
         .compose(voidResult -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
         .compose(items -> processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext))
       );
   }
 
   protected Future<Void> recreateItemRecords(Map<String, List<Piece>> piecesGroupedByPoLine,
-                                             PiecesHolder holder,
-                                             PoLineAndTitleById poLinesAndTitlesById,
-                                             RequestContext requestContext) {
+                                             PiecesHolder holder, RequestContext requestContext) {
     if (Objects.isNull(holder.getItemsToRecreate()) || holder.getItemsToRecreate().isEmpty()) {
       return Future.succeededFuture();
     }
@@ -520,7 +518,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       var futures = new ArrayList<Future<String>>();
       piecesGroupedByPoLine.keySet().stream()
         .map(poLineId -> holder.getItemsToRecreate().get(poLineId))
-        .forEach(list -> processItemToRecreateList(poLinesAndTitlesById, requestContext, list, purchaseOrderMap, futures));
+        .forEach(list -> processItemToRecreateList(requestContext, list, purchaseOrderMap, futures));
       return collectResultsOnSuccess(futures)
         .map(itemIdsRecreated -> {
           itemIdsRecreated.forEach(itemIdRecreated -> logger.info("recreateItemRecords:: Recreated an item in another tenant, itemId: {}", itemIdRecreated));
@@ -530,7 +528,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     });
   }
 
-  private void processItemToRecreateList(PoLineAndTitleById poLinesAndTitlesById, RequestContext requestContext,
+  private void processItemToRecreateList(RequestContext requestContext,
                                          List<PiecesHolder.PiecePoLineDto> itemToRecreateList,
                                          Map<String, CompositePurchaseOrder> purchaseOrderMap, ArrayList<Future<String>> futures) {
     itemToRecreateList.forEach(itemToRecreate -> {
@@ -538,15 +536,11 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       var srcConfig = InventoryUtils.constructItemRecreateConfig(piece.getReceivingTenantId(), requestContext, true);
       var dstConfig = InventoryUtils.constructItemRecreateConfig(itemToRecreate.getCheckInPiece().getReceivingTenantId(), requestContext, false);
       if (InventoryUtils.allowItemRecreate(srcConfig.tenantId(), dstConfig.tenantId())) {
-        var location = new Location().withLocationId(getLocationId(piece)).withHoldingId(getHoldingId(piece));
-        logger.info("recreateItemRecords:: Recreating an item in another tenant, srcTenantId: {}, dstTenantId: {}, pieceId: {}", srcConfig.tenantId(), dstConfig.tenantId(), piece.getItemId());
-        var itemIdFuture = inventoryHoldingManager.getOrCreateHoldingsRecord(poLinesAndTitlesById.titleById.get(piece.getTitleId()).getInstanceId(), location, dstConfig.context())
-          .compose(newHoldingId -> {
-            piece.setHoldingId(newHoldingId);
-            logger.info("recreateItemRecords:: Created a new holding in another tenant, srcTenantId: {}, dstTenantId: {}, holdingId: {}", srcConfig.tenantId(), dstConfig.tenantId(), newHoldingId);
-            return itemRecreateInventoryService.recreateItemInDestinationTenant(purchaseOrderMap.get(itemToRecreate.getPoLineId()), itemToRecreate.getCompositePoLine(), piece, srcConfig.context(), dstConfig.context());
-          });
-        futures.add(itemIdFuture);
+        logger.info("recreateItemRecords:: Recreating an item in another tenant, pieceId: {}, itemId: {}, locationId:{}, holdingId: {}, tenant transfer: {}->{}",
+          piece.getId(), piece.getItemId(), piece.getLocationId(), piece.getHoldingId(), srcConfig.tenantId(), dstConfig.tenantId());
+        var compOrder = purchaseOrderMap.get(itemToRecreate.getPoLineId());
+        var compPoLine = itemToRecreate.getCompositePoLine();
+        futures.add(itemRecreateInventoryService.recreateItemInDestinationTenant(compOrder, compPoLine, piece, srcConfig.context(), dstConfig.context()));
       }
     });
   }
@@ -599,7 +593,10 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
           return;
         }
 
-        if (holdingUpdateOnCheckinReceiveRequired(piece, poLine)) {
+        boolean updateRequired = holdingUpdateOnCheckinReceiveRequired(piece, poLine);
+        logger.info("processHoldingsUpdate:: Updating piece holding, pieceId: {}, itemId: {}, locationId: {}, holdingId: {}, updateHoldingRequired: {}",
+          piece.getId(), piece.getItemId(), getLocationId(piece), getHoldingId(piece), updateRequired);
+        if (updateRequired) {
           futuresForHoldingsUpdates.add(createHoldingsForChangedLocations(piece, title.getInstanceId(), requestContext));
         }
       });
@@ -617,33 +614,29 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   }
 
   private Future<Boolean> createHoldingsForChangedLocations(Piece piece, String instanceId, RequestContext requestContext) {
-    String holdingKey = buildProcessedHoldingKey(piece, instanceId);
-    if (!ifHoldingNotProcessed(holdingKey) || isRevertToOnOrder(piece)) {
+    if (!ifHoldingNotProcessed(piece.getId()) || isRevertToOnOrder(piece)) {
       return Future.succeededFuture(true);
     }
-
     // Get the initial tenant on the piece from storage
     String srcTenantId = piece.getReceivingTenantId();
     // Get the new tenant from the CheckInPiece object coming from the UI
     String dstTenantId = getReceivingTenantId(piece);
     Location location = new Location().withLocationId(getLocationId(piece)).withHoldingId(getHoldingId(piece));
     RequestContext locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, dstTenantId);
-    logger.info("createHoldingsForChangedLocations:: Creating shadow instance and holding if needed, srcTenantId: {}, dstTenantId: {}, locationId: {}, holdingId: {}",
-      srcTenantId, dstTenantId, location.getLocationId(), location.getHoldingId());
     return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, locationContext)
       .compose(instance -> {
         // Does not create a holding for every piece so will be
         // called conditionally only for cases without an affiliation change
-        if (Objects.isNull(srcTenantId) || (srcTenantId.equals(dstTenantId))) {
-          return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, locationContext);
-        }
-        return Future.succeededFuture(null);
+        logger.info("createHoldingsForChangedLocations:: Creating shadow instance and holding if needed, pieceId: {}, itemId: {}, locationId: {}, holdingId: {}",
+          piece.getId(), piece.getItemId(), piece.getLocationId(), piece.getHoldingId());
+        return inventoryHoldingManager.getOrCreateHoldingsRecord(instanceId, location, locationContext);
       })
       .compose(createdHoldingId -> {
         if (Objects.nonNull(createdHoldingId)) {
-          processedHoldings.put(holdingKey, createdHoldingId);
+          processedHoldings.put(piece.getId(), createdHoldingId);
           piece.setHoldingId(createdHoldingId);
-          logger.info("createHoldingsForChangedLocations:: Saving created or found holding, holdingId: {}", createdHoldingId);
+          logger.info("createHoldingsForChangedLocations:: Saving newly created or found holding, pieceId: {}, itemId: {}, locationId: {}, old holdingId: {}, new holdingId: {}",
+            piece.getId(), piece.getItemId(), piece.getLocationId(), piece.getHoldingId(), createdHoldingId);
         }
         return Future.succeededFuture(true);
       })
@@ -749,14 +742,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         continue;
       }
 
-      if (holdingUpdateOnCheckinReceiveRequired(piece, poLine) && !isRevertToOnOrder(piece) && !processedHoldings.isEmpty()) {
-        String holdingKey = buildProcessedHoldingKey(piece, title.getInstanceId());
-        if (processedHoldings.containsKey(holdingKey)) {
-          String holdingId = processedHoldings.get(holdingKey);
+      if (holdingUpdateOnCheckinReceiveRequired(piece, poLine) && !isRevertToOnOrder(piece)) {
+        if (processedHoldings.containsKey(piece.getId())) {
+          String holdingId = processedHoldings.get(piece.getId());
           item.put(ITEM_HOLDINGS_RECORD_ID, holdingId);
-          logger.info("processItemsUpdate:: Item was processed, itemId: {}", piece.getItemId());
+          logger.info("processItemsUpdate:: Item was processed, pieceId: {}, itemId: {}, old holdingId: {}, new holdingId: {}", piece.getId(), piece.getItemId(), piece.getHoldingId(), holdingId);
         } else {
-          logger.info("processItemsUpdate:: Item processing is not required, itemId: {}", piece.getItemId());
+          logger.info("processItemsUpdate:: Item processing is not required, pieceId: {}, itemId: {}", piece.getId(), piece.getItemId());
         }
       }
       RequestContext locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
@@ -779,28 +771,15 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected abstract Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext);
 
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, CompositePoLine poLine) {
+    // In case of affiliation change current holding is irrelevant because we will create a new holding in
+    // another tenant, hence we need to block the creation of instances per affiliation-changed piece here
     boolean isHoldingUpdateRequired;
     if (piece.getFormat() == Piece.Format.ELECTRONIC) {
       isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine);
     } else {
       isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForPhysical(poLine);
     }
-    String locationId = getLocationId(piece);
-    String holdingId = getHoldingId(piece);
-    return isHoldingUpdateRequired && (StringUtils.isNotEmpty(locationId) || StringUtils.isNotEmpty(holdingId));
-  }
-
-  private String buildProcessedHoldingKey(Piece piece, String instanceId) {
-    String locationId = getLocationId(piece);
-    String holdingId = getHoldingId(piece);
-    String receivingTenantId = getReceivingTenantId(piece);
-    // In case of affiliation change current holding is irrelevant because we will create a new holding in the
-    // another tenant, so we need to block the creation of instances per affiliation-changed piece here
-    if (Objects.nonNull(receivingTenantId)) {
-      return receivingTenantId + instanceId;
-    } else {
-      return Optional.ofNullable(locationId).orElse(holdingId) + instanceId;
-    }
+    return isHoldingUpdateRequired && (StringUtils.isNotEmpty(getLocationId(piece)) || StringUtils.isNotEmpty(getHoldingId(piece)));
   }
 
   //-------------------------------------------------------------------------------------
