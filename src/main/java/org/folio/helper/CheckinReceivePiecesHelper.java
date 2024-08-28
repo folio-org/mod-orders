@@ -767,8 +767,6 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   protected abstract Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext);
 
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, CompositePoLine poLine) {
-    // In case of affiliation change current holding is irrelevant because we will create a new holding in
-    // another tenant, hence we need to block the creation of instances per affiliation-changed piece here
     boolean isHoldingUpdateRequired;
     if (piece.getFormat() == Piece.Format.ELECTRONIC) {
       isHoldingUpdateRequired = PoLineCommonUtil.isHoldingUpdateRequiredForEresource(poLine);
