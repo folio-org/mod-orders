@@ -327,13 +327,13 @@
       },
       "locations": [
         {
-          "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "holdingId": "c2c2fe4e-03cb-42c5-890d-8b2041d2f4d0",
           "quantity": 2,
           "quantityElectronic": 0,
           "quantityPhysical": 2
         },
         {
-          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "locationId": "546c5d9a-4845-42b8-aa4f-6bd62bd7bbdc",
           "quantity": 1,
           "quantityElectronic": 0,
           "quantityPhysical": 1

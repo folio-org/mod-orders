@@ -214,6 +214,7 @@ public class InventoryHoldingManager {
         holdingsRecJson.put(HOLDING_INSTANCE_ID, instanceId);
         holdingsRecJson.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
         holdingsRecJson.put(HOLDING_SOURCE, sourceId);
+        logger.info("createHolding:: Creating a new holding, instanceId: {}, locationId: {}", instanceId, locationId);
         return holdingsRecJson;
       })
       .compose(holdingsRecJson -> {

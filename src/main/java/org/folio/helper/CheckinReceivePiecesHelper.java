@@ -617,12 +617,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     if (!ifHoldingNotProcessed(piece.getId()) || isRevertToOnOrder(piece)) {
       return Future.succeededFuture(true);
     }
-    // Get the initial tenant on the piece from storage
-    String srcTenantId = piece.getReceivingTenantId();
-    // Get the new tenant from the CheckInPiece object coming from the UI
-    String dstTenantId = getReceivingTenantId(piece);
     Location location = new Location().withLocationId(getLocationId(piece)).withHoldingId(getHoldingId(piece));
-    RequestContext locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, dstTenantId);
+    RequestContext locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
     return inventoryInstanceManager.createShadowInstanceIfNeeded(instanceId, locationContext)
       .compose(instance -> {
         // Does not create a holding for every piece so will be

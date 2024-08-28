@@ -3,13 +3,13 @@ package org.folio.rest.impl;
 import io.restassured.response.Response;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.Collection;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.acq.model.PieceCollection;
 import org.folio.rest.jaxrs.model.BindPiecesCollection;
 import org.folio.rest.jaxrs.model.BindPiecesResult;
@@ -37,6 +37,7 @@ import org.folio.rest.jaxrs.model.ReceivingResults;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
 import org.folio.rest.jaxrs.model.ToBeExpected;
+import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -76,7 +77,6 @@ import static org.folio.TestConstants.ORDERS_BIND_ID_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_EXPECT_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
-import static org.folio.TestUtils.getInstanceId;
 import static org.folio.TestUtils.getMinimalContentBindItem;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
@@ -86,8 +86,6 @@ import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.getTitle;
 import static org.folio.orders.events.handlers.HandlersTestHelper.verifyCheckinOrderStatusUpdateEvent;
 import static org.folio.orders.events.handlers.HandlersTestHelper.verifyOrderStatusUpdateEvent;
-import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
-import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
@@ -1185,19 +1183,8 @@ public class CheckinReceivingApiTest {
   }
 
   private void verifyProperQuantityOfHoldingsCreated(ReceivingCollection receivingRq) throws IOException {
-    Set<String> expectedHoldings = new HashSet<>();
-
     // get processed poline
     PoLineCollection poLineCollection = new JsonObject(getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
-    PoLine poline = poLineCollection.getPoLines()
-      .stream()
-      .filter(poLine -> poLine.getId()
-        .equals(receivingRq.getToBeReceived()
-          .get(0)
-          .getPoLineId()))
-      .findFirst()
-      .get();
-    CompositePoLine compPOL = PoLineCommonUtil.convertToCompositePoLine(poline);
 
     // get processed pieces for receiving
     PieceCollection pieces = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json"))
@@ -1214,28 +1201,16 @@ public class CheckinReceivingApiTest {
     pieces.getPieces()
       .removeIf(piece -> !pieceIds.contains(piece.getId()));
 
-    for (org.folio.rest.acq.model.Piece piece : pieces.getPieces()) {
-      for (ReceivedItem receivedItem : receivingRq.getToBeReceived()
-        .get(0)
-        .getReceivedItems()) {
-        if (receivedItem.getPieceId()
-          .equals(piece.getId())
-          && !receivedItem.getLocationId()
-          .equals(piece.getLocationId())
-          && isHoldingsUpdateRequired(piece, compPOL)) {
-          expectedHoldings.add(getInstanceId(poline) + receivedItem.getLocationId());
-        }
-      }
-    }
-    assertEquals(expectedHoldings.size(), getCreatedHoldings().size());
-  }
+    long piecesRequestingNewHolding = receivingRq.getToBeReceived().stream()
+        .map(ToBeReceived::getReceivedItems)
+        .map(Collection::stream)
+        .map(piecesList -> piecesList
+          .filter(piece -> Objects.nonNull(piece.getLocationId()))
+          .count())
+        .findFirst()
+        .get();
 
-  private boolean isHoldingsUpdateRequired(org.folio.rest.acq.model.Piece piece, CompositePoLine compPOL) {
-    if (piece.getFormat() == org.folio.rest.acq.model.Piece.PieceFormat.ELECTRONIC) {
-      return isHoldingUpdateRequiredForEresource(compPOL);
-    } else {
-      return isHoldingUpdateRequiredForPhysical(compPOL);
-    }
+    assertEquals(piecesRequestingNewHolding, getCreatedHoldings().size());
   }
 
   @Test
