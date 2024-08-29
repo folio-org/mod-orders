@@ -399,10 +399,14 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     logger.info("calculatePoLineReceiptStatus:: Processed pieces: {}, Pieces from storage: {}", piecesSuccessfullyProcessed.size(), piecesByPoLine.size());
     piecesSuccessfullyProcessed.forEach(v -> logger.info("calculatePoLineReceiptStatus:: Processed Piece, id: {}, status: {}", v.getId(), v.getReceivingStatus()));
     piecesByPoLine.forEach(v -> logger.info("calculatePoLineReceiptStatus:: Piece from storage, id: {}, status: {}", v.getId(), v.getReceivingStatus()));
-    long expectedPiecesQuantity = piecesByPoLine.stream().filter(piece -> EXPECTED_STATUSES.contains(piece.getReceivingStatus())).count();
-    long receivedQty = piecesByPoLine.stream().filter(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus())).count();
+    long expectedPiecesQuantity = piecesByPoLine.stream()
+      .filter(piece -> EXPECTED_STATUSES.contains(piece.getReceivingStatus()))
+      .count();
+    long receivedPiecesQuantity = piecesByPoLine.stream()
+      .filter(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus()))
+      .count();
     logger.info("calculatePoLineReceiptStatus:: Expected pieces: {}", expectedPiecesQuantity);
-    logger.info("calculatePoLineReceiptStatus:: Received pieces: {}", receivedQty);
+    logger.info("calculatePoLineReceiptStatus:: Received pieces: {}", receivedPiecesQuantity);
     // Fully Received: If receiving and there is no expected piece remaining
     if (!poLine.getCheckinItems().equals(Boolean.TRUE) && expectedPiecesQuantity == 0) {
       return FULLY_RECEIVED;
@@ -412,7 +416,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       return PARTIALLY_RECEIVED;
     }
     // If pieces were rolled-back to Expected we check if there is any Received piece in the storage
-    return receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED;
+    return receivedPiecesQuantity == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED;
   }
 
   //-------------------------------------------------------------------------------------

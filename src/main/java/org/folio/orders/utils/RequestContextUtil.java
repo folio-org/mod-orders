@@ -18,7 +18,7 @@ public class RequestContextUtil {
     }
     var modifiedHeaders = new CaseInsensitiveMap<>(requestContext.getHeaders());
     modifiedHeaders.put(XOkapiHeaders.TENANT, tenantId);
-    logger.debug("Request context has been changed with new tenant: {}", tenantId);
+    logger.info("Request context has been changed with new tenant: {}", tenantId);
     return new RequestContext(requestContext.getContext(), modifiedHeaders);
   }
 
