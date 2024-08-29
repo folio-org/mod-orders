@@ -1,15 +1,10 @@
 package org.folio.service.pieces;
 
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
-
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.models.ItemStatus;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -27,46 +22,39 @@ public class ItemRecreateInventoryService {
     this.inventoryItemManager = inventoryItemManager;
   }
 
-  // Return an Id of the recreated Item
-  public Future<String> recreateItemInDestinationTenant(CompositePurchaseOrder compPO, CompositePoLine compPol,
+  /**
+   * Recreates an item in a destination tenant
+   * Example case:
+   * Change piece affiliation from member tenant 1 (e.g. university) to member tenant 2 (e.g. college)
+   * Performed actions:
+   * 1. Find item in member tenant 1 by id
+   * 2. If an item is found create an item in member tenant 2 with the same item id
+   * 3. Then delete the item in member tenant 1 by item id
+   *
+   * @param compOrder Composite PO
+   * @param compPoLine Composite POL
+   * @param piece Piece
+   * @param srcLocCtx Source location context
+   * @param dstLocCtx Destination location context
+   * @return id of the recreated Item
+   */
+  public Future<String> recreateItemInDestinationTenant(CompositePurchaseOrder compOrder, CompositePoLine compPoLine,
                                                         Piece piece, RequestContext srcLocCtx, RequestContext dstLocCtx) {
-    // Example Case: Member Tenant 1 (University) -> Member Tenant 2 (College)
-    // Create Item in Member Tenant 2 with the same Item Id
-    // Delete Item in Member Tenant 1 by Item Id
-    Future<List<String>> itemFuture;
-    if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPol)) {
-      itemFuture = inventoryItemManager.createMissingElectronicItems(compPO, compPol, piece, ITEM_QUANTITY, dstLocCtx);
-    } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPol)) {
-      itemFuture = inventoryItemManager.createMissingPhysicalItems(compPO, compPol, piece, ITEM_QUANTITY, dstLocCtx);
-    } else {
-      itemFuture = Future.succeededFuture(List.of());
-    }
-
-    return itemFuture
-      .map(itemIds -> itemIds.stream().findFirst().orElseThrow(() -> new NoSuchElementException("Recreated Item Id could not be found")))
-      .compose(itemId -> deleteItem(piece, srcLocCtx).map(voidResult -> itemId));
-  }
-
-  private Future<Void> deleteItem(Piece piece, RequestContext requestContext) {
-    return getOnOrderItemForPiece(piece, requestContext)
-      .compose(item -> Optional.ofNullable(item)
-        .map(itemEntry -> inventoryItemManager.deleteItem(piece.getItemId(), true, requestContext))
-        .orElse(Future.succeededFuture()));
-  }
-
-  private Future<JsonObject> getOnOrderItemForPiece(Piece piece, RequestContext requestContext) {
     if (StringUtils.isEmpty(piece.getItemId())) {
       return Future.succeededFuture();
     }
-
-    return inventoryItemManager.getItemRecordById(piece.getItemId(), true, requestContext)
-      .map(item -> getItemWithStatus(item, ItemStatus.ON_ORDER.value()));
-  }
-
-  private JsonObject getItemWithStatus(JsonObject item, String status) {
-    return Optional.ofNullable(item)
-      .map(itemObj -> itemObj.getJsonObject(ITEM_STATUS))
-      .filter(itemStatus -> status.equalsIgnoreCase(itemStatus.getString(ITEM_STATUS_NAME)))
-      .orElse(null);
+    return inventoryItemManager.getItemRecordById(piece.getItemId(), true, srcLocCtx)
+      .compose(item -> {
+        if (Objects.nonNull(item)) {
+          if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPoLine)) {
+            return inventoryItemManager.createMissingElectronicItems(compOrder, compPoLine, piece, ITEM_QUANTITY, dstLocCtx);
+          } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPoLine)) {
+            return inventoryItemManager.createMissingPhysicalItems(compOrder, compPoLine, piece, ITEM_QUANTITY,  dstLocCtx);
+          }
+        }
+        return Future.succeededFuture(List.of());
+      })
+      .map(itemIds -> itemIds.stream().findFirst().orElseThrow(() -> new NoSuchElementException("Recreated item id could not be found")))
+      .compose(itemId -> inventoryItemManager.deleteItem(piece.getItemId(), true, srcLocCtx).map(v -> itemId));
   }
 }

@@ -8,49 +8,49 @@
           "barcode": 11111111112,
           "comment": "Expected error pieceAlreadyReceived",
           "displaySummary": "Vol. 1",
-          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "holdingId": "c2c2fe4e-03cb-42c5-890d-8b2041d2f4d0",
           "pieceId": "8c057872-9c75-4fb1-879d-de3b089b0388"
         },
         {
           "barcode": 11111111113,
           "comment": "Expected error itemNotFound",
           "displaySummary": "Vol. 1",
-          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "holdingId": "c2c2fe4e-03cb-42c5-890d-8b2041d2f4d0",
           "pieceId": "6f495150-9a7c-4104-84fa-16f3ec9ab005"
         },
         {
           "barcode": 11111111114,
           "comment": "Very important note",
           "displaySummary": "Vol. 1",
-          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "holdingId": "c2c2fe4e-03cb-42c5-890d-8b2041d2f4d0",
           "pieceId": "2884f2cd-ccab-47e1-a021-9b22a05230d9"
         },
         {
           "barcode": 11111111115,
           "comment": "Expected error piecePolMismatch",
           "displaySummary": "Vol. 1",
-          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "holdingId": "c2c2fe4e-03cb-42c5-890d-8b2041d2f4d0",
           "pieceId": "2f6056bd-e7f1-4e51-add2-b0c803066c74"
         },
         {
           "barcode": 11111111116,
           "comment": "Expected error pieceNotFound",
           "displaySummary": "Vol. 1",
-          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "holdingId": "c2c2fe4e-03cb-42c5-890d-8b2041d2f4d0",
           "pieceId": "99e04f91-6985-48df-997d-289773fd8c44"
         },
         {
           "barcode": 11111111117,
           "comment": "500500500500 Expected error pieceUpdateFailed",
           "displaySummary": "Vol. 1",
-          "locationId": "168f8a86-d26c-406e-813f-c7527f241ac3",
+          "holdingId": "546c5d9a-4845-42b8-aa4f-6bd62bd7bbdc",
           "pieceId": "de647d4a-cc53-440d-be2b-da12559ba51c"
         },
         {
           "barcode": 11111111118,
           "comment": "Very important note",
           "displaySummary": "Vol. 1",
-          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+         "holdingId": "c2c2fe4e-03cb-42c5-890d-8b2041d2f4d0",
           "pieceId": "f7272eb2-499f-4c29-985e-7ffc468d2360"
         },
         {
