@@ -21,7 +21,7 @@ import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
 import static org.folio.rest.impl.MockServer.getQueryParams;
-import static org.folio.service.inventory.InventoryManager.ITEMS;
+import static org.folio.service.inventory.InventoryUtils.ITEMS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -162,7 +162,7 @@ public class ReceiveOrderStatusChangeHandlerTest {
     logger.info("=== Test case when order update is expected for Closed order ===");
     sendEvent(createBody(PO_ID_CLOSED_STATUS), context.succeeding(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(1));
-      assertThat(getPoLineSearches(), hasSize(1));
+      assertThat(getPoLineSearches(), hasSize(2));
       assertThat(getPurchaseOrderUpdates(), hasSize(1));
       assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(WorkflowStatus.OPEN));
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));
@@ -210,7 +210,7 @@ public class ReceiveOrderStatusChangeHandlerTest {
     logger.info("=== Test case when order update is expected for Closed order ===");
     sendEvent(createBody(PO_ID_CLOSED_STATUS, PO_ID_OPEN_STATUS), context.succeeding(result -> {
       assertThat(getPurchaseOrderRetrievals(), hasSize(2));
-      assertThat(getPoLineSearches(), hasSize(2));
+      assertThat(getPoLineSearches(), hasSize(3));
       assertThat(getPurchaseOrderUpdates(), hasSize(1));
       assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(WorkflowStatus.OPEN));
       assertThat(result.body(), equalTo(Response.Status.OK.getReasonPhrase()));

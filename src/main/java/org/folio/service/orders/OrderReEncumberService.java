@@ -4,8 +4,8 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.rest.core.exceptions.ErrorCodes.FUNDS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.ROLLOVER_NOT_COMPLETED;
+import static org.folio.rest.core.exceptions.ErrorCodes.ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND;
 
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +18,9 @@ import javax.money.MonetaryAmount;
 import javax.money.MonetaryOperator;
 import javax.money.convert.CurrencyConversion;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,10 +42,10 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.finance.budget.BudgetRestrictionService;
-import org.folio.service.finance.rollover.RolloverErrorService;
-import org.folio.service.finance.rollover.RolloverRetrieveService;
+import org.folio.service.finance.rollover.LedgerRolloverErrorService;
+import org.folio.service.finance.rollover.LedgerRolloverProgressService;
+import org.folio.service.finance.transaction.FinanceUtils;
 import org.folio.service.finance.transaction.TransactionService;
-import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
@@ -55,28 +58,24 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
 
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder;
-  private final RolloverErrorService rolloverErrorService;
-  private final RolloverRetrieveService rolloverRetrieveService;
+  private final LedgerRolloverErrorService ledgerRolloverErrorService;
+  private final LedgerRolloverProgressService ledgerRolloverProgressService;
   private final PurchaseOrderLineService purchaseOrderLineService;
   private final TransactionService transactionService;
-  private final OrderTransactionSummariesService orderTransactionSummariesService;
   private final BudgetRestrictionService budgetRestrictionService;
 
   public OrderReEncumberService(PurchaseOrderStorageService purchaseOrderStorageService,
                                 ReEncumbranceHoldersBuilder reEncumbranceHoldersBuilder,
-                                RolloverErrorService rolloverErrorService,
-                                RolloverRetrieveService rolloverRetrieveService,
-                                PurchaseOrderLineService purchaseOrderLineService,
+                                LedgerRolloverErrorService ledgerRolloverErrorService,
+                                LedgerRolloverProgressService ledgerRolloverProgressService, PurchaseOrderLineService purchaseOrderLineService,
                                 TransactionService transactionService,
-                                OrderTransactionSummariesService orderTransactionSummariesService,
                                 BudgetRestrictionService budgetRestrictionService) {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.reEncumbranceHoldersBuilder = reEncumbranceHoldersBuilder;
-    this.rolloverErrorService = rolloverErrorService;
-    this.rolloverRetrieveService = rolloverRetrieveService;
+    this.ledgerRolloverErrorService = ledgerRolloverErrorService;
+    this.ledgerRolloverProgressService = ledgerRolloverProgressService;
     this.purchaseOrderLineService = purchaseOrderLineService;
     this.transactionService = transactionService;
-    this.orderTransactionSummariesService = orderTransactionSummariesService;
     this.budgetRestrictionService = budgetRestrictionService;
   }
 
@@ -87,10 +86,9 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
     if (reEncumbranceHolders.isEmpty()) {
       return Future.succeededFuture(orderRetrieveHolder);
     }
-    return reEncumbranceHoldersBuilder.withFundsData(reEncumbranceHolders, requestContext)
-      .compose(holderList -> {
-        if (holderList.stream()
-          .anyMatch(holder -> Objects.isNull(holder.getLedgerId()))) {
+    return reEncumbranceHoldersBuilder.getLedgerIds(reEncumbranceHolders, requestContext)
+      .compose(lIds -> {
+        if (reEncumbranceHolders.stream().anyMatch(holder -> Objects.isNull(holder.getLedgerId()))) {
           return Future.succeededFuture(orderRetrieveHolder.withNeedReEncumber(true));
         }
 
@@ -103,7 +101,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
             if (isRolloversPartiallyCompleted(holders, ledgerIds)) {
               return Future.succeededFuture(orderRetrieveHolder.withNeedReEncumber(true));
             }
-            return rolloverErrorService.getLedgerFyRolloverErrors(orderRetrieveHolder.getOrderId(), requestContext)
+            return ledgerRolloverErrorService.getLedgerFyRolloverErrors(orderRetrieveHolder.getOrderId(), requestContext)
               .map(LedgerFiscalYearRolloverErrorCollection::getLedgerFiscalYearRolloverErrors)
               .map(ledgerFyRolloverErrors -> orderRetrieveHolder.withNeedReEncumber(!ledgerFyRolloverErrors.isEmpty()));
           }));
@@ -113,35 +111,20 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   public Future<Void> reEncumber(String orderId, RequestContext requestContext) {
     return purchaseOrderStorageService.getCompositeOrderById(orderId, requestContext)
       .map(reEncumbranceHoldersBuilder::buildReEncumbranceHoldersWithOrdersData)
-      .compose(holders -> reEncumbranceHoldersBuilder.withFundsData(holders, requestContext))
-      .map(this::checkAllFundsFound)
-      .compose(holders -> reEncumbranceHoldersBuilder.withLedgersData(holders, requestContext))
-      .compose(holders -> reEncumbranceHoldersBuilder.withCurrentFiscalYearData(holders, requestContext))
+      .compose(holders -> reEncumbranceHoldersBuilder.withFinances(holders, requestContext)
+        .map(v -> holders))
       .compose(holders -> reEncumbranceHoldersBuilder.withRollovers(holders, requestContext))
       .map(reEncumbranceHoldersBuilder::withEncumbranceRollover)
       .compose(holders -> checkRolloverHappensForAllLedgers(holders, requestContext))
-      .compose(holders -> reEncumbranceHoldersBuilder.withBudgets(holders, requestContext))
-      .compose(holders -> reEncumbranceHoldersBuilder.withConversions(holders, requestContext))
-      .map(this::filterNeedReEncumbranceHolders)
       .compose(holders -> reEncumbranceHoldersBuilder.withPreviousFyEncumbrances(holders, requestContext))
+      .map(this::filterNeedReEncumbranceHolders)
+      .map(this::ensureReEncumbranceHoldersExist)
       .map(this::adjustPoLinesCost)
       .compose(holders -> reEncumbranceHoldersBuilder.withToEncumbrances(holders, requestContext))
       .compose(holders -> validateAndCreateEncumbrances(holders, requestContext))
       .map(this::updateLinkToEncumbrances)
       .compose(holders -> deleteRolloverErrors(orderId, requestContext).map(aVoid -> holders))
       .compose(holders -> updatePoLines(holders, requestContext));
-  }
-
-  private List<ReEncumbranceHolder> checkAllFundsFound(List<ReEncumbranceHolder> holders) {
-    List<Parameter> parameters =  holders.stream()
-            .filter(holder -> Objects.isNull(holder.getLedgerId()))
-            .map(ReEncumbranceHolder::getFundId)
-            .map(id -> new Parameter().withValue(id).withKey("fund"))
-            .collect(toList());
-    if (parameters.isEmpty()) {
-      return holders;
-    }
-    throw new HttpException(404, FUNDS_NOT_FOUND.toError().withParameters(parameters));
   }
 
   private Future<List<ReEncumbranceHolder>> checkRolloverHappensForAllLedgers(List<ReEncumbranceHolder> holders,
@@ -172,15 +155,17 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
             .collect(toList());
 
     return GenericCompositeFuture.join(holders.stream()
-            .filter(holder -> Objects.nonNull(holder.getRollover()))
             .map(ReEncumbranceHolder::getRollover)
-            .map(rollover -> rolloverRetrieveService.getRolloversProgress(rollover.getId(), requestContext)
-                    .onSuccess(progresses -> {
-                      if (isRolloverNotCompleted(progresses)) {
-                        ledgerIds.add(rollover.getLedgerId());
-                      }
-                    }))
-            .collect(toList()))
+            .filter(Objects::nonNull)
+            .map(rollover -> ledgerRolloverProgressService.getRolloversProgress(rollover.getId(), requestContext)
+              .map(progresses -> {
+                if (isRolloverNotCompleted(progresses)) {
+                  ledgerIds.add(rollover.getLedgerId());
+                }
+                return null;
+              })
+            )
+            .toList())
             .map(aVoid -> ledgerIds);
   }
 
@@ -193,28 +178,35 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
   private List<ReEncumbranceHolder> filterNeedReEncumbranceHolders(List<ReEncumbranceHolder> reEncumbranceHolders) {
     return reEncumbranceHolders.stream()
             .filter(this::isRolloverRequired)
-            .collect(toList());
+            .toList();
   }
 
   private boolean isRolloverRequired(ReEncumbranceHolder reEncumbranceHolder) {
-    return Objects.nonNull(reEncumbranceHolder.getEncumbranceRollover());
+    return ObjectUtils.allNotNull(reEncumbranceHolder.getEncumbranceRollover(),
+      reEncumbranceHolder.getFyToPoLineConversion(), reEncumbranceHolder.getPreviousFyEncumbrance());
+  }
+
+  private List<ReEncumbranceHolder> ensureReEncumbranceHoldersExist(List<ReEncumbranceHolder> holders) {
+    return Optional.of(holders)
+      .filter(CollectionUtils::isNotEmpty)
+      .orElseThrow(() -> new HttpException(HttpResponseStatus.CONFLICT.code(), ENCUMBRANCES_FOR_RE_ENCUMBER_NOT_FOUND.toError()));
   }
 
   private Future<Void> deleteRolloverErrors(String orderId, RequestContext requestContext) {
-    return rolloverErrorService.getLedgerFyRolloverErrors(orderId, requestContext)
+    return ledgerRolloverErrorService.getLedgerFyRolloverErrors(orderId, requestContext)
             .map(LedgerFiscalYearRolloverErrorCollection::getLedgerFiscalYearRolloverErrors)
-            .compose(errors -> rolloverErrorService.deleteRolloverErrors(errors, requestContext));
+            .compose(errors -> ledgerRolloverErrorService.deleteRolloverErrors(errors, requestContext));
   }
 
   private Future<Void> updatePoLines(List<ReEncumbranceHolder> holders, RequestContext requestContext) {
     List<PoLine> lines = holders.stream().map(ReEncumbranceHolder::getPoLine).map(poLine -> {
-      List<String> alertIds = poLine.getAlerts().stream().map(Alert::getId).collect(toList());
-      List<String> codeIds = poLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList());
+      List<String> alertIds = poLine.getAlerts().stream().map(Alert::getId).toList();
+      List<String> codeIds = poLine.getReportingCodes().stream().map(ReportingCode::getId).toList();
       JsonObject jsonPoLine = JsonObject.mapFrom(poLine);
       jsonPoLine.remove(ALERTS);
       jsonPoLine.remove(REPORTING_CODES);
       return jsonPoLine.mapTo(PoLine.class).withAlerts(alertIds).withReportingCodes(codeIds);
-    }).collect(toList());
+    }).toList();
     return purchaseOrderLineService.saveOrderLines(lines, requestContext);
   }
 
@@ -243,7 +235,7 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
         if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.REMAINING) {
           amount = Money.of(fromEncumbrance.getAmount(), fromEncumbrance.getCurrency());
         } else if (encumbranceRollover.getBasedOn() == EncumbranceRollover.BasedOn.EXPENDED){
-          amount = Money.of(fromEncumbrance.getEncumbrance().getAmountExpended(), fromEncumbrance.getCurrency());
+          amount = Money.of(FinanceUtils.calculateEncumbranceTotalAmount(fromEncumbrance), fromEncumbrance.getCurrency());
         } else {
           amount = Money.of(fromEncumbrance.getEncumbrance().getInitialAmountEncumbered(), fromEncumbrance.getCurrency());
         }
@@ -259,8 +251,8 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
       MonetaryAmount newFundAmount;
       if (fundDistr.getDistributionType().equals(FundDistribution.DistributionType.AMOUNT)) {
         MonetaryAmount fdAmount = Money.of(fundDistr.getValue(), poLine.getCost().getCurrency());
-        newFundAmount = fdAmount.divide(poLineEstimatedPriceBeforeRollover.getNumber().doubleValue())
-                                .multiply(poLineEstimatedPriceAfterRollover.getNumber().doubleValue());
+        newFundAmount = (!poLineEstimatedPriceBeforeRollover.isZero()) ? fdAmount.divide(poLineEstimatedPriceBeforeRollover.getNumber().doubleValue())
+                                .multiply(poLineEstimatedPriceAfterRollover.getNumber().doubleValue()) : Money.of(0, poLine.getCost().getCurrency());
         fundDistr.setValue(newFundAmount.getNumber().doubleValue());
       }
     }
@@ -270,24 +262,15 @@ public class OrderReEncumberService implements CompositeOrderDynamicDataPopulate
                                                                                      RequestContext requestContext) {
     List<ReEncumbranceHolder> holderForCreateEncumbrances = holders.stream()
       .filter(holder -> StringUtils.isEmpty(holder.getNewEncumbrance().getId()))
-      .collect(toList());
+      .toList();
 
     budgetRestrictionService.checkEncumbranceRestrictions(holderForCreateEncumbrances);
-    return holders.stream()
-      .findFirst()
-      .map(ReEncumbranceHolder::getPurchaseOrder)
-      .map(purchaseOrder -> {
-
-        String orderId = purchaseOrder.getId();
-        return orderTransactionSummariesService.updateTransactionSummary(orderId, holderForCreateEncumbrances.size(), requestContext)
-          .compose(aVoid -> GenericCompositeFuture.join(holderForCreateEncumbrances.stream()
-            .map(holder -> transactionService.createTransaction(holder.getNewEncumbrance(), requestContext)
-              .onSuccess(holder::withNewEncumbrance))
-            .collect(toList())))
-          .map(aVoid -> holders);
-      })
-      .orElseGet(() ->  Future.succeededFuture(holders));
-
+    List<Transaction> encumbrances = holderForCreateEncumbrances.stream().map(ReEncumbranceHolder::getNewEncumbrance).toList();
+    if (encumbrances.isEmpty()) {
+      return Future.succeededFuture(holders);
+    }
+    return transactionService.batchCreate(encumbrances, requestContext)
+      .map(aVoid -> holders);
   }
 
 }

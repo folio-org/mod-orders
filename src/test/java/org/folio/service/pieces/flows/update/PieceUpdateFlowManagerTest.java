@@ -10,11 +10,13 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.ID;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING_ITEM;
-import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.EXPECTED;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.RECEIVED;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.UNRECEIVABLE;
+import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -25,6 +27,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,15 +37,21 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.models.ItemStatus;
 import org.folio.models.pieces.PieceUpdateHolder;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
+import org.folio.service.caches.InventoryCache;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
@@ -57,7 +66,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -76,9 +84,9 @@ public class PieceUpdateFlowManagerTest {
   @Autowired PieceService pieceService;
   @Autowired BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
   @Autowired PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
+  @Autowired PurchaseOrderLineService purchaseOrderLineService;
 
-  @Spy
-  private Context ctxMock = getFirstContextFromVertx(getVertx());
+  private final Context ctx = getFirstContextFromVertx(getVertx());
   @Mock
   private Map<String, String> okapiHeadersMock;
 
@@ -89,7 +97,7 @@ public class PieceUpdateFlowManagerTest {
   void initMocks(){
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    requestContext = new RequestContext(ctx, okapiHeadersMock);
   }
 
   @BeforeAll
@@ -112,21 +120,22 @@ public class PieceUpdateFlowManagerTest {
   @AfterEach
   void resetMocks() {
     clearServiceInteractions();
-    Mockito.reset(pieceStorageService, pieceService, protectionService,
-                  pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder);
+    Mockito.reset(pieceStorageService, pieceService, protectionService, pieceUpdateFlowPoLineService,
+      pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder, purchaseOrderLineService);
   }
 
   @Test
-  void shouldNotUpdateLineQuantityIfPoLineIsPackageAndShouldRunProcessInventory() throws ExecutionException, InterruptedException {
+  void shouldNotUpdateLineQuantityIfPoLineIsPackageAndShouldRunProcessInventory() {
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String holdingIdTpUpdate = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     String titleId = UUID.randomUUID().toString();
     String itemId = UUID.randomUUID().toString();
-    String locationId = UUID.randomUUID().toString();
-    JsonObject item = new JsonObject().put(ID, itemId);
     String pieceId = UUID.randomUUID().toString();
+    String locationId = UUID.randomUUID().toString();
+
+    JsonObject item = new JsonObject().put(ID, itemId);
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
     JsonObject holding = new JsonObject().put(ID, holdingId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
@@ -141,20 +150,33 @@ public class PieceUpdateFlowManagerTest {
       .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
-    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId)
+      .withOrderType(PurchaseOrder.OrderType.ONE_TIME).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    Title title = new Title().withId(titleId);
 
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
+    givenPoLineHasPieces(lineId, List.of());
+
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
     doAnswer((Answer<Future<Void>>) invocation -> {
       PieceUpdateHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
       return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doAnswer((Answer<Future<Void>>) invocation -> {
+      PieceUpdateHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withTitleInformation(title);
+      return succeededFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithTitleInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
+
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(purchaseOrderLineService).saveOrderLine(any(CompositePoLine.class), eq(requestContext));
+
     //When
     pieceUpdateFlowManager.updatePiece(pieceToUpdate, true, true, requestContext).result();
     //Then
@@ -176,8 +198,9 @@ public class PieceUpdateFlowManagerTest {
     String titleId = UUID.randomUUID().toString();
     String itemId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
-    JsonObject item = new JsonObject().put(ID, itemId);
     String pieceId = UUID.randomUUID().toString();
+
+    JsonObject item = new JsonObject().put(ID, itemId);
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
     JsonObject holding = new JsonObject().put(ID, holdingId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
@@ -193,15 +216,24 @@ public class PieceUpdateFlowManagerTest {
       .withEresource(eresource)
       .withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    Title title = new Title().withId(titleId);
 
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(pieceToUpdate.getId(), requestContext);
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
+    givenPoLineHasPieces(lineId, List.of());
+
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
     doAnswer((Answer<Future<Void>>) invocation -> {
       PieceUpdateHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
       return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doAnswer((Answer<Future<Void>>) invocation -> {
+      PieceUpdateHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withTitleInformation(title);
+      return succeededFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithTitleInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
+
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
@@ -219,7 +251,7 @@ public class PieceUpdateFlowManagerTest {
   }
 
   @Test
-  void shouldUpdateLineQuantityIfPoLineIsNotPackageAndHoldingReferenceChangedAndShouldRunProcessInventory() throws ExecutionException, InterruptedException {
+  void shouldUpdateLineQuantityIfPoLineIsNotPackageAndHoldingReferenceChangedAndShouldRunProcessInventory() {
     String orderId = UUID.randomUUID().toString();
     String oldHoldingId = UUID.randomUUID().toString();
     String holdingIdToUpdate = UUID.randomUUID().toString();
@@ -228,32 +260,42 @@ public class PieceUpdateFlowManagerTest {
     String itemId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
+
     JsonObject item = new JsonObject().put(ID, itemId);
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, ItemStatus.ON_ORDER.value()));
     JsonObject holding = new JsonObject().put(ID, oldHoldingId);
     holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
     Piece pieceFromStorage = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-      .withHoldingId(oldHoldingId).withFormat(Piece.Format.ELECTRONIC);
+      .withHoldingId(oldHoldingId)
+      .withFormat(Piece.Format.ELECTRONIC);
     Piece incomingPieceToUpdate = new Piece().withId(pieceId).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
-      .withHoldingId(holdingIdToUpdate).withFormat(Piece.Format.ELECTRONIC);
+      .withHoldingId(holdingIdToUpdate)
+      .withFormat(Piece.Format.ELECTRONIC).withReceivingStatus(Piece.ReceivingStatus.RECEIVED);
     Cost cost = new Cost().withQuantityElectronic(1);
     Location loc = new Location().withHoldingId(oldHoldingId).withQuantityElectronic(1).withQuantity(1);
     PoLine poLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
-                                .withEresource(new Eresource().withCreateInventory(INSTANCE_HOLDING_ITEM))
-                                .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
-                                .withLocations(List.of(loc)).withCost(cost);
+      .withEresource(new Eresource().withCreateInventory(INSTANCE_HOLDING_ITEM))
+      .withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE).withLocations(List.of(loc)).withCost(cost);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+    Title title = new Title().withId(titleId);
 
     doReturn(succeededFuture(pieceFromStorage)).when(pieceStorageService).getPieceById(incomingPieceToUpdate.getId(), requestContext);
     final ArgumentCaptor<Piece> pieceToUpdateCapture = ArgumentCaptor.forClass(Piece.class);
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdateCapture.capture(), eq(requestContext));
+    givenPoLineHasPieces(lineId, List.of());
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
+
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
     doAnswer((Answer<Future<Void>>) invocation -> {
       PieceUpdateHolder answerHolder = invocation.getArgument(0);
       answerHolder.withOrderInformation(purchaseOrder, poLine);
       return succeededFuture(null);
     }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
+    doAnswer((Answer<Future<Void>>) invocation -> {
+      PieceUpdateHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withTitleInformation(title);
+      return succeededFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithTitleInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
 
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(pieceUpdateHolderCapture.capture(), eq(requestContext));
@@ -265,10 +307,79 @@ public class PieceUpdateFlowManagerTest {
     Piece pieceToUpdate = pieceToUpdateCapture.getValue();
     PieceUpdateHolder pieceUpdateHolder = pieceUpdateHolderCapture.getValue();
 
+    assertNotNull(pieceToUpdate.getStatusUpdatedDate());
     verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(pieceUpdateHolderCapture.capture(), eq(requestContext));
     verify(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     verify(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
     verify(pieceStorageService).updatePiece(pieceToUpdate, requestContext);
+  }
+
+  @Test
+  void poLineStatusWhenReceiveLast() {
+    // given
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    List<Piece> fromStorage = givenPieces(EXPECTED, RECEIVED, UNRECEIVABLE);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(RECEIVED));
+
+    // when
+    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+
+    // then
+    assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, receiptStatus);
+  }
+
+  @Test
+  void poLineStatusWhenExpectLast() {
+    // given
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    List<Piece> fromStorage = givenPieces(RECEIVED, RECEIVED, UNRECEIVABLE);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
+
+    // when
+    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+
+    // then
+    assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+  }
+
+  @Test
+  void poLineStatusWhenExpectAll() {
+    // given
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    List<Piece> fromStorage = givenPieces(RECEIVED);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
+
+    // when
+    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+
+    // then
+    assertEquals(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT, receiptStatus);
+  }
+
+  @Test
+  void poLineStatusWhenReceivePart() {
+    // given
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    List<Piece> fromStorage = givenPieces(EXPECTED, EXPECTED);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(UNRECEIVABLE));
+
+    // when
+    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+
+    // then
+    assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+  }
+
+  private static List<Piece> givenPieces(Piece.ReceivingStatus... statuses) {
+    return Arrays.stream(statuses).map(status ->
+      new Piece().withId(UUID.randomUUID().toString()).withReceivingStatus(status)
+    ).toList();
+  }
+
+  private void givenPoLineHasPieces(String lineId, List<Piece> pieces) {
+    doReturn(succeededFuture(pieces))
+      .when(pieceStorageService)
+      .getPiecesByLineId(eq(lineId), eq(requestContext));
   }
 
   private static class ContextConfiguration {
@@ -294,13 +405,27 @@ public class PieceUpdateFlowManagerTest {
       return spy(new DefaultPieceFlowsValidator());
     }
 
-    @Bean PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,
-                      ProtectionService protectionService, PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService,
-              PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
-              DefaultPieceFlowsValidator defaultPieceFlowsValidator) {
+    @Bean RestClient restClient() {
+      return mock(RestClient.class);
+    }
+
+    @Bean InventoryCache inventoryCache() {
+      return mock(InventoryCache.class);
+    }
+
+    @Bean PurchaseOrderLineService purchaseOrderLineService() {
+      return mock(PurchaseOrderLineService.class);
+    }
+
+    @Bean
+    PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,
+                                                  ProtectionService protectionService, PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService,
+                                                  PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
+                                                  DefaultPieceFlowsValidator defaultPieceFlowsValidator, PurchaseOrderLineService purchaseOrderLineService) {
       return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService,
-                      pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder,
-          defaultPieceFlowsValidator);
+        pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder,
+        defaultPieceFlowsValidator, purchaseOrderLineService);
     }
   }
+
 }

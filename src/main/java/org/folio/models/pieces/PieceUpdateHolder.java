@@ -58,4 +58,9 @@ public class PieceUpdateHolder extends BasePieceFlowHolder {
   public String getOrderLineId() {
     return pieceToUpdate.getPoLineId();
   }
+
+  @Override
+  public String getTitleId() {
+    return pieceToUpdate.getTitleId();
+  }
 }

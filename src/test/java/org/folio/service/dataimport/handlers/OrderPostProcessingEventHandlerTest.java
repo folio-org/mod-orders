@@ -1,8 +1,11 @@
 package org.folio.service.dataimport.handlers;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ObserveKeyValues;
@@ -26,6 +29,7 @@ import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.dataimport.PoLineImportProgressService;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -49,8 +53,10 @@ import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.TestConfig.closeMockServer;
 import static org.folio.helper.FinanceInteractionsTestHelper.verifyEncumbrancesOnPoUpdate;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.ITEM_RECORDS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
@@ -59,19 +65,21 @@ import static org.folio.rest.impl.MockServer.getCreatedInstances;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
+import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.Piece.Format.OTHER;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.folio.service.dataimport.handlers.CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER;
-import static org.folio.service.inventory.InventoryManager.ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_MATERIAL_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryItemManager.ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_HOLDINGS_RECORD_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_MATERIAL_TYPE_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
 import static org.folio.service.inventory.InventoryManagerTest.OLD_LOCATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -89,6 +97,11 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String ID_FIELD = "id";
   private static final String ELECTRONIC_RESOURCE_MATERIAL_TYPE_ID = "615b8413-82d5-4203-aa6e-e37984cb5ac3";
+  private static final String PHYSICAL_RESOURCE_MATERIAL_TYPE_ID = "1a54b431-2e4f-452d-9cae-9cee66c9a892";
+  private static final String HOLDINGS_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63";
+  private static final String ITEM_ID = "86481a22-633e-4b97-8061-0dc5fdaaeabb";
+  private static final String INSTANCE_ID = "5294d737-a04b-4158-857a-3f3c555bcc60";
+  private static final String HOLDING_ID_FIELD = "holdingId";
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -148,12 +161,12 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   public void shouldOpenOrderAndUseExistingInstanceHoldingsItemWhenAllPoLinesProcessed(TestContext context) throws InterruptedException {
     // given
     JsonObject itemJson = new JsonObject()
-      .put(ID, "86481a22-633e-4b97-8061-0dc5fdaaeabb")
-      .put(ITEM_HOLDINGS_RECORD_ID, "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d63")
+      .put(ID, ITEM_ID)
+      .put(ITEM_HOLDINGS_RECORD_ID, HOLDINGS_ID)
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, poLine.getId())
       .put(ITEM_MATERIAL_TYPE_ID, poLine.getEresource().getMaterialType());
 
-    JsonObject instanceJson = new JsonObject().put(ID_FIELD, "5294d737-a04b-4158-857a-3f3c555bcc60");
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
     CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
     mockPoLine.setInstanceId(instanceJson.getString(ID_FIELD));
 
@@ -162,6 +175,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, mockPoLine);
     addMockEntry(ITEM_RECORDS, itemJson);
+    createPieceAndTitle(mockPoLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
@@ -179,7 +193,6 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     CompletableFuture<Object> future = new CompletableFuture<>();
     PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
     polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
-      .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
@@ -221,7 +234,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
   @Test
   public void shouldNotUpdateOrderStatusToOpenWhenNotAllPoLinesProcessed(TestContext context) throws InterruptedException {
     // given
-    JsonObject instanceJson = new JsonObject().put(ID_FIELD, "5294d737-a04b-4158-857a-3f3c555bcc60");
+    JsonObject instanceJson = new JsonObject().put(ID_FIELD, INSTANCE_ID);
 
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
@@ -240,7 +253,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
 
     CompletableFuture<Void> future = new CompletableFuture<>();
     PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
-    polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
+    polProgressService.savePoLinesAmountPerOrder(order.getId(), 3, TENANT_ID)
       .compose(v -> polProgressService.trackProcessedPoLine(order.getId(), TENANT_ID))
       .onComplete(context.asyncAssertSuccess(v -> future.complete(null)));
 
@@ -268,6 +281,7 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
     addMockEntry(PURCHASE_ORDER_STORAGE, order);
     addMockEntry(PO_LINES_STORAGE, mockPoLine);
+    createPieceAndTitle(poLine);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
@@ -313,6 +327,57 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
 
     verifyEncumbrancesOnPoUpdate(order.withCompositePoLines(List.of(poLine)));
+  }
+
+  @Test
+  public void shouldOpenOrderOnceWhenHandlingMultipleEventsAndAllPoLinesProcessed(TestContext context) {
+    // given
+    Async async = context.async();
+    poLine.setInstanceId(null);
+    poLine.getEresource().setCreateInventory(Eresource.CreateInventory.NONE);
+    CompositePoLine mockPoLine = JsonObject.mapFrom(poLine).mapTo(CompositePoLine.class);
+
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+    addMockEntry(PURCHASE_ORDER_STORAGE, order);
+    addMockEntry(PO_LINES_STORAGE, mockPoLine);
+    createPieceAndTitle(mockPoLine);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0).getChildSnapshotWrappers().get(0))
+      .withEventType(DI_ORDER_CREATED_READY_FOR_POST_PROCESSING.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+        put(ORDER.value(), Json.encodePrettily(order));
+        put(PO_LINE_KEY, Json.encodePrettily(poLine));
+      }});
+
+    PoLineImportProgressService polProgressService = getBeanFromSpringContext(vertx, PoLineImportProgressService.class);
+    OrderPostProcessingEventHandler orderPostProcessingHandler = getBeanFromSpringContext(vertx, OrderPostProcessingEventHandler.class);
+
+    // when
+    Future<CompositeFuture> future = polProgressService.savePoLinesAmountPerOrder(order.getId(), 2, TENANT_ID)
+      .compose(v -> CompositeFuture.join(
+        Future.fromCompletionStage(orderPostProcessingHandler.handle(dataImportEventPayload)),
+        Future.fromCompletionStage(orderPostProcessingHandler.handle(dataImportEventPayload))
+      ));
+
+    // then
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      List<JsonObject> ordersResp = getPurchaseOrderUpdates();
+
+      // verifies that the order opening process was triggered only one time
+      // by checking that request to update the order with status "Open" was performed once
+      context.assertEquals(1, ordersResp.size());
+      CompositePurchaseOrder openedOrder = ordersResp.get(0).mapTo(CompositePurchaseOrder.class);
+      context.assertEquals(order.getId(), openedOrder.getId());
+      context.assertEquals(WorkflowStatus.OPEN, openedOrder.getWorkflowStatus());
+      async.complete();
+    });
   }
 
   @Test
@@ -453,12 +518,23 @@ public class OrderPostProcessingEventHandlerTest extends DiAbstractRestTest {
     return Json.decodeValue(obtainedEvent.getEventPayload(), DataImportEventPayload.class);
   }
 
-  private CompositePoLine verifyPoLine(DataImportEventPayload eventPayload) {
+  private void verifyPoLine(DataImportEventPayload eventPayload) {
     assertNotNull(eventPayload.getContext().get(PO_LINE_KEY));
     CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
     assertNotNull(poLine.getId());
     assertNotNull(poLine.getTitleOrPackage());
     assertNotNull(poLine.getPurchaseOrderId());
-    return poLine;
+  }
+
+  private void createPieceAndTitle(CompositePoLine poLine) {
+    Title title = new Title().withId(SAMPLE_TITLE_ID)
+      .withTitle(poLine.getTitleOrPackage()).withPoLineId(poLine.getId())
+      .withPoLineNumber(poLine.getPoLineNumber())
+      .withInstanceId(poLine.getInstanceId());
+    addMockEntry(TITLES, JsonObject.mapFrom(title));
+    addMockEntry(PIECES_STORAGE,
+      new Piece().withPoLineId(poLine.getId()).withFormat(OTHER)
+        .withReceivingStatus(Piece.ReceivingStatus.EXPECTED)
+        .withTitleId(title.getId()));
   }
 }

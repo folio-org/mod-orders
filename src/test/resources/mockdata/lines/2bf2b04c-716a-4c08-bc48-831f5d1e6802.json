@@ -1,0 +1,61 @@
+{
+  "id": "2bf2b04c-716a-4c08-bc48-831f5d1e6802",
+  "cost": {
+    "currency": "USD",
+    "discountType": "percentage",
+    "listUnitPrice": 1.0,
+    "quantityPhysical": 1,
+    "poLineEstimatedPrice": 1.0
+  },
+  "rush": false,
+  "alerts": [],
+  "claims": [],
+  "source": "User",
+  "details": {
+    "productIds": [],
+    "isAcknowledged": false,
+    "isBinderyActive": false,
+    "subscriptionInterval": 0
+  },
+  "physical": {
+    "volumes": [],
+    "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+    "createInventory": "Instance, Holding, Item",
+    "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+  },
+  "isPackage": false,
+  "locations": [
+    {
+      "quantity": 1,
+      "tenantId": "university",
+      "holdingId": "79b51935-de14-4715-b6de-3c3a8d749208",
+      "quantityPhysical": 1
+    }
+  ],
+  "collection": false,
+  "instanceId": "88fe2b5b-7c99-427e-9c8d-1647f5b0c502",
+  "orderFormat": "Physical Resource",
+  "checkinItems": false,
+  "contributors": [],
+  "poLineNumber": "10004-1",
+  "vendorDetail": {
+    "instructions": "",
+    "vendorAccount": "1234",
+    "referenceNumbers": []
+  },
+  "paymentStatus": "Awaiting Payment",
+  "receiptStatus": "Awaiting Receipt",
+  "claimingActive": false,
+  "reportingCodes": [],
+  "titleOrPackage": "1169-2",
+  "automaticExport": false,
+  "purchaseOrderId": "b25f8ef6-04c4-4290-8531-9bbcefeb8c11",
+  "claimingInterval": 45,
+  "fundDistribution": [],
+  "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+  "searchLocationIds": [
+    "fcd64ce1-6995-48f0-840e-89ffa2288371"
+  ],
+  "donorOrganizationIds": [],
+  "cancellationRestriction": true
+}

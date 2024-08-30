@@ -1,9 +1,196 @@
-## 12.6.0 - Unreleased
+## 12.9.0 - Unreleased
+### Stories
+
+### Bug Fixes
+
+* [MODORDERS-1090](https://folio-org.atlassian.net/browse/MODORDERS-1090) - Quantity = 0 for electronic format orders
+* [MODORDERS-1102](https://folio-org.atlassian.net/browse/MODORDERS-1102) - Order lines search results do not display fund code for orders created by data import
+
+## 12.8.0 - Released (Quesnelia R1 2024)
+This release focused on fixing several bugs as well as implement new features and upgrading dependent libraries
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.7.0...v12.8.0)
+
+### New APIs versions
+
+* Requires `orders-storage.pieces v5.0`
+* Requires `orders-storage.receiving-history v4.0`
+* Requires `orders-storage.po-line-number v2.0`
+* Requires `orders-storage.order-invoice-relationships v1.0`
+* Requires `finance.fiscal-years v2.0`
+* Requires `finance-storage.ledgers v4.0`
+* Provides `orders.receiving v2.0`
+* Provides `orders.pieces v3.0`
+
+### Stories
+
+* [MODORDERS-1052](https://folio-org.atlassian.net/browse/MODORDERS-1052) - Upgrade RAML Module Builder for Quesnelia
+* [MODORDERS-1044](https://folio-org.atlassian.net/browse/MODORDERS-1044) - Do not update orderStatus for past fiscal years
+* [MODORDERS-1043](https://folio-org.atlassian.net/browse/MODORDERS-1043) - Remove pending payment encumbrance links when encumbrances are deleted
+* [MODORDERS-1036](https://folio-org.atlassian.net/browse/MODORDERS-1036) - Include already existing holdings to validation process
+* [MODORDERS-1032](https://folio-org.atlassian.net/browse/MODORDERS-1032) - Protect Holdings Receiving Histrory with Title acq units
+* [MODORDERS-1031](https://folio-org.atlassian.net/browse/MODORDERS-1031) - Create Kafka topics instead of relying on auto create in mod-orders
+* [MODORDERS-1028](https://folio-org.atlassian.net/browse/MODORDERS-1028) - Add specific error code of barcode uniqueness error error during receiving
+* [MODORDERS-1027](https://folio-org.atlassian.net/browse/MODORDERS-1027) - Add logic to update POL receipt status when moving pieces between Unreceivable and Expected
+* [MODORDERS-1022](https://folio-org.atlassian.net/browse/MODORDERS-1022) - Add receipt Date to the CheckIng Piece schema
+* [MODORDERS-1020](https://folio-org.atlassian.net/browse/MODORDERS-1020) - Adjust Restricted Location + Fund validation rules
+* [MODORDERS-1010](https://folio-org.atlassian.net/browse/MODORDERS-1010) - Change "caption" to "Display summary" for checkin and receiving collections
+* [MODORDERS-1005](https://folio-org.atlassian.net/browse/MODORDERS-1005) - Check acq units from Title when receiving/unreceicing pieces
+* [MODORDERS-1000](https://folio-org.atlassian.net/browse/MODORDERS-1000) - Populate Item "Display summary" field with Piece "Display summary" field value
+* [MODORDERS-989](https://folio-org.atlassian.net/browse/MODORDERS-989) - Implement batch endpoint to move multiple pieces to Expected status
+* [MODORDERS-985](https://folio-org.atlassian.net/browse/MODORDERS-985) - Add internal note and external note in Piece schema
+* [MODORDERS-983](https://folio-org.atlassian.net/browse/MODORDERS-983) - Receiving a piece on a closed/cancelled PO will reopen the PO
+* [MODORDERS-980](https://folio-org.atlassian.net/browse/MODORDERS-980) - Update dto schema with recent changes for holdingsItems
+* [MODORDERS-974](https://folio-org.atlassian.net/browse/MODORDERS-974) - Add validation for claimingActive, claimingInterval fields
+* [MODORDERS-972](https://folio-org.atlassian.net/browse/MODORDERS-972) - Protect Title acq units management with permissions
+* [MODORDERS-970](https://folio-org.atlassian.net/browse/MODORDERS-970) - Do not overwrite Item fields when piece fields are null/empty
+* [MODORDERS-969](https://folio-org.atlassian.net/browse/MODORDERS-969) - Opening and editing POs with location-restricted funds
+* [MODORDERS-963](https://folio-org.atlassian.net/browse/MODORDERS-963) - Update PUT piece to check acq unit from title instead of order
+* [MODORDERS-962](https://folio-org.atlassian.net/browse/MODORDERS-962) - Update Get titles query to check acq units from title instead of purchase order
+* [MODORDERS-892](https://folio-org.atlassian.net/browse/MODORDERS-892) - Accumulate all transactions in holder to make only single call to mod-finance
+* [MODORDERS-886](https://folio-org.atlassian.net/browse/MODORDERS-886) - The unclear error message is displayed  when a user is trying to save the order template with already existing name
+* [MODORDERS-846](https://folio-org.atlassian.net/browse/MODORDERS-846) - Add validation back for deleting encumbrance when expended > 0
+* [MODORDSTOR-360](https://folio-org.atlassian.net/browse/MODORDSTOR-360) - Inherit acqUnitIds from Purchase Order when creating new Title
+* [MODDATAIMP-957](https://folio-org.atlassian.net/browse/MODDATAIMP-957) - Test, make adjustments and merge PRs for removing initial saving of records in SRS
+
+### Bug Fixes
+
+* [MODORDERS-1055](https://folio-org.atlassian.net/browse/MODORDERS-1055) - orderStatus is not always updated when reopening an order
+* [MODORDERS-1053](https://folio-org.atlassian.net/browse/MODORDERS-1053) - Missing interface dependencies in module descriptor
+* [MODORDERS-1049](https://folio-org.atlassian.net/browse/MODORDERS-1049) - Rollback inventory if open fails to create encumbrances
+* [MODORDERS-1039](https://folio-org.atlassian.net/browse/MODORDERS-1039) - Encumbrance expense class not updated after a change to the fund distribution
+* [MODORDERS-1030](https://folio-org.atlassian.net/browse/MODORDERS-1030) - "Receipt status" is changed to "Fully received" when all piece statuses for selected title were changed to "Claim delayed" and "Claim sent"
+* [MODORDERS-1024](https://folio-org.atlassian.net/browse/MODORDERS-1024) - Error message appears when open unopened (duplicated) P/E mix order with same location both for physical and electronic resources
+* [MODORDERS-986](https://folio-org.atlassian.net/browse/MODORDERS-986) - Error thrown during change instance connection
+* [MODORDERS-984](https://folio-org.atlassian.net/browse/MODORDERS-984) - Reciept status remains "Fully received" after unreceiving piece
+* [MODORDERS-967](https://folio-org.atlassian.net/browse/MODORDERS-967) - Defect in Order Receipt Status Update for 'Ongoing' Orders
+* [MODORDERS-669](https://folio-org.atlassian.net/browse/MODORDERS-669) - Cannot delete a piece in receiving
+* [MODDICORE-373](https://folio-org.atlassian.net/browse/MODDICORE-373) - The import of file is completed with errors
+
+### Tech debts
+
+* [MODORDERS-852](https://folio-org.atlassian.net/browse/MODORDERS-852) - Some unit tests are not executed
+
+### Dependencies
+
+* Bump `raml` from `35.0.1` to `35.2.0`
+* Bump `vertx` from `4.3.4` to `4.5.4`
+* Bump `data-import-processing-core` from `4.1.0` to `4.2.0`
+
+## 12.7.0 - Released (Poppy R2 2023)
+
+This release focused on fixing several bugs in rollover and implement new feature relate to POL or other parts 
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.6.0...v12.7.0)
+
+### Stories
+
+* [MODORDERS-927](https://issues.folio.org/browse/MODORDERS-927) - Implement interception and update of invalid ISBNs during the POL update process
+* [MODORDERS-912](https://issues.folio.org/browse/MODORDERS-912) - Add uniqueness check for retrieving transactions
+* [MODORDERS-907](https://issues.folio.org/browse/MODORDERS-647) - Use new orders-storage endpoint to update order lines in batch during rollover
+* [MODORDERS-905](https://issues.folio.org/browse/MODORDERS-905) - Persist rollover failures per poLine
+* [MODORDERS-904](https://issues.folio.org/browse/MODORDERS-904) - Added filtering by fundDistribution encumbrance presence
+* [MODORDERS-903](https://issues.folio.org/browse/MODORDERS-903) - Updated composite order conversion
+* [MODORDERS-899](https://issues.folio.org/browse/MODORDERS-899) - Update to Java 17 mod-orders
+* [MODORDERS-887](https://issues.folio.org/browse/MODORDERS-887) - Changing interface version
+* [MODORDERS-882](https://issues.folio.org/browse/MODORDERS-882) - Update the error message displayed when importer is not a member of the specified acq unit
+* [MODORDERS-881](https://issues.folio.org/browse/MODORDERS-881) - Populate locations and material type for POLs when multiple Holdings/Items were created
+* [MODORDERS-879](https://issues.folio.org/browse/MODORDERS-879) - Prevent creating an order using 2 different fiscal years with clear error message
+* [MODORDERS-878](https://issues.folio.org/browse/MODORDERS-878) - Adjust prefix and suffix for generated poNumber
+* [MODORDERS-876](https://issues.folio.org/browse/MODORDERS-876) - Adjust material type and locations from existing holdings and item
+* [MODORDERS-871](https://issues.folio.org/browse/MODORDERS-871) - Finding holdings record during import open P/E mix orderLine
+* [MODORDERS-865](https://issues.folio.org/browse/MODORDERS-865) - Rewrite the orders rollover interaction in an asynchronous way
+* [MODORDERS-860](https://issues.folio.org/browse/MODORDERS-860) - Adjust POL "create inventory" field override
+* [MODORDERS-859](https://issues.folio.org/browse/MODORDERS-859) - Release encumbrance when orderStatus is set to CLOSED
+* [MODORDERS-859](https://issues.folio.org/browse/MODORDERS-859) - Receiving: added permission for transaction summaries
+* [MODORDERS-858](https://issues.folio.org/browse/MODORDERS-858) - Increase a memory to Snapshots
+* [MODORDERS-855](https://issues.folio.org/browse/MODORDERS-855) - fixed vertx semaphores
+* [MODORDERS-828](https://issues.folio.org/browse/MODORDERS-825) - Update dependent raml-util
+* [MODORDERS-786](https://issues.folio.org/browse/MODORDERS-786) - Upgrade di-utils to v1.11.0
+* [MODORDERS-405](https://issues.folio.org/browse/MODORDERS-405) - Composite orders web API updates budget objects with invalid date updated values
+* [MODORDERS-316](https://issues.folio.org/browse/MODORDERS-316) - Using new proxy endpoints for ledger rollover errors
+* [MODORDERS-307](https://issues.folio.org/browse/MODORDERS-307) - Update dependency
+* [MODORDERS-162](https://issues.folio.org/browse/MODORDERS-162) - Updated models
+* [MODFIN-323](https://issues.folio.org/browse/MODFIN-323) - Delete unnecessary code
+* [UIOR-1102](https://issues.folio.org/browse/UIOR-1102) - Ability to edit Ongoing order information of Open orders
+
+### Bug Fixes
+
+* [MODORDERS-929](https://issues.folio.org/browse/MODORDERS-929) - An error appears after rollover when open order/order line having two fund distributions related to different ledgers
+* [MODORDERS-928](https://issues.folio.org/browse/MODORDERS-928) - Can not delete acquisition methods with Order settings "All" permission
+* [MODORDERS-920](https://issues.folio.org/browse/MODORDERS-920) - An error appears after rollover when open order/order line having two fund distributions related to different ledgers
+* [MODORDERS-915](https://issues.folio.org/browse/MODORDERS-915) - NPE in OrderReEncumberService.java:245
+* [MODORDERS-913](https://issues.folio.org/browse/MODORDERS-913) - Encumbrance became "Release" when changing fund distribution in order with related paid invoice having NOT checked "Release encumbrance" option
+* [MODORDERS-914](https://issues.folio.org/browse/MODORDERS-914) - A user with order create permission can not add suffix and prefix to the order
+* [MODORDERS-908](https://issues.folio.org/browse/MODORDERS-908) - Cannot load cache for mapping organizations when importing Orders (Orchid CSP 5 Clone)
+* [MODORDERS-902](https://issues.folio.org/browse/MODORDERS-902) - Allow user to fully edit location details when receiving workflow = Independent order and receipt quantity.
+* [MODORDERS-901](https://issues.folio.org/browse/MODORDERS-901) - zero division fix
+* [MODORDERS-894](https://issues.folio.org/browse/MODORDERS-894) - Adding fund distribution line in the POL breaks the order record. Can no longer open.
+* [MODORDERS-890](https://issues.folio.org/browse/MODORDERS-890) - When using POL "Change instance" the product ID can be made invalid blocking Invoice approve and pay 
+* [MODORDERS-865](https://issues.folio.org/browse/MODORDERS-514) - fixed permissions and request routing
+* [MODORDERS-863](https://issues.folio.org/browse/MODORDERS-863) - Error after importing open orders for the second time
+* [MODORDERS-862](https://issues.folio.org/browse/MODORDERS-859) - Fixed receiving more than 15 pieces
+* [MODORDERS-855](https://issues.folio.org/browse/MODORDERS-859) - fixed Future usage
+* [MODORDERS-514](https://issues.folio.org/browse/MODORDERS-514) - Closing a composite order can fail silently when lines are included
+* [MODORDERS-494](https://issues.folio.org/browse/MODORDERS-494) - Unexpected jump in POL number on 2 line PO
+* [FAT-4999](https://issues.folio.org/browse/FAT-4999) - Added missing permission for check-in
+* [FAT-4863](https://issues.folio.org/browse/FAT-4863) - fixed orders chunk counting
+* [FAT-4844](https://issues.folio.org/browse/FAT-4844) - updated permissions
+
+### Tech debt
+
+* [MODORDERS-750](https://issues.folio.org/browse/MODORDERS-750) - Introduce Caffeine Cache for inventory entry types
+* [MODORDERS-865](https://issues.folio.org/browse/MODORDERS-865) - added missed permission
+* [MODORDERS-850](https://issues.folio.org/browse/MODORDERS-850) - Refactor inventoryManager in order to support caching
+
+### Dependencies
+
+* Bump `java version` from `11` to `17`
+* Bump `data-import-utils` from `1.9.0` to `1.11.0`
+* Bump `data-import-processing-core` from `4.0.1` to `4.1.0`
+
+## 12.6.0 Orchid R1 2023 - Released
+This release focused on replacing FolioVertxCompletableFuture usage refactoring, edit fund distributions with related invoices and orders import features
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.5.0...v12.6.0)
+
+### Stories
+* [MODORDERS-844](https://issues.folio.org/browse/MODORDERS-844) - Add cache to store organisations info for mapping
+* [MODORDERS-843](https://issues.folio.org/browse/MODORDERS-843) - Adjust deduplication mechanism to store info by POLine id
+* [MODORDERS-842](https://issues.folio.org/browse/MODORDERS-842) - Incorrect displaying initial amount encumbered after changing distribution percentage
+* [MODORDERS-840](https://issues.folio.org/browse/MODORDERS-840) - Extend error handling logic if can't create OrderLine
+* [MODORDERS-834](https://issues.folio.org/browse/MODORDERS-834) - Flow #2. Copy the amount awaiting payment and expended from the original encumbrance
+* [MODORDERS-820](https://issues.folio.org/browse/MODORDERS-820) - Introduce "deleteHolding" param to orders put endpoint
+* [MODORDERS-825](https://issues.folio.org/browse/MODORDERS-825) - Align the module with API breaking change
+* [MODORDERS-823](https://issues.folio.org/browse/MODORDERS-823) - Implement logic that defines which event should be issued as a result of saving Pending Orders
+* [MODORDERS-821](https://issues.folio.org/browse/MODORDERS-821) - Implement "Create new holdings for location" flag
+* [MODORDERS-817](https://issues.folio.org/browse/MODORDERS-817) - Associate mapped POLines with single Order based on POLine limit value
+* [MODORDERS-808](https://issues.folio.org/browse/MODORDERS-808) - Create "OrdersPostProcessingEventHandler" for mod-orders
+* [MODORDERS-807](https://issues.folio.org/browse/MODORDERS-807) - Copy number does not get applied to item when creating item through receiving app
+* [MODORDERS-805](https://issues.folio.org/browse/MODORDERS-805) - Replace FolioVertxCompletableFuture usage - merge
+* [MODORDERS-804](https://issues.folio.org/browse/MODORDERS-804) - Remove validation for editing fund distribution when related invoice is approved or paid
+* [MODORDERS-803](https://issues.folio.org/browse/MODORDERS-803) - Implement Edit Fund Destribution blocking action (FLOW #3)
+* [MODORDERS-801](https://issues.folio.org/browse/MODORDERS-801) - Check and correct encumbrance ID links for invoices with Open or Reviewed status (FLOW #4)
+* [MODORDERS-800](https://issues.folio.org/browse/MODORDERS-800) - Implement moving encumbered value from budget 1 to budget 2 (FLOW #2)
+* [MODORDERS-789](https://issues.folio.org/browse/MODORDERS-789) - Creating large amounts of polines performance issue
+* [MODORDERS-788](https://issues.folio.org/browse/MODORDERS-788) - Implement fetching related invoices on PUT PO Line method to be able to implement all futher flows
+* [MODORDERS-784](https://issues.folio.org/browse/MODORDERS-784) - Logging improvement - Configuration
+* [MODORDERS-783](https://issues.folio.org/browse/MODORDERS-783) - Implement Orders Export History API
+* [MODORDERS-780](https://issues.folio.org/browse/MODORDERS-780) - Replace FolioVertxCompletableFuture usage
 * [MODORDERS-775](https://issues.folio.org/browse/MODORDERS-775) - Add deduplication mechanism for Create Order event
 * [MODORDERS-773](https://issues.folio.org/browse/MODORDERS-773) - Implement action profile handler for order creation
-* [MODORDERS-844](https://issues.folio.org/browse/MODORDERS-844) - Add cache to store organisations info for mapping
-* [MODORDERS-808](https://issues.folio.org/browse/MODORDERS-808) - Create "OrdersPostProcessingEventHandler" for mod-orders
-* [MODORDERS-843](https://issues.folio.org/browse/MODORDERS-843) - Adjust deduplication mechanism to store info by POLine id
+* [MODORDERS-724](https://issues.folio.org/browse/MODORDERS-724) - Replace use of deprecated class HttpClientFactory
+* [MODORDERS-696](https://issues.folio.org/browse/MODORDERS-696) - Replace all utility methods for HTTP calls from HelperUtils
+* [MODORDERS-647](https://issues.folio.org/browse/MODORDERS-647) - Implement Find or create logic for Holdings generated through the GOBI API
+
+### Bug Fixes
+* [MODORDERS-841](https://issues.folio.org/browse/MODORDERS-841) - Encumbrance current amount is calculated incorrectly after changing fund distribution when related paid invoice exists
+* [MODORDERS-833](https://issues.folio.org/browse/MODORDERS-833) - Negative encumbrance values appear for expense classes after rollover
+* [MODORDERS-827](https://issues.folio.org/browse/MODORDERS-827) - Order view is not restricted by Acquisition unit
+* [MODORDERS-816](https://issues.folio.org/browse/MODORDERS-816) - A user with order create permission can not add suffix and prefix to the order
+* [MODORDERS-810](https://issues.folio.org/browse/MODORDERS-810) - Invoice is unable to approve due to protected fields on productIds
+* [MODORDERS-713](https://issues.folio.org/browse/MODORDERS-713) - Add prefix and suffix to PO number when create or update order
+
 
 ## 12.5.0 Nolana R3 2022 - Released
 This release focused on upgrade RMB and module interface dependencies

@@ -1,12 +1,7 @@
 buildMvn {
   publishModDescriptor = 'yes'
   mvnDeploy = 'yes'
-  buildNode = 'jenkins-agent-java11'
-
-  doApiLint = true
-  doApiDoc = true
-  apiTypes = 'RAML'
-  apiDirectories = 'ramls'
+  buildNode = 'jenkins-agent-java17'
 
   doDocker = {
     buildJavaDocker {

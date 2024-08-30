@@ -7,32 +7,14 @@ import static org.hamcrest.Matchers.equalTo;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.folio.rest.acq.model.finance.Transaction;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.FundDistribution;
 import org.folio.rest.jaxrs.model.PoLine;
 
 public final class FinanceInteractionsTestHelper {
-
-  public static void verifyEncumbrancesOnPoCreation(CompositePurchaseOrder rqPo, CompositePurchaseOrder rsPo) {
-    // Check that number of linked encumbrances corresponds to FundDistribution count
-    int fundDistributionCount = getFundDistributionCount(rqPo);
-    assertThat(fundDistributionCount, equalTo(getEncumbrancesCount(rsPo)));
-
-    List<Transaction> createdEncumbrances = getCreatedEncumbrances();
-    assertThat(fundDistributionCount, equalTo(createdEncumbrances.size()));
-
-    for (CompositePoLine compositePoLine : rsPo.getCompositePoLines()) {
-      for (FundDistribution fundDistr : compositePoLine.getFundDistribution()) {
-        Transaction encumbrance = getEncumbranceById(createdEncumbrances, fundDistr.getEncumbrance());
-        assertThat(fundDistr.getFundId(), equalTo(encumbrance.getFromFundId()));
-      }
-    }
-  }
 
   public static void verifyEncumbrancesOnPoUpdate(CompositePurchaseOrder rqPo) {
     verifyEncumbrancesOnPoUpdate(rqPo, getFundDistributionCount(rqPo));
@@ -79,14 +61,5 @@ public final class FinanceInteractionsTestHelper {
       .stream()
       .mapToInt(pol -> pol.getFundDistribution().size())
       .sum();
-  }
-
-  private static int getEncumbrancesCount(CompositePurchaseOrder po) {
-    return (int) po.getCompositePoLines()
-      .stream()
-      .flatMap(pol -> pol.getFundDistribution().stream())
-      .map(FundDistribution::getEncumbrance)
-      .filter(Objects::nonNull)
-      .count();
   }
 }

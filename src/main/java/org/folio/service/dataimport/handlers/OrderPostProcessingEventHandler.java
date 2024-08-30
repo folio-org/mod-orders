@@ -34,7 +34,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 
 @Component
 public class OrderPostProcessingEventHandler implements EventHandler {
@@ -44,7 +44,6 @@ public class OrderPostProcessingEventHandler implements EventHandler {
 
   private static final String PO_LINE_KEY = "PO_LINE";
   private static final String ID_FIELD = "id";
-
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderStorageService purchaseOrderStorageService;
   private final Context vertxContext;
@@ -78,8 +77,9 @@ public class OrderPostProcessingEventHandler implements EventHandler {
     RequestContext requestContext = new RequestContext(vertxContext, okapiHeaders);
     CompositePoLine poLine = Json.decodeValue(payloadContext.get(PO_LINE_KEY), CompositePoLine.class);
 
+    LOGGER.info("handle:: jobExecutionId {}, poLineId {}, orderId {}", dataImportEventPayload.getJobExecutionId(), poLine.getId(), poLine.getPurchaseOrderId());
     ensurePoLineWithInstanceId(poLine, dataImportEventPayload, requestContext)
-      .compose(v -> poLineImportProgressService.poLinesProcessed(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
+      .compose(v -> poLineImportProgressService.trackProcessedPoLine(poLine.getPurchaseOrderId(), dataImportEventPayload.getTenant()))
       .compose(poLinesImported -> Boolean.TRUE.equals(poLinesImported)
         ? openOrder(poLine, requestContext, dataImportEventPayload.getJobExecutionId())
         : Future.succeededFuture())

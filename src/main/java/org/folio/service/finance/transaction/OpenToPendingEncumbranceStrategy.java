@@ -6,7 +6,6 @@ import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
-import org.folio.service.finance.transaction.summary.OrderTransactionSummariesService;
 import org.folio.service.orders.OrderWorkflowType;
 
 import io.vertx.core.Future;
@@ -14,37 +13,32 @@ import io.vertx.core.Future;
 public class OpenToPendingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
 
   private final EncumbranceService encumbranceService;
-  private final OrderTransactionSummariesService orderTransactionSummariesService;
   private final EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
 
   public OpenToPendingEncumbranceStrategy(EncumbranceService encumbranceService,
-      OrderTransactionSummariesService orderTransactionSummariesService,
-      EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
+    EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder) {
     this.encumbranceService = encumbranceService;
-    this.orderTransactionSummariesService = orderTransactionSummariesService;
     this.encumbranceRelationsHoldersBuilder = encumbranceRelationsHoldersBuilder;
   }
 
-    @Override
-    public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
-        RequestContext requestContext) {
+  @Override
+  public Future<Void> processEncumbrances(CompositePurchaseOrder compPO, CompositePurchaseOrder poAndLinesFromStorage,
+      RequestContext requestContext) {
 
-      return getOrderEncumbrances(compPO, poAndLinesFromStorage, requestContext)
-                .map(this::makeEncumbrancesPending)
-                .compose(transactions -> orderTransactionSummariesService.updateTransactionSummary(compPO.getId(), transactions.size(), requestContext)
-                    .map(vVoid -> transactions))
-                .compose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
-    }
+    return getOrderEncumbrances(compPO, poAndLinesFromStorage, requestContext)
+      .map(this::makeEncumbrancesPending)
+      .compose(transactions -> encumbranceService.updateEncumbrances(transactions, requestContext));
+  }
 
-    private List<Transaction> makeEncumbrancesPending(List<Transaction> encumbrances) {
-        encumbrances.forEach(encumbrance -> {
-            encumbrance.setAmount(0d);
-            encumbrance.getEncumbrance().setInitialAmountEncumbered(0d);
-            encumbrance.getEncumbrance().setStatus(Encumbrance.Status.PENDING);
-            encumbrance.getEncumbrance().setOrderStatus(Encumbrance.OrderStatus.PENDING);
-        });
-        return encumbrances;
-    }
+  private List<Transaction> makeEncumbrancesPending(List<Transaction> encumbrances) {
+    encumbrances.forEach(encumbrance -> {
+      encumbrance.setAmount(0d);
+      encumbrance.getEncumbrance().setInitialAmountEncumbered(0d);
+      encumbrance.getEncumbrance().setStatus(Encumbrance.Status.PENDING);
+      encumbrance.getEncumbrance().setOrderStatus(Encumbrance.OrderStatus.PENDING);
+    });
+    return encumbrances;
+  }
 
   @Override
   public OrderWorkflowType getStrategyName() {

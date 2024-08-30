@@ -11,7 +11,6 @@ public enum POProtectedFields {
   APPROVED("approved"),
   ORDER_TYPE("orderType"),
   RE_ENCUMBER("reEncumber"),
-  ONGOING("ongoing"),
   TEMPLATE("template");
 
   POProtectedFields(String field) {

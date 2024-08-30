@@ -1,44 +1,158 @@
 package org.folio.helper;
 
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
-
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
-import org.folio.ApiTestSuite;
-import org.folio.config.ApplicationConfig;
-import org.junit.jupiter.api.AfterAll;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import org.folio.rest.acq.model.SequenceNumbers;
+import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
+import org.folio.rest.jaxrs.model.Alert;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.service.orders.PurchaseOrderLineService;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.stubbing.Answer;
+
+import java.util.List;
+import java.util.UUID;
+
+import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 
 public class PurchaseOrderLineHelperTest {
-  private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
-  private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
+  private AutoCloseable mockitoMocks;
+  @InjectMocks
+  private PurchaseOrderLineHelper purchaseOrderLineHelper;
+  @Mock
+  private PurchaseOrderLineService purchaseOrderLineService;
+  @Mock
+  private RequestContext requestContext;
+  @Mock
+  private RestClient restClient;
 
-  private static boolean runningOnOwn;
-
-  @BeforeAll
-  static void before() throws InterruptedException, ExecutionException, TimeoutException {
-    if (isVerticleNotDeployed()) {
-      ApiTestSuite.before();
-      runningOnOwn = true;
-    }
-    initSpringContext(ApplicationConfig.class);
+  @BeforeEach
+  void beforeEach() {
+    mockitoMocks = MockitoAnnotations.openMocks(this);
   }
 
   @AfterEach
-  void afterEach() {
-    clearServiceInteractions();
+  void resetMocks() throws Exception {
+    mockitoMocks.close();
   }
 
-  @AfterAll
-  static void after() {
-    if (runningOnOwn) {
-      ApiTestSuite.after();
-    }
+  @Test
+  @DisplayName("Test createPoLineWithOrder")
+  void testCreatePoLineWithOrder() {
+    // Given
+    Alert alert = new Alert()
+      .withAlert("alert");
+    ReportingCode reportingCode = new ReportingCode()
+      .withCode("code");
+    CompositePurchaseOrder compPO = new CompositePurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withPoNumber("1");
+    Cost cost = new Cost()
+      .withCurrency("USD");
+    CompositePoLine poLine = new CompositePoLine()
+      .withAlerts(List.of(alert))
+      .withReportingCodes(List.of(reportingCode))
+        .withCost(cost);
+
+    doAnswer((Answer<Future<Alert>>) invocation -> {
+      Alert al = invocation.getArgument(1);
+      if (al.getId() == null) {
+        al.setId(UUID.randomUUID().toString());
+      }
+      return succeededFuture(al);
+    }).when(restClient).post(any(RequestEntry.class), any(Alert.class), eq(Alert.class), eq(requestContext));
+    doAnswer((Answer<Future<ReportingCode>>) invocation -> {
+      ReportingCode rc = invocation.getArgument(1);
+      if (rc.getId() == null) {
+        rc.setId(UUID.randomUUID().toString());
+      }
+      return succeededFuture(rc);
+    }).when(restClient).post(any(RequestEntry.class), any(ReportingCode.class), eq(ReportingCode.class), eq(requestContext));
+    SequenceNumbers seqNumbers = new SequenceNumbers()
+      .withSequenceNumbers(List.of("1"));
+    doReturn(succeededFuture(JsonObject.mapFrom(seqNumbers)))
+      .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    doReturn(succeededFuture())
+      .when(purchaseOrderLineService).updateSearchLocations(any(CompositePoLine.class), eq(requestContext));
+    doAnswer((Answer<Future<PoLine>>) invocation -> {
+      PoLine pol = invocation.getArgument(1);
+      return succeededFuture(pol);
+    }).when(restClient).post(any(RequestEntry.class), any(PoLine.class), eq(PoLine.class), eq(requestContext));
+
+    // When
+    Future<CompositePoLine> future = purchaseOrderLineHelper.createPoLineWithOrder(poLine, compPO, requestContext);
+
+    // Then
+    assertTrue(future.succeeded());
+  }
+
+  @Test
+  @DisplayName("Test error when creating a reporting code")
+  void testErrorWhenCreatingAReportingCode() {
+    // Given
+    Alert alert = new Alert()
+      .withAlert("alert");
+    ReportingCode reportingCode = new ReportingCode()
+      .withCode("code");
+    CompositePurchaseOrder compPO = new CompositePurchaseOrder()
+      .withId(UUID.randomUUID().toString())
+      .withPoNumber("1");
+    Cost cost = new Cost()
+      .withCurrency("USD");
+    CompositePoLine poLine = new CompositePoLine()
+      .withAlerts(List.of(alert))
+      .withReportingCodes(List.of(reportingCode))
+      .withCost(cost);
+
+    doAnswer((Answer<Future<Alert>>) invocation -> {
+      Alert al = invocation.getArgument(1);
+      if (al.getId() == null) {
+        al.setId(UUID.randomUUID().toString());
+      }
+      return succeededFuture(al);
+    }).when(restClient).post(any(RequestEntry.class), any(Alert.class), eq(Alert.class), eq(requestContext));
+    doReturn(failedFuture(new Exception("test error")))
+      .when(restClient).post(any(RequestEntry.class), any(ReportingCode.class), eq(ReportingCode.class), eq(requestContext));
+    SequenceNumbers seqNumbers = new SequenceNumbers()
+      .withSequenceNumbers(List.of("1"));
+    doReturn(succeededFuture(JsonObject.mapFrom(seqNumbers)))
+      .when(restClient).getAsJsonObject(any(RequestEntry.class), eq(requestContext));
+    doReturn(succeededFuture())
+      .when(purchaseOrderLineService).updateSearchLocations(any(CompositePoLine.class), eq(requestContext));
+    doAnswer((Answer<Future<PoLine>>) invocation -> {
+      PoLine pol = invocation.getArgument(1);
+      return succeededFuture(pol);
+    }).when(restClient).post(any(RequestEntry.class), any(PoLine.class), eq(PoLine.class), eq(requestContext));
+
+    // When
+    Future<CompositePoLine> future = purchaseOrderLineHelper.createPoLineWithOrder(poLine, compPO, requestContext);
+
+    // Then
+    assertTrue(future.failed());
+    Throwable cause = future.cause();
+    HttpException ex = (HttpException)cause;
+    assertEquals("Failed to create reporting codes", ex.getMessage());
+    assertEquals("test error", ex.getCause().getMessage());
   }
 
 }

@@ -1,0 +1,19 @@
+{
+  "toBeCheckedIn": [
+    {
+      "poLineId": "6499cf7d-c546-4d2f-8d5e-e76ec72dee99",
+      "checkedIn": 1,
+      "checkInPieces": [
+        {
+          "id": "5d1905e1-1ab4-481f-8bf6-617a729c2140",
+          "displaySummary": "Test 1",
+          "displayOnHolding": false,
+          "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+          "holdingId": null,
+          "itemStatus": "In process"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 1
+}

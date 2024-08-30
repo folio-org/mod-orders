@@ -1,0 +1,68 @@
+{
+  "id": "aae3a75a-4e12-4e60-8c14-605b31d7593b",
+  "cost": {
+    "currency": "USD",
+    "discountType": "percentage",
+    "listUnitPrice": 1.0,
+    "quantityPhysical": 2,
+    "poLineEstimatedPrice": 2.0
+  },
+  "rush": false,
+  "alerts": [],
+  "claims": [],
+  "source": "User",
+  "details": {
+    "productIds": [],
+    "isAcknowledged": false,
+    "isBinderyActive": false,
+    "subscriptionInterval": 0
+  },
+  "physical": {
+    "volumes": [],
+    "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+    "createInventory": "Instance, Holding, Item",
+    "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+  },
+  "isPackage": false,
+  "locations": [
+    {
+      "quantity": 1,
+      "tenantId": "university",
+      "holdingId": "82220193-de57-4c10-afb0-0529b5368ff0",
+      "quantityPhysical": 1
+    },
+    {
+      "quantity": 1,
+      "tenantId": "university",
+      "holdingId": "5afdf421-7b02-43d7-9d93-917d1724a725",
+      "quantityPhysical": 1
+    }
+  ],
+  "collection": false,
+  "instanceId": "d97f0db3-7cb0-4179-bce0-1ad648aff60d",
+  "orderFormat": "Physical Resource",
+  "checkinItems": false,
+  "contributors": [],
+  "poLineNumber": "10002-1",
+  "vendorDetail": {
+    "instructions": "",
+    "vendorAccount": "1234",
+    "referenceNumbers": []
+  },
+  "paymentStatus": "Awaiting Payment",
+  "receiptStatus": "Awaiting Receipt",
+  "claimingActive": false,
+  "reportingCodes": [],
+  "titleOrPackage": "1169-1",
+  "automaticExport": false,
+  "purchaseOrderId": "0c9a0e56-3518-4f0c-bfbb-98cc47b07f6c",
+  "claimingInterval": 45,
+  "fundDistribution": [],
+  "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+  "searchLocationIds": [
+    "fcd64ce1-6995-48f0-840e-89ffa2288371",
+    "184aae84-a5bf-4c6a-85ba-4a7c73026cd5"
+  ],
+  "donorOrganizationIds": [],
+  "cancellationRestriction": true
+}

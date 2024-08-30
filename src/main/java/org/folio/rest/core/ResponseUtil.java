@@ -35,10 +35,10 @@ public class ResponseUtil {
 
 
   private static int extractHttpCode(Throwable cause) {
-     if (cause instanceof io.vertx.ext.web.handler.HttpException) {
-      return ((io.vertx.ext.web.handler.HttpException) cause).getStatusCode();
-    } else if (cause instanceof HttpException){
-      return ((HttpException) cause).getCode();
+    if (cause instanceof io.vertx.ext.web.handler.HttpException e) {
+      return e.getStatusCode();
+    } else if (cause instanceof HttpException e){
+      return e.getCode();
     }
     return INTERNAL_SERVER_ERROR.getStatusCode();
   }

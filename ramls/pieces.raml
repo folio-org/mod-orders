@@ -19,7 +19,6 @@ types:
 traits:
   pageable: !include raml-util/traits/pageable.raml
   searchable: !include raml-util/traits/searchable.raml
-  language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
@@ -57,7 +56,7 @@ resourceTypes:
       collection-item:
         exampleItem: !include acq-models/mod-orders-storage/examples/piece_get.sample
         schema: piece
-    is: [validate, language]
+    is: [validate]
     get:
       description: Return a piece record with given {id}
     put:

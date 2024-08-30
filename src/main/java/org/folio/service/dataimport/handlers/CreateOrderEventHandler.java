@@ -1,14 +1,53 @@
 package org.folio.service.dataimport.handlers;
 
-import io.vertx.circuitbreaker.CircuitBreaker;
-import io.vertx.circuitbreaker.CircuitBreakerOptions;
-import io.vertx.circuitbreaker.RetryPolicy;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import static java.lang.Boolean.FALSE;
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.ActionProfile.Action.CREATE;
+import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.ITEM;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.ActionProfile.FolioRecord.ORDER;
+import static org.folio.DataImportEventTypes.DI_COMPLETED;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
+import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
+import static org.folio.service.orders.OrderValidationService.isApprovalRequiredConfiguration;
+import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
+import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
+import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.orders.utils.PermissionsUtil.userDoesNotHaveApprovePermission;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,54 +72,26 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.JobExecutionTotalRecordsCache;
 import org.folio.service.caches.JobProfileSnapshotCache;
 import org.folio.service.caches.MappingParametersCache;
-import org.folio.service.configuration.ConfigurationEntriesService;
-import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.IdStorageService;
 import org.folio.service.dataimport.PoLineImportProgressService;
+import org.folio.service.dataimport.SequentialOrderIdService;
 import org.folio.service.dataimport.utils.DataImportUtils;
+import org.folio.service.orders.OrderValidationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
-import java.time.Period;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static java.lang.Boolean.FALSE;
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.ActionProfile.Action.CREATE;
-import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.ActionProfile.FolioRecord.ITEM;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.ActionProfile.FolioRecord.ORDER;
-import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
-import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
-import static org.folio.DataImportEventTypes.DI_COMPLETED;
-import static org.folio.orders.utils.HelperUtils.DEFAULT_POLINE_LIMIT;
-import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
-import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
-import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.NONE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import io.vertx.circuitbreaker.CircuitBreaker;
+import io.vertx.circuitbreaker.CircuitBreakerOptions;
+import io.vertx.circuitbreaker.RetryPolicy;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 
 @Component
 public class CreateOrderEventHandler implements EventHandler {
@@ -97,10 +108,14 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String MAPPING_RESULT_FIELD = "order";
   private static final String INSTANCE_ID_FIELD = "id";
   private static final String ORDER_STATUS_FIELD = "workflowStatus";
+  private static final String ORDER_FORMAT_FIELD = "orderFormat";
   private static final String POL_ACTIVATION_DUE_FIELD = "activationDue";
   private static final String POL_ERESOURCE_FIELD = "eresource";
   private static final String POL_PHYSICAL_FIELD = "physical";
   private static final String POL_CREATE_INVENTORY_FIELD = "createInventory";
+  private static final String POL_FUND_DISTRIBUTION_FIELD = "fundDistribution";
+  private static final String POL_FUND_CODE_FIELD = "code";
+  private static final String POL_FUND_ID_FIELD = "fundId";
   private static final String PO_LINE_KEY = "PO_LINE";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String JOB_PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
@@ -110,14 +125,17 @@ public class CreateOrderEventHandler implements EventHandler {
   private static final String WORKFLOW_STATUS_PATH = "order.po.workflowStatus";
   private static final String PO_LINE_ORDER_ID_KEY = "purchaseOrderId";
   private static final String DEFAULT_PO_LINES_LIMIT = "1";
+  private static final char LEFT_BRACKET = '(';
+  private static final char RIGHT_BRACKET = ')';
 
   private final PurchaseOrderHelper purchaseOrderHelper;
   private final PurchaseOrderLineHelper poLineHelper;
-  private final ConfigurationEntriesService configurationEntriesService;
+  private final ConfigurationEntriesCache configurationEntriesCache;
   private final IdStorageService idStorageService;
   private final JobProfileSnapshotCache jobProfileSnapshotCache;
   private final SequentialOrderIdService sequentialOrderIdService;
   private final PoLineImportProgressService poLineImportProgressService;
+  private final OrderValidationService orderValidationService;
   private final JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache;
   private final RetryPolicy retryPolicy = (failure, retryCount) -> 1000L;
   private final Vertx vertx;
@@ -126,16 +144,17 @@ public class CreateOrderEventHandler implements EventHandler {
 
   @Autowired
   public CreateOrderEventHandler(PurchaseOrderHelper purchaseOrderHelper, PurchaseOrderLineHelper poLineHelper,
-                                 ConfigurationEntriesService configurationEntriesService, IdStorageService idStorageService,
+                                 ConfigurationEntriesCache configurationEntriesCache, IdStorageService idStorageService,
                                  JobProfileSnapshotCache jobProfileSnapshotCache,
                                  SequentialOrderIdService sequentialOrderIdService,
                                  PoLineImportProgressService poLineImportProgressService,
                                  JobExecutionTotalRecordsCache jobExecutionTotalRecordsCache,
                                  Vertx vertx,
-                                 MappingParametersCache mappingParametersCache) {
+                                 MappingParametersCache mappingParametersCache,
+                                 OrderValidationService orderValidationService) {
     this.purchaseOrderHelper = purchaseOrderHelper;
     this.poLineHelper = poLineHelper;
-    this.configurationEntriesService = configurationEntriesService;
+    this.configurationEntriesCache = configurationEntriesCache;
     this.idStorageService = idStorageService;
     this.jobProfileSnapshotCache = jobProfileSnapshotCache;
     this.sequentialOrderIdService = sequentialOrderIdService;
@@ -143,6 +162,7 @@ public class CreateOrderEventHandler implements EventHandler {
     this.poLineImportProgressService = poLineImportProgressService;
     this.jobExecutionTotalRecordsCache = jobExecutionTotalRecordsCache;
     this.vertx = vertx;
+    this.orderValidationService = orderValidationService;
     circuitBreaker = CircuitBreaker.create("order line circuit breaker", vertx,
       new CircuitBreakerOptions()
         .setMaxRetries(5)       // number of retries
@@ -172,10 +192,9 @@ public class CreateOrderEventHandler implements EventHandler {
           future.completeExceptionally(result.cause());
         } else {
           Optional<Integer> poLinesLimitOptional = extractPoLinesLimit(dataImportEventPayload);
-          MappingManager.map(dataImportEventPayload, new MappingContext());
 
           RequestContext requestContext = new RequestContext(Vertx.currentContext(), okapiHeaders);
-          Future<JsonObject> tenantConfigFuture = configurationEntriesService.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
+          Future<JsonObject> tenantConfigFuture = configurationEntriesCache.loadConfiguration(ORDER_CONFIG_MODULE_NAME, requestContext);
           String temporaryOrderIdForANewOrder = UUID.randomUUID().toString();
 
           tenantConfigFuture
@@ -270,8 +289,8 @@ public class CreateOrderEventHandler implements EventHandler {
                                                                          RequestContext requestContext) {
     CompositePurchaseOrder order = Json.decodeValue(dataImportEventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     Boolean isApproved = order.getApproved();
-    boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
-    boolean isUserNotHaveApprovalPermission = PurchaseOrderHelper.isUserNotHaveApprovePermission(requestContext);
+    boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
+    boolean isUserNotHaveApprovalPermission = userDoesNotHaveApprovePermission(requestContext);
 
     if (isApprovalRequired && Boolean.TRUE.equals(isApproved) && isUserNotHaveApprovalPermission) {
       order.setApproved(false);
@@ -293,8 +312,8 @@ public class CreateOrderEventHandler implements EventHandler {
       return Future.succeededFuture();
     }
 
-    boolean isApprovalRequired = PurchaseOrderHelper.isApprovalRequiredConfiguration(tenantConfig);
-    boolean isUserNotHaveApprovalPermission = PurchaseOrderHelper.isUserNotHaveApprovePermission(requestContext);
+    boolean isApprovalRequired = isApprovalRequiredConfiguration(tenantConfig);
+    boolean isUserNotHaveApprovalPermission = userDoesNotHaveApprovePermission(requestContext);
 
     if (workflowStatus.equals(WorkflowStatus.OPEN)) {
       if (isApprovalRequired && isUserNotHaveApprovalPermission) {
@@ -344,7 +363,7 @@ public class CreateOrderEventHandler implements EventHandler {
     List<ProfileSnapshotWrapper> actionProfiles = jobProfileSnapshotWrapper
       .getChildSnapshotWrappers()
       .stream()
-      .filter(e -> e.getContentType() == ProfileSnapshotWrapper.ContentType.ACTION_PROFILE)
+      .filter(e -> e.getContentType() == ACTION_PROFILE)
       .collect(Collectors.toList());
 
     if (!actionProfiles.isEmpty() && checkIfCurrentProfileIsTheLastOne(dataImportEventPayload, actionProfiles)) {
@@ -395,8 +414,12 @@ public class CreateOrderEventHandler implements EventHandler {
     orderToSave.setId(orderId);
     // in this handler a purchase order always is created in PENDING status despite the status that is set during mapping
     orderToSave.setWorkflowStatus(WorkflowStatus.PENDING);
+    if (orderToSave.getVendor() == null) {
+      LOGGER.warn("saveOrder:: jobExecutionId: '{}', recordId: '{}', orderId: '{}' vendor for the order has not been mapped",
+        dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getContext().get(RECORD_ID_HEADER), orderId);
+    }
 
-    return purchaseOrderHelper.validateOrder(orderToSave, tenantConfig, requestContext)
+    return orderValidationService.validateOrderForPost(orderToSave, tenantConfig, requestContext)
       .compose(errors -> {
         if (CollectionUtils.isNotEmpty(errors)) {
           return Future.failedFuture(new EventProcessingException(Json.encode(errors)));
@@ -405,8 +428,8 @@ public class CreateOrderEventHandler implements EventHandler {
           .compose(order -> savePoLinesAmountPerOrder(orderId, dataImportEventPayload, tenantConfig).map(order))
           .onComplete(v -> dataImportEventPayload.getContext().put(ORDER.value(), Json.encode(orderToSave)))
           .recover(e -> {
-            if (e instanceof HttpException) {
-              String message = ((HttpException) e).getError().getMessage();
+            if (e instanceof HttpException httpException) {
+              String message = httpException.getError().getMessage();
               if (message.contains(ID_UNIQUENESS_ERROR_MSG)) {
                 LOGGER.debug("saveOrder:: Failed to create order with existing id: '{}' due to duplicated event. Ignoring event processing", orderId);
                 return Future.failedFuture(new DuplicateEventException(message));
@@ -420,7 +443,7 @@ public class CreateOrderEventHandler implements EventHandler {
 
   private Future<Void> savePoLinesAmountPerOrder(String orderId, DataImportEventPayload eventPayload, JsonObject tenantConfig) {
     Map<String, String> headers = DataImportUtils.extractOkapiHeaders(eventPayload);
-    OkapiConnectionParams params = new OkapiConnectionParams(headers, Vertx.vertx());
+    OkapiConnectionParams params = new OkapiConnectionParams(headers, vertx);
 
     return jobExecutionTotalRecordsCache.get(eventPayload.getJobExecutionId(), params)
       .map(totalRecords -> determinePoLinesAmountPerOrder(eventPayload, totalRecords, tenantConfig))
@@ -452,7 +475,9 @@ public class CreateOrderEventHandler implements EventHandler {
     }
 
     return poLineHelper.createPoLine(poLine, tenantConfig, requestContext)
-      .eventually(createPoLine -> poLineImportProgressService.trackProcessedPoLine(orderId, dataImportEventPayload.getTenant()))
+      .recover(e -> poLineImportProgressService.trackProcessedPoLine(orderId, dataImportEventPayload.getTenant())
+        .onFailure(trackingError -> LOGGER.warn("saveOrderLines:: Failed to track processed PO line by orderId: {}, jobExecutionId: {}", orderId, dataImportEventPayload.getJobExecutionId(), trackingError))
+        .transform(v -> Future.failedFuture(e)))
       .onComplete(ar -> dataImportEventPayload.getContext().put(PO_LINE_KEY, Json.encode(poLine)));
   }
 
@@ -490,10 +515,10 @@ public class CreateOrderEventHandler implements EventHandler {
     JsonObject orderJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(ORDER_FIELD);
     JsonObject poLineJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(PO_LINES_FIELD);
     calculateActivationDue(poLineJson);
+    ensureFundCode(poLineJson, dataImportEventPayload);
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
 
-    if (WorkflowStatus.OPEN.value().equals(orderJson.getString(ORDER_STATUS_FIELD))
-      && (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null || poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null)) {
+    if (WorkflowStatus.OPEN.value().equals(orderJson.getString(ORDER_STATUS_FIELD))) {
       return overrideCreateInventoryField(poLineJson, dataImportEventPayload)
         .onComplete(v -> dataImportEventPayload.getContext().put(PO_LINE_KEY, poLineJson.encode()));
     }
@@ -516,10 +541,39 @@ public class CreateOrderEventHandler implements EventHandler {
     }
   }
 
+  private void ensureFundCode(JsonObject poLineJson, DataImportEventPayload dataImportEventPayload) {
+    if (!IterableUtils.isEmpty(poLineJson.getJsonArray(POL_FUND_DISTRIBUTION_FIELD))) {
+      Map<String, String> idToFundName = extractFundsData(dataImportEventPayload);
+
+      poLineJson.getJsonArray(POL_FUND_DISTRIBUTION_FIELD).stream()
+        .map(JsonObject.class::cast)
+        .filter(fundDistributionJson -> isNotEmpty(fundDistributionJson.getString(POL_FUND_ID_FIELD)))
+        .forEach(fundDistribution -> fundDistribution.put(POL_FUND_CODE_FIELD, determineFundCode(fundDistribution, idToFundName)));
+    }
+  }
+
+  private Map<String, String> extractFundsData(DataImportEventPayload dataImportEventPayload) {
+    ProfileSnapshotWrapper mappingProfileWrapper = dataImportEventPayload.getCurrentNode();
+    MappingProfile mappingProfile = ObjectMapperTool.getMapper().convertValue(mappingProfileWrapper.getContent(), MappingProfile.class);
+
+    return mappingProfile.getMappingDetails().getMappingFields().stream()
+      .filter(mappingRule -> POL_FUND_DISTRIBUTION_FIELD.equals(mappingRule.getName()) && !mappingRule.getSubfields().isEmpty())
+      .flatMap(mappingRule -> mappingRule.getSubfields().get(0).getFields().stream())
+      .filter(mappingRule -> POL_FUND_ID_FIELD.equals(mappingRule.getName()))
+      .map(mappingRule -> ((Map<String, String>) mappingRule.getAcceptedValues()))
+      .findAny()
+      .orElse(Collections.emptyMap());
+  }
+
+  private String determineFundCode(JsonObject fundDistribution, Map<String, String> idToFundName) {
+    String fundName = idToFundName.get(fundDistribution.getString(POL_FUND_ID_FIELD));
+    return fundName.substring(fundName.lastIndexOf(LEFT_BRACKET) + 1, fundName.lastIndexOf(RIGHT_BRACKET));
+  }
+
   private Future<Void> overrideCreateInventoryField(JsonObject poLineJson, DataImportEventPayload dataImportEventPayload) {
     String profileSnapshotId = dataImportEventPayload.getContext().get(JOB_PROFILE_SNAPSHOT_ID_KEY);
     Map<String, String> headers = DataImportUtils.extractOkapiHeaders(dataImportEventPayload);
-    OkapiConnectionParams okapiParams = new OkapiConnectionParams(headers, Vertx.vertx());
+    OkapiConnectionParams okapiParams = new OkapiConnectionParams(headers, vertx);
 
     return jobProfileSnapshotCache.get(profileSnapshotId, okapiParams)
       .compose(snapshotOptional -> snapshotOptional
@@ -549,16 +603,25 @@ public class CreateOrderEventHandler implements EventHandler {
       createInventoryFieldValue = NONE;
     }
 
-    if (poLineJson.getJsonObject(POL_ERESOURCE_FIELD) != null
-      && !NONE.toString().equals(poLineJson.getJsonObject(POL_ERESOURCE_FIELD).getString(POL_CREATE_INVENTORY_FIELD))) {
-      poLineJson.getJsonObject(POL_ERESOURCE_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
-    }
-    if (poLineJson.getJsonObject(POL_PHYSICAL_FIELD) != null
-      && !NONE.toString().equals(poLineJson.getJsonObject(POL_PHYSICAL_FIELD).getString(POL_CREATE_INVENTORY_FIELD))) {
-      poLineJson.getJsonObject(POL_PHYSICAL_FIELD).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue.value());
+    if (PHYSICAL_RESOURCE.value().equals(poLineJson.getString(ORDER_FORMAT_FIELD))
+      || OTHER.value().equals(poLineJson.getString(ORDER_FORMAT_FIELD))) {
+      setCreateInventoryValue(poLineJson, POL_PHYSICAL_FIELD, createInventoryFieldValue.value());
+    } else if (ELECTRONIC_RESOURCE.value().equals(poLineJson.getString(ORDER_FORMAT_FIELD))) {
+      setCreateInventoryValue(poLineJson, POL_ERESOURCE_FIELD, createInventoryFieldValue.value());
+    } else if (P_E_MIX.value().equals(poLineJson.getString(ORDER_FORMAT_FIELD))) {
+      setCreateInventoryValue(poLineJson, POL_PHYSICAL_FIELD, createInventoryFieldValue.value());
+      setCreateInventoryValue(poLineJson, POL_ERESOURCE_FIELD, createInventoryFieldValue.value());
     }
     return null;
   }
+
+  private void setCreateInventoryValue(JsonObject poLineJson, String resourceDetailsFieldName, String createInventoryFieldValue) {
+    if (poLineJson.getJsonObject(resourceDetailsFieldName) == null) {
+      poLineJson.put(resourceDetailsFieldName, new JsonObject());
+    }
+    poLineJson.getJsonObject(resourceDetailsFieldName).put(POL_CREATE_INVENTORY_FIELD, createInventoryFieldValue);
+  }
+
 
   private void overridePoLinesLimit(JsonObject tenantConfig, Optional<Integer> poLinesLimitOptional) {
     poLinesLimitOptional.ifPresent(poLinesLimit -> tenantConfig.put(PO_LINES_LIMIT_PROPERTY, poLinesLimit));

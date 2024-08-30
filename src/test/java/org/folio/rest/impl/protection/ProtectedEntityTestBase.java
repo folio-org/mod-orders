@@ -3,10 +3,12 @@ package org.folio.rest.impl.protection;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
 import static org.folio.TestUtils.getMinimalContentPiece;
+import static org.folio.TestUtils.getMinimalContentTitle;
 import static org.folio.TestUtils.getRandomId;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -24,6 +26,7 @@ import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Title;
 import org.hamcrest.Matcher;
 
 import io.restassured.http.Header;
@@ -73,9 +76,18 @@ public abstract class ProtectedEntityTestBase {
     return poLine;
   }
 
+  public Title prepareTitle(List<String> acqUnitIds) {
+    Title title = getMinimalContentTitle();
+    title.setAcqUnitIds(acqUnitIds);
+    addMockEntry(TITLES, JsonObject.mapFrom(title));
+    return title;
+  }
+
   public Piece preparePiece(List<String> acqUnitsIds) {
-    CompositePoLine poLine = preparePoLine(acqUnitsIds, CompositePurchaseOrder.WorkflowStatus.OPEN);
+    CompositePoLine poLine = preparePoLine(new ArrayList<>(), CompositePurchaseOrder.WorkflowStatus.OPEN);
+    Title title = prepareTitle(acqUnitsIds);
     Piece piece = getMinimalContentPiece(poLine.getId());
+    piece.setTitleId(title.getId());
     addMockEntry(PIECES_STORAGE, JsonObject.mapFrom(piece));
 
     return piece;

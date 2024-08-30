@@ -1,41 +1,14 @@
 package org.folio.orders.utils;
 
-import static io.vertx.core.Future.succeededFuture;
-import static java.util.stream.Collectors.toList;
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
-import static org.folio.rest.RestConstants.EN;
-import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
-import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
-import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
-import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
-import static org.folio.service.exchange.ExchangeRateProviderResolver.RATE_KEY;
-
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletionException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.money.CurrencyUnit;
-import javax.money.Monetary;
-import javax.money.MonetaryAmount;
-import javax.money.convert.ConversionQuery;
-import javax.money.convert.ConversionQueryBuilder;
-
+import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonObject;
+import one.util.streamex.IntStreamEx;
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.lang3.ArrayUtils;
@@ -45,7 +18,7 @@ import org.folio.helper.BaseHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.exceptions.InventoryException;
+import org.folio.rest.core.exceptions.NoInventoryRecordException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CloseReason;
@@ -62,18 +35,42 @@ import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
-import org.javamoney.moneta.function.MonetaryFunctions;
 import org.javamoney.moneta.function.MonetaryOperators;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.eventbus.DeliveryOptions;
-import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonObject;
-import one.util.streamex.IntStreamEx;
-import one.util.streamex.StreamEx;
+import javax.money.CurrencyUnit;
+import javax.money.Monetary;
+import javax.money.MonetaryAmount;
+import javax.money.convert.ConversionQuery;
+import javax.money.convert.ConversionQueryBuilder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletionException;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static io.vertx.core.Future.succeededFuture;
+import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
+import static org.folio.rest.RestConstants.EN;
+import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
+import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
+import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
+import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
 
 public class HelperUtils {
 
@@ -93,7 +90,6 @@ public class HelperUtils {
   public static final String OKAPI_URL = "x-okapi-url";
   public static final String PO_LINES_LIMIT_PROPERTY = "poLines-limit";
   public static final String LANG = "lang";
-  public static final String URL_WITH_LANG_PARAM = "%s?" + LANG + "=%s";
   public static final String WORKFLOW_STATUS = "workflowStatus";
 
   private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE);
@@ -156,7 +152,7 @@ public class HelperUtils {
    */
   public static int calculateTotalQuantity(CompositePoLine compPOL) {
     Cost cost = compPOL.getCost();
-  	int eQuantity = ObjectUtils.defaultIfNull(cost.getQuantityElectronic(), 0);
+    int eQuantity = ObjectUtils.defaultIfNull(cost.getQuantityElectronic(), 0);
     int physicalQuantity = ObjectUtils.defaultIfNull(cost.getQuantityPhysical(), 0);
     return eQuantity + physicalQuantity;
   }
@@ -178,7 +174,7 @@ public class HelperUtils {
   /**
    * Calculates items quantity for specified locations.
    *
-   * @param compPOL composite PO Line
+   * @param compPOL   composite PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of items expected in the inventory for PO Line
    * @see #calculateInventoryItemsQuantity(CompositePoLine)
@@ -190,7 +186,7 @@ public class HelperUtils {
   /**
    * Calculates pieces quantity for list of locations and return map where piece format is a key and corresponding quantity of pieces as value.
    *
-   * @param compPOL composite PO Line
+   * @param compPOL   composite PO Line
    * @param locations list of locations to calculate quantity for
    * @return quantity of pieces per piece format either required Inventory item for PO Line
    */
@@ -200,55 +196,52 @@ public class HelperUtils {
       return Collections.emptyMap();
     }
 
-    EnumMap<Piece.Format, Integer> quantities = new EnumMap<>(Piece.Format.class);
-    switch (compPOL.getOrderFormat()) {
-      case P_E_MIX:
+    var quantities = new EnumMap<Piece.Format, Integer>(Piece.Format.class);
+    return switch (compPOL.getOrderFormat()) {
+      case P_E_MIX -> {
         if (PoLineCommonUtil.isItemsUpdateRequiredForPhysical(compPOL)) {
           quantities.put(Piece.Format.PHYSICAL, calculatePiecesQuantity(Piece.Format.PHYSICAL, locations));
         }
         if (PoLineCommonUtil.isItemsUpdateRequiredForEresource(compPOL)) {
           quantities.put(Piece.Format.ELECTRONIC, calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations));
         }
-
-        return quantities;
-      case PHYSICAL_RESOURCE:
+        yield quantities;
+      }
+      case PHYSICAL_RESOURCE -> {
         int pQty = PoLineCommonUtil.isItemsUpdateRequiredForPhysical(compPOL) ? calculatePiecesQuantity(Piece.Format.PHYSICAL, locations) : 0;
         quantities.put(Piece.Format.PHYSICAL, pQty);
-        return quantities;
-      case ELECTRONIC_RESOURCE:
+        yield quantities;
+      }
+      case ELECTRONIC_RESOURCE -> {
         int eQty = PoLineCommonUtil.isItemsUpdateRequiredForEresource(compPOL) ? calculatePiecesQuantity(Piece.Format.ELECTRONIC, locations) : 0;
         quantities.put(Piece.Format.ELECTRONIC, eQty);
-        return quantities;
-      case OTHER:
+        yield quantities;
+      }
+      case OTHER -> {
         int oQty = PoLineCommonUtil.isItemsUpdateRequiredForPhysical(compPOL) ? calculatePiecesQuantity(Piece.Format.OTHER, locations) : 0;
         quantities.put(Piece.Format.OTHER, oQty);
-        return quantities;
-      default:
-        return Collections.emptyMap();
-    }
+        yield quantities;
+      }
+    };
   }
 
   /**
    * Calculates pieces quantity for specified locations based on piece format.
    *
-   * @param format piece format
+   * @param format    piece format
    * @param locations list of locations to calculate quantity for
    * @return quantity of items expected in the inventory for PO Line
    */
   public static int calculatePiecesQuantity(Piece.Format format, List<Location> locations) {
-    switch (format) {
-      case ELECTRONIC:
-        return getElectronicLocationsQuantity(locations);
-      case PHYSICAL:
-      case OTHER:
-        return getPhysicalLocationsQuantity(locations);
-      default:
-        return 0;
-    }
+    return switch (format) {
+      case ELECTRONIC -> getElectronicLocationsQuantity(locations);
+      case PHYSICAL, OTHER -> getPhysicalLocationsQuantity(locations);
+    };
   }
 
   /**
    * Calculates total estimated price. See MODORDERS-180 for more details.
+   *
    * @param cost PO Line's cost
    */
   public static MonetaryAmount calculateEstimatedPrice(Cost cost) {
@@ -292,52 +285,71 @@ public class HelperUtils {
     return total;
   }
 
-  public static double calculateEncumbranceEffectiveAmount(double initialAmount, double expended, double awaitingPayment, CurrencyUnit fiscalYearCurrency) {
-    return calculateEncumbranceEffectiveAmount(Money.of(initialAmount, fiscalYearCurrency), Money.of(expended, fiscalYearCurrency),
-      Money.of(awaitingPayment, fiscalYearCurrency), fiscalYearCurrency).getNumber().doubleValue();
-  }
-
-  public static MonetaryAmount calculateEncumbranceEffectiveAmount(MonetaryAmount initialAmount, MonetaryAmount expended, MonetaryAmount awaitingPayment, CurrencyUnit fiscalYearCurrency) {
-    return MonetaryFunctions.max().apply(initialAmount.subtract(expended).subtract(awaitingPayment), Money.zero(fiscalYearCurrency));
-  }
-
   public static int getPhysicalLocationsQuantity(List<Location> locations) {
-    if (CollectionUtils.isNotEmpty(locations)) {
-      return locations.stream()
-                      .map(Location::getQuantityPhysical)
-                      .filter(Objects::nonNull)
-                      .mapToInt(Integer::intValue)
-                      .sum();
-    } else {
+    if (CollectionUtils.isEmpty(locations)) {
       return 0;
     }
+    return locations.stream()
+      .map(Location::getQuantityPhysical)
+      .filter(Objects::nonNull)
+      .mapToInt(Integer::intValue)
+      .sum();
   }
 
   public static int getElectronicLocationsQuantity(List<Location> locations) {
-    if (CollectionUtils.isNotEmpty(locations)) {
-      return locations.stream()
-                      .map(Location::getQuantityElectronic)
-                      .filter(Objects::nonNull)
-                      .mapToInt(Integer::intValue)
-                      .sum();
-    } else {
+    if (CollectionUtils.isEmpty(locations)) {
       return 0;
     }
+    return locations.stream()
+      .map(Location::getQuantityElectronic)
+      .filter(Objects::nonNull)
+      .mapToInt(Integer::intValue)
+      .sum();
+  }
+
+  /**
+   * Almost same as collectResultsOnSuccess with addition that each future itself returns a list and
+   * this implementation combines all elements of all lists into the single list.
+   * @param futures The list of futures to be combined
+   * @return Single list containing all elements returned from all futures
+   * @param <E> element type
+   * @param <T> list type
+   */
+  public static <E, T extends List<E>> Future<List<E>> combineResultListsOnSuccess(Collection<Future<T>> futures) {
+    return collectResultsOnSuccess(futures)
+      .map(lists -> lists.stream().flatMap(List::stream).toList());
   }
 
   /**
    * Wait for all requests completion and collect all resulting objects. In case any failed, complete resulting future with the exception
+   *
    * @param futures list of futures and each produces resulting object on completion
-   * @param <T> resulting type
+   * @param <T>     resulting type
    * @return resulting objects
    */
-  public static <T> Future<List<T>> collectResultsOnSuccess(List<Future<T>> futures) {
+  public static <T> Future<List<T>> collectResultsOnSuccess(Collection<Future<T>> futures) {
     return GenericCompositeFuture.join(new ArrayList<>(futures))
       .map(CompositeFuture::list);
   }
 
   /**
+   * The method allows to compose any elements with the same action in sequence.
+   *
+   * @param  list    elements to be executed in sequence
+   * @param  method  action that will be executed sequentially based on the number of list items
+   * @return         the last composed element(Feature result)
+   */
+  public static <T, R> Future<R> chainCall(List<T> list, Function<T, Future<R>> method) {
+    Future<R> f = Future.succeededFuture();
+    for (T item : list) {
+      f = f.compose(r -> method.apply(item));
+    }
+    return f;
+  }
+
+  /**
    * Transform list of id's to CQL query using 'or' operation
+   *
    * @param ids list of id's
    * @return String representing CQL query to get records by id's
    */
@@ -351,8 +363,9 @@ public class HelperUtils {
 
   /**
    * Transform list of values for some property to CQL query using 'or' operation
-   * @param values list of field values
-   * @param fieldName the property name to search by
+   *
+   * @param values      list of field values
+   * @param fieldName   the property name to search by
    * @param strictMatch indicates whether strict match mode (i.e. ==) should be used or not (i.e. =)
    * @return String representing CQL query to get records by some property values
    */
@@ -372,6 +385,7 @@ public class HelperUtils {
   /**
    * Convert {@link JsonObject} which actually represents org.folio.rest.acq.model.PurchaseOrder to {@link CompositePurchaseOrder}
    * These objects are the same except PurchaseOrder doesn't contain poLines field.
+   *
    * @param poJson {@link JsonObject} representing org.folio.rest.acq.model.PurchaseOrder
    * @return {@link CompositePurchaseOrder}
    */
@@ -380,8 +394,6 @@ public class HelperUtils {
   }
 
   public static boolean changeOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    boolean isUpdateRequired = false;
-
     if (toBeCancelled(purchaseOrder, poLines)) {
       purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
       purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_CANCELLED));
@@ -389,14 +401,17 @@ public class HelperUtils {
     }
 
     if (toBeClosed(purchaseOrder, poLines)) {
-      isUpdateRequired = true;
       purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
       purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_COMPLETE));
-    } else if (toBeReopened(purchaseOrder, poLines)) {
-      isUpdateRequired = true;
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+      return true;
     }
-    return isUpdateRequired;
+
+    if (toBeReopened(purchaseOrder, poLines)) {
+      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
+      return true;
+    }
+
+    return false;
   }
 
   public static String convertTagListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
@@ -456,15 +471,16 @@ public class HelperUtils {
   }
 
   public static Void handleErrorResponse(Handler<AsyncResult<javax.ws.rs.core.Response>> asyncResultHandler, BaseHelper helper,
-                                   Throwable t) {
+                                         Throwable t) {
     asyncResultHandler.handle(succeededFuture(helper.buildErrorResponse(t)));
     return null;
   }
 
   /**
    * Check the number of titles per po line.
+   *
    * @param lineIdTitles Map po line id -> list of titles
-   * @param poLineById Map po line id -> composite po line
+   * @param poLineById   Map po line id -> composite po line
    */
   public static void verifyTitles(Map<String, List<Title>> lineIdTitles, Map<String, CompositePoLine> poLineById) {
     verifyAllTitlesExist(lineIdTitles, poLineById);
@@ -472,9 +488,8 @@ public class HelperUtils {
   }
 
   private static void verifyNonPackageLinesHaveSingleTitle(Map<String, List<Title>> titles,
-      Map<String, CompositePoLine> poLineById) {
-    if (titles.keySet().stream().anyMatch(lineId -> titles.get(lineId).size() > 1 &&
-        !poLineById.get(lineId).getIsPackage())) {
+                                                           Map<String, CompositePoLine> poLineById) {
+    if (titles.keySet().stream().anyMatch(lineId -> titles.get(lineId).size() > 1 && !poLineById.get(lineId).getIsPackage())) {
       throw new HttpException(400, MULTIPLE_NONPACKAGE_TITLES);
     }
   }
@@ -485,7 +500,7 @@ public class HelperUtils {
   }
 
   public static boolean isNotFound(Throwable t) {
-    return t instanceof HttpException && ((HttpException) t).getCode() == 404;
+    return t instanceof HttpException httpException && httpException.getCode() == 404;
   }
 
   public static ConversionQuery getConversionQuery(Double exchangeRate, String fromCurrency, String toCurrency) {
@@ -502,28 +517,10 @@ public class HelperUtils {
     return conversionQuery;
   }
 
-  public static void makePoLinePending(CompositePoLine poLine) {
-      if (poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.AWAITING_PAYMENT) {
-        poLine.setPaymentStatus(CompositePoLine.PaymentStatus.PENDING);
-      }
-      if (poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.AWAITING_RECEIPT) {
-        poLine.setReceiptStatus(CompositePoLine.ReceiptStatus.PENDING);
-      }
-  }
-
-  public static ConversionQuery buildConversionQuery(PoLine poLine, String systemCurrency) {
-    Cost cost = poLine.getCost();
-    if (cost.getExchangeRate() != null){
-      return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency())
-        .setTermCurrency(systemCurrency)
-        .set(RATE_KEY, cost.getExchangeRate()).build();
-    }
-    return ConversionQueryBuilder.of().setBaseCurrency(cost.getCurrency()).setTermCurrency(systemCurrency).build();
-  }
-
   /**
    * Accepts response with collection of the elements and tries to extract the first one.
    * In case the response is incorrect or empty, the {@link CompletionException} will be thrown
+   *
    * @param response     {@link JsonObject} representing service response which should contain array of objects
    * @param propertyName name of the property which holds array of objects
    * @return the first element of the array
@@ -532,11 +529,17 @@ public class HelperUtils {
     return Optional.ofNullable(response.getJsonArray(propertyName))
       .flatMap(items -> items.stream().findFirst())
       .map(JsonObject.class::cast)
-      .orElseThrow(() -> new CompletionException(new InventoryException(String.format("No records of '%s' can be found", propertyName))));
+      .orElseThrow(() -> new CompletionException(new NoInventoryRecordException(
+        String.format("No records of '%s' can be found", propertyName))));
   }
 
   public static String extractId(JsonObject json) {
     return json.getString(ID);
+  }
+
+  public static String extractCreatedDate(JsonObject json) {
+    return json.getJsonObject(CommonFields.METADATA.getValue())
+      .getString(CommonFields.CREATED_DATE.getValue());
   }
 
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLineList) {

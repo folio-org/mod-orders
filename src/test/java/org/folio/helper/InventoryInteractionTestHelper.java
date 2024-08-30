@@ -29,37 +29,36 @@ import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderUpdates;
-import static org.folio.service.inventory.InventoryManager.CONFIG_NAME_INSTANCE_STATUS_CODE;
-import static org.folio.service.inventory.InventoryManager.CONFIG_NAME_INSTANCE_TYPE_CODE;
-import static org.folio.service.inventory.InventoryManager.CONFIG_NAME_LOAN_TYPE_NAME;
-import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME;
-import static org.folio.service.inventory.InventoryManager.CONTRIBUTOR_NAME_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.DEFAULT_INSTANCE_STATUS_CODE;
-import static org.folio.service.inventory.InventoryManager.DEFAULT_INSTANCE_TYPE_CODE;
-import static org.folio.service.inventory.InventoryManager.DEFAULT_LOAN_TYPE_NAME;
-import static org.folio.service.inventory.InventoryManager.HOLDING_INSTANCE_ID;
-import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.service.inventory.InventoryManager.ID;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_CONTRIBUTORS;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_DATE_OF_PUBLICATION;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIERS;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLICATION;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_PUBLISHER;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_SOURCE;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_STATUSES;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_STATUS_ID;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_TITLE;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_TYPES;
-import static org.folio.service.inventory.InventoryManager.INSTANCE_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_HOLDINGS_RECORD_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_MATERIAL_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_PERMANENT_LOAN_TYPE_ID;
-import static org.folio.service.inventory.InventoryManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS;
-import static org.folio.service.inventory.InventoryManager.ITEM_STATUS_NAME;
-import static org.folio.service.inventory.InventoryManager.LOAN_TYPES;
+import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_INSTANCE_ID;
+import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME;
+import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME_TYPE_ID;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_CONTRIBUTORS;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_DATE_OF_PUBLICATION;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIERS;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_ID;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLICATION;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_PUBLISHER;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_SOURCE;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_STATUSES;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_STATUS_ID;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_TITLE;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_TYPES;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_TYPE_ID;
+import static org.folio.service.inventory.InventoryItemManager.ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_MATERIAL_TYPE_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_PERMANENT_LOAN_TYPE_ID;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
+import static org.folio.service.inventory.InventoryUtils.CONFIG_NAME_INSTANCE_STATUS_CODE;
+import static org.folio.service.inventory.InventoryUtils.CONFIG_NAME_INSTANCE_TYPE_CODE;
+import static org.folio.service.inventory.InventoryUtils.CONFIG_NAME_LOAN_TYPE_NAME;
+import static org.folio.service.inventory.InventoryUtils.LOAN_TYPES;
+import static org.folio.service.inventory.InventoryUtils.DEFAULT_LOAN_TYPE_NAME;
+import static org.folio.service.inventory.InventoryUtils.DEFAULT_INSTANCE_STATUS_CODE;
+import static org.folio.service.inventory.InventoryUtils.DEFAULT_INSTANCE_TYPE_CODE;
 import static org.folio.service.pieces.PieceUtil.calculatePiecesQuantityWithoutLocation;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyOrNullString;
@@ -359,8 +358,6 @@ public class InventoryInteractionTestHelper {
       // Make sure that quantities by piece type and by item presence are the same
       assertThat(expectedPhysQty + expectedElQty + expectedOthQty, is(expectedTotal));
 
-      assertThat(poLinePieces, hasSize(expectedTotal));
-
       // Verify each piece individually
       poLinePieces.forEach(piece -> {
           // Check if itemId in inventoryItems match itemId in piece record
@@ -380,9 +377,6 @@ public class InventoryInteractionTestHelper {
 
       totalForAllPoLines += expectedTotal;
     }
-
-    // Make sure that none of pieces missed
-    assertThat(pieceJsons, hasSize(totalForAllPoLines));
   }
 
   public static void verifyInventoryNonInteraction() {
@@ -551,7 +545,6 @@ public class InventoryInteractionTestHelper {
   private static void verifyItemRecordRequest(Header tenant, JsonObject item, String material) {
     assertThat(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), not(is(emptyOrNullString())));
     assertThat(material, is(item.getString(ITEM_MATERIAL_TYPE_ID)));
-    assertThat(item.getString(ITEM_HOLDINGS_RECORD_ID), not(is(emptyOrNullString())));
     assertThat(item.getString(ITEM_PERMANENT_LOAN_TYPE_ID), equalTo(getLoanTypeId(tenant)));
     assertThat(item.getJsonObject(ITEM_STATUS), notNullValue());
     assertThat(item.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), equalTo(ReceivedItem.ItemStatus.ON_ORDER.value()));

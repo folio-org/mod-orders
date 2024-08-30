@@ -1,14 +1,15 @@
 package org.folio.dao;
 
-import io.vertx.core.Future;
-import io.vertx.sqlclient.Tuple;
+import static org.folio.dao.util.DbUtils.prepareFullTableName;
+
+import java.util.UUID;
+
 import org.folio.dao.util.PostgresClientFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.util.UUID;
-
-import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
+import io.vertx.core.Future;
+import io.vertx.sqlclient.Tuple;
 
 @Repository
 public class RecordIdStorageDaoImpl implements RecordIdStorageDao {
@@ -35,7 +36,4 @@ public class RecordIdStorageDaoImpl implements RecordIdStorageDao {
       .map(rows -> rows.iterator().next().getValue(RECORD_ID_FIELD).toString());
   }
 
-  private String prepareFullTableName(String tenantId, String table) {
-    return String.format("%s.%s", convertToPsqlStandard(tenantId), table);
-  }
 }

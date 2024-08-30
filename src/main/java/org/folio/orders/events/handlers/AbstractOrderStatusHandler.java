@@ -11,6 +11,7 @@ import org.folio.completablefuture.AsyncUtil;
 import org.folio.helper.BaseHelper;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -93,7 +94,8 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
         if (Boolean.TRUE.equals(isStatusChanged)) {
           return purchaseOrderHelper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value(), requestContext)
             .compose(aVoid -> purchaseOrderStorageService.saveOrder(purchaseOrder, requestContext))
-            .compose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatus(convert(purchaseOrder), requestContext));
+            .compose(purchaseOrderParam -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(
+              convert(purchaseOrder, poLines), requestContext));
         }
         return Future.succeededFuture();
       });
@@ -105,8 +107,9 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
     return body.getJsonArray(rootElement);
   }
 
-  protected CompositePurchaseOrder convert(PurchaseOrder po) {
-    return JsonObject.mapFrom(po).mapTo(CompositePurchaseOrder.class);
+  protected CompositePurchaseOrder convert(PurchaseOrder po, List<PoLine> poLines) {
+    var lines = poLines.stream().map(line -> JsonObject.mapFrom(line).mapTo(CompositePoLine.class)).toList();
+    return JsonObject.mapFrom(po).mapTo(CompositePurchaseOrder.class).withCompositePoLines(lines);
   }
 
   protected abstract boolean isOrdersStatusChangeSkip(PurchaseOrder purchaseOrder, JsonObject ordersPayload);

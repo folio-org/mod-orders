@@ -32,4 +32,9 @@ public class PieceDeletionHolder extends BasePieceFlowHolder {
   public String getOrderLineId() {
     return pieceToDelete.getPoLineId();
   }
+
+  @Override
+  public String getTitleId() {
+    return pieceToDelete.getTitleId();
+  }
 }

@@ -52,7 +52,7 @@ public class LocationsAndPiecesConsistencyValidator {
         line.getReceiptStatus() != CompositePoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED &&
         !line.getCheckinItems())
       .collect(toMap(CompositePoLine::getId, poLine -> Optional.of(poLine.getLocations())
-        .orElse(new ArrayList<>()).stream().collect(toMap(LocationsAndPiecesConsistencyValidator::buildLocationKey, Location::getQuantity))));
+        .orElse(new ArrayList<>()).stream().collect(toMap(LocationsAndPiecesConsistencyValidator::buildLocationKey, Location::getQuantity, Integer::sum))));
   }
 
   private static String buildLocationKey(Location location) {

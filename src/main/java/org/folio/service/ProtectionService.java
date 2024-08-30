@@ -1,26 +1,37 @@
 package org.folio.service;
 
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.orders.utils.AcqDesiredPermissions.BYPASS_ACQ_UNITS;
 import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.PermissionsUtil.isManagePermissionRequired;
+import static org.folio.orders.utils.PermissionsUtil.userDoesNotHaveDesiredPermission;
+import static org.folio.orders.utils.PermissionsUtil.userHasDesiredPermission;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_NOT_A_MEMBER_OF_THE_ACQ;
 import static org.folio.service.AcquisitionsUnitsService.ACQUISITIONS_UNIT_IDS;
+import static org.folio.service.AcquisitionsUnitsService.ENDPOINT_ACQ_UNITS;
 import static org.folio.service.UserService.getCurrentUserId;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
+import org.folio.orders.utils.AcqDesiredPermissions;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.AcquisitionsUnit;
 import org.folio.rest.jaxrs.model.AcquisitionsUnitCollection;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -32,9 +43,6 @@ public class ProtectionService {
   private static final Logger log = LogManager.getLogger(ProtectionService.class);
 
   public static final String ACQUISITIONS_UNIT_ID = "acquisitionsUnitId";
-  private static final String IS_DELETED_PROP = "isDeleted";
-  private static final String ALL_UNITS_CQL = IS_DELETED_PROP + "=*";
-
   private final AcquisitionsUnitsService acquisitionsUnitsService;
 
   public ProtectionService(AcquisitionsUnitsService acquisitionsUnitsService) {
@@ -60,6 +68,9 @@ public class ProtectionService {
    *         exist; successfully otherwise
    */
   public Future<Void> isOperationRestricted(List<String> unitIds, Set<ProtectedOperationType> operations, RequestContext requestContext) {
+    if (userHasDesiredPermission(BYPASS_ACQ_UNITS, requestContext)) {
+      return Future.succeededFuture();
+    }
     if (CollectionUtils.isNotEmpty(unitIds)) {
       return getUnitsByIds(unitIds, requestContext)
         .compose(units -> {
@@ -84,12 +95,116 @@ public class ProtectionService {
   }
 
   /**
+   * This method validates acq units during entity CREATE operation.
+   *
+   * @param acqUnitIds acquisitions units assigned to purchase order from request
+   * @param permission the acq desired permission to check
+   * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
+   * caused by acquisitions units
+   */
+  public Future<Void> validateAcqUnitsOnCreate(List<String> acqUnitIds,
+                                               AcqDesiredPermissions permission,
+                                               RequestContext requestContext) {
+    if (CollectionUtils.isEmpty(acqUnitIds)) {
+      return Future.succeededFuture();
+    }
+    return Future.succeededFuture()
+      .map(v -> verifyUserHasAssignPermission(acqUnitIds, permission, requestContext))
+      .compose(ok -> verifyIfUnitsAreActive(acqUnitIds, requestContext))
+      .compose(ok -> isOperationRestricted(acqUnitIds, ProtectedOperationType.CREATE, requestContext));
+  }
+
+  /**
+   * The method checks if the order is assigned to acquisition unit, if yes,
+   * then check that if the user has desired permission to assign the record to acquisition unit
+   *
+   * @param acqUnitIds acquisitions units assigned to purchase order from request
+   * @param permission the desired permission to check
+   * @throws HttpException if user does not have assign permission
+   */
+  private Void verifyUserHasAssignPermission(List<String> acqUnitIds,
+                                             AcqDesiredPermissions permission,
+                                             RequestContext requestContext) {
+    if (isNotEmpty(acqUnitIds) && userDoesNotHaveDesiredPermission(permission, requestContext)){
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
+    }
+    return null;
+  }
+
+  /**
+   * This method validates acq units during entity UPDATE operation.
+   *
+   * @param newAcqUnitIds         purchase order from request
+   * @param acqUnitIdsFromStorage purchase order from storage
+   * @param permission            the acq desired permission to check
+   * @param protectedOperations   list of protected operations like CREATE, UPDATE, DELETE to check
+   * @return completable future completed successfully if all checks pass or exceptionally in case of error/restriction
+   * caused by acquisitions units
+   */
+  public Future<Void> validateAcqUnitsOnUpdate(List<String> newAcqUnitIds,
+                                               List<String> acqUnitIdsFromStorage,
+                                               AcqDesiredPermissions permission,
+                                               Set<ProtectedOperationType> protectedOperations,
+                                               RequestContext requestContext) {
+    return Future.succeededFuture()
+      .map(v -> {
+        verifyUserHasManagePermission(newAcqUnitIds, acqUnitIdsFromStorage, permission, requestContext);
+        return null;
+      })
+      .compose(ok -> verifyIfUnitsAreActive(ListUtils.subtract(newAcqUnitIds, acqUnitIdsFromStorage), requestContext))
+      // The check should be done against currently assigned (persisted in storage) units
+      .compose(ok -> isOperationRestricted(acqUnitIdsFromStorage, protectedOperations, requestContext));
+  }
+
+  /**
+   * This method wraps existing cql query with acq units check.
+   *
+   * @param tablePrefix    table prefix in format tableName + '.' or just empty string if acq units will be checked from the same table
+   * @param query          original cql string
+   * @param requestContext request context
+   * @return new string with acq check
+   */
+  public Future<String> getQueryWithAcqUnitsCheck(String tablePrefix, String query, RequestContext requestContext) {
+    if (userHasDesiredPermission(BYPASS_ACQ_UNITS, requestContext)) {
+      return Future.succeededFuture(query);
+    }
+    return acquisitionsUnitsService.buildAcqUnitsCqlExprToSearchRecords(tablePrefix, requestContext)
+      .map(acqUnitsCqlExpr -> {
+        if (StringUtils.isNotEmpty(query)) {
+          return combineCqlExpressions("and", acqUnitsCqlExpr, query);
+        }
+        return acqUnitsCqlExpr;
+      });
+  }
+
+  /**
+   * The method checks if list of acquisition units to which the order is assigned is changed, if yes,
+   * then check that if the user has desired permission to manage acquisition units assignments
+   *
+   * @param newAcqUnitIds         acquisitions units assigned to purchase order from request
+   * @param acqUnitIdsFromStorage acquisitions units assigned to purchase order from storage
+   * @param permission the acq desired permission to check
+   * @throws HttpException if user does not have manage permission
+   */
+  private void verifyUserHasManagePermission(List<String> newAcqUnitIds,
+                                             List<String> acqUnitIdsFromStorage,
+                                             AcqDesiredPermissions permission,
+                                             RequestContext requestContext) {
+    Set<String> newAcqUnits = new HashSet<>(CollectionUtils.emptyIfNull(newAcqUnitIds));
+    Set<String> acqUnitsFromStorage = new HashSet<>(CollectionUtils.emptyIfNull(acqUnitIdsFromStorage));
+
+    if (isManagePermissionRequired(newAcqUnits, acqUnitsFromStorage) && userDoesNotHaveDesiredPermission(permission, requestContext)){
+      throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_ACQ_PERMISSIONS);
+    }
+  }
+
+  /**
    * Verifies if all acquisition units exist and active based on passed ids
    *
    * @param acqUnitIds list of unit IDs.
    * @return completable future completed successfully if all units exist and active or exceptionally otherwise
    */
-  public Future<Void> verifyIfUnitsAreActive(List<String> acqUnitIds, RequestContext requestContext) {
+  private Future<Void> verifyIfUnitsAreActive(List<String> acqUnitIds, RequestContext requestContext) {
     if (acqUnitIds.isEmpty()) {
       return Future.succeededFuture();
     }
@@ -126,7 +241,7 @@ public class ProtectionService {
     return acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, 0, 0, requestContext)
       .map(unit -> {
         if (unit.getTotalRecords() == 0) {
-          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_HAS_NO_PERMISSIONS);
+          throw new HttpException(HttpStatus.HTTP_FORBIDDEN.toInt(), USER_NOT_A_MEMBER_OF_THE_ACQ);
         }
         return null;
       })
@@ -140,8 +255,15 @@ public class ProtectionService {
    * @return list of {@link AcquisitionsUnit}
    */
   private Future<List<AcquisitionsUnit>> getUnitsByIds(List<String> unitIds, RequestContext requestContext) {
-    String query = combineCqlExpressions("and", ALL_UNITS_CQL, convertIdsToCqlQuery(unitIds));
-    return acquisitionsUnitsService.getAcquisitionsUnits(query, 0, Integer.MAX_VALUE, requestContext)
+    return Future.succeededFuture()
+      .map(v-> {
+        String query = combineCqlExpressions("and", convertIdsToCqlQuery(unitIds));
+        return new RequestEntry(ENDPOINT_ACQ_UNITS)
+          .withQuery(query)
+          .withLimit(Integer.MAX_VALUE)
+          .withOffset(0);
+      })
+      .compose(requestEntry -> acquisitionsUnitsService.getAcquisitionsUnits(requestEntry, requestContext))
       .map(AcquisitionsUnitCollection::getAcquisitionsUnits);
   }
 

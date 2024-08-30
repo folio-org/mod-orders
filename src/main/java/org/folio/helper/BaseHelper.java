@@ -84,9 +84,9 @@ public abstract class BaseHelper {
     final Error error;
     final int code;
 
-    if (throwable instanceof HttpException) {
-      code = ((HttpException) throwable).getCode();
-      error = ((HttpException) throwable).getError();
+    if (throwable instanceof HttpException httpException) {
+      code = httpException.getCode();
+      error = httpException.getError();
     } else {
       code = INTERNAL_SERVER_ERROR.getStatusCode();
       error = GENERIC_ERROR_CODE.toError().withAdditionalProperty(ERROR_CAUSE, throwable.getMessage());
@@ -104,17 +104,10 @@ public abstract class BaseHelper {
   }
 
   public Response buildErrorResponse(int code) {
-    final Response.ResponseBuilder responseBuilder;
-    switch (code) {
-      case 400:
-      case 403:
-      case 404:
-      case 422:
-        responseBuilder = Response.status(code);
-        break;
-      default:
-        responseBuilder = Response.status(INTERNAL_SERVER_ERROR);
-    }
+    final Response.ResponseBuilder responseBuilder = switch (code) {
+      case 400, 403, 404, 422 -> Response.status(code);
+      default -> Response.status(INTERNAL_SERVER_ERROR);
+    };
 
     return responseBuilder
       .header(CONTENT_TYPE, APPLICATION_JSON)

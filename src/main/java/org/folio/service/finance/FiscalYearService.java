@@ -18,7 +18,6 @@ import io.vertx.core.Future;
 
 public class FiscalYearService {
 
-  private static final String FISCAL_YEAR = "/finance/fiscal-years/{id}";
   private static final String CURRENT_FISCAL_YEAR = "/finance/ledgers/{id}/current-fiscal-year";
 
   private final RestClient restClient;
@@ -52,10 +51,5 @@ public class FiscalYearService {
 
   private boolean isFiscalYearNotFound(Throwable t) {
     return t instanceof HttpException && ((HttpException) t).getCode() == 404;
-  }
-
-  public Future<FiscalYear> getFiscalYearById(String fiscalYearId, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(FISCAL_YEAR).withId(fiscalYearId);
-    return restClient.get(requestEntry, FiscalYear.class, requestContext);
   }
 }

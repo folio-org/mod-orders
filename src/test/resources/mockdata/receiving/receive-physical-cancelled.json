@@ -1,0 +1,20 @@
+{
+  "toBeReceived": [
+    {
+      "poLineId": "0dd8f1d2-ac2e-4155-a407-72071f6d5f4b",
+      "received": 1,
+      "receivedItems": [
+        {
+          "barcode": 21111111122,
+          "callNumber": "PR 8923 W6 L36 1990 c.3",
+          "comment": "Very important note",
+          "displaySummary": "Vol. 1",
+          "itemStatus": "In process",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "pieceId": "06a95f03-eb00-4248-9f2e-2bd05957ff05"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 1
+}

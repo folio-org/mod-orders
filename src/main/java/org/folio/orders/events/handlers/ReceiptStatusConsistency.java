@@ -1,5 +1,7 @@
 package org.folio.orders.events.handlers;
 
+import static org.folio.helper.CheckinReceivePiecesHelper.EXPECTED_STATUSES;
+import static org.folio.helper.CheckinReceivePiecesHelper.RECEIVED_STATUSES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
@@ -10,14 +12,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.folio.completablefuture.AsyncUtil;
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.helper.BaseHelper;
 import org.folio.orders.utils.HelperUtils;
-import org.folio.rest.acq.model.Piece;
-import org.folio.rest.acq.model.Piece.ReceivingStatus;
-import org.folio.rest.acq.model.PieceCollection;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.Piece.ReceivingStatus;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -65,34 +68,37 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
 
     // 1. Get all pieces for poLineId
     getPieces(query, requestContext)
-      .onSuccess(listOfPieces ->
-      // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
-      purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
-        .map(poLine -> {
-          if (poLine.getReceiptStatus().equals(PoLine.ReceiptStatus.ONGOING)) {
-            promise.complete();
-          } else {
-            calculatePoLineReceiptStatus(poLine, listOfPieces)
-              .compose(status -> purchaseOrderLineService.updatePoLineReceiptStatus(poLine, status, requestContext))
-              .map(updatedPoLineId -> {
-                if (updatedPoLineId != null) {
+      .compose(listOfPieces ->
+        // 2. Get PoLine for the poLineId which will be used to calculate PoLineReceiptStatus
+        purchaseOrderLineService.getOrderLineById(poLineIdUpdate, requestContext)
+          .map(poLine -> {
+            if (PoLineCommonUtil.isCancelledOrOngoingStatus(poLine)) {
+              promise.complete();
+              return null;
+            }
+            ReceiptStatus receivingStatus = calculatePoLineReceiptStatus(poLine, listOfPieces);
+            boolean statusUpdated = purchaseOrderLineService.updatePoLineReceiptStatusWithoutSave(poLine, receivingStatus);
+            if (statusUpdated) {
+              purchaseOrderLineService.saveOrderLine(poLine, requestContext)
+                .map(aVoid -> {
                   // send event to update order status
                   updateOrderStatus(poLine, okapiHeaders, requestContext);
-                }
-                promise.complete();
-                return null;
-              })
-              .onFailure(e -> {
-                logger.error("The error updating poLine by id {}", poLineIdUpdate, e);
-                promise.fail(e);
-              });
-          }
-          return null;
-        })
-        .onFailure(e -> {
-          logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
-          promise.fail(e);
-        }))
+                  promise.complete();
+                  return null;
+                })
+                .onFailure(e -> {
+                  logger.error("The error updating poLine by id {}", poLineIdUpdate, e);
+                  promise.fail(e);
+                });
+            } else {
+              promise.complete();
+            }
+            return null;
+          })
+          .onFailure(e -> {
+            logger.error("The error getting poLine by id {}", poLineIdUpdate, e);
+            promise.fail(e);
+          }))
       .onFailure(e -> {
         logger.error("The error happened getting all pieces by poLine {}", poLineIdUpdate, e);
         promise.fail(e);
@@ -116,40 +122,37 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
     HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, messageContent, requestContext);
   }
 
-  private Future<ReceiptStatus> calculatePoLineReceiptStatus(PoLine poLine,
-      List<org.folio.rest.acq.model.Piece> pieces) {
+  private ReceiptStatus calculatePoLineReceiptStatus(PoLine poLine, List<Piece> pieces) {
 
-    if (pieces.isEmpty()) {
-      return Future.succeededFuture(poLine.getReceiptStatus());
-    } else {
-      return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.EXPECTED, pieces)
-        .compose(expectedQty -> calculatePoLineReceiptStatus(expectedQty, pieces))
-        .onFailure(e -> logger.error("The expected receipt status for PO Line '{}' cannot be calculated", poLine.getId(), e));
+    if (CollectionUtils.isEmpty(pieces)) {
+      logger.info("No pieces processed - receipt status unchanged for PO Line '{}'", poLine.getId());
+      return poLine.getReceiptStatus();
     }
+
+    long expectedQty = getPiecesQuantityByPoLineAndStatus(EXPECTED_STATUSES, pieces);
+    return calculatePoLineReceiptStatus(expectedQty, pieces);
   }
 
-  private Future<ReceiptStatus> calculatePoLineReceiptStatus(int expectedPiecesQuantity,
-      List<org.folio.rest.acq.model.Piece> pieces) {
-
+  private ReceiptStatus calculatePoLineReceiptStatus(long expectedPiecesQuantity, List<Piece> pieces) {
     if (expectedPiecesQuantity == 0) {
-      return Future.succeededFuture(FULLY_RECEIVED);
+      logger.info("calculatePoLineReceiptStatus:: Fully received");
+      return FULLY_RECEIVED;
     }
-    // Partially Received: In case there is at least one successfully received
-    // piece
-    if (StreamEx.of(pieces)
-      .anyMatch(piece -> ReceivingStatus.RECEIVED == piece.getReceivingStatus())) {
-      return Future.succeededFuture(PARTIALLY_RECEIVED);
+
+    if (StreamEx.of(pieces).anyMatch(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus()))) {
+      logger.info("calculatePoLineReceiptStatus:: Partially Received - In case there is at least one successfully received piece");
+      return PARTIALLY_RECEIVED;
     }
-    // Pieces were rolled-back to Expected. In this case we have to check if
-    // there is any Received piece in the storage
-    return getPiecesQuantityByPoLineAndStatus(ReceivingStatus.RECEIVED, pieces)
-      .map(receivedQty -> receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED);
+
+    logger.info("calculatePoLineReceiptStatus::Pieces were rolled-back to Expected, checking if there is any Received piece in the storage");
+    long receivedQty = getPiecesQuantityByPoLineAndStatus(RECEIVED_STATUSES, pieces);
+    return receivedQty == 0 ? AWAITING_RECEIPT : PARTIALLY_RECEIVED;
   }
 
-  private Future<Integer> getPiecesQuantityByPoLineAndStatus(ReceivingStatus receivingStatus, List<Piece> pieces) {
-    return AsyncUtil.executeBlocking(ctx, false, () -> (int) pieces.stream()
-      .filter(piece -> piece.getReceivingStatus() == receivingStatus)
-      .count());
+  private long getPiecesQuantityByPoLineAndStatus(List<ReceivingStatus> receivingStatuses, List<Piece> pieces) {
+    return pieces.stream()
+      .filter(piece -> receivingStatuses.contains(piece.getReceivingStatus()))
+      .count();
   }
 
   Future<List<Piece>> getPieces(String endpoint, RequestContext requestContext) {

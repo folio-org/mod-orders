@@ -24,8 +24,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 
 public class BaseApi {
-
-  private static final String ERROR_CAUSE = "cause";
   private final Logger logger = LogManager.getLogger();
   private final Errors processingErrors = new Errors();
 
@@ -60,7 +58,10 @@ public class BaseApi {
   }
 
   public Response buildErrorResponse(Throwable throwable) {
-    logger.error("Exception encountered", throwable.getCause());
+    logger.error("Exception encountered", throwable);
+    if (throwable instanceof HttpException exception) {
+      return buildErrorResponseFromHttpException(exception);
+    }
     final int code = defineErrorCode(throwable);
     final Errors errors = convertToErrors(throwable);
     final Response.ResponseBuilder responseBuilder = createResponseBuilder(code);
@@ -84,20 +85,20 @@ public class BaseApi {
   }
 
   public Response buildErrorResponse(int code) {
-    final Response.ResponseBuilder responseBuilder;
-    switch (code) {
-      case 400:
-      case 403:
-      case 404:
-      case 422:
-        responseBuilder = Response.status(code);
-        break;
-      default:
-        responseBuilder = Response.status(INTERNAL_SERVER_ERROR);
-    }
+    final Response.ResponseBuilder responseBuilder = switch (code) {
+      case 400, 403, 404, 422 -> Response.status(code);
+      default -> Response.status(INTERNAL_SERVER_ERROR);
+    };
 
     return responseBuilder.header(CONTENT_TYPE, APPLICATION_JSON)
       .entity(getProcessingErrors())
+      .build();
+  }
+
+  private static Response buildErrorResponseFromHttpException(HttpException exception) {
+    return Response.status(exception.getCode())
+      .header(CONTENT_TYPE, APPLICATION_JSON)
+      .entity(exception.getErrors())
       .build();
   }
 
@@ -106,25 +107,16 @@ public class BaseApi {
   }
 
   public static javax.ws.rs.core.Response.ResponseBuilder createResponseBuilder(int code) {
-    final javax.ws.rs.core.Response.ResponseBuilder responseBuilder;
-    switch (code) {
-    case 400:
-    case 403:
-    case 404:
-    case 409:
-    case 422:
-      responseBuilder = javax.ws.rs.core.Response.status(code);
-      break;
-    default:
-      responseBuilder = javax.ws.rs.core.Response.status(INTERNAL_SERVER_ERROR);
-    }
-    return responseBuilder;
+    return switch (code) {
+      case 400, 403, 404, 409, 422 -> Response.status(code);
+      default -> Response.status(INTERNAL_SERVER_ERROR);
+    };
   }
 
   public static int defineErrorCode(Throwable throwable) {
     final Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
-    if (cause instanceof HttpException) {
-      return ((HttpException) cause).getCode();
+    if (cause instanceof HttpException httpException) {
+      return httpException.getCode();
     }
     return INTERNAL_SERVER_ERROR.getStatusCode();
   }

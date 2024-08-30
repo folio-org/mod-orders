@@ -1,6 +1,6 @@
 # mod-orders
 
-Copyright (C) 2018-2022 The Open Library Foundation
+Copyright (C) 2018-2023 The Open Library Foundation
 
 This software is distributed under the terms of the Apache License,
 Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
@@ -161,6 +161,13 @@ In order to avoid reference integrity issues when deleting acquisition units tha
 * When client sends `DELETE /acquisitions-units/units/<id>`, the logic gets acquisitions unit by specified id and updates it setting `isDeleted` to `true`
 * When client sends `GET /acquisitions-units/units?query=<cql>` and `<cql>` does not contain criteria by `isDeleted`, the logic will search for records with `isDeleted==false`.
 * To get all the units regardless of `isDeleted` value, the request should be like `GET /acquisitions-units/units?query=isDeleted=* AND (<cql>)`
+
+### Kafka Integration
+during tenant init, mod-orders creates producer with numPartitions which can be customized with env vars below:
+* DI_ORDER_CREATED_READY_FOR_POST_PROCESSING_PARTITIONS
+* DI_ORDER_CREATED_PARTITIONS
+* DI_PENDING_ORDER_CREATED_PARTITIONS
+Default value is 1
 
 ### Issue tracker
 

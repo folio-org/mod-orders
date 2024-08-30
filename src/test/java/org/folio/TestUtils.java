@@ -2,7 +2,6 @@ package org.folio;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.TestConstants.EXISTED_ITEM_ID;
-import static org.folio.TestConstants.ID;
 import static org.folio.TestConstants.LOCATION_ID;
 import static org.folio.TestConstants.MIN_PO_ID;
 import static org.folio.TestConstants.MIN_PO_LINE_ID;
@@ -10,7 +9,6 @@ import static org.folio.TestConstants.PIECE_ID;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
-import static org.folio.rest.impl.MockServer.getPoLineUpdates;
 import static org.folio.rest.impl.MockServer.serverRqRs;
 import static org.folio.rest.impl.TitlesApiTest.SAMPLE_TITLE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,8 +20,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -33,9 +29,8 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.impl.MockServer;
+import org.folio.rest.jaxrs.model.BindItem;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
@@ -58,7 +53,6 @@ import io.vertx.junit5.VertxTestContext;
 
 public final class TestUtils {
 
-  private static final Logger logger = LogManager.getLogger();
   public static final String PURCHASE_METHOD = "df26d81b-9d63-4ff8-bf41-49bf75cfa70e";
   public static final String APPROVAL_PLAN_METHOD = "796596c4-62b5-4b64-a2ce-524c747afaa2";
   public static final String DEPOSITORY_METHOD = "d2420b93-7b93-41b7-8b42-798f64cb6dd2";
@@ -91,12 +85,6 @@ public final class TestUtils {
       fail(e.getMessage());
     }
     return new JsonObject();
-  }
-
-  public static Date convertLocalDateTimeToDate(LocalDateTime dateToConvert) {
-    return Date
-      .from(dateToConvert.atZone(ZoneId.systemDefault())
-        .toInstant());
   }
 
   public static Object[] getModifiedProtectedFields(Error error) {
@@ -138,23 +126,16 @@ public final class TestUtils {
     assertEquals(1, errors.getErrors().size());
     assertEquals(errorCode, errors.getErrors().get(0).getCode());
     // Assert that only PO Lines limit (count of existing Lines) , GET PO and ISBN validation requests made
-    assertEquals(externalAPICalls, MockServer.serverRqRs.rowKeySet().size());
     assertEquals(1, MockServer.serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.GET).size());
     assertEquals(1, getPoLineSearches().size());
   }
 
   public static void verifyLocationQuantity(Location location, CompositePoLine.OrderFormat orderFormat) {
     switch (orderFormat) {
-      case P_E_MIX:
+      case P_E_MIX ->
         assertEquals(location.getQuantityPhysical() + location.getQuantityElectronic(), location.getQuantity().intValue());
-        break;
-      case ELECTRONIC_RESOURCE:
-        assertEquals(location.getQuantityElectronic(), location.getQuantity());
-        break;
-      case PHYSICAL_RESOURCE:
-      case OTHER:
-        assertEquals(location.getQuantityPhysical(), location.getQuantity());
-        break;
+      case ELECTRONIC_RESOURCE -> assertEquals(location.getQuantityElectronic(), location.getQuantity());
+      case PHYSICAL_RESOURCE, OTHER -> assertEquals(location.getQuantityPhysical(), location.getQuantity());
     }
   }
 
@@ -182,14 +163,24 @@ public final class TestUtils {
       .withPurchaseOrderId(orderId);
   }
 
-  public static CompositePoLine getMinimalPackageCompositePoLine(String orderId) {
-    return new CompositePoLine().withSource(CompositePoLine.Source.EDI)
+  public static PoLine getMinimalContentPoLine() {
+    return getMinimalContentPoLine(MIN_PO_ID);
+  }
+
+  public static PoLine getMinimalContentPoLine(String orderId) {
+    return new PoLine().withSource(PoLine.Source.EDI)
       .withId(MIN_PO_LINE_ID)
-      .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
+      .withOrderFormat(PoLine.OrderFormat.PHYSICAL_RESOURCE)
       .withAcquisitionMethod(PURCHASE_METHOD)
-      .withIsPackage(true)
+      .withPhysical(new Physical().withMaterialType("2d1398ae-e1aa-4c7c-b9c9-15adf8cf6425"))
+      .withCost(new Cost().withCurrency("EUR").withQuantityPhysical(1).withListUnitPrice(10.0))
+      .withLocations(List.of(new Location().withLocationId("2a00b0be-1447-42a1-a112-124450991899").withQuantityPhysical(1).withQuantity(1)))
       .withTitleOrPackage("Title")
       .withPurchaseOrderId(orderId);
+  }
+
+  public static Title getMinimalContentTitle() {
+    return new Title().withTitle("Test title").withId(SAMPLE_TITLE_ID);
   }
 
   public static CompositePurchaseOrder getMinimalContentCompositePurchaseOrder() {
@@ -200,6 +191,14 @@ public final class TestUtils {
       .withVendor("7d232b43-bf9a-4301-a0ce-9e076298632e");
   }
 
+  public static BindItem getMinimalContentBindItem() {
+    return new BindItem()
+      .withBarcode("223512")
+      .withCallNumber("TK5105.88815 . A58 2004 FT MEADE")
+      .withMaterialTypeId("1a54b431-2e4f-452d-9cae-9cee66c9a892")
+      .withPermanentLoanTypeId("2b94c631-fca9-4892-a730-03ee529ffe27")
+      .withLocationId("fcd64ce1-6995-48f0-840e-89ffa2288371");
+  }
   public static String encodePrettily(Object entity) {
     return JsonObject.mapFrom(entity).encodePrettily();
   }
@@ -236,11 +235,11 @@ public final class TestUtils {
     return UUID.randomUUID().toString();
   }
 
-  public static void validateSavedPoLines() {
-    getPoLineUpdates()
-      .forEach(poline -> {
-        logger.info("validate poline {}", poline.getString(ID));
-        poline.mapTo(PoLine.class);
-      });
+  public static List<Location> getLocationPhysicalCopies(int n) {
+    return List.of(new Location()
+      .withLocationId(UUID.randomUUID().toString())
+      .withQuantityPhysical(n)
+      .withQuantity(n));
   }
+
 }

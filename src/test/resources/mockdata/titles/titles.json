@@ -13,7 +13,52 @@
           "qualifier": "(paperback)"
         }
       ]
+    },
+    {
+      "id": "f89f5379-096c-44f5-92da-cd5d325bf3cd",
+      "title": "Test 1",
+      "poLineId": "6499cf7d-c546-4d2f-8d5e-e76ec72dee99",
+      "acqUnitIds": [],
+      "instanceId": "be974f72-2dd1-45e6-899d-ae81b10a14cb",
+      "productIds": [],
+      "bindItemIds": [],
+      "contributors": [],
+      "poLineNumber": "10012-1",
+      "claimingActive": false,
+      "isAcknowledged": false,
+      "claimingInterval": 45,
+      "subscriptionInterval": 0
+    },
+    {
+      "id": "59cb23e5-aeb3-4a10-9485-5d666d731870",
+      "title": "1169-2",
+      "poLineId": "2bf2b04c-716a-4c08-bc48-831f5d1e6802",
+      "acqUnitIds": [],
+      "instanceId": "88fe2b5b-7c99-427e-9c8d-1647f5b0c502",
+      "productIds": [],
+      "bindItemIds": [],
+      "contributors": [],
+      "poLineNumber": "10004-1",
+      "claimingActive": false,
+      "isAcknowledged": false,
+      "claimingInterval": 45,
+      "subscriptionInterval": 0
+    },
+    {
+      "id": "7e413351-79f0-4ef9-adb9-5c81dfd9f064",
+      "title": "1169-1",
+      "poLineId": "aae3a75a-4e12-4e60-8c14-605b31d7593b",
+      "acqUnitIds": [],
+      "instanceId": "d97f0db3-7cb0-4179-bce0-1ad648aff60d",
+      "productIds": [],
+      "bindItemIds": [],
+      "contributors": [],
+      "poLineNumber": "10002-1",
+      "claimingActive": false,
+      "isAcknowledged": false,
+      "claimingInterval": 45,
+      "subscriptionInterval": 0
     }
   ],
-  "totalRecords": 1
+  "totalRecords": 3
 }

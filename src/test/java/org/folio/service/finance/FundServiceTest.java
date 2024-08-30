@@ -33,6 +33,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Error;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +54,7 @@ public class FundServiceTest {
   private RestClient restClient;
   private Map<String, String> okapiHeadersMock;
   private RequestContext requestContext;
+  private AutoCloseable mockitoMocks;
 
   @BeforeEach
   public void initMocks() {
@@ -61,9 +63,13 @@ public class FundServiceTest {
     okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
     okapiHeadersMock.put(X_OKAPI_TENANT.getName(), X_OKAPI_TENANT.getValue());
     okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
-    String okapiURL = okapiHeadersMock.getOrDefault(OKAPI_URL, "");
     requestContext = new RequestContext(Vertx.vertx().getOrCreateContext(), okapiHeadersMock);
-    MockitoAnnotations.openMocks(this);
+    mockitoMocks = MockitoAnnotations.openMocks(this);
+  }
+
+  @AfterEach
+  public void resetMocks() throws Exception {
+    mockitoMocks.close();
   }
 
   @Test
@@ -164,8 +170,32 @@ public class FundServiceTest {
         Error actError = actHttpException.getError();
         assertEquals(404, actHttpException.getCode());
         assertEquals(actError.getMessage(), String.format(FUNDS_NOT_FOUND.getDescription(), fundId));
-        assertEquals(404, actHttpException.getCode());
         //Then
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void shouldThrowHttpExceptionAsCauseIfFundNotFoundWithGetAllFunds(VertxTestContext vertxTestContext) {
+    // Given
+    String fundId1 = UUID.randomUUID().toString();
+    String fundId2 = UUID.randomUUID().toString();
+    List<String> fundIds = List.of(fundId1, fundId2);
+    Fund fund1 = new Fund().withId(fundId1);
+    FundCollection fundCollection = new FundCollection().withFunds(List.of(fund1));
+
+    doReturn(succeededFuture(fundCollection)).when(restClient).get(any(RequestEntry.class), eq(FundCollection.class),
+      eq(requestContext));
+
+    // When
+    var future = fundService.getAllFunds(fundIds, requestContext);
+
+    // Then
+    vertxTestContext.assertFailure(future)
+      .onComplete(thrown -> {
+        HttpException httpException = (HttpException) thrown.cause();
+        assertEquals(404, httpException.getCode());
+        assertEquals(httpException.getError().getCode(), FUNDS_NOT_FOUND.getCode());
         vertxTestContext.completeNow();
       });
   }

@@ -6,7 +6,7 @@
       "requestDate": "2017-07-29T22:25:37Z",
       "requesterId": "21932a85-bd00-446b-9565-46e0c1a5490b",
       "itemId": "522a501a-56b5-48d9-b28a-3a8f02482d98",
-      "fulfilmentPreference": "Hold Shelf",
+      "fulfillmentPreference": "Hold Shelf",
       "position": 1
     },
     {
@@ -15,7 +15,7 @@
       "requestDate": "2017-08-05T11:43:23Z",
       "requesterId": "61d939e4-f2ae-4c53-95d2-224a802fa2a6",
       "itemId": "3e5d5433-a271-499c-94f4-5f3e4652e538",
-      "fulfilmentPreference": "Delivery",
+      "fulfillmentPreference": "Delivery",
       "requestExpirationDate": "2017-08-31T22:25:37Z",
       "holdShelfExpirationDate": "2017-09-01T22:25:37Z",
       "position": 1,
@@ -37,7 +37,15 @@
           "important"
         ]
       }
+    },
+    {
+      "id": "f972fa0e-5e84-4a47-a27b-137724a73fee",
+      "requestType": "Recall",
+      "requestDate": "2023-03-23T11:04:25.000+00:00",
+      "requesterId": "b4cee18d-f862-4ef1-95a5-879fdd619603",
+      "itemId": "f972fa0e-5e84-4a47-a27b-137724a73fee",
+      "fulfillmentPreference": "Delivery"
     }
   ],
-  "totalRecords": 2
+  "totalRecords": 3
 }

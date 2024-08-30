@@ -4,6 +4,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.serverError;
 import static org.folio.dataimport.util.RestUtil.OKAPI_URL_HEADER;
+import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 
@@ -13,6 +15,7 @@ import java.util.UUID;
 
 import org.folio.Organization;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.core.RestClient;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.service.caches.CacheLoadingException;
@@ -35,6 +38,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.RunTestOnContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @RunWith(VertxUnitRunner.class)
 public class CacheTest {
@@ -55,7 +59,7 @@ public class CacheTest {
   public void setUp() {
     Vertx vertx = rule.vertx();
     jobProfileSnapshotCache = new JobProfileSnapshotCache(vertx);
-    mappingParametersCache = new MappingParametersCache(vertx);
+    mappingParametersCache = new MappingParametersCache(vertx, new RestClient());
 
     HashMap<String, String> headers = new HashMap<>();
     headers.put(OKAPI_URL_HEADER, "http://localhost:" + snapshotMockServer.port());
@@ -83,7 +87,7 @@ public class CacheTest {
           context.assertTrue(ar.succeeded());
           Optional<ProfileSnapshotWrapper> result = ar.result();
           context.assertNotNull(result.orElse(null));
-          context.assertEquals(result.orElse(new ProfileSnapshotWrapper()).getContentType(), ProfileSnapshotWrapper.ContentType.JOB_PROFILE);
+          context.assertEquals(result.orElse(new ProfileSnapshotWrapper()).getContentType(), JOB_PROFILE);
           async.complete();
         });
   }
@@ -91,15 +95,24 @@ public class CacheTest {
   @Test
   public void getMappingParametersFromCache(TestContext context) {
     Async async = context.async();
+    ReflectionTestUtils.setField(mappingParametersCache, "settingsLimit", 5000);
+
+    String queryParam = "&query=" + encodeQuery("(cql.allRecords=1) sortBy id");
     String organizationId = UUID.randomUUID().toString();
-    Organization organization = new Organization();
-    organization.setId(organizationId);
+    Organization organization = new Organization().withId(organizationId);
 
     WireMock.stubFor(
-      get("/organizations/organizations")
+      get("/organizations/organizations?limit=5000" + queryParam)
         .willReturn(okJson(new JsonObject()
           .put("organizations", JsonArray.of(organization))
-          .put("totalRecords", 1)
+          .put("totalRecords", 5001)
+          .toString())));
+
+    WireMock.stubFor(
+      get("/organizations/organizations?offset=5000" + queryParam + "&limit=5000")
+        .willReturn(okJson(new JsonObject()
+          .put("organizations", JsonArray.of(organization))
+          .put("totalRecords", 5001)
           .toString())));
 
     mappingParametersCache
@@ -109,7 +122,7 @@ public class CacheTest {
           context.assertTrue(ar.succeeded());
           MappingParameters result = ar.result();
           context.assertNotNull(result);
-          context.assertEquals(organizationId, result.getOrganizations().get(0).getId());
+          result.getOrganizations().forEach(org -> context.assertEquals(organizationId, org.getId()));
           async.complete();
         });
   }
@@ -117,9 +130,9 @@ public class CacheTest {
   @Test
   public void getMappingParametersFromCacheWithError(TestContext context) {
     Async async = context.async();
-
+    String queryParam = "&query=" + encodeQuery("(cql.allRecords=1) sortBy id");
     WireMock.stubFor(
-      get("/organizations/organizations")
+      get("/organizations/organizations?limit=0" + queryParam)
         .willReturn(serverError()));
 
     mappingParametersCache

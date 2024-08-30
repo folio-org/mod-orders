@@ -1,0 +1,16 @@
+{
+  "title": "Sample Title",
+  "poLineId": "c0d08448-347b-418a-8c2f-5fb50248d67e",
+  "instanceId": "f1b57aeb-23c9-4386-bcb8-efda56878267",
+  "packageName": "test title name",
+  "expectedReceiptDate": "2020-10-08T03:53:00.000",
+  "poLineNumber": "1000-01",
+  "receivingNote": "test note",
+  "productIds": [
+    {
+      "productId": "9780764354113",
+      "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422",
+      "qualifier": "(paperback)"
+    }
+  ]
+}

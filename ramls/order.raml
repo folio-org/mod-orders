@@ -21,7 +21,6 @@ types:
 traits:
   pageable: !include raml-util/traits/pageable.raml
   searchable: !include raml-util/traits/searchable.raml
-  language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
@@ -70,7 +69,6 @@ resourceTypes:
       delete:
         description: Delete a purchase order with given {id}
       /re-encumber:
-        is: [language]
         post:
           responses:
             204:
@@ -104,3 +102,4 @@ resourceTypes:
                     value: !include raml-util/examples/errors.sample
                 text/plain:
                   example: "Internal server error, contact administrator"
+

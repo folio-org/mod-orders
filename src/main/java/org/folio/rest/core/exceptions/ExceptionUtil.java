@@ -1,6 +1,5 @@
 package org.folio.rest.core.exceptions;
 
-import static java.util.stream.Collectors.toList;
 import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.POSTGRE_SQL_ERROR;
 
@@ -11,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -27,6 +27,8 @@ public class ExceptionUtil {
   private static final String DETAIL = "detail";
   private static final String MESSAGE = "message";
   public static final String NOT_PROVIDED = "Not Provided";
+  private static final Pattern ERROR_PATTERN = Pattern.compile("(message).*(code).*(parameters)");
+  private static final Pattern ERRORS_PATTERN = Pattern.compile("(errors).*(message).*(code).*(parameters)");
 
   private ExceptionUtil() {
   }
@@ -37,11 +39,11 @@ public class ExceptionUtil {
     Map<Character,String> pgFields = PgExceptionUtil.getBadRequestFields(throwable);
     if (!MapUtils.isEmpty(pgFields)) {
       errors = convertPgExceptions(pgFields);
-    } else if (cause instanceof io.vertx.ext.web.handler.HttpException) {
-      errors = convertVertxHttpException((io.vertx.ext.web.handler.HttpException) cause);
-    } else if (cause instanceof HttpException) {
-      errors = ((HttpException) cause).getErrors();
-      List<Error> errorList = errors.getErrors().stream().map(ExceptionUtil::mapToError).collect(toList());
+    } else if (cause instanceof io.vertx.ext.web.handler.HttpException httpException) {
+      errors = convertVertxHttpException(httpException);
+    } else if (cause instanceof HttpException httpException) {
+      errors = httpException.getErrors();
+      List<Error> errorList = errors.getErrors().stream().map(ExceptionUtil::mapToError).collect(Collectors.toList());
       errors.setErrors(errorList);
     } else {
       errors = new Errors().withErrors(Collections.singletonList(GENERIC_ERROR_CODE.toError()
@@ -53,10 +55,20 @@ public class ExceptionUtil {
 
   public static boolean isErrorMessageJson(String errorMessage) {
     if (!StringUtils.isEmpty(errorMessage)) {
-      Pattern pattern = Pattern.compile("(message).*(code).*(parameters)");
-      Matcher matcher = pattern.matcher(errorMessage);
+      Matcher matcher = ERROR_PATTERN.matcher(errorMessage);
       if (matcher.find()) {
         return matcher.groupCount() == 3;
+      }
+    }
+    return false;
+  }
+
+  public static boolean isErrorsMessageJson(String errorsMessage) {
+    if (!StringUtils.isEmpty(errorsMessage)) {
+      errorsMessage = errorsMessage.replace("\r", "").replace("\n", "");
+      Matcher matcher = ERRORS_PATTERN.matcher(errorsMessage);
+      if (matcher.find()) {
+        return matcher.groupCount() == 4;
       }
     }
     return false;
@@ -76,6 +88,10 @@ public class ExceptionUtil {
       return new JsonObject(jsonMessage).mapTo(Error.class);
     }
     return error;
+  }
+
+  public static Errors mapToErrors(String errorsStr) {
+    return new JsonObject(errorsStr).mapTo(Errors.class);
   }
 
   private static Errors convertVertxHttpException(io.vertx.ext.web.handler.HttpException throwable) {

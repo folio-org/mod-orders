@@ -8,7 +8,7 @@
           "barcode": 21111111122,
           "callNumber": "PR 8923 W6 L36 1990 c.3",
           "comment": "Very important note",
-          "caption": "Vol. 1",
+          "displaySummary": "Vol. 1",
           "itemStatus": "In process",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "05a95f03-eb00-4248-9f2e-2bd05957ff04"

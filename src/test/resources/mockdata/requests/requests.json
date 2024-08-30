@@ -1,0 +1,12 @@
+{
+  "requests": [
+    {"id":  "ab18897b-0e40-4f31-896b-9c9adc979a00", "requesterId": "ac17d541-7c28-43c3-b9f2-9289a9988a44", "itemId": "8d0350f6-3ca0-4876-9e44-0f6a6bd79e47"},
+    {"id":  "ab18897b-0e40-4f31-896b-9c9adc979a01", "requesterId": "ac17d541-7c28-43c3-b9f2-9289a9988a45", "itemId": "8d0350f6-3ca0-4876-9e44-0f6a6bd79e47"},
+    {"id":  "ab18897b-0e40-4f31-896b-9c9adc979a02", "requesterId": "ac17d541-7c28-43c3-b9f2-9289a9988a46", "itemId": "8d0350f6-3ca0-4876-9e44-0f6a6bd79e47"},
+    {"id":  "ab18897b-0e40-4f31-896b-9c9adc979a03", "requesterId": "ac17d541-7c28-43c3-b9f2-9289a9988a47", "itemId": "8d0350f6-3ca0-4876-9e44-0f6a6bd79e47"},
+    {"id":  "ab18897b-0e40-4f31-896b-9c9adc979a04", "requesterId": "ac17d541-7c28-43c3-b9f2-9289a9988a48", "itemId": "8d0350f6-3ca0-4876-9e44-0f6a6bd79e47"},
+    {"id":  "33d3d7f4-a937-4d16-af05-6eefde43c962", "requesterId": "ac17d541-7c28-43c3-b9f2-9289a9988a44", "itemId": "e477dd71-3144-48ee-9972-d93f726ce0d8"},
+    {"id":  "33d3d7f4-a937-4d16-af05-6eefde43c963", "requesterId": "ac17d541-7c28-43c3-b9f2-9289a9988a45", "itemId": "e477dd71-3144-48ee-9972-d93f726ce0d8"}
+  ],
+  "totalRecords": 7
+}

@@ -327,13 +327,13 @@
       },
       "locations": [
         {
-          "locationId": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "holdingId": "c2c2fe4e-03cb-42c5-890d-8b2041d2f4d0",
           "quantity": 2,
           "quantityElectronic": 0,
           "quantityPhysical": 2
         },
         {
-          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "locationId": "546c5d9a-4845-42b8-aa4f-6bd62bd7bbdc",
           "quantity": 1,
           "quantityElectronic": 0,
           "quantityPhysical": 1
@@ -924,8 +924,298 @@
         "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1",
         "createdDate": "2014-07-06T00:00:00.000"
       }
+    },
+    {
+      "id": "1196fcd9-7607-447d-ae85-6e91883d7e4f",
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+      "alerts": [],
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "ABCDEFGHIJKLMNOPQRSTUVW",
+      "claims": [],
+      "collection": false,
+      "contributors": [
+        {
+          "contributor": "Ed Mashburn",
+          "contributorNameTypeId": "fbdd42a8-e47d-4694-b448-cc571d1b44c3"
+        }
+      ],
+      "cost": {
+        "currency": "USD",
+        "listUnitPrice": 24.99,
+        "quantityPhysical": 1
+      },
+      "description": "ABCDEFGH",
+      "details": {
+        "productIds": [
+          {
+            "productId": "9780764354113",
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
+          }
+        ],
+        "receivingNote": "ABCDEFGHIJKL",
+        "subscriptionFrom": "2018-10-09T00:00:00.000Z",
+        "subscriptionInterval": 824,
+        "subscriptionTo": "2020-10-09T00:00:00.000Z"
+      },
+      "donor": "ABCDEFGHIJKLM",
+      "fundDistribution": [
+        {
+          "code": "HIST",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08ac3",
+          "distributionType": "percentage",
+          "value": 80.0
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "quantity": 1,
+          "quantityElectronic": 0,
+          "quantityPhysical": 1
+        },
+        {
+          "locationId": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "quantity": 2,
+          "quantityElectronic": 0,
+          "quantityPhysical": 2
+        }
+      ],
+      "orderFormat": "Physical Resource",
+      "paymentStatus": "Ongoing",
+      "physical": {
+        "createInventory": "Instance, Holding, Item",
+        "expectedReceiptDate": "2018-10-05T00:00:00.000Z",
+        "materialSupplier": "73d14bc5-d131-48c6-b380-f8e62f63c8b6",
+        "materialType": "2fa93835-ea37-479d-b133-1d2a2279fcd8",
+        "receiptDue": "2018-10-10T00:00:00.000Z",
+        "volumes": [
+          "vol. 1"
+        ]
+      },
+      "poLineDescription": "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "poLineNumber": "1EFC97C6B7-1",
+      "publicationDate": "2017",
+      "publisher": "Schiffer Publishing",
+      "purchaseOrderId": "95d29d04-34b1-4fe0-a15e-1cd129143692",
+      "receiptDate": "2018-10-09T00:00:00.000+0000",
+      "receiptStatus": "Cancelled",
+      "reportingCodes": [],
+      "requester": "Leo Bulero",
+      "rush": true,
+      "selector": "ABCD",
+      "tags": {
+        "tagList": [
+          "important"
+        ]
+      },
+      "titleOrPackage": "Kayak Fishing in the Northern Gulf Coast",
+      "vendorDetail": {
+        "instructions": "ABCDEFG",
+        "noteFromVendor": "ABCDEFGHIKJKLMNOP",
+        "referenceNumbers": [
+          {
+            "refNumber": "123456-78",
+            "refNumberType": "Vendor title number",
+            "vendorDetailsSource": "OrderLine"
+          }
+        ],
+        "vendorAccount": "8910-25"
+      },
+      "metadata": {
+        "createdByUserId": "28d10cfc-d137-11e8-a8d5-f2801f1b9fd1",
+        "createdDate": "2014-07-06T00:00:00.000"
+      }
+    },
+    {
+      "id": "6499cf7d-c546-4d2f-8d5e-e76ec72dee99",
+      "cost": {
+        "currency": "USD",
+        "discountType": "percentage",
+        "listUnitPrice": 100.0,
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 100.0
+      },
+      "rush": false,
+      "alerts": [],
+      "claims": [],
+      "source": "User",
+      "details": {
+        "productIds": [],
+        "isAcknowledged": false,
+        "isBinderyActive": false,
+        "subscriptionInterval": 0
+      },
+      "physical": {
+        "volumes": [],
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "isPackage": false,
+      "locations": [
+        {
+          "quantity": 1,
+          "holdingId": "0a4726c2-6c69-4e82-aea2-fa8448523b3e",
+          "quantityPhysical": 1
+        }
+      ],
+      "collection": false,
+      "instanceId": "be974f72-2dd1-45e6-899d-ae81b10a14cb",
+      "orderFormat": "Physical Resource",
+      "checkinItems": false,
+      "contributors": [],
+      "poLineNumber": "10012-1",
+      "vendorDetail": {
+        "instructions": "",
+        "vendorAccount": "1234",
+        "referenceNumbers": []
+      },
+      "paymentStatus": "Awaiting Payment",
+      "receiptStatus": "Awaiting Receipt",
+      "claimingActive": false,
+      "reportingCodes": [],
+      "titleOrPackage": "Test 1",
+      "automaticExport": false,
+      "purchaseOrderId": "60ec2449-98d6-432d-9af3-f8b94ea46f3b",
+      "claimingInterval": 45,
+      "fundDistribution": [],
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+      "searchLocationIds": [
+        "fcd64ce1-6995-48f0-840e-89ffa2288371"
+      ],
+      "donorOrganizationIds": [],
+      "cancellationRestriction": true
+    },
+    {
+      "id": "2bf2b04c-716a-4c08-bc48-831f5d1e6802",
+      "cost": {
+        "currency": "USD",
+        "discountType": "percentage",
+        "listUnitPrice": 1.0,
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 1.0
+      },
+      "rush": false,
+      "alerts": [],
+      "claims": [],
+      "source": "User",
+      "details": {
+        "productIds": [],
+        "isAcknowledged": false,
+        "isBinderyActive": false,
+        "subscriptionInterval": 0
+      },
+      "physical": {
+        "volumes": [],
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "isPackage": false,
+      "locations": [
+        {
+          "quantity": 1,
+          "tenantId": "university",
+          "holdingId": "79b51935-de14-4715-b6de-3c3a8d749208",
+          "quantityPhysical": 1
+        }
+      ],
+      "collection": false,
+      "instanceId": "88fe2b5b-7c99-427e-9c8d-1647f5b0c502",
+      "orderFormat": "Physical Resource",
+      "checkinItems": false,
+      "contributors": [],
+      "poLineNumber": "10004-1",
+      "vendorDetail": {
+        "instructions": "",
+        "vendorAccount": "1234",
+        "referenceNumbers": []
+      },
+      "paymentStatus": "Awaiting Payment",
+      "receiptStatus": "Awaiting Receipt",
+      "claimingActive": false,
+      "reportingCodes": [],
+      "titleOrPackage": "1169-2",
+      "automaticExport": false,
+      "purchaseOrderId": "b25f8ef6-04c4-4290-8531-9bbcefeb8c11",
+      "claimingInterval": 45,
+      "fundDistribution": [],
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+      "searchLocationIds": [
+        "fcd64ce1-6995-48f0-840e-89ffa2288371"
+      ],
+      "donorOrganizationIds": [],
+      "cancellationRestriction": true
+    },
+    {
+      "id": "aae3a75a-4e12-4e60-8c14-605b31d7593b",
+      "cost": {
+        "currency": "USD",
+        "discountType": "percentage",
+        "listUnitPrice": 1.0,
+        "quantityPhysical": 2,
+        "poLineEstimatedPrice": 2.0
+      },
+      "rush": false,
+      "alerts": [],
+      "claims": [],
+      "source": "User",
+      "details": {
+        "productIds": [],
+        "isAcknowledged": false,
+        "isBinderyActive": false,
+        "subscriptionInterval": 0
+      },
+      "physical": {
+        "volumes": [],
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "isPackage": false,
+      "locations": [
+        {
+          "quantity": 1,
+          "tenantId": "university",
+          "holdingId": "82220193-de57-4c10-afb0-0529b5368ff0",
+          "quantityPhysical": 1
+        },
+        {
+          "quantity": 1,
+          "tenantId": "university",
+          "holdingId": "5afdf421-7b02-43d7-9d93-917d1724a725",
+          "quantityPhysical": 1
+        }
+      ],
+      "collection": false,
+      "instanceId": "d97f0db3-7cb0-4179-bce0-1ad648aff60d",
+      "orderFormat": "Physical Resource",
+      "checkinItems": false,
+      "contributors": [],
+      "poLineNumber": "10002-1",
+      "vendorDetail": {
+        "instructions": "",
+        "vendorAccount": "1234",
+        "referenceNumbers": []
+      },
+      "paymentStatus": "Awaiting Payment",
+      "receiptStatus": "Awaiting Receipt",
+      "claimingActive": false,
+      "reportingCodes": [],
+      "titleOrPackage": "1169-1",
+      "automaticExport": false,
+      "purchaseOrderId": "0c9a0e56-3518-4f0c-bfbb-98cc47b07f6c",
+      "claimingInterval": 45,
+      "fundDistribution": [],
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+      "searchLocationIds": [
+        "fcd64ce1-6995-48f0-840e-89ffa2288371",
+        "184aae84-a5bf-4c6a-85ba-4a7c73026cd5"
+      ],
+      "donorOrganizationIds": [],
+      "cancellationRestriction": true
     }
-
   ],
-  "totalRecords": 9
+  "totalRecords": 14
 }

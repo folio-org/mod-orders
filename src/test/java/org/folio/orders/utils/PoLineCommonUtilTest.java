@@ -8,6 +8,8 @@ import io.vertx.core.json.JsonObject;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,40 +17,6 @@ import java.util.UUID;
 public class PoLineCommonUtilTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
-
-  @Test
-  void testShouldMakePOLAsPendingIfPaymentAndReceiptStatusesEqualToAwaiting() {
-    //given
-    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    order.getCompositePoLines().forEach(line -> {
-      line.setPaymentStatus(CompositePoLine.PaymentStatus.AWAITING_PAYMENT);
-      line.setReceiptStatus(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT);
-    });
-    //When
-    PoLineCommonUtil.makePoLinesPending(order.getCompositePoLines());
-    //Then
-    order.getCompositePoLines().forEach(line -> {
-      assertEquals(CompositePoLine.PaymentStatus.PENDING, line.getPaymentStatus());
-      assertEquals(CompositePoLine.ReceiptStatus.PENDING, line.getReceiptStatus());
-    });
-  }
-
-  @Test
-  void testShouldSkipMakePOLAsPendingIfPaymentAndReceiptStatusesNotEqualToAwaiting() {
-    //given
-    CompositePurchaseOrder order = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
-    order.getCompositePoLines().forEach(line -> {
-      line.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
-      line.setReceiptStatus(CompositePoLine.ReceiptStatus.FULLY_RECEIVED);
-    });
-    //When
-    PoLineCommonUtil.makePoLinesPending(order.getCompositePoLines());
-    //Then
-    order.getCompositePoLines().forEach(line -> {
-      assertEquals(CompositePoLine.PaymentStatus.FULLY_PAID, line.getPaymentStatus());
-      assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, line.getReceiptStatus());
-    });
-  }
 
   @Test
   void testOnlyInstanceUpdateNeededForPhysicalIfCreateInventoryInstance() {
@@ -157,5 +125,37 @@ public class PoLineCommonUtilTest {
     String errorMessage = "{\"message\":\"Protected fields can't be modified\",\"code\":\"protectedFieldChanging\",\"parameters\":[],\"protectedAndModifiedFields\":[\"details.productIds\"]}";
     assertEquals(400, exception.getCode());
     assertEquals(errorMessage, exception.getMessage());
+  }
+
+  @ParameterizedTest
+  @CsvSource(value = {"false:true:Other::Instance:true",
+    "true:false:Other:None::true",
+    "true:false:Other:Instance::false",
+    "true:false:Physical Resource:None::true",
+    "true:false:Physical Resource:Instance::false",
+    "false:true:Electronic Resource::None:true",
+    "false:true:Electronic Resource::Instance:false",
+    "true:true:P/E Mix:None:None:true",
+    "true:true:P/E Mix:Instance:None:false",
+    "true:true:P/E Mix:None:Instance:false"
+  }, delimiter = ':')
+  void testIsInventoryUpdateNotRequired(Boolean withPhysical, Boolean withEResource, String orderFormat,
+      String physicalCreateInventory, String eresourceCreateInventory, Boolean updateNotRequired) {
+    CompositePoLine poLine = new CompositePoLine();
+    if (withPhysical) {
+      poLine.setPhysical(new Physical());
+    }
+    if (withEResource) {
+      poLine.setEresource(new Eresource());
+    }
+    poLine.setOrderFormat(CompositePoLine.OrderFormat.fromValue(orderFormat));
+    if (physicalCreateInventory != null) {
+      poLine.getPhysical().setCreateInventory(Physical.CreateInventory.fromValue(physicalCreateInventory));
+    }
+    if (eresourceCreateInventory != null) {
+      poLine.getEresource().setCreateInventory(Eresource.CreateInventory.fromValue(eresourceCreateInventory));
+    }
+    boolean result = PoLineCommonUtil.isInventoryUpdateNotRequired(poLine);
+    assertEquals(result, updateNotRequired);
   }
 }

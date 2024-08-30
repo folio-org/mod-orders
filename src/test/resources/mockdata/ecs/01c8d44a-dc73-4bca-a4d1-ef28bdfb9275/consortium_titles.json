@@ -1,0 +1,21 @@
+{
+  "id": "119a0a40-4494-465d-b5c0-d1171e9fb2cd",
+  "title": "Test 2",
+  "metadata": {
+    "createdDate": "2024-07-22T10:34:00.348Z",
+    "updatedDate": "2024-07-22T10:34:50.025Z",
+    "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
+    "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
+  },
+  "poLineId": "952bc8b4-9735-47f5-9a57-5376f5f6bd15",
+  "acqUnitIds": [],
+  "instanceId": "b0fee84e-07c2-44ba-ab79-3a77ec341d52",
+  "productIds": [],
+  "bindItemIds": [],
+  "contributors": [],
+  "poLineNumber": "10152-1",
+  "claimingActive": false,
+  "isAcknowledged": false,
+  "claimingInterval": 45,
+  "subscriptionInterval": 0
+}

@@ -1,19 +1,20 @@
 package org.folio.dao;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.sqlclient.Row;
-import io.vertx.sqlclient.RowSet;
-import io.vertx.sqlclient.Tuple;
+import static org.folio.dao.util.DbUtils.prepareFullTableName;
+
+import java.util.UUID;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.dao.util.PostgresClientFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.util.UUID;
-
-import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
+import io.vertx.sqlclient.Tuple;
 
 @Repository
 public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorageDao {
@@ -50,7 +51,5 @@ public class SequentialOrderIdStorageDaoImpl implements SequentialOrderIdStorage
     return promise.future().map(resultSet -> resultSet.iterator().next().getUUID(0).toString());
   }
 
-  private String prepareFullTableName(String tenantId, String table) {
-    return String.format("%s.%s", convertToPsqlStandard(tenantId), table);
-  }
+
 }

@@ -21,7 +21,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.service.ProtectionService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.titles.TitlesService;
@@ -31,7 +31,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
@@ -50,7 +49,7 @@ public class PieceServiceTest {
   @Autowired
   private ProtectionService protectionService;
   @Autowired
-  private InventoryManager inventoryManager;
+  private InventoryItemManager inventoryItemManager;
   @Autowired
   private TitlesService titlesService;
   @Autowired
@@ -62,8 +61,7 @@ public class PieceServiceTest {
 
   @Mock
   private Map<String, String> okapiHeadersMock;
-  @Spy
-  private Context ctxMock = getFirstContextFromVertx(getVertx());
+  private final Context ctx = getFirstContextFromVertx(getVertx());
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
@@ -72,7 +70,7 @@ public class PieceServiceTest {
   void initMocks(){
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    requestContext = new RequestContext(ctx, okapiHeadersMock);
   }
 
   @BeforeAll
@@ -120,8 +118,8 @@ public class PieceServiceTest {
     }
 
     @Bean
-    InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
     }
 
     @Bean

@@ -1,0 +1,25 @@
+{
+  "templateId": "9465105a-e8a1-470c-9817-142d33bc4fcd",
+  "lang": "en",
+  "outputFormat": "text/html",
+  "context": {
+    "title": "Title",
+    "routingList": {
+      "name": "Mars expedition",
+      "notes": "Future note",
+      "userIds": []
+    },
+    "users": [
+      {
+        "lastName": "Denesik",
+        "firstName": "Maiya",
+        "routingAddress": "144 Law"
+      },
+      {
+        "lastName": "Huels",
+        "firstName": "Lois",
+        "routingAddress": "123 Law"
+      }
+    ]
+  }
+}

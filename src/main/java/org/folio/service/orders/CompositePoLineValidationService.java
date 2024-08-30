@@ -9,6 +9,9 @@ import static org.folio.orders.utils.PoLineCommonUtil.getPhysicalCostQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForPhysical;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINE_NUMBER;
+import static org.folio.rest.core.exceptions.ErrorCodes.CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE;
+import static org.folio.rest.core.exceptions.ErrorCodes.RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import io.vertx.core.Future;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.HelperUtils;
@@ -30,12 +34,11 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 
-import io.vertx.core.Future;
 
-
-public class CompositePoLineValidationService {
+public class CompositePoLineValidationService extends BaseValidationService {
 
   private final ExpenseClassValidationService expenseClassValidationService;
 
@@ -44,8 +47,8 @@ public class CompositePoLineValidationService {
   }
 
   public Future<List<Error>> validatePoLine(CompositePoLine compPOL, RequestContext requestContext) {
-    List<Error> errors = new ArrayList<>();
-    errors.addAll(validatePackagePoLine(compPOL));
+    List<Error> errors = new ArrayList<>(validatePackagePoLine(compPOL));
+    errors.addAll(validateClaimingConfig(compPOL));
 
     if (getPhysicalCostQuantity(compPOL) == 0 && getElectronicCostQuantity(compPOL) == 0
       && CollectionUtils.isEmpty(compPOL.getLocations())) {
@@ -53,9 +56,10 @@ public class CompositePoLineValidationService {
     }
 
     return expenseClassValidationService.validateExpenseClasses(List.of(compPOL), false, requestContext)
-      .onSuccess(v -> errors.addAll(validatePoLineFormats(compPOL)))
-      .onSuccess(v -> errors.addAll(validateLocations(compPOL)))
-      .map(v -> {
+      .map(v -> errors.addAll(validatePoLineFormats(compPOL)))
+      .map(v -> errors.addAll(validateForBinadryActive(compPOL)))
+      .map(b -> errors.addAll(validateLocations(compPOL)))
+      .map(b -> {
         errors.addAll(validateCostPrices(compPOL));
         return errors;
       });
@@ -232,6 +236,11 @@ public class CompositePoLineValidationService {
     return convertErrorCodesToErrors(compLine, errors);
   }
 
+  protected List<Error> validateClaimingConfig(CompositePoLine compPOL) {
+    List<ErrorCodes> errors = checkClaimingConfig(compPOL.getClaimingActive(), compPOL.getClaimingInterval());
+    return convertErrorCodesToErrors(compPOL, errors);
+  }
+
   /**
    * Checks if discount is negative or exceed cost totalPrice
    *
@@ -285,5 +294,39 @@ public class CompositePoLineValidationService {
     }
 
     return convertErrorCodesToErrors(compPOL, errors);
+  }
+
+  protected List<Error> validateForBinadryActive(CompositePoLine poLine) {
+    List<Error> errors = new ArrayList<>();
+    if (poLine.getDetails() != null && Boolean.TRUE.equals(poLine.getDetails().getIsBinderyActive())) {
+      validateOrderFormatForBindaryActive(poLine, errors);
+      validateCreateInventoryForBindary(poLine, errors);
+      validateReceivingWorkflowForBindary(poLine, errors);
+    }
+    return errors;
+  }
+
+  private void validateOrderFormatForBindaryActive(CompositePoLine poLine, List<Error> errors) {
+    var poLineOrderFormat = poLine.getOrderFormat().value();
+    if (!Objects.equals(poLineOrderFormat, PoLine.OrderFormat.PHYSICAL_RESOURCE.value())
+        && !Objects.equals(poLineOrderFormat, PoLine.OrderFormat.P_E_MIX.value())) {
+      var param = new Parameter().withKey("orderFormat").withValue(poLine.getOrderFormat().value());
+      var error = ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE.toError().withParameters(List.of(param));
+      errors.add(error);
+    }
+  }
+
+  private void validateCreateInventoryForBindary(CompositePoLine poLine, List<Error> errors) {
+    if (poLine.getPhysical() != null && poLine.getPhysical().getCreateInventory() != Physical.CreateInventory.INSTANCE_HOLDING_ITEM) {
+      var param = new Parameter().withKey("createInventory").withValue(poLine.getPhysical().getCreateInventory().value());
+      var error = CREATE_INVENTORY_INCORRECT_FOR_BINDARY_ACTIVE.toError().withParameters(List.of(param));
+      errors.add(error);
+    }
+  }
+
+  private void validateReceivingWorkflowForBindary(CompositePoLine poLine, List<Error> errors) {
+    if (Boolean.FALSE.equals(poLine.getCheckinItems())) {
+      errors.add(RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE.toError());
+    }
   }
 }

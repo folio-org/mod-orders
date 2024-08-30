@@ -5,15 +5,10 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.rest.RestConstants.ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.core.exceptions.ExceptionUtil.isErrorsMessageJson;
+import static org.folio.rest.core.exceptions.ExceptionUtil.mapToErrors;
 
 import java.util.Map;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.WebClientFactory;
-import org.folio.rest.core.exceptions.HttpException;
-import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.core.models.RequestEntry;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -27,13 +22,27 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.predicate.ErrorConverter;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.okapi.common.WebClientFactory;
+import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.core.models.RequestEntry;
 
 public class RestClient {
 
   private static final Logger log = LogManager.getLogger(RestClient.class);
-    private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
+  private static final String CALLING_ENDPOINT_MSG = "Sending {} {}";
+  private static final String SENDING_POST_WITH_BODY_MSG = "Sending 'POST {}' with body: {}";
+
   private static final ErrorConverter ERROR_CONVERTER = ErrorConverter.createFullBody(
-    result -> new HttpException(result.response().statusCode(), result.response().bodyAsString()));
+    result -> {
+      String error = result.response().bodyAsString();
+      if (isErrorsMessageJson(error)) {
+        return new HttpException(result.response().statusCode(), mapToErrors(error));
+      }
+      return new HttpException(result.response().statusCode(), error);
+    });
   private static final ResponsePredicate SUCCESS_RESPONSE_PREDICATE =
     ResponsePredicate.create(ResponsePredicate.SC_SUCCESS, ERROR_CONVERTER);
 
@@ -43,7 +52,7 @@ public class RestClient {
 
   public <T> Future<T> post(String endpoint, T entity, Class<T> responseType, RequestContext requestContext) {
     if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}' with body: {}", endpoint, JsonObject.mapFrom(entity).encodePrettily());
+      log.debug(SENDING_POST_WITH_BODY_MSG, endpoint, JsonObject.mapFrom(entity).encodePrettily());
     }
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
     return getVertxWebClient(requestContext.getContext()).postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
@@ -55,7 +64,20 @@ public class RestClient {
         return bufferHttpResponse.bodyAsJsonObject()
           .put(ID, id)
           .mapTo(responseType);
-      });
+      })
+      .onFailure(log::error);
+  }
+
+  public <T> Future<Void> postEmptyResponse(String endpoint, T entity, RequestContext requestContext) {
+    log.debug(SENDING_POST_WITH_BODY_MSG, () -> endpoint, () -> JsonObject.mapFrom(entity).encodePrettily());
+    var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
+    return getVertxWebClient(requestContext.getContext())
+      .postAbs(buildAbsEndpoint(caseInsensitiveHeader, endpoint))
+      .putHeaders(caseInsensitiveHeader)
+      .expect(SUCCESS_RESPONSE_PREDICATE)
+      .sendJson(entity)
+      .onFailure(log::error)
+      .mapEmpty();
   }
 
   private MultiMap convertToCaseInsensitiveMap(Map<String, String> okapiHeaders) {
@@ -131,7 +153,7 @@ public class RestClient {
   }
 
   private <T>void handleGetMethodErrorResponse(Promise<T> promise, Throwable t, boolean skipError404) {
-    if (skipError404 && t instanceof HttpException && ((HttpException) t).getCode() == 404) {
+    if (skipError404 && t instanceof HttpException httpException && httpException.getCode() == 404) {
       log.warn(t);
       promise.complete();
     } else {
@@ -140,7 +162,7 @@ public class RestClient {
     }
   }
   private void handleErrorResponse(Promise<Void> promise, Throwable t, boolean skipError404) {
-    if (skipError404 && t instanceof HttpException && ((HttpException) t).getCode() == 404){
+    if (skipError404 && t instanceof HttpException httpException && httpException.getCode() == 404){
       log.warn(t);
       promise.complete();
     } else {
@@ -220,12 +242,14 @@ public class RestClient {
 
   public String extractRecordId(HttpResponse<Buffer> response) {
     JsonObject body = response.bodyAsJsonObject();
-    String id;
+    String id = "";
     if (body != null && !body.isEmpty() && body.containsKey(ID)) {
       id = body.getString(ID);
     } else {
       String location = response.getHeader(LOCATION);
-      id = location.substring(location.lastIndexOf('/') + 1);
+      if (location != null) {
+        id = location.substring(location.lastIndexOf('/') + 1);
+      }
     }
     return id;
   }
@@ -246,7 +270,7 @@ public class RestClient {
 
   public Future<String> postJsonObjectAndGetId(RequestEntry requestEntry, JsonObject entity, RequestContext requestContext) {
     if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), JsonObject.mapFrom(entity).encodePrettily());
+      log.debug(SENDING_POST_WITH_BODY_MSG, requestEntry.buildEndpoint(), JsonObject.mapFrom(entity).encodePrettily());
     }
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());
 
@@ -261,7 +285,7 @@ public class RestClient {
 
   public Future<JsonObject> postJsonObject(RequestEntry requestEntry, JsonObject jsonObject, RequestContext requestContext) {
     if (log.isDebugEnabled()) {
-      log.debug("Sending 'POST {}' with body: {}", requestEntry.buildEndpoint(), jsonObject.encodePrettily());
+      log.debug(SENDING_POST_WITH_BODY_MSG, requestEntry.buildEndpoint(), jsonObject.encodePrettily());
     }
     var endpoint = requestEntry.buildEndpoint();
     var caseInsensitiveHeader = convertToCaseInsensitiveMap(requestContext.getHeaders());

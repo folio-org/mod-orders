@@ -8,10 +8,10 @@
   "orderType": "Ongoing",
   "reEncumber": false,
   "ongoing": {
-     "interval": 182,
-     "manualRenewal": true,
-     "reviewPeriod": 30,
-     "renewalDate": "2019-04-09T00:00:00.000Z"
+    "interval": 182,
+    "manualRenewal": true,
+    "reviewPeriod": 30,
+    "renewalDate": "2019-04-09T00:00:00.000Z"
   },
   "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
   "workflowStatus": "Closed",

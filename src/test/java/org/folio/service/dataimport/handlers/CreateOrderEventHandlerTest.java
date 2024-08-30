@@ -13,6 +13,7 @@ import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.DataImportEventTypes;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.Organization;
@@ -36,6 +37,7 @@ import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.RepeatableSubfieldMapping;
 import org.folio.service.dataimport.PoLineImportProgressService;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -67,10 +69,11 @@ import static java.time.ZoneOffset.UTC;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_ERROR;
+import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
-import static org.folio.DataImportEventTypes.DI_MARC_BIB_FOR_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED;
 import static org.folio.DataImportEventTypes.DI_ORDER_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_PENDING_ORDER_CREATED;
@@ -83,11 +86,17 @@ import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.CONFIGS;
 import static org.folio.rest.impl.MockServer.JOB_EXECUTIONS;
 import static org.folio.rest.impl.MockServer.addMockEntry;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
+import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.EntityType.ORDER;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.FundDistribution.DistributionType.PERCENTAGE;
+import static org.folio.rest.jaxrs.model.MappingRule.RepeatableFieldAction.EXTEND_EXISTING;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.folio.service.dataimport.handlers.CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -132,6 +141,8 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         new MappingRule().withPath("order.po.orderType").withValue("\"One-Time\"").withEnabled("true"),
         new MappingRule().withName("vendor").withPath("order.po.vendor").withValue("\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\"").withEnabled("true"),
         new MappingRule().withPath("order.po.approved").withValue("\"true\"").withEnabled("true"),
+        new MappingRule().withPath("order.po.poNumberPrefix").withValue("\"pref\"").withEnabled("true"),
+        new MappingRule().withPath("order.po.poNumberSuffix").withValue("\"suf\"").withEnabled("true"),
         new MappingRule().withPath("order.poLine.titleOrPackage").withValue("245$a").withEnabled("true"),
         new MappingRule().withPath("order.poLine.cost.currency").withValue("\"USD\"").withEnabled("true"),
         new MappingRule().withPath("order.poLine.orderFormat").withValue("\"Physical Resource\"").withEnabled("true"),
@@ -227,7 +238,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -247,6 +258,10 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
+
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertTrue(createdOrder.getPoNumber().contains("pref"));
+    assertTrue(createdOrder.getPoNumber().contains("suf"));
   }
 
   @Test
@@ -288,7 +303,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -318,7 +333,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
@@ -360,7 +375,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -426,7 +441,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -460,7 +475,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -494,7 +509,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
@@ -538,7 +553,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
@@ -566,7 +581,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
 
     CompositePurchaseOrder order = Json.decodeValue(eventPayload.getContext().get(ActionProfile.FolioRecord.ORDER.value()), CompositePurchaseOrder.class);
-    assertEquals(order.getApproved(), Boolean.FALSE);
+    assertEquals(Boolean.FALSE, order.getApproved());
 
     verifyOrder(eventPayload);
     verifyPoLine(eventPayload);
@@ -612,7 +627,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -649,7 +664,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_APPROVAL_REQUIRED)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -725,7 +740,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -761,7 +776,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -797,7 +812,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -841,7 +856,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -863,117 +878,215 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
-  public void shouldOverrideElectronicPoLineCreateInventoryFieldAccordingToProfileSnapshot() throws InterruptedException {
-    // given
-    MappingRule createInventoryRule = new MappingRule()
-      .withPath("order.poLine.eresource.createInventory")
-      .withValue("\"Instance, Holding, Item\"")
-      .withEnabled("true");
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndInstanceActionExists() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(new ActionProfile().withFolioRecord(INSTANCE));
 
-    openOrderMappingProfile.getMappingDetails().getMappingFields().add(createInventoryRule);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(jobProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(JsonObject.mapFrom(jobProfile).getMap())
-      .withChildSnapshotWrappers(List.of(
-        new ProfileSnapshotWrapper()
-          .withId(UUID.randomUUID().toString())
-          .withProfileId(actionProfile.getId())
-          .withOrder(0)
-          .withContentType(ACTION_PROFILE)
-          .withContent(JsonObject.mapFrom(actionProfile).getMap())
-          .withChildSnapshotWrappers(Collections.singletonList(
-            new ProfileSnapshotWrapper()
-              .withId(UUID.randomUUID().toString())
-              .withProfileId(mappingProfile.getId())
-              .withContentType(MAPPING_PROFILE)
-              .withContent(JsonObject.mapFrom(openOrderMappingProfile).getMap()))),
-        new ProfileSnapshotWrapper()
-          .withId(UUID.randomUUID().toString())
-          .withProfileId(actionProfile.getId())
-          .withOrder(1)
-          .withContentType(ACTION_PROFILE)
-          .withContent(JsonObject.mapFrom(new ActionProfile()
-            .withName("Create instance")
-            .withFolioRecord(INSTANCE)).getMap())
-      ));
-    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
 
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
-      .withTenant(TENANT_ID)
-      .withOkapiUrl(OKAPI_URL)
-      .withToken(TOKEN)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
-        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
-      }});
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertEquals(Physical.CreateInventory.INSTANCE, poLine.getPhysical().getCreateInventory());
+  }
 
-    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+  @Test
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndInstanceHoldingActionsExist() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(
+      new ActionProfile().withFolioRecord(INSTANCE),
+      new ActionProfile().withFolioRecord(HOLDINGS));
 
-    // when
-    kafkaCluster.send(request);
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
 
-    // then
-    DataImportEventPayload eventPayload = observeEvent(DI_PENDING_ORDER_CREATED.value());
-    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventType());
-    verifyOrder(eventPayload);
-    CompositePoLine poLine = verifyPoLine(eventPayload);
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndInstanceHoldingItemActionsExist() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(
+      new ActionProfile().withFolioRecord(INSTANCE),
+      new ActionProfile().withFolioRecord(HOLDINGS),
+      new ActionProfile().withFolioRecord(ITEM));
+
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, PHYSICAL_RESOURCE);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertEquals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getPhysical().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatPhysicalAndHaveNoInventoryActionsProfiles() throws InterruptedException {
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), PHYSICAL_RESOURCE);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertEquals(Physical.CreateInventory.NONE, poLine.getPhysical().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndInstanceActionExists() throws InterruptedException {
+    List<ActionProfile> inventoryActionProfiles = List.of(new ActionProfile().withFolioRecord(INSTANCE));
+
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(inventoryActionProfiles, ELECTRONIC_RESOURCE);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
     assertNotNull(poLine.getEresource());
     assertEquals(Eresource.CreateInventory.INSTANCE, poLine.getEresource().getCreateInventory());
   }
 
   @Test
-  public void shouldOverridePhysicalPoLineCreateInventoryFieldAccordingToProfileSnapshot() throws InterruptedException {
-    // given
-    MappingRule createInventoryRule = new MappingRule()
-      .withPath("order.poLine.physical.createInventory")
-      .withValue("\"Instance\"")
-      .withEnabled("true");
+  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndInstanceHoldingActionsExist() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(
+      new ActionProfile().withFolioRecord(INSTANCE),
+      new ActionProfile().withFolioRecord(HOLDINGS));
 
-    openOrderMappingProfile.getMappingDetails().getMappingFields().add(createInventoryRule);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-      .withId(UUID.randomUUID().toString())
-      .withProfileId(jobProfile.getId())
-      .withContentType(JOB_PROFILE)
-      .withContent(JsonObject.mapFrom(jobProfile).getMap())
-      .withChildSnapshotWrappers(List.of(
-        new ProfileSnapshotWrapper()
-          .withId(UUID.randomUUID().toString())
-          .withProfileId(actionProfile.getId())
-          .withContentType(ACTION_PROFILE)
-          .withOrder(0)
-          .withContent(JsonObject.mapFrom(actionProfile).getMap())
-          .withChildSnapshotWrappers(Collections.singletonList(
-            new ProfileSnapshotWrapper()
-              .withId(UUID.randomUUID().toString())
-              .withProfileId(mappingProfile.getId())
-              .withContentType(MAPPING_PROFILE)
-              .withContent(JsonObject.mapFrom(openOrderMappingProfile).getMap()))),
-        new ProfileSnapshotWrapper()
-          .withId(UUID.randomUUID().toString())
-          .withProfileId(actionProfile.getId())
-          .withContentType(ACTION_PROFILE)
-          .withOrder(1)
-          .withContent(JsonObject.mapFrom(new ActionProfile()
-            .withName("Create instance")
-            .withFolioRecord(INSTANCE)).getMap()),
-        new ProfileSnapshotWrapper()
-          .withId(UUID.randomUUID().toString())
-          .withProfileId(actionProfile.getId())
-          .withContentType(ACTION_PROFILE)
-          .withOrder(2)
-          .withContent(JsonObject.mapFrom(new ActionProfile()
-            .withName("Create holdings")
-            .withFolioRecord(HOLDINGS)).getMap())
-      ));
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, ELECTRONIC_RESOURCE);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getEresource());
+    assertEquals(Eresource.CreateInventory.INSTANCE_HOLDING, poLine.getEresource().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndInstanceHoldingItemActionsExist() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(
+      new ActionProfile().withFolioRecord(INSTANCE),
+      new ActionProfile().withFolioRecord(HOLDINGS),
+      new ActionProfile().withFolioRecord(ITEM));
+
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, ELECTRONIC_RESOURCE);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getEresource());
+    assertEquals(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getEresource().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatElectronicAndHaveNoInventoryActionProfiles() throws InterruptedException {
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), ELECTRONIC_RESOURCE);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getEresource());
+    assertEquals(Eresource.CreateInventory.NONE, poLine.getEresource().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndInstanceActionExists() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(new ActionProfile().withFolioRecord(INSTANCE));
+
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertEquals(Physical.CreateInventory.INSTANCE, poLine.getPhysical().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndInstanceHoldingActionsExist() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(
+      new ActionProfile().withFolioRecord(INSTANCE),
+      new ActionProfile().withFolioRecord(HOLDINGS));
+
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndInstanceHoldingItemActionsExist() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(
+      new ActionProfile().withFolioRecord(INSTANCE),
+      new ActionProfile().withFolioRecord(HOLDINGS),
+      new ActionProfile().withFolioRecord(ITEM));
+
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, OTHER);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertEquals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getPhysical().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatOtherAndHaveNoInventoryActionProfiles() throws InterruptedException {
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), OTHER);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertEquals(Physical.CreateInventory.NONE, poLine.getPhysical().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndInstanceActionExists() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(new ActionProfile().withFolioRecord(INSTANCE));
+
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertNotNull(poLine.getEresource());
+    assertEquals(Physical.CreateInventory.INSTANCE, poLine.getPhysical().getCreateInventory());
+    assertEquals(Eresource.CreateInventory.INSTANCE, poLine.getEresource().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndInstanceHoldingActionsExist() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(
+      new ActionProfile().withFolioRecord(INSTANCE),
+      new ActionProfile().withFolioRecord(HOLDINGS));
+
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertNotNull(poLine.getEresource());
+    assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
+    assertEquals(Eresource.CreateInventory.INSTANCE_HOLDING, poLine.getEresource().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndInstanceHoldingItemActionsExist() throws InterruptedException {
+    List<ActionProfile> nextInventoryActionProfiles = List.of(
+      new ActionProfile().withFolioRecord(INSTANCE),
+      new ActionProfile().withFolioRecord(HOLDINGS),
+      new ActionProfile().withFolioRecord(ITEM));
+
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(nextInventoryActionProfiles, P_E_MIX);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertNotNull(poLine.getEresource());
+    assertEquals(Physical.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getPhysical().getCreateInventory());
+    assertEquals(Eresource.CreateInventory.INSTANCE_HOLDING_ITEM, poLine.getEresource().getCreateInventory());
+  }
+
+  @Test
+  public void shouldSetPhysicalAndElectronicPoLineCreateInventoryFieldBasedOnActionProfilesIfOrderFormatMixAndHaveNoInventoryActionProfiles() throws InterruptedException {
+    DataImportEventPayload eventPayload = importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List.of(), P_E_MIX);
+
+    CompositePoLine poLine = Json.decodeValue(eventPayload.getContext().get(PO_LINE_KEY), CompositePoLine.class);
+    assertNotNull(poLine.getPhysical());
+    assertNotNull(poLine.getEresource());
+    assertEquals(Physical.CreateInventory.NONE, poLine.getPhysical().getCreateInventory());
+    assertEquals(Eresource.CreateInventory.NONE, poLine.getEresource().getCreateInventory());
+  }
+
+  private DataImportEventPayload importPoLineWithCreateInventoryFieldBasedOnActionsAndOrderFormat(List<ActionProfile> inventoryActionProfiles,
+                                                                                                  CompositePoLine.OrderFormat orderFormat) throws InterruptedException {
+    // given
+    openOrderMappingProfile.getMappingDetails().getMappingFields().stream()
+      .filter(mappingRule -> mappingRule.getPath().equals("order.poLine.orderFormat"))
+      .forEach(mappingRule -> mappingRule.setValue(String.format("\"%s\"", orderFormat.value())));
+
+    ProfileSnapshotWrapper profileSnapshotWrapper =
+      buildProfileSnapshotWrapperWithInventoryActions(jobProfile, actionProfile, openOrderMappingProfile, inventoryActionProfiles);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -984,16 +1097,17 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
 
+    // result event type depends on inventory action profiles existence
+    DataImportEventTypes eventToObserve = inventoryActionProfiles.isEmpty()
+      ? DI_ORDER_CREATED_READY_FOR_POST_PROCESSING : DI_PENDING_ORDER_CREATED;
+
     // when
     kafkaCluster.send(request);
 
     // then
-    DataImportEventPayload eventPayload = observeEvent(DI_PENDING_ORDER_CREATED.value());
-    assertEquals(DI_PENDING_ORDER_CREATED.value(), eventPayload.getEventType());
-    verifyOrder(eventPayload);
-    CompositePoLine poLine = verifyPoLine(eventPayload);
-    assertNotNull(poLine.getPhysical());
-    assertEquals(Physical.CreateInventory.INSTANCE_HOLDING, poLine.getPhysical().getCreateInventory());
+    DataImportEventPayload eventPayload = observeEvent(eventToObserve.value());
+    assertEquals(eventToObserve.value(), eventPayload.getEventType());
+    return eventPayload;
   }
 
   @Test
@@ -1013,7 +1127,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1051,7 +1165,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1089,7 +1203,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1126,7 +1240,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1166,7 +1280,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1214,7 +1328,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       dataImportEventPayload = new DataImportEventPayload()
         .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
         .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
-        .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+        .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
         .withTenant(TENANT_ID)
         .withOkapiUrl(OKAPI_URL)
         .withToken(TOKEN)
@@ -1306,7 +1420,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1364,7 +1478,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
       .withToken(TOKEN)
@@ -1391,6 +1505,61 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   }
 
   @Test
+  public void shouldCreatePoLineWithFundIdAndFundCode() throws InterruptedException {
+    // given
+    String expectedFundId = "7fbd5d84-62d1-44c6-9c45-6cb173998bbd";
+    String expectedFundCode = "AFRICAHIST";
+    double expectedDistributionValue = 100;
+
+    MappingRule fundDistributionsRule = new MappingRule()
+      .withName("fundDistribution")
+      .withPath("order.poLine.fundDistribution[]")
+      .withEnabled("true")
+      .withRepeatableFieldAction(EXTEND_EXISTING)
+      .withSubfields(List.of(new RepeatableSubfieldMapping()
+        .withOrder(0)
+        .withPath("order.poLine.fundDistribution[]")
+        .withFields(List.of(
+          new MappingRule().withPath("order.poLine.fundDistribution[].fundId").withName("fundId")
+            .withValue("\"African (History) (AFRICAHIST)\"")
+            .withAcceptedValues(new HashMap<>(Map.of(expectedFundId, "African (History) (AFRICAHIST)"))),
+          new MappingRule().withPath("order.poLine.fundDistribution[].value").withValue("\"100\""),
+          new MappingRule().withPath("order.poLine.fundDistribution[].distributionType").withValue("\"percentage\"")))
+      ));
+
+    mappingProfile.getMappingDetails().getMappingFields().add(fundDistributionsRule);
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(OKAPI_URL)
+      .withToken(TOKEN)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    verifyOrder(eventPayload);
+    CompositePoLine createdPoLine = verifyPoLine(eventPayload);
+    assertNotNull(createdPoLine.getFundDistribution());
+    assertEquals(1, createdPoLine.getFundDistribution().size());
+    assertEquals(expectedFundId, createdPoLine.getFundDistribution().get(0).getFundId());
+    assertEquals(expectedFundCode, createdPoLine.getFundDistribution().get(0).getCode());
+    assertEquals(expectedDistributionValue, createdPoLine.getFundDistribution().get(0).getValue());
+    assertEquals(PERCENTAGE, createdPoLine.getFundDistribution().get(0).getDistributionType());
+  }
+
+  @Test
   public void shouldReturnFailedByDuplicateEventExceptionFutureWhenRecordIdIsDuplicated(TestContext context) {
     Async async = context.async();
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
@@ -1400,7 +1569,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -1431,7 +1600,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
-      .withEventType(DI_MARC_BIB_FOR_ORDER_CREATED.value())
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
@@ -1477,6 +1646,41 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
               .withProfileId(mappingProfile.getId())
               .withContentType(MAPPING_PROFILE)
               .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
+  }
+
+  private ProfileSnapshotWrapper buildProfileSnapshotWrapperWithInventoryActions(JobProfile jobProfile, ActionProfile actionProfile,
+                                                                                 MappingProfile mappingProfile, List<ActionProfile> inventoryActionProfiles) {
+    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(JsonObject.mapFrom(jobProfile).getMap())
+      .withChildSnapshotWrappers(new ArrayList<>(List.of(
+        new ProfileSnapshotWrapper()
+          .withId(UUID.randomUUID().toString())
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(JsonObject.mapFrom(actionProfile).getMap())
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withId(UUID.randomUUID().toString())
+              .withProfileId(mappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(JsonObject.mapFrom(mappingProfile).getMap()))))));
+
+    int wrapperOrder = 0;
+    for (ActionProfile inventoryActionProfile : inventoryActionProfiles) {
+      ProfileSnapshotWrapper actionProfileWrapper = new ProfileSnapshotWrapper()
+        .withId(UUID.randomUUID().toString())
+        .withProfileId(this.actionProfile.getId())
+        .withOrder(++wrapperOrder)
+        .withContentType(ACTION_PROFILE)
+        .withContent(JsonObject.mapFrom(inventoryActionProfile).getMap());
+
+      profileSnapshotWrapper.getChildSnapshotWrappers().add(actionProfileWrapper);
+    }
+
+    return profileSnapshotWrapper;
   }
 
   private SendKeyValues<String, String> prepareKafkaRequest(DataImportEventPayload payload) {

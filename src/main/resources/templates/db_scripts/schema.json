@@ -15,6 +15,11 @@
       "run": "after",
       "snippetPath": "create_po_lines_processing_progress_table.sql",
       "fromModuleVersion": "mod-orders-12.6.0"
+    },
+    {
+      "run": "after",
+      "snippetPath": "create_failed_ledger_rollover_po_line_table.sql",
+      "fromModuleVersion": "mod-orders-12.7.0"
     }
   ]
 }

@@ -23,7 +23,7 @@ public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
-  public Boolean poLineUpdateQuantity(PieceDeletionHolder holder) {
+  public boolean poLineUpdateQuantity(PieceDeletionHolder holder) {
     CompositePoLine lineToSave = holder.getPoLineToSave();
     Piece piece = holder.getPieceToDelete();
     final int qty = 1;
@@ -51,7 +51,7 @@ public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineServi
         locationToDelete.add(loc);
       }
       lineToSave.getLocations().removeAll(locationToDelete);
-      return Boolean.TRUE;
+      return true;
     } else if (!isLocationUpdateRequired(piece, lineToSave)) {
       Cost cost = lineToSave.getCost();
       if (piece.getFormat() == Piece.Format.ELECTRONIC) {
@@ -59,7 +59,7 @@ public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineServi
           int prevQty = cost.getQuantityElectronic();
           if (prevQty > 0) {
             cost.setQuantityElectronic(prevQty - qty);
-            return Boolean.TRUE;
+            return true;
           }
         }
       } else {
@@ -67,11 +67,11 @@ public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineServi
           int prevQty = cost.getQuantityPhysical();
           if (prevQty > 0) {
             cost.setQuantityPhysical(prevQty - qty);
-            return Boolean.TRUE;
+            return true;
           }
         }
       }
     }
-   return Boolean.FALSE;
-   }
+    return false;
+  }
 }

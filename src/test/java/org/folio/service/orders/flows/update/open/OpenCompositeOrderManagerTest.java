@@ -25,12 +25,13 @@ import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderLinesSummaryPopulateService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
+import org.folio.service.orders.flows.update.unopen.UnOpenCompositeOrderManager;
 import org.folio.service.pieces.PieceChangeReceiptStatusPublisher;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.titles.TitlesService;
@@ -40,7 +41,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
@@ -57,7 +57,7 @@ public class OpenCompositeOrderManagerTest {
   @Autowired
   private ProtectionService protectionService;
   @Autowired
-  private InventoryManager inventoryManager;
+  private InventoryItemManager inventoryItemManager;
   @Autowired
   private TitlesService titlesService;
   @Autowired
@@ -73,8 +73,7 @@ public class OpenCompositeOrderManagerTest {
 
   @Mock
   private Map<String, String> okapiHeadersMock;
-  @Spy
-  private Context ctxMock = getFirstContextFromVertx(getVertx());
+  private Context ctx = getFirstContextFromVertx(getVertx());
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
@@ -83,7 +82,7 @@ public class OpenCompositeOrderManagerTest {
   void initMocks(){
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    requestContext = new RequestContext(ctx, okapiHeadersMock);
   }
 
   @BeforeAll
@@ -127,8 +126,8 @@ public class OpenCompositeOrderManagerTest {
       return mock(PurchaseOrderLineService.class);
     }
 
-    @Bean InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    @Bean InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
     }
 
     @Bean PieceChangeReceiptStatusPublisher receiptStatusPublisher() {
@@ -191,9 +190,9 @@ public class OpenCompositeOrderManagerTest {
     @Bean OpenCompositeOrderManager openCompositeOrderManager(PurchaseOrderLineService purchaseOrderLineService,
       EncumbranceWorkflowStrategyFactory encumbranceWorkflowStrategyFactory,
       TitlesService titlesService, OpenCompositeOrderInventoryService openCompositeOrderInventoryService,
-      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator){
+      OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, UnOpenCompositeOrderManager unOpenCompositeOrderManager) {
       return new OpenCompositeOrderManager(purchaseOrderLineService, encumbranceWorkflowStrategyFactory,
-          titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator);
+          titlesService, openCompositeOrderInventoryService, openCompositeOrderFlowValidator, unOpenCompositeOrderManager);
     }
   }
 }

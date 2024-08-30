@@ -3,44 +3,78 @@ package org.folio.orders.utils;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
 import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
+import static org.folio.rest.core.exceptions.ErrorCodes.WRONG_ONGOING_NOT_SUBSCRIPTION_FIELDS_CHANGED;
+import static org.folio.rest.core.exceptions.ErrorCodes.WRONG_ONGOING_SUBSCRIPTION_FIELDS_CHANGED;
+
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.PHYSICAL_RESOURCE;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.ONGOING;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import io.vertx.core.json.JsonArray;
+import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.core.exceptions.HttpException;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.tools.parser.JsonPathParser;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public final class PoLineCommonUtil {
-  public static final String DASH_SEPARATOR = "-";
+  private static final String DASH_SEPARATOR = "-";
   private static final String PROTECTED_AND_MODIFIED_FIELDS = "protectedAndModifiedFields";
 
-  private PoLineCommonUtil() {
+  private static final List<String> NOT_EDITABLE_ONGOING_SUBSCRIPTION_FIELDS = List.of(
+    "reviewDate",
+    "manualRenewal"
+  );
 
+  private static final List<String> NOT_EDITABLE_ONGOING_NOT_SUBSCRIPTION_FIELDS = List.of(
+    "interval",
+    "renewalDate",
+    "reviewPeriod",
+    "manualRenewal"
+  );
+
+  private PoLineCommonUtil() {
+  }
+
+  public static String buildPoLineNumber(String poNumber, String sequence) {
+    return poNumber + DASH_SEPARATOR + sequence;
   }
 
   public static void sortPoLinesByPoLineNumber(List<CompositePoLine> poLines) {
     poLines.sort(PoLineCommonUtil::comparePoLinesByPoLineNumber);
+  }
+
+  private static int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {
+    String n1 = poLine1.getPoLineNumber();
+    String n2 = poLine2.getPoLineNumber();
+    if (n1 == null || n2 == null)
+      return 0;
+    String poLineNumberSuffix1 = n1.split(DASH_SEPARATOR)[1];
+    String poLineNumberSuffix2 = n2.split(DASH_SEPARATOR)[1];
+    return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
   }
 
   public static boolean isReceiptNotRequired(CompositePoLine.ReceiptStatus receiptStatus) {
@@ -58,11 +92,11 @@ public final class PoLineCommonUtil {
     }
   }
 
-  public static boolean isUpdateNotRequiredForEresource(CompositePoLine compPOL) {
+  private static boolean isUpdateNotRequiredForEresource(CompositePoLine compPOL) {
     return compPOL.getEresource() == null || compPOL.getEresource().getCreateInventory() == Eresource.CreateInventory.NONE;
   }
 
-  public static boolean isUpdateNotRequiredForPhysical(CompositePoLine compPOL) {
+  private static boolean isUpdateNotRequiredForPhysical(CompositePoLine compPOL) {
     return compPOL.getPhysical() == null || compPOL.getPhysical().getCreateInventory() == Physical.CreateInventory.NONE;
   }
 
@@ -71,19 +105,13 @@ public final class PoLineCommonUtil {
   }
 
   public static boolean isHoldingUpdateRequiredForPhysical(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    if (!(format == PHYSICAL_RESOURCE || format == OTHER || format == P_E_MIX))
-      return false;
-    Physical physical = compPOL.getPhysical();
+    Physical physical = getPhysical(compPOL);
     return physical != null && (physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING
       || physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
 
   public static boolean isHoldingUpdateRequiredForEresource(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    if (!(format == ELECTRONIC_RESOURCE || format == P_E_MIX))
-      return false;
-    Eresource eresource = compPOL.getEresource();
+    Eresource eresource = getEresource(compPOL);
     return eresource != null && (eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING
       || eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM);
   }
@@ -93,27 +121,39 @@ public final class PoLineCommonUtil {
   }
 
   public static boolean isItemsUpdateRequiredForEresource(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    if (!(format == ELECTRONIC_RESOURCE || format == P_E_MIX))
-      return false;
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return false;
     }
-    return Optional.ofNullable(compPOL.getEresource())
+    return Optional.ofNullable(getEresource(compPOL))
       .map(eresource -> eresource.getCreateInventory() == Eresource.CreateInventory.INSTANCE_HOLDING_ITEM)
       .orElse(false);
   }
 
   public static boolean isItemsUpdateRequiredForPhysical(CompositePoLine compPOL) {
-    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
-    if (!(format == PHYSICAL_RESOURCE || format == OTHER || format == P_E_MIX))
-      return false;
     if (compPOL.getCheckinItems() != null && compPOL.getCheckinItems()) {
       return false;
     }
-    return Optional.ofNullable(compPOL.getPhysical())
+    return Optional.ofNullable(getPhysical(compPOL))
       .map(physical -> physical.getCreateInventory() == Physical.CreateInventory.INSTANCE_HOLDING_ITEM)
       .orElse(false);
+  }
+
+  public static Physical getPhysical(PoLine poLine) {
+    return getPhysical(convertToCompositePoLine(poLine));
+  }
+
+  public static Physical getPhysical(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    return format == PHYSICAL_RESOURCE || format == P_E_MIX || format == OTHER ? compPOL.getPhysical() : null;
+  }
+
+  public static Eresource getEresource(PoLine poLine) {
+    return getEresource(convertToCompositePoLine(poLine));
+  }
+
+  public static Eresource getEresource(CompositePoLine compPOL) {
+    CompositePoLine.OrderFormat format = compPOL.getOrderFormat();
+    return format == ELECTRONIC_RESOURCE || format == P_E_MIX ? compPOL.getEresource() : null;
   }
 
   public static boolean isOnlyInstanceUpdateRequired(CompositePoLine compPOL) {
@@ -137,48 +177,76 @@ public final class PoLineCommonUtil {
       || (isHoldingUpdateRequiredForEresource(compPOL) && ObjectUtils.defaultIfNull(location.getQuantityElectronic(), 0) > 0);
   }
 
-  private static int comparePoLinesByPoLineNumber(CompositePoLine poLine1, CompositePoLine poLine2) {
-    String n1 = poLine1.getPoLineNumber();
-    String n2 = poLine2.getPoLineNumber();
-    if (n1 == null || n2 == null)
-      return 0;
-    String poLineNumberSuffix1 = n1.split(DASH_SEPARATOR)[1];
-    String poLineNumberSuffix2 = n2.split(DASH_SEPARATOR)[1];
-    return Integer.parseInt(poLineNumberSuffix1) - Integer.parseInt(poLineNumberSuffix2);
-  }
-
   /**
    * Group all PO Line's locations for which the holding should be created by location identifier
    * @param compPOL PO line with locations to group
    * @return map of grouped locations where key is location id and value is list of locations with the same id
    */
   public static Map<String, List<Location>> groupLocationsByLocationId(CompositePoLine compPOL) {
-    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
-      return Collections.emptyMap();
-    }
-
-    return compPOL.getLocations()
-                  .stream()
-                  .filter(location -> Objects.nonNull(location.getLocationId()))
-                  .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location))
-                  .collect(Collectors.groupingBy(Location::getLocationId));
+    return extractLocationsForPoLineByLocationId(compPOL)
+      .collect(Collectors.groupingBy(Location::getLocationId));
   }
 
   /**
-   * Group all PO Line's locations for which the holding should be created by location identifier
+   * Map all PO Line's location to tenantIds for which the holding should be created by location identifier
+   * @param compPOL PO line with locations
+   * @return map of locations and tenantIds where key is location id and value is the tenantId of the specified location
+   */
+  public static Map<String, String> mapLocationIdsToTenantIds(CompositePoLine compPOL) {
+    return extractLocationsForPoLineByLocationId(compPOL)
+      .filter(location -> Objects.nonNull(location.getTenantId()))
+      .collect(Collectors.toMap(Location::getLocationId, Location::getTenantId));
+  }
+
+  /**
+   * Group all PO Line's locations for which the holding should be created by holding identifier
    * @param compPOL PO line with locations to group
    * @return map of grouped locations where key is holding id and value is list of locations with the same id
    */
   public static Map<String, List<Location>> groupLocationsByHoldingId(CompositePoLine compPOL) {
-    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
-      return Collections.emptyMap();
-    }
-
-    return compPOL.getLocations()
-      .stream()
-      .filter(location -> Objects.nonNull(location.getHoldingId()))
-      .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location))
+    return extractLocationsForPoLineByHoldingId(compPOL)
       .collect(Collectors.groupingBy(Location::getHoldingId));
+  }
+
+  /**
+   * Map all PO Line's location to tenantIds for which the holding should be created by holding identifier
+   * @param compPOL PO line with locations
+   * @return map of locations and tenantIds where key is holding id and value is the tenantId of the specified location
+   */
+  public static Map<String, String> mapHoldingIdsToTenantIds(CompositePoLine compPOL) {
+    return extractLocationsForPoLineByHoldingId(compPOL)
+      .filter(location -> Objects.nonNull(location.getTenantId()))
+      .collect(Collectors.toMap(Location::getHoldingId, Location::getTenantId));
+  }
+
+  private static StreamEx<Location> extractLocationsForPoLineByLocationId(CompositePoLine compPOL) {
+    return extractLocationsForPoLine(compPOL, Location::getLocationId)
+      .filter(location -> !isHoldingCreationRequiredForLocation(compPOL, location));
+  }
+
+  private static StreamEx<Location> extractLocationsForPoLineByHoldingId(CompositePoLine compPOL) {
+    return extractLocationsForPoLine(compPOL, Location::getHoldingId)
+      .filter(location -> isHoldingCreationRequiredForLocation(compPOL, location));
+  }
+
+  private static StreamEx<Location> extractLocationsForPoLine(CompositePoLine compPOL, Function<Location, String> fieldExtractor) {
+    if (CollectionUtils.isEmpty(compPOL.getLocations())) {
+      return StreamEx.empty();
+    }
+    return StreamEx.of(compPOL.getLocations())
+      .filter(location -> Objects.nonNull(fieldExtractor.apply(location)));
+  }
+
+  public static List<String> getTenantsFromLocations(CompositePoLine poLine) {
+    return getTenantsFromLocations(poLine.getLocations());
+  }
+
+  public static List<String> getTenantsFromLocations(List<Location> locations) {
+    return locations
+      .stream()
+      .map(Location::getTenantId)
+      .distinct()
+      .toList();
   }
 
   public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
@@ -186,10 +254,6 @@ public final class PoLineCommonUtil {
     poLine.setReportingCodes(null);
     JsonObject jsonLine = JsonObject.mapFrom(poLine);
     return jsonLine.mapTo(CompositePoLine.class);
-  }
-
-  public static void makePoLinesPending(List<CompositePoLine> compositePoLines) {
-    compositePoLines.forEach(HelperUtils::makePoLinePending);
   }
 
   public static void updateLocationsQuantity(List<Location> locations) {
@@ -213,7 +277,7 @@ public final class PoLineCommonUtil {
       if (oldObject.getValueAt(field) instanceof JsonArray) {
         var oldList = ((JsonArray) oldObject.getValueAt(field)).getList();
         var newList = ((JsonArray) newObject.getValueAt(field)).getList();
-        if (oldList.size() != newList.size() || !oldList.containsAll(newList)) {
+        if (oldList.size() != newList.size() || !CollectionUtils.containsAll(oldList, newList)) {
           fields.add(field);
         }
       } else if (ObjectUtils.notEqual(oldObject.getValueAt(field), newObject.getValueAt(field))) {
@@ -228,5 +292,34 @@ public final class PoLineCommonUtil {
     }
 
     return objectFromStorage;
+  }
+
+  public static void verifyOngoingFieldsChanged(JsonObject compPOFromStorageJson, CompositePurchaseOrder compPO) {
+    JsonObject ongoingJson = compPOFromStorageJson.getJsonObject("ongoing");
+    if (Objects.nonNull(ongoingJson) && Objects.nonNull(compPO.getOngoing())) {
+      JsonPathParser oldObject = new JsonPathParser(ongoingJson);
+      JsonPathParser newObject = new JsonPathParser(JsonObject.mapFrom(compPO.getOngoing()));
+      if (Boolean.TRUE.equals(compPO.getOngoing().getIsSubscription())) {
+        checkFieldsChanged(oldObject, newObject, NOT_EDITABLE_ONGOING_SUBSCRIPTION_FIELDS, WRONG_ONGOING_SUBSCRIPTION_FIELDS_CHANGED);
+      } else {
+        checkFieldsChanged(oldObject, newObject, NOT_EDITABLE_ONGOING_NOT_SUBSCRIPTION_FIELDS, WRONG_ONGOING_NOT_SUBSCRIPTION_FIELDS_CHANGED);
+      }
+    }
+  }
+
+  private static void checkFieldsChanged(JsonPathParser oldObject, JsonPathParser newObject, List<String> fields, ErrorCodes error) {
+    List<Parameter> parameters = new ArrayList<>();
+    for (String field: fields) {
+      if (ObjectUtils.notEqual(oldObject.getValueAt(field), newObject.getValueAt(field))) {
+        parameters.add(new Parameter().withKey(field).withValue(newObject.getValueAt(field).toString()));
+      }
+    }
+    if (!parameters.isEmpty()) {
+      throw new HttpException(400, error, parameters);
+    }
+  }
+
+  public static boolean isCancelledOrOngoingStatus(PoLine poLine) {
+    return poLine.getReceiptStatus() == PoLine.ReceiptStatus.CANCELLED || poLine.getReceiptStatus() == ONGOING;
   }
 }

@@ -45,7 +45,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
@@ -74,8 +73,7 @@ public class ReOpenCompositeOrderManagerTest {
 
   @Mock
   private Map<String, String> okapiHeadersMock;
-  @Spy
-  private Context ctxMock = getFirstContextFromVertx(getVertx());
+  private final Context ctx = getFirstContextFromVertx(getVertx());
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
@@ -84,7 +82,7 @@ public class ReOpenCompositeOrderManagerTest {
   void initMocks(){
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    requestContext = new RequestContext(ctx, okapiHeadersMock);
   }
 
   @BeforeAll
@@ -113,11 +111,10 @@ public class ReOpenCompositeOrderManagerTest {
 
   @ParameterizedTest
   @CsvSource(value = {"Open:Expected:Awaiting Receipt:Awaiting Payment",
-                      "Approved:Received:Partially Received:Fully Paid",
+                      "Approved:Received:Partially Received:Awaiting Payment",
                       "Paid:Received:Partially Received:Fully Paid"}, delimiter = ':')
   void shouldCheckPaymentAndReceiptStatusesIfInvoicesAndPiecesHaveSameStatuses(
-        String invoiceStatus, String pieceStatus, String expReceiptStatus, String expPaymentStatus)
-                      throws ExecutionException, InterruptedException {
+      String invoiceStatus, String pieceStatus, String expReceiptStatus, String expPaymentStatus) {
     CompositePurchaseOrder oldOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine poLine1 = oldOrder.getCompositePoLines().get(0);
     String poLineId1 = poLine1.getId();
@@ -176,17 +173,16 @@ public class ReOpenCompositeOrderManagerTest {
   }
 
   @ParameterizedTest
-  @CsvSource(value = {"Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Partially Paid:true:false",
-                      "Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Fully Paid:true:true",
-                      "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Fully Paid:Awaiting Payment:true:true",
-                      "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Fully Paid:Awaiting Payment:true:false",
+  @CsvSource(value = {"Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Awaiting Payment:true:false",
+                      "Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Awaiting Payment:true:true",
+                      "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Awaiting Payment:Awaiting Payment:true:true",
+                      "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Awaiting Payment:Awaiting Payment:true:false",
                       "Paid:Open:Expected:Received:Awaiting Receipt:Partially Received:Fully Paid:Awaiting Payment:true:true",
                       "Paid:Open:Expected:Received:Awaiting Receipt:Partially Received:Partially Paid:Awaiting Payment:false:true"}, delimiter = ':')
   void shouldCheckPaymentAndReceiptStatusesIfInvoicesAndPiecesHaveDifferentStatuses(
-                  String invoiceStatus1, String invoiceStatus2, String pieceStatus1, String pieceStatus2,
-                  String expReceiptStatus1,  String expReceiptStatus2, String expPaymentStatus1, String expPaymentStatus2,
-                  boolean releaseEncumbrances1, boolean releaseEncumbrances2)
-    throws ExecutionException, InterruptedException {
+      String invoiceStatus1, String invoiceStatus2, String pieceStatus1, String pieceStatus2,
+      String expReceiptStatus1,  String expReceiptStatus2, String expPaymentStatus1, String expPaymentStatus2,
+      boolean releaseEncumbrances1, boolean releaseEncumbrances2) {
     CompositePurchaseOrder oldOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine poLine1 = oldOrder.getCompositePoLines().get(0);
     String poLineId1 = poLine1.getId();
@@ -248,14 +244,13 @@ public class ReOpenCompositeOrderManagerTest {
 
   @ParameterizedTest
   @CsvSource(value = {
-    "Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Fully Paid",
-    "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Fully Paid:Awaiting Payment",
+    "Open:Approved:Expected:Received:Awaiting Receipt:Partially Received:Awaiting Payment:Awaiting Payment",
+    "Approved:Open:Received:Expected:Partially Received:Awaiting Receipt:Awaiting Payment:Awaiting Payment",
     "Paid:Open:Expected:Received:Awaiting Receipt:Partially Received:Fully Paid:Awaiting Payment"
   }, delimiter = ':')
   void shouldCheckPaymentAndReceiptStatusesIfInvoicesAndPiecesHaveDifferentStatusesAndPolCoveredMoreThenOneInvoice(
-    String invoiceStatus1, String invoiceStatus2, String pieceStatus1, String pieceStatus2,
-    String expReceiptStatus1,  String expReceiptStatus2, String expPaymentStatus1, String expPaymentStatus2)
-    throws ExecutionException, InterruptedException {
+      String invoiceStatus1, String invoiceStatus2, String pieceStatus1, String pieceStatus2,
+      String expReceiptStatus1,  String expReceiptStatus2, String expPaymentStatus1, String expPaymentStatus2) {
     CompositePurchaseOrder oldOrder = getMockAsJson(ORDER_PATH).mapTo(CompositePurchaseOrder.class);
     CompositePoLine poLine1 = oldOrder.getCompositePoLines().get(0);
     String poLineId1 = poLine1.getId();

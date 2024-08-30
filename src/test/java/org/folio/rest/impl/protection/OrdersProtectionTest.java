@@ -10,12 +10,14 @@ import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.encodePrettily;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.orders.utils.AcqDesiredPermissions.BYPASS_ACQ_UNITS;
+import static org.folio.orders.utils.PermissionsUtil.OKAPI_HEADER_PERMISSIONS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_UNITS_NOT_FOUND;
 import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_ACQ_PERMISSIONS;
-import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_PERMISSIONS;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_NOT_A_MEMBER_OF_THE_ACQ;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.ALL_DESIRED_PERMISSIONS_HEADER;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.COMPOSITE_ORDERS_PATH;
@@ -38,9 +40,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
+import io.restassured.http.Header;
+import io.vertx.core.json.JsonArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -185,7 +187,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_PERMISSIONS.getCode()));
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_NOT_A_MEMBER_OF_THE_ACQ.getCode()));
 
     validateNumberOfRequests(2, 1);
   }
@@ -204,7 +206,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_PERMISSIONS.getCode()));
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_NOT_A_MEMBER_OF_THE_ACQ.getCode()));
 
     validateNumberOfRequests(1, 1);
   }
@@ -316,7 +318,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_PERMISSIONS.getCode()));
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_NOT_A_MEMBER_OF_THE_ACQ.getCode()));
 
     validateNumberOfRequests(1, 1);
   }
@@ -342,7 +344,7 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
       headers, APPLICATION_JSON, HttpStatus.HTTP_FORBIDDEN.toInt()).as(Errors.class);
 
     assertThat(errors.getErrors(), hasSize(1));
-    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_HAS_NO_PERMISSIONS.getCode()));
+    assertThat(errors.getErrors().get(0).getCode(), equalTo(USER_NOT_A_MEMBER_OF_THE_ACQ.getCode()));
 
     validateNumberOfRequests(1, 1);
   }
@@ -366,6 +368,21 @@ public class OrdersProtectionTest extends ProtectedEntityTestBase {
 
 
     validateNumberOfRequests(1, 1);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+    "UPDATE",
+    "READ"
+  })
+  void testBypassAcqUnitChecks(ProtectedOperations operation) {
+    Header permissionHeader = new Header(OKAPI_HEADER_PERMISSIONS,
+      new JsonArray(List.of(BYPASS_ACQ_UNITS.getPermission())).encode());
+    final Headers headers = prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, permissionHeader, X_OKAPI_USER_ID);
+    CompositePurchaseOrder order = operation == CREATE ? getMinimalContentCompositePurchaseOrder().withAcqUnitIds(new ArrayList<>(PROTECTED_UNITS)) : prepareOrder(PROTECTED_UNITS, PENDING);
+    operation.process(COMPOSITE_ORDERS_PATH, encodePrettily(order), headers, operation.getContentType(), operation.getCode());
+
+    validateNumberOfRequests(0, 0);
   }
 
 }

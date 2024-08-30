@@ -1,0 +1,41 @@
+{
+  "id": "b0fee84e-07c2-44ba-ab79-3a77ec341d52",
+  "hrid": "in00000000013",
+  "tags": {
+    "tagList": []
+  },
+  "notes": [],
+  "title": "Test 2",
+  "series": [],
+  "source": "CONSORTIUM-FOLIO",
+  "_version": 1,
+  "editions": [],
+  "metadata": {
+    "createdDate": "2024-07-22T06:33:03.042Z",
+    "updatedDate": "2024-07-22T06:33:03.042Z",
+    "createdByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c",
+    "updatedByUserId": "122b3d2b-4788-4f1e-9117-56daa91cb75c"
+  },
+  "statusId": "daf2681c-25af-4202-a3fa-e58fdf806183",
+  "subjects": [],
+  "languages": [],
+  "identifiers": [],
+  "publication": [],
+  "contributors": [],
+  "instanceTypeId": "30fffe0e-e985-4144-b2e2-1e8179bdb41f",
+  "previouslyHeld": false,
+  "classifications": [],
+  "instanceFormats": [],
+  "electronicAccess": [],
+  "holdingsRecords2": [],
+  "publicationRange": [],
+  "alternativeTitles": [],
+  "discoverySuppress": false,
+  "instanceFormatIds": [],
+  "statusUpdatedDate": "2024-07-22T06:33:03.042+0000",
+  "statisticalCodeIds": [],
+  "administrativeNotes": [],
+  "physicalDescriptions": [],
+  "publicationFrequency": [],
+  "natureOfContentTermIds": []
+}

@@ -31,6 +31,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
+import org.folio.service.ProtectionService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -39,7 +40,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
@@ -60,8 +60,7 @@ public class PieceStorageServiceTest {
 
   @Mock
   private Map<String, String> okapiHeadersMock;
-  @Spy
-  private Context ctxMock = getFirstContextFromVertx(getVertx());
+  private final Context ctx = getFirstContextFromVertx(getVertx());
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
@@ -70,7 +69,7 @@ public class PieceStorageServiceTest {
   void initMocks(){
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    requestContext = new RequestContext(ctx, okapiHeadersMock);
   }
 
   @BeforeAll
@@ -129,12 +128,15 @@ public class PieceStorageServiceTest {
 
   private static class ContextConfiguration {
 
-    @Bean
-    RestClient restClient() {
+    @Bean RestClient restClient() {
       return mock(RestClient.class);
     }
 
-    @Bean PieceStorageService pieceStorageService(RestClient restClient) {
+    @Bean ProtectionService protectionService() {
+      return mock(ProtectionService.class);
+    }
+
+    @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
       return spy(new PieceStorageService(restClient));
     }
   }

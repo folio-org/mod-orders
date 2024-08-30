@@ -44,6 +44,11 @@ public class CompositeOrderRetrieveHolder {
         return this;
     }
 
+    public CompositeOrderRetrieveHolder withTotalCredited(double transactionsTotal) {
+        order.withTotalCredited(transactionsTotal);
+        return this;
+    }
+
     public CompositeOrderRetrieveHolder withNeedReEncumber(boolean needReEncumber) {
         order.setNeedReEncumber(needReEncumber);
         return this;

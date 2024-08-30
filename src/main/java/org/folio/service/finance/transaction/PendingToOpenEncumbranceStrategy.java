@@ -36,21 +36,18 @@ public class PendingToOpenEncumbranceStrategy implements EncumbranceWorkflowStra
 
   @Override
   public Future<List<EncumbranceRelationsHolder>> prepareProcessEncumbrancesAndValidate(CompositePurchaseOrder compPO,
-    CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
+      CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     validateFundDistributionTotal(compPO.getCompositePoLines());
-    List<EncumbranceRelationsHolder> encumbranceRelationsHolders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
+    List<EncumbranceRelationsHolder> holders = encumbranceRelationsHoldersBuilder.buildBaseHolders(compPO);
 
-    return encumbranceRelationsHoldersBuilder.withBudgets(encumbranceRelationsHolders, requestContext)
-      .compose(holders -> encumbranceRelationsHoldersBuilder.withLedgersData(holders, requestContext))
-      .compose(holders -> encumbranceRelationsHoldersBuilder.withFiscalYearData(holders, requestContext))
-      .compose(holders -> encumbranceRelationsHoldersBuilder.withConversion(holders, requestContext))
-      .compose(holders -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage, requestContext))
-      .map(fundsDistributionService::distributeFunds)
+    return encumbranceRelationsHoldersBuilder.withFinances(holders, requestContext)
+      .compose(v -> encumbranceRelationsHoldersBuilder.withExistingTransactions(holders, poAndLinesFromStorage, requestContext))
+      .map(v -> fundsDistributionService.distributeFunds(holders))
       .map(dataHolders -> {
         budgetRestrictionService.checkEncumbranceRestrictions(dataHolders);
         return null;
       })
-      .map(v -> encumbranceRelationsHolders);
+      .map(v -> holders);
   }
 
   @Override

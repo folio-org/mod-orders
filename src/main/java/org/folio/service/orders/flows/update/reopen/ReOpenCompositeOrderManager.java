@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.folio.helper.CheckinReceivePiecesHelper;
 import org.folio.models.orders.flows.update.reopen.ReOpenCompositeOrderHolder;
 import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
@@ -42,9 +43,13 @@ public class ReOpenCompositeOrderManager {
 
   public Future<Void> process(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage,
                                        RequestContext requestContext) {
-    addPoLinesIfNeeded(compPO, poFromStorage);
-    return processEncumbrances(compPO, poFromStorage, requestContext)
-            .compose(v -> updatePoLineStatuses(compPO, requestContext));
+    return Future.succeededFuture()
+      .map(v -> {
+        addPoLinesIfNeeded(compPO, poFromStorage);
+        return null;
+      })
+      .compose(v -> processEncumbrances(compPO, poFromStorage, requestContext))
+      .compose(v -> updatePoLineStatuses(compPO, requestContext));
   }
 
   private void addPoLinesIfNeeded(CompositePurchaseOrder compPO, CompositePurchaseOrder poFromStorage) {
@@ -101,7 +106,7 @@ public class ReOpenCompositeOrderManager {
     var poLineInvoiceLinesMap = holder.getOrderLineInvoiceLines().stream().collect(groupingBy(InvoiceLine::getPoLineId));
 
     List<Invoice> poLineInvoices = poLineInvoicesMap.get(poLine.getId());
-    if (CollectionUtils.isNotEmpty(poLineInvoices) && isAnyInvoicesApprovedOrPaid(poLineInvoices)) {
+    if (CollectionUtils.isNotEmpty(poLineInvoices) && isAnyInvoicePaid(poLineInvoices)) {
       var invoiceLines = poLineInvoiceLinesMap.get(poLine.getId());
       if (isAnyInvoiceLineReleaseEncumbrance(invoiceLines)) {
         poLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
@@ -117,9 +122,8 @@ public class ReOpenCompositeOrderManager {
     return invoiceLines.stream().anyMatch(InvoiceLine::getReleaseEncumbrance);
   }
 
-  private boolean isAnyInvoicesApprovedOrPaid(List<Invoice> poLineInvoices) {
-    return poLineInvoices.stream().anyMatch(invoice -> Invoice.Status.APPROVED.equals(invoice.getStatus()) ||
-                                                            Invoice.Status.PAID.equals(invoice.getStatus()));
+  private boolean isAnyInvoicePaid(List<Invoice> poLineInvoices) {
+    return poLineInvoices.stream().anyMatch(invoice -> Invoice.Status.PAID.equals(invoice.getStatus()));
   }
 
   private void updatePoLineReceiptStatus(CompositePoLine poLine, ReOpenCompositeOrderHolder holder) {
@@ -135,11 +139,11 @@ public class ReOpenCompositeOrderManager {
   private Future<ReOpenCompositeOrderHolder> buildHolder(String orderId, List<CompositePoLine> poLines, RequestContext requestContext) {
     ReOpenCompositeOrderHolder holder = new ReOpenCompositeOrderHolder(orderId);
     return getPieces(poLines, requestContext)
-              .onSuccess(holder::withPieces)
-              .map(v -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
+              .map(holder::withPieces)
+              .map(aHolder -> poLines.stream().map(CompositePoLine::getId).distinct().collect(toList()))
               .compose(poLineIds -> invoiceLineService.getInvoiceLinesByOrderLineIds(poLineIds, requestContext))
-              .onSuccess(holder::withInvoiceLines)
-              .compose(v -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
+              .map(holder::withInvoiceLines)
+              .compose(aHolder -> invoiceService.getInvoicesByOrderId(orderId, requestContext))
               .map(holder::withOrderInvoices)
               .map(v -> holder);
   }
@@ -150,7 +154,8 @@ public class ReOpenCompositeOrderManager {
   }
 
   private boolean isReceivedPiecePresent(List<Piece> pieces) {
-    return pieces.stream().anyMatch(piece -> Piece.ReceivingStatus.RECEIVED.equals(piece.getReceivingStatus()));
+    return pieces.stream().anyMatch(piece ->
+      CheckinReceivePiecesHelper.RECEIVED_STATUSES.contains(piece.getReceivingStatus()));
   }
 
   private Map<String, List<Piece>> groupPiecesByOrderId(List<Piece> pieces) {

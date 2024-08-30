@@ -5,27 +5,21 @@ import java.util.List;
 
 import org.folio.rest.acq.model.finance.Transaction;
 
-import com.google.common.collect.ImmutableList;
-
 public class EncumbrancesProcessingHolder {
-  private List<Transaction> encumbrancesFromStorage;
   private List<Transaction> encumbrancesForRelease;
   private List<EncumbranceRelationsHolder> encumbrancesForCreate;
   private List<EncumbranceRelationsHolder> encumbrancesForDelete;
   private List<EncumbranceRelationsHolder> encumbrancesForUpdate;
   private List<Transaction> encumbrancesForUnrelease;
-  private List<Transaction> encumbrancesToUnreleaseBefore;
-  private List<Transaction> encumbrancesToReleaseAfter;
+  private List<Transaction> pendingPaymentsToUpdate;
 
   public EncumbrancesProcessingHolder() {
-    this.encumbrancesFromStorage = new ArrayList<>();
     this.encumbrancesForCreate = new ArrayList<>();
     this.encumbrancesForDelete = new ArrayList<>();
     this.encumbrancesForUpdate = new ArrayList<>();
     this.encumbrancesForRelease = new ArrayList<>();
     this.encumbrancesForUnrelease = new ArrayList<>();
-    this.encumbrancesToUnreleaseBefore = new ArrayList<>();
-    this.encumbrancesToReleaseAfter = new ArrayList<>();
+    this.pendingPaymentsToUpdate = new ArrayList<>();
   }
 
   public EncumbrancesProcessingHolder addEncumbrancesForCreate(EncumbranceRelationsHolder encumbranceForCreate) {
@@ -63,23 +57,13 @@ public class EncumbrancesProcessingHolder {
     return this;
   }
 
-  public EncumbrancesProcessingHolder withEncumbrancesFromStorage(List<Transaction> encumbrancesFromStorage) {
-    this.encumbrancesFromStorage = new ArrayList<>(encumbrancesFromStorage);
-    return this;
-  }
-
   public EncumbrancesProcessingHolder withEncumbrancesForUnrelease(List<Transaction> encumbrancesForUnrelease) {
     this.encumbrancesForUnrelease = new ArrayList<>(encumbrancesForUnrelease);
     return this;
   }
 
-  public EncumbrancesProcessingHolder withEncumbrancesToUnreleaseBefore(List<Transaction> encumbrancesToUnreleaseBefore) {
-    this.encumbrancesToUnreleaseBefore = new ArrayList<>(encumbrancesToUnreleaseBefore);
-    return this;
-  }
-
-  public EncumbrancesProcessingHolder withEncumbrancesToReleaseAfter(List<Transaction> encumbrancesToReleaseAfter) {
-    this.encumbrancesToReleaseAfter = new ArrayList<>(encumbrancesToReleaseAfter);
+  public EncumbrancesProcessingHolder withPendingPaymentsToUpdate(List<Transaction> pendingPayments) {
+    this.pendingPaymentsToUpdate = new ArrayList<>(pendingPayments);
     return this;
   }
 
@@ -103,20 +87,13 @@ public class EncumbrancesProcessingHolder {
     return encumbrancesForUnrelease;
   }
 
-  public List<Transaction> getEncumbrancesToUnreleaseBefore() {
-    return encumbrancesToUnreleaseBefore;
+  public List<Transaction> getPendingPaymentsToUpdate() {
+    return pendingPaymentsToUpdate;
   }
 
-  public List<Transaction> getEncumbrancesToUnreleaseAfter() {
-    return encumbrancesToReleaseAfter;
-  }
-
-  public int getAllEncumbrancesQuantity() {
+  public boolean isEmpty() {
     return encumbrancesForCreate.size() + encumbrancesForUpdate.size()
-        + encumbrancesForRelease.size() + encumbrancesForUnrelease.size();
-  }
-
-  public List<Transaction> getEncumbrancesFromStorage() {
-    return ImmutableList.copyOf(encumbrancesFromStorage);
+        + encumbrancesForRelease.size() + encumbrancesForUnrelease.size()
+        + encumbrancesForDelete.size() + pendingPaymentsToUpdate.size() == 0;
   }
 }

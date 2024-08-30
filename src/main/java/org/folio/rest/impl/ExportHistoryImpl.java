@@ -27,7 +27,7 @@ public class ExportHistoryImpl extends BaseApi implements OrdersExportHistory {
   }
 
   @Override
-  public void getOrdersExportHistory(int offset, int limit, String query, String lang, Map<String, String> okapiHeaders,
+  public void getOrdersExportHistory(String totalRecords, int offset, int limit, String query, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     exportHistoryService.getExportHistoryByQuery(query, offset, limit, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(exportHistoryCollection -> asyncResultHandler.handle(succeededFuture(buildOkResponse(exportHistoryCollection))))

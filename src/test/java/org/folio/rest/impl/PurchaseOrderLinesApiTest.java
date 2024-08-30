@@ -23,12 +23,12 @@ import static org.folio.TestConstants.ID_BAD_FORMAT;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
 import static org.folio.TestConstants.ID_FOR_INTERNAL_SERVER_ERROR;
 import static org.folio.TestConstants.INACTIVE_ACCESS_PROVIDER_A;
-import static org.folio.TestConstants.INVALID_LANG;
 import static org.folio.TestConstants.NON_EXIST_CONFIG_X_OKAPI_TENANT;
 import static org.folio.TestConstants.PO_ID_CLOSED_STATUS;
 import static org.folio.TestConstants.PO_ID_OPEN_STATUS;
 import static org.folio.TestConstants.PO_ID_PENDING_STATUS_WITH_PO_LINES;
 import static org.folio.TestConstants.PO_LINE_ID_FOR_SUCCESS_CASE;
+import static org.folio.TestConstants.PO_LINE_ID_WITHOUT_DETAILS;
 import static org.folio.TestConstants.PO_LINE_ID_WRONG_EXPENSE_CLASS;
 import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
 import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
@@ -43,9 +43,8 @@ import static org.folio.helper.PurchaseOrderLineHelper.ERESOURCE;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.ENCUMBRANCES;
+import static org.folio.orders.utils.ResourcePathResolver.FINANCE_BATCH_TRANSACTIONS;
 import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
-import static org.folio.orders.utils.ResourcePathResolver.ORDER_TRANSACTION_SUMMARIES;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
@@ -149,11 +148,9 @@ import org.folio.rest.jaxrs.model.ReplaceInstanceRef;
 import org.folio.rest.jaxrs.model.Tags;
 import org.folio.rest.jaxrs.model.ValidateFundDistributionsRequest;
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -416,7 +413,7 @@ public class PurchaseOrderLinesApiTest {
 
     Errors errors = verifyPostResponse(LINES_PATH, JsonObject.mapFrom(poLine).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 422).as(Errors.class);
-    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors, 4);
+    validatePoLineCreationErrorForNonPendingOrder(errorCode, errors, 2);
   }
 
   @Test
@@ -478,12 +475,6 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
-  void testValidationOnPutWithIncorrectLang() throws IOException {
-    logger.info("=== Test validation on PUT line with invalid lang query parameter ===");
-    verifyPut(String.format(LINE_BY_ID_PATH, ID_DOES_NOT_EXIST) + INVALID_LANG, getMockData(PO_LINE_MIN_CONTENT_PATH), TEXT_PLAIN, 400);
-  }
-
-  @Test
   void testValidationOnPutWithIncorrectLineId() throws IOException {
     logger.info("=== Test validation on PUT line with invalid line ID path parameter ===");
     verifyPut(String.format(LINE_BY_ID_PATH, ID_BAD_FORMAT), getMockData(PO_LINE_MIN_CONTENT_PATH), TEXT_PLAIN, 400);
@@ -524,7 +515,7 @@ public class PurchaseOrderLinesApiTest {
 
     //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(4, column.size());
+    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
 
@@ -584,7 +575,7 @@ public class PurchaseOrderLinesApiTest {
     body.setTags(new Tags().withTagList(Collections.singletonList("updated")));
     body.setCost(new Cost().withCurrency("USD").withListUnitPrice(70.0).withQuantityPhysical(1));
     body.setFundDistribution(Collections.singletonList(new FundDistribution()
-      .withCode("EUROHIST")
+      .withCode("MISCHIST")
       .withFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f")
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(100D)));
@@ -628,7 +619,7 @@ public class PurchaseOrderLinesApiTest {
     body.setTags(null);
     body.setCost(new Cost().withCurrency("USD").withListUnitPrice(70.0).withQuantityPhysical(1));
     body.setFundDistribution(Collections.singletonList(new FundDistribution()
-      .withCode("EUROHIST")
+      .withCode("MISCHIST")
       .withFundId("a89eccf0-57a6-495e-898d-32b9b2210f2f")
       .withDistributionType(FundDistribution.DistributionType.PERCENTAGE)
       .withValue(100D)));
@@ -679,16 +670,19 @@ public class PurchaseOrderLinesApiTest {
     verifyPut(url, JsonObject.mapFrom(body), "", 204);
 
     // 2 calls each to fetch Order Line and Purchase Order
-    // + 2 calls for ISBN validation
+    // + 1 calls for ISBN validation. The next call can retrieve data from cache
     // + 1 call to get the line encumbrances
     // + 1 call to check invoice relationships
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(8, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     column = MockServer.serverRqRs.column(HttpMethod.PUT);
-    assertEquals(5, column.size());
-    assertThat(column.keySet(), containsInAnyOrder(PO_LINES_STORAGE, ALERTS, REPORTING_CODES, ORDER_TRANSACTION_SUMMARIES, ENCUMBRANCES));
+    assertEquals(3, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(PO_LINES_STORAGE, ALERTS, REPORTING_CODES));
+
+    column = MockServer.serverRqRs.column(HttpMethod.POST);
+    assertEquals(1, column.size());
+    assertThat(column.keySet(), containsInAnyOrder(FINANCE_BATCH_TRANSACTIONS));
 
     // Verify no message sent via event bus
     HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
@@ -741,7 +735,6 @@ public class PurchaseOrderLinesApiTest {
 
     // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
@@ -1158,14 +1151,8 @@ public class PurchaseOrderLinesApiTest {
 
     reqData.getDetails().getProductIds().get(0).setProductId(isbn);
 
-    Response response = verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData), APPLICATION_JSON,
-        400);
-
-    Error err = response.getBody().as(Errors.class).getErrors().get(0);
-
-    assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
-    assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
-    assertThat(err.getParameters().get(0).getValue(), equalTo(isbn));
+    verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
   }
 
   @Test
@@ -1210,7 +1197,8 @@ public class PurchaseOrderLinesApiTest {
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
 
-   assertThat("One or more transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, ENCUMBRANCES).size() > 0);
+   assertThat("One or more transactions have been updated",
+     !MockServer.getRqRsEntries(HttpMethod.POST, FINANCE_BATCH_TRANSACTIONS).isEmpty());
   }
 
   @Test
@@ -1302,20 +1290,18 @@ public class PurchaseOrderLinesApiTest {
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(reqData).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
-    assertThat("No transactions have been created", MockServer.getRqRsEntries(HttpMethod.POST, ENCUMBRANCES).size() == 0);
-    assertThat("No transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, ENCUMBRANCES).size() == 0);
-    assertThat("No transactions have been deleted", MockServer.getRqRsEntries(HttpMethod.DELETE, ENCUMBRANCES).size() == 0);
+    assertThat("No transaction has been created, updated or deleted",
+      MockServer.getRqRsEntries(HttpMethod.POST, FINANCE_BATCH_TRANSACTIONS).isEmpty());
 
     // double check with updating status only (When only status updated via request from mod-invoices)
     CompositePoLine updatedLine = getRqRsEntries(HttpMethod.PUT, PO_LINES_STORAGE).get(0).mapTo(CompositePoLine.class);
     updatedLine.setPaymentStatus(CompositePoLine.PaymentStatus.FULLY_PAID);
+    updatedLine.getDetails().getProductIds().iterator().next().setQualifier(null);
 
     verifyPut(String.format(LINE_BY_ID_PATH, reqData.getId()), JsonObject.mapFrom(updatedLine).encodePrettily(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
-    assertThat("No transactions have been created", MockServer.getRqRsEntries(HttpMethod.POST, ENCUMBRANCES).size() == 0);
-    assertThat("No transactions have been updated", MockServer.getRqRsEntries(HttpMethod.PUT, ENCUMBRANCES).size() == 0);
-    assertThat("No transactions have been deleted", MockServer.getRqRsEntries(HttpMethod.DELETE, ENCUMBRANCES).size() == 0);
-
+    assertThat("No transaction has been created, updated or deleted",
+      MockServer.getRqRsEntries(HttpMethod.POST, FINANCE_BATCH_TRANSACTIONS).isEmpty());
   }
 
   @Test
@@ -1583,6 +1569,20 @@ public class PurchaseOrderLinesApiTest {
   }
 
   @Test
+  void testPatchPoLineWithEmptyDetails() {
+    String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_WITHOUT_DETAILS);
+
+    PatchOrderLineRequest body = new PatchOrderLineRequest()
+      .withOperation(PatchOrderLineRequest.Operation.REPLACE_INSTANCE_REF)
+      .withReplaceInstanceRef(new ReplaceInstanceRef()
+        .withNewInstanceId("cd3288a4-898c-4347-a003-2d810ef70f03")
+        .withHoldingsOperation(ReplaceInstanceRef.HoldingsOperation.CREATE)
+        .withDeleteAbandonedHoldings(false));
+
+    verifyPatch(url, JsonObject.mapFrom(body).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), "", 204);
+  }
+
+  @Test
   void testPatchPoLineWithEmptyBody() {
     String url = String.format(LINE_BY_ID_PATH, PO_LINE_ID_FOR_SUCCESS_CASE);
 
@@ -1705,7 +1705,7 @@ public class PurchaseOrderLinesApiTest {
 
     // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
@@ -1738,7 +1738,7 @@ public class PurchaseOrderLinesApiTest {
 
     // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus
@@ -1770,7 +1770,7 @@ public class PurchaseOrderLinesApiTest {
 
     // 3 calls each to fetch Order Line, Purchase Order, Identifier Type
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
 
     // Verify no message sent via event bus

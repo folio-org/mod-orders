@@ -10,15 +10,21 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.core.models.RequestContext;
 
 public class ExchangeRateProviderResolver {
-  private final Logger logger = LogManager.getLogger();
+
   public static final String RATE_KEY = "factor";
 
-  public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext){
+  private final Logger logger = LogManager.getLogger();
+
+  public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext) {
+    return resolve(conversionQuery, requestContext, ManualCurrencyConversion.OperationMode.MULTIPLY);
+  }
+
+  public ExchangeRateProvider resolve(ConversionQuery conversionQuery, RequestContext requestContext, ManualCurrencyConversion.OperationMode operationMode) {
     ExchangeRateProvider exchangeRateProvider = Optional.ofNullable(conversionQuery)
             .map(query -> query.get(RATE_KEY, Double.class))
-            .map(rate -> (ExchangeRateProvider) new ManualExchangeRateProvider())
+            .map(rate -> (ExchangeRateProvider) new ManualExchangeRateProvider(operationMode))
             .orElseGet(() -> new FinanceApiExchangeRateProvider(requestContext));
-    logger.debug("Created ExchangeRateProvider name: {}", exchangeRateProvider.getContext().getProviderName());
+    logger.info("resolve:: exchangeRateProvider name: {}, operationMode: {}", exchangeRateProvider.getContext().getProviderName(), operationMode);
     return exchangeRateProvider;
   }
 }

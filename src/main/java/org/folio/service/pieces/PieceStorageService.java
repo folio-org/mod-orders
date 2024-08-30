@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -38,13 +39,17 @@ public class PieceStorageService {
     this.restClient = restClient;
   }
 
+  public Future<List<Piece>> getPiecesByPoLineId(CompositePoLine compPOL, RequestContext requestContext) {
+    return getPiecesByLineId(compPOL.getId(), requestContext);
+  }
+
   /**
    * Search for pieces which might be already created for the PO line
-   * @param compPOL PO line to retrieve Piece Records for
+   * @param lineId PO line id to retrieve Piece Records for
    * @return future with list of Pieces
    */
-  public Future<List<Piece>> getPiecesByPoLineId(CompositePoLine compPOL, RequestContext requestContext) {
-    String query = String.format("poLineId==%s", compPOL.getId());
+  public Future<List<Piece>> getPiecesByLineId(String lineId, RequestContext requestContext) {
+    String query = String.format("poLineId==%s", lineId);
     RequestEntry requestEntry = new RequestEntry(resourcesPath(PIECES_STORAGE)).withQuery(query)
       .withLimit(Integer.MAX_VALUE)
       .withOffset(0);
@@ -109,6 +114,20 @@ public class PieceStorageService {
       .withOffset(offset)
       .withLimit(limit);
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
+  }
+
+  public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
+    logger.debug("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
+    var futures = ofSubLists(new ArrayList<>(pieceIds), MAX_IDS_FOR_GET_RQ_15)
+      .map(HelperUtils::convertIdsToCqlQuery)
+      .map(query -> getPieces(Integer.MAX_VALUE, 0, query, requestContext))
+      .toList();
+    return collectResultsOnSuccess(futures)
+      .map(lists -> lists.stream()
+        .map(PieceCollection::getPieces)
+        .flatMap(Collection::stream)
+        .toList())
+      .onSuccess(v -> logger.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds));
   }
 
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {

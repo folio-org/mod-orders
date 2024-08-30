@@ -1,6 +1,7 @@
 package org.folio.service.pieces.flows.create;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -23,7 +24,7 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
-  public Boolean poLineUpdateQuantity(PieceCreationHolder holder) {
+  public boolean poLineUpdateQuantity(PieceCreationHolder holder) {
     CompositePoLine lineToSave = holder.getPoLineToSave();
     Piece piece = holder.getPieceToCreate();
     final int qty = 1;
@@ -31,6 +32,9 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
     if (CollectionUtils.isNotEmpty(locationsToUpdate)) {
       Location loc = locationsToUpdate.get(0);
       Cost cost = lineToSave.getCost();
+      if (Objects.nonNull(piece.getReceivingTenantId())) {
+        loc.setTenantId(piece.getReceivingTenantId());
+      }
       if (piece.getFormat() == Piece.Format.ELECTRONIC) {
         Integer prevLocQty = Optional.ofNullable(loc.getQuantityElectronic()).orElse(0);
         loc.setQuantityElectronic(prevLocQty + qty);
@@ -45,9 +49,16 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
         cost.setQuantityPhysical(prevCostQty + qty);
       }
     } else if (isLocationUpdateRequired(piece, lineToSave)) {
-      Location locationToAdd = new Location().withLocationId(piece.getLocationId()).withHoldingId(piece.getHoldingId())
-        .withQuantity(qty);
+      Location locationToAdd = new Location().withQuantity(qty);
+      if (piece.getHoldingId() != null) {
+        locationToAdd = locationToAdd.withHoldingId(piece.getHoldingId());
+      } else {
+        locationToAdd = locationToAdd.withLocationId(piece.getLocationId());
+      }
       Cost cost = lineToSave.getCost();
+      if (Objects.nonNull(piece.getReceivingTenantId())) {
+        locationToAdd.setTenantId(piece.getReceivingTenantId());
+      }
       if (piece.getFormat() == Piece.Format.ELECTRONIC) {
         locationToAdd.withQuantityElectronic(qty);
         Integer prevQty = Optional.ofNullable(cost.getQuantityElectronic()).orElse(0);
@@ -69,6 +80,6 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
         cost.setQuantityPhysical(prevQty + qty);
       }
     }
-    return Boolean.TRUE;
+    return true;
   }
 }

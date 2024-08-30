@@ -1,0 +1,115 @@
+{
+  "id": "07f65192-44a4-483d-97aa-b137bbd96390",
+  "approved": true,
+  "assignedTo": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1",
+  "notes": [],
+  "manualPo": false,
+  "poNumber": "S60402",
+  "orderType": "Ongoing",
+  "reEncumber": false,
+  "vendor": "d0fb5aa0-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "workflowStatus": "Closed",
+  "metadata": {
+    "createdDate": "2018-07-18T00:00:00.000",
+    "createdByUserId": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1"
+  },
+  "compositePoLines": [
+    {
+      "id": "50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "acquisitionMethod": "df26d81b-9d63-4ff8-bf41-49bf75cfa70e",
+      "alerts": [],
+      "cancellationRestriction": false,
+      "cancellationRestrictionNote": "",
+      "claims": [
+        {
+          "claimed": false,
+          "grace": 0
+        }
+      ],
+      "collection": true,
+      "contributors": [
+        {
+          "contributor": "",
+          "contributorNameTypeId": "07c3d791-cabe-11e8-a8d5-f2801f1b9fd1"
+        }
+      ],
+      "cost": {
+        "currency": "USD",
+        "listUnitPriceElectronic": 200000.00,
+        "quantityElectronic": 1
+      },
+      "description": "",
+      "details": {
+        "receivingNote": "Renewal, access continuous",
+        "productIds": [
+          {
+            "productId": "9781566199094",
+            "productIdType": "8261054f-be78-422d-bd51-4ed9f33c3422"
+          }
+        ],
+        "subscriptionFrom": "2019-01-01T00:00:00.000Z",
+        "subscriptionInterval": 365,
+        "subscriptionTo": "2019-12-31T00:00:00.000Z"
+      },
+      "donor": "",
+      "eresource": {
+        "activated": true,
+        "activationDue": 0,
+        "createInventory": "Instance",
+        "trial": false,
+        "expectedActivation": "2019-01-01T00:00:00.000Z",
+        "userLimit": 0,
+        "accessProvider": "fde2cad6-cde3-11e8-a8d5-f2801f1b9fd1",
+        "license": {
+          "code": "Code 1",
+          "description": "License Agreement 1"
+        },
+        "materialType":  "1a54b431-2e4f-452d-9cae-9cee66c9a892"
+      },
+      "fundDistribution": [
+        {
+          "code": "ENDOW-SUBN",
+          "fundId": "fb7b70f1-b898-4924-a991-0e4b6312bb5f",
+          "distributionType": "percentage",
+          "value": 100.0,
+          "encumbrance": "eb506834-6c70-4239-8d1a-6414a5b08008"
+        }
+      ],
+      "locations": [
+        {
+          "locationId": "758258bc-ecc1-41b8-abca-f7b610822ffd",
+          "quantity": 1,
+          "quantityElectronic": 1,
+          "quantityPhysical": 0
+        }
+      ],
+      "orderFormat": "Electronic Resource",
+      "paymentStatus": "Awaiting Payment",
+      "poLineDescription": "",
+      "poLineNumber": "841240-021",
+      "publicationDate": "2019",
+      "publisher": "American Chemical Society",
+      "purchaseOrderId": "07f65192-44a4-483d-97aa-b137bbd96390",
+      "receiptDate": null,
+      "reportingCodes": [],
+      "requester": "",
+      "rush": false,
+      "selector": "Buchanan",
+      "source": "EDI",
+      "tags": {
+        "tagList": []
+      },
+      "titleOrPackage": "American Chemical Society Web Editions",
+      "isPackage": false,
+      "vendorDetail": {
+        "instructions": "",
+        "noteFromVendor": "",
+        "vendorAccount": ""
+      },
+      "metadata": {
+        "createdDate": "2018-07-18T00:00:00.000",
+        "createdByUserId": "28d102a2-d137-11e8-a8d5-f2801f1b9fd1"
+      }
+    }
+  ]
+}

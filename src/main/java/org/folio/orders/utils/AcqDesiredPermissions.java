@@ -2,18 +2,20 @@ package org.folio.orders.utils;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public enum AcqDesiredPermissions {
   ASSIGN("orders.acquisitions-units-assignments.assign"),
-  MANAGE("orders.acquisitions-units-assignments.manage");
+  MANAGE("orders.acquisitions-units-assignments.manage"),
+  TITLES_ASSIGN("titles.acquisitions-units-assignments.assign"),
+  TITLES_MANAGE("titles.acquisitions-units-assignments.manage"),
+  BYPASS_ACQ_UNITS("orders.bypass-acquisition-units");
 
   private final String permission;
   private static final List<String> values;
   static {
     values = Arrays.stream(AcqDesiredPermissions.values())
       .map(AcqDesiredPermissions::getPermission)
-      .collect(Collectors.toUnmodifiableList());
+      .toList();
   }
 
   AcqDesiredPermissions(String permission) {
@@ -24,7 +26,7 @@ public enum AcqDesiredPermissions {
     return permission;
   }
 
-  public static List<String> getValues() {
-    return values;
+  public static List<String> getValuesExceptBypass() {
+    return values.stream().filter(v -> !BYPASS_ACQ_UNITS.getPermission().equals(v)).toList();
   }
 }

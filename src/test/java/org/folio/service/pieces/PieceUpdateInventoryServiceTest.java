@@ -8,8 +8,8 @@ import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.service.inventory.InventoryManager.HOLDING_PERMANENT_LOCATION_ID;
-import static org.folio.service.inventory.InventoryManager.ID;
+import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
+import static org.folio.service.inventory.InventoryHoldingManager.ID;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -27,7 +27,8 @@ import java.util.concurrent.TimeoutException;
 import org.folio.ApiTestSuite;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.service.inventory.InventoryManager;
+import org.folio.service.inventory.InventoryHoldingManager;
+import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +37,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
@@ -47,13 +47,14 @@ public class PieceUpdateInventoryServiceTest {
   @Autowired
   private PieceUpdateInventoryService pieceUpdateInventoryService;
   @Autowired
-  private InventoryManager inventoryManager;
+  private InventoryItemManager inventoryItemManager;
+  @Autowired
+  private InventoryHoldingManager inventoryHoldingManager;
   @Autowired
   private  PieceStorageService pieceStorageService;
   @Mock
   private Map<String, String> okapiHeadersMock;
-  @Spy
-  private Context ctxMock = getFirstContextFromVertx(getVertx());
+  private final Context ctx = getFirstContextFromVertx(getVertx());
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
@@ -62,7 +63,7 @@ public class PieceUpdateInventoryServiceTest {
   void initMocks(){
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
-    requestContext = new RequestContext(ctxMock, okapiHeadersMock);
+    requestContext = new RequestContext(ctx, okapiHeadersMock);
   }
 
   @BeforeAll
@@ -91,19 +92,19 @@ public class PieceUpdateInventoryServiceTest {
   void shouldNotDeleteHoldingIfHoldingIdIsNull() {
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(null, requestContext);
 
-    verify(inventoryManager, times(0)).getHoldingById(null , true, requestContext);
-    verify(inventoryManager, times(0)).deleteHoldingById(null , true, requestContext);
+    verify(inventoryHoldingManager, times(0)).getHoldingById(null , true, requestContext);
+    verify(inventoryHoldingManager, times(0)).deleteHoldingById(null , true, requestContext);
   }
 
   @Test
   void shouldNotDeleteHoldingIfHoldingIdIsNotNullButNotFoundInTheDB() throws ExecutionException, InterruptedException {
     String holdingId = UUID.randomUUID().toString();
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
-    doReturn(succeededFuture(null)).when(inventoryManager).getHoldingById(piece.getHoldingId() , true, requestContext);
+    doReturn(succeededFuture(null)).when(inventoryHoldingManager).getHoldingById(piece.getHoldingId() , true, requestContext);
 
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
-    verify(inventoryManager, times(0)).deleteHoldingById(piece.getHoldingId() , true, requestContext);
+    verify(inventoryHoldingManager, times(0)).deleteHoldingById(piece.getHoldingId() , true, requestContext);
   }
 
 
@@ -114,12 +115,12 @@ public class PieceUpdateInventoryServiceTest {
     holding.put(ID, holding);
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
-    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(succeededFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(new ArrayList<>())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
 
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext);
 
-    verify(inventoryManager, times(1)).deleteHoldingById(holdingId , true, requestContext);
+    verify(inventoryHoldingManager, times(1)).deleteHoldingById(holdingId , true, requestContext);
   }
 
   @Test
@@ -132,12 +133,12 @@ public class PieceUpdateInventoryServiceTest {
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
     Piece piece2 = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
     doReturn(succeededFuture(List.of(piece, piece2))).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
-    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(succeededFuture(new ArrayList<>())).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(new ArrayList<>())).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
 
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
-    verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+    verify(inventoryHoldingManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
   }
 
   @Test
@@ -149,12 +150,12 @@ public class PieceUpdateInventoryServiceTest {
     JsonObject item = new JsonObject().put(ID, UUID.randomUUID().toString());
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withHoldingId(holdingId);
     doReturn(succeededFuture(Collections.emptyList())).when(pieceStorageService).getPiecesByHoldingId(holdingId, requestContext);
-    doReturn(succeededFuture(holding)).when(inventoryManager).getHoldingById(holdingId, true, requestContext);
-    doReturn(succeededFuture(List.of(item))).when(inventoryManager).getItemsByHoldingId(holdingId, requestContext);
+    doReturn(succeededFuture(holding)).when(inventoryHoldingManager).getHoldingById(holdingId, true, requestContext);
+    doReturn(succeededFuture(List.of(item))).when(inventoryItemManager).getItemsByHoldingId(holdingId, requestContext);
 
     pieceUpdateInventoryService.deleteHoldingConnectedToPiece(piece, requestContext).result();
 
-    verify(inventoryManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
+    verify(inventoryHoldingManager, times(0)).deleteHoldingById(holdingId , true, requestContext);
   }
 
 
@@ -165,8 +166,13 @@ public class PieceUpdateInventoryServiceTest {
     }
 
     @Bean
-    InventoryManager inventoryManager() {
-      return mock(InventoryManager.class);
+    InventoryItemManager inventoryItemManager() {
+      return mock(InventoryItemManager.class);
+    }
+
+    @Bean
+    InventoryHoldingManager inventoryHoldingManager() {
+      return mock(InventoryHoldingManager.class);
     }
 
     @Bean
@@ -175,9 +181,10 @@ public class PieceUpdateInventoryServiceTest {
     }
 
     @Bean
-    PieceUpdateInventoryService pieceUpdateInventoryService(InventoryManager inventoryManager,
-                                PieceStorageService pieceStorageService) {
-      return spy(new PieceUpdateInventoryService(inventoryManager, pieceStorageService));
+    PieceUpdateInventoryService pieceUpdateInventoryService(InventoryItemManager inventoryItemManager,
+                                                            InventoryHoldingManager inventoryHoldingManager,
+                                                            PieceStorageService pieceStorageService) {
+      return spy(new PieceUpdateInventoryService(inventoryItemManager, inventoryHoldingManager, pieceStorageService));
     }
   }
 }
