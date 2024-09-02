@@ -3,21 +3,17 @@ package org.folio.completablefuture;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.completablefuture.VertxFutureRepeater.repeat;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
-
 import io.vertx.core.Future;
 
-class CompletableFutureRepeaterTest {
+public class VertxFutureRepeaterTest {
 
   private final static Future<String> a = succeededFuture("a");
   private final static Future<String> b = succeededFuture("b");
@@ -34,14 +30,10 @@ class CompletableFutureRepeaterTest {
     return iterator::next;
   }
 
-  private void assertThrowsCause(Class<?> clazz, Executable executable) {
-    assertThat(assertThrows(Throwable.class, executable).getCause(), is(instanceOf(clazz)));
-  }
-
   @Test
   void fail() {
-    assertThrowsCause(Fail1.class, () -> repeat(1, task(fail1, a, b)).result());
-    assertThrowsCause(Fail2.class, () -> repeat(2, task(fail1, fail2, a, b)).result());
+    assertThat(repeat(1, task(fail1, a, b)).cause(), is(instanceOf(Fail1.class)));
+    assertThat(repeat(2, task(fail1, fail2, a, b)).cause(), is(instanceOf(Fail2.class)));
   }
 
   @Test

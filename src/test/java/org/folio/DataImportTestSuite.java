@@ -1,5 +1,6 @@
 package org.folio;
 
+import org.folio.completablefuture.VertxFutureRepeaterTest;
 import org.folio.di.CacheTest;
 import org.folio.service.caches.InventoryCacheTest;
 import org.folio.service.caches.JobExecutionTotalRecordsCacheTest;
@@ -16,7 +17,8 @@ import org.junit.platform.suite.api.Suite;
   JobExecutionTotalRecordsCacheTest.class,
   OrderIdStorageServiceImplTest.class,
   CreateOrderEventHandlerTest.class,
-  OrderPostProcessingEventHandlerTest.class
+  OrderPostProcessingEventHandlerTest.class,
+  VertxFutureRepeaterTest.class
 })
 public class DataImportTestSuite {
 }
