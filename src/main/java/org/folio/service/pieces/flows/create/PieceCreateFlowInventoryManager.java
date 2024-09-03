@@ -5,6 +5,8 @@ import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTena
 import java.util.Optional;
 
 import io.vertx.core.Future;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -12,12 +14,12 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.inventory.InventoryHoldingManager;
-import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceUpdateInventoryService;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.folio.service.titles.TitlesService;
 
 public class PieceCreateFlowInventoryManager {
+  private static final Logger logger = LogManager.getLogger(PieceCreateFlowInventoryManager.class);
 
   private final TitlesService titlesService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
@@ -38,6 +40,10 @@ public class PieceCreateFlowInventoryManager {
       .compose(instanceId -> handleHolding(compPOL, piece, instanceId, locationContext))
       .compose(holdingId -> handleItem(compPO, compPOL, createItem, piece, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
+      .onSuccess(optional -> logger.info("processInventory:: successfully processed for piece with itemId: {}, poLineId: {}, receivingTenantId: {}",
+        piece.getItemId(), piece.getPoLineId(), piece.getReceivingTenantId()))
+      .onFailure(t -> logger.error("Failed to process inventory for piece with itemId: {}, poLineId: {}, receivingTenantId: {}",
+        piece.getItemId(), piece.getPoLineId(), piece.getReceivingTenantId(), t))
       .mapEmpty();
   }
 
