@@ -22,10 +22,10 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
-import org.folio.service.orders.PurchaseOrderStorageService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,18 +74,15 @@ public class InventoryItemManager {
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final InventoryCache inventoryCache;
   private final ConsortiumConfigurationService consortiumConfigurationService;
-  private final PurchaseOrderStorageService purchaseOrderStorageService;
 
   public InventoryItemManager(RestClient restClient,
                               ConfigurationEntriesCache configurationEntriesCache,
                               InventoryCache inventoryCache,
-                              ConsortiumConfigurationService consortiumConfigurationService,
-                              PurchaseOrderStorageService purchaseOrderStorageService) {
+                              ConsortiumConfigurationService consortiumConfigurationService) {
     this.restClient = restClient;
     this.configurationEntriesCache = configurationEntriesCache;
     this.inventoryCache = inventoryCache;
     this.consortiumConfigurationService = consortiumConfigurationService;
-    this.purchaseOrderStorageService = purchaseOrderStorageService;
   }
 
 
@@ -433,7 +430,7 @@ public class InventoryItemManager {
   private Future<String> createItemInInventory(JsonObject itemData, RequestContext requestContext) {
     Promise<String> promise = Promise.promise();
     RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT);
-    logger.info("Trying to create Item in inventory");
+    logger.info("Trying to create Item in inventory in tenant: {}", TenantTool.tenantId(requestContext.getHeaders()));
     restClient.postJsonObjectAndGetId(requestEntry, itemData, requestContext)
       .onSuccess(promise::complete)
       // In case item creation failed, return null instead of id
