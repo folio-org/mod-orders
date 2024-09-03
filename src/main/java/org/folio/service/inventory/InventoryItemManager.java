@@ -378,7 +378,8 @@ public class InventoryItemManager {
       .compose(item -> {
         InventoryUtils.updateItemWithPieceFields(item, piece);
         item.put(ID, piece.getItemId());
-        logger.info("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
+        logger.info("Posting {} physical item(s) for PO Line with '{}' id, receivingTenantId: {}",
+          quantity, compPOL.getId(), piece.getReceivingTenantId());
         return createItemRecords(item, quantity, requestContext);
       });
   }
@@ -430,7 +431,8 @@ public class InventoryItemManager {
   private Future<String> createItemInInventory(JsonObject itemData, RequestContext requestContext) {
     Promise<String> promise = Promise.promise();
     RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT);
-    logger.info("Trying to create Item in inventory in tenant: {}", TenantTool.tenantId(requestContext.getHeaders()));
+    String tenantId = TenantTool.tenantId(requestContext.getHeaders());
+    logger.info("Trying to create Item in inventory in tenant: {}", tenantId);
     restClient.postJsonObjectAndGetId(requestEntry, itemData, requestContext)
       .onSuccess(promise::complete)
       // In case item creation failed, return null instead of id
@@ -440,6 +442,8 @@ public class InventoryItemManager {
           promise.fail(new HttpException(409, BARCODE_IS_NOT_UNIQUE));
         } else {
           var causeParam = new Parameter().withKey("cause").withValue(t.getMessage());
+          logger.error("Failed to create an item: {} in inventory, tenantId: {}",
+            itemData.encodePrettily(), tenantId,  t);
           promise.fail(new HttpException(500, ITEM_CREATION_FAILED, List.of(causeParam)));
         }
       });

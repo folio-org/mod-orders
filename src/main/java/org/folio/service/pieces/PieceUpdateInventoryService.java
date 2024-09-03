@@ -19,7 +19,6 @@ import org.folio.service.inventory.InventoryItemManager;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 public class PieceUpdateInventoryService {
@@ -43,28 +42,19 @@ public class PieceUpdateInventoryService {
   public Future<String> manualPieceFlowCreateItemRecord(Piece piece, CompositePurchaseOrder compPO,
                                                         CompositePoLine compPOL, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
-    Promise<String> itemFuture = Promise.promise();
-    try {
-      logger.debug("manualPieceFlowCreateItemRecord:: Handling {} items for PO Line and holdings with id={}",
-        ITEM_QUANTITY, piece.getHoldingId());
-      if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
-        inventoryItemManager.createMissingElectronicItems(compPO, compPOL, piece, ITEM_QUANTITY, requestContext)
-          .onSuccess(idS -> itemFuture.complete(idS.get(0)))
-          .onFailure(itemFuture::fail);
-      } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPOL)) {
-        inventoryItemManager.createMissingPhysicalItems(compPO, compPOL, piece, ITEM_QUANTITY, requestContext)
-          .onSuccess(idS -> itemFuture.complete(idS.get(0)))
-          .onFailure(itemFuture::fail);
-      } else {
-        logger.warn("manualPieceFlowCreateItemRecord:: Creating Item is not possible for piece: {}, poLine: {}",
-          piece.getId(), compPOL.getId());
-        itemFuture.complete(null);
-      }
-    } catch (Exception e) {
-      logger.error("Error while creating item for piece:{} and comPOL: {}", piece.getId(), compPOL.getId(), e);
-      itemFuture.fail(e);
+    logger.info("manualPieceFlowCreateItemRecord:: Handling {} items for PO Line and holdings with id={}, receivingTenantId={}",
+      ITEM_QUANTITY, piece.getHoldingId(), piece.getReceivingTenantId());
+    if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
+      return inventoryItemManager.createMissingElectronicItems(compPO, compPOL, piece, ITEM_QUANTITY, requestContext)
+        .map(idS -> idS.get(0));
+    } else if (DefaultPieceFlowsValidator.isCreateItemForNonElectronicPiecePossible(piece, compPOL)) {
+      return inventoryItemManager.createMissingPhysicalItems(compPO, compPOL, piece, ITEM_QUANTITY, requestContext)
+        .map(idS -> idS.get(0));
+    } else {
+      logger.warn("manualPieceFlowCreateItemRecord:: Creating Item is not possible for piece: {}, poLine: {}",
+        piece.getId(), compPOL.getId());
+      return Future.succeededFuture();
     }
-    return itemFuture.future();
   }
 
   public Future<Pair<String, String>> deleteHoldingConnectedToPiece(Piece piece, RequestContext requestContext) {
