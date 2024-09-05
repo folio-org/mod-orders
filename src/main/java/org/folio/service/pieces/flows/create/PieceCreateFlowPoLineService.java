@@ -24,6 +24,11 @@ public class PieceCreateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
+  protected List<Location> getPieceLocations(PieceCreationHolder holder) {
+    return PieceUtil.findOrderPieceLineLocation(holder.getPieceToCreate(), holder.getPoLineToSave());
+  }
+
+  @Override
   public boolean poLineUpdateQuantity(PieceCreationHolder holder) {
     CompositePoLine lineToSave = holder.getPoLineToSave();
     Piece piece = holder.getPieceToCreate();
