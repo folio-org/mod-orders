@@ -112,14 +112,22 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> saveOrderLine(PoLine poLine, RequestContext requestContext) {
+    return saveOrderLine(poLine, poLine.getLocations(), requestContext);
+  }
+
+  private Future<Void> saveOrderLine(PoLine poLine, List<Location> locations, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(poLine.getId());
-    return updateSearchLocations(poLine, requestContext)
+    return updateSearchLocations(poLine, locations, requestContext)
       .compose(v -> restClient.put(requestEntry, poLine, requestContext));
   }
 
   public Future<Void> saveOrderLine(CompositePoLine compositePoLine, RequestContext requestContext) {
+    return saveOrderLine(compositePoLine, compositePoLine.getLocations(), requestContext);
+  }
+
+  public Future<Void> saveOrderLine(CompositePoLine compositePoLine, List<Location> locations, RequestContext requestContext) {
     PoLine poLine = HelperUtils.convertToPoLine(compositePoLine);
-    return saveOrderLine(poLine, requestContext);
+    return saveOrderLine(poLine, locations, requestContext);
   }
 
   public Future<Void> saveOrderLines(PoLineCollection poLineCollection, RequestContext requestContext) {
@@ -503,7 +511,11 @@ public class PurchaseOrderLineService {
   }
 
   private Future<Void> updateSearchLocations(PoLine poLine, RequestContext requestContext) {
-    return retrieveSearchLocationIds(poLine.getLocations(), requestContext)
+    return updateSearchLocations(poLine, poLine.getLocations(), requestContext);
+  }
+
+  private Future<Void> updateSearchLocations(PoLine poLine, List<Location> locations, RequestContext requestContext) {
+    return retrieveSearchLocationIds(locations, requestContext)
       .map(poLine::withSearchLocationIds)
       .mapEmpty();
   }

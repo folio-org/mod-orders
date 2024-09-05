@@ -11,11 +11,12 @@ import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.rest.jaxrs.model.PurchaseOrder.WorkflowStatus.OPEN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -37,6 +38,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
+import org.folio.service.pieces.PieceUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -100,8 +102,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
   @Test
   @DisplayName("Add 1 electronic piece with holding to electronic pol with 1 location and same holding id as in piece")
-  void electAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndHoldingIdInPOLAndPieceTheSame()
-                                        throws ExecutionException, InterruptedException {
+  void electAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndHoldingIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -122,7 +123,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
                                       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -137,14 +138,14 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
                                         incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
 
   @Test
   @DisplayName("Add 1 physical piece with holding to physical pol with 1 location and same holding id as in piece")
-  void physAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndHoldingIdInPOLAndPieceTheSame()
-                throws ExecutionException, InterruptedException {
+  void physAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndHoldingIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -165,7 +166,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
 
@@ -179,7 +180,8 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   private static Stream<Arguments> shouldSetReceivingTenantIdFromPieceArgs() {
@@ -231,8 +233,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
   @Test
   @DisplayName("Add 1 physical piece with location to physical pol with 1 location and same location id as in piece")
-  void physAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame()
-                      throws ExecutionException, InterruptedException {
+  void physAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -253,7 +254,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
     //Then
@@ -266,13 +267,13 @@ public class PieceCreateFlowPoLineServiceTest {
     assertEquals(2, poLineToSave.getLocations().get(0).getQuantity());
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
   @DisplayName("Add 1 electronic piece with location to electronic pol with 1 location and same location id as in piece")
-  void elecAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame()
-                throws ExecutionException, InterruptedException {
+  void elecAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndLocationIdInPOLAndPieceTheSame() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -293,7 +294,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -307,13 +308,13 @@ public class PieceCreateFlowPoLineServiceTest {
     assertEquals(2, poLineToSave.getLocations().get(0).getQuantity());
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
   @DisplayName("Add 1 electronic piece with location to electronic pol with 1 location with holding id")
-  void elecAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndLocationIdInPieceAndPOLWithHoldingId()
-                        throws ExecutionException, InterruptedException {
+  void elecAddStrategyShouldIncreaseQuantityTo2ForCostAndLocationIfInitiallyWas1AndLocationIdInPieceAndPOLWithHoldingId() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
@@ -323,8 +324,6 @@ public class PieceCreateFlowPoLineServiceTest {
     Cost cost = new Cost().withQuantityElectronic(1)
       .withListUnitPrice(1d).withExchangeRate(1d).withCurrency("USD")
       .withPoLineEstimatedPrice(1d);
-    List<Location> locations = new ArrayList<>();
-    locations.add(loc);
     PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(OPEN);
     Eresource eresource = new Eresource().withCreateInventory(Eresource.CreateInventory.INSTANCE);
     PoLine originPoLine = new PoLine().withIsPackage(false).withPurchaseOrderId(orderId)
@@ -337,7 +336,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -353,13 +352,13 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
                                         incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
   @DisplayName("Add 1 electronic piece with holding id to mixed pol with 1 location with holding id and electronic and physical qty")
-  void shouldIncreaseQuantityTo3ForCostAndLocationIfInitiallyWas2AndHoldingIdInPieceAndMixedPOLWithHoldingId()
-    throws ExecutionException, InterruptedException {
+  void shouldIncreaseQuantityTo3ForCostAndLocationIfInitiallyWas2AndHoldingIdInPieceAndMixedPOLWithHoldingId() {
     String orderId = UUID.randomUUID().toString();
     String holdingId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -382,7 +381,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -398,13 +397,13 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToCreate, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
   @DisplayName("Add 1 electronic piece with location id to mixed pol with 1 location with location id and electronic and physical qty")
-  void shouldIncreaseQuantityTo3ForCostAndLocationIfInitiallyWas2AndLocationIdInPieceAndMixedPOLWithLocationId()
-    throws ExecutionException, InterruptedException {
+  void shouldIncreaseQuantityTo3ForCostAndLocationIfInitiallyWas2AndLocationIdInPieceAndMixedPOLWithLocationId() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -427,7 +426,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -443,13 +442,13 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToCreate, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
   @DisplayName("Add 1 electronic piece without location id to mixed pol with 1 location with location id and physical qty and create inventory NONE")
-  void shouldNotUpdateLocationIfCreateInventoryNoneForElectronicButUpdateCostQty()
-    throws ExecutionException, InterruptedException {
+  void shouldNotUpdateLocationIfCreateInventoryNoneForElectronicButUpdateCostQty() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -472,7 +471,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -488,13 +487,13 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToCreate, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
   @DisplayName("Add 1 physical piece without location id to mixed pol with 1 location with location id and physical qty and create inventory NONE")
-  void shouldNotUpdateLocationIfCreateInventoryNoneForPhysicalButUpdateCostQty()
-    throws ExecutionException, InterruptedException {
+  void shouldNotUpdateLocationIfCreateInventoryNoneForPhysicalButUpdateCostQty() {
     String orderId = UUID.randomUUID().toString();
     String locationId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
@@ -517,7 +516,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -533,13 +532,13 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToCreate, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
   @DisplayName("Add 1 physical piece without location id to physical pol without location and physical qty and create inventory NONE")
-  void shouldNotUpdateLocationIfCreateInventoryNoneForPhysicalAndNoLocationInTheLineButUpdateCostQty()
-    throws ExecutionException, InterruptedException {
+  void shouldNotUpdateLocationIfCreateInventoryNoneForPhysicalAndNoLocationInTheLineButUpdateCostQty() {
     String orderId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     Piece pieceToCreate = new Piece().withPoLineId(lineId).withFormat(Piece.Format.PHYSICAL);
@@ -560,7 +559,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -573,7 +572,8 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToCreate, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @ParameterizedTest
@@ -581,8 +581,7 @@ public class PieceCreateFlowPoLineServiceTest {
   @CsvSource(value = {"Electronic Resource:Instance:2:3:Electronic:6:6.0",
                       "Electronic Resource:None:2:3:Electronic:6:6.0"}, delimiter = ':')
   void electAddStrategyShouldIncreaseQuantityTo3ForCostAndLocationIfInitiallyWas2AndLocationIdInPOLAndPieceTheSameInventoryNone(
-          String lineType, String createInventory, int qty1, int qty2, String pieceFormat, int expQty, double expEstimatedPrice)
-          throws ExecutionException, InterruptedException {
+          String lineType, String createInventory, int qty1, int qty2, String pieceFormat, int expQty, double expEstimatedPrice) {
     String orderId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     String locationId1 = UUID.randomUUID().toString();
@@ -605,7 +604,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -631,7 +630,8 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @ParameterizedTest
@@ -641,8 +641,7 @@ public class PieceCreateFlowPoLineServiceTest {
                       "Other:None:2:4:Other:7:7.0",
                       "Other:None:2:4:Other:7:7.0"}, delimiter = ':')
   void physOrNonetAddStrategyShouldIncreaseQuantityTo3ForCostAndLocationIfInitiallyWas2AndLocationIdInPOLAndPieceTheSameInventoryNone(
-    String lineType, String createInventory, int qty1, int qty2, String pieceFormat, int expQty, double expEstimatedPrice)
-    throws ExecutionException, InterruptedException {
+    String lineType, String createInventory, int qty1, int qty2, String pieceFormat, int expQty, double expEstimatedPrice) {
     String orderId = UUID.randomUUID().toString();
     String lineId = UUID.randomUUID().toString();
     String locationId1 = UUID.randomUUID().toString();
@@ -665,7 +664,7 @@ public class PieceCreateFlowPoLineServiceTest {
 
     doReturn(succeededFuture(null)).when(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(eq(incomingUpdateHolder.getPoLineToSave()), anyList(), eq(requestContext));
 
     //When
     pieceCreateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -691,7 +690,8 @@ public class PieceCreateFlowPoLineServiceTest {
 
     verify(receivingEncumbranceStrategy).processEncumbrances(incomingUpdateHolder.getPurchaseOrderToSave(),
       incomingUpdateHolder.getPurchaseOrderToSave(), requestContext);
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(piece, poLineToSave);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   private static class ContextConfiguration {

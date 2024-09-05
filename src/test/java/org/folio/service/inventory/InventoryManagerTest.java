@@ -87,7 +87,6 @@ import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.SharingInstanceService;
-import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.utils.RequestContextMatcher;
 import org.hamcrest.core.IsInstanceOf;
 import org.jetbrains.annotations.NotNull;
@@ -142,8 +141,6 @@ public class InventoryManagerTest {
   private SharingInstanceService sharingInstanceService;
   @Autowired
   private ConsortiumConfigurationService consortiumConfigurationService;
-  @Autowired
-  private PurchaseOrderStorageService purchaseOrderStorageService;
 
 
   private Map<String, String> okapiHeadersMock;
@@ -910,9 +907,6 @@ public class InventoryManagerTest {
     }
 
     @Bean
-    public PurchaseOrderStorageService purchaseOrderStorageService() {return mock(PurchaseOrderStorageService.class);}
-
-    @Bean
     public SharingInstanceService sharingInstanceService() {
       return mock(SharingInstanceService.class);
     }
@@ -926,10 +920,8 @@ public class InventoryManagerTest {
     public InventoryItemManager inventoryItemManager(RestClient restClient,
                                                      ConfigurationEntriesCache configurationEntriesCache,
                                                      InventoryCache inventoryCache,
-                                                     ConsortiumConfigurationService consortiumConfigurationService,
-                                                     PurchaseOrderStorageService purchaseOrderStorageService) {
-      return spy(new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache,
-        consortiumConfigurationService, purchaseOrderStorageService));
+                                                     ConsortiumConfigurationService consortiumConfigurationService) {
+      return spy(new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService));
     }
 
     @Bean
