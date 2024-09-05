@@ -6,6 +6,7 @@ import org.folio.models.pieces.BasePieceFlowHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -13,6 +14,8 @@ import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.validators.PieceValidatorUtil;
 
 import io.vertx.core.Future;
+
+import java.util.List;
 
 public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHolder> implements PoLineUpdateQuantityService<T> {
   protected final PurchaseOrderStorageService purchaseOrderStorageService;
@@ -35,10 +38,12 @@ public abstract class BasePieceFlowUpdatePoLineService<T extends BasePieceFlowHo
           updateEstimatedPrice(holder.getPoLineToSave());
           return null;
         })
-        .compose(v -> purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext));
+        .compose(v -> purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), getPieceLocations(holder), requestContext));
     }
     return Future.succeededFuture();
   }
+
+  protected abstract List<Location> getPieceLocations(T holder);
 
   protected CompositePoLine updateEstimatedPrice(CompositePoLine compPoLine) {
     Cost cost = compPoLine.getCost();

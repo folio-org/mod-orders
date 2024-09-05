@@ -22,10 +22,10 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReceivedItem;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.consortium.ConsortiumConfigurationService;
-import org.folio.service.orders.PurchaseOrderStorageService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,18 +74,15 @@ public class InventoryItemManager {
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final InventoryCache inventoryCache;
   private final ConsortiumConfigurationService consortiumConfigurationService;
-  private final PurchaseOrderStorageService purchaseOrderStorageService;
 
   public InventoryItemManager(RestClient restClient,
                               ConfigurationEntriesCache configurationEntriesCache,
                               InventoryCache inventoryCache,
-                              ConsortiumConfigurationService consortiumConfigurationService,
-                              PurchaseOrderStorageService purchaseOrderStorageService) {
+                              ConsortiumConfigurationService consortiumConfigurationService) {
     this.restClient = restClient;
     this.configurationEntriesCache = configurationEntriesCache;
     this.inventoryCache = inventoryCache;
     this.consortiumConfigurationService = consortiumConfigurationService;
-    this.purchaseOrderStorageService = purchaseOrderStorageService;
   }
 
 
@@ -381,7 +378,8 @@ public class InventoryItemManager {
       .compose(item -> {
         InventoryUtils.updateItemWithPieceFields(item, piece);
         item.put(ID, piece.getItemId());
-        logger.info("Posting {} physical item(s) for PO Line with '{}' id", quantity, compPOL.getId());
+        logger.info("Posting {} physical item(s) for PO Line with '{}' id, receivingTenantId: {}",
+          quantity, compPOL.getId(), piece.getReceivingTenantId());
         return createItemRecords(item, quantity, requestContext);
       });
   }
@@ -433,7 +431,8 @@ public class InventoryItemManager {
   private Future<String> createItemInInventory(JsonObject itemData, RequestContext requestContext) {
     Promise<String> promise = Promise.promise();
     RequestEntry requestEntry = new RequestEntry(ITEM_STOR_ENDPOINT);
-    logger.info("Trying to create Item in inventory");
+    String tenantId = TenantTool.tenantId(requestContext.getHeaders());
+    logger.info("Trying to create Item in inventory in tenant: {}", tenantId);
     restClient.postJsonObjectAndGetId(requestEntry, itemData, requestContext)
       .onSuccess(promise::complete)
       // In case item creation failed, return null instead of id
@@ -443,6 +442,8 @@ public class InventoryItemManager {
           promise.fail(new HttpException(409, BARCODE_IS_NOT_UNIQUE));
         } else {
           var causeParam = new Parameter().withKey("cause").withValue(t.getMessage());
+          logger.error("Failed to create an item: {} in inventory, tenantId: {}",
+            itemData.encodePrettily(), tenantId,  t);
           promise.fail(new HttpException(500, ITEM_CREATION_FAILED, List.of(causeParam)));
         }
       });

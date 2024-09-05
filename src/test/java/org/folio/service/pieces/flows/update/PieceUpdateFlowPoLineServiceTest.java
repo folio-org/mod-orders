@@ -12,6 +12,7 @@ import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -28,7 +29,6 @@ import org.folio.ApiTestSuite;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
@@ -39,6 +39,7 @@ import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.finance.transaction.ReceivingEncumbranceStrategy;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
+import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.create.PieceCreateFlowPoLineService;
 import org.folio.service.pieces.flows.delete.PieceDeleteFlowPoLineService;
 import org.junit.jupiter.api.AfterAll;
@@ -102,7 +103,7 @@ public class PieceUpdateFlowPoLineServiceTest {
   }
 
   @Test
-  void shouldUpdateLineQuantityIfElectronicPoLineIsNotPackageAndHoldingReferenceChanged() throws ExecutionException, InterruptedException {
+  void shouldUpdateLineQuantityIfElectronicPoLineIsNotPackageAndHoldingReferenceChanged() {
     String orderId = UUID.randomUUID().toString();
     String oldHoldingId = UUID.randomUUID().toString();
     String newHoldingId = UUID.randomUUID().toString();
@@ -128,9 +129,8 @@ public class PieceUpdateFlowPoLineServiceTest {
                                                                     .withPieceFromStorage(pieceFromStorage);
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
-    ArgumentCaptor<CompositePurchaseOrder> purchaseOrderToSaveCapture = ArgumentCaptor.forClass(CompositePurchaseOrder.class);
-      ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), anyList(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -149,11 +149,12 @@ public class PieceUpdateFlowPoLineServiceTest {
 
     assertNull(poLineFromStorage.getLocations().get(0).getLocationId());
     assertEquals(oldHoldingId, poLineFromStorage.getLocations().get(0).getHoldingId());
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLineToUpdate);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
-  void shouldUpdateLineQuantityAndAddNewLocationWithHoldingIfPhysicalPoLineIsNotPackageAndHoldingReferenceChanged() throws ExecutionException, InterruptedException {
+  void shouldUpdateLineQuantityAndAddNewLocationWithHoldingIfPhysicalPoLineIsNotPackageAndHoldingReferenceChanged() {
     String orderId = UUID.randomUUID().toString();
     String oldHoldingId = UUID.randomUUID().toString();
     String holdingIdToUpdate = UUID.randomUUID().toString();
@@ -180,7 +181,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), anyList(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -206,11 +207,12 @@ public class PieceUpdateFlowPoLineServiceTest {
     assertEquals(2, costToSave.getQuantityPhysical());
     assertNull(costToSave.getQuantityElectronic());
 
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLineToUpdate);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
-  void shouldUpdateLineQuantityWithAddNeLocationIfMixedPoLineIsNotPackageAndLocationReferenceChanged() throws ExecutionException, InterruptedException {
+  void shouldUpdateLineQuantityWithAddNeLocationIfMixedPoLineIsNotPackageAndLocationReferenceChanged() {
     String orderId = UUID.randomUUID().toString();
     String oldHoldingId = UUID.randomUUID().toString();
     String locationToUpdate = UUID.randomUUID().toString();
@@ -238,7 +240,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), anyList(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -246,8 +248,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     CompositePoLine poLineToUpdate = poLineToSaveCapture.getValue();
     assertEquals(locationToUpdate, pieceToUpdate.getLocationId());
     assertNull(pieceToUpdate.getHoldingId());
-    List<Location> locations = poLineToUpdate.getLocations();
-    assertEquals(2, locations.size());
+    assertEquals(2, poLineToUpdate.getLocations().size());
     Location physicalLocationToSave =  poLineToUpdate.getLocations().stream()
       .filter(location -> location.getQuantityPhysical() != null).findAny().get();
     assertNull(physicalLocationToSave.getQuantityElectronic());
@@ -266,11 +267,12 @@ public class PieceUpdateFlowPoLineServiceTest {
     assertEquals(1, costToSave.getQuantityElectronic());
     assertEquals(1, costToSave.getQuantityPhysical());
 
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLineToUpdate);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
-  void shouldUpdateLineQuantityWithAddNeHoldingIfMixedPoLineIsNotPackageAndHoldingReferenceChanged() throws ExecutionException, InterruptedException {
+  void shouldUpdateLineQuantityWithAddNeHoldingIfMixedPoLineIsNotPackageAndHoldingReferenceChanged() {
     String orderId = UUID.randomUUID().toString();
     String oldHoldingId = UUID.randomUUID().toString();
     String holdingToUpdate = UUID.randomUUID().toString();
@@ -298,7 +300,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), anyList(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -306,8 +308,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     CompositePoLine poLineToUpdate = poLineToSaveCapture.getValue();
     assertEquals(holdingToUpdate, pieceToUpdate.getHoldingId());
     assertNull(pieceToUpdate.getLocationId());
-    List<Location> locations = poLineToUpdate.getLocations();
-    assertEquals(2, locations.size());
+    assertEquals(2, poLineToUpdate.getLocations().size());
     Location physicalLocationToSave =  poLineToUpdate.getLocations().stream()
       .filter(location -> location.getQuantityPhysical() != null).findAny().get();
     assertNull(physicalLocationToSave.getQuantityElectronic());
@@ -326,11 +327,12 @@ public class PieceUpdateFlowPoLineServiceTest {
     assertEquals(1, costToSave.getQuantityElectronic());
     assertEquals(1, costToSave.getQuantityPhysical());
 
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLineToUpdate);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   @Test
-  void shouldUpdateLineQuantityWithAddNeHoldingIfMixedPoLineWith2LocationsIsNotPackageAndHoldingReferenceChanged() throws ExecutionException, InterruptedException {
+  void shouldUpdateLineQuantityWithAddNeHoldingIfMixedPoLineWith2LocationsIsNotPackageAndHoldingReferenceChanged() {
     String orderId = UUID.randomUUID().toString();
     String oldHoldingId = UUID.randomUUID().toString();
     String holdingToUpdate = UUID.randomUUID().toString();
@@ -359,7 +361,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     incomingUpdateHolder.withOrderInformation(purchaseOrderFromStorage, poLineFromStorage);
 
     ArgumentCaptor<CompositePoLine> poLineToSaveCapture = ArgumentCaptor.forClass(CompositePoLine.class);
-    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), eq(requestContext));
+    doReturn(succeededFuture(null)).when(purchaseOrderLineService).saveOrderLine(poLineToSaveCapture.capture(), anyList(), eq(requestContext));
 
     //When
     pieceUpdateFlowPoLineService.updatePoLine(incomingUpdateHolder, requestContext).result();
@@ -367,8 +369,7 @@ public class PieceUpdateFlowPoLineServiceTest {
     CompositePoLine poLineToUpdate = poLineToSaveCapture.getValue();
     assertEquals(holdingToUpdate, pieceToUpdate.getHoldingId());
     assertNull(pieceToUpdate.getLocationId());
-    List<Location> locations = poLineToUpdate.getLocations();
-    assertEquals(2, locations.size());
+    assertEquals(2, poLineToUpdate.getLocations().size());
     Location physicalLocationToSave =  poLineToUpdate.getLocations().stream()
       .filter(location -> location.getQuantityPhysical() != null).findAny().get();
     assertNull(physicalLocationToSave.getQuantityElectronic());
@@ -387,7 +388,8 @@ public class PieceUpdateFlowPoLineServiceTest {
     assertEquals(1, costToSave.getQuantityElectronic());
     assertEquals(1, costToSave.getQuantityPhysical());
 
-    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), requestContext);
+    List<Location> locations = PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLineToUpdate);
+    verify(purchaseOrderLineService).saveOrderLine(incomingUpdateHolder.getPoLineToSave(), locations, requestContext);
   }
 
   private static class ContextConfiguration {

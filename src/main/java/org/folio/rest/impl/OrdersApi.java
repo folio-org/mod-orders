@@ -9,8 +9,6 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.helper.PurchaseOrderHelper;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
@@ -27,11 +25,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
 public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersRollover {
-
-  private static final Logger logger = LogManager.getLogger();
 
   @Autowired
   private OrderRolloverService orderRolloverService;
@@ -95,12 +90,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
     purchaseOrderHelper
       .getPurchaseOrders(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(orders -> {
-        if (logger.isInfoEnabled()) {
-          logger.debug("Successfully retrieved orders: {}", JsonObject.mapFrom(orders).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(buildOkResponse(orders)));
-      })
+      .onSuccess(orders -> asyncResultHandler.handle(succeededFuture(buildOkResponse(orders))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 

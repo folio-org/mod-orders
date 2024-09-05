@@ -35,7 +35,8 @@ public class PieceCreateFlowManager {
   }
 
   public Future<Piece> createPiece(Piece pieceToCreate, boolean createItem, RequestContext requestContext) {
-    logger.info("manual createPiece start");
+    logger.info("createPiece:: manual createPiece start, poLineId: {}, receivingTenantId: {}",
+      pieceToCreate.getPoLineId(), pieceToCreate.getReceivingTenantId());
     PieceCreationHolder holder = new PieceCreationHolder().withPieceToCreate(pieceToCreate).withCreateItem(createItem);
     return basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))

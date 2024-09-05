@@ -14,7 +14,7 @@ import org.folio.service.orders.OrderWorkflowType;
 import io.vertx.core.Future;
 
 public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy {
-  private static final Logger LOG = LogManager.getLogger(ReceivingEncumbranceStrategy.class);
+  private static final Logger logger = LogManager.getLogger(ReceivingEncumbranceStrategy.class);
 
   private final EncumbranceService encumbranceService;
   private final FundsDistributionService fundsDistributionService;
@@ -44,7 +44,8 @@ public class ReceivingEncumbranceStrategy implements EncumbranceWorkflowStrategy
       })
       .map(aVoid -> encumbrancesProcessingHolderBuilder.distributeHoldersByOperation(encumbranceRelationsHolders))
       .compose(holder -> encumbranceService.createOrUpdateEncumbrances(holder, requestContext))
-      .onSuccess(holders -> LOG.debug("End processing encumbrances for piece add/delete"));
+      .onSuccess(holders -> logger.debug("processEncumbrances:: End processing encumbrances for piece add/delete for order id: {}", compPO.getId()))
+      .onFailure(t -> logger.error("Failed to process encumbrances for piece add/delete for order id: {}", compPO.getId(), t));
   }
 
   public Future<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(List<EncumbranceRelationsHolder> holders,

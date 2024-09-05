@@ -36,7 +36,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     OrderTemplatesHelper orderTemplatesHelper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     orderTemplatesHelper.createOrderTemplate(entity)
       .onSuccess(template -> {
-        if (logger.isInfoEnabled()) {
+        if (logger.isDebugEnabled()) {
           logger.debug("Successfully created new order template: {}", JsonObject.mapFrom(template)
             .encodePrettily());
         }
@@ -52,12 +52,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.getOrderTemplates(query, offset, limit)
-      .onSuccess(templates -> {
-        if (logger.isInfoEnabled()) {
-          logger.debug("Successfully retrieved order templates collection: {}", JsonObject.mapFrom(templates).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(templates)));
-      })
+      .onSuccess(templates -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(templates))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
@@ -100,13 +95,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.getOrderTemplateById(id)
-      .onSuccess(template -> {
-        if (logger.isInfoEnabled()) {
-          logger.debug("Successfully retrieved order template: {}", JsonObject.mapFrom(template)
-            .encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(template)));
-      })
+      .onSuccess(template -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(template))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
@@ -117,7 +106,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.deleteOrderTemplate(id)
       .onSuccess(ok -> {
-        if (logger.isInfoEnabled()) {
+        if (logger.isDebugEnabled()) {
           logger.debug("Successfully deleted order template with id={}", id);
         }
         asyncResultHandler.handle(succeededFuture(helper.buildNoContentResponse()));

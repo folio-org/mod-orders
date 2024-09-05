@@ -483,10 +483,8 @@ public class ApplicationConfig {
   InventoryItemManager inventoryItemManager(RestClient restClient,
                                             ConfigurationEntriesCache configurationEntriesCache,
                                             InventoryCache inventoryCache,
-                                            ConsortiumConfigurationService consortiumConfigurationService,
-                                            PurchaseOrderStorageService purchaseOrderStorageService) {
-    return new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache,
-      consortiumConfigurationService, purchaseOrderStorageService);
+                                            ConsortiumConfigurationService consortiumConfigurationService) {
+    return new InventoryItemManager(restClient, configurationEntriesCache, inventoryCache, consortiumConfigurationService);
   }
 
   @Bean

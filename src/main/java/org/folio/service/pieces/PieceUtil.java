@@ -19,7 +19,7 @@ import org.folio.rest.jaxrs.model.Piece;
 public class PieceUtil {
   public static List<Location> findOrderPieceLineLocation(Piece piece, CompositePoLine compPoLine) {
     if ((piece.getFormat() == Piece.Format.ELECTRONIC || piece.getFormat() == Piece.Format.PHYSICAL) &&
-                  (CompositePoLine.OrderFormat.P_E_MIX == compPoLine.getOrderFormat())) {
+      (CompositePoLine.OrderFormat.P_E_MIX == compPoLine.getOrderFormat())) {
       return compPoLine.getLocations().stream()
         .filter(loc -> isLocationMatch(piece, loc)).collect(Collectors.toList());
     } else if (piece.getFormat() == Piece.Format.ELECTRONIC && CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE == compPoLine.getOrderFormat()) {
@@ -28,9 +28,9 @@ public class PieceUtil {
         .filter(loc -> isLocationMatch(piece, loc)).collect(Collectors.toList());
     }
     return compPoLine.getLocations().stream()
-          .filter(loc -> Objects.nonNull(loc.getQuantityPhysical()))
-          .filter(loc -> isLocationMatch(piece, loc))
-          .collect(Collectors.toList());
+      .filter(loc -> Objects.nonNull(loc.getQuantityPhysical()))
+      .filter(loc -> isLocationMatch(piece, loc))
+      .collect(Collectors.toList());
   }
 
   public static Map<Piece.Format, Integer> calculatePiecesQuantityWithoutLocation(CompositePoLine compPOL) {
