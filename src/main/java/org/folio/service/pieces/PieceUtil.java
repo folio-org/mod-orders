@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.JsonArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -39,7 +39,7 @@ public class PieceUtil {
         .collect(Collectors.toList());
     }
     logger.info("findOrderPieceLineLocation:: Found {} locations for pieceId: {} and poLineId: {}",
-      JsonObject.mapFrom(result).encodePrettily(), piece.getId(), piece.getPoLineId());
+      JsonArray.of(result).encodePrettily(), piece.getId(), piece.getPoLineId());
     return result;
   }
 

@@ -52,12 +52,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.getOrderTemplates(query, offset, limit)
-      .onSuccess(templates -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Successfully retrieved order templates collection: {}", JsonObject.mapFrom(templates).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(templates)));
-      })
+      .onSuccess(templates -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(templates))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 
@@ -100,13 +95,7 @@ public class OrderTemplatesAPI implements OrdersOrderTemplates {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     OrderTemplatesHelper helper = new OrderTemplatesHelper(okapiHeaders, vertxContext);
     helper.getOrderTemplateById(id)
-      .onSuccess(template -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Successfully retrieved order template: {}", JsonObject.mapFrom(template)
-            .encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(template)));
-      })
+      .onSuccess(template -> asyncResultHandler.handle(succeededFuture(helper.buildOkResponse(template))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, helper, t));
   }
 

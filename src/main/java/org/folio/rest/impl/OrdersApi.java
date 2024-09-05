@@ -95,12 +95,7 @@ public class OrdersApi extends BaseApi implements OrdersCompositeOrders, OrdersR
 
     purchaseOrderHelper
       .getPurchaseOrders(limit, offset, query, new RequestContext(vertxContext, okapiHeaders))
-      .onSuccess(orders -> {
-        if (logger.isInfoEnabled()) {
-          logger.debug("Successfully retrieved orders: {}", JsonObject.mapFrom(orders).encodePrettily());
-        }
-        asyncResultHandler.handle(succeededFuture(buildOkResponse(orders)));
-      })
+      .onSuccess(orders -> asyncResultHandler.handle(succeededFuture(buildOkResponse(orders))))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
 
