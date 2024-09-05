@@ -36,7 +36,7 @@ public class PieceUpdateFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   public Future<Void> updatePoLine(PieceUpdateHolder holder, RequestContext requestContext) {
     boolean isLineUpdated = updatePoLineWithoutSave(holder);
     if (isLineUpdated) {
-      return purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), requestContext);
+      return purchaseOrderLineService.saveOrderLine(holder.getPoLineToSave(), getPieceLocations(holder), requestContext);
     } else {
       return Future.succeededFuture();
     }
