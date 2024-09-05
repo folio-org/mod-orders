@@ -9,6 +9,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import io.vertx.core.json.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -17,20 +20,27 @@ import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 
 public class PieceUtil {
+  private static final Logger logger = LogManager.getLogger(PieceUtil.class);
+
   public static List<Location> findOrderPieceLineLocation(Piece piece, CompositePoLine compPoLine) {
+    List<Location> result;
     if ((piece.getFormat() == Piece.Format.ELECTRONIC || piece.getFormat() == Piece.Format.PHYSICAL) &&
                   (CompositePoLine.OrderFormat.P_E_MIX == compPoLine.getOrderFormat())) {
-      return compPoLine.getLocations().stream()
+      result = compPoLine.getLocations().stream()
         .filter(loc -> isLocationMatch(piece, loc)).collect(Collectors.toList());
     } else if (piece.getFormat() == Piece.Format.ELECTRONIC && CompositePoLine.OrderFormat.ELECTRONIC_RESOURCE == compPoLine.getOrderFormat()) {
-      return compPoLine.getLocations().stream()
+      result = compPoLine.getLocations().stream()
         .filter(loc -> Objects.nonNull(loc.getQuantityElectronic()))
         .filter(loc -> isLocationMatch(piece, loc)).collect(Collectors.toList());
+    } else {
+      result = compPoLine.getLocations().stream()
+        .filter(loc -> Objects.nonNull(loc.getQuantityPhysical()))
+        .filter(loc -> isLocationMatch(piece, loc))
+        .collect(Collectors.toList());
     }
-    return compPoLine.getLocations().stream()
-          .filter(loc -> Objects.nonNull(loc.getQuantityPhysical()))
-          .filter(loc -> isLocationMatch(piece, loc))
-          .collect(Collectors.toList());
+    logger.info("findOrderPieceLineLocation:: Found {} locations for pieceId: {} and poLineId: {}",
+      JsonObject.mapFrom(result).encodePrettily(), piece.getId(), piece.getPoLineId());
+    return result;
   }
 
   public static Map<Piece.Format, Integer> calculatePiecesQuantityWithoutLocation(CompositePoLine compPOL) {
