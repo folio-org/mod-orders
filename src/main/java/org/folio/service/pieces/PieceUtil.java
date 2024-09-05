@@ -38,7 +38,7 @@ public class PieceUtil {
         .filter(loc -> isLocationMatch(piece, loc))
         .collect(Collectors.toList());
     }
-    logger.info("findOrderPieceLineLocation:: Found {} locations for pieceId: {} and poLineId: {}",
+    logger.debug("findOrderPieceLineLocation:: Found {} locations for pieceId: {} and poLineId: {}",
       JsonArray.of(result).encodePrettily(), piece.getId(), piece.getPoLineId());
     return result;
   }
