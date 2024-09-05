@@ -126,7 +126,7 @@ public class ReceiptStatusConsistencyTest {
     logger.info("=== Test case to verify partially received status when at least one successfully received piece ===");
 
     CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
-    MockServer.addMockTitles(Collections.singletonList(compositePoLine));
+    MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED), context.succeeding(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());
@@ -159,7 +159,7 @@ public class ReceiptStatusConsistencyTest {
     logger.info("=== Test case to verify fully received status when all pieces successfully received ===");
 
     CompositePoLine compositePoLine = getMockAsJson(PO_LINES_MOCK_DATA_PATH, POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED).mapTo(CompositePoLine.class);
-    MockServer.addMockTitles(Collections.singletonList(compositePoLine));
+    MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_FULLY_RECEIVED), context.succeeding(result -> {
       logger.info("getPoLineSearches()--->" + getPoLineSearches());

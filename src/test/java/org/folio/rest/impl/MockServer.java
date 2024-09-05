@@ -43,6 +43,7 @@ import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestUtils.encodePrettily;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.getTitle;
@@ -344,6 +345,16 @@ public class MockServer {
     poLines.stream()
       .filter(line -> !line.getIsPackage() && isNotEmpty(line.getId()))
       .forEach(line -> addMockEntry(TITLES, getTitle(line)));
+  }
+
+  public static void addMockOrderData(List<CompositePoLine> poLines) {
+    poLines.stream()
+      .filter(poLine -> !poLine.getIsPackage() && isNotEmpty(poLine.getId()))
+      .forEach(poLine -> {
+        addMockEntry(PURCHASE_ORDER_STORAGE, getMinimalOrder(poLine));
+        addMockEntry(PO_LINES_STORAGE, poLine);
+        addMockEntry(TITLES, getTitle(poLine));
+      });
   }
 
   public static void addMockTitleWithId(CompositePoLine poLine, String titleId) {

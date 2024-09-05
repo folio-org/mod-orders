@@ -1,8 +1,10 @@
 package org.folio.models.pieces;
 
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Piece;
 
 import java.util.ArrayList;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 public class PiecesHolder {
+  private Pair<CompositePurchaseOrder, CompositePoLine> purchaseOrderPoLinePair;
   private Map<String, List<Piece>> piecesFromStorage;
   private Map<String, List<PiecePoLineDto>> itemsToRecreate;
 
@@ -58,12 +61,21 @@ public class PiecesHolder {
     }
   }
 
+  public Pair<CompositePurchaseOrder, CompositePoLine> getPurchaseOrderPoLinePair() {
+    return purchaseOrderPoLinePair;
+  }
+
   public Map<String, List<Piece>> getPiecesFromStorage() {
     return this.piecesFromStorage;
   }
 
   public Map<String, List<PiecePoLineDto>> getItemsToRecreate() {
     return this.itemsToRecreate;
+  }
+
+  public PiecesHolder withPurchaseOrderPoLinePair(Pair<CompositePurchaseOrder, CompositePoLine> purchaseOrderPoLinePair) {
+    this.purchaseOrderPoLinePair = purchaseOrderPoLinePair;
+    return this;
   }
 
   public PiecesHolder withPiecesFromStorage(Map<String, List<Piece>> piecesFromStorage) {

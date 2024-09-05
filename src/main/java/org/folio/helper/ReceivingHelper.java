@@ -4,6 +4,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.EnumSet;
 import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -64,28 +65,29 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
 
   public Future<ReceivingResults> receiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     return removeForbiddenEntities(requestContext)
-      .compose(vVoid -> processReceiveItems(receivingCollection, requestContext));
+      .compose(voidResult -> processReceiveItems(receivingCollection, requestContext));
   }
 
   private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     PiecesHolder holder = new PiecesHolder();
-
-    // 1. Get piece records from storage
-    return retrievePieceRecords(requestContext)
-      // 2. Filter locationId
+    // 1. Get purchase order and poLine from storage
+    return retrievePurchaseOrderPoLinePair(extractPoLineId(receivingCollection), holder, requestContext)
+      // 2. Get piece records from storage
+      .compose(voidResult -> retrievePieceRecords(requestContext))
+      // 3. Filter locationId
       .compose(piecesFromStorage -> {
         holder.withPiecesFromStorage(piecesFromStorage);
         return filterMissingLocations(piecesFromStorage, requestContext);
       })
-      // 3. Update items in the Inventory if required
+      // 4. Update items in the Inventory if required
       .compose(pieces -> updateInventoryItemsAndHoldings(pieces, holder, requestContext))
-      // 4. Update piece records with receiving details which do not have associated item
+      // 5. Update piece records with receiving details which do not have associated item
       .map(this::updatePieceRecordsWithoutItems)
-      // 5. Update received piece records in the storage
+      // 6. Update received piece records in the storage
       .compose(piecesByPoLineIds -> storeUpdatedPieceRecords(piecesByPoLineIds, requestContext))
-      // 6. Update PO Line status
+      // 7. Update PO Line status
       .compose(piecesByPoLineIds -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesByPoLineIds, requestContext))
-      // 7. Return results to the client
+      // 8. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(receivingCollection, piecesGroupedByPoLine));
   }
 
@@ -179,9 +181,9 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(PiecesHolder holder, JsonObject item, Piece piece, RequestContext locationContext) {
     ReceivedItem receivedItem = getByPiece(piece);
-    InventoryUtils.updateItemWithReceivedItemFields(item, receivedItem);
+    InventoryUtils.updateItemWithReceivedItemFields(holder, item, receivedItem);
     return inventoryItemManager.updateItem(item, locationContext)
       // Update Piece record object with receiving details if item updated
       // successfully
@@ -225,7 +227,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
     piece.setChronology(receivedItem.getChronology());
     piece.setCopyNumber(receivedItem.getCopyNumber());
     piece.setDisplayOnHolding(receivedItem.getDisplayOnHolding());
-    // Piece record might be received or rolled-back to Expected
+    // Piece record might be received or rolled-back to Expected if item status is "On-order" or "Order Closed"
     if (isOnOrderItemStatus(receivedItem)) {
       piece.setReceivedDate(null);
       piece.setReceivingStatus(Piece.ReceivingStatus.EXPECTED);
@@ -256,7 +258,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   }
 
   private boolean isOnOrderItemStatus(ReceivedItem receivedItem) {
-    return receivedItem.getItemStatus() == ReceivedItem.ItemStatus.ON_ORDER;
+    return EnumSet.of(ReceivedItem.ItemStatus.ON_ORDER, ReceivedItem.ItemStatus.ORDER_CLOSED).contains(receivedItem.getItemStatus());
   }
 
 }

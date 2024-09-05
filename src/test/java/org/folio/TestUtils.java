@@ -139,6 +139,12 @@ public final class TestUtils {
     }
   }
 
+  public static CompositePurchaseOrder getMinimalOrder(CompositePoLine poLine) {
+    return new CompositePurchaseOrder()
+      .withId(poLine.getPurchaseOrderId())
+      .withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+  }
+
   public static Title getTitle(CompositePoLine poLine) {
     return new Title().withId(UUID.randomUUID().toString())
       .withPoLineId(poLine.getId())

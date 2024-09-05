@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.models.ItemFields;
 import org.folio.models.pieces.BindPiecesHolder;
+import org.folio.models.pieces.PiecesHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.RestConstants;
@@ -300,7 +301,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(PiecesHolder holder, JsonObject item, Piece piece, RequestContext locationContext) {
     return null;
   }
 

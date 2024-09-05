@@ -6,10 +6,14 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.models.pieces.PiecesHolder;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Parameter;
@@ -49,6 +53,8 @@ import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 
 public class InventoryUtils {
+
+  protected static final Logger logger = LogManager.getLogger();
 
   // mod-configuration: config names and default values
   public static final String CONFIG_NAME_HOLDINGS_SOURCE_NAME = "inventory-holdingsSourceName";
@@ -222,9 +228,12 @@ public class InventoryUtils {
     }
   }
 
-  public static void updateItemWithCheckinPieceFields(JsonObject item, CheckInPiece checkinPiece) {
-    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
-
+  public static void updateItemWithCheckinPieceFields(PiecesHolder holder, JsonObject item, CheckInPiece checkinPiece) {
+    if (isOrderClosed(holder)) {
+      checkinPiece.withItemStatus(CheckInPiece.ItemStatus.ORDER_CLOSED);
+    } else {
+      item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
+    }
     if (StringUtils.isNotEmpty(checkinPiece.getDisplaySummary())) {
       item.put(ITEM_DISPLAY_SUMMARY, checkinPiece.getDisplaySummary());
     }
@@ -251,9 +260,12 @@ public class InventoryUtils {
     }
   }
 
-  public static void updateItemWithReceivedItemFields(JsonObject item, ReceivedItem receivedItem) {
-    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
-
+  public static void updateItemWithReceivedItemFields(PiecesHolder holder, JsonObject item, ReceivedItem receivedItem) {
+    if (isOrderClosed(holder)) {
+      receivedItem.withItemStatus(ReceivedItem.ItemStatus.ORDER_CLOSED);
+    } else {
+      item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
+    }
     if (StringUtils.isNotEmpty(receivedItem.getDisplaySummary())) {
       item.put(ITEM_DISPLAY_SUMMARY, receivedItem.getDisplaySummary());
     }
@@ -272,6 +284,10 @@ public class InventoryUtils {
     if (StringUtils.isNotEmpty(receivedItem.getCallNumber())) {
       item.put(ITEM_LEVEL_CALL_NUMBER, receivedItem.getCallNumber());
     }
+  }
+
+  private static boolean isOrderClosed(PiecesHolder holder) {
+    return Objects.nonNull(holder.getPurchaseOrderPoLinePair()) && holder.getPurchaseOrderPoLinePair().getKey().getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.CLOSED;
   }
 
   public static ItemRecreateConfig constructItemRecreateConfig(String receivingTenantId, RequestContext requestContext, boolean reuseInitialRequestContext) {
