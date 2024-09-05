@@ -42,7 +42,7 @@ public class PieceUpdateInventoryService {
   public Future<String> manualPieceFlowCreateItemRecord(Piece piece, CompositePurchaseOrder compPO,
                                                         CompositePoLine compPOL, RequestContext requestContext) {
     final int ITEM_QUANTITY = 1;
-    logger.info("manualPieceFlowCreateItemRecord:: Handling {} items for PO Line and holdings with id={}, receivingTenantId={}",
+    logger.debug("manualPieceFlowCreateItemRecord:: Handling {} items for PO Line and holdings with id={}, receivingTenantId={}",
       ITEM_QUANTITY, piece.getHoldingId(), piece.getReceivingTenantId());
     if (piece.getFormat() == Piece.Format.ELECTRONIC && DefaultPieceFlowsValidator.isCreateItemForElectronicPiecePossible(piece, compPOL)) {
       return inventoryItemManager.createMissingElectronicItems(compPO, compPOL, piece, ITEM_QUANTITY, requestContext)

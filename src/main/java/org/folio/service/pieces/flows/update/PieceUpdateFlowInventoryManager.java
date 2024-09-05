@@ -30,7 +30,6 @@ import io.vertx.core.json.JsonObject;
 public class PieceUpdateFlowInventoryManager {
 
   private static final Logger logger = LogManager.getLogger(PieceUpdateFlowInventoryManager.class);
-  private static final String UPDATE_INVENTORY_FOR_LINE_DONE = "Update inventory for line done";
 
   private final TitlesService titlesService;
   private final PieceUpdateInventoryService pieceUpdateInventoryService;
@@ -52,14 +51,18 @@ public class PieceUpdateFlowInventoryManager {
 
   public Future<Void> processInventory(PieceUpdateHolder holder, RequestContext requestContext) {
     final var locationContext = createContextWithNewTenantId(requestContext, holder.getPieceToUpdate().getReceivingTenantId());
-    return inventoryItemManager.updateItemWithPieceFields(holder.getPieceToUpdate(), locationContext)
+    Piece pieceToUpdate = holder.getPieceToUpdate();
+    return inventoryItemManager.updateItemWithPieceFields(pieceToUpdate, locationContext)
       .compose(v -> updateInventoryForPoLine(holder, locationContext, requestContext)
           .map(holder::withInstanceId)
           .compose(aHolder -> handleHolding(holder, locationContext))
           .compose(holdingId -> handleItem(holder, locationContext))
           .map(itemId -> Optional.ofNullable(itemId).map(holder.getPieceToUpdate()::withItemId))
           .compose(aVoid -> deleteHolding(holder, requestContext))
-          .onSuccess(pair -> logger.debug(UPDATE_INVENTORY_FOR_LINE_DONE))
+          .onSuccess(pair -> logger.info("processInventory:: successfully updated inventory for piece with itemId: {}, poLineId: {}, receivingTenantId: {}",
+            pieceToUpdate.getItemId(), pieceToUpdate.getPoLineId(), pieceToUpdate.getReceivingTenantId()))
+          .onFailure(t -> logger.error("Failed to update inventory for piece with itemId: {}, poLineId: {}, receivingTenantId: {}",
+            pieceToUpdate.getItemId(), pieceToUpdate.getPoLineId(), pieceToUpdate.getReceivingTenantId(), t))
           .mapEmpty()
       );
   }

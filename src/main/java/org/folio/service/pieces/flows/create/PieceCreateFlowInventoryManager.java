@@ -40,9 +40,9 @@ public class PieceCreateFlowInventoryManager {
       .compose(instanceId -> handleHolding(compPOL, piece, instanceId, locationContext))
       .compose(holdingId -> handleItem(compPO, compPOL, createItem, piece, locationContext))
       .map(itemId -> Optional.ofNullable(itemId).map(piece::withItemId))
-      .onSuccess(optional -> logger.info("processInventory:: successfully processed for piece with itemId: {}, poLineId: {}, receivingTenantId: {}",
+      .onSuccess(optional -> logger.info("processInventory:: successfully created inventory for piece with itemId: {}, poLineId: {}, receivingTenantId: {}",
         piece.getItemId(), piece.getPoLineId(), piece.getReceivingTenantId()))
-      .onFailure(t -> logger.error("Failed to process inventory for piece with itemId: {}, poLineId: {}, receivingTenantId: {}",
+      .onFailure(t -> logger.error("Failed to create inventory for piece with itemId: {}, poLineId: {}, receivingTenantId: {}",
         piece.getItemId(), piece.getPoLineId(), piece.getReceivingTenantId(), t))
       .mapEmpty();
   }
