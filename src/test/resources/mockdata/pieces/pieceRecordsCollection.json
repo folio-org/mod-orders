@@ -591,7 +591,39 @@
       "displayOnHolding": true,
       "discoverySuppress": false,
       "statusUpdatedDate": "2024-09-05T17:40:38.744+00:00"
+    },
+    {
+      "id": "82bbf9c4-9b1c-429d-a930-b7d19ad02f8f",
+      "format": "Physical",
+      "itemId": "354bef47-1984-4f37-be97-649863221695",
+      "isBound": false,
+      "titleId": "c845ff38-ff5c-4568-9a2f-491f02e8fb32",
+      "poLineId": "ec32e137-fd2f-4056-bfeb-a628f9c59e3b",
+      "holdingId": "3b72efa9-7b30-4eb5-b927-4780d8faa546",
+      "supplement": false,
+      "displaySummary": "1173-5-1",
+      "displayToPublic": false,
+      "receivingStatus": "Expected",
+      "displayOnHolding": true,
+      "discoverySuppress": false,
+      "statusUpdatedDate": "2024-09-06T13:33:22.393+00:00"
+    },
+    {
+      "id": "e1455e7f-fef4-4b17-be09-58c1f485ae5c",
+      "format": "Physical",
+      "itemId": "461820c8-987d-4fd0-833e-f0253df19b34",
+      "isBound": false,
+      "titleId": "53fa6263-f202-4fcb-8146-48dff84e86af",
+      "poLineId": "2fee3fb5-4c1d-4ad6-889a-5ffc832b1d7c",
+      "holdingId": "e7c7ecdd-f723-411f-a6df-d1c61bbbaa5a",
+      "supplement": false,
+      "displaySummary": "1173-5-2",
+      "displayToPublic": false,
+      "receivingStatus": "Expected",
+      "displayOnHolding": true,
+      "discoverySuppress": false,
+      "statusUpdatedDate": "2024-09-06T13:33:34.267+00:00"
     }
   ],
-  "totalRecords": 67
+  "totalRecords": 69
 }

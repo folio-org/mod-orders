@@ -1840,7 +1840,58 @@
       "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
       "purchaseOrderLineIdentifier": "64849972-9e37-4add-a83b-bd92e5211638",
       "effectiveCallNumberComponents": {}
+    },
+    {
+      "id": "354bef47-1984-4f37-be97-649863221695",
+      "hrid": "it00000000001",
+      "notes": [],
+      "status": {
+        "date": "2024-09-06T13:33:22.289+00:00",
+        "name": "On order"
+      },
+      "_version": 1,
+      "formerIds": [],
+      "yearCaption": [],
+      "displaySummary": "1173-5-1",
+      "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+      "circulationNotes": [],
+      "electronicAccess": [],
+      "holdingsRecordId": "3b72efa9-7b30-4eb5-b927-4780d8faa546",
+      "discoverySuppress": false,
+      "statisticalCodeIds": [],
+      "administrativeNotes": [],
+      "effectiveLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "purchaseOrderLineIdentifier": "ec32e137-fd2f-4056-bfeb-a628f9c59e3b",
+      "effectiveCallNumberComponents": {}
+    },
+    {
+      "id": "461820c8-987d-4fd0-833e-f0253df19b34",
+      "hrid": "it00000000002",
+      "tags": {
+        "tagList": []
+      },
+      "notes": [],
+      "status": {
+        "date": "2024-09-06T13:34:00.562Z",
+        "name": "Order closed"
+      },
+      "_version": 2,
+      "formerIds": [],
+      "yearCaption": [],
+      "displaySummary": "1173-5-2",
+      "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+      "circulationNotes": [],
+      "electronicAccess": [],
+      "holdingsRecordId": "e7c7ecdd-f723-411f-a6df-d1c61bbbaa5a",
+      "discoverySuppress": false,
+      "statisticalCodeIds": [],
+      "administrativeNotes": [],
+      "effectiveLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "purchaseOrderLineIdentifier": "2fee3fb5-4c1d-4ad6-889a-5ffc832b1d7c",
+      "effectiveCallNumberComponents": {}
     }
   ],
-  "totalRecords": 50
+  "totalRecords": 52
 }

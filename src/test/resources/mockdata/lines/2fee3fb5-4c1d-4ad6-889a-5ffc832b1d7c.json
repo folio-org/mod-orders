@@ -1,0 +1,60 @@
+{
+  "id": "2fee3fb5-4c1d-4ad6-889a-5ffc832b1d7c",
+  "cost": {
+    "currency": "USD",
+    "discountType": "percentage",
+    "listUnitPrice": 1.0,
+    "quantityPhysical": 1,
+    "poLineEstimatedPrice": 1.0
+  },
+  "rush": false,
+  "alerts": [],
+  "claims": [],
+  "source": "User",
+  "details": {
+    "productIds": [],
+    "isAcknowledged": false,
+    "isBinderyActive": false,
+    "subscriptionInterval": 0
+  },
+  "physical": {
+    "volumes": [],
+    "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+    "createInventory": "Instance, Holding, Item",
+    "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+  },
+  "isPackage": false,
+  "locations": [
+    {
+      "quantity": 1,
+      "holdingId": "e7c7ecdd-f723-411f-a6df-d1c61bbbaa5a",
+      "quantityPhysical": 1
+    }
+  ],
+  "collection": false,
+  "instanceId": "4589da14-19e3-407a-b1dd-75ab77dc47d7",
+  "orderFormat": "Physical Resource",
+  "checkinItems": true,
+  "contributors": [],
+  "poLineNumber": "10000-2",
+  "vendorDetail": {
+    "instructions": "",
+    "vendorAccount": "1234",
+    "referenceNumbers": []
+  },
+  "paymentStatus": "Cancelled",
+  "receiptStatus": "Cancelled",
+  "claimingActive": false,
+  "reportingCodes": [],
+  "titleOrPackage": "1173-5-2",
+  "automaticExport": false,
+  "purchaseOrderId": "0ea6b8bf-405e-4f06-aeb1-79853c48d41b",
+  "claimingInterval": 45,
+  "fundDistribution": [],
+  "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+  "searchLocationIds": [
+    "fcd64ce1-6995-48f0-840e-89ffa2288371"
+  ],
+  "donorOrganizationIds": [],
+  "cancellationRestriction": true
+}
