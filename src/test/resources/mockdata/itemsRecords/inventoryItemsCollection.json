@@ -1688,7 +1688,159 @@
         "id": "758258bc-ecc1-41b8-abca-f7b610822ffd",
         "name": "ORWIG ETHNO CD"
       }
+    },
+    {
+      "id": "400ffb07-3f43-4c08-9e54-6070a8aa446d",
+      "hrid": "it00000000001",
+      "notes": [],
+      "status": {
+        "date": "2024-08-22T05:46:38.213+00:00",
+        "name": "On order"
+      },
+      "_version": 3,
+      "formerIds": [],
+      "yearCaption": [],
+      "displaySummary": "1",
+      "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+      "circulationNotes": [],
+      "electronicAccess": [],
+      "holdingsRecordId": "5afdf421-7b02-43d7-9d93-917d1724a725",
+      "discoverySuppress": false,
+      "statisticalCodeIds": [],
+      "administrativeNotes": [],
+      "effectiveLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "purchaseOrderLineIdentifier": "aae3a75a-4e12-4e60-8c14-605b31d7593b",
+      "effectiveCallNumberComponents": {}
+    },
+    {
+      "id": "05b10ba2-adc1-4fe2-aa0f-8a05633d135b",
+      "hrid": "it00000000002",
+      "notes": [],
+      "status": {
+        "date": "2024-08-22T06:58:44.108+00:00",
+        "name": "On order"
+      },
+      "_version": 1,
+      "formerIds": [],
+      "yearCaption": [],
+      "displaySummary": "2",
+      "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+      "circulationNotes": [],
+      "electronicAccess": [],
+      "holdingsRecordId": "82220193-de57-4c10-afb0-0529b5368ff0",
+      "discoverySuppress": false,
+      "statisticalCodeIds": [],
+      "administrativeNotes": [],
+      "effectiveLocationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+      "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "purchaseOrderLineIdentifier": "aae3a75a-4e12-4e60-8c14-605b31d7593b",
+      "effectiveCallNumberComponents": {}
+    },
+    {
+      "id": "5bb7a68f-3753-47b3-ab22-476274743456",
+      "hrid": "it00000000068",
+      "notes": [],
+      "status": {
+        "date": "2024-07-22T10:34:49.772+00:00",
+        "name": "On order"
+      },
+      "_version": 1,
+      "metadata": {
+        "createdDate": "2024-07-22T10:34:49.771Z",
+        "updatedDate": "2024-07-22T10:34:49.771Z",
+        "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
+        "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
+      },
+      "formerIds": [],
+      "yearCaption": [],
+      "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+      "circulationNotes": [],
+      "electronicAccess": [],
+      "holdingsRecordId": "e5e5dbcf-4d4e-4c48-993f-af15b8bef5ed",
+      "statisticalCodeIds": [],
+      "administrativeNotes": [],
+      "effectiveLocationId": "7b434c63-b6d6-42eb-b071-add43ac69624",
+      "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "purchaseOrderLineIdentifier": "952bc8b4-9735-47f5-9a57-5376f5f6bd15",
+      "effectiveCallNumberComponents": {}
+    },
+    {
+      "id": "2d4b8528-ebb8-46b6-87a9-56e667c3f5b6",
+      "hrid": "it00000000061",
+      "notes": [],
+      "status": {
+        "date": "2024-07-19T17:43:24.883+00:00",
+        "name": "On order"
+      },
+      "_version": 1,
+      "metadata": {
+        "createdDate": "2024-07-19T17:43:24.882Z",
+        "updatedDate": "2024-07-19T17:43:24.882Z",
+        "createdByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b",
+        "updatedByUserId": "98a2b51b-0550-4d8e-9915-f7642a24328b"
+      },
+      "formerIds": [],
+      "yearCaption": [],
+      "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+      "circulationNotes": [],
+      "electronicAccess": [],
+      "holdingsRecordId": "873e87d4-0c17-430a-81ed-93ffbb8f0d8e",
+      "statisticalCodeIds": [],
+      "administrativeNotes": [],
+      "effectiveLocationId": "7b434c63-b6d6-42eb-b071-add43ac69624",
+      "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "purchaseOrderLineIdentifier": "391e39b1-f891-4d92-ab14-b5760bdac937",
+      "effectiveCallNumberComponents": {}
+    },
+    {
+      "id": "74ad86a6-d5cb-4dbb-bb41-d8d0c389e89f",
+      "hrid": "it00000000003",
+      "notes": [],
+      "status": {
+        "date": "2024-08-22T08:12:11.357+00:00",
+        "name": "On order"
+      },
+      "_version": 3,
+      "formerIds": [],
+      "yearCaption": [],
+      "displaySummary": "1",
+      "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+      "circulationNotes": [],
+      "electronicAccess": [],
+      "holdingsRecordId": "79b51935-de14-4715-b6de-3c3a8d749208",
+      "discoverySuppress": false,
+      "statisticalCodeIds": [],
+      "administrativeNotes": [],
+      "effectiveLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "purchaseOrderLineIdentifier": "2bf2b04c-716a-4c08-bc48-831f5d1e6802",
+      "effectiveCallNumberComponents": {}
+    },
+    {
+      "id": "0f67d6da-0ce4-44aa-8ea2-582024360867",
+      "hrid": "it00000000003",
+      "notes": [],
+      "status": {
+        "date": "2024-08-22T08:12:11.357+00:00",
+        "name": "On order"
+      },
+      "_version": 3,
+      "formerIds": [],
+      "yearCaption": [],
+      "displaySummary": "1",
+      "materialTypeId": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+      "circulationNotes": [],
+      "electronicAccess": [],
+      "holdingsRecordId": "83380cec-dded-46d8-8f33-ce82468acdaf",
+      "discoverySuppress": false,
+      "statisticalCodeIds": [],
+      "administrativeNotes": [],
+      "effectiveLocationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+      "permanentLoanTypeId": "2b94c631-fca9-4892-a730-03ee529ffe27",
+      "purchaseOrderLineIdentifier": "64849972-9e37-4add-a83b-bd92e5211638",
+      "effectiveCallNumberComponents": {}
     }
   ],
-  "totalRecords": 43
+  "totalRecords": 50
 }

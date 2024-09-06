@@ -229,7 +229,7 @@ public class TitlesApiTest {
 
     logger.info(JsonObject.mapFrom(resp).encodePrettily());
 
-    assertEquals(4, resp.getTitles().size());
+    assertEquals(5, resp.getTitles().size());
   }
 
   @Test

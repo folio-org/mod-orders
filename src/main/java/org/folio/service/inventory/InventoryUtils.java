@@ -231,9 +231,8 @@ public class InventoryUtils {
   public static void updateItemWithCheckinPieceFields(PiecesHolder holder, JsonObject item, CheckInPiece checkinPiece) {
     if (isOrderClosed(holder)) {
       checkinPiece.withItemStatus(CheckInPiece.ItemStatus.ORDER_CLOSED);
-    } else {
-      item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
     }
+    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
     if (StringUtils.isNotEmpty(checkinPiece.getDisplaySummary())) {
       item.put(ITEM_DISPLAY_SUMMARY, checkinPiece.getDisplaySummary());
     }
@@ -263,9 +262,8 @@ public class InventoryUtils {
   public static void updateItemWithReceivedItemFields(PiecesHolder holder, JsonObject item, ReceivedItem receivedItem) {
     if (isOrderClosed(holder)) {
       receivedItem.withItemStatus(ReceivedItem.ItemStatus.ORDER_CLOSED);
-    } else {
-      item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
     }
+    item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
     if (StringUtils.isNotEmpty(receivedItem.getDisplaySummary())) {
       item.put(ITEM_DISPLAY_SUMMARY, receivedItem.getDisplaySummary());
     }
@@ -287,7 +285,10 @@ public class InventoryUtils {
   }
 
   private static boolean isOrderClosed(PiecesHolder holder) {
-    return Objects.nonNull(holder.getPurchaseOrderPoLinePair()) && holder.getPurchaseOrderPoLinePair().getKey().getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.CLOSED;
+    if (Objects.isNull(holder.getPurchaseOrderPoLinePair())) {
+      return false;
+    }
+    return holder.getPurchaseOrderPoLinePair().getKey().getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.CLOSED;
   }
 
   public static ItemRecreateConfig constructItemRecreateConfig(String receivingTenantId, RequestContext requestContext, boolean reuseInitialRequestContext) {

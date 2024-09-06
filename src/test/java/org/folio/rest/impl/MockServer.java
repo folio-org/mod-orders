@@ -1238,7 +1238,6 @@ public class MockServer {
       try {
         JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
         JsonArray jsonArray = items.getJsonArray(ITEMS);
-        appendEcsItems(jsonArray);
 
         if (query.startsWith("id==")) {
           List<String> itemIds = extractIdsFromQuery(query);
@@ -1278,14 +1277,6 @@ public class MockServer {
     }
   }
 
-  private static void appendEcsItems(JsonArray jsonArray) throws IOException {
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_SINGLE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_SINGLE_ITEM))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_1_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_2_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS))));
-  }
-
   private void handleGetInventoryItemRecordById(RoutingContext ctx) {
     logger.info("handleGetInventoryItemRecordById got: " + ctx.request().path());
 
@@ -1300,7 +1291,6 @@ public class MockServer {
       try {
         JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
         JsonArray jsonArray = items.getJsonArray(ITEMS);
-        appendEcsItems(jsonArray);
 
         final Iterator<Object> iterator = jsonArray.iterator();
           while (iterator.hasNext()) {
