@@ -54,6 +54,7 @@ import org.folio.service.caches.InventoryCache;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 import org.junit.jupiter.api.AfterAll;
@@ -175,7 +176,9 @@ public class PieceUpdateFlowManagerTest {
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     doReturn(succeededFuture(null))
-      .when(purchaseOrderLineService).saveOrderLine(any(CompositePoLine.class), eq(requestContext));
+      .when(purchaseOrderLineService).saveOrderLine(any(CompositePoLine.class),
+        eq(PieceUtil.findOrderPieceLineLocation(pieceToUpdate, PoLineCommonUtil.convertToCompositePoLine(poLine))),
+        eq(requestContext));
 
     //When
     pieceUpdateFlowManager.updatePiece(pieceToUpdate, true, true, requestContext).result();

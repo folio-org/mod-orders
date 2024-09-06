@@ -20,11 +20,13 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.ProtectionService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
@@ -99,7 +101,7 @@ public class PieceUpdateFlowManager {
         }
         return null;
       })
-      .onFailure(t -> logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t.getCause()))
+      .onFailure(t -> logger.error("User to update piece with id={}", holder.getPieceToUpdate().getId(), t))
       .mapEmpty();
   }
 
@@ -115,14 +117,19 @@ public class PieceUpdateFlowManager {
         List<Piece> piecesToUpdate = List.of(holder.getPieceToUpdate());
         CompositePoLine poLineToSave = holder.getPoLineToSave();
         poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
-        return purchaseOrderLineService.saveOrderLine(poLineToSave, requestContext);
+        List<Location> locations = PieceUtil.findOrderPieceLineLocation(holder.getPieceToUpdate(), poLineToSave);
+        return purchaseOrderLineService.saveOrderLine(poLineToSave, locations, requestContext);
       }).compose(v -> {
         if (!Boolean.TRUE.equals(originPoLine.getIsPackage()) &&
           !Boolean.TRUE.equals(originPoLine.getCheckinItems())) {
           return updatePoLineService.updatePoLine(holder, requestContext);
         }
         return Future.succeededFuture();
-      });
+      })
+      .onSuccess(aVoid -> logger.info("updatePoLine:: Po line with id: {} is updated for pieceId: {}",
+        originPoLine.getId(), holder.getPieceToUpdate().getId()))
+      .onFailure(t -> logger.error("Failed to update PO line with id: {} for pieceId: {}",
+        originPoLine.getId(), holder.getPieceToUpdate().getId(), t));
   }
 
   CompositePoLine.ReceiptStatus calculatePoLineReceiptStatus(CompositePoLine poLine, List<Piece> fromStorage, List<Piece> toUpdate) {

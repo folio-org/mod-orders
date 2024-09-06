@@ -23,6 +23,11 @@ public class PieceDeleteFlowPoLineService extends BasePieceFlowUpdatePoLineServi
   }
 
   @Override
+  protected List<Location> getPieceLocations(PieceDeletionHolder holder) {
+    return PieceUtil.findOrderPieceLineLocation(holder.getPieceToDelete(), holder.getPoLineToSave());
+  }
+
+  @Override
   public boolean poLineUpdateQuantity(PieceDeletionHolder holder) {
     CompositePoLine lineToSave = holder.getPoLineToSave();
     Piece piece = holder.getPieceToDelete();
