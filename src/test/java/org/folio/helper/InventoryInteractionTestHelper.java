@@ -35,6 +35,7 @@ import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_N
 import static org.folio.service.inventory.InventoryInstanceManager.CONTRIBUTOR_NAME_TYPE_ID;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_CONTRIBUTORS;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_DATE_OF_PUBLICATION;
+import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_DISCOVERY_SUPPRESS;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIERS;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_ID;
 import static org.folio.service.inventory.InventoryInstanceManager.INSTANCE_IDENTIFIER_TYPE_VALUE;
@@ -520,6 +521,7 @@ public class InventoryInteractionTestHelper {
 
   private static void verifyInstanceRecordRequest(Header tenant, JsonObject instance, CompositePoLine line) {
     assertThat(instance.getString(INSTANCE_TITLE), equalTo(line.getTitleOrPackage()));
+    assertThat(instance.getBoolean(INSTANCE_DISCOVERY_SUPPRESS), equalTo(false));
     assertThat(instance.getString(INSTANCE_SOURCE), equalTo("FOLIO"));
     assertThat(instance.getString(INSTANCE_STATUS_ID), equalTo(getInstanceStatusId(tenant)));
     assertThat(instance.getString(INSTANCE_TYPE_ID), equalTo(getInstanceTypeId(tenant)));

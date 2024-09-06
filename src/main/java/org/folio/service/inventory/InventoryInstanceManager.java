@@ -75,6 +75,7 @@ public class InventoryInstanceManager {
   public static final String CONTRIBUTOR_NAME_TYPES = "contributorNameTypes";
   public static final String INSTANCE_STATUSES = "instanceStatuses";
   public static final String INSTANCE_TYPES = "instanceTypes";
+  public static final String INSTANCE_DISCOVERY_SUPPRESS = "discoverySuppress";
 
   private final RestClient restClient;
   private final ConfigurationEntriesCache configurationEntriesCache;
@@ -110,6 +111,7 @@ public class InventoryInstanceManager {
     // MODORDERS-145 The Source and source code are required by schema
     instance.put(INSTANCE_SOURCE, SOURCE_FOLIO);
     instance.put(INSTANCE_TITLE, title.getTitle());
+    instance.put(INSTANCE_DISCOVERY_SUPPRESS, false);
 
     if (title.getEdition() != null) {
       instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(title.getEdition())));
@@ -220,6 +222,7 @@ public class InventoryInstanceManager {
     // MODORDERS-145 The Source and source code are required by schema
     instance.put(INSTANCE_SOURCE, SOURCE_FOLIO);
     instance.put(INSTANCE_TITLE, compPOL.getTitleOrPackage());
+    instance.put(INSTANCE_DISCOVERY_SUPPRESS, false);
 
     if (compPOL.getEdition() != null) {
       instance.put(INSTANCE_EDITIONS, new JsonArray(singletonList(compPOL.getEdition())));
