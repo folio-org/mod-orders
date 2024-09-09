@@ -223,8 +223,11 @@ public class UnOpenCompositeOrderManager {
         deletedHoldingIds.add(inventoryItemManager.getItemsByHoldingId(holdingId, newContext)
           .compose(items -> {
             if (items.isEmpty()) {
+              logger.info("deleteHoldings:: Deleting holdings, holdingId: {}", holdingId);
               return inventoryHoldingManager.deleteHoldingById(holdingId, true, newContext)
                 .map(v -> Pair.of(holdingId, permanentLocationId));
+            } else {
+              logger.info("deleteHoldings:: Cannot delete holdings with items, holdingId: {}, items: {}", holdingId, items.size());
             }
             return Future.succeededFuture();
           }));
