@@ -6,6 +6,7 @@ import static org.folio.RestTestUtils.prepareHeaders;
 import static org.folio.RestTestUtils.verifyDeleteResponse;
 import static org.folio.RestTestUtils.verifyGet;
 import static org.folio.RestTestUtils.verifyPostResponse;
+import static org.folio.RestTestUtils.verifyPostResponseWithQueryParams;
 import static org.folio.RestTestUtils.verifyPut;
 import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.initSpringContext;
@@ -20,6 +21,7 @@ import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
+import static org.folio.TestUtils.getTitle;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
@@ -36,7 +38,10 @@ import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_HOLDINGS_RECORD_JSON;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_INSTANCE_JSON;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_ITEM_JSON;
+import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
+import static org.folio.rest.impl.MockServer.getCreatedItems;
+import static org.folio.rest.impl.MockServer.getCreatedPieces;
 import static org.folio.service.inventory.InventoryUtils.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryUtils.INSTANCES;
 import static org.folio.service.inventory.InventoryUtils.ITEMS;
@@ -49,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -62,6 +68,7 @@ import org.folio.ApiTestSuite;
 import org.folio.HttpStatus;
 import org.folio.config.ApplicationConfig;
 import org.folio.orders.events.handlers.HandlersTestHelper;
+import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
@@ -141,6 +148,100 @@ public class PieceApiTest {
     int status500 = HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt();
     verifyPostResponse(PIECES_ENDPOINT, JsonObject.mapFrom(postPieceRq).encode(), prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID,
       new Header(X_ECHO_STATUS, String.valueOf(status500))), APPLICATION_JSON, status500);
+  }
+
+  @Test
+  void testPostPhysicalPieceCancelledPurchaseOrder() {
+    logger.info("=== Test POST physical piece with a cancelled purchase order ===");
+
+    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
+    Title tile = getTitle(compositePoLine);
+    addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
+    addMockEntry(PO_LINES_STORAGE, compositePoLine);
+    addMockEntry(TITLES, tile);
+
+    Location location = compositePoLine.getLocations().stream().findFirst().orElseThrow();
+    Piece piece = new Piece().withPoLineId(compositePoLine.getId())
+      .withTitleId(tile.getId())
+      .withFormat(Piece.Format.PHYSICAL)
+      .withLocationId(location.getLocationId())
+      .withHoldingId(location.getHoldingId());
+
+    assertThat(piece.getId(), nullValue());
+
+    Piece createdPiece = verifyPostResponseWithQueryParams(PIECES_ENDPOINT, JsonObject.mapFrom(piece).encode(),
+      Map.of("createItem", "true"),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON,
+      HttpStatus.HTTP_CREATED.toInt()).as(Piece.class);
+
+    assertThat(createdPiece.getId(), notNullValue());
+    assertThat(createdPiece.getItemId(), notNullValue());
+    assertThat(createdPiece.getReceivingStatus().value(), is(Piece.ReceivingStatus.EXPECTED.value()));
+
+    List<JsonObject> piecesCreated = getCreatedPieces();
+    List<JsonObject> itemsCreated = getCreatedItems();
+
+    assertThat(piecesCreated, hasSize(1));
+    assertThat(itemsCreated, hasSize(1));
+
+    for (JsonObject itemJson : itemsCreated) {
+      logger.info("Item with from a cancelled purchase order: {}", JsonObject.mapFrom(itemJson).encodePrettily());
+      assertThat(itemJson.getString("id"), is(createdPiece.getItemId()));
+      assertThat(itemJson.getString("purchaseOrderLineIdentifier"), is(compositePoLine.getId()));
+      assertThat(itemJson.getJsonObject("status").getString("name"), is(CheckInPiece.ItemStatus.ORDER_CLOSED.value()));
+    }
+  }
+
+  private static Stream<Arguments> testPostPieceCancelledOrderLineArgs() {
+    return Stream.of(
+      Arguments.of(15, CheckInPiece.ItemStatus.ON_ORDER),
+      Arguments.of(16, CheckInPiece.ItemStatus.ORDER_CLOSED)
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("testPostPieceCancelledOrderLineArgs")
+  void testPostPieceCancelledOrderLine(int poLineIdx, CheckInPiece.ItemStatus itemStatus) {
+    logger.info("=== Test POST physical piece with a cancelled order line ===");
+
+    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    Title tile = getTitle(compositePoLine);
+    addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
+    addMockEntry(PO_LINES_STORAGE, compositePoLine);
+    addMockEntry(TITLES, tile);
+
+    Location location = compositePoLine.getLocations().stream().findFirst().orElseThrow();
+    Piece piece = new Piece().withPoLineId(compositePoLine.getId())
+      .withTitleId(tile.getId())
+      .withFormat(Piece.Format.PHYSICAL)
+      .withLocationId(location.getLocationId())
+      .withHoldingId(location.getHoldingId());
+
+    assertThat(piece.getId(), nullValue());
+
+    Piece createdPiece = verifyPostResponseWithQueryParams(PIECES_ENDPOINT, JsonObject.mapFrom(piece).encode(),
+      Map.of("createItem", "true"),
+      prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, X_OKAPI_USER_ID), APPLICATION_JSON,
+      HttpStatus.HTTP_CREATED.toInt()).as(Piece.class);
+
+    assertThat(createdPiece.getId(), notNullValue());
+    assertThat(createdPiece.getItemId(), notNullValue());
+    assertThat(createdPiece.getReceivingStatus().value(), is(Piece.ReceivingStatus.EXPECTED.value()));
+
+    List<JsonObject> piecesCreated = getCreatedPieces();
+    List<JsonObject> itemsCreated = getCreatedItems();
+
+    assertThat(piecesCreated, hasSize(1));
+    assertThat(itemsCreated, hasSize(1));
+
+    for (JsonObject itemJson : itemsCreated) {
+      logger.info("Item with from a cancelled order line: {}", JsonObject.mapFrom(itemJson).encodePrettily());
+      assertThat(itemJson.getString("id"), is(createdPiece.getItemId()));
+      assertThat(itemJson.getString("purchaseOrderLineIdentifier"), is(compositePoLine.getId()));
+      assertThat(itemJson.getJsonObject("status").getString("name"), is(itemStatus.value()));
+    }
   }
 
   @Test

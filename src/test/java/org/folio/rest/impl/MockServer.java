@@ -266,7 +266,7 @@ public class MockServer {
   public static final String ACQUISITION_METHODS_COLLECTION = ACQUISITION_METHOD_MOCK_DATA_PATH + "acquisitionMethods.json";
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
   private static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
-  private static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
+  public static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
   private static final String ROUTING_LISTS_PATH = BASE_MOCK_DATA_PATH + "routing-lists/routing-lists.json";
   public static final String BUDGETS_PATH = BASE_MOCK_DATA_PATH + "budgets/budgets.json";
   public static final String LEDGERS_PATH = BASE_MOCK_DATA_PATH + "ledgers/ledgers.json";
@@ -393,7 +393,7 @@ public class MockServer {
 
   public static List<JsonObject> getPoLineBatchUpdates() {
     try {
-      sleep(1000);
+      sleep(500);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
