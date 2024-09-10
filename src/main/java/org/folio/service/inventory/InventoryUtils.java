@@ -228,10 +228,7 @@ public class InventoryUtils {
     }
   }
 
-  public static void updateItemWithCheckinPieceFields(PiecesHolder holder, JsonObject item, CheckInPiece checkinPiece) {
-    if (isOrderClosed(holder)) {
-      checkinPiece.withItemStatus(CheckInPiece.ItemStatus.ORDER_CLOSED);
-    }
+  public static void updateItemWithCheckinPieceFields(JsonObject item, CheckInPiece checkinPiece) {
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, checkinPiece.getItemStatus().value()));
     if (StringUtils.isNotEmpty(checkinPiece.getDisplaySummary())) {
       item.put(ITEM_DISPLAY_SUMMARY, checkinPiece.getDisplaySummary());

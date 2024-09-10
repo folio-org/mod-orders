@@ -61,7 +61,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static java.lang.Thread.sleep;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
 import static org.folio.RestTestUtils.verifyDeleteResponse;
@@ -764,7 +763,7 @@ public class CheckinReceivingApiTest {
     for (Piece piece : pieces) {
       JsonObject itemJson = itemUpdates.stream().filter(json -> json.getString(ID).equals(piece.getItemId())).findFirst().orElseThrow();
       assertThat(itemJson.getString("holdingsRecordId"), is(piece.getHoldingId()));
-      assertThat(itemJson.getJsonObject("status").getString("name"), is(CheckInPiece.ItemStatus.ORDER_CLOSED.value()));
+      assertThat(itemJson.getJsonObject("status").getString("name"), is(CheckInPiece.ItemStatus.IN_PROCESS.value()));
     }
 
     // Verify no status updated for cancelled order
@@ -883,9 +882,6 @@ public class CheckinReceivingApiTest {
 
     ReceivingResults results = verifyPostResponse(ORDERS_CHECKIN_ENDPOINT, JsonObject.mapFrom(checkinCollection).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_ECS), APPLICATION_JSON, 200).as(ReceivingResults.class);
-
-    // Added to make the test wait for POL batch update
-    sleep(1000);
 
     assertThat(results.getTotalRecords(), equalTo(checkinCollection.getTotalRecords()));
 

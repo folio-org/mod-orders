@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static java.lang.Thread.sleep;
 import static java.time.temporal.ChronoUnit.DAYS;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -283,9 +284,6 @@ public class MockServer {
   public static final String ECS_UNIVERSITY_INSTANCE_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_instance.json";
   public static final String ECS_UNIVERSITY_HOLDINGS_RECORD_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_holdings_record.json";
   public static final String ECS_UNIVERSITY_ITEM_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item.json";
-  public static final String ECS_UNIVERSITY_ITEM_SINGLE_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item_single.json";
-  public static final String ECS_UNIVERSITY_ITEM_MULTIPLE_1_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item_multiple_1.json";
-  public static final String ECS_UNIVERSITY_ITEM_MULTIPLE_2_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item_multiple_2.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
@@ -394,6 +392,11 @@ public class MockServer {
   }
 
   public static List<JsonObject> getPoLineBatchUpdates() {
+    try {
+      sleep(1000);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
     return serverRqRs.get(PO_LINES_BATCH_STORAGE, HttpMethod.PUT);
   }
 
