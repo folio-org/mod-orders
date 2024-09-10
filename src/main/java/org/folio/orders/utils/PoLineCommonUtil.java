@@ -274,9 +274,9 @@ public final class PoLineCommonUtil {
     JsonPathParser oldObject = new JsonPathParser(objectFromStorage);
     JsonPathParser newObject = new JsonPathParser(requestObject);
     for (String field : protectedFields) {
-      if (oldObject.getValueAt(field) instanceof JsonArray) {
-        var oldList = ((JsonArray) oldObject.getValueAt(field)).getList();
-        var newList = ((JsonArray) newObject.getValueAt(field)).getList();
+      if (oldObject.getValueAt(field) instanceof JsonArray || newObject.getValueAt(field) instanceof JsonArray) {
+        var oldList = getArray(oldObject, field);
+        var newList = getArray(newObject, field);
         if (oldList.size() != newList.size() || !CollectionUtils.containsAll(oldList, newList)) {
           fields.add(field);
         }
@@ -292,6 +292,14 @@ public final class PoLineCommonUtil {
     }
 
     return objectFromStorage;
+  }
+
+  private static List getArray(JsonPathParser parser, String field) {
+    Object valueAt = parser.getValueAt(field);
+    if (!(valueAt instanceof JsonArray jsonArray)) {
+      return new ArrayList<>();
+    }
+    return jsonArray.getList();
   }
 
   public static void verifyOngoingFieldsChanged(JsonObject compPOFromStorageJson, CompositePurchaseOrder compPO) {
