@@ -93,6 +93,46 @@ public class PoLineCommonUtilTest {
   }
 
   @Test
+  void testShouldHandleNullArrayFromStorage() {
+    //given
+    List<String> protectedFields = List.of("details.productIds");
+    PoLine lineFromStorage = new PoLine()
+      .withId(UUID.randomUUID().toString())
+      .withDetails(null);
+    CompositePoLine requestObject = new CompositePoLine()
+      .withId(UUID.randomUUID().toString())
+      .withDetails(new Details().withProductIds(List.of()));
+    JsonObject lineFromStorageJson = JsonObject.mapFrom(lineFromStorage);
+
+    //when
+    JsonObject result = PoLineCommonUtil
+      .verifyProtectedFieldsChanged(protectedFields, lineFromStorageJson, JsonObject.mapFrom(requestObject));
+
+    //then
+    assertEquals(result, lineFromStorageJson);
+  }
+
+  @Test
+  void shouldHandleNullArrayFromRequest() {
+    //given
+    List<String> protectedFields = List.of("details.productIds");
+    PoLine lineFromStorage = new PoLine()
+      .withId(UUID.randomUUID().toString())
+      .withDetails(new Details().withProductIds(List.of()));
+    CompositePoLine requestObject = new CompositePoLine()
+      .withId(UUID.randomUUID().toString())
+      .withDetails(null);
+    JsonObject lineFromStorageJson = JsonObject.mapFrom(lineFromStorage);
+
+    //when
+    JsonObject result = PoLineCommonUtil
+      .verifyProtectedFieldsChanged(protectedFields, lineFromStorageJson, JsonObject.mapFrom(requestObject));
+
+    //then
+    assertEquals(result, lineFromStorageJson);
+  }
+
+  @Test
   void testShouldThrowExceptionBecauseRequiredFieldWasUpdated() {
     List<String> protectedFields = List.of("details.productIds");
     String productIdType = "8261054f-be78-422d-bd51-4ed9f33c3422";
