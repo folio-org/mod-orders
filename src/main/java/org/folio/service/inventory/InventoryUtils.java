@@ -13,6 +13,7 @@ import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
+import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Contributor;
 import org.folio.rest.jaxrs.model.Error;
@@ -257,7 +258,7 @@ public class InventoryUtils {
   }
 
   public static void updateItemWithReceivedItemFields(PiecesHolder holder, JsonObject item, ReceivedItem receivedItem) {
-    if (isOrderClosed(holder)) {
+    if (isOrderClosedOrPoLineCancelled(holder)) {
       receivedItem.withItemStatus(ReceivedItem.ItemStatus.ORDER_CLOSED);
     }
     item.put(ITEM_STATUS, new JsonObject().put(ITEM_STATUS_NAME, receivedItem.getItemStatus().value()));
@@ -281,11 +282,16 @@ public class InventoryUtils {
     }
   }
 
-  private static boolean isOrderClosed(PiecesHolder holder) {
-    if (Objects.isNull(holder.getPurchaseOrderPoLinePair())) {
+  private static boolean isOrderClosedOrPoLineCancelled(PiecesHolder holder) {
+    var orderPoLinePair = holder.getPurchaseOrderPoLinePair();
+    if (Objects.isNull(orderPoLinePair)) {
       return false;
     }
-    return holder.getPurchaseOrderPoLinePair().getKey().getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.CLOSED;
+    var purchaseOrder = orderPoLinePair.getKey();
+    var poLine = orderPoLinePair.getValue();
+    return purchaseOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.CLOSED
+      || poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.CANCELLED
+      && poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.CANCELLED;
   }
 
   public static ItemRecreateConfig constructItemRecreateConfig(String receivingTenantId, RequestContext requestContext, boolean reuseInitialRequestContext) {

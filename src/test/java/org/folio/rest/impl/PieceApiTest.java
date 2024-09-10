@@ -42,6 +42,9 @@ import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
+import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
 import static org.folio.service.inventory.InventoryUtils.HOLDINGS_RECORDS;
 import static org.folio.service.inventory.InventoryUtils.INSTANCES;
 import static org.folio.service.inventory.InventoryUtils.ITEMS;
@@ -187,9 +190,9 @@ public class PieceApiTest {
 
     for (JsonObject itemJson : itemsCreated) {
       logger.info("Item with from a cancelled purchase order: {}", JsonObject.mapFrom(itemJson).encodePrettily());
-      assertThat(itemJson.getString("id"), is(createdPiece.getItemId()));
-      assertThat(itemJson.getString("purchaseOrderLineIdentifier"), is(compositePoLine.getId()));
-      assertThat(itemJson.getJsonObject("status").getString("name"), is(CheckInPiece.ItemStatus.ORDER_CLOSED.value()));
+      assertThat(itemJson.getString(ID), is(createdPiece.getItemId()));
+      assertThat(itemJson.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), is(compositePoLine.getId()));
+      assertThat(itemJson.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), is(CheckInPiece.ItemStatus.ORDER_CLOSED.value()));
     }
   }
 
@@ -238,9 +241,9 @@ public class PieceApiTest {
 
     for (JsonObject itemJson : itemsCreated) {
       logger.info("Item with from a cancelled order line: {}", JsonObject.mapFrom(itemJson).encodePrettily());
-      assertThat(itemJson.getString("id"), is(createdPiece.getItemId()));
-      assertThat(itemJson.getString("purchaseOrderLineIdentifier"), is(compositePoLine.getId()));
-      assertThat(itemJson.getJsonObject("status").getString("name"), is(itemStatus.value()));
+      assertThat(itemJson.getString(ID), is(createdPiece.getItemId()));
+      assertThat(itemJson.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER), is(compositePoLine.getId()));
+      assertThat(itemJson.getJsonObject(ITEM_STATUS).getString(ITEM_STATUS_NAME), is(itemStatus.value()));
     }
   }
 

@@ -5,7 +5,7 @@
       "received": 1,
       "receivedItems": [
         {
-          "itemStatus": "In process",
+          "itemStatus": "On order",
           "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
           "pieceId": "82bbf9c4-9b1c-429d-a930-b7d19ad02f8f"
         }
