@@ -116,7 +116,9 @@ public class PieceUpdateFlowManager {
         }
         List<Piece> piecesToUpdate = List.of(holder.getPieceToUpdate());
         CompositePoLine poLineToSave = holder.getPoLineToSave();
-        poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
+        if (!poLineToSave.getReceiptStatus().equals(CompositePoLine.ReceiptStatus.CANCELLED)) {
+          poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
+        }
         List<Location> locations = PieceUtil.findOrderPieceLineLocation(holder.getPieceToUpdate(), poLineToSave);
         return purchaseOrderLineService.saveOrderLine(poLineToSave, locations, requestContext);
       }).compose(v -> {
