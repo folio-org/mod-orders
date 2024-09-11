@@ -65,7 +65,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     PiecesHolder holder = new PiecesHolder();
     // 1. Get purchase order and poLine from storage
-    return retrievePurchaseOrderPoLinePair(extractPoLineId(checkinCollection), holder, requestContext)
+    return findAndSetPurchaseOrderPoLinePair(extractPoLineId(checkinCollection), holder, requestContext)
       // 2. Get piece records from storage
       .compose(voidResult -> createItemsWithPieceUpdate(checkinCollection, holder, requestContext))
       // 3. Filter locationId
@@ -93,11 +93,13 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
           .forEach(checkInPiece -> pieces.forEach(piece -> {
             var srcTenantId = piece.getReceivingTenantId();
             var dstTenantId = checkInPiece.getReceivingTenantId();
+            var purchaseOrder = holder.getPurchaseOrderPoLinePair().getKey();
+            var poLine = holder.getPurchaseOrderPoLinePair().getValue();
             if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
-              pieceFutures.add(pieceCreateFlowInventoryManager.processInventory(holder.getPurchaseOrderPoLinePair().getKey(), holder.getPurchaseOrderPoLinePair().getValue(), piece, checkInPiece.getCreateItem(), requestContext)
+              pieceFutures.add(pieceCreateFlowInventoryManager.processInventory(purchaseOrder, poLine, piece, checkInPiece.getCreateItem(), requestContext)
                 .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece)));
             } else if (checkInPiece.getId().equals(piece.getId()) && InventoryUtils.allowItemRecreate(srcTenantId, dstTenantId) && Objects.nonNull(piece.getItemId())) {
-              pieceFutures.add(Future.succeededFuture(new PiecesHolder.PiecePoLineDto(holder.getPurchaseOrderPoLinePair().getValue(), piece, checkInPiece)));
+              pieceFutures.add(Future.succeededFuture(new PiecesHolder.PiecePoLineDto(poLine, piece, checkInPiece)));
             } else {
               pieceFutures.add(Future.succeededFuture(new PiecesHolder.PiecePoLineDto(poLineId, piece)));
             }

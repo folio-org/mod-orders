@@ -154,12 +154,21 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     return poLineOptional.orElseThrow(() -> new IllegalStateException("PoLineId cannot be extracted from a checkIn/receiving model"));
   }
 
-  public Future<Void> retrievePurchaseOrderPoLinePair(String poLineId, PiecesHolder holder, RequestContext requestContext) {
+  /**
+   * Find and set the associated purchase order and its order line by order line id
+   * @param poLineId Order line id from the checkIn/receiving model
+   * @param holder PieceHolder, the destination where this pair will be saved
+   * @param requestContext The request context that holds the headers needed proper query resolution
+   * @return A pair consistigng of a purchase order and its order line
+   */
+  public Future<Void> findAndSetPurchaseOrderPoLinePair(String poLineId, PiecesHolder holder, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
         .map(HelperUtils::convertToCompositePurchaseOrder)
         .map(purchaseOrder -> {
+          logger.info("findAndSetPurchaseOrderPoLinePair:: Found purchase order & poLine, order id: {}, poLineId: {}",
+            purchaseOrder.getId(), poLine.getId());
           holder.withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
           return null;
         }));

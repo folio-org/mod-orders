@@ -71,7 +71,7 @@ public class ReceivingHelper extends CheckinReceivePiecesHelper<ReceivedItem> {
   private Future<ReceivingResults> processReceiveItems(ReceivingCollection receivingCollection, RequestContext requestContext) {
     PiecesHolder holder = new PiecesHolder();
     // 1. Get purchase order and poLine from storage
-    return retrievePurchaseOrderPoLinePair(extractPoLineId(receivingCollection), holder, requestContext)
+    return findAndSetPurchaseOrderPoLinePair(extractPoLineId(receivingCollection), holder, requestContext)
       // 2. Get piece records from storage
       .compose(voidResult -> retrievePieceRecords(requestContext))
       // 3. Filter locationId

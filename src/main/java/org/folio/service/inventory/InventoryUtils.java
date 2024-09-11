@@ -289,9 +289,13 @@ public class InventoryUtils {
     }
     var purchaseOrder = orderPoLinePair.getKey();
     var poLine = orderPoLinePair.getValue();
-    return purchaseOrder.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.CLOSED
-      || poLine.getReceiptStatus() == CompositePoLine.ReceiptStatus.CANCELLED
-      && poLine.getPaymentStatus() == CompositePoLine.PaymentStatus.CANCELLED;
+    return isPurchaseOrderClosedOrPoLineCancelled(purchaseOrder, poLine);
+  }
+
+  public static boolean isPurchaseOrderClosedOrPoLineCancelled(CompositePurchaseOrder purchaseOrder, CompositePoLine poLine) {
+    return purchaseOrder.getWorkflowStatus().equals(CompositePurchaseOrder.WorkflowStatus.CLOSED)
+      || (poLine.getReceiptStatus().equals(CompositePoLine.ReceiptStatus.CANCELLED)
+      && poLine.getPaymentStatus().equals(CompositePoLine.PaymentStatus.CANCELLED));
   }
 
   public static ItemRecreateConfig constructItemRecreateConfig(String receivingTenantId, RequestContext requestContext, boolean reuseInitialRequestContext) {
