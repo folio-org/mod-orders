@@ -119,6 +119,8 @@ public class PieceUpdateFlowManager {
         List<Piece> piecesToUpdate = List.of(holder.getPieceToUpdate());
         CompositePoLine poLineToSave = holder.getPoLineToSave();
         if (PoLineCommonUtil.isCancelledOrOngoingStatus(HelperUtils.convertToPoLine(poLineToSave))) {
+          logger.info("updatePoLine:: Skipping updating POL '{}' status for CANCELLED or ONGOING po lines", poLineToSave.getId());
+        } else {
           poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));
         }
         List<Location> locations = PieceUtil.findOrderPieceLineLocation(holder.getPieceToUpdate(), poLineToSave);
