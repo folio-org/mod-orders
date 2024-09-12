@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -24,6 +25,8 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 
 import io.vertx.core.Future;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
+import org.folio.service.consortium.ConsortiumConfigurationService;
 
 public class PieceStorageService {
   private static final Logger logger = LogManager.getLogger(PieceStorageService.class);
@@ -33,9 +36,15 @@ public class PieceStorageService {
   private static final String PIECE_STORAGE_ENDPOINT = resourcesPath(PIECES_STORAGE);
   private static final String PIECE_STORAGE_BY_ID_ENDPOINT = PIECE_STORAGE_ENDPOINT + "/{id}";
 
+  private final ConsortiumConfigurationService consortiumConfigurationService;
+  private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
   private final RestClient restClient;
 
-  public PieceStorageService(RestClient restClient) {
+  public PieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
+                             ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                             RestClient restClient) {
+    this.consortiumConfigurationService = consortiumConfigurationService;
+    this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
     this.restClient = restClient;
   }
 
@@ -110,10 +119,26 @@ public class PieceStorageService {
   }
 
   public Future<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query)
-      .withOffset(offset)
-      .withLimit(limit);
-    return restClient.get(requestEntry, PieceCollection.class, requestContext);
+    var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
+    return restClient.get(requestEntry, PieceCollection.class, requestContext)
+      .compose(piecesCollection -> filterPiecesByUserTenantsIfNecessary(piecesCollection.getPieces(), requestContext))
+      .map(pieces -> new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size()));
+  }
+
+  private Future<List<Piece>> filterPiecesByUserTenantsIfNecessary(List<Piece> pieces, RequestContext requestContext) {
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(consortiumConfiguration -> consortiumConfiguration
+        .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext)
+          .map(userTenants -> filterPiecesByUserTenants(pieces, userTenants)))
+        .orElse(Future.succeededFuture(pieces)));
+  }
+
+  private List<Piece> filterPiecesByUserTenants(List<Piece> pieces, List<String> userTenants) {
+    return pieces.stream()
+      .filter(piece -> Optional.ofNullable(piece.getReceivingTenantId())
+        .map(userTenants::contains)
+        .orElse(true))
+      .toList();
   }
 
   public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {

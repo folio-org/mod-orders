@@ -32,6 +32,8 @@ import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.ProtectionService;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -136,8 +138,21 @@ public class PieceStorageServiceTest {
       return mock(ProtectionService.class);
     }
 
-    @Bean PieceStorageService pieceStorageService(RestClient restClient, ProtectionService protectionService) {
-      return spy(new PieceStorageService(restClient));
+    @Bean PieceStorageService pieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
+                                                  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                                  RestClient restClient) {
+      return spy(new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, restClient));
     }
+
+    @Bean
+    ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient) {
+      return new ConsortiumConfigurationService(restClient);
+    }
+
+    @Bean
+    ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
+      return new ConsortiumUserTenantsRetriever(restClient);
+    }
+
   }
 }
