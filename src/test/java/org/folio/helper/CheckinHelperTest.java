@@ -35,12 +35,16 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.ApiTestSuite;
+import org.folio.models.pieces.PiecesHolder;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
+import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ToBeCheckedIn;
@@ -219,14 +223,18 @@ public class CheckinHelperTest {
 
   @Test
   void testShouldSuccessfullyUpdateItem(VertxTestContext vertxTestContext) {
+    String purchaseOrderId = UUID.randomUUID().toString();
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
+    CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    CompositePoLine poLine = new CompositePoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
+    PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class))).thenReturn(Future.succeededFuture());
 
     Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
     CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
-    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(new JsonObject(), piece, requestContext);
+    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(pieceHolder, new JsonObject(), piece, requestContext);
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         assertTrue(result.succeeded());
@@ -236,15 +244,19 @@ public class CheckinHelperTest {
 
   @Test
   void testShouldFailToUpdateItemWhenBarcodeIsExists(VertxTestContext vertxTestContext) {
+    String purchaseOrderId = UUID.randomUUID().toString();
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
+    CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    CompositePoLine poLine = new CompositePoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
+    PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new HttpException(500, "Barcode must be unique, 555 is already assigned to another item")));
 
     Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
     CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
-    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(new JsonObject(), piece, requestContext);
+    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(pieceHolder, new JsonObject(), piece, requestContext);
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         Error error = checkinHelper.getError(poLineId, pieceId);
@@ -257,15 +269,19 @@ public class CheckinHelperTest {
 
   @Test
   void testShouldFailToUpdateItemWhenUnexpectedErrorThrown(VertxTestContext vertxTestContext) {
+    String purchaseOrderId = UUID.randomUUID().toString();
     String poLineId = UUID.randomUUID().toString();
     String pieceId = UUID.randomUUID().toString();
+    CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(purchaseOrderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    CompositePoLine poLine = new CompositePoLine().withId(poLineId).withPurchaseOrderId(purchaseOrderId);
+    PiecesHolder pieceHolder = new PiecesHolder().withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
     CheckinCollection checkinCollection = getCheckinCollection(poLineId, pieceId);
     when(inventoryItemManager.updateItem(any(JsonObject.class), any(RequestContext.class)))
       .thenReturn(Future.failedFuture(new HttpException(500, "Service failure")));
 
     Piece piece = new Piece().withId(pieceId).withPoLineId(poLineId);
     CheckinHelper checkinHelper = spy(new CheckinHelper(checkinCollection, okapiHeadersMock, requestContext.getContext()));
-    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(new JsonObject(), piece, requestContext);
+    Future<Boolean> future = checkinHelper.receiveInventoryItemAndUpdatePiece(pieceHolder, new JsonObject(), piece, requestContext);
     vertxTestContext.assertComplete(future)
       .onComplete(result -> {
         Error error = checkinHelper.getError(poLineId, pieceId);

@@ -1,0 +1,60 @@
+{
+  "id": "ec32e137-fd2f-4056-bfeb-a628f9c59e3b",
+  "cost": {
+    "currency": "USD",
+    "discountType": "percentage",
+    "listUnitPrice": 1.0,
+    "quantityPhysical": 1,
+    "poLineEstimatedPrice": 1.0
+  },
+  "rush": false,
+  "alerts": [],
+  "claims": [],
+  "source": "User",
+  "details": {
+    "productIds": [],
+    "isAcknowledged": false,
+    "isBinderyActive": false,
+    "subscriptionInterval": 0
+  },
+  "physical": {
+    "volumes": [],
+    "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+    "createInventory": "Instance, Holding, Item",
+    "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+  },
+  "isPackage": false,
+  "locations": [
+    {
+      "quantity": 1,
+      "holdingId": "3b72efa9-7b30-4eb5-b927-4780d8faa546",
+      "quantityPhysical": 1
+    }
+  ],
+  "collection": false,
+  "instanceId": "4e4cb019-6049-4612-87ee-0d3db8f70c37",
+  "orderFormat": "Physical Resource",
+  "checkinItems": true,
+  "contributors": [],
+  "poLineNumber": "10000-1",
+  "vendorDetail": {
+    "instructions": "",
+    "vendorAccount": "1234",
+    "referenceNumbers": []
+  },
+  "paymentStatus": "Awaiting Payment",
+  "receiptStatus": "Awaiting Receipt",
+  "claimingActive": false,
+  "reportingCodes": [],
+  "titleOrPackage": "1173-5-1",
+  "automaticExport": false,
+  "purchaseOrderId": "0ea6b8bf-405e-4f06-aeb1-79853c48d41b",
+  "claimingInterval": 45,
+  "fundDistribution": [],
+  "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+  "searchLocationIds": [
+    "fcd64ce1-6995-48f0-840e-89ffa2288371"
+  ],
+  "donorOrganizationIds": [],
+  "cancellationRestriction": true
+}

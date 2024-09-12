@@ -8,6 +8,7 @@ import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -18,6 +19,7 @@ import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.orders.utils.RequestContextUtil;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.CheckinCollection;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -31,9 +33,12 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.ProcessingStatus;
+import org.folio.rest.jaxrs.model.ReceivingCollection;
 import org.folio.rest.jaxrs.model.ReceivingItemResult;
 import org.folio.rest.jaxrs.model.ReceivingResult;
 import org.folio.rest.jaxrs.model.Title;
+import org.folio.rest.jaxrs.model.ToBeCheckedIn;
+import org.folio.rest.jaxrs.model.ToBeReceived;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.ProtectionService;
 import org.folio.service.inventory.InventoryHoldingManager;
@@ -135,6 +140,38 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     processedHoldingsParams = new HashSet<>();
     processedHoldings = new HashMap<>();
     processingErrors = new HashMap<>();
+  }
+
+  public static String extractPoLineId(Object collection) {
+    Optional<String> poLineOptional;
+    if (collection instanceof CheckinCollection checkinCollection) {
+      poLineOptional = checkinCollection.getToBeCheckedIn().stream().map(ToBeCheckedIn::getPoLineId).findFirst();
+    } else if (collection instanceof ReceivingCollection receivingCollection)  {
+      poLineOptional = receivingCollection.getToBeReceived().stream().map(ToBeReceived::getPoLineId).findFirst();
+    } else {
+      throw new IllegalStateException("Unsupported checkIn or receiving model");
+    }
+    return poLineOptional.orElseThrow(() -> new IllegalStateException("PoLineId cannot be extracted from a checkIn/receiving model"));
+  }
+
+  /**
+   * Find and set the associated purchase order and its order line by order line id
+   * @param poLineId Order line id from the checkIn/receiving model
+   * @param holder PieceHolder, the destination where this pair will be saved
+   * @param requestContext The request context that holds the headers needed proper query resolution
+   * @return A pair consistigng of a purchase order and its order line
+   */
+  public Future<Void> findAndSetPurchaseOrderPoLinePair(String poLineId, PiecesHolder holder, RequestContext requestContext) {
+    return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
+      .map(PoLineCommonUtil::convertToCompositePoLine)
+      .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(poLine.getPurchaseOrderId(), requestContext)
+        .map(HelperUtils::convertToCompositePurchaseOrder)
+        .map(purchaseOrder -> {
+          logger.info("findAndSetPurchaseOrderPoLinePair:: Found purchase order & poLine, order id: {}, poLineId: {}",
+            purchaseOrder.getId(), poLine.getId());
+          holder.withPurchaseOrderPoLinePair(Pair.of(purchaseOrder, poLine));
+          return null;
+        }));
   }
 
   //-------------------------------------------------------------------------------------
@@ -499,7 +536,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .compose(poLineAndTitleById -> processHoldingsUpdate(piecesGroupedByPoLine, poLineAndTitleById, requestContext)
         .compose(voidResult -> recreateItemRecords(piecesGroupedByPoLine, holder, requestContext))
         .compose(voidResult -> getItemRecords(piecesGroupedByPoLine, piecesByItemId, requestContext))
-        .compose(items -> processItemsUpdate(piecesGroupedByPoLine, piecesByItemId, items, poLineAndTitleById, requestContext))
+        .compose(items -> processItemsUpdate(piecesGroupedByPoLine, holder, piecesByItemId, items, poLineAndTitleById, requestContext))
       );
   }
 
@@ -724,6 +761,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   }
 
   private Future<Map<String, List<Piece>>> processItemsUpdate(Map<String, List<Piece>> piecesGroupedByPoLine,
+                                                              PiecesHolder holder,
                                                               Map<String, Piece> piecesByItemId,
                                                               List<JsonObject> items,
                                                               PoLineAndTitleById poLinesAndTitlesById,
@@ -752,7 +790,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
         }
       }
       RequestContext locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, getReceivingTenantId(piece));
-      futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(item, piece, locationContext));
+      futuresForItemsUpdates.add(receiveInventoryItemAndUpdatePiece(holder, item, piece, locationContext));
     }
     return collectResultsOnSuccess(futuresForItemsUpdates).map(results -> {
       if (logger.isDebugEnabled()) {
@@ -768,7 +806,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
    * @param piece piece associated with the item
    * @return future indicating if the item update is successful.
    */
-  protected abstract Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext);
+  protected abstract Future<Boolean> receiveInventoryItemAndUpdatePiece(PiecesHolder holder, JsonObject item, Piece piece, RequestContext locationContext);
 
   private boolean holdingUpdateOnCheckinReceiveRequired(Piece piece, CompositePoLine poLine) {
     boolean isHoldingUpdateRequired;

@@ -59,6 +59,33 @@ public class RestTestUtils {
     return response;
   }
 
+  public static Response verifyPostResponseWithQueryParams(String url, String body, Map<String, String> queryParams, Headers headers, String
+    expectedContentType, int expectedCode) {
+    Response response = RestAssured
+      .with()
+      .header(X_OKAPI_URL)
+      .header(X_OKAPI_TOKEN)
+      .headers(headers)
+      .contentType(APPLICATION_JSON)
+      .queryParams(queryParams)
+      .body(body)
+      .post(url)
+      .then()
+      .log()
+      .all()
+      .statusCode(expectedCode)
+      .contentType(expectedContentType)
+      .extract()
+      .response();
+
+    // Verify no messages sent via event bus on POST (except receiving/check-in)
+    if (!(url.startsWith(ORDERS_RECEIVING_ENDPOINT) || url.startsWith(ORDERS_CHECKIN_ENDPOINT))) {
+      HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
+    }
+
+    return response;
+  }
+
 
   public static Response verifyPut(String url, JsonObject body, String expectedContentType, int expectedCode) {
     return verifyPut(url, body.encodePrettily(), expectedContentType, expectedCode);

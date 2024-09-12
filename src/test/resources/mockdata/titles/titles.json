@@ -58,7 +58,52 @@
       "isAcknowledged": false,
       "claimingInterval": 45,
       "subscriptionInterval": 0
+    },
+    {
+      "id": "fc13aa53-76e9-4906-a078-262ca5b5e148",
+      "title": "1173-4",
+      "poLineId": "64849972-9e37-4add-a83b-bd92e5211638",
+      "acqUnitIds": [],
+      "instanceId": "80d48859-0208-491d-a11b-3879a91d4917",
+      "productIds": [],
+      "bindItemIds": [],
+      "contributors": [],
+      "poLineNumber": "10010-1",
+      "claimingActive": false,
+      "isAcknowledged": false,
+      "claimingInterval": 45,
+      "subscriptionInterval": 0
+    },
+    {
+      "id": "c845ff38-ff5c-4568-9a2f-491f02e8fb32",
+      "title": "1173-5-1",
+      "poLineId": "ec32e137-fd2f-4056-bfeb-a628f9c59e3b",
+      "acqUnitIds": [],
+      "instanceId": "4e4cb019-6049-4612-87ee-0d3db8f70c37",
+      "productIds": [],
+      "bindItemIds": [],
+      "contributors": [],
+      "poLineNumber": "10000-1",
+      "claimingActive": false,
+      "isAcknowledged": false,
+      "claimingInterval": 45,
+      "subscriptionInterval": 0
+    },
+    {
+      "id": "53fa6263-f202-4fcb-8146-48dff84e86af",
+      "title": "1173-5-2",
+      "poLineId": "2fee3fb5-4c1d-4ad6-889a-5ffc832b1d7c",
+      "acqUnitIds": [],
+      "instanceId": "4589da14-19e3-407a-b1dd-75ab77dc47d7",
+      "productIds": [],
+      "bindItemIds": [],
+      "contributors": [],
+      "poLineNumber": "10000-2",
+      "claimingActive": false,
+      "isAcknowledged": false,
+      "claimingInterval": 45,
+      "subscriptionInterval": 0
     }
   ],
-  "totalRecords": 3
+  "totalRecords": 7
 }

@@ -12,8 +12,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.orders.events.handlers.MessageAddress;
-import org.folio.orders.utils.HelperUtils;
-import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CheckInPiece;
 import org.folio.rest.jaxrs.model.CheckinCollection;
@@ -61,25 +59,27 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
 
   public Future<ReceivingResults> checkinPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     return removeForbiddenEntities(requestContext)
-      .compose(vVoid -> processCheckInPieces(checkinCollection, requestContext));
+      .compose(voidResult -> processCheckInPieces(checkinCollection, requestContext));
   }
 
   private Future<ReceivingResults> processCheckInPieces(CheckinCollection checkinCollection, RequestContext requestContext) {
     PiecesHolder holder = new PiecesHolder();
-    // 1. Get piece records from storage
-    return createItemsWithPieceUpdate(checkinCollection, holder, requestContext)
-      // 2. Filter locationId
+    // 1. Get purchase order and poLine from storage
+    return findAndSetPurchaseOrderPoLinePair(extractPoLineId(checkinCollection), holder, requestContext)
+      // 2. Get piece records from storage
+      .compose(voidResult -> createItemsWithPieceUpdate(checkinCollection, holder, requestContext))
+      // 3. Filter locationId
       .compose(piecesByPoLineIds -> filterMissingLocations(piecesByPoLineIds, requestContext))
-      // 3. Update items in the Inventory if required
+      // 4. Update items in the Inventory if required
       .compose(pieces -> updateInventoryItemsAndHoldings(pieces, holder, requestContext))
-      // 4. Update piece records with checkIn details which do not have
+      // 5. Update piece records with checkIn details which do not have
       // associated item
       .map(this::updatePieceRecordsWithoutItems)
-      // 5. Update received piece records in the storage
+      // 6. Update received piece records in the storage
       .compose(piecesGroupedByPoLine -> storeUpdatedPieceRecords(piecesGroupedByPoLine, requestContext))
-      // 6. Update PO Line status
+      // 7. Update PO Line status
       .compose(piecesGroupedByPoLine -> updateOrderAndPoLinesStatus(holder.getPiecesFromStorage(), piecesGroupedByPoLine, checkinCollection, requestContext))
-      // 7. Return results to the client
+      // 8. Return results to the client
       .map(piecesGroupedByPoLine -> prepareResponseBody(checkinCollection, piecesGroupedByPoLine));
   }
 
@@ -93,17 +93,13 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
           .forEach(checkInPiece -> pieces.forEach(piece -> {
             var srcTenantId = piece.getReceivingTenantId();
             var dstTenantId = checkInPiece.getReceivingTenantId();
+            var purchaseOrder = holder.getPurchaseOrderPoLinePair().getKey();
+            var poLine = holder.getPurchaseOrderPoLinePair().getValue();
             if (checkInPiece.getId().equals(piece.getId()) && Boolean.TRUE.equals(checkInPiece.getCreateItem())) {
-              pieceFutures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-                .map(PoLineCommonUtil::convertToCompositePoLine)
-                .compose(compPol -> purchaseOrderStorageService.getPurchaseOrderByIdAsJson(compPol.getPurchaseOrderId(), requestContext)
-                  .map(HelperUtils::convertToCompositePurchaseOrder)
-                  .compose(purchaseOrder -> pieceCreateFlowInventoryManager.processInventory(purchaseOrder, compPol, piece, checkInPiece.getCreateItem(), requestContext))
-                .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece))));
+              pieceFutures.add(pieceCreateFlowInventoryManager.processInventory(purchaseOrder, poLine, piece, checkInPiece.getCreateItem(), requestContext)
+                .map(voidResult -> new PiecesHolder.PiecePoLineDto(poLineId, piece)));
             } else if (checkInPiece.getId().equals(piece.getId()) && InventoryUtils.allowItemRecreate(srcTenantId, dstTenantId) && Objects.nonNull(piece.getItemId())) {
-              pieceFutures.add(purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-                .map(PoLineCommonUtil::convertToCompositePoLine)
-                .map(compPol -> new PiecesHolder.PiecePoLineDto(compPol, piece, checkInPiece)));
+              pieceFutures.add(Future.succeededFuture(new PiecesHolder.PiecePoLineDto(poLine, piece, checkInPiece)));
             } else {
               pieceFutures.add(Future.succeededFuture(new PiecesHolder.PiecePoLineDto(poLineId, piece)));
             }
@@ -118,10 +114,9 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   private void prepareItemsToRecreate(PiecesHolder holder, List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
-    var itemRecreateDtoMap = piecePoLineDtoList.stream()
+    holder.withItemsToRecreate(piecePoLineDtoList.stream()
       .filter(PiecesHolder.PiecePoLineDto::isRecreateItem)
-      .collect(groupingBy(PiecesHolder.PiecePoLineDto::getPoLineId));
-    holder.withItemsToRecreate(itemRecreateDtoMap);
+      .collect(groupingBy(PiecesHolder.PiecePoLineDto::getPoLineId)));
   }
 
   private static Map<String, List<Piece>> createPoLineIdPiecePair(List<PiecesHolder.PiecePoLineDto> piecePoLineDtoList) {
@@ -190,7 +185,7 @@ public class CheckinHelper extends CheckinReceivePiecesHelper<CheckInPiece> {
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(PiecesHolder holder, JsonObject item, Piece piece, RequestContext locationContext) {
     Promise<Boolean> promise = Promise.promise();
     CheckInPiece checkinPiece = getByPiece(piece);
     InventoryUtils.updateItemWithCheckinPieceFields(item, checkinPiece);

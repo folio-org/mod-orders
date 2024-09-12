@@ -43,6 +43,7 @@ import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.ELECTRONIC_
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 import static org.folio.service.inventory.InventoryUtils.ITEMS;
 import static org.folio.service.inventory.InventoryUtils.ITEM_BY_ID_ENDPOINT;
+import static org.folio.service.inventory.InventoryUtils.isPurchaseOrderClosedOrPoLineCancelled;
 
 public class InventoryItemManager {
   private static final Logger logger = LogManager.getLogger(InventoryItemManager.class);
@@ -392,9 +393,12 @@ public class InventoryItemManager {
 
   private Future<JsonObject> buildBaseItemRecordJsonObject(CompositePurchaseOrder compPO, CompositePoLine compPOL,
                                                            String holdingId, RequestContext requestContext) {
-    String itemStatus = compPO.getWorkflowStatus().equals(CompositePurchaseOrder.WorkflowStatus.CLOSED)
-      ? ReceivedItem.ItemStatus.ORDER_CLOSED.value()
-      : ReceivedItem.ItemStatus.ON_ORDER.value();
+    String itemStatus;
+    if (isPurchaseOrderClosedOrPoLineCancelled(compPO, compPOL)) {
+      itemStatus = ReceivedItem.ItemStatus.ORDER_CLOSED.value();
+    } else {
+      itemStatus = ReceivedItem.ItemStatus.ON_ORDER.value();
+    }
     return InventoryUtils.getLoanTypeId(configurationEntriesCache, inventoryCache, requestContext)
       .map(loanTypeId -> {
         JsonObject itemRecord = new JsonObject();

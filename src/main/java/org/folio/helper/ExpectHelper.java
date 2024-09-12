@@ -133,7 +133,7 @@ public class ExpectHelper extends CheckinReceivePiecesHelper<ExpectPiece> {
   }
 
   @Override
-  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(JsonObject item, Piece piece, RequestContext locationContext) {
+  protected Future<Boolean> receiveInventoryItemAndUpdatePiece(PiecesHolder holder, JsonObject item, Piece piece, RequestContext locationContext) {
     return Future.succeededFuture(false);
   }
 

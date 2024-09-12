@@ -334,8 +334,11 @@ public class UnOpenCompositeOrderManager {
       deletedHoldingIds.add(inventoryItemManager.getItemsByHoldingId(holdingId, requestContext)
         .compose(items -> {
           if (items.isEmpty()) {
+            logger.info("deleteHoldingsByItems:: Deleting holdings, holdingId: {}", holdingId);
             return inventoryHoldingManager.deleteHoldingById(holdingId, true, requestContext)
               .map(v -> Pair.of(holdingId, effectiveLocationId));
+          } else {
+            logger.info("deleteHoldingsByItems:: Cannot delete holdings with items, holdingId: {}, items: {}", holdingId, items.size());
           }
           return Future.succeededFuture();
         }));

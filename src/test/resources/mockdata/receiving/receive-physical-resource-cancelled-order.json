@@ -1,0 +1,16 @@
+{
+  "toBeReceived": [
+    {
+      "poLineId": "64849972-9e37-4add-a83b-bd92e5211638",
+      "received": 1,
+      "receivedItems": [
+        {
+          "itemStatus": "Order closed",
+          "locationId": "fcd64ce1-6995-48f0-840e-89ffa2288371",
+          "pieceId": "e2a4b11a-5aba-4af0-ad64-ac74ce782397"
+        }
+      ]
+    }
+  ],
+  "totalRecords": 1
+}

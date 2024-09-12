@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static java.lang.Thread.sleep;
 import static java.time.temporal.ChronoUnit.DAYS;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -43,6 +44,7 @@ import static org.folio.TestConstants.X_ECHO_STATUS;
 import static org.folio.TestUtils.encodePrettily;
 import static org.folio.TestUtils.getMinimalContentCompositePoLine;
 import static org.folio.TestUtils.getMinimalContentCompositePurchaseOrder;
+import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.TestUtils.getMockData;
 import static org.folio.TestUtils.getTitle;
@@ -264,7 +266,7 @@ public class MockServer {
   public static final String ACQUISITION_METHODS_COLLECTION = ACQUISITION_METHOD_MOCK_DATA_PATH + "acquisitionMethods.json";
   static final String ORDER_TEMPLATES_COLLECTION = ORDER_TEMPLATES_MOCK_DATA_PATH + "/orderTemplates.json";
   private static final String FUNDS_PATH = BASE_MOCK_DATA_PATH + "funds/funds.json";
-  private static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
+  public static final String TITLES_PATH = BASE_MOCK_DATA_PATH + "titles/titles.json";
   private static final String ROUTING_LISTS_PATH = BASE_MOCK_DATA_PATH + "routing-lists/routing-lists.json";
   public static final String BUDGETS_PATH = BASE_MOCK_DATA_PATH + "budgets/budgets.json";
   public static final String LEDGERS_PATH = BASE_MOCK_DATA_PATH + "ledgers/ledgers.json";
@@ -282,9 +284,6 @@ public class MockServer {
   public static final String ECS_UNIVERSITY_INSTANCE_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_instance.json";
   public static final String ECS_UNIVERSITY_HOLDINGS_RECORD_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_holdings_record.json";
   public static final String ECS_UNIVERSITY_ITEM_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item.json";
-  public static final String ECS_UNIVERSITY_ITEM_SINGLE_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item_single.json";
-  public static final String ECS_UNIVERSITY_ITEM_MULTIPLE_1_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item_multiple_1.json";
-  public static final String ECS_UNIVERSITY_ITEM_MULTIPLE_2_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item_multiple_2.json";
 
   static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
@@ -346,6 +345,16 @@ public class MockServer {
       .forEach(line -> addMockEntry(TITLES, getTitle(line)));
   }
 
+  public static void addMockOrderData(List<CompositePoLine> poLines) {
+    poLines.stream()
+      .filter(poLine -> !poLine.getIsPackage() && isNotEmpty(poLine.getId()))
+      .forEach(poLine -> {
+        addMockEntry(PURCHASE_ORDER_STORAGE, getMinimalOrder(poLine));
+        addMockEntry(PO_LINES_STORAGE, poLine);
+        addMockEntry(TITLES, getTitle(poLine));
+      });
+  }
+
   public static void addMockTitleWithId(CompositePoLine poLine, String titleId) {
     org.folio.rest.jaxrs.model.Title newTitle = getTitle(poLine);
     newTitle.setId(titleId);
@@ -383,6 +392,11 @@ public class MockServer {
   }
 
   public static List<JsonObject> getPoLineBatchUpdates() {
+    try {
+      sleep(500);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
     return serverRqRs.get(PO_LINES_BATCH_STORAGE, HttpMethod.PUT);
   }
 
@@ -1227,7 +1241,6 @@ public class MockServer {
       try {
         JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
         JsonArray jsonArray = items.getJsonArray(ITEMS);
-        appendEcsItems(jsonArray);
 
         if (query.startsWith("id==")) {
           List<String> itemIds = extractIdsFromQuery(query);
@@ -1267,14 +1280,6 @@ public class MockServer {
     }
   }
 
-  private static void appendEcsItems(JsonArray jsonArray) throws IOException {
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_SINGLE_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_SINGLE_ITEM))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_1_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS))));
-    jsonArray.add(new JsonObject(getMockData(String.format(ECS_UNIVERSITY_ITEM_MULTIPLE_2_JSON, CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS))));
-  }
-
   private void handleGetInventoryItemRecordById(RoutingContext ctx) {
     logger.info("handleGetInventoryItemRecordById got: " + ctx.request().path());
 
@@ -1289,7 +1294,6 @@ public class MockServer {
       try {
         JsonObject items = new JsonObject(getMockData(ITEMS_RECORDS_MOCK_DATA_PATH + "inventoryItemsCollection.json"));
         JsonArray jsonArray = items.getJsonArray(ITEMS);
-        appendEcsItems(jsonArray);
 
         final Iterator<Object> iterator = jsonArray.iterator();
           while (iterator.hasNext()) {
