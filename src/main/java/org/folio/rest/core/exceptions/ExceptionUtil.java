@@ -2,6 +2,7 @@ package org.folio.rest.core.exceptions;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.POSTGRE_SQL_ERROR;
+import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_MISSED_AFFILIATIONS;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,6 +30,7 @@ public class ExceptionUtil {
   public static final String NOT_PROVIDED = "Not Provided";
   private static final Pattern ERROR_PATTERN = Pattern.compile("(message).*(code).*(parameters)");
   private static final Pattern ERRORS_PATTERN = Pattern.compile("(errors).*(message).*(code).*(parameters)");
+  private static final Pattern AFFILIATION_MISSED_PATTERN = Pattern.compile("Invalid token: User with id ([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}) does not exist");
 
   private ExceptionUtil() {
   }
@@ -53,6 +55,16 @@ public class ExceptionUtil {
     return errors;
   }
 
+  public static HttpException getHttpException(int statusCode, String error) {
+    if (isAffiliationMissedError(error)) {
+      return new HttpException(statusCode, USER_HAS_MISSED_AFFILIATIONS);
+    }
+    if (isErrorsMessageJson(error)) {
+      return new HttpException(statusCode, mapToErrors(error));
+    }
+    return new HttpException(statusCode, error);
+  }
+
   public static boolean isErrorMessageJson(String errorMessage) {
     if (!StringUtils.isEmpty(errorMessage)) {
       Matcher matcher = ERROR_PATTERN.matcher(errorMessage);
@@ -72,6 +84,14 @@ public class ExceptionUtil {
       }
     }
     return false;
+  }
+
+  public static boolean isAffiliationMissedError(String errorMessage) {
+    if (StringUtils.isEmpty(errorMessage)) {
+      return false;
+    }
+    Matcher matcher = AFFILIATION_MISSED_PATTERN.matcher(errorMessage);
+    return matcher.find();
   }
 
   public static String errorAsString(Errors errors) {

@@ -5,8 +5,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.folio.rest.RestConstants.ID;
 import static org.folio.rest.RestConstants.OKAPI_URL;
-import static org.folio.rest.core.exceptions.ExceptionUtil.isErrorsMessageJson;
-import static org.folio.rest.core.exceptions.ExceptionUtil.mapToErrors;
+import static org.folio.rest.core.exceptions.ExceptionUtil.getHttpException;
 
 import java.util.Map;
 
@@ -38,11 +37,9 @@ public class RestClient {
   private static final ErrorConverter ERROR_CONVERTER = ErrorConverter.createFullBody(
     result -> {
       String error = result.response().bodyAsString();
-      if (isErrorsMessageJson(error)) {
-        return new HttpException(result.response().statusCode(), mapToErrors(error));
-      }
-      return new HttpException(result.response().statusCode(), error);
+      return getHttpException(result.response().statusCode(), error);
     });
+
   private static final ResponsePredicate SUCCESS_RESPONSE_PREDICATE =
     ResponsePredicate.create(ResponsePredicate.SC_SUCCESS, ERROR_CONVERTER);
 
