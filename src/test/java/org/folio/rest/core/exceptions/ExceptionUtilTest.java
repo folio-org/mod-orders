@@ -3,6 +3,8 @@ package org.folio.rest.core.exceptions;
 import static org.folio.rest.core.exceptions.ErrorCodes.GENERIC_ERROR_CODE;
 import static org.folio.rest.core.exceptions.ErrorCodes.POSTGRE_SQL_ERROR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.folio.rest.jaxrs.model.Errors;
 import org.junit.jupiter.api.Assertions;
@@ -12,6 +14,15 @@ import io.vertx.pgclient.PgException;
 
 public class ExceptionUtilTest {
 
+  private static final String INVALID_TOKEN_ERROR = """
+    {
+      "errors" : [ {
+        "message" : "Invalid token: User with id 858cbba3-6fd0-4430-9011-9939574677d8 does not exist",
+        "code" : "genericError",
+        "parameters" : [ ]
+      } ],
+      "total_records" : 1
+    }""";
 
   @Test
   void testIfBadRequestMessageNotNull() {
@@ -49,5 +60,32 @@ public class ExceptionUtilTest {
     String errorMsg = "{\"message\":\"Test\",\"code\":\"Test\",\"parameters\":[]}";
     boolean act = ExceptionUtil.isErrorMessageJson(errorMsg);
     Assertions.assertTrue(act);
+  }
+
+  @Test
+  void testGetHttpExceptionMissedAffiliationError() {
+    HttpException httpException = ExceptionUtil.getHttpException(401, INVALID_TOKEN_ERROR);
+    assertEquals(ErrorCodes.USER_HAS_MISSED_AFFILIATIONS.toError(), httpException.getError());
+  }
+
+  @Test
+  void testGetHttpExceptionOtherError() {
+    HttpException httpException = ExceptionUtil.getHttpException(500, "Module failure");
+    assertEquals(500, httpException.getCode());
+    assertEquals(GENERIC_ERROR_CODE.getCode(), httpException.getError().getCode());
+    assertEquals("Module failure", httpException.getError().getMessage());
+  }
+
+  @Test
+  void testIsAffiliationMissedTrue() {
+    boolean act = ExceptionUtil.isAffiliationMissedError(INVALID_TOKEN_ERROR);
+    assertTrue(act);
+  }
+
+  @Test
+  void testIsAffiliationMissedFalse() {
+    String errorMsg = "{\"message\":\"Test\",\"code\":\"Test\",\"parameters\":[]}";
+    boolean act = ExceptionUtil.isAffiliationMissedError(errorMsg);
+    assertFalse(act);
   }
 }
