@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.folio.rest.RestConstants.PATH_PARAM_PLACE_HOLDER;
+
 public class ResourcePathResolver {
 
   private ResourcePathResolver() {
@@ -98,7 +100,7 @@ public class ResourcePathResolver {
     apis.put(EXPORT_HISTORY, "/orders-storage/export-history");
     apis.put(TAGS, "/tags");
     apis.put(USERS, "/users");
-    apis.put(CONSORTIA_USER_TENANTS, "/consortia/:id/user-tenants");
+    apis.put(CONSORTIA_USER_TENANTS, "/consortia/" + PATH_PARAM_PLACE_HOLDER + "/user-tenants");
     apis.put(ORDER_SETTINGS, "/orders-storage/settings");
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
 

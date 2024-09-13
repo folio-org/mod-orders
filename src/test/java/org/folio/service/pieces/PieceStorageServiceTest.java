@@ -126,7 +126,7 @@ public class PieceStorageServiceTest {
     when(consortiumConfigurationService.getConsortiumConfiguration(any(RequestContext.class))).thenReturn(Future.succeededFuture(Optional.empty()));
 
     String expectedQuery = String.format("id==%s", pieceId);
-    var future = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, expectedQuery, requestContext);
+    var future = pieceStorageService.getAllPieces(expectedQuery, requestContext);
 
     verify(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
     vertxTestContext.assertComplete(future)
@@ -156,7 +156,7 @@ public class PieceStorageServiceTest {
     doReturn(Future.succeededFuture(piecesMockData)).when(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(userTenantsMockData)).when(restClientMock).getAsJsonObject(any(), any(RequestContext.class));
 
-    var future = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, null, requestContext);
+    var future = pieceStorageService.getAllPieces(null, requestContext);
 
     verify(restClientMock, times(1)).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
     verify(restClientMock, times(1)).getAsJsonObject(any(), any(RequestContext.class));
@@ -179,7 +179,7 @@ public class PieceStorageServiceTest {
     doReturn(Future.succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
     doReturn(Future.succeededFuture(piecesMockData)).when(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
 
-    var future = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, null, requestContext);
+    var future = pieceStorageService.getAllPieces(null, requestContext);
 
     verify(restClientMock, times(1)).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
     verify(restClientMock, times(0)).getAsJsonObject(any(), any(RequestContext.class));

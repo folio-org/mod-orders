@@ -107,22 +107,27 @@ public class PieceStorageService {
 
   public Future<PieceCollection> getExpectedPiecesByLineId(String poLineId, RequestContext requestContext) {
     String query = String.format(PIECES_BY_POL_ID_AND_STATUS_QUERY, poLineId, Piece.ReceivingStatus.EXPECTED.value());
-    return getPieces(Integer.MAX_VALUE, 0, query, requestContext);
+    return getAllPieces(query, requestContext);
   }
 
   public Future<List<Piece>> getPiecesByHoldingId(String holdingId, RequestContext requestContext) {
     if (holdingId != null) {
       String query = String.format(PIECES_BY_HOLDING_ID_QUERY, holdingId);
-      return getPieces(Integer.MAX_VALUE, 0, query, requestContext).map(PieceCollection::getPieces);
+      return getAllPieces(query, requestContext).map(PieceCollection::getPieces);
     }
     return Future.succeededFuture(Collections.emptyList());
+  }
+
+  public Future<PieceCollection> getAllPieces(String query, RequestContext requestContext) {
+    var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
+    return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
 
   public Future<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {
     var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
     return restClient.get(requestEntry, PieceCollection.class, requestContext)
-      .compose(piecesCollection -> filterPiecesByUserTenantsIfNecessary(piecesCollection.getPieces(), requestContext))
-      .map(pieces -> new PieceCollection().withPieces(pieces).withTotalRecords(pieces.size()));
+      .compose(piecesCollection -> filterPiecesByUserTenantsIfNecessary(piecesCollection.getPieces(), requestContext)
+        .map(piecesCollection::withPieces));
   }
 
   private Future<List<Piece>> filterPiecesByUserTenantsIfNecessary(List<Piece> pieces, RequestContext requestContext) {
@@ -145,7 +150,7 @@ public class PieceStorageService {
     logger.debug("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
     var futures = ofSubLists(new ArrayList<>(pieceIds), MAX_IDS_FOR_GET_RQ_15)
       .map(HelperUtils::convertIdsToCqlQuery)
-      .map(query -> getPieces(Integer.MAX_VALUE, 0, query, requestContext))
+      .map(query -> getAllPieces(query, requestContext))
       .toList();
     return collectResultsOnSuccess(futures)
       .map(lists -> lists.stream()
