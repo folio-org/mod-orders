@@ -2,6 +2,7 @@ package org.folio.helper;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import java.util.stream.Stream;
 import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -18,6 +19,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -155,4 +159,22 @@ public class PurchaseOrderLineHelperTest {
     assertEquals("test error", ex.getCause().getMessage());
   }
 
+  private static Stream<Arguments> testHasAlteredExchangeRateArgs() {
+    return Stream.of(
+      Arguments.of(false, 0.7d, 0.7d),
+      Arguments.of(false, null, null),
+      Arguments.of(true, 0.7d, 0.8d),
+      Arguments.of(true, null, 0.8d),
+      Arguments.of(true, 0.7d, null)
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("testHasAlteredExchangeRateArgs")
+  void testHasAlteredExchangeRate(boolean expected, Double oldExchangeRate, Double newExchangeRate) {
+    var currencyCode = "AUD";
+    var oldCost = new Cost().withCurrency(currencyCode).withExchangeRate(newExchangeRate);
+    var newCost = new Cost().withCurrency(currencyCode).withExchangeRate(oldExchangeRate);
+    assertEquals(expected, PurchaseOrderLineHelper.hasAlteredExchangeRate(oldCost, newCost));
+  }
 }
