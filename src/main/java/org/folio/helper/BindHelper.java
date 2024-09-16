@@ -93,7 +93,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   private Future<Void> clearTitleBindItemsIfNeeded(String titleId, String bindItemId, RequestContext requestContext) {
     String query = String.format("titleId==%s and bindItemId==%s and isBound==true", titleId, bindItemId);
-    return pieceStorageService.getAllPieces(query, requestContext)
+    return pieceStorageService.getAllPieces(0, 0, query, requestContext)
       .compose(pieceCollection -> {
         var totalRecords = pieceCollection.getTotalRecords();
         if (totalRecords != 0) {

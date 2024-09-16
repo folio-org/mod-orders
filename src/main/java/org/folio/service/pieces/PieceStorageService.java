@@ -118,16 +118,19 @@ public class PieceStorageService {
     return Future.succeededFuture(Collections.emptyList());
   }
 
-  public Future<PieceCollection> getAllPieces(String query, RequestContext requestContext) {
-    var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE);
-    return restClient.get(requestEntry, PieceCollection.class, requestContext);
-  }
-
   public Future<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {
-    var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
-    return restClient.get(requestEntry, PieceCollection.class, requestContext)
+    return getAllPieces(limit, offset, query, requestContext)
       .compose(piecesCollection -> filterPiecesByUserTenantsIfNecessary(piecesCollection.getPieces(), requestContext)
         .map(piecesCollection::withPieces));
+  }
+
+  public Future<PieceCollection> getAllPieces(String query, RequestContext requestContext) {
+    return getAllPieces(Integer.MAX_VALUE, 0, query, requestContext);
+  }
+
+  public Future<PieceCollection> getAllPieces(int limit, int offset, String query, RequestContext requestContext) {
+    var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
+    return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
 
   private Future<List<Piece>> filterPiecesByUserTenantsIfNecessary(List<Piece> pieces, RequestContext requestContext) {
