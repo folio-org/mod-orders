@@ -1,0 +1,16 @@
+{
+  "pieces": [
+    {
+      "id": "05a95f03-eb00-4248-9f2e-2bd05957ff04",
+      "receivingTenantId": "tenantId1"
+    },
+    {
+      "id": "05a95f03-eb00-4248-9f2e-2bd05957ff05",
+      "receivingTenantId": "tenantId2"
+    },
+    {
+      "id": "05a95f03-eb00-4248-9f2e-2bd05957ff06"
+    }
+  ],
+  "totalRecords": 3
+}

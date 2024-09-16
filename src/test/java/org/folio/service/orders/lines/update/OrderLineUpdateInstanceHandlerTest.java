@@ -39,6 +39,7 @@ import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.SharingInstanceService;
 import org.folio.service.inventory.InventoryHoldingManager;
 import org.folio.service.inventory.InventoryItemManager;
@@ -221,17 +222,28 @@ public class OrderLineUpdateInstanceHandlerTest {
       return new ProtectionService(acquisitionsUnitsService);
     }
 
-    @Bean PieceStorageService pieceStorageService(RestClient restClient) {
-      return new PieceStorageService(restClient);
+    @Bean PieceStorageService pieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
+                                                  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                                  RestClient restClient) {
+      return new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, restClient);
     }
+
     @Bean InventoryService inventoryService (RestClient restClient) {
       return new InventoryService(restClient);
     }
+
     @Bean SharingInstanceService sharingInstanceService (RestClient restClient) {
       return new SharingInstanceService(restClient);
     }
-    @Bean ConsortiumConfigurationService consortiumConfigurationService (RestClient restClient) {
+
+    @Bean
+    ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient) {
       return new ConsortiumConfigurationService(restClient);
+    }
+
+    @Bean
+    ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
+      return new ConsortiumUserTenantsRetriever(restClient);
     }
 
     @Bean PurchaseOrderStorageService purchaseOrderStorageService () {

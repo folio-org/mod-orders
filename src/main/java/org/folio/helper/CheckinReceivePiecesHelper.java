@@ -377,7 +377,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
   private Future<List<Piece>> getPiecesByPoLine(String poLineId, RequestContext requestContext) {
     String query = String.format("poLineId==%s", poLineId);
-    return pieceStorageService.getPieces(Integer.MAX_VALUE, 0, query, requestContext)
+    return pieceStorageService.getAllPieces(query, requestContext)
       .map(PieceCollection::getPieces);
   }
 

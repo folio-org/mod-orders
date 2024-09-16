@@ -37,7 +37,7 @@ public class HoldingsSummaryService {
     var queryForPiece = String.format("?query=holdingId==%s", holdingId);
     var queryForLines = String.format("?query=locations=\"holdingId\" : \"%s\"", holdingId);
 
-    return pieceStorageService.getPieces(Integer.MAX_VALUE, 0, queryForPiece, requestContext)
+    return pieceStorageService.getAllPieces(queryForPiece, requestContext)
       .map(piecesCollection -> {
         Set<String> lineIds = piecesCollection.getPieces().stream()
           .map(Piece::getPoLineId)
