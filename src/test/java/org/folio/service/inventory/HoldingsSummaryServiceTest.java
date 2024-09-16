@@ -69,7 +69,7 @@ public class HoldingsSummaryServiceTest {
     when(purchaseOrderLineService.getOrderLines(anyString(), anyInt(), anyInt(), any()))
       .thenReturn(Future.succeededFuture(polines));
 
-    when(pieceStorageService.getPieces(anyInt(), anyInt(), anyString(), any()))
+    when(pieceStorageService.getAllPieces(anyString(), any()))
       .thenReturn(Future.succeededFuture(pieces));
 
     var hs = holdingsSummaryService.getHoldingsSummary(UUID.randomUUID().toString(), requestContext)

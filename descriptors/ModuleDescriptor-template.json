@@ -489,7 +489,9 @@
           "pathPattern": "/orders/pieces",
           "permissionsRequired": ["orders.pieces.collection.get"],
           "modulePermissions": [
-            "orders-storage.pieces.collection.get"
+            "orders-storage.pieces.collection.get",
+            "consortia.user-tenants.collection.get",
+            "user-tenants.collection.get"
           ]
         },
         {
