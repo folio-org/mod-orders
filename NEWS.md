@@ -1,5 +1,13 @@
 ## 12.9.0 - Unreleased
 
+## 12.8.9 - Released (Quesnelia R1 2024)
+The primary focus of this release was to provide support for mapping the order line donor information field during order import
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.8...v12.8.9)
+
+### Stories
+* [MODORDERS-1187](https://folio-org.atlassian.net/browse/MODORDERS-1187) - Upgrade di-processing-core library to v4.2.2 to pick up logic for donor information field mapping
+
+
 ## 12.8.8 - Released (Quesnelia R1 2024)
 The primary focus of this release was to fix issue with fund code population during order line import
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.7...v12.8.8)
