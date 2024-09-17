@@ -1,5 +1,13 @@
 ## 12.9.0 - Unreleased
 
+## 12.8.10 - Released (Quesnelia R1 2024)
+The primary focus of this release was to fix issue with updating an encumbrance when exchange rate is edited
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.9...v12.8.10)
+
+### Bug Fixes
+* [MODORDERS-1185](https://folio-org.atlassian.net/browse/MODORDERS-1185) - Encumbrance amount does not update when exchange rate is edited on open order
+
+
 ## 12.8.9 - Released (Quesnelia R1 2024)
 The primary focus of this release was to provide support for mapping the order line donor information field during order import
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.8...v12.8.9)

@@ -1,44 +1,32 @@
 package org.folio.helper;
 
-import static org.folio.TestConfig.clearServiceInteractions;
-import static org.folio.TestConfig.initSpringContext;
-import static org.folio.TestConfig.isVerticleNotDeployed;
-import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
+import org.folio.rest.jaxrs.model.Cost;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
-import org.folio.ApiTestSuite;
-import org.folio.config.ApplicationConfig;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PurchaseOrderLineHelperTest {
-  private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
-  private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
 
-  private static boolean runningOnOwn;
-
-  @BeforeAll
-  static void before() throws InterruptedException, ExecutionException, TimeoutException {
-    if (isVerticleNotDeployed()) {
-      ApiTestSuite.before();
-      runningOnOwn = true;
-    }
-    initSpringContext(ApplicationConfig.class);
+  private static Stream<Arguments> testHasAlteredExchangeRateArgs() {
+    return Stream.of(
+      Arguments.of(false, 0.7d, 0.7d),
+      Arguments.of(false, null, null),
+      Arguments.of(true, 0.7d, 0.8d),
+      Arguments.of(true, null, 0.8d),
+      Arguments.of(true, 0.7d, null)
+    );
   }
 
-  @AfterEach
-  void afterEach() {
-    clearServiceInteractions();
+  @ParameterizedTest
+  @MethodSource("testHasAlteredExchangeRateArgs")
+  void testHasAlteredExchangeRate(boolean expected, Double oldExchangeRate, Double newExchangeRate) {
+    var currencyCode = "AUD";
+    var oldCost = new Cost().withCurrency(currencyCode).withExchangeRate(newExchangeRate);
+    var newCost = new Cost().withCurrency(currencyCode).withExchangeRate(oldExchangeRate);
+    assertEquals(expected, PurchaseOrderLineHelper.hasAlteredExchangeRate(oldCost, newCost));
   }
-
-  @AfterAll
-  static void after() {
-    if (runningOnOwn) {
-      ApiTestSuite.after();
-    }
-  }
-
 }
