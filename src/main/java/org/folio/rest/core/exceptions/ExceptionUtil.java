@@ -30,7 +30,6 @@ public class ExceptionUtil {
   public static final String NOT_PROVIDED = "Not Provided";
   private static final Pattern ERROR_PATTERN = Pattern.compile("(message).*(code).*(parameters)");
   private static final Pattern ERRORS_PATTERN = Pattern.compile("(errors).*(message).*(code).*(parameters)");
-  private static final Pattern AFFILIATION_MISSED_PATTERN = Pattern.compile("Invalid token: User with id ([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}) does not exist");
 
   private ExceptionUtil() {
   }
@@ -90,8 +89,7 @@ public class ExceptionUtil {
     if (StringUtils.isEmpty(errorMessage)) {
       return false;
     }
-    Matcher matcher = AFFILIATION_MISSED_PATTERN.matcher(errorMessage);
-    return matcher.find();
+    return errorMessage.contains("Invalid token:");
   }
 
   public static String errorAsString(Errors errors) {

@@ -14,10 +14,19 @@ import io.vertx.pgclient.PgException;
 
 public class ExceptionUtilTest {
 
-  private static final String INVALID_TOKEN_ERROR = """
+  private static final String INVALID_TOKEN_USER_DOES_NOT_EXIST = """
     {
       "errors" : [ {
         "message" : "Invalid token: User with id 858cbba3-6fd0-4430-9011-9939574677d8 does not exist",
+        "code" : "genericError",
+        "parameters" : [ ]
+      } ],
+      "total_records" : 1
+    }""";
+  private static final String INVALID_TOKEN_USER_IS_NOT_ACTIVE = """
+    {
+      "errors" : [ {
+        "message" : "Invalid token: user with id d107a00f-b3fe-44b2-ae88-44c43733d6cc is not active",
         "code" : "genericError",
         "parameters" : [ ]
       } ],
@@ -63,8 +72,14 @@ public class ExceptionUtilTest {
   }
 
   @Test
-  void testGetHttpExceptionMissedAffiliationError() {
-    HttpException httpException = ExceptionUtil.getHttpException(401, INVALID_TOKEN_ERROR);
+  void testGetHttpExceptionMissedAffiliationWhenUserDoesNotExist() {
+    HttpException httpException = ExceptionUtil.getHttpException(401, INVALID_TOKEN_USER_DOES_NOT_EXIST);
+    assertEquals(ErrorCodes.USER_HAS_MISSED_AFFILIATIONS.toError(), httpException.getError());
+  }
+
+  @Test
+  void testGetHttpExceptionMissedAffiliationWhenUserIsNotActive() {
+    HttpException httpException = ExceptionUtil.getHttpException(401, INVALID_TOKEN_USER_IS_NOT_ACTIVE);
     assertEquals(ErrorCodes.USER_HAS_MISSED_AFFILIATIONS.toError(), httpException.getError());
   }
 
@@ -78,7 +93,7 @@ public class ExceptionUtilTest {
 
   @Test
   void testIsAffiliationMissedTrue() {
-    boolean act = ExceptionUtil.isAffiliationMissedError(INVALID_TOKEN_ERROR);
+    boolean act = ExceptionUtil.isAffiliationMissedError(INVALID_TOKEN_USER_DOES_NOT_EXIST);
     assertTrue(act);
   }
 
