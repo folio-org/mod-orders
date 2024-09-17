@@ -56,7 +56,8 @@ public class ExceptionUtil {
 
   public static HttpException getHttpException(int statusCode, String error) {
     if (isAffiliationMissedError(error)) {
-      return new HttpException(statusCode, USER_HAS_MISSED_AFFILIATIONS);
+      return new HttpException(statusCode, USER_HAS_MISSED_AFFILIATIONS,
+        List.of(new Parameter().withKey("cause").withValue(error)));
     }
     if (isErrorsMessageJson(error)) {
       return new HttpException(statusCode, mapToErrors(error));

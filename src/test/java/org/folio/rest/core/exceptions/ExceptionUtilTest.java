@@ -6,11 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.pgclient.PgException;
+
+import java.util.List;
 
 public class ExceptionUtilTest {
 
@@ -74,13 +78,17 @@ public class ExceptionUtilTest {
   @Test
   void testGetHttpExceptionMissedAffiliationWhenUserDoesNotExist() {
     HttpException httpException = ExceptionUtil.getHttpException(401, INVALID_TOKEN_USER_DOES_NOT_EXIST);
-    assertEquals(ErrorCodes.USER_HAS_MISSED_AFFILIATIONS.toError(), httpException.getError());
+    Error expected = ErrorCodes.USER_HAS_MISSED_AFFILIATIONS.toError()
+      .withParameters(List.of(new Parameter().withKey("cause").withValue(INVALID_TOKEN_USER_DOES_NOT_EXIST)));
+    assertEquals(expected, httpException.getError());
   }
 
   @Test
   void testGetHttpExceptionMissedAffiliationWhenUserIsNotActive() {
     HttpException httpException = ExceptionUtil.getHttpException(401, INVALID_TOKEN_USER_IS_NOT_ACTIVE);
-    assertEquals(ErrorCodes.USER_HAS_MISSED_AFFILIATIONS.toError(), httpException.getError());
+    Error expected = ErrorCodes.USER_HAS_MISSED_AFFILIATIONS.toError()
+      .withParameters(List.of(new Parameter().withKey("cause").withValue(INVALID_TOKEN_USER_IS_NOT_ACTIVE)));
+    assertEquals(expected, httpException.getError());
   }
 
   @Test
