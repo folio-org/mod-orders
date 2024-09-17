@@ -1,0 +1,13 @@
+{
+  "userTenants": [
+    {
+      "id": "05c34b3d-33fa-46fc-8906-4ade19a570fd",
+      "userId": "440c89e3-7f6c-578a-9ea8-310dad23605e",
+      "username": "testUser",
+      "tenantId": "tenantId1",
+      "tenantName": "Tenant1",
+      "isPrimary": true
+    }
+  ],
+  "totalRecords": 1
+}

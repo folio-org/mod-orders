@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.folio.rest.RestConstants.PATH_PARAM_PLACE_HOLDER;
+
 public class ResourcePathResolver {
 
   private ResourcePathResolver() {
@@ -53,6 +55,8 @@ public class ResourcePathResolver {
   public static final String ROUTING_LISTS = "routingLists";
   public static final String ORDER_SETTINGS = "orderSettings";
   public static final String USERS = "users";
+  public static final String CONSORTIA_USER_TENANTS = "consortia.user-tenants";
+
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -96,6 +100,7 @@ public class ResourcePathResolver {
     apis.put(EXPORT_HISTORY, "/orders-storage/export-history");
     apis.put(TAGS, "/tags");
     apis.put(USERS, "/users");
+    apis.put(CONSORTIA_USER_TENANTS, "/consortia/" + PATH_PARAM_PLACE_HOLDER + "/user-tenants");
     apis.put(ORDER_SETTINGS, "/orders-storage/settings");
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
 

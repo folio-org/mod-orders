@@ -11,6 +11,8 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.PieceCollection;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.pieces.PieceStorageService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -235,13 +237,25 @@ public class CirculationRequestsRetrieverTest {
     }
 
     @Bean
-    public PieceStorageService pieceStorageService(RestClient restClient) {
-      return spy(new PieceStorageService(restClient));
+    public PieceStorageService pieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
+                                                   ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                                   RestClient restClient) {
+      return spy(new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, restClient));
     }
 
     @Bean
     public CirculationRequestsRetriever circulationRequestsRetriever(PieceStorageService pieceStorageService, RestClient restClient) {
       return new CirculationRequestsRetriever(pieceStorageService, restClient);
+    }
+
+    @Bean
+    ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient) {
+      return new ConsortiumConfigurationService(restClient);
+    }
+
+    @Bean
+    ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
+      return new ConsortiumUserTenantsRetriever(restClient);
     }
 
   }

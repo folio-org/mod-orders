@@ -760,17 +760,33 @@ public class PurchaseOrderLineHelper {
     List<FundDistribution> requestFundDistros = compositePoLine.getFundDistribution();
     List<FundDistribution> storageFundDistros = storagePoLine.getFundDistribution();
 
-    if (compOrder.getWorkflowStatus() == CLOSED || (requestFundDistros.size() + storageFundDistros.size()) == 0 ) {
+    if (compOrder.getWorkflowStatus() == CLOSED || (requestFundDistros.size() + storageFundDistros.size()) == 0) {
       return false;
     }
 
     if (!compositePoLine.getCost().getPoLineEstimatedPrice().equals(storagePoLine.getCost().getPoLineEstimatedPrice())
       || !compositePoLine.getCost().getCurrency().equals(storagePoLine.getCost().getCurrency())
+      || hasAlteredExchangeRate(storagePoLine.getCost(), compositePoLine.getCost())
       || (requestFundDistros.size() != storageFundDistros.size())) {
       return true;
     }
 
     return !CollectionUtils.isEqualCollection(requestFundDistros, storageFundDistros);
+  }
+
+  static boolean hasAlteredExchangeRate(Cost oldCost, Cost newCost) {
+    var oldExchangeRate = oldCost.getExchangeRate();
+    var newExchangeRate = newCost.getExchangeRate();
+    if (Objects.isNull(oldExchangeRate) && Objects.isNull(newExchangeRate)) {
+      return false;
+    }
+    if (Objects.isNull(oldExchangeRate) || Objects.isNull(newExchangeRate)) {
+      logger.info("hasAlteredExchangeRate:: Exchange rate is null in one of the costs");
+      return true;
+    }
+    var exchangeRateIsAltered = !newExchangeRate.equals(oldExchangeRate);
+    logger.info("hasAlteredExchangeRate:: Exchange rate is altered: {}", exchangeRateIsAltered);
+    return exchangeRateIsAltered;
   }
 
   private Future<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {
