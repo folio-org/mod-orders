@@ -131,6 +131,7 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> saveOrderLines(PoLineCollection poLineCollection, RequestContext requestContext) {
+    logger.info("saveOrderLines:: start saving {} po lines in batch", poLineCollection.getTotalRecords());
     RequestEntry requestEntry = new RequestEntry(BATCH_ENDPOINT);
     return collectResultsOnSuccess(transform(poLineCollection.getPoLines(), poLine -> updateSearchLocations(poLine, requestContext)))
       .compose(v -> restClient.put(requestEntry, poLineCollection, requestContext));

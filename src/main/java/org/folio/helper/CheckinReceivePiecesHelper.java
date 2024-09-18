@@ -348,7 +348,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
                                              Consumer<List<PoLine>> updateOrderStatus, List<PoLine> poLines,
                                              List<Future<PoLine>> poLinesToUpdate) {
     return collectResultsOnSuccess(poLinesToUpdate)
-      .map(updatedPoLines -> purchaseOrderLineService.saveOrderLines(updatedPoLines, requestContext).map(voidResult -> {
+      .map(updatedPoLines -> purchaseOrderLineService.saveOrderLines(updatedPoLines, requestContext).compose(voidResult -> {
         logger.info("saveOrderLinesBatch:: {} out of {} POL updated with new status in batch", poLines.size(), piecesGroupedByPoLine.size());
 
         List<PoLine> notCancelledOrOngoingPoLines = updatedPoLines.stream()
@@ -432,8 +432,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private ReceiptStatus calculatePoLineReceiptStatus(List<Piece> piecesByPoLine,
                                                      List<Piece> piecesSuccessfullyProcessed,
                                                      PoLine poLine) {
-    logger.info("calculatePoLineReceiptStatus:: Calculating receipt status for POL, id: {}, checkInItems: {}", poLine.getId(), poLine.getCheckinItems());
-    logger.info("calculatePoLineReceiptStatus:: Processed pieces: {}, Pieces from storage: {}", piecesSuccessfullyProcessed.size(), piecesByPoLine.size());
+    logger.info("calculatePoLineReceiptStatus:: Calculating receipt status for POL, id: {}, checkInItems: {}, processed pieces: {}, pieces from storage: {}",
+      poLine.getId(), poLine.getCheckinItems(), piecesSuccessfullyProcessed.size(), piecesByPoLine.size());
     piecesSuccessfullyProcessed.forEach(v -> logger.info("calculatePoLineReceiptStatus:: Processed Piece, id: {}, status: {}", v.getId(), v.getReceivingStatus()));
     piecesByPoLine.forEach(v -> logger.info("calculatePoLineReceiptStatus:: Piece from storage, id: {}, status: {}", v.getId(), v.getReceivingStatus()));
     long expectedPiecesQuantity = piecesByPoLine.stream()
@@ -442,8 +442,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     long receivedPiecesQuantity = piecesByPoLine.stream()
       .filter(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus()))
       .count();
-    logger.info("calculatePoLineReceiptStatus:: Expected pieces: {}", expectedPiecesQuantity);
-    logger.info("calculatePoLineReceiptStatus:: Received pieces: {}", receivedPiecesQuantity);
+    logger.info("calculatePoLineReceiptStatus:: Expected pieces: {}, Received pieces: {}", expectedPiecesQuantity, receivedPiecesQuantity);
     // Fully Received: If receiving and there is no expected piece remaining
     if (!poLine.getCheckinItems().equals(Boolean.TRUE) && expectedPiecesQuantity == 0) {
       return FULLY_RECEIVED;
