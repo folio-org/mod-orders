@@ -3,7 +3,6 @@ package org.folio.service.caches;
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
@@ -11,6 +10,8 @@ import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.AcquisitionMethod;
+import org.folio.AcquisitionsUnit;
 import org.folio.ContributorNameType;
 import org.folio.Contributornametypes;
 import org.folio.ExpenseClass;
@@ -30,6 +31,8 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.util.OkapiConnectionParams;
 import org.folio.rest.util.RestUtil;
+import org.folio.service.AcquisitionMethodsService;
+import org.folio.service.AcquisitionsUnitsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -75,17 +78,22 @@ public class MappingParametersCache {
   private long cacheExpirationTime;
 
   private final AsyncCache<String, MappingParameters> cache;
-
   private final RestClient restClient;
+  private final AcquisitionsUnitsService acquisitionsUnitsService;
+  private final AcquisitionMethodsService acquisitionMethodsService;
 
   @Autowired
-  public MappingParametersCache(Vertx vertx, RestClient restClient) {
+  public MappingParametersCache(Vertx vertx, RestClient restClient,
+                                AcquisitionsUnitsService acquisitionsUnitsService,
+                                AcquisitionMethodsService acquisitionMethodsService) {
     LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
     cache = Caffeine.newBuilder()
       .expireAfterAccess(cacheExpirationTime, TimeUnit.SECONDS)
       .executor(task -> vertx.runOnContext(v -> task.run()))
       .buildAsync();
     this.restClient = restClient;
+    this.acquisitionsUnitsService = acquisitionsUnitsService;
+    this.acquisitionMethodsService = acquisitionMethodsService;
   }
 
   /**
@@ -121,10 +129,13 @@ public class MappingParametersCache {
     Future<List<Organization>> organizationsFuture = getOrganizations(params);
     Future<List<Fund>> fundsFuture = getFunds(params);
     Future<List<ExpenseClass>> expenseClassesFuture = getExpenseClasses(params);
+    Future<List<AcquisitionsUnit>> acquisitionsUnitsFuture = getAcquisitionsUnits(params);
+    Future<List<AcquisitionMethod>> acquisitionsMethodsFuture = getAcquisitionMethods(params);
     Future<List<String>> tenantConfigurationAddressesFuture = getTenantConfigurationAddresses(params);
 
     return GenericCompositeFuture.join(Arrays.asList(locationsFuture, materialTypesFuture, contributorNameTypesFuture,
-      organizationsFuture, fundsFuture, expenseClassesFuture, tenantConfigurationAddressesFuture))
+      organizationsFuture, fundsFuture, expenseClassesFuture, acquisitionsUnitsFuture,
+      acquisitionsMethodsFuture, tenantConfigurationAddressesFuture))
       .map(v -> new MappingParameters()
         .withLocations(locationsFuture.result())
         .withMaterialTypes(materialTypesFuture.result())
@@ -132,6 +143,8 @@ public class MappingParametersCache {
         .withOrganizations(organizationsFuture.result())
         .withFunds(fundsFuture.result())
         .withExpenseClasses(expenseClassesFuture.result())
+        .withAcquisitionsUnits(acquisitionsUnitsFuture.result())
+        .withAcquisitionMethods(acquisitionsMethodsFuture.result())
         .withTenantConfigurationAddresses(tenantConfigurationAddressesFuture.result()));
   }
 
@@ -217,48 +230,64 @@ public class MappingParametersCache {
       response -> response.mapTo(ExpenseClassCollection.class).getExpenseClasses());
   }
 
+  private Future<List<AcquisitionsUnit>> getAcquisitionsUnits(OkapiConnectionParams params) {
+    return acquisitionsUnitsService.getAcquisitionsUnits(null, 0, settingsLimit, new RequestContext(Vertx.currentContext(), params.getHeaders()))
+      .map(unitsCollection -> unitsCollection.getAcquisitionsUnits()
+        .stream().map(unit -> mapTo(unit, AcquisitionsUnit.class)).toList());
+  }
+
+  private Future<List<AcquisitionMethod>> getAcquisitionMethods(OkapiConnectionParams params) {
+    return acquisitionMethodsService.getAcquisitionMethods(settingsLimit, 0, null, new RequestContext(Vertx.currentContext(), params.getHeaders()))
+      .map(methodsCollection -> methodsCollection.getAcquisitionMethods()
+        .stream().map(method -> mapTo(method, AcquisitionMethod.class)).toList());
+  }
+
+  private static <T> T mapTo(Object unit, Class<T> objectClass) {
+    return Json.decodeValue(Json.encode(unit), objectClass);
+  }
+
   private Future<List<String>> getTenantConfigurationAddresses(OkapiConnectionParams params) {
-    Promise<List<String>> promise = Promise.promise();
-    RestUtil.doRequest(params, TENANT_CONFIGURATION_ADDRESSES_URL, HttpMethod.GET, null).onComplete(ar -> {
-      if (RestUtil.validateAsyncResult(ar, promise)) {
-        JsonObject response = ar.result().getJson();
+    return RestUtil.doRequest(params, TENANT_CONFIGURATION_ADDRESSES_URL, HttpMethod.GET, null).compose(httpResponse -> {
+      if ((httpResponse.getResponse().statusCode() == HttpStatus.SC_OK)) {
+        JsonObject response = httpResponse.getJson();
         if (ifConfigResponseIsValid(response)) {
           List<String> addresses = response.getJsonArray(CONFIGS_VALUE_RESPONSE).stream()
             .map(config -> ((JsonObject) config).getString(VALUE_RESPONSE))
             .filter(Objects::nonNull)
             .toList();
-          promise.complete(addresses);
-        } else {
-          promise.complete(new ArrayList<>());
+          return Future.succeededFuture(addresses);
         }
+        return Future.succeededFuture(Collections.emptyList());
+      } else {
+        String message = format(ERROR_LOADING_CACHE_MESSAGE, params.getTenantId(),
+          httpResponse.getResponse().statusCode(), httpResponse.getBody());
+        LOGGER.warn("getTenantConfigurationAddresses:: " + message);
+        return Future.failedFuture(new CacheLoadingException(message));
       }
     });
-    return promise.future();
   }
 
   private <T> Future<List<T>> loadData(OkapiConnectionParams params, String requestUrl, String dataCollectionField,
                                        Function<JsonObject, List<T>> dataExtractor) {
-    Promise<List<T>> promise = Promise.promise();
-    RestUtil.doRequest(params, requestUrl, HttpMethod.GET, null).onComplete(responseAr -> {
+    return RestUtil.doRequest(params, requestUrl, HttpMethod.GET, null).compose(httpResponse -> {
       try {
-        if (RestUtil.validateAsyncResult(responseAr, promise)) {
-          JsonObject response = responseAr.result().getJson();
+        if (httpResponse.getResponse().statusCode() == HttpStatus.SC_OK) {
+          JsonObject response = httpResponse.getJson();
           if (response != null && response.containsKey(dataCollectionField)) {
-            promise.complete(dataExtractor.apply(response));
-          } else {
-            promise.complete(Collections.emptyList());
+            return Future.succeededFuture(dataExtractor.apply(response));
           }
+          return Future.succeededFuture(Collections.emptyList());
         } else {
           String message = format(ERROR_LOADING_CACHE_MESSAGE, params.getTenantId(),
-            responseAr.result().getResponse().statusCode(), responseAr.result().getBody());
+            httpResponse.getResponse().statusCode(), httpResponse.getBody());
           LOGGER.warn("loadData:: " + message);
+          return Future.failedFuture(new CacheLoadingException(message));
         }
       } catch (Exception e) {
         LOGGER.warn("loadData:: Failed to load {}", dataCollectionField, e);
-        promise.fail(new CacheLoadingException(e.getMessage()));
+        return Future.failedFuture(new CacheLoadingException(e.getMessage()));
       }
     });
-    return promise.future();
   }
 
   private boolean ifConfigResponseIsValid(JsonObject response) {
