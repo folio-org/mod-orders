@@ -3035,7 +3035,7 @@ public class MockServer {
   }
 
   private void handleGetJsonResource(RoutingContext ctx, String path) {
-    logger.info("handleGetJsonResource:: got: " + ctx.request().path());
+    logger.info("handleGetJsonResource:: got: {}", ctx.request().path());
     JsonObject resource = getMockAsJson(path);
     if (!resource.isEmpty()) {
       serverResponse(ctx, 200, APPLICATION_JSON, resource.encodePrettily());

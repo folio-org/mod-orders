@@ -171,7 +171,7 @@ public class MappingParametersCache {
           return Future.succeededFuture(orgCollection.getOrganizations());
         } else {
           String message = format(ERROR_LOADING_CACHE_MESSAGE, "Organizations", tenantId, httpResponse.getResponse().statusCode(), httpResponse.getBody());
-          LOGGER.warn("getOrganizations:: " + message);
+          LOGGER.warn("getOrganizations:: {}", message);
           return Future.failedFuture(new CacheLoadingException(message));
         }
       });
@@ -272,7 +272,7 @@ public class MappingParametersCache {
       } else {
         String message = format(ERROR_LOADING_CACHE_MESSAGE, "TenantConfigurationAddresses", params.getTenantId(),
           httpResponse.getResponse().statusCode(), httpResponse.getBody());
-        LOGGER.warn("getTenantConfigurationAddresses:: " + message);
+        LOGGER.warn("getTenantConfigurationAddresses:: {}", message);
         return Future.failedFuture(new CacheLoadingException(message));
       }
     });
@@ -291,7 +291,7 @@ public class MappingParametersCache {
         } else {
           String message = format(ERROR_LOADING_CACHE_MESSAGE, parameterName, params.getTenantId(),
             httpResponse.getResponse().statusCode(), httpResponse.getBody());
-          LOGGER.warn("loadData:: " + message);
+          LOGGER.warn("loadData:: {}", message);
           return Future.failedFuture(new CacheLoadingException(message));
         }
       } catch (Exception e) {
