@@ -57,7 +57,7 @@ public class ConsortiumUserTenantsRetriever {
     }
   }
 
-  public CompletableFuture<List<String>> getUserTenantsFromRemote(String userId, String consortiumId, RequestContext requestContext) {
+  private CompletableFuture<List<String>> getUserTenantsFromRemote(String userId, String consortiumId, RequestContext requestContext) {
     var url = CONSORTIA_USER_TENANTS_ENDPOINT.replace(PATH_PARAM_PLACE_HOLDER, consortiumId);
     var requestEntry = new RequestEntry(url)
       .withOffset(0)
