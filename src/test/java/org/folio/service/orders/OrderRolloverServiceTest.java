@@ -45,6 +45,7 @@ import org.folio.rest.jaxrs.model.FundDistribution.DistributionType;
 import org.folio.rest.jaxrs.model.LedgerFiscalYearRollover;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
+import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.RolloverStatus;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
@@ -723,5 +724,47 @@ public class OrderRolloverServiceTest {
     var totalAmountAfterConversion = orderRolloverService.calculateTotalInitialAmountEncumbered(holder);
 
     Assertions.assertEquals(BigDecimal.valueOf(totalAmount), totalAmountAfterConversion);
+  }
+
+  private static Stream<Arguments> testBuildOpenOrClosedOrderQueryByFundIdsAndTypesArgs() {
+    return Stream.of(
+      Arguments.of("(purchaseOrder.orderType == One-Time) and (purchaseOrder.workflowStatus==Open) and (fundDistribution =/@fundId \"%s\") sortBy metadata.createdDate",
+        PurchaseOrder.WorkflowStatus.OPEN,
+        List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d))),
+      Arguments.of("(purchaseOrder.orderType == One-Time) and (purchaseOrder.workflowStatus==Closed) and (fundDistribution =/@fundId \"%s\") and (fundDistribution == \"*\\\"encumbrance\\\": \\\"*\") sortBy metadata.createdDate",
+        PurchaseOrder.WorkflowStatus.CLOSED,
+        List.of(new EncumbranceRollover().withOrderType(EncumbranceRollover.OrderType.ONE_TIME).withBasedOn(EncumbranceRollover.BasedOn.INITIAL_AMOUNT).withIncreaseBy(0d)))
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("testBuildOpenOrClosedOrderQueryByFundIdsAndTypesArgs")
+  @DisplayName("Should convert total amount using correct exchange rate provider")
+  void testBuildOpenOrClosedOrderQueryByFundIdsAndTypes(String expectedQueryTemplate, PurchaseOrder.WorkflowStatus workflowStatus, List<EncumbranceRollover> encumbranceRollovers) {
+    var fundId = UUID.randomUUID().toString();
+    var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(encumbranceRollovers);
+    var expectedQuery = String.format(expectedQueryTemplate, fundId);
+    var actualQuery = orderRolloverService.buildOpenOrClosedOrderQueryByFundIdsAndTypes(List.of(fundId), workflowStatus, ledgerFiscalYearRollover);
+    Assertions.assertEquals(expectedQuery, actualQuery);
+  }
+
+  private static Stream<Arguments> testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettingsArgs() {
+    return Stream.of(
+      Arguments.of("(purchaseOrder.workflowStatus==Open) and (fundDistribution =/@fundId \"%s\") sortBy metadata.createdDate",
+        PurchaseOrder.WorkflowStatus.OPEN),
+      Arguments.of("(purchaseOrder.workflowStatus==Closed) and (fundDistribution =/@fundId \"%s\") and (fundDistribution == \"*\\\"encumbrance\\\": \\\"*\") sortBy metadata.createdDate",
+        PurchaseOrder.WorkflowStatus.CLOSED)
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettingsArgs")
+  @DisplayName("Should convert total amount using correct exchange rate provider")
+  void testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettings(String expectedQueryTemplate, PurchaseOrder.WorkflowStatus workflowStatus) {
+    var fundId = UUID.randomUUID().toString();
+    var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(List.of());
+    var expectedQuery = String.format(expectedQueryTemplate, fundId);
+    var actualQuery = orderRolloverService.buildOpenOrClosedOrderQueryByFundIdsAndTypes(List.of(fundId), workflowStatus, ledgerFiscalYearRollover);
+    Assertions.assertEquals(expectedQuery, actualQuery);
   }
 }

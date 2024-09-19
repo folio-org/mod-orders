@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -72,6 +71,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertxconcurrent.Semaphore;
 
 public class OrderRolloverService {
+
   private static final Logger logger = LogManager.getLogger();
 
   private static final String PO_LINE_FUND_DISTR_QUERY = "fundDistribution =/@fundId \"%s\"";
@@ -427,28 +427,25 @@ public class OrderRolloverService {
       .collect(Collectors.joining(delimiter));
   }
 
-  private String buildOpenOrClosedOrderQueryByFundIdsAndTypes(List<String> fundIds, PurchaseOrder.WorkflowStatus workflowStatus, LedgerFiscalYearRollover ledgerFYRollover) {
-    String typesQuery = null;
+  protected String buildOpenOrClosedOrderQueryByFundIdsAndTypes(List<String> fundIds, PurchaseOrder.WorkflowStatus workflowStatus, LedgerFiscalYearRollover ledgerFYRollover) {
+    StringBuilder resultQuery = new StringBuilder();
     if (!ledgerFYRollover.getEncumbrancesRollover().isEmpty()) {
-      typesQuery = buildOrderTypesQuery(ledgerFYRollover);
+      resultQuery.append("(").append(buildOrderTypesQuery(ledgerFYRollover)).append(")").append(AND);
     }
-    String fundIdsQuery = fundIds.stream()
-      .map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId))
-      .collect(Collectors.joining(OR));
-    String resultQuery;
-    if (Objects.nonNull(typesQuery)) {
-      resultQuery = "(" + typesQuery + ")" + AND + " (purchaseOrder.workflowStatus==" + workflowStatus + ") " + AND + "(" + fundIdsQuery + ")";
-    } else {
-      resultQuery = "(purchaseOrder.workflowStatus==" + workflowStatus + ") " + AND + "(" + fundIdsQuery + ")";
-    }
+    resultQuery.append("(purchaseOrder.workflowStatus==").append(workflowStatus).append(")").append(AND).append("(").append(buildFundIdQuery(fundIds)).append(")");
     if (workflowStatus == CLOSED) {
       // MODORDERS-904 Avoid rollover re-processing of old already processed closed orders in previous fiscal years
-      String nonEmptyEncumbranceFilter = " AND ("  + PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY + ")";
-      resultQuery = resultQuery + nonEmptyEncumbranceFilter;
+      resultQuery.append(AND).append("(").append(PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY).append(")");
     }
-    resultQuery = resultQuery + " sortBy metadata.createdDate";
+    resultQuery.append(" sortBy metadata.createdDate");
     logger.info("buildOpenOrClosedOrderQueryByFundIdsAndTypes:: Resulting PO line query: {}", resultQuery);
-    return resultQuery;
+    return resultQuery.toString();
+  }
+
+  private static String buildFundIdQuery(List<String> fundIds) {
+    return fundIds.stream()
+      .map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId))
+      .collect(Collectors.joining(OR));
   }
 
   private String buildOrderTypesQuery(LedgerFiscalYearRollover ledgerFYRollover) {
