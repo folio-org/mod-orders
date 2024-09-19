@@ -442,7 +442,7 @@ public class OrderRolloverService {
     return resultQuery.toString();
   }
 
-  private static String buildFundIdQuery(List<String> fundIds) {
+  private String buildFundIdQuery(List<String> fundIds) {
     return fundIds.stream()
       .map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId))
       .collect(Collectors.joining(OR));
