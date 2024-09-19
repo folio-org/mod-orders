@@ -1,10 +1,11 @@
 package org.folio.helper;
 
-import static io.vertx.core.json.JsonObject.mapFrom;
 import static org.apache.commons.collections4.CollectionUtils.isEqualCollection;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.HelperUtils.convertToCompositePoLine;
+import static org.folio.orders.utils.HelperUtils.convertToPoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
@@ -209,7 +210,7 @@ public class PurchaseOrderLineHelper {
     updateEstimatedPrice(compPoLine);
     PoLineCommonUtil.updateLocationsQuantity(compPoLine.getLocations());
 
-    var line = mapFrom(compPoLine).mapTo(PoLine.class);
+    var line = convertToPoLine(compPoLine);
     List<Future<Void>> subObjFuts = new ArrayList<>();
     subObjFuts.add(createAlerts(compPoLine, line, requestContext));
     subObjFuts.add(createReportingCodes(compPoLine, line, requestContext));
@@ -446,11 +447,14 @@ public class PurchaseOrderLineHelper {
     if (poFromStorage.getWorkflowStatus() != PENDING && getNewPoLines(compPO, existingPoLines).findAny().isPresent()) {
       throw new HttpException(422, poFromStorage.getWorkflowStatus() == OPEN ? ErrorCodes.ORDER_OPEN : ErrorCodes.ORDER_CLOSED);
     }
-    validatePoLineProtectedFieldsChangedOrder(compPO, existingPoLines);
+    validatePoLineProtectedFieldsChangedOrder(poFromStorage, compPO, existingPoLines);
     return handlePoLines(compPO, existingPoLines, requestContext);
   }
 
-  private void validatePoLineProtectedFieldsChangedOrder(CompositePurchaseOrder compPO, List<PoLine> existingPoLines) {
+  private void validatePoLineProtectedFieldsChangedOrder(CompositePurchaseOrder poFromStorage, CompositePurchaseOrder compPO, List<PoLine> existingPoLines) {
+    if (poFromStorage.getWorkflowStatus() == PENDING) {
+      return;
+    }
     compPO.getCompositePoLines().forEach(poLine -> {
       var fields = POLineProtectedFieldsUtil.getFieldNames(poLine.getOrderFormat().value());
       var correspondingLine = findCorrespondingCompositePoLine(poLine, existingPoLines);
@@ -637,8 +641,8 @@ public class PurchaseOrderLineHelper {
       });
   }
 
-  private CompositePurchaseOrder addLineToCompOrder(CompositePurchaseOrder compOrder, PoLine poLine) {
-    var compPoLine = JsonObject.mapFrom(poLine.withAlerts(null).withReportingCodes(null)).mapTo(CompositePoLine.class);
+  private CompositePurchaseOrder addLineToCompOrder(CompositePurchaseOrder compOrder, PoLine lineFromStorage) {
+    var compPoLine = convertToCompositePoLine(lineFromStorage);
     compOrder.getCompositePoLines().add(compPoLine);
     return compOrder;
   }
@@ -718,7 +722,7 @@ public class PurchaseOrderLineHelper {
   private Future<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {
     return organizationService.validateAccessProviders(Collections.singletonList(compOrderLine), requestContext)
       .map(errors -> {
-        if (!isNotEmpty(errors.getErrors())) {
+        if (isNotEmpty(errors.getErrors())) {
           throw new HttpException(422, errors.getErrors().get(0));
         }
         return null;

@@ -448,6 +448,13 @@ public class HelperUtils {
       && (receiptStatus == FULLY_RECEIVED || receiptStatus == RECEIPT_NOT_REQUIRED || receiptStatus == ReceiptStatus.CANCELLED);
   }
 
+  public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
+    JsonObject pol = JsonObject.mapFrom(poLine);
+    pol.remove(ALERTS);
+    pol.remove(REPORTING_CODES);
+    return pol.mapTo(CompositePoLine.class);
+  }
+
   public static PoLine convertToPoLine(CompositePoLine compPoLine) {
     JsonObject pol = JsonObject.mapFrom(compPoLine);
     pol.remove(ALERTS);
