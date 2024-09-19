@@ -19,7 +19,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.C
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.folio.service.orders.utils.StatusUtils.areAllPoLinesCanceled;
-import static org.folio.service.orders.utils.StatusUtils.isPoLineStatusCanceled;
+import static org.folio.service.orders.utils.StatusUtils.isCompositePoLineStatusCanceled;
 import static org.folio.service.orders.utils.StatusUtils.isStatusChanged;
 import static org.folio.service.orders.utils.StatusUtils.updateOrderStatusIfNeeded;
 
@@ -271,32 +271,30 @@ public class PurchaseOrderLineHelper {
    */
   public Future<Void> updateOrderLine(CompositePoLine compOrderLine, RequestContext requestContext) {
     return getPoLineByIdAndValidate(compOrderLine.getPurchaseOrderId(), compOrderLine.getId(), requestContext)
-      .compose(lineFromStorage -> {
-        var poLineFromStorage = lineFromStorage.mapTo(PoLine.class);
-        return getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId(), requestContext)
-          .map(compOrder -> addLineToCompOrder(compOrder, poLineFromStorage))
-          .map(compOrder -> {
-            validatePOLineProtectedFieldsChanged(compOrderLine, poLineFromStorage, compOrder);
-            PoLineCommonUtil.updateLocationsQuantity(compOrderLine.getLocations());
-            updateEstimatedPrice(compOrderLine);
-            checkLocationCanBeModified(compOrderLine, poLineFromStorage, compOrder);
-            return compOrder;
-          })
-          .compose(compOrder -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
-            .compose(v -> purchaseOrderLineService.validateAndNormalizeISBNAndProductType(Collections.singletonList(compOrderLine), requestContext))
-            .compose(v -> validateAccessProviders(compOrderLine, requestContext))
-            .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
-            .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext)))
-          .map(v -> compOrderLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
-          .map(v -> new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage))
-          .compose(poLineInvoiceLineHolder -> polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
-            .compose(v -> createShadowInstanceIfNeeded(compOrderLine, requestContext))
-            .compose(v -> updateOrderLine(compOrderLine, lineFromStorage, requestContext))
-            .compose(v -> updateEncumbranceStatus(compOrderLine, poLineFromStorage, requestContext))
-            .compose(v -> polInvoiceLineRelationService.updateInvoiceLineReference(poLineInvoiceLineHolder, requestContext))
-            .compose(v -> updateInventoryItemStatus(compOrderLine, poLineFromStorage, requestContext))
-            .compose(v -> updateOrderStatusIfNeeded(compOrderLine, lineFromStorage, requestContext)));
-      });
+      .map(lineFromStorage -> lineFromStorage.mapTo(PoLine.class))
+      .compose(poLineFromStorage -> getCompositePurchaseOrder(compOrderLine.getPurchaseOrderId(), requestContext)
+        .map(compOrder -> addLineToCompOrder(compOrder, poLineFromStorage))
+        .map(compOrder -> {
+          validatePOLineProtectedFieldsChanged(compOrderLine, poLineFromStorage, compOrder);
+          PoLineCommonUtil.updateLocationsQuantity(compOrderLine.getLocations());
+          updateEstimatedPrice(compOrderLine);
+          checkLocationCanBeModified(compOrderLine, poLineFromStorage, compOrder);
+          return compOrder;
+        })
+        .compose(compOrder -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
+          .compose(v -> purchaseOrderLineService.validateAndNormalizeISBNAndProductType(Collections.singletonList(compOrderLine), requestContext))
+          .compose(v -> validateAccessProviders(compOrderLine, requestContext))
+          .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
+          .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext)))
+        .map(v -> compOrderLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
+        .map(v -> new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage))
+        .compose(poLineInvoiceLineHolder -> polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
+          .compose(v -> createShadowInstanceIfNeeded(compOrderLine, requestContext))
+          .compose(v -> updateOrderLine(compOrderLine, JsonObject.mapFrom(poLineFromStorage), requestContext))
+          .compose(v -> updateEncumbranceStatus(compOrderLine, poLineFromStorage, requestContext))
+          .compose(v -> polInvoiceLineRelationService.updateInvoiceLineReference(poLineInvoiceLineHolder, requestContext))
+          .compose(v -> updateInventoryItemStatus(compOrderLine, poLineFromStorage, requestContext))
+          .compose(v -> updateOrderStatusIfNeeded(compOrderLine, poLineFromStorage, requestContext))));
   }
 
   private Future<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, PoLine poLineFromStorage, RequestContext requestContext) {
@@ -373,21 +371,20 @@ public class PurchaseOrderLineHelper {
    */
   private Future<JsonObject> getPoLineByIdAndValidate(String orderId, String lineId, RequestContext requestContext) {
     return purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .map(JsonObject::mapFrom)
-      .map(line -> {
+      .map(poLine -> {
         logger.debug("Validating if the retrieved PO line corresponds to PO");
-        validateOrderId(orderId, line);
-        return line;
+        validateOrderId(orderId, poLine);
+        return JsonObject.mapFrom(poLine);
       });
   }
 
   /**
    * Validates if the retrieved PO line corresponds to PO (orderId). In case the PO line does not correspond to order id the exception is thrown
    * @param orderId order identifier
-   * @param line PO line retrieved from storage
+   * @param poLine PO line retrieved from storage
    */
-  private void validateOrderId(String orderId, JsonObject line) {
-    if (!StringUtils.equals(orderId, line.getString(PURCHASE_ORDER_ID))) {
+  private void validateOrderId(String orderId, PoLine poLine) {
+    if (!StringUtils.equals(orderId, poLine.getPurchaseOrderId())) {
       throw new HttpException(422, ErrorCodes.INCORRECT_ORDER_ID_IN_POL);
     }
   }
@@ -670,7 +667,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> updateInventoryItemStatus(CompositePoLine compOrderLine, PoLine lineFromStorage, RequestContext requestContext) {
-    if (!isStatusChanged(compOrderLine, lineFromStorage) || !isPoLineStatusCanceled(compOrderLine)) {
+    if (!isStatusChanged(compOrderLine, lineFromStorage) || !isCompositePoLineStatusCanceled(compOrderLine)) {
       return Future.succeededFuture();
     }
     return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
@@ -720,8 +717,7 @@ public class PurchaseOrderLineHelper {
   private Future<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {
     return organizationService.validateAccessProviders(Collections.singletonList(compOrderLine), requestContext)
       .map(errors -> {
-        if (!errors.getErrors()
-          .isEmpty()) {
+        if (!isNotEmpty(errors.getErrors())) {
           throw new HttpException(422, errors.getErrors().get(0));
         }
         return null;
@@ -798,8 +794,8 @@ public class PurchaseOrderLineHelper {
 
   private Future<Void> verifyDeleteAllowed(PoLine line, RequestContext requestContext) {
     return orderInvoiceRelationService.checkOrderPOLineLinkedToInvoiceLine(line, requestContext)
-      .compose(v -> getCompositePurchaseOrder(line.getPurchaseOrderId(), requestContext)
-        .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext)));
+      .compose(v -> getCompositePurchaseOrder(line.getPurchaseOrderId(), requestContext))
+      .compose(order -> protectionService.isOperationRestricted(order.getAcqUnitIds(), DELETE, requestContext));
   }
 
   private Future<Void> createShadowInstanceIfNeeded(CompositePoLine compositePoLine, RequestContext requestContext) {

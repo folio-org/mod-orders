@@ -17,9 +17,9 @@ import static org.folio.helper.BaseHelper.ORDER_ID;
 
 public class StatusUtils {
 
-  public static Future<Void> updateOrderStatusIfNeeded(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
+  public static Future<Void> updateOrderStatusIfNeeded(CompositePoLine compOrderLine, PoLine poLineFromStorage, RequestContext requestContext) {
     // See MODORDERS-218
-    if (isStatusChanged(compOrderLine, lineFromStorage.mapTo(PoLine.class))) {
+    if (isStatusChanged(compOrderLine, poLineFromStorage)) {
       var updateOrderMessage = JsonObject.of(EVENT_PAYLOAD, JsonArray.of(JsonObject.of(ORDER_ID, compOrderLine.getPurchaseOrderId())));
       HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, updateOrderMessage, requestContext);
     }
@@ -45,7 +45,7 @@ public class StatusUtils {
       PoLine.ReceiptStatus.CANCELLED.equals(poLine.getReceiptStatus());
   }
 
-  public static boolean isPoLineStatusCanceled(CompositePoLine compOrderLine) {
+  public static boolean isCompositePoLineStatusCanceled(CompositePoLine compOrderLine) {
     return CompositePoLine.ReceiptStatus.CANCELLED.equals(compOrderLine.getReceiptStatus()) ||
       CompositePoLine.PaymentStatus.CANCELLED.equals(compOrderLine.getPaymentStatus());
   }

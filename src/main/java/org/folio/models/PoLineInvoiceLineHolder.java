@@ -9,8 +9,9 @@ import org.folio.rest.jaxrs.model.PoLine;
 
 
 public class PoLineInvoiceLineHolder {
-  private CompositePoLine poLineFromRequest;
-  private PoLine poLineFromStorage;
+
+  private final CompositePoLine poLineFromRequest;
+  private final PoLine poLineFromStorage;
   private List<InvoiceLine> invoiceLines;
   private List<InvoiceLine> openOrReviewedInvoiceLines;
 
