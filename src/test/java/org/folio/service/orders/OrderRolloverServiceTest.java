@@ -739,7 +739,6 @@ public class OrderRolloverServiceTest {
 
   @ParameterizedTest
   @MethodSource("testBuildOpenOrClosedOrderQueryByFundIdsAndTypesArgs")
-  @DisplayName("Should convert total amount using correct exchange rate provider")
   void testBuildOpenOrClosedOrderQueryByFundIdsAndTypes(String expectedQueryTemplate, PurchaseOrder.WorkflowStatus workflowStatus, List<EncumbranceRollover> encumbranceRollovers) {
     var fundId = UUID.randomUUID().toString();
     var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(encumbranceRollovers);
@@ -759,7 +758,6 @@ public class OrderRolloverServiceTest {
 
   @ParameterizedTest
   @MethodSource("testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettingsArgs")
-  @DisplayName("Should convert total amount using correct exchange rate provider")
   void testBuildOpenOrClosedOrderQueryByFundIdsAndTypesWithoutSettings(String expectedQueryTemplate, PurchaseOrder.WorkflowStatus workflowStatus) {
     var fundId = UUID.randomUUID().toString();
     var ledgerFiscalYearRollover = new LedgerFiscalYearRollover().withId(UUID.randomUUID().toString()).withEncumbrancesRollover(List.of());
