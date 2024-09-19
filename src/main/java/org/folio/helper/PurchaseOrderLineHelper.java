@@ -98,7 +98,7 @@ public class PurchaseOrderLineHelper {
   public static final String ERESOURCE = "eresource";
   public static final String PHYSICAL = "physical";
   private static final String OTHER = "other";
-  private static final String QUERY_BY_PO_LINE_ID = "poLineId==";
+  private static final String QUERY_BY_PO_LINE_ID = "poLineId==%s";
 
   private final InventoryItemStatusSyncService itemStatusSyncService;
   private final InventoryInstanceManager inventoryInstanceManager;
@@ -285,16 +285,16 @@ public class PurchaseOrderLineHelper {
           .compose(v -> purchaseOrderLineService.validateAndNormalizeISBNAndProductType(Collections.singletonList(compOrderLine), requestContext))
           .compose(v -> validateAccessProviders(compOrderLine, requestContext))
           .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
-          .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext)))
-        .map(v -> compOrderLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
-        .map(v -> new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage))
-        .compose(poLineInvoiceLineHolder -> polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
-          .compose(v -> createShadowInstanceIfNeeded(compOrderLine, requestContext))
-          .compose(v -> updateOrderLine(compOrderLine, JsonObject.mapFrom(poLineFromStorage), requestContext))
-          .compose(v -> updateEncumbranceStatus(compOrderLine, poLineFromStorage, requestContext))
-          .compose(v -> polInvoiceLineRelationService.updateInvoiceLineReference(poLineInvoiceLineHolder, requestContext))
-          .compose(v -> updateInventoryItemStatus(compOrderLine, poLineFromStorage, requestContext))
-          .compose(v -> updateOrderStatusIfNeeded(compOrderLine, poLineFromStorage, requestContext))));
+          .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext))
+          .map(v -> compOrderLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
+          .map(v -> new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage))
+          .compose(poLineInvoiceLineHolder -> polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
+            .compose(v -> createShadowInstanceIfNeeded(compOrderLine, requestContext))
+            .compose(v -> updateOrderLine(compOrderLine, JsonObject.mapFrom(poLineFromStorage), requestContext))
+            .compose(v -> updateEncumbranceStatus(compOrderLine, poLineFromStorage, requestContext))
+            .compose(v -> polInvoiceLineRelationService.updateInvoiceLineReference(poLineInvoiceLineHolder, requestContext))
+            .compose(v -> updateInventoryItemStatus(compOrderLine, poLineFromStorage, requestContext))
+            .compose(v -> updateOrderStatusIfNeeded(compOrder, compOrderLine, poLineFromStorage, requestContext)))));
   }
 
   private Future<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, PoLine poLineFromStorage, RequestContext requestContext) {
@@ -626,7 +626,8 @@ public class PurchaseOrderLineHelper {
     if (Boolean.TRUE.equals(line.getIsPackage())) {
       return Future.succeededFuture(line);
     }
-    return titlesService.getTitles(1, 0, QUERY_BY_PO_LINE_ID + line.getId(), requestContext)
+    var query = String.format(QUERY_BY_PO_LINE_ID, line.getId());
+    return titlesService.getTitles(1, 0, query, requestContext)
       .map(titleCollection -> {
         var titles = titleCollection.getTitles();
         if (!titles.isEmpty()) {
