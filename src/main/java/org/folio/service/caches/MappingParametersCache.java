@@ -18,6 +18,8 @@ import org.folio.ExpenseClass;
 import org.folio.ExpenseClassCollection;
 import org.folio.Fund;
 import org.folio.FundCollection;
+import org.folio.IdentifierType;
+import org.folio.Identifiertypes;
 import org.folio.Location;
 import org.folio.Locations;
 import org.folio.Materialtypes;
@@ -66,10 +68,11 @@ public class MappingParametersCache {
   private static final String CONTRIBUTOR_NAME_TYPES_RESPONSE_PARAM = "contributorNameTypes";
   private static final String FUNDS_RESPONSE_PARAM = "funds";
   private static final String EXPENSE_CLASSES_RESPONSE_PARAM = "expenseClasses";
+  private static final String IDENTIFIER_TYPES_RESPONSE_PARAM = "identifierTypes";
   private static final String TENANT_CONFIGURATION_ADDRESSES_URL = "/configurations/entries?query=" + URLEncoder.encode("(module==TENANT and configName==tenant.addresses)", StandardCharsets.UTF_8);
   private static final String CONFIGS_VALUE_RESPONSE = "configs";
   private static final String VALUE_RESPONSE = "value";
-  public static final String ERROR_LOADING_CACHE_MESSAGE = "Error loading cache, tenantId: '%s', status code: %s, response message: %s";
+  public static final String ERROR_LOADING_CACHE_MESSAGE = "Error loading cache for mapping parameter: '%s', tenantId: '%s', status code: %s, response message: %s";
 
   @Value("${orders.cache.mapping.parameters.settings.limit:5000}")
   private int settingsLimit;
@@ -129,12 +132,13 @@ public class MappingParametersCache {
     Future<List<Organization>> organizationsFuture = getOrganizations(params);
     Future<List<Fund>> fundsFuture = getFunds(params);
     Future<List<ExpenseClass>> expenseClassesFuture = getExpenseClasses(params);
+    Future<List<IdentifierType>> identifierTypesFuture = getIdentifierTypes(params);
     Future<List<AcquisitionsUnit>> acquisitionsUnitsFuture = getAcquisitionsUnits(params);
     Future<List<AcquisitionMethod>> acquisitionsMethodsFuture = getAcquisitionMethods(params);
     Future<List<String>> tenantConfigurationAddressesFuture = getTenantConfigurationAddresses(params);
 
     return GenericCompositeFuture.join(Arrays.asList(locationsFuture, materialTypesFuture, contributorNameTypesFuture,
-      organizationsFuture, fundsFuture, expenseClassesFuture, acquisitionsUnitsFuture,
+      organizationsFuture, fundsFuture, identifierTypesFuture, expenseClassesFuture, acquisitionsUnitsFuture,
       acquisitionsMethodsFuture, tenantConfigurationAddressesFuture))
       .map(v -> new MappingParameters()
         .withLocations(locationsFuture.result())
@@ -143,6 +147,7 @@ public class MappingParametersCache {
         .withOrganizations(organizationsFuture.result())
         .withFunds(fundsFuture.result())
         .withExpenseClasses(expenseClassesFuture.result())
+        .withIdentifierTypes(identifierTypesFuture.result())
         .withAcquisitionsUnits(acquisitionsUnitsFuture.result())
         .withAcquisitionMethods(acquisitionsMethodsFuture.result())
         .withTenantConfigurationAddresses(tenantConfigurationAddressesFuture.result()));
@@ -165,7 +170,7 @@ public class MappingParametersCache {
 
           return Future.succeededFuture(orgCollection.getOrganizations());
         } else {
-          String message = format(ERROR_LOADING_CACHE_MESSAGE, tenantId, httpResponse.getResponse().statusCode(), httpResponse.getBody());
+          String message = format(ERROR_LOADING_CACHE_MESSAGE, "Organizations", tenantId, httpResponse.getResponse().statusCode(), httpResponse.getBody());
           LOGGER.warn("getOrganizations:: " + message);
           return Future.failedFuture(new CacheLoadingException(message));
         }
@@ -203,31 +208,37 @@ public class MappingParametersCache {
   private Future<List<Mtype>> getMaterialTypes(OkapiConnectionParams params) {
     String materialTypesUrl = "/material-types?limit=" + settingsLimit;
     return loadData(params, materialTypesUrl, MATERIALS_TYPES_RESPONSE_PARAM,
-      response -> response.mapTo(Materialtypes.class).getMtypes());
+      response -> response.mapTo(Materialtypes.class).getMtypes(), "MaterialTypes");
   }
 
   private Future<List<Location>> getLocations(OkapiConnectionParams params) {
     String locationsUrl = "/locations?limit=" + settingsLimit;
     return loadData(params, locationsUrl, LOCATIONS_RESPONSE_PARAM,
-      response -> response.mapTo(Locations.class).getLocations());
+      response -> response.mapTo(Locations.class).getLocations(), "Locations");
   }
 
   private Future<List<ContributorNameType>> getContributorNameTypes(OkapiConnectionParams params) {
     String contributorNameTypesUrl = "/contributor-name-types?limit=" + settingsLimit;
     return loadData(params, contributorNameTypesUrl, CONTRIBUTOR_NAME_TYPES_RESPONSE_PARAM,
-      response -> response.mapTo(Contributornametypes.class).getContributorNameTypes());
+      response -> response.mapTo(Contributornametypes.class).getContributorNameTypes(), "ContributorNameTypes");
   }
 
   private Future<List<Fund>> getFunds(OkapiConnectionParams params) {
     String fundsUrl = "/finance/funds?limit=" + settingsLimit;
     return loadData(params, fundsUrl, FUNDS_RESPONSE_PARAM,
-      response -> response.mapTo(FundCollection.class).getFunds());
+      response -> response.mapTo(FundCollection.class).getFunds(), "Funds");
   }
 
   private Future<List<ExpenseClass>> getExpenseClasses(OkapiConnectionParams params) {
     String fundsUrl = "/finance/expense-classes?limit=" + settingsLimit;
     return loadData(params, fundsUrl, EXPENSE_CLASSES_RESPONSE_PARAM,
-      response -> response.mapTo(ExpenseClassCollection.class).getExpenseClasses());
+      response -> response.mapTo(ExpenseClassCollection.class).getExpenseClasses(), "ExpenseClasses");
+  }
+
+  private Future<List<IdentifierType>> getIdentifierTypes(OkapiConnectionParams params) {
+    String identifierTypesUrl = "/identifier-types?limit=" + settingsLimit;
+    return loadData(params, identifierTypesUrl, IDENTIFIER_TYPES_RESPONSE_PARAM,
+      response -> response.mapTo(Identifiertypes.class).getIdentifierTypes(), "IdentifierTypes");
   }
 
   private Future<List<AcquisitionsUnit>> getAcquisitionsUnits(OkapiConnectionParams params) {
@@ -259,7 +270,7 @@ public class MappingParametersCache {
         }
         return Future.succeededFuture(Collections.emptyList());
       } else {
-        String message = format(ERROR_LOADING_CACHE_MESSAGE, params.getTenantId(),
+        String message = format(ERROR_LOADING_CACHE_MESSAGE, "TenantConfigurationAddresses", params.getTenantId(),
           httpResponse.getResponse().statusCode(), httpResponse.getBody());
         LOGGER.warn("getTenantConfigurationAddresses:: " + message);
         return Future.failedFuture(new CacheLoadingException(message));
@@ -268,7 +279,7 @@ public class MappingParametersCache {
   }
 
   private <T> Future<List<T>> loadData(OkapiConnectionParams params, String requestUrl, String dataCollectionField,
-                                       Function<JsonObject, List<T>> dataExtractor) {
+                                       Function<JsonObject, List<T>> dataExtractor, String parameterName) {
     return RestUtil.doRequest(params, requestUrl, HttpMethod.GET, null).compose(httpResponse -> {
       try {
         if (httpResponse.getResponse().statusCode() == HttpStatus.SC_OK) {
@@ -278,7 +289,7 @@ public class MappingParametersCache {
           }
           return Future.succeededFuture(Collections.emptyList());
         } else {
-          String message = format(ERROR_LOADING_CACHE_MESSAGE, params.getTenantId(),
+          String message = format(ERROR_LOADING_CACHE_MESSAGE, parameterName, params.getTenantId(),
             httpResponse.getResponse().statusCode(), httpResponse.getBody());
           LOGGER.warn("loadData:: " + message);
           return Future.failedFuture(new CacheLoadingException(message));

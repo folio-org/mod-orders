@@ -18,6 +18,7 @@ import org.folio.AcquisitionsUnit;
 import org.folio.ContributorNameType;
 import org.folio.ExpenseClass;
 import org.folio.Fund;
+import org.folio.IdentifierType;
 import org.folio.Location;
 import org.folio.Mtype;
 import org.folio.Organization;
@@ -114,6 +115,7 @@ public class CacheTest {
     Organization organization = new Organization().withId(uuid);
     Location location = new Location().withId(uuid);
     Mtype materialType = new Mtype().withId(uuid);
+    IdentifierType identifierType = new IdentifierType().withId(uuid);
     ContributorNameType contributorNameType = new ContributorNameType().withId(uuid);
     Fund fund = new Fund().withId(uuid);
     ExpenseClass expenseClass = new ExpenseClass().withId(uuid);
@@ -146,6 +148,13 @@ public class CacheTest {
       get("/material-types?limit=5000")
         .willReturn(okJson(new JsonObject()
           .put("mtypes", JsonArray.of(materialType))
+          .put("totalRecords", 10)
+          .toString())));
+
+    WireMock.stubFor(
+      get("/identifier-types?limit=5000")
+        .willReturn(okJson(new JsonObject()
+          .put("identifierTypes", JsonArray.of(identifierType))
           .put("totalRecords", 10)
           .toString())));
 
@@ -201,6 +210,7 @@ public class CacheTest {
           result.getOrganizations().forEach(org -> context.assertEquals(uuid, org.getId()));
           result.getLocations().forEach(loc -> context.assertEquals(uuid, loc.getId()));
           result.getMaterialTypes().forEach(mt -> context.assertEquals(uuid, mt.getId()));
+          result.getIdentifierTypes().forEach(it -> context.assertEquals(uuid, it.getId()));
           result.getContributorNameTypes().forEach(cnt -> context.assertEquals(uuid, cnt.getId()));
           result.getFunds().forEach(fnd -> context.assertEquals(uuid, fnd.getId()));
           result.getExpenseClasses().forEach(exp -> context.assertEquals(uuid, exp.getId()));
@@ -226,6 +236,10 @@ public class CacheTest {
 
     WireMock.stubFor(
       get("/material-types?limit=0")
+        .willReturn(serverError()));
+
+    WireMock.stubFor(
+      get("/identifier-types?limit=0")
         .willReturn(serverError()));
 
     WireMock.stubFor(
