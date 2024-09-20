@@ -121,7 +121,9 @@ public class CacheTest {
     ExpenseClass expenseClass = new ExpenseClass().withId(uuid);
     AcquisitionsUnit acquisitionsUnit = new AcquisitionsUnit().withId(uuid);
     AcquisitionMethod acquisitionMethod = new AcquisitionMethod().withId(uuid);
-    String address = "{\"name\":\"test\",\"address\":\"test st. 1\"}";
+    String addressName = "test";
+    String addressStreet = "test st. 1";
+    JsonObject address = new JsonObject().put("name", addressName).put("address", addressStreet);
 
     WireMock.stubFor(
       get("/organizations/organizations?limit=5000" + orgQueryParam)
@@ -196,7 +198,7 @@ public class CacheTest {
     WireMock.stubFor(
       get("/configurations/entries?" + addressQueryParam)
         .willReturn(okJson(new JsonObject()
-          .put("funds", JsonArray.of(fund))
+          .put("configs", JsonArray.of(new JsonObject().put("id", uuid).put("value", address.encode())))
           .put("totalRecords", 10)
           .toString())));
 
@@ -207,6 +209,17 @@ public class CacheTest {
           context.assertTrue(ar.succeeded());
           MappingParameters result = ar.result();
           context.assertNotNull(result);
+          context.assertEquals(2, result.getOrganizations().size());
+          context.assertEquals(1, result.getLocations().size());
+          context.assertEquals(1, result.getMaterialTypes().size());
+          context.assertEquals(1, result.getIdentifierTypes().size());
+          context.assertEquals(1, result.getContributorNameTypes().size());
+          context.assertEquals(1, result.getFunds().size());
+          context.assertEquals(1, result.getExpenseClasses().size());
+          context.assertEquals(1, result.getAcquisitionsUnits().size());
+          context.assertEquals(1, result.getAcquisitionMethods().size());
+          context.assertEquals(1, result.getTenantConfigurationAddresses().size());
+
           result.getOrganizations().forEach(org -> context.assertEquals(uuid, org.getId()));
           result.getLocations().forEach(loc -> context.assertEquals(uuid, loc.getId()));
           result.getMaterialTypes().forEach(mt -> context.assertEquals(uuid, mt.getId()));
@@ -216,7 +229,12 @@ public class CacheTest {
           result.getExpenseClasses().forEach(exp -> context.assertEquals(uuid, exp.getId()));
           result.getAcquisitionsUnits().forEach(units -> context.assertEquals(uuid, units.getId()));
           result.getAcquisitionMethods().forEach(method -> context.assertEquals(uuid, method.getId()));
-          result.getTenantConfigurationAddresses().forEach(a -> context.assertEquals(address, a));
+          result.getTenantConfigurationAddresses().forEach(a -> {
+            JsonObject addr = new JsonObject(a);
+            context.assertEquals(uuid, addr.getString("id"));
+            context.assertEquals(addressName, addr.getString("name"));
+            context.assertEquals(addressStreet, addr.getString("address"));
+          });
           async.complete();
         });
   }

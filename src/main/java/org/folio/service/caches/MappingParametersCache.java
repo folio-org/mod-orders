@@ -52,6 +52,7 @@ import java.util.function.Function;
 
 import static java.lang.String.format;
 import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.rest.RestConstants.ID;
 import static org.folio.service.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 /**
@@ -263,7 +264,14 @@ public class MappingParametersCache {
         JsonObject response = httpResponse.getJson();
         if (ifConfigResponseIsValid(response)) {
           List<String> addresses = response.getJsonArray(CONFIGS_VALUE_RESPONSE).stream()
-            .map(config -> ((JsonObject) config).getString(VALUE_RESPONSE))
+            .map(config -> {
+              JsonObject configJson = (JsonObject) config;
+              String configValue = configJson.getString(VALUE_RESPONSE);
+              if (configValue != null) {
+                return new JsonObject(configValue).put(ID, configJson.getString(ID)).toString();
+              }
+              return null;
+            })
             .filter(Objects::nonNull)
             .toList();
           return Future.succeededFuture(addresses);
@@ -304,8 +312,7 @@ public class MappingParametersCache {
   private boolean ifConfigResponseIsValid(JsonObject response) {
     return response != null && response.containsKey(CONFIGS_VALUE_RESPONSE)
       && response.getJsonArray(CONFIGS_VALUE_RESPONSE) != null
-      && !response.getJsonArray(CONFIGS_VALUE_RESPONSE).isEmpty()
-      && response.getJsonArray(CONFIGS_VALUE_RESPONSE).getJsonObject(0) != null;
+      && !response.getJsonArray(CONFIGS_VALUE_RESPONSE).isEmpty();
   }
 
   private String getOrganizationsSortedLimitPath(int limit) {
