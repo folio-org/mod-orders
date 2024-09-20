@@ -1,7 +1,7 @@
 package org.folio.orders.events.handlers;
 
-import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
+import static org.folio.service.orders.utils.StatusUtils.changeOrderStatus;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,8 +10,8 @@ import java.util.Map;
 import org.folio.completablefuture.AsyncUtil;
 import org.folio.helper.BaseHelper;
 import org.folio.helper.PurchaseOrderHelper;
+import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -108,7 +108,7 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
   }
 
   protected CompositePurchaseOrder convert(PurchaseOrder po, List<PoLine> poLines) {
-    var lines = poLines.stream().map(line -> JsonObject.mapFrom(line).mapTo(CompositePoLine.class)).toList();
+    var lines = poLines.stream().map(HelperUtils::convertToCompositePoLine).toList();
     return JsonObject.mapFrom(po).mapTo(CompositePurchaseOrder.class).withCompositePoLines(lines);
   }
 

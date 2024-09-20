@@ -3,6 +3,8 @@ package org.folio.helper;
 import static org.apache.commons.collections4.CollectionUtils.isEqualCollection;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
+import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
+import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePoLine;
 import static org.folio.orders.utils.HelperUtils.convertToPoLine;
@@ -20,9 +22,8 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.C
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.folio.service.orders.utils.StatusUtils.areAllPoLinesCanceled;
-import static org.folio.service.orders.utils.StatusUtils.isCompositePoLineStatusCanceled;
+import static org.folio.service.orders.utils.StatusUtils.isStatusCanceledCompositePoLine;
 import static org.folio.service.orders.utils.StatusUtils.isStatusChanged;
-import static org.folio.service.orders.utils.StatusUtils.updateOrderStatusIfNeeded;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,6 +38,7 @@ import java.util.stream.Stream;
 
 import javax.ws.rs.core.Response;
 
+import io.vertx.core.json.JsonArray;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -44,6 +46,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.models.ItemStatus;
 import org.folio.models.PoLineInvoiceLineHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.POLineProtectedFieldsUtil;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -672,7 +675,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> updateInventoryItemStatus(CompositePoLine compOrderLine, PoLine lineFromStorage, RequestContext requestContext) {
-    if (!isStatusChanged(compOrderLine, lineFromStorage) || !isCompositePoLineStatusCanceled(compOrderLine)) {
+    if (!isStatusChanged(compOrderLine, lineFromStorage) || !isStatusCanceledCompositePoLine(compOrderLine)) {
       return Future.succeededFuture();
     }
     return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)
@@ -684,6 +687,16 @@ public class PurchaseOrderLineHelper {
         return itemStatusSyncService.updateInventoryItemStatus(compOrderLine.getId(), compOrderLine.getLocations(),
           ItemStatus.ORDER_CLOSED, requestContext);
       });
+  }
+
+  public Future<Void> updateOrderStatusIfNeeded(CompositePurchaseOrder compositePurchaseOrder, CompositePoLine compOrderLine,
+                                                       PoLine poLineFromStorage, RequestContext requestContext) {
+    // See MODORDERS-218
+    if (isStatusChanged(compOrderLine, poLineFromStorage)) {
+      var updateOrderMessage = JsonObject.of(EVENT_PAYLOAD, JsonArray.of(JsonObject.of(ORDER_ID, compOrderLine.getPurchaseOrderId())));
+      HelperUtils.sendEvent(MessageAddress.RECEIVE_ORDER_STATUS_UPDATE, updateOrderMessage, requestContext);
+    }
+    return Future.succeededFuture();
   }
 
   private boolean isEncumbranceUpdateNeeded(CompositePurchaseOrder compOrder, CompositePoLine compositePoLine, PoLine storagePoLine) {

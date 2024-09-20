@@ -393,59 +393,9 @@ public class HelperUtils {
     return poJson.mapTo(CompositePurchaseOrder.class);
   }
 
-  public static boolean changeOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    if (toBeCancelled(purchaseOrder, poLines)) {
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
-      purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_CANCELLED));
-      return true;
-    }
-
-    if (toBeClosed(purchaseOrder, poLines)) {
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
-      purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_COMPLETE));
-      return true;
-    }
-
-    if (toBeReopened(purchaseOrder, poLines)) {
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-      return true;
-    }
-
-    return false;
-  }
-
   public static String convertTagListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
-
     String prefix = fieldName + (strictMatch ? "==(\"" : "=(\"");
     return StreamEx.of(values).joining("\" or \"", prefix, "\")");
-  }
-
-  private static boolean toBeClosed(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.OPEN
-      && poLines.stream().allMatch(HelperUtils::isCompletedPoLine);
-  }
-
-  private static boolean toBeCancelled(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.OPEN
-      && poLines.stream().allMatch(HelperUtils::isCancelledPoLine);
-  }
-
-  private static boolean isCancelledPoLine(PoLine line) {
-    PoLine.PaymentStatus paymentStatus = line.getPaymentStatus();
-    PoLine.ReceiptStatus receiptStatus = line.getReceiptStatus();
-    return paymentStatus == PaymentStatus.CANCELLED && receiptStatus == ReceiptStatus.CANCELLED;
-  }
-
-  private static boolean toBeReopened(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.CLOSED
-      && poLines.stream().anyMatch(line -> !isCompletedPoLine(line));
-  }
-
-  private static boolean isCompletedPoLine(PoLine line) {
-    PoLine.PaymentStatus paymentStatus = line.getPaymentStatus();
-    PoLine.ReceiptStatus receiptStatus = line.getReceiptStatus();
-    return (paymentStatus == PAYMENT_NOT_REQUIRED || paymentStatus == FULLY_PAID || paymentStatus == PaymentStatus.CANCELLED)
-      && (receiptStatus == FULLY_RECEIVED || receiptStatus == RECEIPT_NOT_REQUIRED || receiptStatus == ReceiptStatus.CANCELLED);
   }
 
   public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
