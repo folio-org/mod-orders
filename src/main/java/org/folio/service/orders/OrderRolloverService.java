@@ -71,6 +71,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertxconcurrent.Semaphore;
 
 public class OrderRolloverService {
+
   private static final Logger logger = LogManager.getLogger();
 
   private static final String PO_LINE_FUND_DISTR_QUERY = "fundDistribution =/@fundId \"%s\"";
@@ -114,7 +115,6 @@ public class OrderRolloverService {
         .compose(progress -> startRollover(ledgerFYRollover, progress, requestContext)));
   }
 
-
   public Future<Void> prepareRollover(LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
     return ledgerRolloverProgressService.getRolloversProgressByRolloverId(ledgerFYRollover.getId(), requestContext)
       .map(progress -> progress.withOrdersRolloverStatus(RolloverStatus.IN_PROGRESS))
@@ -123,15 +123,12 @@ public class OrderRolloverService {
 
   public Future<Void> startRollover(LedgerFiscalYearRollover ledgerFYRollover, LedgerFiscalYearRolloverProgress progress, RequestContext requestContext) {
     var fundIdsFuture = fundService.getFundsByLedgerId(ledgerFYRollover.getLedgerId(), requestContext)
-      .map(ledgerFunds -> ledgerFunds.stream()
-        .map(Fund::getId)
-        .toList());
-
+      .map(ledgerFunds -> ledgerFunds.stream().map(Fund::getId).toList());
     return fundIdsFuture
       .compose(ledgerFundIds -> configurationEntriesCache.getSystemCurrency(requestContext)
         .compose(systemCurrency -> rolloverOrdersByFundIds(ledgerFundIds, ledgerFYRollover, systemCurrency, requestContext)))
       .recover(t -> handleOrderRolloverError(t, ledgerFYRollover, progress, requestContext))
-      .compose(aVoid -> calculateAndUpdateOverallProgressStatus(progress.withOrdersRolloverStatus(SUCCESS), requestContext))
+      .compose(v -> calculateAndUpdateOverallProgressStatus(progress.withOrdersRolloverStatus(SUCCESS), requestContext))
       .onSuccess(v -> logger.info("Order Rollover success : All orders processed"))
       .onFailure(t -> logger.error("Order Rollover failed", t));
   }
@@ -144,15 +141,17 @@ public class OrderRolloverService {
   }
 
   private Future<Void> rolloverOrdersByFundIds(List<String> ledgerFundIds, LedgerFiscalYearRollover ledgerFYRollover, String systemCurrency, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(ledgerFundIds)) return Future.succeededFuture();
-
+    if (CollectionUtils.isEmpty(ledgerFundIds)) {
+      return Future.succeededFuture();
+    }
     var fundIdChunks = Lists.partition(ledgerFundIds, MAX_IDS_FOR_GET_RQ_15);
-
-    return requestContext.getContext().<List<Future<Void>>>executeBlocking(promise -> {
-        List<Future<Void>> futures = new ArrayList<>();
+    var ctx =  requestContext.getContext();
+    return ctx
+      .<List<Future<Void>>>executeBlocking(promise -> {
+        var futures = new ArrayList<Future<Void>>();
         // process fundId chunks one by one
-        Semaphore semaphore = new Semaphore(1, requestContext.getContext().owner());
-        for (List<String> fundIds : fundIdChunks) {
+        var semaphore = new Semaphore(1, requestContext.getContext().owner());
+        for (var fundIds : fundIdChunks) {
           semaphore.acquire(() -> {
             // perform rollover for open orders and then for closed orders
             var future = rolloverOrdersByFundIds(fundIds, ledgerFYRollover, systemCurrency, OPEN, requestContext)
@@ -181,33 +180,29 @@ public class OrderRolloverService {
   }
 
   private Future<Void> rolloverOrdersByFundIds(List<String> chunkFundIds, LedgerFiscalYearRollover ledgerFYRollover,
-      String systemCurrency, PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
-
-    String query = buildOpenOrClosedOrderQueryByFundIdsAndTypes(chunkFundIds, workflowStatus, ledgerFYRollover);
+                                               String systemCurrency, PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
+    var query = buildOpenOrClosedOrderQueryByFundIdsAndTypes(chunkFundIds, workflowStatus, ledgerFYRollover);
     var totalRecordsFuture = purchaseOrderLineService.getOrderLineCollection(query, 0, 0, requestContext)
       .map(PoLineCollection::getTotalRecords);
-
     var ctx = requestContext.getContext();
-    return totalRecordsFuture.compose(totalRecords -> ctx.<List<Future<Void>>>executeBlocking(promise -> {
-        List<Future<Void>> futures = new ArrayList<>();
+    return totalRecordsFuture.compose(totalRecords ->
+      ctx.<List<Future<Void>>>executeBlocking(promise -> {
+        var futures = new ArrayList<Future<Void>>();
         if (totalRecords == 0) {
           promise.complete(emptyList());
           return;
         }
-
-        int numberOfChunks = (int) Math.ceil((double) totalRecords / POLINES_CHUNK_SIZE_200);
+        var numberOfChunks = (int) Math.ceil((double) totalRecords / POLINES_CHUNK_SIZE_200);
         // only 1 active thread because of chunk size = 200 records
-        Semaphore semaphore = new Semaphore(1, ctx.owner());
-
-        AtomicInteger atomicChunkCounter = new AtomicInteger();
-        for (int chunkNumber = 0; chunkNumber < numberOfChunks; chunkNumber++) {
+        var semaphore = new Semaphore(1, ctx.owner());
+        var atomicChunkCounter = new AtomicInteger();
+        for (var chunkNumber = 0; chunkNumber < numberOfChunks; chunkNumber++) {
           // can produce "thread blocked" warnings because of large number of data
           semaphore.acquire(() -> {
-            Future<Void> future = purchaseOrderLineService.getOrderLines(query, atomicChunkCounter.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
+            var future = purchaseOrderLineService.getOrderLines(query, atomicChunkCounter.getAndIncrement() * POLINES_CHUNK_SIZE_200, POLINES_CHUNK_SIZE_200, requestContext)
               .compose(poLines -> rolloverOrders(systemCurrency, poLines, ledgerFYRollover, workflowStatus, requestContext))
               .compose(modifiedPoLines -> saveOrderLines(modifiedPoLines, ledgerFYRollover, workflowStatus, requestContext))
               .onComplete(asyncResult -> semaphore.release());
-
             futures.add(future);
             if (futures.size() == numberOfChunks) {
               promise.complete(futures);
@@ -220,16 +215,18 @@ public class OrderRolloverService {
   }
 
   private Future<Void> saveOrderLines(List<PoLine> orderLines, LedgerFiscalYearRollover ledgerFYRollover,
-      PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
+                                      PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
+    logger.info("saveOrderLines:: Saving POLs after rollover processing, size: {}", orderLines.size());
     return purchaseOrderLineService.saveOrderLines(orderLines, requestContext)
       .recover(t -> handlePoLineUpdateFailures(orderLines, ledgerFYRollover, workflowStatus, t, requestContext)
-        .map(a -> {
+        .map(v -> {
           throw new HttpException(400, ErrorCodes.PO_LINE_ROLLOVER_FAILED.toError());
         }));
   }
 
-  private Future<Void> handlePoLineUpdateFailures(List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover, PurchaseOrder.WorkflowStatus workflowStatus,
-                                                 Throwable t, RequestContext requestContext) {
+  private Future<Void> handlePoLineUpdateFailures(List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
+                                                  PurchaseOrder.WorkflowStatus workflowStatus,
+                                                  Throwable t, RequestContext requestContext) {
     return GenericCompositeFuture.join(poLines.stream()
         .map(poLine -> handlePoLineUpdateFailure(poLine, ledgerFYRollover, workflowStatus, t, requestContext))
         .toList())
@@ -249,34 +246,30 @@ public class OrderRolloverService {
       ((HttpException) t).getCode(), // statusCode
       workflowStatus.value() // purchase order workflow status (Open / Closed)
     );
-
     return failedLedgerRolloverPoLineDao.saveFailedRolloverRecord(failureDto, requestContext.getHeaders().get(OKAPI_HEADER_TENANT));
   }
 
   private Future<List<PoLine>> rolloverOrders(String systemCurrency, List<PoLine> poLines, LedgerFiscalYearRollover ledgerFYRollover,
-    PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
-    if (poLines.isEmpty())
+                                              PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
+    if (poLines.isEmpty()) {
       return Future.succeededFuture(emptyList());
-
+    }
     var poLineIds = poLines.stream()
       .map(PoLine::getId)
       .collect(toList());
-
     return getEncumbrancesForRollover(poLineIds, ledgerFYRollover, requestContext)
       .compose(encumbrances -> {
         if (OPEN.equals(workflowStatus)) {
           var holders = buildPoLineEncumbrancesHolders(systemCurrency, poLines, encumbrances, requestContext);
           var modifiedPoLines = applyPoLinesRolloverChanges(holders);
           return Future.succeededFuture(modifiedPoLines);
-
         } else {
           return removeEncumbrancesFromClosedPoLines(poLines, encumbrances, requestContext);
         }
       });
   }
 
-  private Future<List<PoLine>> removeEncumbrancesFromClosedPoLines(List<PoLine> poLines, List<Transaction> transactions,
-      RequestContext requestContext) {
+  private Future<List<PoLine>> removeEncumbrancesFromClosedPoLines(List<PoLine> poLines, List<Transaction> transactions, RequestContext requestContext) {
     return Future.succeededFuture()
       .compose(v -> {
         if (transactions.isEmpty()) {
@@ -326,31 +319,30 @@ public class OrderRolloverService {
     BigDecimal totalCurrEncumbranceInitialAmount = calculateTotalInitialAmountEncumbered(holder);
     Double poLineEstimatedPriceBeforeRollover = poLine.getCost().getPoLineEstimatedPrice();
     Double poLineEstimatedPriceAfterRollover = totalCurrEncumbranceInitialAmount.doubleValue();
-
     Double fyroAdjustmentAmount = calculateFYROAdjustmentAmount(holder, totalCurrEncumbranceInitialAmount).getNumber().doubleValue();
     poLine.getCost().setFyroAdjustmentAmount(fyroAdjustmentAmount);
     poLine.getCost().setPoLineEstimatedPrice(poLineEstimatedPriceAfterRollover);
-
     updateFundDistribution(poLine, currEncumbranceFundIdMap, poLineEstimatedPriceBeforeRollover, poLineEstimatedPriceAfterRollover);
   }
 
   private void updateFundDistribution(PoLine poLine, Map<String, List<Transaction>> currEncumbranceFundIdMap,
-    Double poLineEstimatedPriceBeforeRollover, Double poLineEstimatedPriceAfterRollover) {
-    poLine.getFundDistribution().forEach(fundDistr -> {
-      if (fundDistr.getDistributionType().equals(DistributionType.AMOUNT)) {
-        MonetaryAmount fdAmount = Money.of(fundDistr.getValue(), poLine.getCost().getCurrency());
-        MonetaryAmount newFdAmount = (poLineEstimatedPriceBeforeRollover != 0) ? fdAmount.divide(poLineEstimatedPriceBeforeRollover).multiply(poLineEstimatedPriceAfterRollover) : Money.of(0, poLine.getCost().getCurrency());
-        fundDistr.setValue(newFdAmount.getNumber().doubleValue());
+                                      Double poLineEstimatedPriceBeforeRollover, Double poLineEstimatedPriceAfterRollover) {
+    poLine.getFundDistribution().forEach(fundDistribution -> {
+      if (fundDistribution.getDistributionType().equals(DistributionType.AMOUNT)) {
+        MonetaryAmount fdAmount = Money.of(fundDistribution.getValue(), poLine.getCost().getCurrency());
+        MonetaryAmount newFdAmount = (poLineEstimatedPriceBeforeRollover != 0)
+          ? fdAmount.divide(poLineEstimatedPriceBeforeRollover).multiply(poLineEstimatedPriceAfterRollover)
+          : Money.of(0, poLine.getCost().getCurrency());
+        fundDistribution.setValue(newFdAmount.getNumber().doubleValue());
       }
-      var currEncumbrances = currEncumbranceFundIdMap.getOrDefault(fundDistr.getFundId(), emptyList());
-      currEncumbrances.forEach(encumbr -> {
-        if (encumbr.getExpenseClassId() != null && fundDistr.getExpenseClassId() != null) {
-          if (encumbr.getExpenseClassId().equals(fundDistr.getExpenseClassId())) {
-            fundDistr.setEncumbrance(encumbr.getId());
+      var currEncumbrances = currEncumbranceFundIdMap.getOrDefault(fundDistribution.getFundId(), emptyList());
+      currEncumbrances.forEach(encumbrance -> {
+        if (encumbrance.getExpenseClassId() != null && fundDistribution.getExpenseClassId() != null) {
+          if (encumbrance.getExpenseClassId().equals(fundDistribution.getExpenseClassId())) {
+            fundDistribution.setEncumbrance(encumbrance.getId());
           }
-        } else if (encumbr.getExpenseClassId() == null && fundDistr.getExpenseClassId() == null)
-        {
-          fundDistr.setEncumbrance(encumbr.getId());
+        } else if (encumbrance.getExpenseClassId() == null && fundDistribution.getExpenseClassId() == null) {
+          fundDistribution.setEncumbrance(encumbrance.getId());
         }
       });
     });
@@ -365,9 +357,9 @@ public class OrderRolloverService {
 
   protected BigDecimal calculateTotalInitialAmountEncumbered(PoLineEncumbrancesHolder holder) {
     BigDecimal totalAmountBeforeConversion = holder.getEncumbrances().stream()
-                       .map(Transaction::getEncumbrance)
-                       .map(Encumbrance::getInitialAmountEncumbered)
-                       .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
+       .map(Transaction::getEncumbrance)
+       .map(Encumbrance::getInitialAmountEncumbered)
+       .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
     Cost cost = holder.getPoLine().getCost();
     logger.info("calculateTotalInitialAmountEncumbered:: initiating currency conversion: {}->{}", holder.getSystemCurrency(), cost.getCurrency());
     logger.info("calculateTotalInitialAmountEncumbered:: totalAmountBeforeConversion: {}", totalAmountBeforeConversion.doubleValue());
@@ -408,8 +400,8 @@ public class OrderRolloverService {
 
   private List<Transaction> extractPoLineEncumbrances(PoLine poLine, List<Transaction> encumbrances) {
     return encumbrances.stream()
-                .filter(encumbrance -> poLine.getId().equals(encumbrance.getEncumbrance().getSourcePoLineId()))
-                .collect(toList());
+      .filter(encumbrance -> poLine.getId().equals(encumbrance.getEncumbrance().getSourcePoLineId()))
+      .collect(toList());
   }
 
   private Future<List<Transaction>> getEncumbrancesForRollover(List<String> polineIds, LedgerFiscalYearRollover ledgerFYRollover, RequestContext requestContext) {
@@ -431,37 +423,38 @@ public class OrderRolloverService {
 
   private String buildQuery(List<String> orderIds, String queryTemplate, String delimiter) {
     return orderIds.stream()
-            .map(orderId -> String.format(queryTemplate, orderId))
-                   .collect(Collectors.joining(delimiter));
+      .map(orderId -> String.format(queryTemplate, orderId))
+      .collect(Collectors.joining(delimiter));
   }
 
-  private String buildOpenOrClosedOrderQueryByFundIdsAndTypes(List<String> fundIds, PurchaseOrder.WorkflowStatus workflowStatus,
-    LedgerFiscalYearRollover ledgerFYRollover) {
-    String typesQuery = buildOrderTypesQuery(ledgerFYRollover);
-    String fundIdsQuery = fundIds.stream().map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId)).collect(Collectors.joining(OR));
-    String sortByCreatedDate = " sortBy metadata.createdDate";
-
-    var resultQuery = "(" + typesQuery + ")" + AND + " (purchaseOrder.workflowStatus==" + workflowStatus + ") " + AND + "(" + fundIdsQuery + ")";
-
+  protected String buildOpenOrClosedOrderQueryByFundIdsAndTypes(List<String> fundIds, PurchaseOrder.WorkflowStatus workflowStatus, LedgerFiscalYearRollover ledgerFYRollover) {
+    StringBuilder resultQuery = new StringBuilder();
+    if (!ledgerFYRollover.getEncumbrancesRollover().isEmpty()) {
+      resultQuery.append("(").append(buildOrderTypesQuery(ledgerFYRollover)).append(")").append(AND);
+    }
+    resultQuery.append("(purchaseOrder.workflowStatus==").append(workflowStatus).append(")").append(AND).append("(").append(buildFundIdQuery(fundIds)).append(")");
     if (workflowStatus == CLOSED) {
       // MODORDERS-904 Avoid rollover re-processing of old already processed closed orders in previous fiscal years
-      String nonEmptyEncumbranceFilter = " AND ("  + PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY + ")";
-      resultQuery = resultQuery + nonEmptyEncumbranceFilter;
+      resultQuery.append(AND).append("(").append(PO_LINE_NON_EMPTY_ENCUMBRANCE_QUERY).append(")");
     }
+    resultQuery.append(" sortBy metadata.createdDate");
+    logger.info("buildOpenOrClosedOrderQueryByFundIdsAndTypes:: Resulting PO line query: {}", resultQuery);
+    return resultQuery.toString();
+  }
 
-    resultQuery = resultQuery + sortByCreatedDate;
-    logger.debug("buildOpenOrClosedOrderQueryByFundIdsAndTypes :: resulting PO line query: {}", resultQuery);
-
-    return resultQuery;
+  private String buildFundIdQuery(List<String> fundIds) {
+    return fundIds.stream()
+      .map(fundId -> String.format(PO_LINE_FUND_DISTR_QUERY, fundId))
+      .collect(Collectors.joining(OR));
   }
 
   private String buildOrderTypesQuery(LedgerFiscalYearRollover ledgerFYRollover) {
     return ledgerFYRollover.getEncumbrancesRollover().stream()
-                                        .map(encumrRol -> convertToOrderType(encumrRol.getOrderType()))
-                                        .map(PurchaseOrder.OrderType::toString)
-                                        .distinct()
-                                        .map(orderType -> String.format(ORDER_TYPE_QUERY, orderType))
-                                        .collect(Collectors.joining(OR));
+      .map(encumbrancesRollover -> convertToOrderType(encumbrancesRollover.getOrderType()))
+      .map(PurchaseOrder.OrderType::toString)
+      .distinct()
+      .map(orderType -> String.format(ORDER_TYPE_QUERY, orderType))
+      .collect(Collectors.joining(OR));
   }
 
   private PurchaseOrder.OrderType convertToOrderType(EncumbranceRollover.OrderType encumberRolloverType) {
