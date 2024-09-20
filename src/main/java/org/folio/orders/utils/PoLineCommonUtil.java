@@ -1,7 +1,10 @@
 package org.folio.orders.utils;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
+import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
+import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.rest.core.exceptions.ErrorCodes.PROHIBITED_FIELD_CHANGING;
 import static org.folio.rest.core.exceptions.ErrorCodes.WRONG_ONGOING_NOT_SUBSCRIPTION_FIELDS_CHANGED;
 import static org.folio.rest.core.exceptions.ErrorCodes.WRONG_ONGOING_SUBSCRIPTION_FIELDS_CHANGED;
@@ -27,6 +30,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.jaxrs.model.Alert;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -35,6 +39,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.tools.parser.JsonPathParser;
 
 import io.vertx.core.json.JsonArray;
@@ -254,6 +259,29 @@ public final class PoLineCommonUtil {
     poLine.setReportingCodes(null);
     JsonObject jsonLine = JsonObject.mapFrom(poLine);
     return jsonLine.mapTo(CompositePoLine.class);
+  }
+
+  public static CompositePoLine convertToCompositePoLine(JsonObject poLine) {
+    poLine.remove(ALERTS);
+    poLine.remove(REPORTING_CODES);
+    return poLine.mapTo(CompositePoLine.class);
+  }
+
+  public static PoLine convertToPoLine(CompositePoLine compPoLine) {
+    JsonObject pol = JsonObject.mapFrom(compPoLine);
+    pol.remove(ALERTS);
+    pol.remove(REPORTING_CODES);
+    PoLine poLine = pol.mapTo(PoLine.class);
+    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
+    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
+    return poLine;
+  }
+
+  public static List<PoLine> convertToPoLines(List<CompositePoLine> compositePoLines) {
+    return compositePoLines
+      .stream()
+      .map(PoLineCommonUtil::convertToPoLine)
+      .collect(toList());
   }
 
   public static void updateLocationsQuantity(List<Location> locations) {

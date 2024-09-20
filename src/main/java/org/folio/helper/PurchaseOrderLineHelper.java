@@ -6,9 +6,9 @@ import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
 import static org.folio.helper.BaseHelper.ORDER_ID;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
-import static org.folio.orders.utils.HelperUtils.convertToCompositePoLine;
-import static org.folio.orders.utils.HelperUtils.convertToPoLine;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
+import static org.folio.orders.utils.PoLineCommonUtil.convertToCompositePoLine;
+import static org.folio.orders.utils.PoLineCommonUtil.convertToPoLine;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
@@ -88,7 +88,6 @@ import org.folio.service.organization.OrganizationService;
 import org.folio.service.titles.TitlesService;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
@@ -230,18 +229,12 @@ public class PurchaseOrderLineHelper {
     if (!isCreateInventoryNull(compPOL)) {
       return Future.succeededFuture();
     }
-
-    Promise<JsonObject> promise = Promise.promise();
-    if (tenantConfiguration != null && !tenantConfiguration.isEmpty() && !StringUtils.isEmpty(tenantConfiguration.getString(CREATE_INVENTORY))) {
-      promise.complete(new JsonObject(tenantConfiguration.getString(CREATE_INVENTORY)));
-    } else {
-      promise.complete(new JsonObject());
+    var jsonConfig = new JsonObject();
+    if (tenantConfiguration != null && !tenantConfiguration.isEmpty() && StringUtils.isNotEmpty(tenantConfiguration.getString(CREATE_INVENTORY))) {
+      jsonConfig = new JsonObject(tenantConfiguration.getString(CREATE_INVENTORY));
     }
-    return promise.future()
-      .map(jsonConfig -> {
-        updateCreateInventory(compPOL, jsonConfig);
-        return null;
-      });
+    updateCreateInventory(compPOL, jsonConfig);
+    return Future.succeededFuture();
   }
 
   public static boolean isCreateInventoryNull(CompositePoLine compPOL) {
@@ -337,17 +330,12 @@ public class PurchaseOrderLineHelper {
    * @param lineFromStorage {@link JsonObject} representing PO line from storage (/acq-models/mod-orders-storage/schemas/po_line.json)
    */
   public Future<Void> updateOrderLine(CompositePoLine compOrderLine, JsonObject lineFromStorage, RequestContext requestContext) {
-    Promise<Void> promise = Promise.promise();
-
-    purchaseOrderLineService.updateSearchLocations(compOrderLine, requestContext)
+    return purchaseOrderLineService.updateSearchLocations(compOrderLine, requestContext)
       .compose(v -> purchaseOrderLineService.updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext))
       .compose(poLine -> purchaseOrderLineService.updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
-      .onSuccess(json -> promise.complete())
       .onFailure(throwable -> {
         logger.error("PoLine with id - '{}' partially updated but there are issues processing some PoLine sub-objects", compOrderLine.getId());
-        promise.fail(throwable);
-      });
-    return promise.future();
+      }).mapEmpty();
   }
 
   public String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {
@@ -442,7 +430,7 @@ public class PurchaseOrderLineHelper {
     if (!isPoLinesUpdateRequired(poFromStorage, compPO)) {
       return Future.succeededFuture();
     }
-    var existingPoLines = HelperUtils.convertToPoLines(poFromStorage.getCompositePoLines());
+    var existingPoLines = PoLineCommonUtil.convertToPoLines(poFromStorage.getCompositePoLines());
     if (isEmpty(compPO.getCompositePoLines())) {
       return updatePoLinesNumber(compPO, existingPoLines, requestContext);
     }
@@ -600,19 +588,14 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
-    Promise<CompositePurchaseOrder> promise = Promise.promise();
-    purchaseOrderStorageService.getPurchaseOrderByIdAsJson(purchaseOrderId, requestContext)
+    return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(purchaseOrderId, requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
-      .onSuccess(promise::complete)
       .onFailure(cause -> {
         // The case when specified order does not exist
         if (cause instanceof HttpException httpException && httpException.getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
-          cause = new HttpException(422, ErrorCodes.ORDER_NOT_FOUND);
+          throw new HttpException(422, ErrorCodes.ORDER_NOT_FOUND);
         }
-        promise.fail(cause);
       });
-
-    return promise.future();
   }
 
   private Future<String> generateLineNumber(CompositePurchaseOrder compOrder, RequestContext requestContext) {
@@ -645,7 +628,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private CompositePurchaseOrder addLineToCompOrder(CompositePurchaseOrder compOrder, PoLine lineFromStorage) {
-    var compPoLine = convertToCompositePoLine(lineFromStorage);
+    var compPoLine = convertToCompositePoLine(JsonObject.mapFrom(lineFromStorage));
     compOrder.getCompositePoLines().add(compPoLine);
     return compOrder;
   }
@@ -675,7 +658,8 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> updateInventoryItemStatus(CompositePoLine compOrderLine, PoLine lineFromStorage, RequestContext requestContext) {
-    if (!isStatusChanged(compOrderLine, lineFromStorage) || !isStatusCanceledCompositePoLine(compOrderLine)) {
+    var shouldUpdateItemStatus = isStatusChanged(compOrderLine, lineFromStorage) && isStatusCanceledCompositePoLine(compOrderLine);
+    if (!shouldUpdateItemStatus) {
       return Future.succeededFuture();
     }
     return purchaseOrderLineService.getPoLinesByOrderId(compOrderLine.getPurchaseOrderId(), requestContext)

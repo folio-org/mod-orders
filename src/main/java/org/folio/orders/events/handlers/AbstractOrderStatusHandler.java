@@ -10,7 +10,7 @@ import java.util.Map;
 import org.folio.completablefuture.AsyncUtil;
 import org.folio.helper.BaseHelper;
 import org.folio.helper.PurchaseOrderHelper;
-import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.PoLine;
@@ -108,7 +108,7 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
   }
 
   protected CompositePurchaseOrder convert(PurchaseOrder po, List<PoLine> poLines) {
-    var lines = poLines.stream().map(HelperUtils::convertToCompositePoLine).toList();
+    var lines = poLines.stream().map(JsonObject::mapFrom).map(PoLineCommonUtil::convertToCompositePoLine).toList();
     return JsonObject.mapFrom(po).mapTo(CompositePurchaseOrder.class).withCompositePoLines(lines);
   }
 

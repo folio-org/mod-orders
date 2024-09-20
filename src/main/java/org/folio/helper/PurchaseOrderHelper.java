@@ -282,7 +282,7 @@ public class PurchaseOrderHelper {
     } else {
       Future.succeededFuture()
         .map(v -> {
-          List<PoLine> poLines = HelperUtils.convertToPoLines(compPO.getCompositePoLines());
+          List<PoLine> poLines = PoLineCommonUtil.convertToPoLines(compPO.getCompositePoLines());
           if (initialOrdersStatus.equals(compPO.getWorkflowStatus().value()))
             changeOrderStatus(purchaseOrder, poLines);
           promise.complete(poLines);

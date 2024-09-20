@@ -415,7 +415,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       updatedLocations++;
     }
 
-    return updatedLocations > 0 ? HelperUtils.convertToPoLine(compositePoLine) : poLine;
+    return updatedLocations > 0 ? PoLineCommonUtil.convertToPoLine(compositePoLine) : poLine;
   }
 
   /**

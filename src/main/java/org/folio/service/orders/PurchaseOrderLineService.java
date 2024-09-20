@@ -126,7 +126,7 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> saveOrderLine(CompositePoLine compositePoLine, List<Location> locations, RequestContext requestContext) {
-    PoLine poLine = HelperUtils.convertToPoLine(compositePoLine);
+    PoLine poLine = PoLineCommonUtil.convertToPoLine(compositePoLine);
     return saveOrderLine(poLine, locations, requestContext);
   }
 

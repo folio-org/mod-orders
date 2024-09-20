@@ -292,7 +292,7 @@ public class OrderValidationService {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return Collections.singleton(UPDATE);
     }
-    List<PoLine> poLines = HelperUtils.convertToPoLines(poFromStorage.getCompositePoLines());
+    List<PoLine> poLines = PoLineCommonUtil.convertToPoLines(poFromStorage.getCompositePoLines());
     Set<String> newIds = compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(Collectors.toSet());
     Set<String> storageIds = poLines.stream().map(PoLine::getId).collect(Collectors.toSet());
     Set<ProtectedOperationType> operations = new HashSet<>();

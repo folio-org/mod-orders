@@ -391,31 +391,6 @@ public class HelperUtils {
     return StreamEx.of(values).joining("\" or \"", prefix, "\")");
   }
 
-  public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
-    JsonObject pol = JsonObject.mapFrom(poLine);
-    pol.remove(ALERTS);
-    pol.remove(REPORTING_CODES);
-    return pol.mapTo(CompositePoLine.class);
-  }
-
-  public static PoLine convertToPoLine(CompositePoLine compPoLine) {
-    JsonObject pol = JsonObject.mapFrom(compPoLine);
-    pol.remove(ALERTS);
-    pol.remove(REPORTING_CODES);
-    PoLine poLine = pol.mapTo(PoLine.class);
-    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
-    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
-    return poLine;
-  }
-
-
-  public static List<PoLine> convertToPoLines(List<CompositePoLine> compositePoLines) {
-    return compositePoLines
-      .stream()
-      .map(HelperUtils::convertToPoLine)
-      .collect(toList());
-  }
-
   public static boolean isProductIdsExist(CompositePoLine compPOL) {
     return compPOL.getDetails() != null && CollectionUtils.isNotEmpty(compPOL.getDetails().getProductIds());
   }
