@@ -19,20 +19,10 @@ public class StatusUtils {
   private static final Set<String> resolutionPaymentStatus = Set.of(PaymentStatus.CANCELLED.value(), PaymentStatus.PAYMENT_NOT_REQUIRED.value(), PaymentStatus.FULLY_PAID.value());
   private static final Set<String> resolutionReceiptStatus = Set.of(ReceiptStatus.CANCELLED.value(), ReceiptStatus.RECEIPT_NOT_REQUIRED.value(), ReceiptStatus.FULLY_RECEIVED.value());
 
-
-//  private static boolean isCompositeOrderClosed(CompositePurchaseOrder order) {
-//    return order.getWorkflowStatus() == CompositePurchaseOrder.WorkflowStatus.CLOSED;
-//  }
-
   public static boolean isStatusChanged(CompositePoLine compOrderLine, PoLine lineFromStorage) {
     return !StringUtils.equals(lineFromStorage.getReceiptStatus().value(), compOrderLine.getReceiptStatus().value()) ||
       !StringUtils.equals(lineFromStorage.getPaymentStatus().value(), compOrderLine.getPaymentStatus().value());
   }
-
-//  public static boolean shouldUpdateOrderStatus(CompositePurchaseOrder compositePurchaseOrder, CompositePoLine compOrderLine, PoLine lineFromStorage) {
-//    return !isCompositeOrderClosed(compositePurchaseOrder) && isStatusChanged(compOrderLine, lineFromStorage)
-//      || isCompositeOrderClosed(compositePurchaseOrder) && isNonResolutionPoLine(compOrderLine);
-//  }
 
   public static boolean areAllPoLinesCanceled(List<PoLine> poLines) {
     return poLines.stream().allMatch(StatusUtils::isStatusCanceledPoLine);
