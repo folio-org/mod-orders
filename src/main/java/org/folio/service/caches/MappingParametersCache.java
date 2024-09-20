@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
@@ -70,7 +71,8 @@ public class MappingParametersCache {
   private static final String FUNDS_RESPONSE_PARAM = "funds";
   private static final String EXPENSE_CLASSES_RESPONSE_PARAM = "expenseClasses";
   private static final String IDENTIFIER_TYPES_RESPONSE_PARAM = "identifierTypes";
-  private static final String TENANT_CONFIGURATION_ADDRESSES_URL = "/configurations/entries?query=" + URLEncoder.encode("(module==TENANT and configName==tenant.addresses)", StandardCharsets.UTF_8);
+  private static final String TENANT_CONFIGURATION_ADDRESSES_URL = "/configurations/entries?query="
+    + URLEncoder.encode("(module==TENANT and configName==tenant.addresses)", StandardCharsets.UTF_8);
   private static final String CONFIGS_VALUE_RESPONSE = "configs";
   private static final String VALUE_RESPONSE = "value";
   public static final String ERROR_LOADING_CACHE_MESSAGE = "Error loading cache for mapping parameter: '%s', tenantId: '%s', status code: %s, response message: %s";
@@ -127,16 +129,16 @@ public class MappingParametersCache {
     LOGGER.debug("loadMappingParameters:: Trying to load mapping parameters '{}' for cache, okapi url: {}, tenantId: {}",
       tenantId, params.getOkapiUrl(), params.getTenantId());
 
-    Future<List<Location>> locationsFuture = getLocations(params);
-    Future<List<Mtype>> materialTypesFuture = getMaterialTypes(params);
-    Future<List<ContributorNameType>> contributorNameTypesFuture = getContributorNameTypes(params);
-    Future<List<Organization>> organizationsFuture = getOrganizations(params);
-    Future<List<Fund>> fundsFuture = getFunds(params);
-    Future<List<ExpenseClass>> expenseClassesFuture = getExpenseClasses(params);
-    Future<List<IdentifierType>> identifierTypesFuture = getIdentifierTypes(params);
-    Future<List<AcquisitionsUnit>> acquisitionsUnitsFuture = getAcquisitionsUnits(params);
-    Future<List<AcquisitionMethod>> acquisitionsMethodsFuture = getAcquisitionMethods(params);
-    Future<List<String>> tenantConfigurationAddressesFuture = getTenantConfigurationAddresses(params);
+    var locationsFuture = getLocations(params);
+    var materialTypesFuture = getMaterialTypes(params);
+    var contributorNameTypesFuture = getContributorNameTypes(params);
+    var organizationsFuture = getOrganizations(params);
+    var fundsFuture = getFunds(params);
+    var expenseClassesFuture = getExpenseClasses(params);
+    var identifierTypesFuture = getIdentifierTypes(params);
+    var acquisitionsUnitsFuture = getAcquisitionsUnits(params);
+    var acquisitionsMethodsFuture = getAcquisitionMethods(params);
+    var tenantConfigurationAddressesFuture = getTenantConfigurationAddresses(params);
 
     return GenericCompositeFuture.join(Arrays.asList(locationsFuture, materialTypesFuture, contributorNameTypesFuture,
       organizationsFuture, fundsFuture, identifierTypesFuture, expenseClassesFuture, acquisitionsUnitsFuture,
@@ -163,7 +165,7 @@ public class MappingParametersCache {
       .compose(httpResponse -> {
         if (httpResponse.getResponse().statusCode() == HttpStatus.SC_OK) {
           OrganizationCollection orgCollection = Json.decodeValue(httpResponse.getJson().encode(), OrganizationCollection.class);
-          LOGGER.debug("loadMappingParameters:: The first chunk of organizations was loaded for cache, tenantId '{}', organizations '{}', totalRecords '{}'",
+          LOGGER.debug("getOrganizations:: The first chunk of organizations was loaded for cache, tenantId '{}', organizations '{}', totalRecords '{}'",
             tenantId, orgCollection.getOrganizations().size(), orgCollection.getTotalRecords());
           if (orgCollection.getTotalRecords() > settingsLimit) {
             return getRemainingOrganizations(params, orgCollection);
@@ -260,7 +262,7 @@ public class MappingParametersCache {
 
   private Future<List<String>> getTenantConfigurationAddresses(OkapiConnectionParams params) {
     return RestUtil.doRequest(params, TENANT_CONFIGURATION_ADDRESSES_URL, HttpMethod.GET, null).compose(httpResponse -> {
-      if ((httpResponse.getResponse().statusCode() == HttpStatus.SC_OK)) {
+      if (httpResponse.getResponse().statusCode() == HttpStatus.SC_OK) {
         JsonObject response = httpResponse.getJson();
         if (ifConfigResponseIsValid(response)) {
           List<String> addresses = response.getJsonArray(CONFIGS_VALUE_RESPONSE).stream()
@@ -268,7 +270,12 @@ public class MappingParametersCache {
               JsonObject configJson = (JsonObject) config;
               String configValue = configJson.getString(VALUE_RESPONSE);
               if (configValue != null) {
-                return new JsonObject(configValue).put(ID, configJson.getString(ID)).toString();
+                try {
+                  return new JsonObject(configValue).put(ID, configJson.getString(ID)).toString();
+                } catch (DecodeException decodeException) {
+                  LOGGER.warn("getTenantConfigurationAddresses:: Cannot parse json configuration value {}", configValue);
+                  return null;
+                }
               }
               return null;
             })
