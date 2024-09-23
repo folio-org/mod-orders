@@ -255,16 +255,10 @@ public final class PoLineCommonUtil {
   }
 
   public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
-    poLine.setAlerts(null);
-    poLine.setReportingCodes(null);
-    JsonObject jsonLine = JsonObject.mapFrom(poLine);
-    return jsonLine.mapTo(CompositePoLine.class);
-  }
-
-  public static CompositePoLine convertToCompositePoLine(JsonObject poLine) {
-    poLine.remove(ALERTS);
-    poLine.remove(REPORTING_CODES);
-    return poLine.mapTo(CompositePoLine.class);
+    JsonObject poLineJson = JsonObject.mapFrom(poLine);
+    poLineJson.remove(ALERTS);
+    poLineJson.remove(REPORTING_CODES);
+    return poLineJson.mapTo(CompositePoLine.class);
   }
 
   public static PoLine convertToPoLine(CompositePoLine compPoLine) {

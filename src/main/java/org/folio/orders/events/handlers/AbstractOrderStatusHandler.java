@@ -108,7 +108,7 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
   }
 
   protected CompositePurchaseOrder convert(PurchaseOrder po, List<PoLine> poLines) {
-    var lines = poLines.stream().map(JsonObject::mapFrom).map(PoLineCommonUtil::convertToCompositePoLine).toList();
+    var lines = poLines.stream().map(PoLineCommonUtil::convertToCompositePoLine).toList();
     return JsonObject.mapFrom(po).mapTo(CompositePurchaseOrder.class).withCompositePoLines(lines);
   }
 

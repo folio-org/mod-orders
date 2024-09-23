@@ -468,17 +468,11 @@ public class HelperUtils {
   }
 
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLineList) {
-    List<CompositePoLine> compositePoLines = new ArrayList<>(poLineList.size());
-    if (CollectionUtils.isNotEmpty(poLineList)) {
-      poLineList.forEach(poLine -> {
-        poLine.setAlerts(null);
-        poLine.setReportingCodes(null);
-        CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
-        compositePoLines.add(compositePoLine);
-      });
-    }
-    JsonObject jsonLine = JsonObject.mapFrom(purchaseOrder);
-    return jsonLine.mapTo(CompositePurchaseOrder.class).withCompositePoLines(compositePoLines);
+    var purchaseOrderJson = JsonObject.mapFrom(purchaseOrder);
+    var compositePoLines = poLineList.stream()
+      .map(PoLineCommonUtil::convertToCompositePoLine)
+      .toList();
+    return purchaseOrderJson.mapTo(CompositePurchaseOrder.class).withCompositePoLines(compositePoLines);
   }
 
   public static void sendEvent(MessageAddress messageAddress, JsonObject data, RequestContext requestContext) {

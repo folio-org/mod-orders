@@ -628,7 +628,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private CompositePurchaseOrder addLineToCompOrder(CompositePurchaseOrder compOrder, PoLine lineFromStorage) {
-    var compPoLine = convertToCompositePoLine(JsonObject.mapFrom(lineFromStorage));
+    var compPoLine = convertToCompositePoLine(lineFromStorage);
     compOrder.getCompositePoLines().add(compPoLine);
     return compOrder;
   }
