@@ -1,5 +1,6 @@
 package org.folio.orders.utils;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -254,26 +255,26 @@ public final class PoLineCommonUtil {
   }
 
   public static CompositePoLine convertToCompositePoLine(PoLine poLine) {
-    JsonObject poLineJson = JsonObject.mapFrom(poLine);
+    var poLineJson = JsonObject.mapFrom(poLine);
     poLineJson.remove(ALERTS);
     poLineJson.remove(REPORTING_CODES);
     return poLineJson.mapTo(CompositePoLine.class);
   }
 
   public static PoLine convertToPoLine(CompositePoLine compPoLine) {
-    JsonObject pol = JsonObject.mapFrom(compPoLine);
+    var pol = JsonObject.mapFrom(compPoLine);
     pol.remove(ALERTS);
     pol.remove(REPORTING_CODES);
-    PoLine poLine = pol.mapTo(PoLine.class);
-    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).toList());
-    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).toList());
+    var poLine = pol.mapTo(PoLine.class);
+    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
+    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
     return poLine;
   }
 
   public static List<PoLine> convertToPoLines(List<CompositePoLine> compositePoLines) {
     return compositePoLines.stream()
       .map(PoLineCommonUtil::convertToPoLine)
-      .toList();
+      .collect(toList());
   }
 
   public static void updateLocationsQuantity(List<Location> locations) {
