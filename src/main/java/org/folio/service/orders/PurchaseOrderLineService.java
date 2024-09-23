@@ -24,12 +24,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
@@ -137,13 +137,14 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> saveOrderLinesWithLocations(List<PoLineLocationsPair> pairs, RequestContext requestContext) {
-    List<PoLineCollection> poLineCollections = getPartitionedPoLines(pairs.stream().map(PoLineLocationsPair::getPoLine).collect(Collectors.toList()));
+    List<PoLineCollection> poLineCollections = getPartitionedPoLines(pairs.stream().map(PoLineLocationsPair::getPoLine).toList());
 
     for (PoLineCollection collection: poLineCollections) {
       for (PoLine poLine: collection.getPoLines()) {
         List<Location> locations = pairs.stream()
           .filter(pair -> StringUtils.equals(pair.getPoLine().getId(), poLine.getId()))
-          .findFirst().get().getLocations();
+          .findFirst().orElseThrow(() -> new NoSuchElementException("No matching PoLine found"))
+          .getLocations();
         updateSearchLocations(poLine, locations, requestContext);
       }
     }
