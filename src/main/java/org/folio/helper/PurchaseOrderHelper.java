@@ -6,7 +6,6 @@ import static org.folio.orders.utils.HelperUtils.COMPOSITE_PO_LINES;
 import static org.folio.orders.utils.HelperUtils.ORDER_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.WORKFLOW_STATUS;
-import static org.folio.orders.utils.HelperUtils.changeOrderStatus;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
 import static org.folio.orders.utils.OrderStatusTransitionUtil.isOrderClosing;
@@ -24,6 +23,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_REOPEN_PERMI
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.folio.service.UserService.getCurrentUserId;
+import static org.folio.service.orders.utils.StatusUtils.changeOrderStatus;
 
 import java.util.Arrays;
 import java.util.List;
@@ -282,7 +282,7 @@ public class PurchaseOrderHelper {
     } else {
       Future.succeededFuture()
         .map(v -> {
-          List<PoLine> poLines = HelperUtils.convertToPoLines(compPO.getCompositePoLines());
+          List<PoLine> poLines = PoLineCommonUtil.convertToPoLines(compPO.getCompositePoLines());
           if (initialOrdersStatus.equals(compPO.getWorkflowStatus().value()))
             changeOrderStatus(purchaseOrder, poLines);
           promise.complete(poLines);

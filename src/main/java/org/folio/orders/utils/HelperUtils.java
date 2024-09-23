@@ -20,18 +20,13 @@ import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.NoInventoryRecordException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.Alert;
-import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
-import org.folio.rest.jaxrs.model.PoLine.PaymentStatus;
-import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
-import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.exchange.ExchangeRateProviderResolver;
 import org.javamoney.moneta.Money;
@@ -58,19 +53,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.vertx.core.Future.succeededFuture;
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
-import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
-import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.FULLY_PAID;
-import static org.folio.rest.jaxrs.model.PoLine.PaymentStatus.PAYMENT_NOT_REQUIRED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
-import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.RECEIPT_NOT_REQUIRED;
 
 public class HelperUtils {
 
@@ -393,77 +381,9 @@ public class HelperUtils {
     return poJson.mapTo(CompositePurchaseOrder.class);
   }
 
-  public static boolean changeOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    if (toBeCancelled(purchaseOrder, poLines)) {
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
-      purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_CANCELLED));
-      return true;
-    }
-
-    if (toBeClosed(purchaseOrder, poLines)) {
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
-      purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_COMPLETE));
-      return true;
-    }
-
-    if (toBeReopened(purchaseOrder, poLines)) {
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
-      return true;
-    }
-
-    return false;
-  }
-
   public static String convertTagListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
-
     String prefix = fieldName + (strictMatch ? "==(\"" : "=(\"");
     return StreamEx.of(values).joining("\" or \"", prefix, "\")");
-  }
-
-  private static boolean toBeClosed(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.OPEN
-      && poLines.stream().allMatch(HelperUtils::isCompletedPoLine);
-  }
-
-  private static boolean toBeCancelled(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.OPEN
-      && poLines.stream().allMatch(HelperUtils::isCancelledPoLine);
-  }
-
-  private static boolean isCancelledPoLine(PoLine line) {
-    PoLine.PaymentStatus paymentStatus = line.getPaymentStatus();
-    PoLine.ReceiptStatus receiptStatus = line.getReceiptStatus();
-    return paymentStatus == PaymentStatus.CANCELLED && receiptStatus == ReceiptStatus.CANCELLED;
-  }
-
-  private static boolean toBeReopened(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
-    return purchaseOrder.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.CLOSED
-      && poLines.stream().anyMatch(line -> !isCompletedPoLine(line));
-  }
-
-  private static boolean isCompletedPoLine(PoLine line) {
-    PoLine.PaymentStatus paymentStatus = line.getPaymentStatus();
-    PoLine.ReceiptStatus receiptStatus = line.getReceiptStatus();
-    return (paymentStatus == PAYMENT_NOT_REQUIRED || paymentStatus == FULLY_PAID || paymentStatus == PaymentStatus.CANCELLED)
-      && (receiptStatus == FULLY_RECEIVED || receiptStatus == RECEIPT_NOT_REQUIRED || receiptStatus == ReceiptStatus.CANCELLED);
-  }
-
-  public static PoLine convertToPoLine(CompositePoLine compPoLine) {
-    JsonObject pol = JsonObject.mapFrom(compPoLine);
-    pol.remove(ALERTS);
-    pol.remove(REPORTING_CODES);
-    PoLine poLine = pol.mapTo(PoLine.class);
-    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
-    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
-    return poLine;
-  }
-
-
-  public static List<PoLine> convertToPoLines(List<CompositePoLine> compositePoLines) {
-    return compositePoLines
-      .stream()
-      .map(HelperUtils::convertToPoLine)
-      .collect(toList());
   }
 
   public static boolean isProductIdsExist(CompositePoLine compPOL) {
@@ -543,17 +463,11 @@ public class HelperUtils {
   }
 
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(PurchaseOrder purchaseOrder, List<PoLine> poLineList) {
-    List<CompositePoLine> compositePoLines = new ArrayList<>(poLineList.size());
-    if (CollectionUtils.isNotEmpty(poLineList)) {
-      poLineList.forEach(poLine -> {
-        poLine.setAlerts(null);
-        poLine.setReportingCodes(null);
-        CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
-        compositePoLines.add(compositePoLine);
-      });
-    }
-    JsonObject jsonLine = JsonObject.mapFrom(purchaseOrder);
-    return jsonLine.mapTo(CompositePurchaseOrder.class).withCompositePoLines(compositePoLines);
+    var purchaseOrderJson = JsonObject.mapFrom(purchaseOrder);
+    var compositePoLines = poLineList.stream()
+      .map(PoLineCommonUtil::convertToCompositePoLine)
+      .toList();
+    return purchaseOrderJson.mapTo(CompositePurchaseOrder.class).withCompositePoLines(compositePoLines);
   }
 
   public static void sendEvent(MessageAddress messageAddress, JsonObject data, RequestContext requestContext) {

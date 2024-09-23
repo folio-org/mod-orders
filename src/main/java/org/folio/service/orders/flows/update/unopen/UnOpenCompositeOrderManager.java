@@ -122,7 +122,7 @@ public class UnOpenCompositeOrderManager {
 
   private Future<Void> updatePoLinesSummary(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
     return GenericCompositeFuture.join(compositePoLines.stream()
-        .map(HelperUtils::convertToPoLine)
+        .map(PoLineCommonUtil::convertToPoLine)
         .map(line -> purchaseOrderLineService.saveOrderLine(line, requestContext))
         .collect(toList()))
       .map(ok -> null);

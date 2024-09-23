@@ -11,7 +11,6 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.PoLine;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 
 public class PoLineInvoiceLineHolderBuilder {
   private static final List<InvoiceLine.InvoiceLineStatus> EDITABLE_STATUSES = List.of(InvoiceLine.InvoiceLineStatus.OPEN, InvoiceLine.InvoiceLineStatus.REVIEWED);
@@ -22,7 +21,7 @@ public class PoLineInvoiceLineHolderBuilder {
   }
 
   public Future<PoLineInvoiceLineHolder> buildHolder(CompositePoLine compOrderLine, PoLine poLineFromStorage, RequestContext requestContext) {
-    PoLineInvoiceLineHolder holder = new PoLineInvoiceLineHolder(compOrderLine, JsonObject.mapFrom(poLineFromStorage));
+    var holder = new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage);
     return invoiceLineService.getInvoiceLinesByOrderLineId(compOrderLine.getId(), requestContext)
       .onSuccess(holder::withInvoiceLines)
       .compose(aResult -> CollectionUtils.isEmpty(holder.getInvoiceLines()) ? Future.succeededFuture(holder) :
