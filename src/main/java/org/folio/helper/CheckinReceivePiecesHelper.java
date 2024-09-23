@@ -423,8 +423,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       updatedLocations++;
     }
 
-    return updatedLocations > 0 ? PoLineLocationsPair.of(PoLineCommonUtil.convertToPoLine(compositePoLine), locations.stream().toList()) :
-      PoLineLocationsPair.of(poLine, poLine.getLocations());
+    return updatedLocations > 0
+      ? PoLineLocationsPair.of(PoLineCommonUtil.convertToPoLine(compositePoLine), locations.stream().toList())
+      : PoLineLocationsPair.of(poLine, poLine.getLocations());
   }
 
   /**
