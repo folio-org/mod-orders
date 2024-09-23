@@ -333,9 +333,8 @@ public class PurchaseOrderLineHelper {
     return purchaseOrderLineService.updateSearchLocations(compOrderLine, requestContext)
       .compose(v -> purchaseOrderLineService.updatePoLineSubObjects(compOrderLine, lineFromStorage, requestContext))
       .compose(poLine -> purchaseOrderLineService.updateOrderLineSummary(compOrderLine.getId(), poLine, requestContext))
-      .onFailure(throwable -> {
-        logger.error("PoLine with id - '{}' partially updated but there are issues processing some PoLine sub-objects", compOrderLine.getId());
-      }).mapEmpty();
+      .onFailure(throwable -> logger.error("PoLine with id - '{}' partially updated but there are issues processing some PoLine sub-objects", compOrderLine.getId()))
+      .mapEmpty();
   }
 
   public String buildNewPoLineNumber(PoLine poLineFromStorage, String poNumber) {

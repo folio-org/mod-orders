@@ -1,6 +1,5 @@
 package org.folio.orders.utils;
 
-import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.orders.utils.HelperUtils.calculateTotalLocationQuantity;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
@@ -266,16 +265,15 @@ public final class PoLineCommonUtil {
     pol.remove(ALERTS);
     pol.remove(REPORTING_CODES);
     PoLine poLine = pol.mapTo(PoLine.class);
-    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).collect(toList()));
-    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).collect(toList()));
+    poLine.setAlerts(compPoLine.getAlerts().stream().map(Alert::getId).toList());
+    poLine.setReportingCodes(compPoLine.getReportingCodes().stream().map(ReportingCode::getId).toList());
     return poLine;
   }
 
   public static List<PoLine> convertToPoLines(List<CompositePoLine> compositePoLines) {
-    return compositePoLines
-      .stream()
+    return compositePoLines.stream()
       .map(PoLineCommonUtil::convertToPoLine)
-      .collect(toList());
+      .toList();
   }
 
   public static void updateLocationsQuantity(List<Location> locations) {

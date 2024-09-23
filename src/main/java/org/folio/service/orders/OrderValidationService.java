@@ -11,7 +11,6 @@ import org.folio.helper.PoNumberHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.AcqDesiredPermissions;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.ErrorCodes;
