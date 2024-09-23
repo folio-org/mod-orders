@@ -590,11 +590,12 @@ public class PurchaseOrderLineHelper {
   private Future<CompositePurchaseOrder> getCompositePurchaseOrder(String purchaseOrderId, RequestContext requestContext) {
     return purchaseOrderStorageService.getPurchaseOrderByIdAsJson(purchaseOrderId, requestContext)
       .map(HelperUtils::convertToCompositePurchaseOrder)
-      .onFailure(cause -> {
+      .recover(cause -> {
         // The case when specified order does not exist
         if (cause instanceof HttpException httpException && httpException.getCode() == Response.Status.NOT_FOUND.getStatusCode()) {
           throw new HttpException(422, ErrorCodes.ORDER_NOT_FOUND);
         }
+        throw new HttpException(500, cause.getMessage(), cause);
       });
   }
 
