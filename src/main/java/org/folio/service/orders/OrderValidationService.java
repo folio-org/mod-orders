@@ -11,7 +11,6 @@ import org.folio.helper.PoNumberHelper;
 import org.folio.helper.PurchaseOrderLineHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.AcqDesiredPermissions;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.exceptions.ErrorCodes;
@@ -292,7 +291,7 @@ public class OrderValidationService {
     if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
       return Collections.singleton(UPDATE);
     }
-    List<PoLine> poLines = HelperUtils.convertToPoLines(poFromStorage.getCompositePoLines());
+    List<PoLine> poLines = PoLineCommonUtil.convertToPoLines(poFromStorage.getCompositePoLines());
     Set<String> newIds = compPO.getCompositePoLines().stream().map(CompositePoLine::getId).collect(Collectors.toSet());
     Set<String> storageIds = poLines.stream().map(PoLine::getId).collect(Collectors.toSet());
     Set<ProtectedOperationType> operations = new HashSet<>();

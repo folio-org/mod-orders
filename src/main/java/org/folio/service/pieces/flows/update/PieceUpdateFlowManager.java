@@ -15,7 +15,6 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.pieces.PieceUpdateHolder;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
@@ -118,7 +117,7 @@ public class PieceUpdateFlowManager {
         }
         List<Piece> piecesToUpdate = List.of(holder.getPieceToUpdate());
         CompositePoLine poLineToSave = holder.getPoLineToSave();
-        if (PoLineCommonUtil.isCancelledOrOngoingStatus(HelperUtils.convertToPoLine(poLineToSave))) {
+        if (PoLineCommonUtil.isCancelledOrOngoingStatus(PoLineCommonUtil.convertToPoLine(poLineToSave))) {
           logger.info("updatePoLine:: Skipping updating POL '{}' status for CANCELLED or ONGOING po lines", poLineToSave.getId());
         } else {
           poLineToSave.setReceiptStatus(calculatePoLineReceiptStatus(originPoLine, pieces, piecesToUpdate));

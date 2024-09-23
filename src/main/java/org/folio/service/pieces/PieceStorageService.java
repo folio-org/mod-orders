@@ -25,6 +25,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 
 import io.vertx.core.Future;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 
@@ -136,6 +137,7 @@ public class PieceStorageService {
   private Future<List<Piece>> filterPiecesByUserTenantsIfNecessary(List<Piece> pieces, RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> consortiumConfiguration
+        .filter(configuration -> shouldFilterPiecesForTenant(configuration.centralTenantId(), requestContext))
         .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext)
           .map(userTenants -> filterPiecesByUserTenants(pieces, userTenants)))
         .orElse(Future.succeededFuture(pieces)));
@@ -183,6 +185,11 @@ public class PieceStorageService {
       .withLimit(Integer.MAX_VALUE);
     return restClient.get(requestEntry, PieceCollection.class, requestContext)
       .map(PieceCollection::getPieces);
+  }
+
+  private static boolean shouldFilterPiecesForTenant(String centralTenantId, RequestContext requestContext) {
+    var requestTenantId = TenantTool.tenantId(requestContext.getHeaders());
+    return requestTenantId.equals(centralTenantId);
   }
 
 }

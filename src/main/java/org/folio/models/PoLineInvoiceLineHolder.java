@@ -7,18 +7,17 @@ import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.PoLine;
 
-import io.vertx.core.json.JsonObject;
-
 
 public class PoLineInvoiceLineHolder {
-  private CompositePoLine poLineFromRequest;
-  private PoLine poLineFromStorage;
+
+  private final CompositePoLine poLineFromRequest;
+  private final PoLine poLineFromStorage;
   private List<InvoiceLine> invoiceLines;
   private List<InvoiceLine> openOrReviewedInvoiceLines;
 
-  public PoLineInvoiceLineHolder(CompositePoLine poLineFromRequest, JsonObject poLineFromStorage) {
+  public PoLineInvoiceLineHolder(CompositePoLine poLineFromRequest, PoLine poLineFromStorage) {
     this.poLineFromRequest = poLineFromRequest;
-    this.poLineFromStorage = poLineFromStorage.mapTo(PoLine.class);
+    this.poLineFromStorage = poLineFromStorage;
     this.invoiceLines = new ArrayList<>();
     this.openOrReviewedInvoiceLines = new ArrayList<>();
   }

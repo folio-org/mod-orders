@@ -402,7 +402,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     }
 
     short updatedLocations = 0;
-    CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
+    var compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
     Set<Location> locations = new HashSet<>();
     for (Piece pieceFromStorage: piecesFromStorage) {
       locations.addAll(PieceUtil.findOrderPieceLineLocation(pieceFromStorage, compositePoLine));
@@ -423,7 +423,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       updatedLocations++;
     }
 
-    return updatedLocations > 0 ? PoLineLocationsPair.of(HelperUtils.convertToPoLine(compositePoLine), locations.stream().toList()) :
+    return updatedLocations > 0 ? PoLineLocationsPair.of(PoLineCommonUtil.convertToPoLine(compositePoLine), locations.stream().toList()) :
       PoLineLocationsPair.of(poLine, poLine.getLocations());
   }
 
