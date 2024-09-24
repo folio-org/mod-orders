@@ -1,6 +1,5 @@
 package org.folio.service.orders;
 
-import static com.google.common.collect.Lists.transform;
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.helper.BaseHelper.ID;
@@ -25,6 +24,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
@@ -39,6 +39,7 @@ import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.models.PoLineLocationsPair;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
@@ -126,26 +127,58 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> saveOrderLine(CompositePoLine compositePoLine, List<Location> locations, RequestContext requestContext) {
-    PoLine poLine = HelperUtils.convertToPoLine(compositePoLine);
+    PoLine poLine = PoLineCommonUtil.convertToPoLine(compositePoLine);
     return saveOrderLine(poLine, locations, requestContext);
   }
 
-  public Future<Void> saveOrderLines(PoLineCollection poLineCollection, RequestContext requestContext) {
-    RequestEntry requestEntry = new RequestEntry(BATCH_ENDPOINT);
-    return collectResultsOnSuccess(transform(poLineCollection.getPoLines(), poLine -> updateSearchLocations(poLine, requestContext)))
-      .compose(v -> restClient.put(requestEntry, poLineCollection, requestContext));
+  public Future<Void> saveOrderLinesWithoutSearchLocationsUpdate(List<PoLine> orderLines, RequestContext requestContext) {
+    List<PoLineCollection> poLineCollections = getPartitionedPoLines(orderLines);
+    return saveOrderLinesCollections(poLineCollections, requestContext);
   }
 
+  public Future<Void> saveOrderLinesWithLocations(List<PoLineLocationsPair> pairs, RequestContext requestContext) {
+    List<PoLineCollection> poLineCollections = getPartitionedPoLines(pairs.stream().map(PoLineLocationsPair::getPoLine).toList());
+
+    for (PoLineCollection collection: poLineCollections) {
+      for (PoLine poLine: collection.getPoLines()) {
+        List<Location> locations = pairs.stream()
+          .filter(pair -> StringUtils.equals(pair.getPoLine().getId(), poLine.getId()))
+          .findFirst().orElseThrow(() -> new NoSuchElementException("No matching PoLine found"))
+          .getLocations();
+        updateSearchLocations(poLine, locations, requestContext);
+      }
+    }
+
+    return saveOrderLinesCollections(poLineCollections, requestContext);
+  }
 
   public Future<Void> saveOrderLines(List<PoLine> orderLines, RequestContext requestContext) {
-    List<PoLineCollection> poLineCollections = ListUtils.partition(orderLines, PO_LINE_BATCH_PARTITION_SIZE)
+    List<PoLineCollection> poLineCollections = getPartitionedPoLines(orderLines);
+
+    for (PoLineCollection collection: poLineCollections) {
+      for (PoLine poLine: collection.getPoLines()) {
+        updateSearchLocations(poLine, requestContext);
+      }
+    }
+
+    return saveOrderLinesCollections(poLineCollections, requestContext);
+  }
+
+  private List<PoLineCollection> getPartitionedPoLines(List<PoLine> orderLines) {
+    return ListUtils.partition(orderLines, PO_LINE_BATCH_PARTITION_SIZE)
       .stream()
       .map(lines -> new PoLineCollection().withPoLines(lines).withTotalRecords(lines.size()))
       .toList();
+  }
 
-    return GenericCompositeFuture.join(poLineCollections.stream()
-      .map(poLineCollection -> saveOrderLines(poLineCollection, requestContext))
-      .toList())
+  private Future<Void> saveOrderLinesCollections(List<PoLineCollection> poLineCollections, RequestContext requestContext) {
+    return GenericCompositeFuture.join(poLineCollections
+      .stream()
+      .map(poLineCollection -> {
+        logger.info("saveOrderLines:: start saving {} po lines in batch", poLineCollection.getTotalRecords());
+        RequestEntry requestEntry = new RequestEntry(BATCH_ENDPOINT);
+        return restClient.put(requestEntry, poLineCollection, requestContext);
+      }).toList())
       .mapEmpty();
   }
 

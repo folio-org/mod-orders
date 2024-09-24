@@ -217,7 +217,7 @@ public class OrderRolloverService {
   private Future<Void> saveOrderLines(List<PoLine> orderLines, LedgerFiscalYearRollover ledgerFYRollover,
                                       PurchaseOrder.WorkflowStatus workflowStatus, RequestContext requestContext) {
     logger.info("saveOrderLines:: Saving POLs after rollover processing, size: {}", orderLines.size());
-    return purchaseOrderLineService.saveOrderLines(orderLines, requestContext)
+    return purchaseOrderLineService.saveOrderLinesWithoutSearchLocationsUpdate(orderLines, requestContext)
       .recover(t -> handlePoLineUpdateFailures(orderLines, ledgerFYRollover, workflowStatus, t, requestContext)
         .map(v -> {
           throw new HttpException(400, ErrorCodes.PO_LINE_ROLLOVER_FAILED.toError());

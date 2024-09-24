@@ -371,7 +371,7 @@ public class OrderReEncumberServiceTest {
     when(ledgerRolloverErrorService.getLedgerFyRolloverErrors(anyString(), any()))
         .thenReturn(succeededFuture(new LedgerFiscalYearRolloverErrorCollection()));
     when(ledgerRolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(succeededFuture(null));
-    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(succeededFuture(null));
+    when(purchaseOrderLineService.saveOrderLinesWithoutSearchLocationsUpdate(anyList(), any())).thenReturn(succeededFuture(null));
     ConversionQuery conversionQuery = ConversionQueryBuilder.of().setBaseCurrency("USD").setTermCurrency("USD").build();
     when(exchangeRateProviderResolver.resolve(conversionQuery, requestContext)).thenReturn(exchangeRateProvider);
 
@@ -415,7 +415,7 @@ public class OrderReEncumberServiceTest {
     when(ledgerRolloverErrorService.getLedgerFyRolloverErrors(anyString(), any()))
         .thenReturn(succeededFuture(new LedgerFiscalYearRolloverErrorCollection()));
     when(ledgerRolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(succeededFuture(null));
-    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(succeededFuture(null));
+    when(purchaseOrderLineService.saveOrderLinesWithoutSearchLocationsUpdate(anyList(), any())).thenReturn(succeededFuture(null));
 
     List<Transaction> toTransactionList = Collections.emptyList();
     when(transactionService.getTransactions(anyString(), eq(requestContext)))
@@ -580,7 +580,7 @@ public class OrderReEncumberServiceTest {
     when(ledgerRolloverErrorService.getLedgerFyRolloverErrors(anyString(), any()))
         .thenReturn(succeededFuture(new LedgerFiscalYearRolloverErrorCollection()));
     when(ledgerRolloverErrorService.deleteRolloverErrors(anyList(), any())).thenReturn(succeededFuture(null));
-    when(purchaseOrderLineService.saveOrderLines(anyList(), any())).thenReturn(succeededFuture(null));
+    when(purchaseOrderLineService.saveOrderLinesWithoutSearchLocationsUpdate(anyList(), any())).thenReturn(succeededFuture(null));
 
     when(ledgerRolloverProgressService.getRolloversProgress(eq(rolloverId), any()))
         .thenReturn(succeededFuture(Collections.singletonList(success)));

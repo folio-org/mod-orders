@@ -5,6 +5,7 @@ import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
+import org.folio.service.orders.utils.StatusUtils;
 import org.junit.jupiter.api.Test;
 
 import javax.money.convert.ConversionQuery;
@@ -92,7 +93,7 @@ public class HelperUtilsTest {
 
     List<PoLine> poLines = List.of(firstPoLine, secondPoLine);
 
-    assertTrue(HelperUtils.changeOrderStatus(purchaseOrder, poLines));
+    assertTrue(StatusUtils.changeOrderStatus(purchaseOrder, poLines));
     assertEquals(purchaseOrder.getWorkflowStatus(), PurchaseOrder.WorkflowStatus.CLOSED);
     assertEquals(purchaseOrder.getCloseReason(), new CloseReason().withReason(REASON_CANCELLED));
   }
