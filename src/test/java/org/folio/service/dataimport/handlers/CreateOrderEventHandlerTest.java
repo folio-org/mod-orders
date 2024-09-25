@@ -11,9 +11,11 @@ import net.mguenther.kafka.junit.KeyValue;
 import net.mguenther.kafka.junit.ObserveKeyValues;
 import net.mguenther.kafka.junit.SendKeyValues;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.folio.AcquisitionsUnit;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
+import org.folio.Fund;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.Organization;
@@ -81,6 +83,8 @@ import static org.folio.TestConfig.closeMockServer;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.folio.orders.utils.HelperUtils.CONFIG_NAME;
 import static org.folio.orders.utils.HelperUtils.PO_LINES_LIMIT_PROPERTY;
+import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
+import static org.folio.orders.utils.ResourcePathResolver.FUNDS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.rest.RestVerticle.OKAPI_USERID_HEADER;
 import static org.folio.rest.impl.MockServer.CONFIGS;
@@ -98,6 +102,7 @@ import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.folio.service.dataimport.handlers.CreateOrderEventHandler.OKAPI_PERMISSIONS_HEADER;
+import static org.folio.service.orders.AcquisitionsUnitsServiceTest.USER_ID_ASSIGNED_TO_ACQ_UNITS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1113,17 +1118,19 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   @Test
   public void shouldCreateOrderWithSpecifiedAcquisitionUnitWhenUserHasUnitsAssignmentsPermission() throws InterruptedException {
     // given
-    String expectedAcqUnitId = "0e9525aa-d123-4e4d-9f7e-1b302a97eb90";
+    String expectedAcqUnitId = "f6d2cc9d-82ca-437c-a4e6-e5c30323df00";
     String acqUnitName = "Not protected";
     MappingRule acqUnitIdsRule = new MappingRule()
-      .withAcceptedValues(new HashMap<>(Map.of(expectedAcqUnitId, acqUnitName)))
+      .withName("acqUnitIds")
       .withPath("order.po.acqUnitIds[]")
       .withValue(String.format("\"%s\"", acqUnitName))
       .withEnabled("true");
 
     mappingProfile.getMappingDetails().getMappingFields().add(acqUnitIdsRule);
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    AcquisitionsUnit acquisitionsUnit = new AcquisitionsUnit().withId(expectedAcqUnitId).withName(acqUnitName);
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+    addMockEntry(ACQUISITIONS_UNITS, acquisitionsUnit);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
@@ -1134,7 +1141,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .withContext(new HashMap<>() {{
         put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
         put(OKAPI_PERMISSIONS_HEADER, JsonArray.of(AcqDesiredPermissions.ASSIGN.getPermission()).encode());
-        put(OKAPI_USERID_HEADER, USER_ID);
+        put(OKAPI_USERID_HEADER, USER_ID_ASSIGNED_TO_ACQ_UNITS);
         put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
       }});
 
@@ -1521,15 +1528,16 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
         .withPath("order.poLine.fundDistribution[]")
         .withFields(List.of(
           new MappingRule().withPath("order.poLine.fundDistribution[].fundId").withName("fundId")
-            .withValue("\"African (History) (AFRICAHIST)\"")
-            .withAcceptedValues(new HashMap<>(Map.of(expectedFundId, "African (History) (AFRICAHIST)"))),
+            .withValue("\"African (History) (AFRICAHIST)\""),
           new MappingRule().withPath("order.poLine.fundDistribution[].value").withValue("\"100\""),
           new MappingRule().withPath("order.poLine.fundDistribution[].distributionType").withValue("\"percentage\"")))
       ));
 
     mappingProfile.getMappingDetails().getMappingFields().add(fundDistributionsRule);
     ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    Fund fund = new Fund().withId(expectedFundId).withCode(expectedFundCode).withName("African (History)");
     addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+    addMockEntry(FUNDS, fund);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))

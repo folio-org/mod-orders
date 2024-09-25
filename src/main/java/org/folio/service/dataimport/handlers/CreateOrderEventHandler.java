@@ -33,7 +33,6 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +52,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.Fund;
 import org.folio.MappingProfile;
 import org.folio.Record;
 import org.folio.dbschema.ObjectMapperTool;
@@ -62,6 +62,7 @@ import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -200,17 +201,17 @@ public class CreateOrderEventHandler implements EventHandler {
           tenantConfigFuture
             .onSuccess(tenantConfig -> overridePoLinesLimit(tenantConfig, poLinesLimitOptional))
             .compose(tenantConfig -> {
-              Promise<Void> promise = Promise.promise();
+              Promise<MappingParameters> promise = Promise.promise();
               prepareEventPayloadForMapping(dataImportEventPayload);
               mappingParametersCache.get(okapiParams)
                 .onSuccess(mappingParameters -> {
                   MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-                  promise.complete();
+                  promise.complete(mappingParameters);
                 })
                 .onFailure(promise::fail);
               return promise.future();
             })
-            .compose(orderId -> prepareMappingResult(dataImportEventPayload))
+            .compose(mappingParameters -> prepareMappingResult(dataImportEventPayload, mappingParameters))
             .compose(v -> setApprovedFalseIfUserNotHaveApprovalPermission(dataImportEventPayload, tenantConfigFuture.result(), requestContext))
             .compose(tenantConfig -> generateSequentialOrderId(dataImportEventPayload, tenantConfigFuture.result(), temporaryOrderIdForANewOrder))
             .compose(generatedOrderId -> {
@@ -510,12 +511,12 @@ public class CreateOrderEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(ORDER.value(), new JsonObject().encode());
   }
 
-  private Future<Void> prepareMappingResult(DataImportEventPayload dataImportEventPayload) {
+  private Future<Void> prepareMappingResult(DataImportEventPayload dataImportEventPayload, MappingParameters mappingParameters) {
     JsonObject mappingResult = new JsonObject(dataImportEventPayload.getContext().get(ORDER.value()));
     JsonObject orderJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(ORDER_FIELD);
     JsonObject poLineJson = mappingResult.getJsonObject(MAPPING_RESULT_FIELD).getJsonObject(PO_LINES_FIELD);
     calculateActivationDue(poLineJson);
-    ensureFundCode(poLineJson, dataImportEventPayload);
+    ensureFundCode(poLineJson, mappingParameters);
     dataImportEventPayload.getContext().put(ORDER.value(), orderJson.encode());
 
     if (WorkflowStatus.OPEN.value().equals(orderJson.getString(ORDER_STATUS_FIELD))) {
@@ -541,33 +542,19 @@ public class CreateOrderEventHandler implements EventHandler {
     }
   }
 
-  private void ensureFundCode(JsonObject poLineJson, DataImportEventPayload dataImportEventPayload) {
+  private void ensureFundCode(JsonObject poLineJson, MappingParameters mappingParameters) {
     if (!IterableUtils.isEmpty(poLineJson.getJsonArray(POL_FUND_DISTRIBUTION_FIELD))) {
-      Map<String, String> idToFundName = extractFundsData(dataImportEventPayload);
-
       poLineJson.getJsonArray(POL_FUND_DISTRIBUTION_FIELD).stream()
         .map(JsonObject.class::cast)
         .filter(fundDistributionJson -> isNotEmpty(fundDistributionJson.getString(POL_FUND_ID_FIELD)))
-        .forEach(fundDistribution -> fundDistribution.put(POL_FUND_CODE_FIELD, determineFundCode(fundDistribution, idToFundName)));
+        .forEach(fundDistribution -> fundDistribution.put(POL_FUND_CODE_FIELD, determineFundCode(fundDistribution, mappingParameters)));
     }
   }
 
-  private Map<String, String> extractFundsData(DataImportEventPayload dataImportEventPayload) {
-    ProfileSnapshotWrapper mappingProfileWrapper = dataImportEventPayload.getCurrentNode();
-    MappingProfile mappingProfile = ObjectMapperTool.getMapper().convertValue(mappingProfileWrapper.getContent(), MappingProfile.class);
-
-    return mappingProfile.getMappingDetails().getMappingFields().stream()
-      .filter(mappingRule -> POL_FUND_DISTRIBUTION_FIELD.equals(mappingRule.getName()) && !mappingRule.getSubfields().isEmpty())
-      .flatMap(mappingRule -> mappingRule.getSubfields().get(0).getFields().stream())
-      .filter(mappingRule -> POL_FUND_ID_FIELD.equals(mappingRule.getName()))
-      .map(mappingRule -> ((Map<String, String>) mappingRule.getAcceptedValues()))
-      .findAny()
-      .orElse(Collections.emptyMap());
-  }
-
-  private String determineFundCode(JsonObject fundDistribution, Map<String, String> idToFundName) {
-    String fundName = idToFundName.get(fundDistribution.getString(POL_FUND_ID_FIELD));
-    return fundName.substring(fundName.lastIndexOf(LEFT_BRACKET) + 1, fundName.lastIndexOf(RIGHT_BRACKET));
+  private String determineFundCode(JsonObject fundDistribution, MappingParameters mappingParameters) {
+    String fundId = fundDistribution.getString(POL_FUND_ID_FIELD);
+    Optional<Fund> fund = mappingParameters.getFunds().stream().filter(f -> fundId.equals(f.getId())).findFirst();
+    return fund.map(Fund::getCode).orElse(null);
   }
 
   private Future<Void> overrideCreateInventoryField(JsonObject poLineJson, DataImportEventPayload dataImportEventPayload) {
