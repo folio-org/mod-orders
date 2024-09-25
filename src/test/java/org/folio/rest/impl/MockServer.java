@@ -327,6 +327,8 @@ public class MockServer {
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_ELECTRONIC = "01c8d44a-dc73-4bca-a4d1-ef28bdfb9275";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_SINGLE_ITEM = "b25f8ef6-04c4-4290-8531-9bbcefeb8c11";
   public static final String CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS = "0c9a0e56-3518-4f0c-bfbb-98cc47b07f6c";
+  public static final String MOCKDATA_LOCATIONS_JSON = "mockdata/locations/locations.json";
+  public static final String MOCKDATA_MATERIAL_TYPES_JSON = "mockdata/material-types/material-types.json";
 
   public static Table<String, HttpMethod, List<JsonObject>> serverRqRs = HashBasedTable.create();
   public static HashMap<String, List<String>> serverRqQueries = new HashMap<>();
@@ -664,6 +666,8 @@ public class MockServer {
     router.get("/data-import-profiles/jobProfileSnapshots/:id").handler(this::handleGetJobProfileSnapshotById);
     router.get("/change-manager/jobExecutions/:id").handler(this::handleGetJobExecutionById);
     router.get("/organizations/organizations").handler(this::handleGetOrganizations);
+    router.get("/locations").handler(ctx -> handleGetJsonResource(ctx, MOCKDATA_LOCATIONS_JSON));
+    router.get("/material-types").handler(ctx -> handleGetJsonResource(ctx, MOCKDATA_MATERIAL_TYPES_JSON));
 
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
@@ -1369,9 +1373,12 @@ public class MockServer {
     logger.info("handleGetIdentifierType got: " + ctx.request().path());
     try {
         // Filter result based on name from query
-        String name = ctx.request().getParam("query").split("==")[1];
+        String query = ctx.request().getParam("query");
         JsonObject entries = new JsonObject(getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
-        filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
+        if (query != null) {
+          String name = query.split("==")[1];
+          filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
+        }
 
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
         addServerRqRsData(HttpMethod.GET, IDENTIFIER_TYPES, entries);
@@ -2532,17 +2539,19 @@ public class MockServer {
 
       serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
       addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, new JsonObject(body));
-    } else if (queryParam.startsWith("id==")) {
+    } else if (StringUtils.isEmpty(queryParam) || queryParam.startsWith("id==")){
       List<String> contributorNameTypeIds = extractIdsFromQuery(queryParam);
 
       JsonObject contributorNameTypeCollection = getMockAsJson(CONTRIBUTOR_NAME_TYPES_PATH);
-      List<JsonObject> contributorNameTypes = contributorNameTypeCollection.getJsonArray(CONTRIBUTOR_NAME_TYPES)
-        .stream()
-        .map(o -> ((JsonObject) o))
-        .filter(contributorNameType -> contributorNameTypeIds.contains(contributorNameType.getString(ID)))
-        .collect(Collectors.toList());
+      if (!StringUtils.isEmpty(queryParam)) {
+        List<JsonObject> contributorNameTypes = contributorNameTypeCollection.getJsonArray(CONTRIBUTOR_NAME_TYPES)
+          .stream()
+          .map(o -> ((JsonObject) o))
+          .filter(contributorNameType -> contributorNameTypeIds.contains(contributorNameType.getString(ID)))
+          .collect(Collectors.toList());
 
-      contributorNameTypeCollection.put(CONTRIBUTOR_NAME_TYPES, contributorNameTypes);
+        contributorNameTypeCollection.put(CONTRIBUTOR_NAME_TYPES, contributorNameTypes);
+      }
 
       serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, contributorNameTypeCollection.encodePrettily());
       addServerRqRsData(HttpMethod.GET, CONTRIBUTOR_NAME_TYPES, contributorNameTypeCollection);
@@ -3020,6 +3029,16 @@ public class MockServer {
       List<Organization> organizations = organizationsOptional.get();
       OrganizationCollection organizationsClassSchema = new OrganizationCollection().withOrganizations(organizations).withTotalRecords(organizations.size());
       serverResponse(ctx, 200, APPLICATION_JSON, Json.encodePrettily(organizationsClassSchema));
+    } else {
+      serverResponse(ctx, 404, APPLICATION_JSON, null);
+    }
+  }
+
+  private void handleGetJsonResource(RoutingContext ctx, String path) {
+    logger.info("handleGetJsonResource:: got: {}", ctx.request().path());
+    JsonObject resource = getMockAsJson(path);
+    if (!resource.isEmpty()) {
+      serverResponse(ctx, 200, APPLICATION_JSON, resource.encodePrettily());
     } else {
       serverResponse(ctx, 404, APPLICATION_JSON, null);
     }
