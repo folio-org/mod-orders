@@ -9,6 +9,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.folio.models.PoLineLocationsPair;
 import org.folio.models.pieces.PieceUpdateHolder;
 import org.folio.models.pieces.PiecesHolder;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -49,6 +50,7 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.ItemRecreateInventoryService;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
 import org.folio.service.titles.TitlesService;
@@ -318,7 +320,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     // requires update and persist in storage
     return getPoLines(poLineIdsForUpdatedPieces, requestContext).compose(poLines -> {
       // Calculate expected status and po line details for each PO Line and update with new one if required
-      List<Future<PoLine>> poLinesToUpdate = new ArrayList<>();
+      List<Future<PoLineLocationsPair>> poLinesToUpdate = new ArrayList<>();
       for (PoLine poLine : poLines) {
         List<Piece> successfullyProcessedPieces = getSuccessfullyProcessedPieces(poLine.getId(), piecesGroupedByPoLine);
         if (CollectionUtils.isEmpty(successfullyProcessedPieces)) {
@@ -328,7 +330,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
         // Method call getPiecesByPoLine() is required to retrieve all pieces for given POL by id as
         // piecesFromStorage only contains the processed pieces which is not enough for correct Receipt Status calculation
-        Future<PoLine> poLineToUpdateFuture = getPiecesByPoLine(poLine.getId(), requestContext)
+        Future<PoLineLocationsPair> poLineToUpdateFuture = getPiecesByPoLine(poLine.getId(), requestContext)
           .map(pieces -> updateRelatedPoLineDetails(poLine, piecesFromStorage.get(poLine.getId()), pieces, successfullyProcessedPieces));
 
         poLinesToUpdate.add(poLineToUpdateFuture);
@@ -346,12 +348,13 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
 
   private Future<Object> saveOrderLinesBatch(Map<String, List<Piece>> piecesGroupedByPoLine, RequestContext requestContext,
                                              Consumer<List<PoLine>> updateOrderStatus, List<PoLine> poLines,
-                                             List<Future<PoLine>> poLinesToUpdate) {
+                                             List<Future<PoLineLocationsPair>> poLinesToUpdate) {
     return collectResultsOnSuccess(poLinesToUpdate)
-      .map(updatedPoLines -> purchaseOrderLineService.saveOrderLines(updatedPoLines, requestContext).map(voidResult -> {
+      .map(updatedPoLines -> purchaseOrderLineService.saveOrderLinesWithLocations(updatedPoLines, requestContext).compose(voidResult -> {
         logger.info("saveOrderLinesBatch:: {} out of {} POL updated with new status in batch", poLines.size(), piecesGroupedByPoLine.size());
 
         List<PoLine> notCancelledOrOngoingPoLines = updatedPoLines.stream()
+          .map(PoLineLocationsPair::getPoLine)
           .filter(poLine -> !PoLineCommonUtil.isCancelledOrOngoingStatus(poLine))
           .toList();
         updateOrderStatus.accept(notCancelledOrOngoingPoLines);
@@ -381,7 +384,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       .map(PieceCollection::getPieces);
   }
 
-  private PoLine updateRelatedPoLineDetails(PoLine poLine,
+  private PoLineLocationsPair updateRelatedPoLineDetails(PoLine poLine,
                                             List<Piece> piecesFromStorage,
                                             List<Piece> byPoLine,
                                             List<Piece> successfullyProcessed) {
@@ -395,11 +398,16 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     // the same check as in PieceUpdateFlowManager::updatePoLine
     if (Boolean.TRUE.equals(poLine.getIsPackage()) || Boolean.TRUE.equals(poLine.getCheckinItems())) {
       logger.info("updateRelatedPoLineDetails:: Skipping updating POL {} if it package or has independent receiving flow", poLine.getId());
-      return poLine;
+      return PoLineLocationsPair.of(poLine, poLine.getLocations());
     }
 
     short updatedLocations = 0;
-    CompositePoLine compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
+    var compositePoLine = PoLineCommonUtil.convertToCompositePoLine(poLine);
+    Set<Location> locations = new HashSet<>();
+    for (Piece pieceFromStorage: piecesFromStorage) {
+      locations.addAll(PieceUtil.findOrderPieceLineLocation(pieceFromStorage, compositePoLine));
+    }
+
     for (Piece pieceToUpdate : successfullyProcessed) {
       Optional<Piece> relatedStoragePiece = piecesFromStorage.stream()
         .filter(piece -> piece.getId().equals(pieceToUpdate.getId()))
@@ -415,7 +423,9 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
       updatedLocations++;
     }
 
-    return updatedLocations > 0 ? HelperUtils.convertToPoLine(compositePoLine) : poLine;
+    return updatedLocations > 0
+      ? PoLineLocationsPair.of(PoLineCommonUtil.convertToPoLine(compositePoLine), locations.stream().toList())
+      : PoLineLocationsPair.of(poLine, poLine.getLocations());
   }
 
   /**
@@ -432,8 +442,8 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
   private ReceiptStatus calculatePoLineReceiptStatus(List<Piece> piecesByPoLine,
                                                      List<Piece> piecesSuccessfullyProcessed,
                                                      PoLine poLine) {
-    logger.info("calculatePoLineReceiptStatus:: Calculating receipt status for POL, id: {}, checkInItems: {}", poLine.getId(), poLine.getCheckinItems());
-    logger.info("calculatePoLineReceiptStatus:: Processed pieces: {}, Pieces from storage: {}", piecesSuccessfullyProcessed.size(), piecesByPoLine.size());
+    logger.info("calculatePoLineReceiptStatus:: Calculating receipt status for POL, id: {}, checkInItems: {}, processed pieces: {}, pieces from storage: {}",
+      poLine.getId(), poLine.getCheckinItems(), piecesSuccessfullyProcessed.size(), piecesByPoLine.size());
     piecesSuccessfullyProcessed.forEach(v -> logger.info("calculatePoLineReceiptStatus:: Processed Piece, id: {}, status: {}", v.getId(), v.getReceivingStatus()));
     piecesByPoLine.forEach(v -> logger.info("calculatePoLineReceiptStatus:: Piece from storage, id: {}, status: {}", v.getId(), v.getReceivingStatus()));
     long expectedPiecesQuantity = piecesByPoLine.stream()
@@ -442,8 +452,7 @@ public abstract class CheckinReceivePiecesHelper<T> extends BaseHelper {
     long receivedPiecesQuantity = piecesByPoLine.stream()
       .filter(piece -> RECEIVED_STATUSES.contains(piece.getReceivingStatus()))
       .count();
-    logger.info("calculatePoLineReceiptStatus:: Expected pieces: {}", expectedPiecesQuantity);
-    logger.info("calculatePoLineReceiptStatus:: Received pieces: {}", receivedPiecesQuantity);
+    logger.info("calculatePoLineReceiptStatus:: Expected pieces: {}, Received pieces: {}", expectedPiecesQuantity, receivedPiecesQuantity);
     // Fully Received: If receiving and there is no expected piece remaining
     if (!poLine.getCheckinItems().equals(Boolean.TRUE) && expectedPiecesQuantity == 0) {
       return FULLY_RECEIVED;

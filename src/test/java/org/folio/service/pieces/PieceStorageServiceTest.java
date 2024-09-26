@@ -3,31 +3,37 @@ package org.folio.service.pieces;
 import static io.vertx.core.Future.succeededFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.TestConfig.autowireDependencies;
-import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.clearVertxContext;
 import static org.folio.TestConfig.getFirstContextFromVertx;
 import static org.folio.TestConfig.getVertx;
 import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
+import static org.folio.TestConfig.mockPort;
+import static org.folio.TestConstants.X_OKAPI_TOKEN;
+import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.rest.RestConstants.OKAPI_URL;
+import static org.folio.rest.core.RestClientTest.X_OKAPI_TENANT;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 import org.folio.ApiTestSuite;
 import org.folio.models.consortium.ConsortiumConfiguration;
@@ -45,7 +51,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -65,6 +73,8 @@ public class PieceStorageServiceTest {
   private static final String PIECES_PATH = BASE_MOCK_DATA_PATH + "pieces/";
   private static final String PIECES_MOCK = "pieces-for-user-tenants";
 
+  private static final String REQUEST_TENANT_ID = "tenantId";
+
   @Autowired
   PieceStorageService pieceStorageService;
 
@@ -77,8 +87,6 @@ public class PieceStorageServiceTest {
   @Autowired
   private RestClient restClientMock;
 
-  @Mock
-  private Map<String, String> okapiHeadersMock;
   private final Context ctx = getFirstContextFromVertx(getVertx());
 
   private RequestContext requestContext;
@@ -88,7 +96,17 @@ public class PieceStorageServiceTest {
   void initMocks(){
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
+    var okapiHeadersMock = new HashMap<String, String>();
+    okapiHeadersMock.put(OKAPI_URL, "http://localhost:" + mockPort);
+    okapiHeadersMock.put(X_OKAPI_TOKEN.getName(), X_OKAPI_TOKEN.getValue());
+    okapiHeadersMock.put(X_OKAPI_USER_ID.getName(), X_OKAPI_USER_ID.getValue());
+    okapiHeadersMock.put(X_OKAPI_TENANT.getName(), REQUEST_TENANT_ID);
     requestContext = new RequestContext(ctx, okapiHeadersMock);
+  }
+
+  @AfterEach
+  void resetMocks() {
+    reset(restClientMock);
   }
 
   @BeforeAll
@@ -106,11 +124,6 @@ public class PieceStorageServiceTest {
     if (runningOnOwn) {
       ApiTestSuite.after();
     }
-  }
-
-  @AfterEach
-  void resetMocks() {
-    clearServiceInteractions();
   }
 
   @Test
@@ -146,20 +159,23 @@ public class PieceStorageServiceTest {
     verify(pieceStorageService, times(1)).deletePiece(any(String.class), eq(requestContext));
   }
 
-  @Test
-  void testGetPiecesFilterByUserTenants(VertxTestContext vertxTestContext) {
+  @ParameterizedTest(name = "{index} {0}")
+  @MethodSource("testGetPiecesFilterByUserTenantsParams")
+  void testGetPiecesFilterByUserTenants(String testCaseName, Optional<ConsortiumConfiguration> consortiumConfiguration,
+                                        boolean shouldFilter, int filteredPieces, VertxTestContext vertxTestContext) {
     var userTenantsMockData = getMockAsJson(USER_TENANTS_PATH, USER_TENANTS_MOCK);
     var piecesMockData = getMockAsJson(PIECES_PATH, PIECES_MOCK).mapTo(PieceCollection.class);
-    var consortiumConfiguration = Optional.of(new ConsortiumConfiguration("tenantId0", UUID.randomUUID().toString()));
 
     doReturn(Future.succeededFuture(consortiumConfiguration)).when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
     doReturn(Future.succeededFuture(piecesMockData)).when(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
-    doReturn(Future.succeededFuture(userTenantsMockData)).when(restClientMock).getAsJsonObject(any(), any(RequestContext.class));
+    if (shouldFilter) {
+      doReturn(Future.succeededFuture(userTenantsMockData)).when(restClientMock).getAsJsonObject(any(), any(RequestContext.class));
+    }
 
     var future = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, null, requestContext);
 
     verify(restClientMock, times(1)).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
-    verify(restClientMock, times(1)).getAsJsonObject(any(), any(RequestContext.class));
+    verify(restClientMock, times(shouldFilter ? 1 : 0)).getAsJsonObject(any(), any(RequestContext.class));
     verify(consortiumConfigurationService, times(1)).getConsortiumConfiguration(eq(requestContext));
 
     vertxTestContext.assertComplete(future)
@@ -167,32 +183,19 @@ public class PieceStorageServiceTest {
         var result = f.result();
         assertThat(result).isNotNull();
         assertThat(result.getTotalRecords()).isEqualTo(3);
-        assertThat(result.getPieces()).hasSize(2);
+        assertThat(result.getPieces()).hasSize(filteredPieces);
         vertxTestContext.completeNow();
       });
   }
 
-  @Test
-  void testGetPiecesFilterByUserTenantsNonECS(VertxTestContext vertxTestContext) {
-    var piecesMockData = getMockAsJson(PIECES_PATH, PIECES_MOCK).mapTo(PieceCollection.class);
-
-    doReturn(Future.succeededFuture(Optional.empty())).when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
-    doReturn(Future.succeededFuture(piecesMockData)).when(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
-
-    var future = pieceStorageService.getPieces(Integer.MAX_VALUE, 0, null, requestContext);
-
-    verify(restClientMock, times(1)).get(any(RequestEntry.class), eq(PieceCollection.class), eq(requestContext));
-    verify(restClientMock, times(0)).getAsJsonObject(any(), any(RequestContext.class));
-    verify(consortiumConfigurationService, times(1)).getConsortiumConfiguration(eq(requestContext));
-
-    vertxTestContext.assertComplete(future)
-      .onComplete(f -> {
-        var result = f.result();
-        assertThat(result).isNotNull();
-        assertThat(result.getTotalRecords()).isEqualTo(3);
-        assertThat(result.getPieces()).hasSize(3);
-        vertxTestContext.completeNow();
-      });
+  private static Stream<Arguments> testGetPiecesFilterByUserTenantsParams() {
+    var consortiumConfigurationCentral = Optional.of(new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString()));
+    var consortiumConfigurationMember = Optional.of(new ConsortiumConfiguration("centralTenantId", UUID.randomUUID().toString()));
+    return Stream.of(
+      Arguments.of("ECS - Central", consortiumConfigurationCentral, true, 2),
+      Arguments.of("ECS - Member", consortiumConfigurationMember, false, 3),
+      Arguments.of("Non-ECS", Optional.empty(), false, 3)
+    );
   }
 
   private static class ContextConfiguration {
