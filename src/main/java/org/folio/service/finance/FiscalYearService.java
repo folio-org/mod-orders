@@ -2,12 +2,13 @@ package org.folio.service.finance;
 
 import static org.folio.rest.core.exceptions.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
 
 import org.folio.rest.acq.model.finance.FiscalYear;
+import org.folio.rest.acq.model.finance.Fund;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
@@ -30,13 +31,21 @@ public class FiscalYearService {
   }
 
   public Future<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
+    return getCurrentFiscalYear(ledgerId, null, requestContext);
+  }
+
+  private Future<FiscalYear> getCurrentFiscalYear(String ledgerId, Fund fund, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(CURRENT_FISCAL_YEAR).withId(ledgerId);
     return restClient.get(requestEntry, FiscalYear.class, requestContext)
       .recover(t -> {
         Throwable cause = Objects.nonNull(t.getCause()) ? t.getCause() : t;
         if (isFiscalYearNotFound(cause)) {
-          List<Parameter> parameters = Collections.singletonList(new Parameter().withValue(ledgerId)
-            .withKey("ledgerId"));
+          List<Parameter> parameters = new ArrayList<>();
+          parameters.add(new Parameter().withValue(ledgerId).withKey("ledgerId"));
+          if (Objects.nonNull(fund)) {
+            parameters.add(new Parameter().withValue(fund.getId()).withKey("fundId"));
+            parameters.add(new Parameter().withValue(fund.getCode()).withKey("fundCode"));
+          }
           throw new HttpException(404, CURRENT_FISCAL_YEAR_NOT_FOUND.toError()
             .withParameters(parameters));
         }
@@ -46,7 +55,7 @@ public class FiscalYearService {
 
   public Future<FiscalYear> getCurrentFiscalYearByFundId(String fundId, RequestContext requestContext) {
     return fundService.retrieveFundById(fundId, requestContext)
-      .compose(fund -> getCurrentFiscalYear(fund.getLedgerId(), requestContext));
+      .compose(fund -> getCurrentFiscalYear(fund.getLedgerId(), fund, requestContext));
   }
 
   private boolean isFiscalYearNotFound(Throwable t) {
