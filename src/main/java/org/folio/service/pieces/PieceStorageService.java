@@ -2,6 +2,7 @@ package org.folio.service.pieces;
 
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
 import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -11,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -25,7 +25,6 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 
 import io.vertx.core.Future;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 
@@ -120,9 +119,9 @@ public class PieceStorageService {
   }
 
   public Future<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {
-    return getAllPieces(limit, offset, query, requestContext)
-      .compose(piecesCollection -> filterPiecesByUserTenantsIfNecessary(piecesCollection.getPieces(), requestContext)
-        .map(piecesCollection::withPieces));
+    return getUserTenantsIfNecessary(requestContext)
+      .map(userTenants -> getQueryForUserTenants(userTenants, query))
+      .compose(cql -> getAllPieces(limit, offset, cql, requestContext));
   }
 
   public Future<PieceCollection> getAllPieces(String query, RequestContext requestContext) {
@@ -134,21 +133,11 @@ public class PieceStorageService {
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
 
-  private Future<List<Piece>> filterPiecesByUserTenantsIfNecessary(List<Piece> pieces, RequestContext requestContext) {
+  private Future<List<String>> getUserTenantsIfNecessary(RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> consortiumConfiguration
-        .filter(configuration -> shouldFilterPiecesForTenant(configuration.centralTenantId(), requestContext))
-        .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext)
-          .map(userTenants -> filterPiecesByUserTenants(pieces, userTenants)))
-        .orElse(Future.succeededFuture(pieces)));
-  }
-
-  private List<Piece> filterPiecesByUserTenants(List<Piece> pieces, List<String> userTenants) {
-    return pieces.stream()
-      .filter(piece -> Optional.ofNullable(piece.getReceivingTenantId())
-        .map(userTenants::contains)
-        .orElse(true))
-      .toList();
+        .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext))
+        .orElse(null));
   }
 
   public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
@@ -187,9 +176,13 @@ public class PieceStorageService {
       .map(PieceCollection::getPieces);
   }
 
-  private static boolean shouldFilterPiecesForTenant(String centralTenantId, RequestContext requestContext) {
-    var requestTenantId = TenantTool.tenantId(requestContext.getHeaders());
-    return requestTenantId.equals(centralTenantId);
+  private static String getQueryForUserTenants(List<String> userTenants, String query) {
+    if (userTenants == null) {
+      return query;
+    }
+    userTenants.add(null);
+    var cql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
+    return combineCqlExpressions(query, cql);
   }
 
 }
