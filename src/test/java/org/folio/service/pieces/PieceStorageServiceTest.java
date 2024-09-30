@@ -26,6 +26,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -162,12 +163,15 @@ public class PieceStorageServiceTest {
   @ParameterizedTest(name = "{index} {0}")
   @MethodSource("testGetPiecesFilterByUserTenantsParams")
   void testGetPiecesFilterByUserTenants(String testCaseName, Optional<ConsortiumConfiguration> consortiumConfiguration,
-                                        boolean shouldFilter, int filteredPieces, VertxTestContext vertxTestContext) {
+                                        boolean shouldFilter, VertxTestContext vertxTestContext) {
     var userTenantsMockData = getMockAsJson(USER_TENANTS_PATH, USER_TENANTS_MOCK);
     var piecesMockData = getMockAsJson(PIECES_PATH, PIECES_MOCK).mapTo(PieceCollection.class);
 
-    doReturn(Future.succeededFuture(consortiumConfiguration)).when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
-    doReturn(Future.succeededFuture(piecesMockData)).when(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
+    doReturn(Future.succeededFuture(consortiumConfiguration))
+      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+    doReturn(Future.succeededFuture(piecesMockData))
+      .when(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
+
     if (shouldFilter) {
       doReturn(Future.succeededFuture(userTenantsMockData)).when(restClientMock).getAsJsonObject(any(), any(RequestContext.class));
     }
@@ -183,18 +187,35 @@ public class PieceStorageServiceTest {
         var result = f.result();
         assertThat(result).isNotNull();
         assertThat(result.getTotalRecords()).isEqualTo(3);
-        assertThat(result.getPieces()).hasSize(filteredPieces);
+        assertThat(result.getPieces()).hasSize(3);
         vertxTestContext.completeNow();
       });
+  }
+
+  @ParameterizedTest
+  @MethodSource("getQueryForUserTenantsParamProvider")
+  void testGetQueryForUserTenants(List<String> userTenants, String query, String expectedQuery) {
+    String result = PieceStorageService.getQueryForUserTenants(userTenants, query);
+    assertEquals(expectedQuery, result);
   }
 
   private static Stream<Arguments> testGetPiecesFilterByUserTenantsParams() {
     var consortiumConfigurationCentral = Optional.of(new ConsortiumConfiguration(REQUEST_TENANT_ID, UUID.randomUUID().toString()));
     var consortiumConfigurationMember = Optional.of(new ConsortiumConfiguration("centralTenantId", UUID.randomUUID().toString()));
     return Stream.of(
-      Arguments.of("ECS - Central", consortiumConfigurationCentral, true, 2),
-      Arguments.of("ECS - Member", consortiumConfigurationMember, false, 3),
-      Arguments.of("Non-ECS", Optional.empty(), false, 3)
+      Arguments.of("ECS - Central", consortiumConfigurationCentral, true),
+      Arguments.of("ECS - Member", consortiumConfigurationMember, false),
+      Arguments.of("Non-ECS", Optional.empty(), false)
+    );
+  }
+
+  private static Stream<Arguments> getQueryForUserTenantsParamProvider() {
+    return Stream.of(
+      Arguments.of(null, "format==Physical", "format==Physical"),
+      Arguments.of(new ArrayList<>(), "format==Physical", "(format==Physical) and (receivingTenantId==(null))"),
+      Arguments.of(new ArrayList<>(List.of("tenant1")), "format==Physical", "(format==Physical) and (receivingTenantId==(tenant1 or null))"),
+      Arguments.of(new ArrayList<>(List.of("tenant1", "tenant2")), "format==Physical", "(format==Physical) and (receivingTenantId==(tenant1 or tenant2 or null))"
+      )
     );
   }
 

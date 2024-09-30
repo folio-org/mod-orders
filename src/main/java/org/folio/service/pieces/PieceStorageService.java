@@ -25,6 +25,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceCollection;
 
 import io.vertx.core.Future;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 
@@ -119,7 +120,7 @@ public class PieceStorageService {
   }
 
   public Future<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {
-    return getUserTenantsIfNecessary(requestContext)
+    return getUserTenantsIfNeeded(requestContext)
       .map(userTenants -> getQueryForUserTenants(userTenants, query))
       .compose(cql -> getAllPieces(limit, offset, cql, requestContext));
   }
@@ -133,11 +134,13 @@ public class PieceStorageService {
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
 
-  private Future<List<String>> getUserTenantsIfNecessary(RequestContext requestContext) {
+  private Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> consortiumConfiguration
-        .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext))
-        .orElse(null));
+        .map(configuration -> shouldFilterPiecesForTenant(configuration.centralTenantId(), requestContext)
+          ? consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext)
+          : Future.<List<String>>succeededFuture())
+        .orElse(Future.succeededFuture()));
   }
 
   public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
@@ -176,13 +179,18 @@ public class PieceStorageService {
       .map(PieceCollection::getPieces);
   }
 
-  private static String getQueryForUserTenants(List<String> userTenants, String query) {
+  static String getQueryForUserTenants(List<String> userTenants, String query) {
     if (userTenants == null) {
       return query;
     }
     userTenants.add(null);
     var cql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
-    return combineCqlExpressions(query, cql);
+    return combineCqlExpressions("and", query, cql);
+  }
+
+  private static boolean shouldFilterPiecesForTenant(String centralTenantId, RequestContext requestContext) {
+    var requestTenantId = TenantTool.tenantId(requestContext.getHeaders());
+    return requestTenantId.equals(centralTenantId);
   }
 
 }
