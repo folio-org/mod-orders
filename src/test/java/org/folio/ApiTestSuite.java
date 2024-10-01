@@ -106,6 +106,7 @@ import org.folio.service.pieces.flows.update.PieceUpdateFlowManagerTest;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineServiceTest;
 import org.folio.service.pieces.validators.PieceValidatorUtilTest;
 import org.folio.service.routinglists.RoutingListServiceTest;
+import org.folio.service.settings.SettingsRetrieverTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
@@ -535,4 +536,9 @@ public class ApiTestSuite {
   @Nested
   class FinanceHoldersBuilderTestNested extends FinanceHoldersBuilderTest {
   }
+
+  @Nested
+  class SettingsRetrieverTestNested extends SettingsRetrieverTest {
+  }
+
 }
