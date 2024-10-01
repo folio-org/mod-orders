@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -28,6 +29,8 @@ import io.vertx.core.Future;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.settings.SettingsRetriever;
+import org.folio.service.settings.util.SettingKey;
 
 public class PieceStorageService {
   private static final Logger logger = LogManager.getLogger(PieceStorageService.class);
@@ -39,13 +42,13 @@ public class PieceStorageService {
 
   private final ConsortiumConfigurationService consortiumConfigurationService;
   private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
+  private final SettingsRetriever settingsRetriever;
   private final RestClient restClient;
 
-  public PieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
-                             ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
-                             RestClient restClient) {
+  public PieceStorageService(ConsortiumConfigurationService consortiumConfigurationService, ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever, SettingsRetriever settingsRetriever, RestClient restClient) {
     this.consortiumConfigurationService = consortiumConfigurationService;
     this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
+    this.settingsRetriever = settingsRetriever;
     this.restClient = restClient;
   }
 
@@ -136,11 +139,17 @@ public class PieceStorageService {
 
   private Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> consortiumConfiguration
-        .map(configuration -> shouldFilterPiecesForTenant(configuration.centralTenantId(), requestContext)
-          ? consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext)
-          : Future.<List<String>>succeededFuture())
-        .orElse(Future.succeededFuture()));
+      .compose(consortiumConfiguration -> {
+        if (consortiumConfiguration.isEmpty()) {
+          return Future.succeededFuture();
+        }
+        var configuration = consortiumConfiguration.get();
+        return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, requestContext)
+          .map(centralOrdering -> centralOrdering.map(Setting::getValue).orElse(null))
+          .compose(orderingEnabled -> shouldFilterPiecesForTenant(configuration.centralTenantId(), Boolean.parseBoolean(orderingEnabled), requestContext)
+            ? consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext)
+            : Future.succeededFuture());
+      });
   }
 
   public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
@@ -188,9 +197,9 @@ public class PieceStorageService {
     return combineCqlExpressions("and", query, cql);
   }
 
-  private static boolean shouldFilterPiecesForTenant(String centralTenantId, RequestContext requestContext) {
+  private static boolean shouldFilterPiecesForTenant(String centralTenantId, boolean centralOrderingEnabled, RequestContext requestContext) {
     var requestTenantId = TenantTool.tenantId(requestContext.getHeaders());
-    return requestTenantId.equals(centralTenantId);
+    return centralOrderingEnabled && requestTenantId.equals(centralTenantId);
   }
 
 }

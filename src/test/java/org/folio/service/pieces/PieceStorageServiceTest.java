@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 
 import org.folio.ApiTestSuite;
 import org.folio.models.consortium.ConsortiumConfiguration;
+import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -46,6 +47,8 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.ProtectionService;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
+import org.folio.service.settings.SettingsRetriever;
+import org.folio.service.settings.util.SettingKey;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -83,7 +86,7 @@ public class PieceStorageServiceTest {
   ConsortiumConfigurationService consortiumConfigurationService;
 
   @Autowired
-  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
+  SettingsRetriever settingsRetriever;
 
   @Autowired
   private RestClient restClientMock;
@@ -163,12 +166,14 @@ public class PieceStorageServiceTest {
   @ParameterizedTest(name = "{index} {0}")
   @MethodSource("testGetPiecesFilterByUserTenantsParams")
   void testGetPiecesFilterByUserTenants(String testCaseName, Optional<ConsortiumConfiguration> consortiumConfiguration,
-                                        boolean shouldFilter, VertxTestContext vertxTestContext) {
+                                        Boolean shouldFilter, VertxTestContext vertxTestContext) {
     var userTenantsMockData = getMockAsJson(USER_TENANTS_PATH, USER_TENANTS_MOCK);
     var piecesMockData = getMockAsJson(PIECES_PATH, PIECES_MOCK).mapTo(PieceCollection.class);
 
     doReturn(Future.succeededFuture(consortiumConfiguration))
       .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+    doReturn(Future.succeededFuture(Optional.of(new Setting().withValue((shouldFilter.toString())))))
+      .when(settingsRetriever).getSettingByKey(eq(SettingKey.CENTRAL_ORDERING_ENABLED), any(RequestContext.class));
     doReturn(Future.succeededFuture(piecesMockData))
       .when(restClientMock).get(any(RequestEntry.class), eq(PieceCollection.class), any(RequestContext.class));
 
@@ -233,9 +238,10 @@ public class PieceStorageServiceTest {
 
     @Bean
     PieceStorageService pieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
-                                                  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
-                                                  RestClient restClient) {
-      return spy(new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, restClient));
+                                            ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                            SettingsRetriever settingsRetriever,
+                                            RestClient restClient) {
+      return spy(new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, settingsRetriever, restClient));
     }
 
     @Bean
@@ -246,6 +252,11 @@ public class PieceStorageServiceTest {
     @Bean
     ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
       return spy(new ConsortiumUserTenantsRetriever(restClient));
+    }
+
+    @Bean
+    SettingsRetriever settingsRetriever(RestClient restClient) {
+      return spy(new SettingsRetriever(restClient));
     }
 
   }
