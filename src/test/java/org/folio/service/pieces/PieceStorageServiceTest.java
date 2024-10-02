@@ -217,9 +217,9 @@ public class PieceStorageServiceTest {
   private static Stream<Arguments> getQueryForUserTenantsParamProvider() {
     return Stream.of(
       Arguments.of(null, "format==Physical", "format==Physical"),
-      Arguments.of(new ArrayList<>(), "format==Physical", "(format==Physical) and (receivingTenantId==(null))"),
-      Arguments.of(new ArrayList<>(List.of("tenant1")), "format==Physical", "(format==Physical) and (receivingTenantId==(tenant1 or null))"),
-      Arguments.of(new ArrayList<>(List.of("tenant1", "tenant2")), "format==Physical", "(format==Physical) and (receivingTenantId==(tenant1 or tenant2 or null))"
+      Arguments.of(new ArrayList<>(), "format==Physical", "format==Physical"),
+      Arguments.of(new ArrayList<>(List.of("tenant1")), "format==Physical", "(format==Physical) and ((receivingTenantId==(tenant1)) or (cql.allRecords=1 NOT receivingTenantId=\"\"))"),
+      Arguments.of(new ArrayList<>(List.of("tenant1", "tenant2")), "format==Physical", "(format==Physical) and ((receivingTenantId==(tenant1 or tenant2)) or (cql.allRecords=1 NOT receivingTenantId=\"\"))"
       )
     );
   }

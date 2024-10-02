@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.QueryUtils;
@@ -190,10 +191,9 @@ public class PieceStorageService {
   }
 
   static String getQueryForUserTenants(List<String> userTenants, String query) {
-    if (userTenants == null) {
+    if (CollectionUtils.isEmpty(userTenants)) {
       return query;
     }
-    userTenants.add(null);
     var cql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
     var matchNullTenantExpr = getCqlExpressionForFieldNullValue("receivingTenantId");
     cql = combineCqlExpressions("or", cql, matchNullTenantExpr);
