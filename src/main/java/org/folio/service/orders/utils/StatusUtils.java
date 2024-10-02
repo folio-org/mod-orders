@@ -28,16 +28,22 @@ public class StatusUtils {
     return poLines.stream().allMatch(StatusUtils::isStatusCanceledPoLine);
   }
 
-  public static boolean changeOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+  public static boolean changeOrderStatusForOrderUpdate(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
     if (toBeCancelled(purchaseOrder, poLines)) {
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
-      purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_CANCELLED));
-      return true;
+      return closeOrder(purchaseOrder, REASON_CANCELLED);
     }
     if (toBeClosed(purchaseOrder, poLines)) {
-      purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
-      purchaseOrder.setCloseReason(new CloseReason().withReason(REASON_COMPLETE));
-      return true;
+      return closeOrder(purchaseOrder, REASON_COMPLETE);
+    }
+    return false;
+  }
+
+  public static boolean changeOrderStatusForPoLineUpdate(PurchaseOrder purchaseOrder, List<PoLine> poLines) {
+    if (toBeCancelled(purchaseOrder, poLines)) {
+      return closeOrder(purchaseOrder, REASON_CANCELLED);
+    }
+    if (toBeClosed(purchaseOrder, poLines)) {
+      return closeOrder(purchaseOrder, REASON_COMPLETE);
     }
     if (toBeReopened(purchaseOrder, poLines)) {
       purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.OPEN);
@@ -92,6 +98,12 @@ public class StatusUtils {
 
   private static boolean isOrderClosed(PurchaseOrder order) {
     return order.getWorkflowStatus() == PurchaseOrder.WorkflowStatus.CLOSED;
+  }
+
+  private static boolean closeOrder(PurchaseOrder purchaseOrder, String reason) {
+    purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
+    purchaseOrder.setCloseReason(new CloseReason().withReason(reason));
+    return true;
   }
 
   private StatusUtils() {}
