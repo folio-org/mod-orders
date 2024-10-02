@@ -1,6 +1,6 @@
 package org.folio.service.inventory;
 
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.QueryUtils.encodeQuery;
 import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.orders.utils.HelperUtils.getFirstObjectFromResponse;
 import static org.folio.rest.RestConstants.ID;

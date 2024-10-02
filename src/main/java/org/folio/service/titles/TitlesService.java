@@ -16,8 +16,8 @@ import java.util.function.Function;
 
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -97,7 +97,7 @@ public class TitlesService {
     return collectResultsOnSuccess(StreamEx
       .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
       // Transform piece id's to CQL query
-      .map(ids -> HelperUtils.convertFieldListToCqlQuery(ids, "poLineId", true))
+      .map(ids -> QueryUtils.convertFieldListToCqlQuery(ids, "poLineId", true))
       // Send get request for each CQL query
       .map(query -> getTitlesByQuery(query, requestContext))
       .toList())
@@ -109,7 +109,7 @@ public class TitlesService {
     return collectResultsOnSuccess(StreamEx
       .ofSubLists(pieceIds, MAX_IDS_FOR_GET_RQ_15)
       // Transform piece id's to CQL query
-      .map(ids -> HelperUtils.convertIdsToCqlQuery(ids, "pieces.id"))
+      .map(ids -> QueryUtils.convertIdsToCqlQuery(ids, "pieces.id"))
       // Send get request for each CQL query
       .map(query -> getTitlesByQuery(query, requestContext))
       .toList())

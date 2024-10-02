@@ -19,6 +19,7 @@ import org.folio.orders.events.handlers.ReceiveOrderStatusChangeHandlerTest;
 import org.folio.orders.utils.FundDistributionUtilsTest;
 import org.folio.orders.utils.HelperUtilsTest;
 import org.folio.orders.utils.PoLineCommonUtilTest;
+import org.folio.orders.utils.QueryUtilsTest;
 import org.folio.orders.utils.StreamUtilsTest;
 import org.folio.orders.utils.validators.LocationsAndPiecesConsistencyValidatorTest;
 import org.folio.rest.core.ResponseUtilTest;
@@ -251,6 +252,10 @@ public class ApiTestSuite {
 
   @Nested
   class HelperUtilsTestNested extends HelperUtilsTest {
+  }
+
+  @Nested
+  class QueryUtilsTestNested extends QueryUtilsTest {
   }
 
   @Nested

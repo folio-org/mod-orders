@@ -2,8 +2,9 @@ package org.folio.service.pieces;
 
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.combineCqlExpressions;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.getCqlExpressionForFieldNullValue;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -155,7 +156,7 @@ public class PieceStorageService {
   public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
     logger.debug("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
     var futures = ofSubLists(new ArrayList<>(pieceIds), MAX_IDS_FOR_GET_RQ_15)
-      .map(HelperUtils::convertIdsToCqlQuery)
+      .map(QueryUtils::convertIdsToCqlQuery)
       .map(query -> getAllPieces(query, requestContext))
       .toList();
     return collectResultsOnSuccess(futures)
@@ -194,6 +195,8 @@ public class PieceStorageService {
     }
     userTenants.add(null);
     var cql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
+    var matchNullTenantExpr = getCqlExpressionForFieldNullValue("receivingTenantId");
+    cql = combineCqlExpressions("or", cql, matchNullTenantExpr);
     return combineCqlExpressions("and", query, cql);
   }
 
