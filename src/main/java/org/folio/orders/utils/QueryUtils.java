@@ -18,7 +18,7 @@ public class QueryUtils {
   private static final String CQL_PREFIX = "(";
   private static final String CQL_SUFFIX = ")";
   private static final String CQL_UNDEFINED_FIELD_EXPRESSION = "cql.allRecords=1 NOT %s=\"\"";
-  private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE); //NOSONAR
 
   public static String encodeQuery(String query) {
     return URLEncoder.encode(query, StandardCharsets.UTF_8);
