@@ -12,6 +12,10 @@ import java.util.List;
 import static org.folio.orders.utils.QueryUtils.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+
+/**
+ * Used Copilot to write the tests
+ */
 public class QueryUtilsTest {
 
   @Test
