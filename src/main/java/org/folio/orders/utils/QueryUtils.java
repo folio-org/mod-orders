@@ -99,4 +99,6 @@ public class QueryUtils {
     return String.format(CQL_UNDEFINED_FIELD_EXPRESSION, fieldName);
   }
 
+  private QueryUtils() {}
+
 }
