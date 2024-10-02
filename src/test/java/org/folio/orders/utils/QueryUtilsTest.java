@@ -1,6 +1,7 @@
 package org.folio.orders.utils;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.CopilotGenerated;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -12,10 +13,7 @@ import java.util.List;
 import static org.folio.orders.utils.QueryUtils.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-
-/**
- * Used Copilot to write the tests
- */
+@CopilotGenerated(partiallyGenerated = true)
 public class QueryUtilsTest {
 
   @Test
