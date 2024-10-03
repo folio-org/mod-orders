@@ -4,9 +4,8 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.acq.model.Setting;
 import org.folio.rest.acq.model.SettingCollection;
 import org.folio.rest.core.RestClient;
@@ -24,9 +23,8 @@ import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.service.settings.util.SettingFields.KEY;
 
+@Log4j2
 public class SettingsRetriever {
-
-  private static final Logger logger = LogManager.getLogger(SettingsRetriever.class);
 
   private static final String SETTINGS_ENDPOINT = resourcesPath(ORDER_SETTINGS);
   private static final String SETTINGS_BY_KEY_QUERY = KEY.getValue() + "==%s";
@@ -52,7 +50,7 @@ public class SettingsRetriever {
       var cacheKey = String.format(SETTINGS_CACHE_KEY, TenantTool.tenantId(requestContext.getHeaders()), settingKey.getName());
       return Future.fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> getSettingByKeyFromRemote(settingKey, requestContext)));
     } catch (Exception e) {
-      logger.error("Exception occurred when retrieving setting for key: {}", settingKey.getName(), e);
+      log.error("Exception occurred when retrieving setting for key: {}", settingKey.getName(), e);
       return Future.failedFuture(e);
     }
   }

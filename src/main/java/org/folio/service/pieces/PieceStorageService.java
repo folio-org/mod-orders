@@ -15,9 +15,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
@@ -34,8 +33,8 @@ import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.settings.SettingsRetriever;
 import org.folio.service.settings.util.SettingKey;
 
+@Log4j2
 public class PieceStorageService {
-  private static final Logger logger = LogManager.getLogger(PieceStorageService.class);
 
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   private static final String PIECES_BY_HOLDING_ID_QUERY = "holdingId==%s";
@@ -103,9 +102,9 @@ public class PieceStorageService {
     pieceIds.forEach(pieceId -> deletedItems.add(deletePiece(pieceId, requestContext)));
     return collectResultsOnSuccess(deletedItems)
       .onSuccess(v -> {
-        if (logger.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
           String deletedIds = String.join(",", pieceIds);
-          logger.debug("Pieces were removed : {}", deletedIds);
+          log.debug("Pieces were removed : {}", deletedIds);
         }
       })
       .mapEmpty();
@@ -155,7 +154,7 @@ public class PieceStorageService {
   }
 
   public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
-    logger.debug("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
+    log.debug("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
     var futures = ofSubLists(new ArrayList<>(pieceIds), MAX_IDS_FOR_GET_RQ_15)
       .map(QueryUtils::convertIdsToCqlQuery)
       .map(query -> getAllPieces(query, requestContext))
@@ -165,11 +164,11 @@ public class PieceStorageService {
         .map(PieceCollection::getPieces)
         .flatMap(Collection::stream)
         .toList())
-      .onSuccess(v -> logger.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds));
+      .onSuccess(v -> log.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds));
   }
 
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
-    logger.info("getPiecesByLineIdsByChunks start");
+    log.info("getPiecesByLineIdsByChunks start");
     var futures = ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getPieceChunkByLineIds(ids, requestContext))
       .toList();
@@ -177,7 +176,7 @@ public class PieceStorageService {
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(Collectors.toList()))
-      .onSuccess(v -> logger.info("getPiecesByLineIdsByChunks end"));
+      .onSuccess(v -> log.info("getPiecesByLineIdsByChunks end"));
 
   }
 
@@ -194,10 +193,10 @@ public class PieceStorageService {
     if (CollectionUtils.isEmpty(userTenants)) {
       return query;
     }
-    var cql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
-    var matchNullTenantExpr = getCqlExpressionForFieldNullValue("receivingTenantId");
-    cql = combineCqlExpressions("or", cql, matchNullTenantExpr);
-    return combineCqlExpressions("and", query, cql);
+    String tenantCql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
+    String nullTenantCql = getCqlExpressionForFieldNullValue("receivingTenantId");
+    String combinedTenantCql = combineCqlExpressions("or", tenantCql, nullTenantCql);
+    return combineCqlExpressions("and", query, combinedTenantCql);
   }
 
   private static boolean shouldFilterPiecesForTenant(String centralTenantId, boolean centralOrderingEnabled, RequestContext requestContext) {
