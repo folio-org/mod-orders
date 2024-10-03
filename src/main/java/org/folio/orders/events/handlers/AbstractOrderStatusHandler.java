@@ -1,7 +1,7 @@
 package org.folio.orders.events.handlers;
 
 import static org.folio.orders.utils.HelperUtils.getOkapiHeaders;
-import static org.folio.service.orders.utils.StatusUtils.changeOrderStatus;
+import static org.folio.service.orders.utils.StatusUtils.changeOrderStatusForPoLineUpdate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -89,7 +89,7 @@ public abstract class AbstractOrderStatusHandler extends BaseHelper implements H
   protected Future<Void> updateOrderStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, RequestContext requestContext) {
 
     PurchaseOrder.WorkflowStatus initialStatus = purchaseOrder.getWorkflowStatus();
-    return AsyncUtil.executeBlocking(ctx, false, () -> changeOrderStatus(purchaseOrder, poLines))
+    return AsyncUtil.executeBlocking(ctx, false, () -> changeOrderStatusForPoLineUpdate(purchaseOrder, poLines))
       .compose(isStatusChanged -> {
         if (Boolean.TRUE.equals(isStatusChanged)) {
           return purchaseOrderHelper.handleFinalOrderItemsStatus(purchaseOrder, poLines, initialStatus.value(), requestContext)

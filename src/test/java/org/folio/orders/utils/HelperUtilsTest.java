@@ -87,7 +87,7 @@ public class HelperUtilsTest {
 
     List<PoLine> poLines = List.of(firstPoLine, secondPoLine);
 
-    assertTrue(StatusUtils.changeOrderStatus(purchaseOrder, poLines));
+    assertTrue(StatusUtils.changeOrderStatusForOrderUpdate(purchaseOrder, poLines));
     assertEquals(purchaseOrder.getWorkflowStatus(), PurchaseOrder.WorkflowStatus.CLOSED);
     assertEquals(purchaseOrder.getCloseReason(), new CloseReason().withReason(REASON_CANCELLED));
   }
