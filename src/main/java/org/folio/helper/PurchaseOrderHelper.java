@@ -23,7 +23,7 @@ import static org.folio.rest.core.exceptions.ErrorCodes.USER_HAS_NO_REOPEN_PERMI
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.OPEN;
 import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.PENDING;
 import static org.folio.service.UserService.getCurrentUserId;
-import static org.folio.service.orders.utils.StatusUtils.changeOrderStatus;
+import static org.folio.service.orders.utils.StatusUtils.changeOrderStatusForOrderUpdate;
 
 import java.util.Arrays;
 import java.util.List;
@@ -273,25 +273,17 @@ public class PurchaseOrderHelper {
   public Future<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus,
                                                         RequestContext requestContext) {
     PurchaseOrder purchaseOrder = convertToPurchaseOrder(compPO);
-    Promise<List<PoLine>> promise = Promise.promise();
 
-    if (isEmpty(compPO.getCompositePoLines())) {
-      purchaseOrderLineService.getPoLinesByOrderId(compPO.getId(), requestContext)
-        .onSuccess(promise::complete)
-        .onFailure(promise::fail);
-    } else {
-      Future.succeededFuture()
-        .map(v -> {
+    return Future.succeededFuture()
+      .compose(v -> {
+        if (isEmpty(compPO.getCompositePoLines())) {
+          return purchaseOrderLineService.getPoLinesByOrderId(compPO.getId(), requestContext);
+        } else {
           List<PoLine> poLines = PoLineCommonUtil.convertToPoLines(compPO.getCompositePoLines());
-          if (initialOrdersStatus.equals(compPO.getWorkflowStatus().value()))
-            changeOrderStatus(purchaseOrder, poLines);
-          promise.complete(poLines);
-          return null;
-        })
-        .onFailure(promise::fail);
-    }
-
-    return promise.future()
+          changeOrderStatusForOrderUpdate(purchaseOrder, poLines);
+          return Future.succeededFuture(poLines);
+        }
+      })
       .compose(poLines -> handleFinalOrderItemsStatus(purchaseOrder, poLines, initialOrdersStatus, requestContext))
       .map(v -> {
         compPO.setWorkflowStatus(WorkflowStatus.fromValue(purchaseOrder.getWorkflowStatus().value()));
@@ -302,7 +294,7 @@ public class PurchaseOrderHelper {
   }
 
   public Future<Void> handleFinalOrderItemsStatus(PurchaseOrder purchaseOrder, List<PoLine> poLines, String initialOrdersStatus,
-                                                             RequestContext requestContext) {
+                                                  RequestContext requestContext) {
     if (isOrderClosing(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {
       return itemStatusSyncService.updateItemStatusesInInventory(poLines, ItemStatus.ON_ORDER, ItemStatus.ORDER_CLOSED, requestContext);
     } else if (isOrderReopening(purchaseOrder.getWorkflowStatus(), initialOrdersStatus)) {

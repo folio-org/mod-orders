@@ -2237,9 +2237,9 @@ public class PurchaseOrdersApiTest {
   }
 
   @Test
-  void testPutOrderToAutomaticallyChangeStatusFromClosedToOpen() {
+  void testPutOrderRemainClosedRegardlessOfPoLines() {
 
-    logger.info("=== Test case when order status update is expected from Closed to Open ===");
+    logger.info("=== Test case when order status update is remained as Closed regardless of po lines ===");
 
     CompositePurchaseOrder reqData = getMockAsJson(COMP_ORDER_MOCK_DATA_PATH, PO_ID_CLOSED_STATUS).mapTo(CompositePurchaseOrder.class);
     assertThat(reqData.getWorkflowStatus(), is(CompositePurchaseOrder.WorkflowStatus.CLOSED));
@@ -2248,15 +2248,12 @@ public class PurchaseOrdersApiTest {
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, reqData.getId()),
       JsonObject.mapFrom(reqData), EMPTY, 204);
 
-    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.OPEN));
+    assertThat(getPurchaseOrderUpdates().get(0).mapTo(PurchaseOrder.class).getWorkflowStatus(), is(PurchaseOrder.WorkflowStatus.CLOSED));
 
-    assertThat(getItemsSearches(), notNullValue());
-    assertThat(getItemsSearches(), hasSize(1));
-    assertThat(getItemUpdates(), notNullValue());
-    assertThat(getItemUpdates(), hasSize(getItemsSearches().get(0).getJsonArray(ITEMS).size()));
+    assertThat(getItemsSearches(), nullValue());
+    assertThat(getItemUpdates(), nullValue());
 
-    assertThat(getQueryParams(ITEM_RECORDS), hasSize(1));
-    assertThat(getQueryParams(ITEM_RECORDS).get(0), containsAny("status.name==Order closed", reqData.getCompositePoLines().get(0).getId()));
+    assertThat(getQueryParams(ITEM_RECORDS), hasSize(0));
   }
 
   @Test
