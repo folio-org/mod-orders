@@ -26,13 +26,13 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.CommonFields.COLLECTION_TOTAL;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 import static org.folio.service.inventory.InventoryUtils.REQUESTS;
 import static org.folio.service.inventory.util.RequestFields.COLLECTION_RECORDS;
-import static org.folio.service.inventory.util.RequestFields.COLLECTION_TOTAL;
 import static org.folio.service.inventory.util.RequestFields.REQUESTER_ID;
 import static org.folio.service.inventory.util.RequestFields.ITEM_ID;
 

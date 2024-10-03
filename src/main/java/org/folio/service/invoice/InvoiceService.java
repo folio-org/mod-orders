@@ -2,7 +2,7 @@ package org.folio.service.invoice;
 
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.ArrayList;

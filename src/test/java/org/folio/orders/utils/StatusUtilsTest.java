@@ -1,5 +1,6 @@
 package org.folio.orders.utils;
 
+import org.folio.CopilotGenerated;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
@@ -13,10 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Test for StatusUtils.
- * Generated with Copilot.
- */
+@CopilotGenerated
 public class StatusUtilsTest {
 
   private PurchaseOrder purchaseOrder;

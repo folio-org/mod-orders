@@ -1,6 +1,6 @@
 package org.folio.service;
 
-import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
+import static org.folio.orders.utils.QueryUtils.combineCqlExpressions;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_MEMBERSHIPS;
 import static org.folio.orders.utils.ResourcePathResolver.ACQUISITIONS_UNITS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -92,7 +92,7 @@ public class AcquisitionsUnitsService {
         return noAcqUnitAssignedQuery;
       }
       return String.format("%s or (%s)",
-        HelperUtils.convertFieldListToCqlQuery(ids, tableAlias + ACQUISITIONS_UNIT_IDS, false),
+        QueryUtils.convertFieldListToCqlQuery(ids, tableAlias + ACQUISITIONS_UNIT_IDS, false),
         noAcqUnitAssignedQuery);
     });
   }

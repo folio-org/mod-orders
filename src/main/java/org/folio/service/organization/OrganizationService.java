@@ -1,8 +1,8 @@
 package org.folio.service.organization;
 
 import static java.util.stream.Collectors.toList;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.encodeQuery;
 import static org.folio.rest.RestConstants.ERROR_CAUSE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_VENDOR_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ORDER_VENDOR_NOT_FOUND;

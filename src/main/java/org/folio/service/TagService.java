@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.acq.model.tag.Tag;
 import org.folio.rest.acq.model.tag.TagCollection;
 import org.folio.rest.core.RestClient;
@@ -31,7 +31,7 @@ public class TagService {
 
   public Future<Void> createTagsIfMissing(Set<String> tagLabels, RequestContext requestContext) {
     List<String> tagList = new ArrayList<>(tagLabels);
-    String query = HelperUtils.convertTagListToCqlQuery(tagList, "label", true);
+    String query = QueryUtils.convertTagListToCqlQuery(tagList, "label", true);
 
     return getTags(query, 0, Integer.MAX_VALUE, requestContext)
       .map(existingTagsCollection -> {

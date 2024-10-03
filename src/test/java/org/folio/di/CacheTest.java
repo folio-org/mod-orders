@@ -4,7 +4,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.serverError;
 import static org.folio.dataimport.util.RestUtil.OKAPI_URL_HEADER;
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.QueryUtils.encodeQuery;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;

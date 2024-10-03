@@ -14,6 +14,7 @@ import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.settings.SettingsRetriever;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -43,10 +44,10 @@ import static org.folio.TestConfig.mockPort;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestConstants.X_OKAPI_USER_ID;
 import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.orders.utils.CommonFields.COLLECTION_TOTAL;
 import static org.folio.rest.RestConstants.OKAPI_URL;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.PurchaseOrdersApiTest.X_OKAPI_TENANT;
-import static org.folio.service.inventory.util.RequestFields.COLLECTION_TOTAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -239,8 +240,9 @@ public class CirculationRequestsRetrieverTest {
     @Bean
     public PieceStorageService pieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
                                                    ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                                   SettingsRetriever settingsRetriever,
                                                    RestClient restClient) {
-      return spy(new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, restClient));
+      return spy(new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, settingsRetriever, restClient));
     }
 
     @Bean
@@ -256,6 +258,11 @@ public class CirculationRequestsRetrieverTest {
     @Bean
     ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever(RestClient restClient) {
       return new ConsortiumUserTenantsRetriever(restClient);
+    }
+
+    @Bean
+    SettingsRetriever settingsRetriever(RestClient restClient) {
+      return new SettingsRetriever(restClient);
     }
 
   }

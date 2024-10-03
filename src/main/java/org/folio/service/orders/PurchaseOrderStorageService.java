@@ -3,7 +3,7 @@ package org.folio.service.orders;
 import static java.util.stream.Collectors.toList;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.HelperUtils.convertToCompositePurchaseOrder;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 

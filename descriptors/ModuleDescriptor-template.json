@@ -490,6 +490,7 @@
           "permissionsRequired": ["orders.pieces.collection.get"],
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
+            "orders-storage.settings.collection.get",
             "consortia.user-tenants.collection.get",
             "user-tenants.collection.get"
           ]
