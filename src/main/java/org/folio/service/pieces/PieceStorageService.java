@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
@@ -196,7 +197,7 @@ public class PieceStorageService {
     String tenantCql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
     String nullTenantCql = getCqlExpressionForFieldNullValue("receivingTenantId");
     String combinedTenantCql = combineCqlExpressions("or", tenantCql, nullTenantCql);
-    return query != null
+    return StringUtils.isNotBlank(query)
       ? combineCqlExpressions("and", combinedTenantCql, query)
       : combinedTenantCql;
   }
