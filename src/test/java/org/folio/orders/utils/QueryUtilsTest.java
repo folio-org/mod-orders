@@ -51,6 +51,12 @@ public class QueryUtilsTest {
   }
 
   @Test
+  void testCombineCqlExpressionsWithSortBy() {
+    var result = combineCqlExpressions("or", "field1==value1", "field2==value2 sortBy field3/sort.ascending");
+    assertEquals(result, "(field1==value1) or (field2==value2) sortBy field3/sort.ascending");
+  }
+
+  @Test
   void testConvertIdsToCqlQuery() {
     var ids = List.of("id1", "id2");
     var result = convertIdsToCqlQuery(ids);
