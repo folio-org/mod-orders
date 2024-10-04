@@ -196,7 +196,9 @@ public class PieceStorageService {
     String tenantCql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
     String nullTenantCql = getCqlExpressionForFieldNullValue("receivingTenantId");
     String combinedTenantCql = combineCqlExpressions("or", tenantCql, nullTenantCql);
-    return combineCqlExpressions("and", combinedTenantCql, query);
+    return query != null
+      ? combineCqlExpressions("and", combinedTenantCql, query)
+      : combinedTenantCql;
   }
 
   private static boolean shouldFilterPiecesForTenant(String centralTenantId, boolean centralOrderingEnabled, RequestContext requestContext) {
