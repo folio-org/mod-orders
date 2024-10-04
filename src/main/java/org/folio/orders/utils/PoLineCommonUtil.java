@@ -256,6 +256,7 @@ public final class PoLineCommonUtil {
 
   public static Map<String, Location> extractUnaffiliatedLocations(List<Location> locations, List<String> tenantIds) {
     return StreamEx.of(locations)
+      .filter(location -> Objects.nonNull(location.getTenantId()))
       .filter(location -> !tenantIds.contains(location.getTenantId()))
       .toMap(Location::getTenantId, Function.identity());
   }

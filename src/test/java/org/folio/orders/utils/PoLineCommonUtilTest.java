@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -198,4 +199,48 @@ public class PoLineCommonUtilTest {
     boolean result = PoLineCommonUtil.isInventoryUpdateNotRequired(poLine);
     assertEquals(result, updateNotRequired);
   }
+
+
+  @Test
+  void testExtractUnaffiliatedLocations() {
+    List<Location> locations = List.of(
+      createLocation("tenant1"),
+      createLocation("tenant2"),
+      createLocation("tenant3")
+    );
+    List<String> tenantIds = List.of("tenant1", "tenant2");
+    var result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
+    assertEquals(1, result.size());
+    assertEquals(locations.get(2), result.get("tenant3"));
+  }
+
+  @Test
+  void testExtractUnaffiliatedLocationsWhenLocationsListIsEmpty() {
+    List<Location> locations = new ArrayList<>();
+    List<String> tenantIds = List.of("tenant1", "tenant2");
+    var result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
+    assertTrue(result.isEmpty());
+
+    locations.add(new Location().withTenantId("tenant1"));
+    locations.add(new Location().withTenantId("tenant2"));
+    result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void testExtractUnaffiliatedLocationsHandleNullLocationTenantId() {
+    List<Location> locations = List.of(
+      createLocation(null),
+      createLocation("tenant2")
+    );
+    List<String> tenantIds = List.of("tenant1");
+    var result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
+    assertEquals(1, result.size());
+    assertEquals(locations.get(1), result.get("tenant2"));
+  }
+
+  private static Location createLocation(String tenantId) {
+    return new Location().withTenantId(tenantId);
+  }
+
 }
