@@ -41,7 +41,7 @@
             "orders-storage.configuration.suffixes.collection.get",
             "finance.funds.item.get",
             "finance.transactions.collection.get",
-            "finance.transactions.batch"
+            "finance.transactions.batch.execute"
           ]
         },
         {
@@ -98,7 +98,7 @@
             "orders.item.delete"
           ],
           "modulePermissions": [
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.purchase-orders.item.delete",
@@ -234,7 +234,7 @@
             "finance.ledgers.current-fiscal-year.item.get",
             "finance.fiscal-years.item.get",
             "finance.expense-classes.collection.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "finance-storage.ledgers.collection.get",
             "finance-storage.budget-expense-classes.collection.get",
@@ -278,7 +278,7 @@
             "orders.po-lines.item.delete"
           ],
           "modulePermissions": [
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.item.get",
@@ -391,7 +391,7 @@
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.purchase-orders.collection.get",
             "finance.funds.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get"
           ]
         },
@@ -426,7 +426,7 @@
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post",
             "finance.funds.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
@@ -519,7 +519,7 @@
             "inventory-storage.contributor-name-types.collection.get",
             "finance.funds.budget.item.get",
             "finance.fiscal-years.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.post",
             "orders-storage.pieces.collection.get",
@@ -568,7 +568,7 @@
             "inventory-storage.instance-types.collection.get",
             "inventory-storage.instance-statuses.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.get",
             "orders-storage.pieces.item.post",
@@ -603,7 +603,7 @@
             "finance.funds.collection.get",
             "finance.funds.budget.item.get",
             "finance.fiscal-years.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.delete",
@@ -993,7 +993,7 @@
             "configuration.entries.collection.get",
             "finance-storage.funds.collection.get",
             "finance.exchange-rate.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.po-lines.collection.get",
@@ -2033,7 +2033,7 @@
         "finance.funds.collection.get",
         "finance.funds.item.get",
         "finance.budgets.collection.get",
-        "finance.transactions.batch",
+        "finance.transactions.batch.execute",
         "finance.transactions.collection.get",
         "finance.transactions.item.get",
         "finance.ledgers.current-fiscal-year.item.get",
@@ -2107,7 +2107,7 @@
         "finance.budgets.collection.get",
         "finance.fiscal-years.item.get",
         "finance.ledgers.current-fiscal-year.item.get",
-        "finance.transactions.batch",
+        "finance.transactions.batch.execute",
         "finance.transactions.collection.get",
         "finance.transactions.item.get",
         "finance.exchange-rate.item.get",
