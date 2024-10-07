@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.folio.orders.utils.RequestContextUtil.getUserIdFromContext;
@@ -73,7 +74,7 @@ public class ConsortiumUserTenantsRetriever {
     return IntStream.range(0, userTenants.size())
       .mapToObj(userTenants::getJsonObject)
       .map(userTenant -> userTenant.getString(TENANT_ID.getValue()))
-      .toList();
+      .collect(Collectors.toList());
   }
 
 }

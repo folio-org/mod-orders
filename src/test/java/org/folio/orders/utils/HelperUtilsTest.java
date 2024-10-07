@@ -27,12 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class HelperUtilsTest {
 
   @Test
-  void testShouldReturnEmptyString() {
-    String act = HelperUtils.combineCqlExpressions("");
-    assertThat(act, is(emptyOrNullString()));
-  }
-
-  @Test
   void testCombineResultListsOnSuccess() {
     var f1 = Future.succeededFuture(List.of(1, 2, 3));
     var f2 = Future.succeededFuture(List.of(4, 5, 6));

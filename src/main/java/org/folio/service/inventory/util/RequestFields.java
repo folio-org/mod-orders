@@ -6,8 +6,7 @@ public enum RequestFields {
   REQUESTER_ID("requesterId"),
   STATUS("status"),
   DESTINATION_ITEM_ID("destinationItemId"),
-  COLLECTION_RECORDS("requests"),
-  COLLECTION_TOTAL("totalRecords");
+  COLLECTION_RECORDS("requests");
 
   private final String value;
 

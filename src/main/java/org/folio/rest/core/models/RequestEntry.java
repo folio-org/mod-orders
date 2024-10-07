@@ -1,6 +1,6 @@
 package org.folio.rest.core.models;
 
-import static org.folio.orders.utils.HelperUtils.encodeQuery;
+import static org.folio.orders.utils.QueryUtils.encodeQuery;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -1,6 +1,6 @@
 package org.folio.service;
 
-import static org.folio.orders.utils.HelperUtils.buildQuery;
+import static org.folio.orders.utils.QueryUtils.buildQuery;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;

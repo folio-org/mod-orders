@@ -2,7 +2,9 @@ package org.folio.service.pieces;
 
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.combineCqlExpressions;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.getCqlExpressionForFieldNullValue;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
@@ -11,12 +13,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.orders.utils.HelperUtils;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.orders.utils.QueryUtils;
+import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -28,9 +31,11 @@ import io.vertx.core.Future;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.settings.SettingsRetriever;
+import org.folio.service.settings.util.SettingKey;
 
+@Log4j2
 public class PieceStorageService {
-  private static final Logger logger = LogManager.getLogger(PieceStorageService.class);
 
   private static final String PIECES_BY_POL_ID_AND_STATUS_QUERY = "poLineId==%s and receivingStatus==%s";
   private static final String PIECES_BY_HOLDING_ID_QUERY = "holdingId==%s";
@@ -39,13 +44,13 @@ public class PieceStorageService {
 
   private final ConsortiumConfigurationService consortiumConfigurationService;
   private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
+  private final SettingsRetriever settingsRetriever;
   private final RestClient restClient;
 
-  public PieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
-                             ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
-                             RestClient restClient) {
+  public PieceStorageService(ConsortiumConfigurationService consortiumConfigurationService, ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever, SettingsRetriever settingsRetriever, RestClient restClient) {
     this.consortiumConfigurationService = consortiumConfigurationService;
     this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
+    this.settingsRetriever = settingsRetriever;
     this.restClient = restClient;
   }
 
@@ -98,9 +103,9 @@ public class PieceStorageService {
     pieceIds.forEach(pieceId -> deletedItems.add(deletePiece(pieceId, requestContext)));
     return collectResultsOnSuccess(deletedItems)
       .onSuccess(v -> {
-        if (logger.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
           String deletedIds = String.join(",", pieceIds);
-          logger.debug("Pieces were removed : {}", deletedIds);
+          log.debug("Pieces were removed : {}", deletedIds);
         }
       })
       .mapEmpty();
@@ -120,9 +125,9 @@ public class PieceStorageService {
   }
 
   public Future<PieceCollection> getPieces(int limit, int offset, String query, RequestContext requestContext) {
-    return getAllPieces(limit, offset, query, requestContext)
-      .compose(piecesCollection -> filterPiecesByUserTenantsIfNecessary(piecesCollection.getPieces(), requestContext)
-        .map(piecesCollection::withPieces));
+    return getUserTenantsIfNeeded(requestContext)
+      .map(userTenants -> getQueryForUserTenants(userTenants, query))
+      .compose(cql -> getAllPieces(limit, offset, cql, requestContext));
   }
 
   public Future<PieceCollection> getAllPieces(String query, RequestContext requestContext) {
@@ -134,27 +139,25 @@ public class PieceStorageService {
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
 
-  private Future<List<Piece>> filterPiecesByUserTenantsIfNecessary(List<Piece> pieces, RequestContext requestContext) {
+  private Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> consortiumConfiguration
-        .filter(configuration -> shouldFilterPiecesForTenant(configuration.centralTenantId(), requestContext))
-        .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext)
-          .map(userTenants -> filterPiecesByUserTenants(pieces, userTenants)))
-        .orElse(Future.succeededFuture(pieces)));
-  }
-
-  private List<Piece> filterPiecesByUserTenants(List<Piece> pieces, List<String> userTenants) {
-    return pieces.stream()
-      .filter(piece -> Optional.ofNullable(piece.getReceivingTenantId())
-        .map(userTenants::contains)
-        .orElse(true))
-      .toList();
+      .compose(consortiumConfiguration -> {
+        if (consortiumConfiguration.isEmpty()) {
+          return Future.succeededFuture();
+        }
+        var configuration = consortiumConfiguration.get();
+        return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, requestContext)
+          .map(centralOrdering -> centralOrdering.map(Setting::getValue).orElse(null))
+          .compose(orderingEnabled -> shouldFilterPiecesForTenant(configuration.centralTenantId(), Boolean.parseBoolean(orderingEnabled), requestContext)
+            ? consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext)
+            : Future.succeededFuture());
+      });
   }
 
   public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
-    logger.debug("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
+    log.debug("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
     var futures = ofSubLists(new ArrayList<>(pieceIds), MAX_IDS_FOR_GET_RQ_15)
-      .map(HelperUtils::convertIdsToCqlQuery)
+      .map(QueryUtils::convertIdsToCqlQuery)
       .map(query -> getAllPieces(query, requestContext))
       .toList();
     return collectResultsOnSuccess(futures)
@@ -162,11 +165,11 @@ public class PieceStorageService {
         .map(PieceCollection::getPieces)
         .flatMap(Collection::stream)
         .toList())
-      .onSuccess(v -> logger.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds));
+      .onSuccess(v -> log.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds));
   }
 
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
-    logger.info("getPiecesByLineIdsByChunks start");
+    log.info("getPiecesByLineIdsByChunks start");
     var futures = ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getPieceChunkByLineIds(ids, requestContext))
       .toList();
@@ -174,7 +177,7 @@ public class PieceStorageService {
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(Collectors.toList()))
-      .onSuccess(v -> logger.info("getPiecesByLineIdsByChunks end"));
+      .onSuccess(v -> log.info("getPiecesByLineIdsByChunks end"));
 
   }
 
@@ -187,9 +190,21 @@ public class PieceStorageService {
       .map(PieceCollection::getPieces);
   }
 
-  private static boolean shouldFilterPiecesForTenant(String centralTenantId, RequestContext requestContext) {
+  static String getQueryForUserTenants(List<String> userTenants, String query) {
+    if (CollectionUtils.isEmpty(userTenants)) {
+      return query;
+    }
+    String tenantCql = convertIdsToCqlQuery(userTenants, "receivingTenantId");
+    String nullTenantCql = getCqlExpressionForFieldNullValue("receivingTenantId");
+    String combinedTenantCql = combineCqlExpressions("or", tenantCql, nullTenantCql);
+    return StringUtils.isNotBlank(query)
+      ? combineCqlExpressions("and", combinedTenantCql, query)
+      : combinedTenantCql;
+  }
+
+  private static boolean shouldFilterPiecesForTenant(String centralTenantId, boolean centralOrderingEnabled, RequestContext requestContext) {
     var requestTenantId = TenantTool.tenantId(requestContext.getHeaders());
-    return requestTenantId.equals(centralTenantId);
+    return centralOrderingEnabled && requestTenantId.equals(centralTenantId);
   }
 
 }

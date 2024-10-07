@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.exceptions.InventoryException;
@@ -35,7 +36,7 @@ import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 import static org.folio.rest.core.exceptions.ErrorCodes.BARCODE_IS_NOT_UNIQUE;
 import static org.folio.rest.core.exceptions.ErrorCodes.ITEM_CREATION_FAILED;
@@ -110,7 +111,7 @@ public class InventoryItemManager {
     List<Future<List<JsonObject>>> futures = StreamEx
       .ofSubLists(poLineIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> {
-        String query = String.format("status.name==%s and %s", itemStatus, HelperUtils.convertFieldListToCqlQuery(ids, InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true));
+        String query = String.format("status.name==%s and %s", itemStatus, QueryUtils.convertFieldListToCqlQuery(ids, InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, true));
         return getItemRecordsByQuery(query, requestContext);
       })
       .toList();

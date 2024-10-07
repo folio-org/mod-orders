@@ -2,8 +2,8 @@ package org.folio.service;
 
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.orders.utils.AcqDesiredPermissions.BYPASS_ACQ_UNITS;
-import static org.folio.orders.utils.HelperUtils.combineCqlExpressions;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.combineCqlExpressions;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.PermissionsUtil.isManagePermissionRequired;
 import static org.folio.orders.utils.PermissionsUtil.userDoesNotHaveDesiredPermission;
 import static org.folio.orders.utils.PermissionsUtil.userHasDesiredPermission;
@@ -27,8 +27,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.orders.utils.AcqDesiredPermissions;
-import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -237,7 +237,7 @@ public class ProtectionService {
    * @return list of unit ids associated with user.
    */
   private Future<Void> verifyUserIsMemberOfOrdersUnits(List<String> unitIdsAssignedToOrder, RequestContext requestContext) {
-    String query = String.format("userId==%s AND %s", getCurrentUserId(requestContext.getHeaders()), HelperUtils.convertFieldListToCqlQuery(unitIdsAssignedToOrder, ACQUISITIONS_UNIT_ID, true));
+    String query = String.format("userId==%s AND %s", getCurrentUserId(requestContext.getHeaders()), QueryUtils.convertFieldListToCqlQuery(unitIdsAssignedToOrder, ACQUISITIONS_UNIT_ID, true));
     return acquisitionsUnitsService.getAcquisitionsUnitsMemberships(query, 0, 0, requestContext)
       .map(unit -> {
         if (unit.getTotalRecords() == 0) {

@@ -588,6 +588,10 @@
           <showWeaveInfo>true</showWeaveInfo>
           <forceAjcCompile>true</forceAjcCompile>
           <aspectDirectory>src/main/java/org/folio/rest/annotations</aspectDirectory>
+          <includes>
+            <include>**/impl/*.java</include>
+            <include>**/*.aj</include>
+          </includes>
           <aspectLibraries>
             <aspectLibrary>
               <groupId>org.folio</groupId>

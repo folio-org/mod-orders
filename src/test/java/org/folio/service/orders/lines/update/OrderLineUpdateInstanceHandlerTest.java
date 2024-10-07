@@ -49,6 +49,7 @@ import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.lines.update.instance.WithHoldingOrderLineUpdateInstanceStrategy;
 import org.folio.service.pieces.PieceStorageService;
+import org.folio.service.settings.SettingsRetriever;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -224,8 +225,9 @@ public class OrderLineUpdateInstanceHandlerTest {
 
     @Bean PieceStorageService pieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
                                                   ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                                  SettingsRetriever settingsRetriever,
                                                   RestClient restClient) {
-      return new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, restClient);
+      return new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, settingsRetriever, restClient);
     }
 
     @Bean InventoryService inventoryService (RestClient restClient) {
@@ -321,5 +323,11 @@ public class OrderLineUpdateInstanceHandlerTest {
 
       return new OrderLineUpdateInstanceStrategyResolver(strategies);
     }
+
+    @Bean
+    SettingsRetriever settingsRetriever(RestClient restClient) {
+      return new SettingsRetriever(restClient);
+    }
+
   }
 }

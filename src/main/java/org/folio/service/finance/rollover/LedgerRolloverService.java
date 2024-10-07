@@ -1,6 +1,6 @@
 package org.folio.service.finance.rollover;
 
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.rest.jaxrs.model.LedgerFiscalYearRollover.RolloverType.COMMIT;
 import static org.folio.service.finance.transaction.EncumbranceService.AND;
 

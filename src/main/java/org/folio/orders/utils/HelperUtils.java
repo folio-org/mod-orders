@@ -8,12 +8,9 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import one.util.streamex.IntStreamEx;
-import one.util.streamex.StreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.folio.helper.BaseHelper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.events.handlers.MessageAddress;
@@ -37,8 +34,6 @@ import javax.money.Monetary;
 import javax.money.MonetaryAmount;
 import javax.money.convert.ConversionQuery;
 import javax.money.convert.ConversionQueryBuilder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -49,13 +44,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.rest.RestConstants.EN;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
@@ -80,8 +71,6 @@ public class HelperUtils {
   public static final String LANG = "lang";
   public static final String WORKFLOW_STATUS = "workflowStatus";
 
-  private static final Pattern CQL_SORT_BY_PATTERN = Pattern.compile("(.*)(\\ssortBy\\s.*)", Pattern.CASE_INSENSITIVE);
-
   private HelperUtils() {
 
   }
@@ -92,37 +81,6 @@ public class HelperUtils {
       .entries()
       .forEach(entry -> okapiHeaders.put(entry.getKey(), entry.getValue()));
     return okapiHeaders;
-  }
-
-  /**
-   * @param query string representing CQL query
-   * @return URL encoded string
-   */
-  public static String encodeQuery(String query) {
-    return URLEncoder.encode(query, StandardCharsets.UTF_8);
-  }
-
-  public static String buildQuery(String query) {
-    return isEmpty(query) ? EMPTY : "&query=" + encodeQuery(query);
-  }
-
-  public static String combineCqlExpressions(String operator, String... expressions) {
-    if (ArrayUtils.isEmpty(expressions)) {
-      return EMPTY;
-    }
-
-    String sorting = EMPTY;
-
-    // Check whether last expression contains sorting query. If it does, extract it to be added in the end of the resulting query
-    Matcher matcher = CQL_SORT_BY_PATTERN.matcher(expressions[expressions.length - 1]);
-    if (matcher.find()) {
-      expressions[expressions.length - 1] = matcher.group(1);
-      sorting = matcher.group(2);
-    }
-
-    return StreamEx.of(expressions)
-      .filter(StringUtils::isNotBlank)
-      .joining(") " + operator + " (", "(", ")") + sorting;
   }
 
   public static Integer calculateTotalLocationQuantity(Location location) {
@@ -335,33 +293,6 @@ public class HelperUtils {
     return f;
   }
 
-  /**
-   * Transform list of id's to CQL query using 'or' operation
-   *
-   * @param ids list of id's
-   * @return String representing CQL query to get records by id's
-   */
-  public static String convertIdsToCqlQuery(Collection<String> ids, String idField) {
-    return convertFieldListToCqlQuery(ids, idField, true);
-  }
-
-  public static String convertIdsToCqlQuery(Collection<String> ids) {
-    return convertFieldListToCqlQuery(ids, ID, true);
-  }
-
-  /**
-   * Transform list of values for some property to CQL query using 'or' operation
-   *
-   * @param values      list of field values
-   * @param fieldName   the property name to search by
-   * @param strictMatch indicates whether strict match mode (i.e. ==) should be used or not (i.e. =)
-   * @return String representing CQL query to get records by some property values
-   */
-  public static String convertFieldListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
-    String prefix = fieldName + (strictMatch ? "==(" : "=(");
-    return StreamEx.of(values).joining(" or ", prefix, ")");
-  }
-
   public static int getPoLineLimit(JsonObject config) {
     try {
       return Integer.parseInt(config.getString(PO_LINES_LIMIT_PROPERTY, DEFAULT_POLINE_LIMIT));
@@ -379,11 +310,6 @@ public class HelperUtils {
    */
   public static CompositePurchaseOrder convertToCompositePurchaseOrder(JsonObject poJson) {
     return poJson.mapTo(CompositePurchaseOrder.class);
-  }
-
-  public static String convertTagListToCqlQuery(Collection<String> values, String fieldName, boolean strictMatch) {
-    String prefix = fieldName + (strictMatch ? "==(\"" : "=(\"");
-    return StreamEx.of(values).joining("\" or \"", prefix, "\")");
   }
 
   public static boolean isProductIdsExist(CompositePoLine compPOL) {

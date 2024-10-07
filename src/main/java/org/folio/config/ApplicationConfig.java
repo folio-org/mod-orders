@@ -119,6 +119,7 @@ import org.folio.service.pieces.flows.update.PieceUpdateFlowInventoryManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowManager;
 import org.folio.service.pieces.flows.update.PieceUpdateFlowPoLineService;
 import org.folio.service.routinglists.RoutingListService;
+import org.folio.service.settings.SettingsRetriever;
 import org.folio.service.titles.TitleInstanceService;
 import org.folio.service.titles.TitleValidationService;
 import org.folio.service.titles.TitlesService;
@@ -524,8 +525,9 @@ public class ApplicationConfig {
   @Bean
   PieceStorageService pieceStorageService(ConsortiumConfigurationService consortiumConfigurationService,
                                           ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever,
+                                          SettingsRetriever settingsRetriever,
                                           RestClient restClient) {
-    return new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, restClient);
+    return new PieceStorageService(consortiumConfigurationService, consortiumUserTenantsRetriever, settingsRetriever, restClient);
   }
 
   @Bean
@@ -869,6 +871,11 @@ public class ApplicationConfig {
   @Bean
   CirculationRequestsRetriever circulationRequestsRetriever(PieceStorageService pieceStorageService, RestClient restClient) {
     return new CirculationRequestsRetriever(pieceStorageService, restClient);
+  }
+
+  @Bean
+  SettingsRetriever settingsRetriever(RestClient restClient) {
+    return new SettingsRetriever(restClient);
   }
 
 }

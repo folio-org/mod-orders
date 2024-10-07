@@ -4,7 +4,7 @@ import static io.vertx.core.json.JsonObject.mapFrom;
 import static one.util.streamex.StreamEx.ofSubLists;
 import static org.folio.helper.BaseHelper.ID;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
-import static org.folio.orders.utils.HelperUtils.convertIdsToCqlQuery;
+import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;

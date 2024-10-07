@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.folio.orders.utils.HelperUtils;
+import org.folio.orders.utils.QueryUtils;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.HoldingSummary;
 import org.folio.rest.jaxrs.model.HoldingSummaryCollection;
@@ -43,7 +43,7 @@ public class HoldingsSummaryService {
           .map(Piece::getPoLineId)
           .collect(Collectors.toSet());
         if (!lineIds.isEmpty()) {
-          return String.format("%s or %s", queryForLines, HelperUtils.convertIdsToCqlQuery(lineIds));
+          return String.format("%s or %s", queryForLines, QueryUtils.convertIdsToCqlQuery(lineIds));
         }
         return queryForLines;})
       .compose(query -> purchaseOrderLineService.getOrderLines(query, 0, Integer.MAX_VALUE, requestContext)
