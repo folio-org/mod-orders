@@ -213,7 +213,7 @@ public class PoLineCommonUtilTest {
     List<String> tenantIds = List.of("tenant1", "tenant2");
     var result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
     assertEquals(1, result.size());
-    assertEquals(locations.get(2), result.get("tenant3"));
+    assertTrue(result.contains(locations.get(2)));
   }
 
   @Test
@@ -238,7 +238,7 @@ public class PoLineCommonUtilTest {
     List<String> tenantIds = List.of("tenant1");
     var result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
     assertEquals(1, result.size());
-    assertEquals(locations.get(1), result.get("tenant2"));
+    assertTrue(result.contains(locations.get(1)));
   }
 
   private static Location createLocation(String tenantId) {

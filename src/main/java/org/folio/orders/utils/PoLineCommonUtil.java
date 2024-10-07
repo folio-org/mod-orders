@@ -254,11 +254,11 @@ public final class PoLineCommonUtil {
       .toList();
   }
 
-  public static Map<String, Location> extractUnaffiliatedLocations(List<Location> locations, List<String> tenantIds) {
+  public static Set<Location> extractUnaffiliatedLocations(List<Location> locations, List<String> tenantIds) {
     return StreamEx.of(locations)
       .filter(location -> Objects.nonNull(location.getTenantId()))
       .filter(location -> !tenantIds.contains(location.getTenantId()))
-      .toMap(Location::getTenantId, Function.identity());
+      .toSet();
   }
 
   public static CompositePoLine convertToCompositePoLine(PoLine poLine) {

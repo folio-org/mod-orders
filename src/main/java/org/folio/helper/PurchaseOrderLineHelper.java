@@ -42,6 +42,7 @@ import javax.ws.rs.core.Response;
 
 import io.vertx.core.json.JsonArray;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.SetUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -743,14 +744,10 @@ public class PurchaseOrderLineHelper {
         if (CollectionUtils.isEmpty(userTenants)) {
           return Future.succeededFuture();
         }
-        var storageUnaffiliatedLocationsMap = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
-        var updatedUnaffiliatedLocationsMap = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
-        for (var tenantId : storageUnaffiliatedLocationsMap.keySet()) {
-          var storageLocation = storageUnaffiliatedLocationsMap.get(tenantId);
-          var updatedLocation = updatedUnaffiliatedLocationsMap.get(tenantId);
-          if (updatedLocation == null || !updatedLocation.equals(storageLocation)) {
-            return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
-          }
+        var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
+        var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
+        if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
+          return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
         }
         return Future.succeededFuture();
       });

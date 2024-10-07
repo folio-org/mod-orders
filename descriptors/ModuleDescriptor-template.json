@@ -265,6 +265,7 @@
             "invoice.invoice-lines.item.put",
             "invoices.bypass-acquisition-units",
             "orders-storage.order-invoice-relationships.collection.get",
+            "consortia.user-tenants.collection.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
           ]
