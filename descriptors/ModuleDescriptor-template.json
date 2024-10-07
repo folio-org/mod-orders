@@ -263,7 +263,7 @@
             "organizations-storage.organizations.collection.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put",
-            "invoices.bypass-acquisition-units",
+            "invoices.acquisition-units.bypass.execute",
             "orders-storage.order-invoice-relationships.collection.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
@@ -2066,7 +2066,7 @@
         "inventory-storage.identifier-types.collection.get",
         "invoice.invoices.collection.get",
         "invoice.invoice-lines.collection.get",
-        "invoices.bypass-acquisition-units",
+        "invoices.acquisition-units.bypass.execute",
         "organizations-storage.organizations.collection.get",
         "organizations-storage.organizations.item.get",
         "isbn-utils.convert-to-13.get",
