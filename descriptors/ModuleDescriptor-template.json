@@ -151,7 +151,7 @@
             "orders.po-lines.collection.get"
           ],
           "permissionsDesired": [
-            "orders.bypass-acquisition-units"
+            "orders.acquisition-units.bypass.execute"
           ],
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
@@ -195,7 +195,7 @@
             "orders.po-lines.item.get"
           ],
           "permissionsDesired": [
-            "orders.bypass-acquisition-units"
+            "orders.acquisition-units.bypass.execute"
           ],
           "modulePermissions": [
             "orders-storage.po-lines.item.get",
@@ -217,7 +217,7 @@
             "orders.po-lines.item.put"
           ],
           "permissionsDesired": [
-            "orders.bypass-acquisition-units"
+            "orders.acquisition-units.bypass.execute"
           ],
           "modulePermissions": [
             "orders-storage.alerts.item.post",
@@ -624,7 +624,7 @@
         {
           "methods": ["GET"],
           "pathPattern": "/orders/pieces-requests",
-          "permissionsRequired": ["orders.pieces.collection.get"],
+          "permissionsRequired": ["orders.piece-requests.collection.get"],
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
             "circulation.requests.collection.get"
@@ -1512,6 +1512,11 @@
       "description": "Delete an existing piece"
     },
     {
+      "permissionName": "orders.piece-requests.collection.get",
+      "displayName": "Orders - Get piece requests",
+      "description": "Get order piece requests"
+    },
+    {
       "permissionName" : "orders.pieces.all",
       "displayName" : "All piece permissions",
       "description" : "All permissions for the pieces",
@@ -1520,7 +1525,8 @@
         "orders.pieces.item.post",
         "orders.pieces.item.get",
         "orders.pieces.item.put",
-        "orders.pieces.item.delete"
+        "orders.pieces.item.delete",
+        "orders.piece-requests.collection.get"
       ]
     },
     {
@@ -1635,9 +1641,10 @@
       ]
     },
     {
-      "permissionName": "orders.bypass-acquisition-units",
+      "permissionName": "orders.acquisition-units.bypass.execute",
       "displayName": "Bypass acquisition units checks",
-      "description": "Backend internal permission to bypass order acquisition units checks"
+      "description": "Backend internal permission to bypass order acquisition units checks",
+      "replaces": ["orders.bypass-acquisition-units"]
     },
     {
       "permissionName": "orders.acquisitions-units-assignments.assign",
