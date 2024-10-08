@@ -2,7 +2,12 @@ package org.folio.helper;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.Optional;
 import java.util.stream.Stream;
+
+import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.acq.model.SequenceNumbers;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -14,6 +19,8 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.ReportingCode;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +39,10 @@ import java.util.UUID;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestUtils.callPrivateMethod;
+import static org.folio.TestUtils.getLocationsForTenants;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -45,6 +55,10 @@ public class PurchaseOrderLineHelperTest {
   private PurchaseOrderLineHelper purchaseOrderLineHelper;
   @Mock
   private PurchaseOrderLineService purchaseOrderLineService;
+  @Mock
+  private ConsortiumConfigurationService consortiumConfigurationService;
+  @Mock
+  private ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
   @Mock
   private RequestContext requestContext;
   @Mock
@@ -177,4 +191,49 @@ public class PurchaseOrderLineHelperTest {
     var newCost = new Cost().withCurrency(currencyCode).withExchangeRate(oldExchangeRate);
     assertEquals(expected, PurchaseOrderLineHelper.hasAlteredExchangeRate(oldCost, newCost));
   }
+
+  @Test
+  void testValidateUserUnaffiliatedLocationUpdates() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    var locationsStored = getLocationsForTenants(List.of("tenant1", "tenant2", "tenant3"));
+    var locationsUpdated = getLocationsForTenants(List.of("tenant1", "tenant3"));
+    var storagePoLine = new PoLine().withLocations(locationsStored);
+    var updatedPoLine = new CompositePoLine().withLocations(locationsUpdated);
+
+    doReturn(succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))))
+      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+    doReturn(succeededFuture(List.of("tenant1", "tenant2")))
+      .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), any(RequestContext.class));
+
+    var future = callValidateUserUnaffiliatedLocationUpdates(updatedPoLine, storagePoLine, requestContext, purchaseOrderLineHelper);
+
+    assertTrue(future.succeeded());
+  }
+
+  @Test
+  void testValidateUserUnaffiliatedLocationUpdatesInvalid() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    var locationsStored = getLocationsForTenants(List.of("tenant1", "tenant2", "tenant3"));
+    var locationsUpdated = getLocationsForTenants(List.of("tenant1", "tenant3"));
+    locationsUpdated.get(1).withQuantityPhysical(10);
+    var storagePoLine = new PoLine().withLocations(locationsStored);
+    var updatedPoLine = new CompositePoLine().withLocations(locationsUpdated);
+
+    doReturn(succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))))
+      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+    doReturn(succeededFuture(List.of("tenant1")))
+      .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), any(RequestContext.class));
+
+    var future = callValidateUserUnaffiliatedLocationUpdates(updatedPoLine, storagePoLine, requestContext, purchaseOrderLineHelper);
+
+    assertTrue(future.failed());
+    assertInstanceOf(HttpException.class, future.cause());
+  }
+
+  private Future<Void> callValidateUserUnaffiliatedLocationUpdates(CompositePoLine updatedPoLine, PoLine storagePoLine,
+                                                                   RequestContext requestContext, PurchaseOrderLineHelper purchaseOrderLineHelper)
+    throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+    return callPrivateMethod(purchaseOrderLineHelper, "validateUserUnaffiliatedLocationUpdates", Future.class,
+      new Class[]{ CompositePoLine.class, PoLine.class, RequestContext.class }, new Object[] { updatedPoLine, storagePoLine, requestContext });
+  }
+
 }

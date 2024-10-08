@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -246,6 +247,22 @@ public final class TestUtils {
       .withLocationId(UUID.randomUUID().toString())
       .withQuantityPhysical(n)
       .withQuantity(n));
+  }
+
+  public static List<Location> getLocationsForTenants(List<String> tenantIds) {
+    return tenantIds.stream()
+      .flatMap(tenantId -> getLocationPhysicalCopies(5).stream()
+        .map(location -> location.withLocationId(null).withTenantId(tenantId)))
+      .toList();
+  }
+
+  public static <T, C> T callPrivateMethod(C object, String methodName, Class<T> returnType, Class<?>[] paramTypes, Object[] params)
+    throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+
+    var method = object.getClass()
+      .getDeclaredMethod(methodName, paramTypes);
+    method.setAccessible(true);
+    return returnType.cast(method.invoke(object, params));
   }
 
 }

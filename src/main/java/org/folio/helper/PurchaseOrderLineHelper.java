@@ -9,6 +9,8 @@ import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.PoLineCommonUtil.convertToCompositePoLine;
 import static org.folio.orders.utils.PoLineCommonUtil.convertToPoLine;
+import static org.folio.orders.utils.PoLineCommonUtil.extractUnaffiliatedLocations;
+import static org.folio.orders.utils.PoLineCommonUtil.updateLocationsQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.ProtectedOperationType.UPDATE;
@@ -40,6 +42,7 @@ import javax.ws.rs.core.Response;
 
 import io.vertx.core.json.JsonArray;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.SetUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -72,6 +75,8 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.service.ProtectionService;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
@@ -117,6 +122,8 @@ public class PurchaseOrderLineHelper {
   private final CompositePoLineValidationService compositePoLineValidationService;
   private final OrganizationService organizationService;
   private final POLInvoiceLineRelationService polInvoiceLineRelationService;
+  private final ConsortiumConfigurationService consortiumConfigurationService;
+  private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
 
   public PurchaseOrderLineHelper(InventoryItemStatusSyncService inventoryItemStatusSyncService,
                                  InventoryInstanceManager inventoryInstanceManager,
@@ -131,7 +138,9 @@ public class PurchaseOrderLineHelper {
                                  RestClient restClient,
                                  CompositePoLineValidationService compositePoLineValidationService,
                                  POLInvoiceLineRelationService polInvoiceLineRelationService,
-                                 OrganizationService organizationService) {
+                                 OrganizationService organizationService,
+                                 ConsortiumConfigurationService consortiumConfigurationService,
+                                 ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
 
     this.itemStatusSyncService = inventoryItemStatusSyncService;
     this.inventoryInstanceManager = inventoryInstanceManager;
@@ -147,6 +156,8 @@ public class PurchaseOrderLineHelper {
     this.compositePoLineValidationService = compositePoLineValidationService;
     this.polInvoiceLineRelationService = polInvoiceLineRelationService;
     this.organizationService = organizationService;
+    this.consortiumConfigurationService = consortiumConfigurationService;
+    this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
   }
 
   /**
@@ -210,7 +221,7 @@ public class PurchaseOrderLineHelper {
     }
     compPoLine.setPurchaseOrderId(compOrder.getId());
     updateEstimatedPrice(compPoLine);
-    PoLineCommonUtil.updateLocationsQuantity(compPoLine.getLocations());
+    updateLocationsQuantity(compPoLine.getLocations());
 
     var line = convertToPoLine(compPoLine);
     List<Future<Void>> subObjFuts = new ArrayList<>();
@@ -273,7 +284,7 @@ public class PurchaseOrderLineHelper {
         .map(compOrder -> addLineToCompOrder(compOrder, poLineFromStorage))
         .map(compOrder -> {
           validatePOLineProtectedFieldsChanged(compOrderLine, poLineFromStorage, compOrder);
-          PoLineCommonUtil.updateLocationsQuantity(compOrderLine.getLocations());
+          updateLocationsQuantity(compOrderLine.getLocations());
           updateEstimatedPrice(compOrderLine);
           checkLocationCanBeModified(compOrderLine, poLineFromStorage, compOrder);
           return compOrder;
@@ -281,6 +292,7 @@ public class PurchaseOrderLineHelper {
         .compose(compOrder -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
           .compose(v -> purchaseOrderLineService.validateAndNormalizeISBNAndProductType(Collections.singletonList(compOrderLine), requestContext))
           .compose(v -> validateAccessProviders(compOrderLine, requestContext))
+          .compose(v -> validateUserUnaffiliatedLocationUpdates(compOrderLine, poLineFromStorage, requestContext))
           .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
           .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext)))
         .map(v -> compOrderLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
@@ -494,7 +506,7 @@ public class PurchaseOrderLineHelper {
       for (CompositePoLine line : compOrder.getCompositePoLines()) {
         if (StringUtils.equals(lineFromStorage.getId(), line.getId())) {
           line.setPoLineNumber(buildNewPoLineNumber(lineFromStorage, compOrder.getPoNumber()));
-          PoLineCommonUtil.updateLocationsQuantity(line.getLocations());
+          updateLocationsQuantity(line.getLocations());
           updateEstimatedPrice(line);
 
           futures.add(updateOrderLine(line, JsonObject.mapFrom(lineFromStorage), requestContext));
@@ -726,6 +738,27 @@ public class PurchaseOrderLineHelper {
       .mapEmpty();
   }
 
+  private Future<Void> validateUserUnaffiliatedLocationUpdates(CompositePoLine updatedPoLine, PoLine storedPoLine, RequestContext requestContext) {
+    return getUserTenantsIfNeeded(requestContext)
+      .compose(userTenants -> {
+        if (CollectionUtils.isEmpty(userTenants)) {
+          return Future.succeededFuture();
+        }
+        var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
+        var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
+        if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
+          return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
+        }
+        return Future.succeededFuture();
+      });
+  }
+
+  private Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(consortiumConfiguration -> consortiumConfiguration
+        .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext))
+        .orElse(Future.succeededFuture()));
+  }
 
   private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, PoLine poLineFromStorage, CompositePurchaseOrder purchaseOrder) {
     if (purchaseOrder.getWorkflowStatus() != PENDING) {
