@@ -98,12 +98,13 @@ public class InvoiceLineService {
         }
       }
     }
-    if (CollectionUtils.isNotEmpty(invoiceLinesToUpdate)) {
-      logger.info("removeEncumbranceLinks:: updating invoice lines: {} with removed encumbrance links",
-        invoiceLinesToUpdate.stream().map(InvoiceLine::getId).collect(joining(", ")));
-      return saveInvoiceLines(invoiceLinesToUpdate, requestContext);
+    if (CollectionUtils.isEmpty(invoiceLinesToUpdate)) {
+      logger.info("removeEncumbranceLinks:: no invoice lines to update");
+      return Future.succeededFuture();
     }
-    return Future.succeededFuture();
+    logger.info("removeEncumbranceLinks:: updating invoice lines: {} with removed encumbrance links",
+      invoiceLinesToUpdate.stream().map(InvoiceLine::getId).collect(joining(", ")));
+    return saveInvoiceLines(invoiceLinesToUpdate, requestContext);
   }
 
   public Future<Void> saveInvoiceLines(List<InvoiceLine> invoiceLines, RequestContext requestContext) {
