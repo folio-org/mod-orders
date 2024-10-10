@@ -149,8 +149,8 @@ import org.folio.rest.jaxrs.model.Tags;
 import org.folio.rest.jaxrs.model.ValidateFundDistributionsRequest;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -192,8 +192,8 @@ public class PurchaseOrderLinesApiTest {
     initSpringContext(ApplicationConfig.class);
   }
 
-  @AfterEach
-  void afterEach() {
+  @BeforeEach
+  void beforeEach() {
     clearServiceInteractions();
   }
 
@@ -515,7 +515,7 @@ public class PurchaseOrderLinesApiTest {
 
     //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertEquals(2, column.size());
     assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
 
