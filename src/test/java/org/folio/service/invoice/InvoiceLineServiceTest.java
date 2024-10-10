@@ -1,19 +1,25 @@
 package org.folio.service.invoice;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.folio.CopilotGenerated;
 import org.folio.rest.acq.model.invoice.Adjustment;
+import org.folio.rest.acq.model.invoice.FundDistribution;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.folio.rest.acq.model.invoice.InvoiceLine.InvoiceLineStatus;
 import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
@@ -32,9 +38,8 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
+@CopilotGenerated(partiallyGenerated = true)
 public class InvoiceLineServiceTest {
-
-  private static final Logger logger = LogManager.getLogger();
 
   @InjectMocks
   private InvoiceLineService invoiceLineService;
@@ -63,6 +68,7 @@ public class InvoiceLineServiceTest {
     InvoiceLine invoiceLine1 = new InvoiceLine()
       .withId(invoiceLineId1)
       .withPoLineId(poLineId1)
+      .withInvoiceLineStatus(InvoiceLineStatus.OPEN)
       .withFundDistributions(List.of(new org.folio.rest.acq.model.invoice.FundDistribution()
         .withEncumbrance(encumbrance1Id)))
       .withAdjustments(List.of(new Adjustment().withFundDistributions(List.of(
@@ -71,6 +77,7 @@ public class InvoiceLineServiceTest {
     InvoiceLine invoiceLine2 = new InvoiceLine()
       .withId(invoiceLineId2)
       .withPoLineId(poLineId2)
+      .withInvoiceLineStatus(InvoiceLineStatus.REVIEWED)
       .withAdjustments(List.of(new Adjustment().withFundDistributions(List.of(
         new org.folio.rest.acq.model.invoice.FundDistribution().withEncumbrance(encumbrance3Id)))));
     List<InvoiceLine> invoiceLines = List.of(invoiceLine1, invoiceLine2);
@@ -115,5 +122,80 @@ public class InvoiceLineServiceTest {
     vertxTestContext.assertComplete(future)
       .onComplete(res-> vertxTestContext.completeNow());
 
+  }
+
+  @Test
+  void removeEncumbranceLinks_shouldUpdateEncumbranceLinks_whenEncumbrancesMatch() {
+    List<InvoiceLine> invoiceLines = new ArrayList<>();
+    InvoiceLine invoiceLine = new InvoiceLine().withId("1").withInvoiceLineStatus(InvoiceLineStatus.OPEN)
+      .withFundDistributions(List.of(new FundDistribution().withEncumbrance("enc1")));
+    invoiceLines.add(invoiceLine);
+    List<String> transactionIds = List.of("enc1");
+    RequestContext requestContext = mock(RequestContext.class);
+    when(restClient.put(any(RequestEntry.class), any(InvoiceLine.class), eq(requestContext))).thenReturn(Future.succeededFuture());
+
+    Future<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContext);
+
+    assertTrue(result.succeeded());
+    assertNull(invoiceLine.getFundDistributions().get(0).getEncumbrance());
+  }
+
+  @Test
+  void removeEncumbranceLinks_shouldHandleEmptyInvoiceLines() {
+    List<InvoiceLine> invoiceLines = new ArrayList<>();
+    List<String> transactionIds = List.of("enc1");
+    RequestContext requestContext = mock(RequestContext.class);
+
+    Future<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContext);
+
+    assertTrue(result.succeeded());
+    verifyNoInteractions(restClient);
+  }
+
+  @Test
+  void removeEncumbranceLinks_shouldNotUpdateEncumbranceLinks_whenNoEncumbrancesMatch() {
+    List<InvoiceLine> invoiceLines = new ArrayList<>();
+    InvoiceLine invoiceLine = new InvoiceLine().withId("1").withInvoiceLineStatus(InvoiceLineStatus.OPEN)
+      .withFundDistributions(List.of(new FundDistribution().withEncumbrance("enc2")));
+    invoiceLines.add(invoiceLine);
+    List<String> transactionIds = List.of("enc1");
+    RequestContext requestContext = mock(RequestContext.class);
+
+    Future<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContext);
+
+    assertTrue(result.succeeded());
+    assertEquals("enc2", invoiceLine.getFundDistributions().get(0).getEncumbrance());
+    verifyNoInteractions(restClient);
+  }
+
+  @Test
+  void removeEncumbranceLinks_shouldHandleEmptyTransactionIds() {
+    List<InvoiceLine> invoiceLines = new ArrayList<>();
+    InvoiceLine invoiceLine = new InvoiceLine().withId("1").withInvoiceLineStatus(InvoiceLineStatus.OPEN)
+      .withFundDistributions(List.of(new FundDistribution().withEncumbrance("enc1")));
+    invoiceLines.add(invoiceLine);
+    List<String> transactionIds = new ArrayList<>();
+    RequestContext requestContext = mock(RequestContext.class);
+
+    Future<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContext);
+
+    assertTrue(result.succeeded());
+    assertEquals("enc1", invoiceLine.getFundDistributions().get(0).getEncumbrance());
+    verifyNoInteractions(restClient);
+  }
+
+  @Test
+  void removeEncumbranceLinks_shouldNotUpdateEncumbranceLinks_whenInvoiceLineStatusNotEditable() {
+    List<InvoiceLine> invoiceLines = new ArrayList<>();
+    InvoiceLine invoiceLine = new InvoiceLine().withId("1").withInvoiceLineStatus(InvoiceLineStatus.PAID)
+      .withFundDistributions(List.of(new FundDistribution().withEncumbrance("enc1")));
+    invoiceLines.add(invoiceLine);
+    List<String> transactionIds = List.of("enc1");
+    RequestContext requestContext = mock(RequestContext.class);
+
+    Future<Void> result = invoiceLineService.removeEncumbranceLinks(invoiceLines, transactionIds, requestContext);
+
+    assertTrue(result.succeeded());
+    assertEquals("enc1", invoiceLine.getFundDistributions().get(0).getEncumbrance());
   }
 }

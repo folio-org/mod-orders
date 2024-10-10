@@ -285,13 +285,11 @@ public class PurchaseOrderLineHelper {
           .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext)))
         .map(v -> compOrderLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
         .map(v -> new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage))
-        .compose(poLineInvoiceLineHolder -> polInvoiceLineRelationService.prepareRelatedInvoiceLines(poLineInvoiceLineHolder, requestContext)
-          .compose(v -> createShadowInstanceIfNeeded(compOrderLine, requestContext))
-          .compose(v -> updateOrderLine(compOrderLine, JsonObject.mapFrom(poLineFromStorage), requestContext))
-          .compose(v -> updateEncumbranceStatus(compOrderLine, poLineFromStorage, requestContext))
-          .compose(v -> polInvoiceLineRelationService.updateInvoiceLineReference(poLineInvoiceLineHolder, requestContext))
-          .compose(v -> updateInventoryItemStatus(compOrderLine, poLineFromStorage, requestContext))
-          .compose(v -> updateOrderStatusIfNeeded(compOrderLine, poLineFromStorage, requestContext))));
+        .compose(v -> createShadowInstanceIfNeeded(compOrderLine, requestContext))
+        .compose(v -> updateOrderLine(compOrderLine, JsonObject.mapFrom(poLineFromStorage), requestContext))
+        .compose(v -> updateEncumbranceStatus(compOrderLine, poLineFromStorage, requestContext))
+        .compose(v -> updateInventoryItemStatus(compOrderLine, poLineFromStorage, requestContext))
+        .compose(v -> updateOrderStatusIfNeeded(compOrderLine, poLineFromStorage, requestContext)));
   }
 
   private Future<Void> updateEncumbranceStatus(CompositePoLine compOrderLine, PoLine poLineFromStorage, RequestContext requestContext) {

@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.InvoiceUtil.filterInvoiceLinesByStatuses;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
@@ -18,6 +20,7 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.acq.model.invoice.Adjustment;
 import org.folio.rest.acq.model.invoice.FundDistribution;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
+import org.folio.rest.acq.model.invoice.InvoiceLine.InvoiceLineStatus;
 import org.folio.rest.acq.model.invoice.InvoiceLineCollection;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.exceptions.HttpException;
@@ -74,8 +77,10 @@ public class InvoiceLineService {
   }
 
   public Future<Void> removeEncumbranceLinks(List<InvoiceLine> invoiceLines, List<String> transactionIds, RequestContext requestContext) {
+    List<InvoiceLine> editableOrCancelledInvoiceLines = filterInvoiceLinesByStatuses(invoiceLines,
+      List.of(InvoiceLineStatus.OPEN, InvoiceLineStatus.REVIEWED, InvoiceLineStatus.CANCELLED));
     List<InvoiceLine> invoiceLinesToUpdate = new ArrayList<>();
-    for (InvoiceLine invoiceLine : invoiceLines) {
+    for (InvoiceLine invoiceLine : editableOrCancelledInvoiceLines) {
       for (FundDistribution fd : invoiceLine.getFundDistributions()) {
         if (transactionIds.contains(fd.getEncumbrance())) {
           fd.setEncumbrance(null);
@@ -93,7 +98,12 @@ public class InvoiceLineService {
         }
       }
     }
-    return saveInvoiceLines(invoiceLinesToUpdate, requestContext);
+    if (CollectionUtils.isNotEmpty(invoiceLinesToUpdate)) {
+      logger.info("removeEncumbranceLinks:: updating invoice lines: {} with removed encumbrance links",
+        invoiceLinesToUpdate.stream().map(InvoiceLine::getId).collect(joining(", ")));
+      return saveInvoiceLines(invoiceLinesToUpdate, requestContext);
+    }
+    return Future.succeededFuture();
   }
 
   public Future<Void> saveInvoiceLines(List<InvoiceLine> invoiceLines, RequestContext requestContext) {
