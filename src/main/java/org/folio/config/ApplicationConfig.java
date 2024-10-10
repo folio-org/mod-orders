@@ -744,13 +744,16 @@ public class ApplicationConfig {
                                                   ProtectionService protectionService,
                                                   PurchaseOrderLineService purchaseOrderLineService,
                                                   PurchaseOrderStorageService purchaseOrderStorageService,
-                                                  RestClient restClient, CompositePoLineValidationService compositePoLineValidationService,
+                                                  RestClient restClient,
+                                                  CompositePoLineValidationService compositePoLineValidationService,
                                                   POLInvoiceLineRelationService polInvoiceLineRelationService,
-                                                  OrganizationService organizationService) {
+                                                  OrganizationService organizationService,
+                                                  ConsortiumConfigurationService consortiumConfigurationService,
+                                                  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
     return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
       purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService, polInvoiceLineRelationService,
-      organizationService);
+      organizationService, consortiumConfigurationService, consortiumUserTenantsRetriever);
   }
 
   @Bean CompositePoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService) {
