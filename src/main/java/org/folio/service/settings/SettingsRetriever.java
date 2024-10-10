@@ -21,13 +21,12 @@ import java.util.concurrent.TimeUnit;
 
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.service.settings.util.SettingFields.KEY;
 
 @Log4j2
 public class SettingsRetriever {
 
   private static final String SETTINGS_ENDPOINT = resourcesPath(ORDER_SETTINGS);
-  private static final String SETTINGS_BY_KEY_QUERY = KEY.getValue() + "==%s";
+  private static final String SETTINGS_BY_KEY_QUERY = "key==%s";
   private static final String SETTINGS_CACHE_KEY = "%s.%s";
 
   @Value("${orders.cache.orders-settings.expiration.time.seconds:300}")
