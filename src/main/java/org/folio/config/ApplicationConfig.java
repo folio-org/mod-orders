@@ -752,7 +752,7 @@ public class ApplicationConfig {
                                                   ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
     return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
-      purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService, polInvoiceLineRelationService,
+      purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService,
       organizationService, consortiumConfigurationService, consortiumUserTenantsRetriever);
   }
 

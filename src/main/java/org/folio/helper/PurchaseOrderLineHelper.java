@@ -83,7 +83,6 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
-import org.folio.service.invoice.POLInvoiceLineRelationService;
 import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderWorkflowType;
@@ -121,7 +120,6 @@ public class PurchaseOrderLineHelper {
   private final RestClient restClient;
   private final CompositePoLineValidationService compositePoLineValidationService;
   private final OrganizationService organizationService;
-  private final POLInvoiceLineRelationService polInvoiceLineRelationService;
   private final ConsortiumConfigurationService consortiumConfigurationService;
   private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
 
@@ -137,7 +135,6 @@ public class PurchaseOrderLineHelper {
                                  PurchaseOrderStorageService purchaseOrderStorageService,
                                  RestClient restClient,
                                  CompositePoLineValidationService compositePoLineValidationService,
-                                 POLInvoiceLineRelationService polInvoiceLineRelationService,
                                  OrganizationService organizationService,
                                  ConsortiumConfigurationService consortiumConfigurationService,
                                  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
@@ -154,7 +151,6 @@ public class PurchaseOrderLineHelper {
     this.purchaseOrderStorageService = purchaseOrderStorageService;
     this.restClient = restClient;
     this.compositePoLineValidationService = compositePoLineValidationService;
-    this.polInvoiceLineRelationService = polInvoiceLineRelationService;
     this.organizationService = organizationService;
     this.consortiumConfigurationService = consortiumConfigurationService;
     this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
