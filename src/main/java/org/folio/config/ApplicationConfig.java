@@ -68,7 +68,6 @@ import org.folio.service.inventory.InventoryService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.invoice.InvoiceService;
 import org.folio.service.invoice.POLInvoiceLineRelationService;
-import org.folio.service.invoice.PoLineInvoiceLineHolderBuilder;
 import org.folio.service.orders.CombinedOrderDataPopulateService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
 import org.folio.service.orders.CompositeOrderRetrieveHolderBuilder;
@@ -753,7 +752,7 @@ public class ApplicationConfig {
                                                   ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
     return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
-      purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService, polInvoiceLineRelationService,
+      purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService,
       organizationService, consortiumConfigurationService, consortiumUserTenantsRetriever);
   }
 
@@ -842,13 +841,9 @@ public class ApplicationConfig {
     return new OrderLineUpdateInstanceStrategyResolver(strategies);
   }
 
-  @Bean PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder(InvoiceLineService invoiceLineService) {
-    return new PoLineInvoiceLineHolderBuilder(invoiceLineService);
-  }
-
   @Bean POLInvoiceLineRelationService polInvoiceLineRelationService(InvoiceLineService invoiceLineService,
-      PendingPaymentService pendingPaymentService, PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder) {
-    return new POLInvoiceLineRelationService(invoiceLineService, pendingPaymentService, poLineInvoiceLineHolderBuilder);
+      PendingPaymentService pendingPaymentService) {
+    return new POLInvoiceLineRelationService(invoiceLineService, pendingPaymentService);
   }
 
   @Bean

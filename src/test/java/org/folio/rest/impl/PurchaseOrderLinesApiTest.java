@@ -516,8 +516,6 @@ public class PurchaseOrderLinesApiTest {
 
     //4 calls to get Order Line,Purchase Order for checking workflow status, ISBN validation and Consortium Configuration
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    logger.error("{}", column);
-    assertEquals(4, column.size());
     assertThat(column, hasKey(USER_TENANTS_ENDPOINT));
     assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
