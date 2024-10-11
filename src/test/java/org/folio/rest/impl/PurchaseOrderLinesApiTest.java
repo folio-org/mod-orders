@@ -51,6 +51,7 @@ import static org.folio.orders.utils.ResourcePathResolver.PO_NUMBER;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.REPORTING_CODES;
 import static org.folio.orders.utils.ResourcePathResolver.TITLES;
+import static org.folio.orders.utils.ResourcePathResolver.USER_TENANTS_ENDPOINT;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_ADDITIONAL_COST_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_DISCOUNT_INVALID;
 import static org.folio.rest.core.exceptions.ErrorCodes.COST_UNIT_PRICE_ELECTRONIC_INVALID;
@@ -513,9 +514,9 @@ public class PurchaseOrderLinesApiTest {
 
     assertTrue(StringUtils.isEmpty(resp.getBody().asString()));
 
-    //3 calls to get Order Line,Purchase Order for checking workflow status and ISBN validation
+    //4 calls to get Order Line,Purchase Order for checking workflow status, ISBN validation and Consortium Configuration
     Map<String, List<JsonObject>> column = MockServer.serverRqRs.column(HttpMethod.GET);
-    assertEquals(3, column.size());
+    assertThat(column, hasKey(USER_TENANTS_ENDPOINT));
     assertThat(column, hasKey(PO_LINES_STORAGE));
     assertThat(column, not(hasKey(PIECES_STORAGE)));
 

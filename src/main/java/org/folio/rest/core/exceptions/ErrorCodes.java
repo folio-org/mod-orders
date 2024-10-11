@@ -83,6 +83,7 @@ public enum ErrorCodes {
   PIECES_TO_BE_DELETED("piecesNeedToBeDeleted", "Pieces need to be deleted"),
   PIECES_TO_BE_CREATED("piecesNeedToBeCreated", "Pieces need to be created"),
   LOCATION_CAN_NOT_BE_MODIFIER_AFTER_OPEN("locationCannotBeModifiedAfterOpen", "Please use the receiving App to update pieces and locations"),
+  LOCATION_UPDATE_WITHOUT_AFFILIATION("locationUpdateWithoutAffiliation", "Location must not be updated if the user does not have its corresponding affiliation"),
   REQUEST_FOUND("thereAreRequestsOnItem", "There are requests on item"),
   REQUESTS_ACTION_REQUIRED("requestsActionRequired", "There are circulation requests on items and requestsAction should be populated"),
   PIECES_HAVE_DIFFERENT_RECEIVING_TENANT_IDS("piecesHaveDifferentReceivingTenantIds", "All pieces do not have the same receivingTenantId"),

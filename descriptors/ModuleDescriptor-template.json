@@ -265,6 +265,7 @@
             "invoice.invoice-lines.item.put",
             "invoices.acquisition-units.bypass.execute",
             "orders-storage.order-invoice-relationships.collection.get",
+            "consortia.user-tenants.collection.get",
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post"
           ]
@@ -1237,7 +1238,7 @@
     },
     {
       "id": "inventory",
-      "version": "10.5 11.0 12.0 13.0"
+      "version": "10.5 11.0 12.0 13.0 14.0"
     },
     {
       "id": "instance-types",
