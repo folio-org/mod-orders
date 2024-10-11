@@ -41,7 +41,7 @@
             "orders-storage.configuration.suffixes.collection.get",
             "finance.funds.item.get",
             "finance.transactions.collection.get",
-            "finance.transactions.batch"
+            "finance.transactions.batch.execute"
           ]
         },
         {
@@ -98,7 +98,7 @@
             "orders.item.delete"
           ],
           "modulePermissions": [
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.purchase-orders.item.delete",
@@ -151,7 +151,7 @@
             "orders.po-lines.collection.get"
           ],
           "permissionsDesired": [
-            "orders.bypass-acquisition-units"
+            "orders.acquisition-units.bypass.execute"
           ],
           "modulePermissions": [
             "acquisitions-units-storage.units.collection.get",
@@ -195,7 +195,7 @@
             "orders.po-lines.item.get"
           ],
           "permissionsDesired": [
-            "orders.bypass-acquisition-units"
+            "orders.acquisition-units.bypass.execute"
           ],
           "modulePermissions": [
             "orders-storage.po-lines.item.get",
@@ -217,7 +217,7 @@
             "orders.po-lines.item.put"
           ],
           "permissionsDesired": [
-            "orders.bypass-acquisition-units"
+            "orders.acquisition-units.bypass.execute"
           ],
           "modulePermissions": [
             "orders-storage.alerts.item.post",
@@ -234,7 +234,7 @@
             "finance.ledgers.current-fiscal-year.item.get",
             "finance.fiscal-years.item.get",
             "finance.expense-classes.collection.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "finance-storage.ledgers.collection.get",
             "finance-storage.budget-expense-classes.collection.get",
@@ -263,7 +263,7 @@
             "organizations-storage.organizations.collection.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put",
-            "invoices.bypass-acquisition-units",
+            "invoices.acquisition-units.bypass.execute",
             "orders-storage.order-invoice-relationships.collection.get",
             "consortia.user-tenants.collection.get",
             "user-tenants.collection.get",
@@ -279,7 +279,7 @@
             "orders.po-lines.item.delete"
           ],
           "modulePermissions": [
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "orders-storage.purchase-orders.item.get",
             "orders-storage.po-lines.item.get",
@@ -392,7 +392,7 @@
             "acquisitions-units-storage.memberships.collection.get",
             "orders-storage.purchase-orders.collection.get",
             "finance.funds.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get"
           ]
         },
@@ -427,7 +427,7 @@
             "user-tenants.collection.get",
             "consortia.sharing-instances.item.post",
             "finance.funds.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "orders-storage.pieces.collection.get",
             "orders-storage.pieces.item.put",
@@ -520,7 +520,7 @@
             "inventory-storage.contributor-name-types.collection.get",
             "finance.funds.budget.item.get",
             "finance.fiscal-years.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.post",
             "orders-storage.pieces.collection.get",
@@ -569,7 +569,7 @@
             "inventory-storage.instance-types.collection.get",
             "inventory-storage.instance-statuses.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.get",
             "orders-storage.pieces.item.post",
@@ -604,7 +604,7 @@
             "finance.funds.collection.get",
             "finance.funds.budget.item.get",
             "finance.fiscal-years.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "finance-storage.ledgers.collection.get",
             "orders-storage.pieces.item.delete",
@@ -625,7 +625,7 @@
         {
           "methods": ["GET"],
           "pathPattern": "/orders/pieces-requests",
-          "permissionsRequired": ["orders.pieces.collection.get"],
+          "permissionsRequired": ["orders.piece-requests.collection.get"],
           "modulePermissions": [
             "orders-storage.pieces.collection.get",
             "circulation.requests.collection.get"
@@ -994,7 +994,7 @@
             "configuration.entries.collection.get",
             "finance-storage.funds.collection.get",
             "finance.exchange-rate.item.get",
-            "finance.transactions.batch",
+            "finance.transactions.batch.execute",
             "finance.transactions.collection.get",
             "orders-storage.purchase-orders.collection.get",
             "orders-storage.po-lines.collection.get",
@@ -1513,6 +1513,11 @@
       "description": "Delete an existing piece"
     },
     {
+      "permissionName": "orders.piece-requests.collection.get",
+      "displayName": "Orders - Get piece requests",
+      "description": "Get order piece requests"
+    },
+    {
       "permissionName" : "orders.pieces.all",
       "displayName" : "All piece permissions",
       "description" : "All permissions for the pieces",
@@ -1521,7 +1526,8 @@
         "orders.pieces.item.post",
         "orders.pieces.item.get",
         "orders.pieces.item.put",
-        "orders.pieces.item.delete"
+        "orders.pieces.item.delete",
+        "orders.piece-requests.collection.get"
       ]
     },
     {
@@ -1636,9 +1642,10 @@
       ]
     },
     {
-      "permissionName": "orders.bypass-acquisition-units",
+      "permissionName": "orders.acquisition-units.bypass.execute",
       "displayName": "Bypass acquisition units checks",
-      "description": "Backend internal permission to bypass order acquisition units checks"
+      "description": "Backend internal permission to bypass order acquisition units checks",
+      "replaces": ["orders.bypass-acquisition-units"]
     },
     {
       "permissionName": "orders.acquisitions-units-assignments.assign",
@@ -2027,7 +2034,7 @@
         "finance.funds.collection.get",
         "finance.funds.item.get",
         "finance.budgets.collection.get",
-        "finance.transactions.batch",
+        "finance.transactions.batch.execute",
         "finance.transactions.collection.get",
         "finance.transactions.item.get",
         "finance.ledgers.current-fiscal-year.item.get",
@@ -2060,7 +2067,7 @@
         "inventory-storage.identifier-types.collection.get",
         "invoice.invoices.collection.get",
         "invoice.invoice-lines.collection.get",
-        "invoices.bypass-acquisition-units",
+        "invoices.acquisition-units.bypass.execute",
         "organizations-storage.organizations.collection.get",
         "organizations-storage.organizations.item.get",
         "isbn-utils.convert-to-13.get",
@@ -2101,7 +2108,7 @@
         "finance.budgets.collection.get",
         "finance.fiscal-years.item.get",
         "finance.ledgers.current-fiscal-year.item.get",
-        "finance.transactions.batch",
+        "finance.transactions.batch.execute",
         "finance.transactions.collection.get",
         "finance.transactions.item.get",
         "finance.exchange-rate.item.get",
