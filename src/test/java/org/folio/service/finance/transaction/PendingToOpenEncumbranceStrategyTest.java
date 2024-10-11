@@ -56,7 +56,6 @@ package org.folio.service.finance.transaction;
   import org.folio.service.finance.budget.BudgetService;
   import org.folio.service.invoice.InvoiceLineService;
   import org.folio.service.invoice.POLInvoiceLineRelationService;
-  import org.folio.service.invoice.PoLineInvoiceLineHolderBuilder;
   import org.folio.service.orders.OrderInvoiceRelationService;
   import org.junit.jupiter.api.BeforeEach;
   import org.junit.jupiter.api.Test;
@@ -116,9 +115,8 @@ public class PendingToOpenEncumbranceStrategyTest {
       encumbranceService, fundService, fiscalYearService, exchangeRateProviderResolver, budgetService, ledgerService);
     EncumbrancesProcessingHolderBuilder encumbrancesProcessingHolderBuilder = new EncumbrancesProcessingHolderBuilder();
     PendingPaymentService pendingPaymentService = new PendingPaymentService(transactionService);
-    PoLineInvoiceLineHolderBuilder poLineInvoiceLineHolderBuilder = new PoLineInvoiceLineHolderBuilder(invoiceLineService);
     POLInvoiceLineRelationService polInvoiceLineRelationService = new POLInvoiceLineRelationService(invoiceLineService,
-      pendingPaymentService, poLineInvoiceLineHolderBuilder);
+      pendingPaymentService);
     pendingToOpenEncumbranceStrategy = new PendingToOpenEncumbranceStrategy(encumbranceService,
       fundsDistributionService, budgetRestrictionService, encumbranceRelationsHoldersBuilder,
       encumbrancesProcessingHolderBuilder, polInvoiceLineRelationService);

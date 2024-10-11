@@ -5,15 +5,18 @@ import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vertx.core.json.JsonObject;
+import org.folio.CopilotGenerated;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@CopilotGenerated(partiallyGenerated = true)
 public class PoLineCommonUtilTest {
   private static final String ORDER_ID = "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14";
   private static final String ORDER_PATH = BASE_MOCK_DATA_PATH + "compositeOrders/" + ORDER_ID + ".json";
@@ -198,4 +201,48 @@ public class PoLineCommonUtilTest {
     boolean result = PoLineCommonUtil.isInventoryUpdateNotRequired(poLine);
     assertEquals(result, updateNotRequired);
   }
+
+
+  @Test
+  void testExtractUnaffiliatedLocations() {
+    List<Location> locations = List.of(
+      createLocation("tenant1"),
+      createLocation("tenant2"),
+      createLocation("tenant3")
+    );
+    List<String> tenantIds = List.of("tenant1", "tenant2");
+    var result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
+    assertEquals(1, result.size());
+    assertTrue(result.contains(locations.get(2)));
+  }
+
+  @Test
+  void testExtractUnaffiliatedLocationsWhenLocationsListIsEmpty() {
+    List<Location> locations = new ArrayList<>();
+    List<String> tenantIds = List.of("tenant1", "tenant2");
+    var result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
+    assertTrue(result.isEmpty());
+
+    locations.add(new Location().withTenantId("tenant1"));
+    locations.add(new Location().withTenantId("tenant2"));
+    result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void testExtractUnaffiliatedLocationsHandleNullLocationTenantId() {
+    List<Location> locations = List.of(
+      createLocation(null),
+      createLocation("tenant2")
+    );
+    List<String> tenantIds = List.of("tenant1");
+    var result = PoLineCommonUtil.extractUnaffiliatedLocations(locations, tenantIds);
+    assertEquals(1, result.size());
+    assertTrue(result.contains(locations.get(1)));
+  }
+
+  private static Location createLocation(String tenantId) {
+    return new Location().withTenantId(tenantId);
+  }
+
 }
