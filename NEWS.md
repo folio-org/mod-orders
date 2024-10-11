@@ -1,4 +1,9 @@
 ## 12.9.0 - Unreleased
+
+### New APIs versions
+
+* Requires `holdings-storage v8.0`
+
 ### Stories
 
 ### Bug Fixes
