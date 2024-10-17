@@ -53,14 +53,14 @@ public class PieceDeleteFlowManager {
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
       .compose(aVoid -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .compose(aVoid -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext))
-      .compose(aVoid -> isAllowedToDeletePiece(holder, requestContext))
+      .compose(aVoid -> isAllowedToDeletePiece(holder))
       .compose(aVoid -> isDeletePieceRequestValid(holder, requestContext))
       .compose(aVoid -> pieceDeleteFlowInventoryManager.processInventory(holder, requestContext))
       .compose(pair -> updatePoLine(holder, requestContext))
       .compose(aVoid -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext));
   }
 
-  private Future<Void> isAllowedToDeletePiece(PieceDeletionHolder holder, RequestContext requestContext) {
+  private Future<Void> isAllowedToDeletePiece(PieceDeletionHolder holder) {
     var poLineCheckItems = holder.getOriginPoLine().getCheckinItems(); // false = Synchronized order and receipt quantity
     var overallCostQuantity = getOverallCostQuantity(holder.getOriginPoLine());
     if (Boolean.FALSE.equals(poLineCheckItems) && overallCostQuantity == 1) {
