@@ -380,7 +380,7 @@ public class PieceApiTest {
     String titleId = UUID.randomUUID().toString();
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(2);
     CompositePoLine poLine = new CompositePoLine().withId(lineId).withPurchaseOrderId(order.getId())
       .withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
@@ -432,7 +432,7 @@ public class PieceApiTest {
     String titleId = UUID.randomUUID().toString();
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(2);
     CompositePoLine poLine = new CompositePoLine().withId(lineId).withPurchaseOrderId(order.getId())
       .withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
@@ -464,7 +464,7 @@ public class PieceApiTest {
 
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(orderId);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1);
+    Cost cost = new Cost().withQuantityElectronic(2);
     CompositePoLine poLine = new CompositePoLine().withId(lineId).withPurchaseOrderId(order.getId())
       .withIsPackage(false).withPurchaseOrderId(orderId).withId(lineId)
       .withOrderFormat(CompositePoLine.OrderFormat.PHYSICAL_RESOURCE)
@@ -494,7 +494,7 @@ public class PieceApiTest {
 
     PurchaseOrder order = new PurchaseOrder().withId(UUID.randomUUID().toString());
     CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
-      .withCost(new Cost().withQuantityElectronic(1));
+      .withCost(new Cost().withQuantityElectronic(2));
     Title title = new Title().withId(UUID.randomUUID().toString()).withTitle("title name");
     Piece piece = new Piece().withId(UUID.randomUUID().toString())
       .withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98")

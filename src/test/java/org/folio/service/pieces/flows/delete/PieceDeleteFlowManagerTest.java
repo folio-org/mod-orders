@@ -143,7 +143,7 @@ public class PieceDeleteFlowManagerTest {
     holding.put(HOLDING_PERMANENT_LOCATION_ID, locationId);
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
       .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
-    Cost cost = new Cost().withQuantityElectronic(1)
+    Cost cost = new Cost().withQuantityElectronic(2)
       .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
       .withPoLineEstimatedPrice(1d);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
@@ -310,7 +310,7 @@ public class PieceDeleteFlowManagerTest {
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(lineId).withTitleId(titleId)
       .withLocationId(locationId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withLocationId(locationId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1)
+    Cost cost = new Cost().withQuantityElectronic(2)
       .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
       .withPoLineEstimatedPrice(1d);
     PoLine poLine = new PoLine().withIsPackage(false).withCheckinItems(false).withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)
@@ -370,7 +370,7 @@ public class PieceDeleteFlowManagerTest {
     Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(lineId)
                              .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
     Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
-    Cost cost = new Cost().withQuantityElectronic(1)
+    Cost cost = new Cost().withQuantityElectronic(2)
       .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
       .withPoLineEstimatedPrice(1d);
     PoLine poLine = new PoLine().withIsPackage(false).withCheckinItems(false).withOrderFormat(PoLine.OrderFormat.ELECTRONIC_RESOURCE)

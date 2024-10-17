@@ -13,7 +13,6 @@ import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
@@ -62,12 +61,10 @@ public class PieceDeleteFlowManager {
   }
 
   private Future<Void> isAllowedToDeletePiece(PieceDeletionHolder holder, RequestContext requestContext) {
-    var poLineCheckItems = holder.getOriginPoLine().getCheckinItems();
-    var orderStatus = holder.getOriginPurchaseOrder().getWorkflowStatus();
+    var poLineCheckItems = holder.getOriginPoLine().getCheckinItems(); // false = Synchronized order and receipt quantity
     var overallCostQuantity = getOverallCostQuantity(holder.getOriginPoLine());
-    if (!poLineCheckItems && CompositePurchaseOrder.WorkflowStatus.CLOSED.equals(orderStatus) && overallCostQuantity == 1) {
-      var params = List.of(new Parameter().withKey("WorkFlowStatus").withValue(orderStatus.value()),
-        new Parameter().withKey("OverallCostQuantity").withValue(String.valueOf(overallCostQuantity)));
+    if (Boolean.FALSE.equals(poLineCheckItems) && overallCostQuantity == 1) {
+      var params = List.of(new Parameter().withKey("OverallCostQuantity").withValue(String.valueOf(overallCostQuantity)));
       var error = ErrorCodes.LAST_PIECE.toError().withParameters(params);
       logger.error("isAllowedToDeletePiece:: {}", error.getMessage());
       throw new HttpException(RestConstants.VALIDATION_ERROR, error);
