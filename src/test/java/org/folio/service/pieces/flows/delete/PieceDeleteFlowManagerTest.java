@@ -95,10 +95,11 @@ public class PieceDeleteFlowManagerTest {
 
   private RequestContext requestContext;
   private static boolean runningOnOwn;
+  private AutoCloseable closeable;
 
   @BeforeEach
   void initMocks(){
-    MockitoAnnotations.openMocks(this);
+    closeable = MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctx, okapiHeadersMock);
   }
@@ -121,7 +122,8 @@ public class PieceDeleteFlowManagerTest {
   }
 
   @AfterEach
-  void resetMocks() {
+  void resetMocks() throws Exception {
+    closeable.close();
     clearServiceInteractions();
     Mockito.reset(pieceStorageService, protectionService, inventoryItemManager, inventoryHoldingManager,
       pieceUpdateInventoryService, pieceDeleteFlowPoLineService, basePieceFlowHolderBuilder);
@@ -188,6 +190,53 @@ public class PieceDeleteFlowManagerTest {
     assertNull(poLine.getLocations().get(0).getLocationId());
     assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
     verify(pieceDeleteFlowPoLineService, times(0)).updatePoLine(pieceDeletionHolderCapture.capture(), eq(requestContext));
+    verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
+  }
+
+  @Test
+  void positive_shouldNotUpdateLineQuantityIfOrderIsClosedAndCostQuantityOneAndShouldNotDeleteHoldingAndItemAndPiece()  {
+    String orderId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    String lineId = UUID.randomUUID().toString();
+    String titleId = UUID.randomUUID().toString();
+    String itemId = UUID.randomUUID().toString();
+    Piece piece = new Piece().withId(UUID.randomUUID().toString()).withPoLineId(lineId).withItemId(itemId).withTitleId(titleId)
+      .withHoldingId(holdingId).withFormat(Piece.Format.ELECTRONIC);
+    Cost cost = new Cost().withQuantityElectronic(1)
+      .withListUnitPriceElectronic(1d).withExchangeRate(1d).withCurrency("USD")
+      .withPoLineEstimatedPrice(1d);
+    Location loc = new Location().withHoldingId(holdingId).withQuantityElectronic(1).withQuantity(1);
+    PoLine poLine = new PoLine().withCheckinItems(false).withIsPackage(true)
+      .withPurchaseOrderId(orderId).withId(lineId).withLocations(List.of(loc)).withCost(cost);
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(orderId).withWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
+    Title title = new Title().withId(titleId);
+
+    doReturn(succeededFuture(piece)).when(pieceStorageService).getPieceById(piece.getId(), requestContext);
+    doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
+
+    final ArgumentCaptor<PieceDeletionHolder> PieceDeletionHolderCapture = ArgumentCaptor.forClass(PieceDeletionHolder.class);
+    doAnswer((Answer<Future<Void>>) invocation -> {
+      PieceDeletionHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withOrderInformation(purchaseOrder, poLine);
+      return succeededFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
+    doAnswer((Answer<Future<Void>>) invocation -> {
+      PieceDeletionHolder answerHolder = invocation.getArgument(0);
+      answerHolder.withTitleInformation(title);
+      return succeededFuture(null);
+    }).when(basePieceFlowHolderBuilder).updateHolderWithTitleInformation(PieceDeletionHolderCapture.capture(), eq(requestContext));
+
+    pieceDeleteFlowManager.deletePiece(piece.getId(), true, requestContext).result();
+
+    PieceDeletionHolder holder = PieceDeletionHolderCapture.getValue();
+    assertNull(poLine.getLocations().get(0).getLocationId());
+    assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
+    verify(pieceStorageService, times(0)).deletePiece(eq(piece.getId()), eq(true), eq(requestContext));
+    verify(pieceUpdateInventoryService, times(0)).deleteHoldingConnectedToPiece(piece, requestContext);
+
+    assertNull(poLine.getLocations().get(0).getLocationId());
+    assertEquals(holdingId, poLine.getLocations().get(0).getHoldingId());
+    verify(pieceDeleteFlowPoLineService, times(0)).updatePoLine(any(), any());
     verify(basePieceFlowHolderBuilder).updateHolderWithOrderInformation(holder, requestContext);
   }
 
