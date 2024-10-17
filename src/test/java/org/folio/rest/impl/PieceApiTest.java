@@ -493,7 +493,8 @@ public class PieceApiTest {
     logger.info("=== Test delete piece by id without requests ===");
 
     PurchaseOrder order = new PurchaseOrder().withId(UUID.randomUUID().toString());
-    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId());
+    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString()).withPurchaseOrderId(order.getId())
+      .withCost(new Cost().withQuantityElectronic(1));
     Title title = new Title().withId(UUID.randomUUID().toString()).withTitle("title name");
     Piece piece = new Piece().withId(UUID.randomUUID().toString())
       .withItemId("522a501a-56b5-48d9-b28a-3a8f02482d98")
