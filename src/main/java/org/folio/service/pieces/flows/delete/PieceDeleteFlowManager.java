@@ -64,7 +64,9 @@ public class PieceDeleteFlowManager {
     var poLineCheckItems = holder.getOriginPoLine().getCheckinItems(); // false = Synchronized order and receipt quantity
     var overallCostQuantity = getOverallCostQuantity(holder.getOriginPoLine());
     if (Boolean.FALSE.equals(poLineCheckItems) && overallCostQuantity == 1) {
-      var params = List.of(new Parameter().withKey("OverallCostQuantity").withValue(String.valueOf(overallCostQuantity)));
+      var params = List.of(
+        new Parameter().withKey("OverallCostQuantity").withValue(String.valueOf(overallCostQuantity)),
+        new Parameter().withKey("PoLineId").withValue(holder.getOrderLineId()));
       var error = ErrorCodes.LAST_PIECE.toError().withParameters(params);
       logger.error("isAllowedToDeletePiece:: {}", error.getMessage());
       throw new HttpException(RestConstants.VALIDATION_ERROR, error);
