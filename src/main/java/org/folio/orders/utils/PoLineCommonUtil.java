@@ -296,6 +296,10 @@ public final class PoLineCommonUtil {
     return defaultIfNull(compPOL.getCost().getQuantityElectronic(), 0);
   }
 
+  public static int getOverallCostQuantity(CompositePoLine comPOL) {
+    return getElectronicCostQuantity(comPOL) + getPhysicalCostQuantity(comPOL);
+  }
+
   public static JsonObject verifyProtectedFieldsChanged(List<String> protectedFields, JsonObject objectFromStorage,
     JsonObject requestObject) {
     Set<String> fields = new HashSet<>();

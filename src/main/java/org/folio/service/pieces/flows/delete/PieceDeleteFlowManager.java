@@ -1,7 +1,10 @@
 package org.folio.service.pieces.flows.delete;
 
+import static org.folio.orders.utils.PoLineCommonUtil.getOverallCostQuantity;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
+
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,6 +13,7 @@ import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.ProtectionService;
 import org.folio.service.pieces.PieceStorageService;
@@ -49,10 +53,25 @@ public class PieceDeleteFlowManager {
       .compose(aHolder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext))
       .compose(aVoid -> basePieceFlowHolderBuilder.updateHolderWithTitleInformation(holder, requestContext))
       .compose(aVoid -> protectionService.isOperationRestricted(holder.getTitle().getAcqUnitIds(), DELETE, requestContext))
+      .compose(aVoid -> isAllowedToDeletePiece(holder))
       .compose(aVoid -> isDeletePieceRequestValid(holder, requestContext))
       .compose(aVoid -> pieceDeleteFlowInventoryManager.processInventory(holder, requestContext))
       .compose(pair -> updatePoLine(holder, requestContext))
       .compose(aVoid -> pieceStorageService.deletePiece(holder.getPieceToDelete().getId(), true, requestContext));
+  }
+
+  private Future<Void> isAllowedToDeletePiece(PieceDeletionHolder holder) {
+    var poLineCheckItems = holder.getOriginPoLine().getCheckinItems(); // false = Synchronized order and receipt quantity
+    var overallCostQuantity = getOverallCostQuantity(holder.getOriginPoLine());
+    if (Boolean.FALSE.equals(poLineCheckItems) && overallCostQuantity == 1) {
+      var params = List.of(
+        new Parameter().withKey("OverallCostQuantity").withValue(String.valueOf(overallCostQuantity)),
+        new Parameter().withKey("PoLineId").withValue(holder.getOrderLineId()));
+      var error = ErrorCodes.LAST_PIECE.toError().withParameters(params);
+      logger.error("isAllowedToDeletePiece:: {}", error.getMessage());
+      throw new HttpException(RestConstants.VALIDATION_ERROR, error);
+    }
+    return Future.succeededFuture();
   }
 
   private Future<Void> isDeletePieceRequestValid(PieceDeletionHolder holder, RequestContext requestContext) {
