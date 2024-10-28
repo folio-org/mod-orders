@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.models.CompositeOrderRetrieveHolder;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.Transaction;
@@ -60,7 +61,7 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
 
   private Future<List<InvoiceLine>> getInvoiceLinesByInvoiceIds(List<Invoice> invoices, FiscalYear fiscalYear, RequestContext requestContext) {
     return collectResultsOnSuccess(invoices.stream()
-      .filter(invoice -> invoice.getFiscalYearId().equals(fiscalYear.getId()))
+      .filter(invoice -> StringUtils.equals(invoice.getFiscalYearId(), fiscalYear.getId()))
       .map(invoice -> invoiceLineService.getInvoiceLinesByInvoiceId(invoice.getId(), requestContext))
       .toList())
       .map(invoiceLinesLists -> invoiceLinesLists.stream().flatMap(List::stream).toList());
