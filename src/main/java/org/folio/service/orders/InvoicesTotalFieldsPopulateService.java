@@ -22,12 +22,12 @@ import io.vertx.core.Future;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 @Log4j2
-public class TransactionsTotalFieldsPopulateService implements CompositeOrderDynamicDataPopulateService {
+public class InvoicesTotalFieldsPopulateService implements CompositeOrderDynamicDataPopulateService {
 
   private final InvoiceService invoiceService;
   private final InvoiceLineService invoiceLineService;
 
-  public TransactionsTotalFieldsPopulateService(InvoiceService invoiceService, InvoiceLineService invoiceLineService) {
+  public InvoicesTotalFieldsPopulateService(InvoiceService invoiceService, InvoiceLineService invoiceLineService) {
     this.invoiceService = invoiceService;
     this.invoiceLineService = invoiceLineService;
   }
@@ -64,7 +64,7 @@ public class TransactionsTotalFieldsPopulateService implements CompositeOrderDyn
 
   private CompositeOrderRetrieveHolder populateTotalFields(CompositeOrderRetrieveHolder holder, Map<Invoice, List<InvoiceLine>> invoiceToInvoiceLinesMap) {
     return holder
-      .withTotalEncumbered(getTotalAmountSum(invoiceToInvoiceLinesMap, Math::abs))
+      .withTotalEncumbered(getTotalAmountSum(invoiceToInvoiceLinesMap, Function.identity()))
       .withTotalExpended(getTotalAmountSum(invoiceToInvoiceLinesMap, total -> Double.max(total, 0)))
       .withTotalCredited(getTotalAmountSum(invoiceToInvoiceLinesMap, total -> Double.min(total, 0)));
   }
@@ -78,7 +78,7 @@ public class TransactionsTotalFieldsPopulateService implements CompositeOrderDyn
 
   private double getTotalAmount(List<InvoiceLine> invoiceLines, String currency, Function<Double, Double> amountMapper) {
     return StreamEx.of(invoiceLines)
-      .map(invoiceLine -> amountMapper.apply(invoiceLine.getTotal()))
+      .map(invoiceLine -> Math.abs(amountMapper.apply(invoiceLine.getTotal())))
       .map(amount -> Money.of(amount, currency))
       .reduce(Money::add)
       .map(amount -> amount.with(MonetaryOperators.rounding()).getNumber().doubleValue())
