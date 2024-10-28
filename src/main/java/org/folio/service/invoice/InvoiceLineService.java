@@ -52,7 +52,7 @@ public class InvoiceLineService {
     return restClient.get(requestEntry, InvoiceLineCollection.class, requestContext)
       .map(InvoiceLineCollection::getInvoiceLines)
       .recover(t -> {
-        logger.error(GET_INVOICE_LINES_ERROR + ". Query: " + query, t);
+        logger.error("{}. Query: {}", GET_INVOICE_LINES_ERROR, query, t);
         throw new HttpException(t instanceof HttpException ? ((HttpException) t).getCode() :
           HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), GET_INVOICE_LINES_ERROR);
       });
