@@ -4,9 +4,11 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import io.vertxconcurrent.Semaphore;
 import one.util.streamex.IntStreamEx;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
@@ -48,6 +50,7 @@ import java.util.function.Function;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.folio.rest.RestConstants.EN;
+import static org.folio.rest.RestConstants.SEMAPHORE_MAX_ACTIVE_THREADS;
 import static org.folio.rest.core.exceptions.ErrorCodes.MULTIPLE_NONPACKAGE_TITLES;
 import static org.folio.rest.core.exceptions.ErrorCodes.TITLE_NOT_FOUND;
 
@@ -411,6 +414,30 @@ public class HelperUtils {
 
   public static <T> T clone(Class<T> clazz, T object) {
     return JsonObject.mapFrom(object).mapTo(clazz);
+  }
+
+  public static <I, O> Future<List<O>> executeWithSemaphores(Collection<I> collection,
+                                                             FunctionReturningFuture<I, O> f, RequestContext requestContext) {
+    if (collection.isEmpty())
+      return Future.succeededFuture(List.of());
+    return requestContext.getContext().<List<Future<O>>>executeBlocking(promise -> {
+      Semaphore semaphore = new Semaphore(SEMAPHORE_MAX_ACTIVE_THREADS, Vertx.currentContext().owner());
+      List<Future<O>> futures = new ArrayList<>();
+      for (I item : collection) {
+        semaphore.acquire(() -> {
+          Future<O> future = f.apply(item)
+            .onComplete(asyncResult -> semaphore.release());
+          futures.add(future);
+          if (futures.size() == collection.size()) {
+            promise.complete(futures);
+          }
+        });
+      }
+    }).compose(HelperUtils::collectResultsOnSuccess);
+  }
+
+  public interface FunctionReturningFuture<I, O> {
+    Future<O> apply(I item);
   }
 
 }
