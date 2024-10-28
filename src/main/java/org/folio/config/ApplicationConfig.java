@@ -81,7 +81,7 @@ import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.orders.ReEncumbranceHoldersBuilder;
-import org.folio.service.orders.InvoicesTotalFieldsPopulateService;
+import org.folio.service.orders.CompositeOrderTotalFieldsPopulateService;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderFlowValidator;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderHolderBuilder;
 import org.folio.service.orders.flows.update.open.OpenCompositeOrderInventoryService;
@@ -424,8 +424,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(InvoiceService invoiceService, InvoiceLineService invoiceLineService) {
-    return new InvoicesTotalFieldsPopulateService(invoiceService, invoiceLineService);
+  CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService, InvoiceService invoiceService, InvoiceLineService invoiceLineService) {
+    return new CompositeOrderTotalFieldsPopulateService(transactionService, invoiceService, invoiceLineService);
   }
 
   @Bean("orderLinesSummaryPopulateService")
