@@ -54,7 +54,7 @@ import java.util.function.Function;
 import static java.lang.String.format;
 import static org.folio.orders.utils.QueryUtils.encodeQuery;
 import static org.folio.rest.RestConstants.ID;
-import static org.folio.service.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 
 /**
  * The class responsible for caching {@link MappingParameters}
