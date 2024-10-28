@@ -1,31 +1,35 @@
 package org.folio.service.orders;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.folio.models.CompositeOrderRetrieveHolder;
-import org.folio.rest.acq.model.finance.Transaction;
 import org.folio.rest.acq.model.invoice.Invoice;
+import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
-import org.folio.service.finance.transaction.TransactionService;
+import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.invoice.InvoiceService;
 import org.javamoney.moneta.Money;
 import org.javamoney.moneta.function.MonetaryOperators;
 
 import io.vertx.core.Future;
 
+import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+
 @Log4j2
 public class TransactionsTotalFieldsPopulateService implements CompositeOrderDynamicDataPopulateService {
 
-  private final TransactionService transactionService;
   private final InvoiceService invoiceService;
+  private final InvoiceLineService invoiceLineService;
 
-  public TransactionsTotalFieldsPopulateService(TransactionService transactionService, InvoiceService invoiceService) {
-    this.transactionService = transactionService;
+  public TransactionsTotalFieldsPopulateService(InvoiceService invoiceService, InvoiceLineService invoiceLineService) {
     this.invoiceService = invoiceService;
+    this.invoiceLineService = invoiceLineService;
   }
 
   @Override
@@ -38,35 +42,46 @@ public class TransactionsTotalFieldsPopulateService implements CompositeOrderDyn
   }
 
   private Future<CompositeOrderRetrieveHolder> withTotalFields(CompositeOrderRetrieveHolder holder, RequestContext requestContext) {
-    var query = "transactionType==Encumbrance AND encumbrance.sourcePurchaseOrderId==%s AND fiscalYearId==%s"
-      .formatted(holder.getOrderId(), holder.getFiscalYearId());
-    return transactionService.getTransactions(query, requestContext)
-      .map(transactions -> holder
-        .withTotalEncumbered(getTransactionsTotal(transactions, Transaction::getAmount))
-        .withTotalExpended(getTransactionsTotal(transactions, transaction -> transaction.getEncumbrance().getAmountExpended()))
-        .withTotalCredited(getTransactionsTotal(transactions, transaction -> transaction.getEncumbrance().getAmountCredited())))
-      .compose(v -> holder.getOrder().getTotalExpended() != 0
-        ? Future.succeededFuture(holder)
-        : invoiceService.getInvoicesByOrderId(holder.getOrderId(), requestContext)
-            .map(invoices -> holder.withTotalExpended(getInvoicesTotal(invoices, holder.getFiscalYearId(), Invoice::getTotal))));
+    return invoiceService.getInvoicesByOrderId(holder.getOrderId(), requestContext)
+      .compose(invoices -> getInvoiceLinesByInvoiceIds(invoices, requestContext)
+        .map(invoiceLines -> groupInvoiceLinesByInvoices(invoices, invoiceLines))
+        .map(invoiceToInvoiceLinesMap -> populateTotalFields(holder, invoiceToInvoiceLinesMap)));
   }
 
-  private double getTransactionsTotal(List<Transaction> transactions, Function<Transaction, Double> amountExtractor) {
-    return getMonetaryAmount(StreamEx.of(transactions), Transaction::getCurrency, amountExtractor);
+  private Future<List<InvoiceLine>> getInvoiceLinesByInvoiceIds(List<Invoice> invoices, RequestContext requestContext) {
+    return collectResultsOnSuccess(invoices.stream()
+      .map(invoice -> invoiceLineService.getInvoiceLinesByInvoiceId(invoice.getId(), requestContext))
+      .toList())
+      .map(invoiceLinesLists -> invoiceLinesLists.stream().flatMap(List::stream).toList());
   }
 
-  private double getInvoicesTotal(List<Invoice> invoices, String fiscalYearId, Function<Invoice, Double> amountExtractor) {
-    var filteredInvoices = StreamEx.of(invoices)
-      .filter(invoice -> invoice.getFiscalYearId().equals(fiscalYearId));
-    return getMonetaryAmount(filteredInvoices, Invoice::getCurrency, amountExtractor);
+  private Map<Invoice, List<InvoiceLine>> groupInvoiceLinesByInvoices(List<Invoice> invoices, List<InvoiceLine> invoiceLines) {
+    return invoices.stream()
+      .collect(Collectors.toMap(invoice -> invoice, invoice -> invoiceLines.stream()
+        .filter(invoiceLine -> invoiceLine.getInvoiceId().equals(invoice.getId()))
+        .collect(Collectors.toList())));
   }
 
-  private <T> double getMonetaryAmount(StreamEx<T> entities, Function<T, String> currencyExtractor, Function<T, Double> amountExtractor) {
-    return entities
-      .map(entity -> Money.of(amountExtractor.apply(entity), currencyExtractor.apply(entity)))
+  private CompositeOrderRetrieveHolder populateTotalFields(CompositeOrderRetrieveHolder holder, Map<Invoice, List<InvoiceLine>> invoiceToInvoiceLinesMap) {
+    return holder
+      .withTotalEncumbered(getTotalAmountSum(invoiceToInvoiceLinesMap, Math::abs))
+      .withTotalExpended(getTotalAmountSum(invoiceToInvoiceLinesMap, total -> Double.max(total, 0)))
+      .withTotalCredited(getTotalAmountSum(invoiceToInvoiceLinesMap, total -> Double.min(total, 0)));
+  }
+
+  private double getTotalAmountSum(Map<Invoice, List<InvoiceLine>> invoiceToInvoiceLinesMap, Function<Double, Double> amountMapper) {
+    return StreamEx.of(invoiceToInvoiceLinesMap.entrySet())
+      .mapToDouble(entry -> getTotalAmount(entry.getValue(), entry.getKey().getCurrency(), amountMapper))
+      .sum();
+
+  }
+
+  private double getTotalAmount(List<InvoiceLine> invoiceLines, String currency, Function<Double, Double> amountMapper) {
+    return StreamEx.of(invoiceLines)
+      .map(invoiceLine -> amountMapper.apply(invoiceLine.getTotal()))
+      .map(amount -> Money.of(amount, currency))
       .reduce(Money::add)
-      .map(amount -> amount.with(MonetaryOperators.rounding())
-        .getNumber().doubleValue())
+      .map(amount -> amount.with(MonetaryOperators.rounding()).getNumber().doubleValue())
       .orElse(0d);
   }
 

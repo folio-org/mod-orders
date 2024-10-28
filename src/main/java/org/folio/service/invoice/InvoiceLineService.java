@@ -35,6 +35,7 @@ public class InvoiceLineService {
   private static final String INVOICE_LINES_ENDPOINT = "/invoice/invoice-lines";
   private static final String INVOICE_LINE_BY_ID_ENDPOINT = INVOICE_LINES_ENDPOINT + "/{id}";
   private static final String GET_INVOICE_LINES_ERROR = "Error when retrieving invoice lines";
+  private static final String GET_INVOICE_LINE_BY_INVOICE_ID_QUERY =  "invoiceId==%s";
   private static final String GET_INVOICE_LINE_BY_PO_LINE_ID_QUERY =  "poLineId==%s";
   private static final Logger logger = LogManager.getLogger();
 
@@ -44,21 +45,22 @@ public class InvoiceLineService {
     this.restClient = restClient;
   }
 
-  public Future<List<InvoiceLine>> getInvoiceLines(RequestEntry requestEntry, RequestContext requestContext) {
-    return restClient.get(requestEntry, InvoiceLineCollection.class, requestContext)
-     .map(InvoiceLineCollection::getInvoiceLines);
-  }
-
   public Future<List<InvoiceLine>> retrieveInvoiceLines(String query, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(INVOICE_LINES_ENDPOINT).withQuery(query)
       .withOffset(0)
       .withLimit(Integer.MAX_VALUE);
-    return getInvoiceLines(requestEntry, requestContext)
-       .recover(t -> {
+    return restClient.get(requestEntry, InvoiceLineCollection.class, requestContext)
+      .map(InvoiceLineCollection::getInvoiceLines)
+      .recover(t -> {
         logger.error(GET_INVOICE_LINES_ERROR + ". Query: " + query, t);
         throw new HttpException(t instanceof HttpException ? ((HttpException) t).getCode() :
           HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), GET_INVOICE_LINES_ERROR);
       });
+  }
+
+  public Future<List<InvoiceLine>> getInvoiceLinesByInvoiceId(String invoiceId, RequestContext requestContext) {
+    var query = GET_INVOICE_LINE_BY_INVOICE_ID_QUERY.formatted(invoiceId);
+    return retrieveInvoiceLines(query, requestContext);
   }
 
   public Future<List<InvoiceLine>> getInvoiceLinesByOrderLineId(String orderPoLineId, RequestContext requestContext) {
