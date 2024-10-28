@@ -2,7 +2,6 @@ package org.folio.service.orders;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -34,18 +33,15 @@ public class InvoicesTotalFieldsPopulateService implements CompositeOrderDynamic
 
   @Override
   public Future<CompositeOrderRetrieveHolder> populate(CompositeOrderRetrieveHolder holder, RequestContext requestContext) {
-    return Optional.of(holder)
-      .map(CompositeOrderRetrieveHolder::getFiscalYear)
-      .map(v -> withTotalFields(holder, requestContext))
-      .orElseGet(() -> Future.succeededFuture(holder.withTotalExpended(0d).withTotalCredited(0d).withTotalEncumbered(0d)))
-      .onFailure(v -> log.error("Failed at {}.{}", this.getClass().getName(), Thread.currentThread().getStackTrace()[0]));
-  }
-
-  private Future<CompositeOrderRetrieveHolder> withTotalFields(CompositeOrderRetrieveHolder holder, RequestContext requestContext) {
+    if (holder.getFiscalYear() == null) {
+      return Future.succeededFuture(holder.withTotalExpended(0d).withTotalCredited(0d).withTotalEncumbered(0d));
+    }
     return invoiceService.getInvoicesByOrderId(holder.getOrderId(), requestContext)
       .compose(invoices -> getInvoiceLinesByInvoiceIds(invoices, requestContext)
         .map(invoiceLines -> groupInvoiceLinesByInvoices(invoices, invoiceLines))
-        .map(invoiceToInvoiceLinesMap -> populateTotalFields(holder, invoiceToInvoiceLinesMap)));
+        .map(invoiceToInvoiceLinesMap -> populateTotalFields(holder, invoiceToInvoiceLinesMap)))
+      .onFailure(t -> log.error("Failed to populate order's '{}' total fields with fiscal year '{}' from invoice lines",
+        holder.getOrderId(), holder.getFiscalYearId(), t));
   }
 
   private Future<List<InvoiceLine>> getInvoiceLinesByInvoiceIds(List<Invoice> invoices, RequestContext requestContext) {
