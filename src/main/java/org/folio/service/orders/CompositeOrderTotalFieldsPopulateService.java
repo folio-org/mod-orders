@@ -62,8 +62,7 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
   private Future<List<InvoiceLine>> getInvoiceLinesByInvoiceIds(List<Invoice> invoices, FiscalYear fiscalYear, RequestContext requestContext) {
     return collectResultsOnSuccess(invoices.stream()
       .filter(invoice -> StringUtils.equals(invoice.getFiscalYearId(), fiscalYear.getId()))
-      .map(invoice -> invoiceLineService.getInvoiceLinesByInvoiceId(invoice.getId(), requestContext))
-      .toList())
+      .map(invoice -> invoiceLineService.getInvoiceLinesByInvoiceId(invoice.getId(), requestContext)).toList())
       .map(invoiceLinesLists -> invoiceLinesLists.stream().flatMap(List::stream).toList());
   }
 
