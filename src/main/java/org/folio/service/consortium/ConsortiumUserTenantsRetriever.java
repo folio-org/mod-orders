@@ -1,7 +1,6 @@
 package org.folio.service.consortium;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -14,10 +13,10 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.RequestContextUtil.getUserIdFromContext;
 import static org.folio.orders.utils.ResourcePathResolver.CONSORTIA_USER_TENANTS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -40,10 +39,8 @@ public class ConsortiumUserTenantsRetriever {
 
   public ConsortiumUserTenantsRetriever(RestClient restClient) {
     this.restClient = restClient;
-    asyncCache = Caffeine.newBuilder()
-      .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
-      .buildAsync();
+    var context = Vertx.currentContext();
+    asyncCache = buildAsyncCache(context, cacheExpirationTime);
   }
 
   public Future<List<String>> getUserTenants(String consortiumId, RequestContext requestContext) {

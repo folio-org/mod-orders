@@ -1,11 +1,11 @@
 package org.folio.service.caches;
 
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.HelperUtils.SYSTEM_CONFIG_MODULE_NAME;
 import static org.folio.service.configuration.ConfigurationEntriesService.CONFIG_QUERY;
 import static org.folio.service.configuration.ConfigurationEntriesService.TENANT_CONFIGURATION_ENTRIES;
 
-import java.util.concurrent.TimeUnit;
-
+import io.vertx.core.Vertx;
 import lombok.extern.log4j.Log4j2;
 import org.folio.orders.utils.HelperUtils.BiFunctionReturningFuture;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -19,10 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 @Log4j2
@@ -42,18 +40,10 @@ public class ConfigurationEntriesCache {
   @Autowired
   public ConfigurationEntriesCache(ConfigurationEntriesService configurationEntriesService) {
     this.configurationEntriesService = configurationEntriesService;
-    configsCache = Caffeine.newBuilder()
-      .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
-      .buildAsync();
-    systemCurrencyCache = Caffeine.newBuilder()
-      .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
-      .buildAsync();
-    systemTimezoneCache = Caffeine.newBuilder()
-      .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
-      .buildAsync();
+    var context = Vertx.currentContext();
+    configsCache = buildAsyncCache(context, cacheExpirationTime);
+    systemCurrencyCache = buildAsyncCache(context, cacheExpirationTime);
+    systemTimezoneCache = buildAsyncCache(context, cacheExpirationTime);
   }
 
   /**
@@ -73,8 +63,7 @@ public class ConfigurationEntriesCache {
     return loadConfigurationData(SYSTEM_CONFIG_MODULE_NAME, requestContext, systemTimezoneCache, configurationEntriesService::getSystemTimeZone);
   }
 
-  private <T> Future<T> loadConfigurationData(String module, RequestContext requestContext,
-                                              AsyncCache<String, T> cache,
+  private <T> Future<T> loadConfigurationData(String module, RequestContext requestContext, AsyncCache<String, T> cache,
                                               BiFunctionReturningFuture<RequestEntry, RequestContext, T> configExtractor) {
     try {
       var requestEntry = new RequestEntry(TENANT_CONFIGURATION_ENTRIES)

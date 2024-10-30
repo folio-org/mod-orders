@@ -15,12 +15,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
+
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 
 @Component
 public class JobProfileSnapshotCache {
@@ -34,10 +35,7 @@ public class JobProfileSnapshotCache {
 
   @Autowired
   public JobProfileSnapshotCache(Vertx vertx) {
-    cache = Caffeine.newBuilder()
-      .expireAfterAccess(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> vertx.runOnContext(v -> task.run()))
-      .buildAsync();
+    cache = buildAsyncCache(vertx, cacheExpirationTime);
   }
 
   public Future<Optional<ProfileSnapshotWrapper>> get(String profileSnapshotId, OkapiConnectionParams params) {
