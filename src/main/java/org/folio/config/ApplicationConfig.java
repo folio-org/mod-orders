@@ -424,8 +424,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService, InvoiceService invoiceService, InvoiceLineService invoiceLineService) {
-    return new CompositeOrderTotalFieldsPopulateService(transactionService, invoiceService, invoiceLineService);
+  CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService, InvoiceService invoiceService,
+                                                                        InvoiceLineService invoiceLineService, FiscalYearService fiscalYearService) {
+    return new CompositeOrderTotalFieldsPopulateService(transactionService, invoiceService, invoiceLineService, fiscalYearService);
   }
 
   @Bean("orderLinesSummaryPopulateService")
