@@ -35,6 +35,7 @@ public class ConfigurationEntriesCache {
 
   private final AsyncCache<String, JsonObject> configsCache;
   private final AsyncCache<String, String> systemCurrencyCache;
+  private final AsyncCache<String, String> systemTimezoneCache;
   private final ConfigurationEntriesService configurationEntriesService;
 
 
@@ -46,6 +47,10 @@ public class ConfigurationEntriesCache {
       .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
       .buildAsync();
     systemCurrencyCache = Caffeine.newBuilder()
+      .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
+      .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
+      .buildAsync();
+    systemTimezoneCache = Caffeine.newBuilder()
       .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
       .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
       .buildAsync();
@@ -62,6 +67,10 @@ public class ConfigurationEntriesCache {
 
   public Future<String> getSystemCurrency(RequestContext requestContext) {
     return loadConfigurationData(SYSTEM_CONFIG_MODULE_NAME, requestContext, systemCurrencyCache, configurationEntriesService::getSystemCurrency);
+  }
+
+  public Future<String> getSystemTimeZone(RequestContext requestContext) {
+    return loadConfigurationData(SYSTEM_CONFIG_MODULE_NAME, requestContext, systemTimezoneCache, configurationEntriesService::getSystemTimeZone);
   }
 
   private <T> Future<T> loadConfigurationData(String module, RequestContext requestContext,
