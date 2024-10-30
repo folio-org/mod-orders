@@ -11,6 +11,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +27,7 @@ import org.folio.rest.acq.model.finance.FiscalYear;
 
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -44,6 +48,8 @@ public class FiscalYearServiceTest {
   private RestClient restClientMock;
   @Mock
   private RequestContext requestContextMock;
+  @Mock
+  private ConfigurationEntriesCache configurationEntriesCacheMock;
 
   @BeforeEach
   public void initMocks() {
@@ -86,14 +92,20 @@ public class FiscalYearServiceTest {
     String fiscalYearId = UUID.randomUUID().toString();
     String series = "FY2023";
     String currentFiscalYearId = UUID.randomUUID().toString();
-    FiscalYear fiscalYear = new FiscalYear().withId(fiscalYearId).withSeries(series);
-    FiscalYear currentFiscalYear = new FiscalYear().withId(currentFiscalYearId);
-    FiscalYearCollection fiscalYearCollection = new FiscalYearCollection().withFiscalYears(List.of(currentFiscalYear, fiscalYear));
+    FiscalYear fiscalYear = new FiscalYear().withId(fiscalYearId).withSeries(series)
+      .withPeriodStart(Date.from(Instant.now().minus(265, ChronoUnit.DAYS)))
+      .withPeriodEnd(Date.from(Instant.now().plus(100, ChronoUnit.DAYS)));
+    FiscalYear currentFiscalYear = new FiscalYear().withId(currentFiscalYearId).withSeries(series)
+      .withPeriodStart(Date.from(Instant.now().minus(165, ChronoUnit.DAYS)))
+      .withPeriodEnd(Date.from(Instant.now().plus(200, ChronoUnit.DAYS)));
+    FiscalYearCollection fiscalYearCollection = new FiscalYearCollection().withFiscalYears(List.of(fiscalYear, currentFiscalYear));
 
     doReturn(Future.succeededFuture(fiscalYear))
       .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
     doReturn(Future.succeededFuture(fiscalYearCollection))
       .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
+    doReturn(Future.succeededFuture("UTC"))
+      .when(configurationEntriesCacheMock).getSystemTimeZone(any(RequestContext.class));
 
     Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContextMock);
 
@@ -124,6 +136,8 @@ public class FiscalYearServiceTest {
       .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYear.class), any(RequestContext.class));
     doReturn(Future.failedFuture(new HttpException(404, "Fiscal year not found")))
       .when(restClientMock).get(any(RequestEntry.class), eq(FiscalYearCollection.class), any(RequestContext.class));
+    doReturn(Future.succeededFuture("UTC"))
+      .when(configurationEntriesCacheMock).getSystemTimeZone(any(RequestContext.class));
 
     Future<String> result = fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContextMock);
 
