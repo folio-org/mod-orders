@@ -1,8 +1,8 @@
 package org.folio.service.orders;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -67,7 +67,7 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
     return collectResultsOnSuccess(invoices.stream()
       .map(Invoice::getFiscalYearId)
       .map(fiscalYearId -> fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContext)).toList())
-      .map(HashSet::new);
+      .map(fiscalYearsIds -> fiscalYearsIds.stream().filter(Objects::nonNull).collect(Collectors.toSet()));
   }
 
   private Future<List<InvoiceLine>> getInvoiceLinesByInvoiceIds(List<Invoice> invoices, Set<String> fiscalYearIds, RequestContext requestContext) {

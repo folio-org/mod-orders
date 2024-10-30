@@ -66,6 +66,8 @@
             "invoice.invoice-lines.collection.get",
             "finance.transactions.collection.get",
             "finance.exchange-rate.item.get",
+            "finance.fiscal-years.item.get",
+            "finance.fiscal-years.collection.get",
             "finance.funds.item.get",
             "finance.funds.collection.get",
             "finance.ledgers.current-fiscal-year.item.get",
@@ -848,6 +850,7 @@
             "inventory-storage.instance-statuses.collection.get",
             "inventory-storage.contributor-name-types.collection.get",
             "user-tenants.collection.get",
+            "configuration.entries.collection.get",
             "consortia.sharing-instances.item.post",
             "acquisitions-units-storage.units.collection.get",
             "acquisitions-units-storage.memberships.collection.get"
