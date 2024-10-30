@@ -271,8 +271,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  FiscalYearService fiscalYearService(RestClient restClient, FundService fundService) {
-    return new FiscalYearService(restClient, fundService);
+  FiscalYearService fiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache) {
+    return new FiscalYearService(restClient, fundService, configurationEntriesCache);
   }
 
   @Bean

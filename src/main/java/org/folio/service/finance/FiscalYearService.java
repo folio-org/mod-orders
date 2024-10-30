@@ -1,19 +1,21 @@
 package org.folio.service.finance;
 
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.ResourcePathResolver.FISCAL_YEARS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_CURRENT_FISCAL_YEAR;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.core.exceptions.ErrorCodes.CURRENT_FISCAL_YEAR_NOT_FOUND;
 
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Vertx;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.FiscalYearCollection;
@@ -25,6 +27,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 
 import io.vertx.core.Future;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.caches.ConfigurationEntriesCache;
 import org.springframework.beans.factory.annotation.Value;
 
 public class FiscalYearService {
@@ -32,7 +35,7 @@ public class FiscalYearService {
   private static final String LEDGER_CURRENT_FISCAL_YEAR_ENDPOINT = resourcesPath(LEDGER_CURRENT_FISCAL_YEAR);
   private static final String FISCAL_YEARS_ENDPOINT = resourcesPath(FISCAL_YEARS);
   private static final String FISCAL_YEAR_BY_ID_ENDPOINT = resourceByIdPath(FISCAL_YEARS, "{id}");
-  private static final String FISCAL_YEAR_BY_SERIES_QUERY = "series==\"%s\" sortBy periodStart";
+  private static final String FISCAL_YEAR_BY_SERIES_QUERY = "series==\"%s\" AND periodEnd>=%s sortBy periodStart";
   private static final String CACHE_KEY_TEMPLATE = "%s.%s";
 
   @Value("${orders.cache.fiscal-years.expiration.time.seconds:300}")
@@ -42,19 +45,16 @@ public class FiscalYearService {
 
   private final RestClient restClient;
   private final FundService fundService;
+  private final ConfigurationEntriesCache configurationEntriesCache;
 
 
-  public FiscalYearService(RestClient restClient, FundService fundService) {
+  public FiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache) {
     this.restClient = restClient;
     this.fundService = fundService;
-    currentFiscalYearCacheBySeries = Caffeine.newBuilder()
-      .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
-      .buildAsync();
-    seriesCacheByFiscalYearId = Caffeine.newBuilder()
-      .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
-      .buildAsync();
+    this.configurationEntriesCache = configurationEntriesCache;
+    var context = Vertx.currentContext();
+    currentFiscalYearCacheBySeries = buildAsyncCache(context, cacheExpirationTime);
+    seriesCacheByFiscalYearId = buildAsyncCache(context, cacheExpirationTime);
   }
 
   public Future<FiscalYear> getCurrentFiscalYear(String ledgerId, RequestContext requestContext) {
@@ -104,13 +104,32 @@ public class FiscalYearService {
 
   private Future<String> getCurrentFiscalYearForSeries(String series, RequestContext requestContext) {
     var cacheKey = CACHE_KEY_TEMPLATE.formatted(series, TenantTool.tenantId(requestContext.getHeaders()));
-    return Future.fromCompletionStage(currentFiscalYearCacheBySeries.get(cacheKey, (key, executor) -> {
-      var query = FISCAL_YEAR_BY_SERIES_QUERY.formatted(series);
-      var requestEntry = new RequestEntry(FISCAL_YEARS_ENDPOINT).withQuery(query);
-      return restClient.get(requestEntry, FiscalYearCollection.class, requestContext)
-          .map(fiscalYearCollection -> fiscalYearCollection.getFiscalYears().get(0).getId())
-          .toCompletionStage().toCompletableFuture();
-      }));
+    return Future.fromCompletionStage(currentFiscalYearCacheBySeries.get(cacheKey, (key, executor) ->
+      configurationEntriesCache.getSystemTimeZone(requestContext)
+        .map(timezone -> Instant.now().atZone(ZoneId.of(timezone)).toLocalDate())
+        .map(now -> FISCAL_YEAR_BY_SERIES_QUERY.formatted(series, now))
+        .map(query -> new RequestEntry(FISCAL_YEARS_ENDPOINT).withQuery(query).withLimit(3).withOffset(0))
+        .compose(requestEntry -> restClient.get(requestEntry, FiscalYearCollection.class, requestContext))
+        .map(fiscalYearCollection -> extractCurrentFiscalYearId(fiscalYearCollection.getFiscalYears()))
+        .toCompletionStage().toCompletableFuture()));
+  }
+
+  private String extractCurrentFiscalYearId(List<FiscalYear> fiscalYears) {
+    if (fiscalYears.isEmpty()) {
+      return null;
+    }
+    if (fiscalYears.size() == 1) {
+      return fiscalYears.get(0).getId();
+    }
+    var now = new Date();
+    var firstYear = fiscalYears.get(0);
+    var secondYear = fiscalYears.get(1);
+    if (firstYear.getPeriodStart().before(now) && firstYear.getPeriodEnd().after(now)
+      && secondYear.getPeriodStart().before(now) && secondYear.getPeriodEnd().after(now)
+      && firstYear.getPeriodEnd().after(secondYear.getPeriodStart())) {
+      return secondYear.getId();
+    }
+    return firstYear.getId();
   }
 
   private boolean isFiscalYearNotFound(Throwable t) {
