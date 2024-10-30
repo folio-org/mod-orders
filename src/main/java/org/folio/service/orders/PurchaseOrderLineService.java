@@ -515,7 +515,7 @@ public class PurchaseOrderLineService {
     return inventoryCache.getISBNProductTypeId(requestContext)
       .compose(isbnTypeId -> {
         var setOfProductIds = buildSetOfProductIdsFromCompositePoLines(filteredCompLines, isbnTypeId);
-        return org.folio.service.orders.utils.HelperUtils.executeWithSemaphores(setOfProductIds,
+        return HelperUtils.executeWithSemaphores(setOfProductIds,
           productId -> inventoryCache.convertToISBN13(productIdUnaryOperator.apply(productId), requestContext)
             .map(normalizedId -> Map.entry(productId, normalizedId))
             .recover(throwable -> validationExceptionPredicate.test(throwable) ?
