@@ -21,7 +21,6 @@ import java.util.stream.IntStream;
 import static org.folio.orders.utils.RequestContextUtil.getUserIdFromContext;
 import static org.folio.orders.utils.ResourcePathResolver.CONSORTIA_USER_TENANTS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.RestConstants.PATH_PARAM_PLACE_HOLDER;
 import static org.folio.service.pieces.util.UserTenantFields.COLLECTION_USER_TENANTS;
 import static org.folio.service.pieces.util.UserTenantFields.TENANT_ID;
 import static org.folio.service.pieces.util.UserTenantFields.USER_ID;
@@ -59,8 +58,8 @@ public class ConsortiumUserTenantsRetriever {
   }
 
   private CompletableFuture<List<String>> getUserTenantsFromRemote(String userId, String consortiumId, RequestContext requestContext) {
-    var url = CONSORTIA_USER_TENANTS_ENDPOINT.replace(PATH_PARAM_PLACE_HOLDER, consortiumId);
-    var requestEntry = new RequestEntry(url)
+    var requestEntry = new RequestEntry(CONSORTIA_USER_TENANTS_ENDPOINT)
+      .withId(consortiumId)
       .withOffset(0)
       .withLimit(Integer.MAX_VALUE)
       .withQueryParameter(USER_ID.getValue(), userId);
