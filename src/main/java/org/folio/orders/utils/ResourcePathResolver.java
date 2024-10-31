@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.folio.rest.RestConstants.PATH_PARAM_PLACE_HOLDER;
-
 public class ResourcePathResolver {
 
   private ResourcePathResolver() {
@@ -49,6 +47,8 @@ public class ResourcePathResolver {
   public static final String CONFIGURATION_ENTRIES = "configurations.entries";
   public static final String LEDGER_FY_ROLLOVERS = "finance.ledger-rollovers";
   public static final String LEDGER_FY_ROLLOVER_ERRORS = "finance.ledger-rollovers-errors";
+  public static final String LEDGER_CURRENT_FISCAL_YEAR = "finance.ledger.current-fiscal-year";
+  public static final String FISCAL_YEARS = "finance.fiscal-years";
   public static final String ORDER_INVOICE_RELATIONSHIP = "order-invoice-relationship";
   public static final String EXPORT_HISTORY = "export-history";
   public static final String TAGS = "tags";
@@ -96,11 +96,13 @@ public class ResourcePathResolver {
     apis.put(CONFIGURATION_ENTRIES, "/configurations/entries");
     apis.put(LEDGER_FY_ROLLOVERS, "/finance/ledger-rollovers");
     apis.put(LEDGER_FY_ROLLOVER_ERRORS, "/finance/ledger-rollovers-errors");
+    apis.put(LEDGER_CURRENT_FISCAL_YEAR, "/finance/ledgers/{id}/current-fiscal-year");
+    apis.put(FISCAL_YEARS, "/finance/fiscal-years");
     apis.put(ORDER_INVOICE_RELATIONSHIP, "/orders-storage/order-invoice-relns");
     apis.put(EXPORT_HISTORY, "/orders-storage/export-history");
     apis.put(TAGS, "/tags");
     apis.put(USERS, "/users");
-    apis.put(CONSORTIA_USER_TENANTS, "/consortia/" + PATH_PARAM_PLACE_HOLDER + "/user-tenants");
+    apis.put(CONSORTIA_USER_TENANTS, "/consortia/{id}/user-tenants");
     apis.put(ORDER_SETTINGS, "/orders-storage/settings");
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
 

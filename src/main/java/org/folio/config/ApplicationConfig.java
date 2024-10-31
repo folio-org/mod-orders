@@ -271,8 +271,8 @@ public class ApplicationConfig {
   }
 
   @Bean
-  FiscalYearService fiscalYearService(RestClient restClient, FundService fundService) {
-    return new FiscalYearService(restClient, fundService);
+  FiscalYearService fiscalYearService(RestClient restClient, FundService fundService, ConfigurationEntriesCache configurationEntriesCache) {
+    return new FiscalYearService(restClient, fundService, configurationEntriesCache);
   }
 
   @Bean
@@ -424,8 +424,9 @@ public class ApplicationConfig {
   }
 
   @Bean
-  CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService, InvoiceService invoiceService, InvoiceLineService invoiceLineService) {
-    return new CompositeOrderTotalFieldsPopulateService(transactionService, invoiceService, invoiceLineService);
+  CompositeOrderDynamicDataPopulateService totalExpendedPopulateService(TransactionService transactionService, InvoiceService invoiceService,
+                                                                        InvoiceLineService invoiceLineService, FiscalYearService fiscalYearService) {
+    return new CompositeOrderTotalFieldsPopulateService(transactionService, invoiceService, invoiceLineService, fiscalYearService);
   }
 
   @Bean("orderLinesSummaryPopulateService")

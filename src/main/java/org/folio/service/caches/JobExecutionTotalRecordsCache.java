@@ -1,7 +1,6 @@
 package org.folio.service.caches;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
@@ -15,7 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 
 /**
  * An in-memory cache that stores total amount of imported records
@@ -38,10 +38,7 @@ public class JobExecutionTotalRecordsCache {
 
   @Autowired
   public JobExecutionTotalRecordsCache(Vertx vertx) {
-    cache = Caffeine.newBuilder()
-      .expireAfterAccess(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> vertx.runOnContext(v -> task.run()))
-      .buildAsync();
+    cache = buildAsyncCache(vertx, cacheExpirationTime);
   }
 
   /**

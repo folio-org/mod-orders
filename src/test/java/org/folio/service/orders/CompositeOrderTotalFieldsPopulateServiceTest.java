@@ -18,6 +18,7 @@ import org.folio.rest.acq.model.invoice.Invoice;
 import org.folio.rest.acq.model.invoice.InvoiceLine;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.service.finance.FiscalYearService;
 import org.folio.service.finance.transaction.TransactionService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.invoice.InvoiceService;
@@ -37,12 +38,12 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
 
   @Mock
   private TransactionService transactionService;
-
   @Mock
   private InvoiceService invoiceService;
-
   @Mock
   private InvoiceLineService invoiceLineService;
+  @Mock
+  private FiscalYearService fiscalYearService;
 
   @Mock
   private RequestContext requestContext;
@@ -117,16 +118,26 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
   }
 
   @Test
-  void shouldHandleNullFiscalYearAndTransactions() {
+  void shouldHandleNullFiscalYearWithInvoicesInvoiceLinesAndNoTransactions() {
+    String fiscalYearId = UUID.randomUUID().toString();
+    Invoice invoice1 = new Invoice().withId(UUID.randomUUID().toString()).withCurrency("USD").withFiscalYearId(fiscalYearId);
+    Invoice invoice2 = new Invoice().withId(UUID.randomUUID().toString()).withCurrency("USD").withFiscalYearId(fiscalYearId);
+    InvoiceLine invoiceLine1 = new InvoiceLine().withInvoiceId(invoice1.getId()).withTotal(100.0);
+    InvoiceLine invoiceLine2 = new InvoiceLine().withInvoiceId(invoice2.getId()).withTotal(-500.0);
+    List<Invoice> invoices = List.of(invoice1, invoice2);
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
 
-    when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(invoiceService.getInvoicesByOrderId(anyString(), any())).thenReturn(Future.succeededFuture(invoices));
+    when(invoiceLineService.getInvoiceLinesByInvoiceId(eq(invoice1.getId()), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine1)));
+    when(invoiceLineService.getInvoiceLinesByInvoiceId(eq(invoice2.getId()), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine2)));
+    when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(List.of()));
+    when(fiscalYearService.getCurrentFYForSeriesByFYId(anyString(), any())).thenReturn(Future.succeededFuture(fiscalYearId));
 
     CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).result();
 
     assertEquals(0.0, resultHolder.getOrder().getTotalEncumbered());
-    assertEquals(0.0, resultHolder.getOrder().getTotalExpended());
-    assertEquals(0.0, resultHolder.getOrder().getTotalCredited());
+    assertEquals(100.0, resultHolder.getOrder().getTotalExpended());
+    assertEquals(500.0, resultHolder.getOrder().getTotalCredited());
   }
 }

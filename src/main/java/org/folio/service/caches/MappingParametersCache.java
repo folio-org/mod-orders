@@ -1,7 +1,6 @@
 package org.folio.service.caches;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
@@ -48,10 +47,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static java.lang.String.format;
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.QueryUtils.encodeQuery;
 import static org.folio.rest.RestConstants.ID;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -93,10 +92,7 @@ public class MappingParametersCache {
                                 AcquisitionsUnitsService acquisitionsUnitsService,
                                 AcquisitionMethodsService acquisitionMethodsService) {
     LOGGER.info("MappingParametersCache:: settings limit: '{}'", settingsLimit);
-    cache = Caffeine.newBuilder()
-      .expireAfterAccess(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> vertx.runOnContext(v -> task.run()))
-      .buildAsync();
+    cache = buildAsyncCache(vertx, cacheExpirationTime);
     this.restClient = restClient;
     this.acquisitionsUnitsService = acquisitionsUnitsService;
     this.acquisitionMethodsService = acquisitionMethodsService;

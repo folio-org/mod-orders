@@ -1,7 +1,6 @@
 package org.folio.service.consortium;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.commons.lang3.StringUtils;
@@ -18,7 +17,8 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 
 public class ConsortiumConfigurationService {
   private static final Logger logger = LogManager.getLogger(ConsortiumConfigurationService.class);
@@ -36,11 +36,7 @@ public class ConsortiumConfigurationService {
 
   public ConsortiumConfigurationService(RestClient restClient) {
     this.restClient = restClient;
-
-    asyncCache = Caffeine.newBuilder()
-      .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
-      .buildAsync();
+    asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
   public Future<Optional<ConsortiumConfiguration>> getConsortiumConfiguration(RequestContext requestContext) {
