@@ -1,15 +1,70 @@
-## 12.9.0 - Unreleased
+## 13.0.0 - Unreleased
+
+## 12.9.0 - Released (Ramsons R2 2024)
+The primary focus of this release was to enhance multi-tenant functionality, improve piece management, and implement various inventory and order processing features.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.8.0...v12.9.0)
 
 ### New APIs versions
-
 * Requires `holdings-storage v8.0`
 
 ### Stories
+* [MODORDERS-1194](https://issues.folio.org/browse/MODORDERS-1194) - Update libraries of dependant acq modules to the latest versions
+* [MODORDERS-1191](https://issues.folio.org/browse/MODORDERS-1191) - Update total expended amount calculation for Purchase order
+* [MODORDERS-1190](https://issues.folio.org/browse/MODORDERS-1190) - Fund distribution should not be changed in invoice line when fund was changed in related open POL
+* [MODORDERS-1188](https://issues.folio.org/browse/MODORDERS-1188) - Apply restriction to edit Locations based on user affiliations
+* [MODORDERS-1183](https://issues.folio.org/browse/MODORDERS-1183) - Introduce new error code for missed affiliations
+* [MODORDERS-1182](https://issues.folio.org/browse/MODORDERS-1182) - Bump pieces interfaces minor version to 3.1 after new endpoint was added
+* [MODORDERS-1180](https://issues.folio.org/browse/MODORDERS-1180) - Populate discoverySuppress as false by default when creating Instance from an Order
+* [MODORDERS-1174](https://issues.folio.org/browse/MODORDERS-1174) - Filter pieces based on user affiliations
+* [MODORDERS-1170](https://issues.folio.org/browse/MODORDERS-1170) - Orders app: Order not auto-closing as complete despite not receiving/payment requirements
+* [MODORDERS-1166](https://issues.folio.org/browse/MODORDERS-1166) - Add bindItemTenantId to Piece schema
+* [MODORDERS-1163](https://issues.folio.org/browse/MODORDERS-1163) - Edited location should displayed in related ongoing / cancelled PO line after receiving piece from full screen form
+* [MODORDERS-1161](https://issues.folio.org/browse/MODORDERS-1161) - Error is not displayed when user goes to receiving title details with pieces from tenant where user has no affiliation
+* [MODORDERS-1160](https://issues.folio.org/browse/MODORDERS-1160) - Unable to edit PO line when details field is empty
+* [MODORDERS-1151](https://issues.folio.org/browse/MODORDERS-1151) - Central ordering - Opening and editing POs with location-restricted funds (FE)
+* [MODORDERS-1146](https://issues.folio.org/browse/MODORDERS-1146) - Add link to original item for piece that is bound
+* [MODORDERS-1145](https://issues.folio.org/browse/MODORDERS-1145) - Add Instance Title to Context for template request
+* [MODORDERS-1144](https://issues.folio.org/browse/MODORDERS-1144) - Bound piece having related item with barcode can be removed from "Bound pieces data" accordion
+* [MODORDERS-1138](https://issues.folio.org/browse/MODORDERS-1138) - Implement endpoint to fetch Circulation requests for pieces
+* [MODORDERS-1133](https://issues.folio.org/browse/MODORDERS-1133) - Add support of creating holding in member tenants for Receiving
+* [MODORDERS-1131](https://issues.folio.org/browse/MODORDERS-1131) - Fix piece, item, title relationship in bind piece features
+* [MODORDERS-1129](https://issues.folio.org/browse/MODORDERS-1129) - Order with newly created title (free-text) and location from member tenant can be opened
+* [MODORDERS-1122](https://issues.folio.org/browse/MODORDERS-1122) - Add logic to create item in any tenant for binding
+* [MODORDERS-1120](https://issues.folio.org/browse/MODORDERS-1120) - Support populating searchLocationId for correct tenant during order opening
+* [MODORDERS-1118](https://issues.folio.org/browse/MODORDERS-1118) - Fix and optimize getting finance data to process encumbrances
+* [MODORDERS-1115](https://issues.folio.org/browse/MODORDERS-1115) - Extend bind pieces endpoint with functionality when items are associated
+* [MODORDERS-1114](https://issues.folio.org/browse/MODORDERS-1114) - Enhance bind-pieces endpoint with flag to transfer circulation requests
+* [MODORDERS-1108](https://issues.folio.org/browse/MODORDERS-1108) - Update PiecesAPI CRUD methods to process inventory in desired tenant
+* [MODORDERS-1105](https://issues.folio.org/browse/MODORDERS-1105) - Update logic to handle item status "On order" "Order closed" in correct tenant
+* [MODORDERS-1104](https://issues.folio.org/browse/MODORDERS-1104) - Integrate with Transfer API for moving circulation requests to new item
+* [MODORDERS-1103](https://issues.folio.org/browse/MODORDERS-1103) - Update UnOpenCompositeOrderManager::deleteHoldings to use tenantId parameter
+* [MODORDERS-1096](https://issues.folio.org/browse/MODORDERS-1096) - Add logic to update related item in desired tenant during piece receiving
+* [MODORDERS-1095](https://issues.folio.org/browse/MODORDERS-1095) - Split InventoryManager god class into subclasses
+* [MODORDERS-1084](https://issues.folio.org/browse/MODORDERS-1084) - Create Inventory objects in appropriate tenant from location during UnOpen order
+* [MODORDERS-1081](https://issues.folio.org/browse/MODORDERS-1081) - Create instance when user adds receiving title to package order line
+* [MODORDERS-1072](https://issues.folio.org/browse/MODORDERS-1072) - Add "Display to public" to the Piece schema with validation logic
+* [MODORDERS-1048](https://issues.folio.org/browse/MODORDERS-1048) - Create Inventory objects in appropriate tenant from location for Change Instance Connection
+* [MODORDERS-1047](https://issues.folio.org/browse/MODORDERS-1047) - Create Inventory objects in appropriate tenant from location during Open order
+* [MODORDERS-1046](https://issues.folio.org/browse/MODORDERS-1046) - Retrieve holdings from member tenants for Restrict by Locations feature
+* [MODORDERS-1026](https://issues.folio.org/browse/MODORDERS-1026) - Implement API to execute mod-template-engine request
+* [MODORDERS-1015](https://issues.folio.org/browse/MODORDERS-1015) - Implement endpoint to bind multiple pieces together(no items associated)
+* [MODORDERS-1014](https://issues.folio.org/browse/MODORDERS-1014) - Add "Bindery active" flag in POL with validation
+* [MODORDERS-1006](https://issues.folio.org/browse/MODORDERS-1006) - Create Routing Lists API
 
 ### Bug Fixes
-
-* [MODORDERS-1090](https://folio-org.atlassian.net/browse/MODORDERS-1090) - Quantity = 0 for electronic format orders
+* [MODORDERS-1195](https://issues.folio.org/browse/MODORDERS-1195) - Closed purchase order line associated with a deleted piece record cannot be saved
+* [MODORDERS-1152](https://issues.folio.org/browse/MODORDERS-1152) - Fix additional fields in EDIFACT order syntax
+* [MODORDERS-1149](https://issues.folio.org/browse/MODORDERS-1149) - 500 response when changing the instance connection with "Create new" option
+* [MODORDERS-1140](https://issues.folio.org/browse/MODORDERS-1140) - Item status is "On order" when add piece for cancelled order
+* [MODORDERS-1130](https://issues.folio.org/browse/MODORDERS-1130) - ECS | Order can not be opened if contains three locations from different tenants
 * [MODORDERS-1102](https://folio-org.atlassian.net/browse/MODORDERS-1102) - Order lines search results do not display fund code for orders created by data import
+* [MODORDERS-1090](https://folio-org.atlassian.net/browse/MODORDERS-1090) - Quantity = 0 for electronic format orders
+
+### Dependencies
+* Bump `raml` from `35.2.0` to `35.3.0`
+* Added `folio-module-descriptor-validator` version `1.0.0`
+
 
 ## 12.8.0 - Released (Quesnelia R1 2024)
 This release focused on fixing several bugs as well as implement new features and upgrading dependent libraries
