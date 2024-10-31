@@ -66,6 +66,7 @@ public class CompositeOrderTotalFieldsPopulateService implements CompositeOrderD
     }
     return collectResultsOnSuccess(invoices.stream()
       .map(Invoice::getFiscalYearId)
+      .filter(Objects::nonNull)
       .map(fiscalYearId -> fiscalYearService.getCurrentFYForSeriesByFYId(fiscalYearId, requestContext)).toList())
       .map(fiscalYearsIds -> fiscalYearsIds.stream().filter(Objects::nonNull).collect(Collectors.toSet()));
   }
