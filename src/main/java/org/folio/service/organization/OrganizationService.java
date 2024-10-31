@@ -1,6 +1,7 @@
 package org.folio.service.organization;
 
 import static java.util.stream.Collectors.toList;
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.QueryUtils.encodeQuery;
 import static org.folio.rest.RestConstants.ERROR_CAUSE;
@@ -15,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -37,7 +37,6 @@ import org.folio.service.UserService;
 import org.springframework.stereotype.Component;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -56,11 +55,7 @@ public class OrganizationService {
 
   private final Errors processingErrors = new Errors();
   public OrganizationService(RestClient restClient) {
-    asyncCache = Caffeine.newBuilder()
-      .expireAfterWrite(30, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext()
-        .runOnContext(v -> task.run()))
-      .buildAsync();
+    asyncCache = buildAsyncCache(Vertx.currentContext(), 30);
     this.restClient = restClient;
   }
 

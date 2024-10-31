@@ -1,7 +1,6 @@
 package org.folio.service.settings;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import lombok.extern.log4j.Log4j2;
@@ -17,8 +16,8 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_SETTINGS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
@@ -37,11 +36,7 @@ public class SettingsRetriever {
 
   public SettingsRetriever(RestClient restClient) {
     this.restClient = restClient;
-
-    asyncCache = Caffeine.newBuilder()
-      .expireAfterWrite(cacheExpirationTime, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext().runOnContext(v -> task.run()))
-      .buildAsync();
+    asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
   public Future<Optional<Setting>> getSettingByKey(SettingKey settingKey, RequestContext requestContext) {

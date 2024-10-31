@@ -1,14 +1,13 @@
 package org.folio.service.caches;
 
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 import static org.folio.orders.utils.HelperUtils.SYSTEM_CONFIG_MODULE_NAME;
 import static org.folio.service.configuration.ConfigurationEntriesService.CONFIG_QUERY;
 import static org.folio.service.configuration.ConfigurationEntriesService.TENANT_CONFIGURATION_ENTRIES;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import io.vertx.core.Vertx;
+import lombok.extern.log4j.Log4j2;
+import org.folio.orders.utils.HelperUtils.BiFunctionReturningFuture;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
@@ -16,37 +15,35 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.UserService;
 import org.folio.service.configuration.ConfigurationEntriesService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
+@Log4j2
 @Component
 public class ConfigurationEntriesCache {
-  private static final Logger log = LogManager.getLogger();
+
+  private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
+  @Value("${orders.cache.configuration-entries.expiration.time.seconds:30}")
+  private long cacheExpirationTime;
 
   private final AsyncCache<String, JsonObject> configsCache;
   private final AsyncCache<String, String> systemCurrencyCache;
-  private static final String UNIQUE_CACHE_KEY_PATTERN = "%s_%s_%s";
+  private final AsyncCache<String, String> systemTimezoneCache;
   private final ConfigurationEntriesService configurationEntriesService;
+
+
   @Autowired
   public ConfigurationEntriesCache(ConfigurationEntriesService configurationEntriesService) {
     this.configurationEntriesService = configurationEntriesService;
-    configsCache = Caffeine.newBuilder()
-      .expireAfterWrite(30, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext()
-        .runOnContext(v -> task.run()))
-      .buildAsync();
-
-    systemCurrencyCache = Caffeine.newBuilder()
-      .expireAfterWrite(30, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext()
-        .runOnContext(v -> task.run()))
-      .buildAsync();
+    var context = Vertx.currentContext();
+    configsCache = buildAsyncCache(context, cacheExpirationTime);
+    systemCurrencyCache = buildAsyncCache(context, cacheExpirationTime);
+    systemTimezoneCache = buildAsyncCache(context, cacheExpirationTime);
   }
 
   /**
@@ -55,25 +52,28 @@ public class ConfigurationEntriesCache {
    * @return CompletableFuture with {@link String} ISBN UUID value
    */
   public Future<JsonObject> loadConfiguration(String module, RequestContext requestContext) {
-    try {
-      RequestEntry requestEntry = new RequestEntry(TENANT_CONFIGURATION_ENTRIES)
-        .withQuery(String.format(CONFIG_QUERY, module))
-        .withOffset(0)
-        .withLimit(Integer.MAX_VALUE);
-
-      var cacheKey = buildUniqueKey(requestEntry, requestContext);
-
-      return Future.fromCompletionStage(configsCache.get(cacheKey, (key, executor) -> loadConfiguration(requestEntry, requestContext)));
-    } catch (Exception e) {
-      log.error("loadConfiguration:: Error loading tenant configuration from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
-      return Future.failedFuture(e);
-    }
+    return loadConfigurationData(module, requestContext, configsCache, configurationEntriesService::loadConfiguration);
   }
 
-  private CompletableFuture<JsonObject> loadConfiguration(RequestEntry requestEntry, RequestContext requestContext) {
-    return configurationEntriesService.loadConfiguration(requestEntry, requestContext)
-      .toCompletionStage()
-      .toCompletableFuture();
+  public Future<String> getSystemCurrency(RequestContext requestContext) {
+    return loadConfigurationData(SYSTEM_CONFIG_MODULE_NAME, requestContext, systemCurrencyCache, configurationEntriesService::getSystemCurrency);
+  }
+
+  public Future<String> getSystemTimeZone(RequestContext requestContext) {
+    return loadConfigurationData(SYSTEM_CONFIG_MODULE_NAME, requestContext, systemTimezoneCache, configurationEntriesService::getSystemTimeZone);
+  }
+
+  private <T> Future<T> loadConfigurationData(String module, RequestContext requestContext, AsyncCache<String, T> cache,
+                                              BiFunctionReturningFuture<RequestEntry, RequestContext, T> configExtractor) {
+    var requestEntry = new RequestEntry(TENANT_CONFIGURATION_ENTRIES)
+      .withQuery(String.format(CONFIG_QUERY, module))
+      .withOffset(0)
+      .withLimit(Integer.MAX_VALUE);
+    var cacheKey = buildUniqueKey(requestEntry, requestContext);
+    return Future.fromCompletionStage(cache.get(cacheKey, (key, executor) ->
+      configExtractor.apply(requestEntry, requestContext)
+        .onFailure(t -> log.error("Error loading tenant configuration, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), t))
+        .toCompletionStage().toCompletableFuture()));
   }
 
   private String buildUniqueKey(RequestEntry requestEntry, RequestContext requestContext) {
@@ -83,25 +83,4 @@ public class ConfigurationEntriesCache {
     return String.format(UNIQUE_CACHE_KEY_PATTERN, tenantId, userId, endpoint);
   }
 
-  public Future<String> getSystemCurrency(RequestContext requestContext) {
-
-    try {
-      RequestEntry requestEntry = new RequestEntry(TENANT_CONFIGURATION_ENTRIES)
-        .withQuery(String.format(CONFIG_QUERY, SYSTEM_CONFIG_MODULE_NAME))
-        .withOffset(0)
-        .withLimit(Integer.MAX_VALUE);
-
-      var cacheKey = buildUniqueKey(requestEntry, requestContext);
-
-      return Future.fromCompletionStage(systemCurrencyCache.get(cacheKey, (key, executor) -> getSystemCurrency(requestEntry, requestContext)));
-    } catch (Exception e) {
-      log.warn("get:: Error loading system currency from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
-      return Future.failedFuture(e);
-    }
-  }
-  private CompletableFuture<String> getSystemCurrency(RequestEntry requestEntry, RequestContext requestContext) {
-    return configurationEntriesService.getSystemCurrency(requestEntry, requestContext)
-      .toCompletionStage()
-      .toCompletableFuture();
-  }
 }
