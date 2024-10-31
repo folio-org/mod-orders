@@ -65,19 +65,15 @@ public class ConfigurationEntriesCache {
 
   private <T> Future<T> loadConfigurationData(String module, RequestContext requestContext, AsyncCache<String, T> cache,
                                               BiFunctionReturningFuture<RequestEntry, RequestContext, T> configExtractor) {
-    try {
-      var requestEntry = new RequestEntry(TENANT_CONFIGURATION_ENTRIES)
-        .withQuery(String.format(CONFIG_QUERY, module))
-        .withOffset(0)
-        .withLimit(Integer.MAX_VALUE);
-      var cacheKey = buildUniqueKey(requestEntry, requestContext);
-      return Future.fromCompletionStage(cache.get(cacheKey, (key, executor) ->
-        configExtractor.apply(requestEntry, requestContext)
-          .toCompletionStage().toCompletableFuture()));
-    } catch (Exception e) {
-      log.error("loadConfigurationData:: Error loading tenant configuration from cache, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), e);
-      return Future.failedFuture(e);
-    }
+    var requestEntry = new RequestEntry(TENANT_CONFIGURATION_ENTRIES)
+      .withQuery(String.format(CONFIG_QUERY, module))
+      .withOffset(0)
+      .withLimit(Integer.MAX_VALUE);
+    var cacheKey = buildUniqueKey(requestEntry, requestContext);
+    return Future.fromCompletionStage(cache.get(cacheKey, (key, executor) ->
+      configExtractor.apply(requestEntry, requestContext)
+        .onFailure(t -> log.error("Error loading tenant configuration, tenantId: '{}'", TenantTool.tenantId(requestContext.getHeaders()), t))
+        .toCompletionStage().toCompletableFuture()));
   }
 
   private String buildUniqueKey(RequestEntry requestEntry, RequestContext requestContext) {

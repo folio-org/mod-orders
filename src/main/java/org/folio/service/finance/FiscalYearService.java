@@ -17,6 +17,7 @@ import java.util.concurrent.CompletionException;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Vertx;
+import lombok.extern.log4j.Log4j2;
 import org.folio.rest.acq.model.finance.FiscalYear;
 import org.folio.rest.acq.model.finance.FiscalYearCollection;
 import org.folio.rest.core.RestClient;
@@ -30,6 +31,7 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.springframework.beans.factory.annotation.Value;
 
+@Log4j2
 public class FiscalYearService {
 
   private static final String LEDGER_CURRENT_FISCAL_YEAR_ENDPOINT = resourcesPath(LEDGER_CURRENT_FISCAL_YEAR);
@@ -99,7 +101,8 @@ public class FiscalYearService {
 
   private Future<FiscalYear> getFiscalYearById(String fiscalYearId, RequestContext requestContext) {
     var requestEntry = new RequestEntry(FISCAL_YEAR_BY_ID_ENDPOINT).withId(fiscalYearId);
-    return restClient.get(requestEntry, FiscalYear.class, requestContext);
+    return restClient.get(requestEntry, FiscalYear.class, requestContext)
+      .onFailure(t -> log.error("Unable to fetch fiscal year by id: {}", fiscalYearId, t));
   }
 
   private Future<String> getCurrentFiscalYearForSeries(String series, RequestContext requestContext) {
@@ -111,6 +114,7 @@ public class FiscalYearService {
         .map(query -> new RequestEntry(FISCAL_YEARS_ENDPOINT).withQuery(query).withLimit(3).withOffset(0))
         .compose(requestEntry -> restClient.get(requestEntry, FiscalYearCollection.class, requestContext))
         .map(fiscalYearCollection -> extractCurrentFiscalYearId(fiscalYearCollection.getFiscalYears()))
+        .onFailure(t -> log.error("Unable to fetch current fiscal year for series: {}", series, t))
         .toCompletionStage().toCompletableFuture()));
   }
 
