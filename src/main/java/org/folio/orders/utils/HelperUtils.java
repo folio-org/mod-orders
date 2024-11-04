@@ -440,4 +440,8 @@ public class HelperUtils {
     Future<O> apply(I item);
   }
 
+  public interface BiFunctionReturningFuture<I1, I2, O> {
+    Future<O> apply(I1 item1, I2 item2);
+  }
+
 }

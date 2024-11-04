@@ -1,7 +1,6 @@
 package org.folio.service.caches;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,11 +13,12 @@ import org.folio.service.inventory.InventoryService;
 import org.springframework.stereotype.Component;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+
+import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
 
 @Component
 public class InventoryCache {
@@ -37,17 +37,9 @@ public class InventoryCache {
 
   public InventoryCache(InventoryService inventoryService) {
     this.inventoryService = inventoryService;
-    asyncCache = Caffeine.newBuilder()
-      .expireAfterWrite(30, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext()
-        .runOnContext(v -> task.run()))
-      .buildAsync();
-
-    asyncJsonCache = Caffeine.newBuilder()
-      .expireAfterWrite(30, TimeUnit.SECONDS)
-      .executor(task -> Vertx.currentContext()
-        .runOnContext(v -> task.run()))
-      .buildAsync();
+    var context = Vertx.currentContext();
+    asyncCache = buildAsyncCache(context, 30);
+    asyncJsonCache = buildAsyncCache(context, 30);
   }
 
   public Future<String> getISBNProductTypeId(RequestContext requestContext) {
