@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 import static org.folio.orders.utils.RequestContextUtil.getUserIdFromContext;
 import static org.folio.orders.utils.ResourcePathResolver.CONSORTIA_USER_TENANTS;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
@@ -43,24 +44,25 @@ public class ConsortiumUserTenantsRetriever {
     asyncCache = buildAsyncCache(context, cacheExpirationTime);
   }
 
-  public Future<List<String>> getUserTenants(String consortiumId, RequestContext requestContext) {
+  public Future<List<String>> getUserTenants(String consortiumId, String centralTenantId, RequestContext requestContext) {
     try {
       var userId = getUserIdFromContext(requestContext);
       var cacheKey = String.format(USER_TENANTS_CACHE_KEY_TEMPLATE, userId, consortiumId);
-      return Future.fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> getUserTenantsFromRemote(userId, consortiumId, requestContext)));
+      return Future.fromCompletionStage(asyncCache.get(cacheKey, (key, executor) -> getUserTenantsFromRemote(userId, consortiumId, centralTenantId, requestContext)));
     } catch (Exception e) {
       logger.error("Error when retrieving user tenants for consortium - '{}'", consortiumId, e);
       return Future.failedFuture(e);
     }
   }
 
-  private CompletableFuture<List<String>> getUserTenantsFromRemote(String userId, String consortiumId, RequestContext requestContext) {
+  private CompletableFuture<List<String>> getUserTenantsFromRemote(String userId, String consortiumId, String centralTenantId, RequestContext requestContext) {
+    var newRequestContext = createContextWithNewTenantId(requestContext, centralTenantId);
     var requestEntry = new RequestEntry(CONSORTIA_USER_TENANTS_ENDPOINT)
       .withId(consortiumId)
       .withOffset(0)
       .withLimit(Integer.MAX_VALUE)
       .withQueryParameter(USER_ID.getValue(), userId);
-    return restClient.getAsJsonObject(requestEntry, requestContext)
+    return restClient.getAsJsonObject(requestEntry, newRequestContext)
       .map(this::extractTenantIds)
       .toCompletionStage().toCompletableFuture();
   }
