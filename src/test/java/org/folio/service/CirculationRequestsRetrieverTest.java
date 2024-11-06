@@ -251,8 +251,8 @@ public class CirculationRequestsRetrieverTest {
     }
 
     @Bean
-    ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient) {
-      return new ConsortiumConfigurationService(restClient);
+    ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
+      return new ConsortiumConfigurationService(restClient, settingsRetriever);
     }
 
     @Bean

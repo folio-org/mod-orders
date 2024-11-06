@@ -8,17 +8,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.orders.utils.RequestContextUtil;
+import org.folio.rest.acq.model.Setting;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.core.models.RequestEntry;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.settings.SettingsRetriever;
+import org.folio.service.settings.util.SettingKey;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.orders.utils.CacheUtils.buildAsyncCache;
+import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
 
 public class ConsortiumConfigurationService {
   private static final Logger logger = LogManager.getLogger(ConsortiumConfigurationService.class);
@@ -34,8 +38,11 @@ public class ConsortiumConfigurationService {
   private final RestClient restClient;
   private final AsyncCache<String, Optional<ConsortiumConfiguration>> asyncCache;
 
-  public ConsortiumConfigurationService(RestClient restClient) {
+  private SettingsRetriever settingsRetriever;
+
+  public ConsortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
     this.restClient = restClient;
+    this.settingsRetriever = settingsRetriever;
     asyncCache = buildAsyncCache(Vertx.currentContext(), cacheExpirationTime);
   }
 
@@ -74,4 +81,22 @@ public class ConsortiumConfigurationService {
       .map(config -> config.isEmpty() ? requestContext : RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId()));
   }
 
+  public Future<RequestContext> overrideContextToCentralTenantIdNeeded(RequestContext requestContext) {
+    return getConsortiumConfiguration(requestContext)
+      .compose(consortiumConfiguration -> {
+        if (consortiumConfiguration.isEmpty()) {
+          return Future.succeededFuture(requestContext);
+        }
+        String tenantId = TenantTool.tenantId(requestContext.getHeaders());
+        var configuration = consortiumConfiguration.get();
+        if (StringUtils.equals(tenantId, configuration.centralTenantId())) {
+          return Future.succeededFuture(requestContext);
+        }
+        return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, requestContext)
+          .map(centralOrdering -> centralOrdering.map(Setting::getValue).orElse(null))
+          .compose(orderingEnabled -> Boolean.parseBoolean(orderingEnabled) ?
+            Future.succeededFuture(createContextWithNewTenantId(requestContext, configuration.centralTenantId())) :
+            Future.succeededFuture(requestContext));
+      });
+  }
 }
