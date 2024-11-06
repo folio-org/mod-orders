@@ -35,7 +35,6 @@ public class InvoiceLineService {
   private static final String INVOICE_LINES_ENDPOINT = "/invoice/invoice-lines";
   private static final String INVOICE_LINE_BY_ID_ENDPOINT = INVOICE_LINES_ENDPOINT + "/{id}";
   private static final String GET_INVOICE_LINES_ERROR = "Error when retrieving invoice lines";
-  private static final String GET_INVOICE_LINE_BY_INVOICE_ID_QUERY =  "invoiceId==%s";
   private static final String GET_INVOICE_LINE_BY_INVOICE_ID_AND_STATUS_QUERY =  "invoiceId==%s and invoiceLineStatus==%s";
   private static final String GET_INVOICE_LINE_BY_PO_LINE_ID_QUERY =  "poLineId==%s";
   private static final Logger logger = LogManager.getLogger();
@@ -57,11 +56,6 @@ public class InvoiceLineService {
         throw new HttpException(t instanceof HttpException ? ((HttpException) t).getCode() :
           HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt(), GET_INVOICE_LINES_ERROR);
       });
-  }
-
-  public Future<List<InvoiceLine>> getInvoiceLinesByInvoiceId(String invoiceId, RequestContext requestContext) {
-    var query = GET_INVOICE_LINE_BY_INVOICE_ID_QUERY.formatted(invoiceId);
-    return retrieveInvoiceLines(query, requestContext);
   }
 
   public Future<List<InvoiceLine>> getInvoiceLinesByInvoiceIdAndStatus(String invoiceId, InvoiceLine.InvoiceLineStatus status, RequestContext requestContext) {
