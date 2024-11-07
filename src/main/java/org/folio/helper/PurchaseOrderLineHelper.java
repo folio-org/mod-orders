@@ -749,9 +749,11 @@ public class PurchaseOrderLineHelper {
 
   private Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration -> consortiumConfiguration
-        .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), requestContext))
-        .orElse(Future.succeededFuture()));
+      .compose(consortiumConfiguration ->
+        consortiumConfiguration
+          .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), configuration.centralTenantId(), requestContext))
+          .orElse(Future.succeededFuture())
+      );
   }
 
   private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, PoLine poLineFromStorage, CompositePurchaseOrder purchaseOrder) {

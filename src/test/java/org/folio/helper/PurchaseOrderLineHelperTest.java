@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -202,7 +203,7 @@ public class PurchaseOrderLineHelperTest {
     doReturn(succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))))
       .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
     doReturn(succeededFuture(List.of("tenant1", "tenant2")))
-      .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), any(RequestContext.class));
+      .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), eq("centralTenantId"), any(RequestContext.class));
 
     var future = callValidateUserUnaffiliatedLocationUpdates(updatedPoLine, storagePoLine, requestContext, purchaseOrderLineHelper);
 
@@ -220,7 +221,7 @@ public class PurchaseOrderLineHelperTest {
     doReturn(succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))))
       .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
     doReturn(succeededFuture(List.of("tenant1")))
-      .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), any(RequestContext.class));
+      .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), anyString(), any(RequestContext.class));
 
     var future = callValidateUserUnaffiliatedLocationUpdates(updatedPoLine, storagePoLine, requestContext, purchaseOrderLineHelper);
 
