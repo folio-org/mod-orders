@@ -61,7 +61,7 @@ public class InventoryItemStatusSyncServiceTest {
     //when
     itemStatusSyncService.updateInventoryItemStatus(PO_LINE_ID, locations, ItemStatus.ORDER_CLOSED, requestContext);
     //then
-    verify(inventoryItemManager, times(1)).updateItem(eq(item), any(RequestContext.class));
+    verify(inventoryItemManager, times(1)).updateItemRecords(eq(List.of(item)), any(RequestContext.class));
     assertEquals(ItemStatus.ORDER_CLOSED, ItemStatus.fromValue(item.getJsonObject("status").getString("name")));
   }
 
@@ -77,7 +77,7 @@ public class InventoryItemStatusSyncServiceTest {
     //when
     itemStatusSyncService.updateInventoryItemStatus(PO_LINE_ID, locations, ItemStatus.ORDER_CLOSED, requestContext);
     //then
-    verify(inventoryItemManager, times(2)).updateItem(eq(item), any(RequestContext.class));
+    verify(inventoryItemManager, times(2)).updateItemRecords(eq(List.of(item)), any(RequestContext.class));
     assertEquals(ItemStatus.ORDER_CLOSED, ItemStatus.fromValue(item.getJsonObject("status").getString("name")));
   }
 
