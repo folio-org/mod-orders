@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.folio.helper.BaseHelper.MAX_REPEAT_ON_FAILURE;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
@@ -56,16 +55,17 @@ public class InventoryItemStatusSyncService {
     ).mapEmpty();
   }
 
-  private Future<Void> updateItemStatusForTenant(String poLineId, ItemStatus status, RequestContext requestContext) {
+  Future<Void> updateItemStatusForTenant(String poLineId, ItemStatus status, RequestContext requestContext) {
     return inventoryItemManager.getItemsByPoLineIdsAndStatus(List.of(poLineId), ItemStatus.ON_ORDER.value(), requestContext)
       .compose(items -> {
-        //Each poLine can have only one linked item
-        Optional<JsonObject> poLineItem = items.stream()
-          .filter(item -> poLineId.equals(item.getString(InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))).findFirst();
-        if (poLineItem.isPresent()) {
-          JsonObject updatedItem = updateItemStatus(poLineItem.get(), status);
-          return inventoryItemManager.updateItem(updatedItem, requestContext)
-            .onFailure(e -> logger.error("Failed to update Inventory item status to: {}, po line id: {}", status.value(), poLineId));
+        List<JsonObject> itemRecords = items.stream()
+          .filter(item -> poLineId.equals(item.getString(InventoryItemManager.ITEM_PURCHASE_ORDER_LINE_IDENTIFIER)))
+          .map(item -> updateItemStatus(item, status))
+          .toList();
+        if (CollectionUtils.isNotEmpty(itemRecords)) {
+          return inventoryItemManager.updateItemRecords(itemRecords, requestContext)
+            .onFailure(e -> logger.error("Failed to update Inventory item status to: {}, po line id: {}", status.value(), poLineId))
+            .mapEmpty();
         }
         return Future.succeededFuture(null);
       });
