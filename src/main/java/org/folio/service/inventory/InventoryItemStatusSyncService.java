@@ -55,7 +55,7 @@ public class InventoryItemStatusSyncService {
     ).mapEmpty();
   }
 
-  Future<Void> updateItemStatusForTenant(String poLineId, ItemStatus status, RequestContext requestContext) {
+  private Future<Void> updateItemStatusForTenant(String poLineId, ItemStatus status, RequestContext requestContext) {
     return inventoryItemManager.getItemsByPoLineIdsAndStatus(List.of(poLineId), ItemStatus.ON_ORDER.value(), requestContext)
       .compose(items -> {
         List<JsonObject> itemRecords = items.stream()
