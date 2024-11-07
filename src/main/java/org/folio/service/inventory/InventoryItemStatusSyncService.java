@@ -64,7 +64,7 @@ public class InventoryItemStatusSyncService {
           .toList();
         if (CollectionUtils.isNotEmpty(itemRecords)) {
           return inventoryItemManager.updateItemRecords(itemRecords, requestContext)
-            .onFailure(e -> logger.error("Failed to update Inventory items status to: {}, po line id: {}", status.value(), poLineId))
+            .onFailure(e -> logger.error("Failed to update Inventory items status to: {}, po line id: {}", status.value(), poLineId, e))
             .mapEmpty();
         }
         return Future.succeededFuture(null);
