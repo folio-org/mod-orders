@@ -5,7 +5,7 @@ The primary focus of this release was to fix order processing and multi-tenant i
 
 [Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.0...v12.9.1)
 
-### Stories
+### Bug Fixes
 * [MODORDERS-1213](https://issues.folio.org/browse/MODORDERS-1213) - Item has "On order" status after cancelling PO line
 * [MODORDERS-1208](https://issues.folio.org/browse/MODORDERS-1208) - ECS | Invoice linked with POL can not be paid in Member tenant
 * [MODORDERS-1204](https://issues.folio.org/browse/MODORDERS-1204) - Update total expended amount calculation for Purchase order to only Paid invoices
