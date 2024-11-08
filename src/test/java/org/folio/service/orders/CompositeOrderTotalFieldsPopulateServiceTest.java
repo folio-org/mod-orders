@@ -1,5 +1,6 @@
 package org.folio.service.orders;
 
+import static org.folio.rest.acq.model.invoice.InvoiceLine.InvoiceLineStatus.PAID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -30,7 +31,7 @@ import org.mockito.MockitoAnnotations;
 
 import io.vertx.core.Future;
 
-@CopilotGenerated
+@CopilotGenerated(partiallyGenerated = true)
 public class CompositeOrderTotalFieldsPopulateServiceTest {
 
   @InjectMocks
@@ -58,9 +59,9 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
     String fiscalYearId = UUID.randomUUID().toString();
     Invoice invoice1 = new Invoice().withId(UUID.randomUUID().toString()).withCurrency("USD").withFiscalYearId(fiscalYearId);
     Invoice invoice2 = new Invoice().withId(UUID.randomUUID().toString()).withCurrency("USD").withFiscalYearId(fiscalYearId);
-    InvoiceLine invoiceLine1 = new InvoiceLine().withInvoiceId(invoice1.getId()).withTotal(100.0);
-    InvoiceLine invoiceLine2 = new InvoiceLine().withInvoiceId(invoice2.getId()).withTotal(200.0);
-    InvoiceLine invoiceLine3 = new InvoiceLine().withInvoiceId(invoice2.getId()).withTotal(-500.0);
+    InvoiceLine invoiceLine1 = new InvoiceLine().withInvoiceId(invoice1.getId()).withTotal(100.0).withInvoiceLineStatus(PAID);
+    InvoiceLine invoiceLine2 = new InvoiceLine().withInvoiceId(invoice2.getId()).withTotal(200.0).withInvoiceLineStatus(PAID);
+    InvoiceLine invoiceLine3 = new InvoiceLine().withInvoiceId(invoice2.getId()).withTotal(-500.0).withInvoiceLineStatus(PAID);
     List<Invoice> invoices = List.of(invoice1, invoice2);
     Transaction transaction1 = new Transaction().withAmount(100.0).withCurrency("USD");
     Transaction transaction2 = new Transaction().withAmount(700.0).withCurrency("USD");
@@ -70,8 +71,8 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
       .withFiscalYear(new FiscalYear().withId(fiscalYearId));
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any())).thenReturn(Future.succeededFuture(invoices));
-    when(invoiceLineService.getInvoiceLinesByInvoiceId(eq(invoice1.getId()), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine1)));
-    when(invoiceLineService.getInvoiceLinesByInvoiceId(eq(invoice2.getId()), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine2, invoiceLine3)));
+    when(invoiceLineService.getInvoiceLinesByInvoiceIdAndStatus(eq(invoice1.getId()), eq(PAID), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine1)));
+    when(invoiceLineService.getInvoiceLinesByInvoiceIdAndStatus(eq(invoice2.getId()), eq(PAID), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine2, invoiceLine3)));
     when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(transactions));
 
     CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).result();
@@ -107,7 +108,7 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
       .withFiscalYear(new FiscalYear().withId(fiscalYearId));
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any())).thenReturn(Future.succeededFuture(invoices));
-    when(invoiceLineService.getInvoiceLinesByInvoiceId(anyString(), any())).thenReturn(Future.succeededFuture(Collections.emptyList()));
+    when(invoiceLineService.getInvoiceLinesByInvoiceIdAndStatus(anyString(), eq(PAID), any())).thenReturn(Future.succeededFuture(Collections.emptyList()));
     when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(Collections.emptyList()));
 
     CompositeOrderRetrieveHolder resultHolder = populateService.populate(holder, requestContext).result();
@@ -122,15 +123,15 @@ public class CompositeOrderTotalFieldsPopulateServiceTest {
     String fiscalYearId = UUID.randomUUID().toString();
     Invoice invoice1 = new Invoice().withId(UUID.randomUUID().toString()).withCurrency("USD").withFiscalYearId(fiscalYearId);
     Invoice invoice2 = new Invoice().withId(UUID.randomUUID().toString()).withCurrency("USD").withFiscalYearId(fiscalYearId);
-    InvoiceLine invoiceLine1 = new InvoiceLine().withInvoiceId(invoice1.getId()).withTotal(100.0);
-    InvoiceLine invoiceLine2 = new InvoiceLine().withInvoiceId(invoice2.getId()).withTotal(-500.0);
+    InvoiceLine invoiceLine1 = new InvoiceLine().withInvoiceId(invoice1.getId()).withTotal(100.0).withInvoiceLineStatus(PAID);
+    InvoiceLine invoiceLine2 = new InvoiceLine().withInvoiceId(invoice2.getId()).withTotal(-500.0).withInvoiceLineStatus(PAID);
     List<Invoice> invoices = List.of(invoice1, invoice2);
     CompositePurchaseOrder order = new CompositePurchaseOrder().withId(UUID.randomUUID().toString());
     CompositeOrderRetrieveHolder holder = new CompositeOrderRetrieveHolder(order);
 
     when(invoiceService.getInvoicesByOrderId(anyString(), any())).thenReturn(Future.succeededFuture(invoices));
-    when(invoiceLineService.getInvoiceLinesByInvoiceId(eq(invoice1.getId()), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine1)));
-    when(invoiceLineService.getInvoiceLinesByInvoiceId(eq(invoice2.getId()), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine2)));
+    when(invoiceLineService.getInvoiceLinesByInvoiceIdAndStatus(eq(invoice1.getId()), eq(PAID), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine1)));
+    when(invoiceLineService.getInvoiceLinesByInvoiceIdAndStatus(eq(invoice2.getId()), eq(PAID), any())).thenReturn(Future.succeededFuture(List.of(invoiceLine2)));
     when(transactionService.getTransactions(anyString(), any())).thenReturn(Future.succeededFuture(List.of()));
     when(fiscalYearService.getCurrentFYForSeriesByFYId(anyString(), any())).thenReturn(Future.succeededFuture(fiscalYearId));
 

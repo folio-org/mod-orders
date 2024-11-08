@@ -1,5 +1,16 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.1 - Released (Ramsons R2 2024)
+The primary focus of this release was to fix order processing and multi-tenant issues.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.0...v12.9.1)
+
+### Bug Fixes
+* [MODORDERS-1213](https://issues.folio.org/browse/MODORDERS-1213) - Item has "On order" status after cancelling PO line
+* [MODORDERS-1208](https://issues.folio.org/browse/MODORDERS-1208) - ECS | Invoice linked with POL can not be paid in Member tenant
+* [MODORDERS-1204](https://issues.folio.org/browse/MODORDERS-1204) - Update total expended amount calculation for Purchase order to only Paid invoices
+
+
 ## 12.9.0 - Released (Ramsons R2 2024)
 The primary focus of this release was to enhance multi-tenant functionality, improve piece management, and implement various inventory and order processing features.
 
