@@ -21,6 +21,7 @@ import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.ReceivedItem;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   @Autowired
   private InventoryInstanceManager inventoryInstanceManager;
+
+  @Autowired
+  private ConsortiumConfigurationService consortiumConfigurationService;
 
   public BindHelper(BindPiecesCollection bindPiecesCollection,
                     Map<String, String> okapiHeaders, Context ctx) {
@@ -111,8 +115,9 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   public Future<BindPiecesResult> bindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
-    return removeForbiddenEntities(requestContext)
-      .compose(vVoid -> processBindPieces(bindPiecesCollection, requestContext));
+    return consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext)
+      .compose(ctx -> removeForbiddenEntities(ctx)
+        .compose(vVoid -> processBindPieces(bindPiecesCollection, ctx)));
   }
 
   private Future<BindPiecesResult> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
