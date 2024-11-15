@@ -24,7 +24,6 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.consortium.ConsortiumConfigurationService;
 import org.folio.service.inventory.InventoryInstanceManager;
 import org.folio.service.inventory.InventoryItemRequestService;
-import org.folio.service.settings.util.SettingKey;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
