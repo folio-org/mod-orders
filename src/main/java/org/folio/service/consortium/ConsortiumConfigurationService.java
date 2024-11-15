@@ -100,9 +100,7 @@ public class ConsortiumConfigurationService {
             logger.info("overrideContextToCentralTenantIdNeeded:: central ordering enabled: {}", centralOrdering);
             return centralOrdering.map(Setting::getValue).orElse(null);
           })
-          .compose(orderingEnabled -> Boolean.parseBoolean(orderingEnabled) ?
-            Future.succeededFuture(centralContext) :
-            Future.succeededFuture(requestContext));
+          .compose(orderingEnabled -> Future.succeededFuture(Boolean.parseBoolean(orderingEnabled) ? centralContext : requestContext));
       });
   }
 }
