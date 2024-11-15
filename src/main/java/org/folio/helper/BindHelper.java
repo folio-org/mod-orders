@@ -116,8 +116,11 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   public Future<BindPiecesResult> bindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
     return consortiumConfigurationService.overrideContextToCentralTenantIdNeeded(requestContext)
-      .compose(ctx -> removeForbiddenEntities(ctx)
-        .compose(vVoid -> processBindPieces(bindPiecesCollection, ctx)));
+      .compose(ctx -> {
+        logger.info("bindPieces:: Using request context with centralTenantId: {}", TenantTool.tenantId(ctx.getHeaders()));
+        return removeForbiddenEntities(ctx)
+          .compose(vVoid -> processBindPieces(bindPiecesCollection, ctx));
+      });
   }
 
   private Future<BindPiecesResult> processBindPieces(BindPiecesCollection bindPiecesCollection, RequestContext requestContext) {
