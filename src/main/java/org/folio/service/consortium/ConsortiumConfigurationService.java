@@ -81,7 +81,7 @@ public class ConsortiumConfigurationService {
       .map(config -> config.isEmpty() ? requestContext : RequestContextUtil.createContextWithNewTenantId(requestContext, location.getTenantId()));
   }
 
-  public Future<RequestContext> overrideContextToCentralTenantIdNeeded(RequestContext requestContext) {
+  public Future<RequestContext> overrideContextToCentralTenantIfNeeded(RequestContext requestContext) {
     return getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration -> {
         if (consortiumConfiguration.isEmpty()) {

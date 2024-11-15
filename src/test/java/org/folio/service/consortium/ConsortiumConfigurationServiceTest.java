@@ -75,7 +75,7 @@ public class ConsortiumConfigurationServiceTest {
   }
 
   @Test
-  void overrideContextToCentralTenantIdNeeded_withEmptyConsortiumConfiguration() {
+  void overrideContextToCentralTenantIfNeeded_withEmptyConsortiumConfiguration() {
     // given
     JsonObject consortiumConfiguration = new JsonObject(Map.of(
       "userTenants", new JsonArray(List.of())
@@ -84,7 +84,7 @@ public class ConsortiumConfigurationServiceTest {
       .thenReturn(Future.succeededFuture(consortiumConfiguration));
 
     // when
-    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIdNeeded(requestContext);
+    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
 
     // then
     assertEquals(requestContext, future.result());
@@ -93,7 +93,7 @@ public class ConsortiumConfigurationServiceTest {
   }
 
   @Test
-  void overrideContextToCentralTenantIdNeeded_withSameTenantId() {
+  void overrideContextToCentralTenantIdNeeded_withSameTenantIf() {
     // given
     JsonObject consortiumConfiguration = new JsonObject(Map.of(
       "userTenants", new JsonArray(List.of(
@@ -105,7 +105,7 @@ public class ConsortiumConfigurationServiceTest {
     when(requestContext.getHeaders()).thenReturn(Map.of(XOkapiHeaders.TENANT, "tenantId"));
 
     // when
-    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIdNeeded(requestContext);
+    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
 
     // then
     assertEquals(requestContext, future.result());
@@ -128,7 +128,7 @@ public class ConsortiumConfigurationServiceTest {
       .thenReturn(Future.succeededFuture(Optional.of(new Setting().withValue("true"))));
 
     // when
-    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIdNeeded(requestContext);
+    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
 
     // then
     assertEquals("centralTenantId", future.result().getHeaders().get(XOkapiHeaders.TENANT));
@@ -151,7 +151,7 @@ public class ConsortiumConfigurationServiceTest {
       .thenReturn(Future.succeededFuture(Optional.of(new Setting().withValue("false"))));
 
     // when
-    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIdNeeded(requestContext);
+    Future<RequestContext> future = consortiumConfigurationService.overrideContextToCentralTenantIfNeeded(requestContext);
 
     // then
     assertEquals(requestContext, future.result());
