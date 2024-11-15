@@ -250,8 +250,8 @@ public class PieceStorageServiceTest {
     }
 
     @Bean
-    ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient) {
-      return spy(new ConsortiumConfigurationService(restClient));
+    ConsortiumConfigurationService consortiumConfigurationService(RestClient restClient, SettingsRetriever settingsRetriever) {
+      return spy(new ConsortiumConfigurationService(restClient, settingsRetriever));
     }
 
     @Bean
