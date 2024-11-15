@@ -94,13 +94,14 @@ public class ConsortiumConfigurationService {
         if (StringUtils.equals(tenantId, configuration.centralTenantId())) {
           return Future.succeededFuture(requestContext);
         }
-        return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, requestContext)
+        RequestContext centralContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
+        return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, centralContext)
           .map(centralOrdering -> {
             logger.info("overrideContextToCentralTenantIdNeeded:: central ordering enabled: {}", centralOrdering);
             return centralOrdering.map(Setting::getValue).orElse(null);
           })
           .compose(orderingEnabled -> Boolean.parseBoolean(orderingEnabled) ?
-            Future.succeededFuture(createContextWithNewTenantId(requestContext, configuration.centralTenantId())) :
+            Future.succeededFuture(centralContext) :
             Future.succeededFuture(requestContext));
       });
   }
