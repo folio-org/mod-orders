@@ -69,10 +69,13 @@ public class OrderLinePatchOperationService {
   }
 
   public Future<Void> patch(String lineId, PatchOrderLineRequest request, RequestContext requestContext) {
+    logger.info("patch:: start patching operation: {} for poLineId: {}", request.getOperation(), lineId);
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
     return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, requestContext)
       .compose(v -> patchOrderLine(request, lineId, requestContext))
-      .compose(v -> updateInventoryInstanceInformation(request, lineId, requestContext));
+      .compose(v -> updateInventoryInstanceInformation(request, lineId, requestContext))
+      .onSuccess(v -> logger.info("patch:: successfully patched operation: {} for poLineId: {}", request.getOperation(), lineId))
+      .onFailure(e -> logger.error("Failed to patch operation: {} for poLineId: {}", request.getOperation(), lineId, e));
   }
 
   private Future<Void> patchOrderLine(PatchOrderLineRequest request, String lineId, RequestContext requestContext) {
