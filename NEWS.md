@@ -1,5 +1,14 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.2 - Released (Ramsons R2 2024)
+The primary focus of this release was to fix issue with binding items in member tenants.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.1...v12.9.2)
+
+### Bug Fixes
+* [MODORDERS-1211](https://issues.folio.org/browse/MODORDERS-1211) - ECS | User in member tenant cannot bind pieces related to order from Central tenant
+
+
 ## 12.9.1 - Released (Ramsons R2 2024)
 The primary focus of this release was to fix order processing and multi-tenant issues.
 
