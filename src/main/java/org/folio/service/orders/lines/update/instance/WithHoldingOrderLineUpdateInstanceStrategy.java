@@ -83,6 +83,7 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> moveHoldings(OrderLineUpdateInstanceHolder holder, String newInstanceId, RequestContext requestContext) {
     PoLine poLine = holder.getStoragePoLine();
+    logger.info("moveHoldings:: start processing for poLineId: {} and new instanceId: {}", poLine.getId(), newInstanceId);
     CompositePoLine compPOL = PoLineCommonUtil.convertToCompositePoLine(poLine);
     return pieceStorageService.getPiecesByPoLineId(compPOL, requestContext)
       .map(pieces -> getHoldingsByTenants(holder, pieces, requestContext))
@@ -93,7 +94,11 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
               removeHoldingUnrecognizedFields(holdings);
               var locationContext = RequestContextUtil.createContextWithNewTenantId(requestContext, entry.getKey());
               return inventoryInstanceManager.createShadowInstanceIfNeeded(newInstanceId, locationContext)
-                .compose(instance -> inventoryHoldingManager.updateInstanceForHoldingRecords(holdings, newInstanceId, locationContext));
+                .compose(instance -> inventoryHoldingManager.updateInstanceForHoldingRecords(holdings, newInstanceId, locationContext))
+                .onSuccess(v -> logger.info("moveHoldings:: {} holdings for tenantId: {} have been updated with new instanceId: {}",
+                  holdings.size(), entry.getKey(), newInstanceId))
+                .onFailure(e -> logger.error("Failed to update holdings for tenantId: {} with new instanceId: {}",
+                  entry.getKey(), newInstanceId, e));
             }))
             .toList();
           return GenericCompositeFuture.all(updateHoldings).mapEmpty();
@@ -227,7 +232,10 @@ public class WithHoldingOrderLineUpdateInstanceStrategy extends BaseOrderLineUpd
 
   private Future<Void> updateItemsHolding(String holdingId, String newHoldingId, String poLineId, RequestContext requestContext) {
     return inventoryItemManager.getItemsByHoldingIdAndOrderLineId(holdingId, poLineId, requestContext)
-      .compose(items -> updateItemsInInventory(items, newHoldingId, requestContext));
+      .compose(items -> updateItemsInInventory(items, newHoldingId, requestContext))
+      .onSuccess(v -> logger.info("updateItemsHolding:: existing items for holdingId: {} have been updated with new holdingId: {}",
+        holdingId, newHoldingId))
+      .onFailure(e -> logger.error("Failed to update items for holdingId: {} with new holdingId: {}", holdingId, newHoldingId, e));
   }
 
   private Future<Void> updateItemsInInventory(List<JsonObject> items, String newHoldingId, RequestContext requestContext) {
