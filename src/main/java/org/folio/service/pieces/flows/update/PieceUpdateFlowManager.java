@@ -103,7 +103,7 @@ public class PieceUpdateFlowManager {
         .map(entry -> new PieceBatchStatusUpdateHolder(newStatus, entry.getValue(), entry.getKey()))
         .map(holder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
           .compose(v -> updatePoLine(holder, requestContext))
-          .map(v -> updatePiecesStatusesByPoLine(holder, requestContext)))
+          .compose(v -> updatePiecesStatusesByPoLine(holder, requestContext)))
         .toList())
       .compose(HelperUtils::collectResultsOnSuccess)
       .mapEmpty();
@@ -144,12 +144,16 @@ public class PieceUpdateFlowManager {
       .onFailure(t -> log.error("Failed to update PO line with id: '{}' for pieceIds: {}", originPoLine.getId(), pieceIds, t));
   }
 
-  private boolean updatePiecesStatusesByPoLine(PieceBatchStatusUpdateHolder holder, RequestContext requestContext) {
+  private Future<Boolean> updatePiecesStatusesByPoLine(PieceBatchStatusUpdateHolder holder, RequestContext requestContext) {
     var isAnyPiecesUpdated = holder.getPieces().stream().anyMatch(piece -> updatePieceStatus(piece, piece.getReceivingStatus(), holder.getReceivingStatus()));
-    if (isAnyPiecesUpdated) {
-      pieceService.receiptConsistencyPiecePoLine(holder.getPoLineId(), requestContext);
-    }
-    return isAnyPiecesUpdated;
+    var updates = holder.getPieces().stream().map(piece -> pieceStorageService.updatePiece(piece, requestContext)).toList();
+    return HelperUtils.collectResultsOnSuccess(updates)
+      .map(v -> {
+        if (isAnyPiecesUpdated) {
+          pieceService.receiptConsistencyPiecePoLine(holder.getPoLineId(), requestContext);
+        }
+        return isAnyPiecesUpdated;
+      });
   }
 
   private List<Location> getPieceLocations(List<Piece> pieces, CompositePoLine poLine) {
