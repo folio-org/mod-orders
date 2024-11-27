@@ -2,6 +2,7 @@ package org.folio.service.pieces;
 
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +69,17 @@ public class PieceUtil {
   }
 
   private static boolean isLocationMatch(Piece piece, Location loc) {
-    return (Objects.nonNull(piece.getLocationId()) && piece.getLocationId().equals(loc.getLocationId())) ||
-                      (Objects.nonNull(piece.getHoldingId()) && piece.getHoldingId().equals(loc.getHoldingId()));
+    return (Objects.nonNull(piece.getLocationId()) && piece.getLocationId().equals(loc.getLocationId()))
+      || (Objects.nonNull(piece.getHoldingId()) && piece.getHoldingId().equals(loc.getHoldingId()));
   }
+
+  public static boolean updatePieceStatus(Piece piece, Piece.ReceivingStatus oldStatus, Piece.ReceivingStatus newStatus) {
+    var isStatusChanged = !oldStatus.equals(newStatus);
+    if (isStatusChanged) {
+      piece.setStatusUpdatedDate(new Date());
+    }
+    piece.setReceivingStatus(newStatus);
+    return isStatusChanged;
+  }
+
 }
