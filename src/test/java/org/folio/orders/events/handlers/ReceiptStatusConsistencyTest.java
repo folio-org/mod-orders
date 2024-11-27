@@ -33,6 +33,7 @@ import org.folio.rest.acq.model.PoLine.ReceiptStatus;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -67,6 +68,8 @@ public class ReceiptStatusConsistencyTest {
 
   @Autowired
   private PurchaseOrderLineService purchaseOrderLineService;
+  @Autowired
+  private PieceStorageService pieceStorageService;
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -82,7 +85,7 @@ public class ReceiptStatusConsistencyTest {
   @BeforeEach
   void setUp() {
     SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
-    vertx.eventBus().consumer(TEST_ADDRESS, new ReceiptStatusConsistency(vertx, purchaseOrderLineService));
+    vertx.eventBus().consumer(TEST_ADDRESS, new ReceiptStatusConsistency(vertx, pieceStorageService, purchaseOrderLineService));
   }
 
   @AfterEach

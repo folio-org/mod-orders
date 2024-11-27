@@ -1,19 +1,29 @@
 package org.folio.service.orders.utils;
 
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.CloseReason;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLine.PaymentStatus;
 import org.folio.rest.jaxrs.model.PoLine.ReceiptStatus;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import static org.folio.helper.CheckinReceivePiecesHelper.EXPECTED_STATUSES;
+import static org.folio.helper.CheckinReceivePiecesHelper.RECEIVED_STATUSES;
 import static org.folio.orders.utils.HelperUtils.REASON_CANCELLED;
 import static org.folio.orders.utils.HelperUtils.REASON_COMPLETE;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.AWAITING_RECEIPT;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.FULLY_RECEIVED;
+import static org.folio.rest.jaxrs.model.PoLine.ReceiptStatus.PARTIALLY_RECEIVED;
 
+@Log4j2
 public class StatusUtils {
 
   private static final Set<String> resolutionPaymentStatus = Set.of(PaymentStatus.CANCELLED.value(), PaymentStatus.PAYMENT_NOT_REQUIRED.value(), PaymentStatus.FULLY_PAID.value());
@@ -104,6 +114,36 @@ public class StatusUtils {
     purchaseOrder.setWorkflowStatus(PurchaseOrder.WorkflowStatus.CLOSED);
     purchaseOrder.setCloseReason(new CloseReason().withReason(reason));
     return true;
+  }
+
+  public static PoLine.ReceiptStatus calculatePoLineReceiptStatus(String poLineId, List<Piece> piecesFromStorage) {
+    return calculatePoLineReceiptStatus(poLineId, piecesFromStorage, List.of());
+  }
+
+  public static PoLine.ReceiptStatus calculatePoLineReceiptStatus(String poLineId, List<Piece> piecesFromStorage, List<Piece> piecesToUpdate) {
+    // 1. Get map of all persistent piece statuses
+    var pieceStatues = piecesFromStorage.stream().collect(Collectors.toMap(Piece::getId, Piece::getReceivingStatus));
+    // 2. Update new piece statuses (if any)
+    piecesToUpdate.forEach(piece -> pieceStatues.put(piece.getId(), piece.getReceivingStatus()));
+    // 3. Calculate receipt status
+    return calculatePoLineReceiptStatus(poLineId, pieceStatues);
+  }
+
+  private static PoLine.ReceiptStatus calculatePoLineReceiptStatus(String poLineId, Map<String, Piece.ReceivingStatus> pieceStatuses) {
+    // Count received and expected statuses
+    long receivedQuantity = pieceStatuses.values().stream().filter(RECEIVED_STATUSES::contains).count();
+    long expectedQuantity = pieceStatuses.values().stream().filter(EXPECTED_STATUSES::contains).count();
+
+    if (expectedQuantity == 0) {
+      log.info("calculatePoLineReceiptStatus:: PoLine with id: '{}', status: Fully Received", poLineId);
+      return FULLY_RECEIVED;
+    }
+    if (receivedQuantity > 0) {
+      log.info("calculatePoLineReceiptStatus:: PoLine with id: '{}', status: Partially Received. Successfully Received pieces: {}", poLineId, receivedQuantity);
+      return PARTIALLY_RECEIVED;
+    }
+    log.info("calculatePoLineReceiptStatus:: PoLine with id: '{}', status: Awaiting Receipt. Pieces were rolled-back to Expected", poLineId);
+    return AWAITING_RECEIPT;
   }
 
   private StatusUtils() {}
