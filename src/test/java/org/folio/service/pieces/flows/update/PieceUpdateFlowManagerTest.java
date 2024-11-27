@@ -16,8 +16,10 @@ import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.UNRECEIVABLE;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
+import static org.folio.service.orders.utils.StatusUtils.calculatePoLineReceiptStatus;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -173,7 +175,7 @@ public class PieceUpdateFlowManagerTest {
 
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
-    doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
+    doNothing().when(pieceService).receiptConsistencyPiecePoLine(anyString(), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     doReturn(succeededFuture(null))
       .when(purchaseOrderLineService).saveOrderLine(any(CompositePoLine.class),
@@ -239,7 +241,7 @@ public class PieceUpdateFlowManagerTest {
 
     doReturn(succeededFuture(null)).when(protectionService).isOperationRestricted(any(), any(ProtectedOperationType.class), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowInventoryManager).processInventory(any(PieceUpdateHolder.class), eq(requestContext));
-    doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
+    doNothing().when(pieceService).receiptConsistencyPiecePoLine(anyString(), eq(requestContext));
     doReturn(succeededFuture(null)).when(pieceUpdateFlowPoLineService).updatePoLine(pieceUpdateHolderCapture.capture(), eq(requestContext));
     //When
     pieceUpdateFlowManager.updatePiece(pieceToUpdate, true, true, requestContext).result();
@@ -286,7 +288,7 @@ public class PieceUpdateFlowManagerTest {
     final ArgumentCaptor<Piece> pieceToUpdateCapture = ArgumentCaptor.forClass(Piece.class);
     doReturn(succeededFuture(null)).when(pieceStorageService).updatePiece(pieceToUpdateCapture.capture(), eq(requestContext));
     givenPoLineHasPieces(lineId, List.of());
-    doNothing().when(pieceService).receiptConsistencyPiecePoLine(any(JsonObject.class), eq(requestContext));
+    doNothing().when(pieceService).receiptConsistencyPiecePoLine(anyString(), eq(requestContext));
 
     final ArgumentCaptor<PieceUpdateHolder> pieceUpdateHolderCapture = ArgumentCaptor.forClass(PieceUpdateHolder.class);
     doAnswer((Answer<Future<Void>>) invocation -> {
@@ -320,12 +322,12 @@ public class PieceUpdateFlowManagerTest {
   @Test
   void poLineStatusWhenReceiveLast() {
     // given
-    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    String poLineId = UUID.randomUUID().toString();
     List<Piece> fromStorage = givenPieces(EXPECTED, RECEIVED, UNRECEIVABLE);
     List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(RECEIVED));
 
     // when
-    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
 
     // then
     assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, receiptStatus);
@@ -334,12 +336,12 @@ public class PieceUpdateFlowManagerTest {
   @Test
   void poLineStatusWhenExpectLast() {
     // given
-    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    String poLineId = UUID.randomUUID().toString();
     List<Piece> fromStorage = givenPieces(RECEIVED, RECEIVED, UNRECEIVABLE);
     List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
 
     // when
-    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
 
     // then
     assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
@@ -348,12 +350,12 @@ public class PieceUpdateFlowManagerTest {
   @Test
   void poLineStatusWhenExpectAll() {
     // given
-    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    String poLineId = UUID.randomUUID().toString();
     List<Piece> fromStorage = givenPieces(RECEIVED);
     List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
 
     // when
-    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
 
     // then
     assertEquals(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT, receiptStatus);
@@ -362,12 +364,12 @@ public class PieceUpdateFlowManagerTest {
   @Test
   void poLineStatusWhenReceivePart() {
     // given
-    CompositePoLine poLine = new CompositePoLine().withId(UUID.randomUUID().toString());
+    String poLineId = UUID.randomUUID().toString();
     List<Piece> fromStorage = givenPieces(EXPECTED, EXPECTED);
     List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(UNRECEIVABLE));
 
     // when
-    var receiptStatus = pieceUpdateFlowManager.calculatePoLineReceiptStatus(poLine, fromStorage, update);
+    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
 
     // then
     assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
