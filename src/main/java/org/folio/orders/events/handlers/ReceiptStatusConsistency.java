@@ -48,9 +48,9 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
     var requestContext = new RequestContext(ctx, okapiHeaders);
 
     var poLineId = getPoLineId(messageFromEventBus);
-    var future = purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
-      .compose(poLine -> pieceStorageService.getPiecesByLineId(poLineId, requestContext)
-        .compose(pieces -> updatePoLineAndOrderStatuses(pieces, poLine, requestContext))
+    var future = pieceStorageService.getPiecesByLineId(poLineId, requestContext)
+      .compose(pieces -> purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
+        .compose(poLine -> updatePoLineAndOrderStatuses(pieces, poLine, requestContext))
         .onFailure(e -> logger.error("Exception occurred while fetching PoLine by id: '{}'", poLineId, e)))
       .onFailure(e -> logger.error("Exception occurred while fetching pieces by PoLine id: '{}'", poLineId, e));
 

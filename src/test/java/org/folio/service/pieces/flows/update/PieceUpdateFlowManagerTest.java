@@ -331,7 +331,7 @@ public class PieceUpdateFlowManagerTest {
     var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
 
     // then
-    assertEquals(CompositePoLine.ReceiptStatus.FULLY_RECEIVED, receiptStatus);
+    assertEquals(PoLine.ReceiptStatus.FULLY_RECEIVED, receiptStatus);
   }
 
   @Test
@@ -345,7 +345,7 @@ public class PieceUpdateFlowManagerTest {
     var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
 
     // then
-    assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+    assertEquals(PoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
   }
 
   @Test
@@ -359,7 +359,7 @@ public class PieceUpdateFlowManagerTest {
     var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
 
     // then
-    assertEquals(CompositePoLine.ReceiptStatus.AWAITING_RECEIPT, receiptStatus);
+    assertEquals(PoLine.ReceiptStatus.AWAITING_RECEIPT, receiptStatus);
   }
 
   @Test
@@ -373,7 +373,7 @@ public class PieceUpdateFlowManagerTest {
     var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
 
     // then
-    assertEquals(CompositePoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+    assertEquals(PoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
   }
 
   private static List<Piece> givenPieces(Piece.ReceivingStatus... statuses) {

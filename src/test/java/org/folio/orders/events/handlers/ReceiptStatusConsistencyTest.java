@@ -5,6 +5,7 @@ import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.checkVertxContextCompletion;
 import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.orders.events.utils.EventUtils.POL_UPDATE_FIELD;
 import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
@@ -227,7 +228,7 @@ public class ReceiptStatusConsistencyTest {
 
   private JsonObject createBody(String poLineId) {
     JsonObject jsonObj = new JsonObject();
-    jsonObj.put("poLineIdUpdate",  poLineId);
+    jsonObj.put(POL_UPDATE_FIELD,  poLineId);
     return jsonObj;
   }
 
