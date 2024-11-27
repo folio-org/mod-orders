@@ -11,8 +11,10 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.models.pieces.BasePieceFlowHolder;
 import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.models.pieces.PieceUpdateHolder;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
+import org.folio.orders.utils.ProtectedOperationType;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
@@ -29,12 +31,14 @@ import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
 
 import io.vertx.core.Future;
+import org.folio.service.titles.TitlesService;
 
 @Log4j2
 public class PieceUpdateFlowManager {
 
   private final PieceStorageService pieceStorageService;
   private final PieceService pieceService;
+  private final TitlesService titlesService;
   private final ProtectionService protectionService;
   private final PieceUpdateFlowPoLineService updatePoLineService;
   private final PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager;
@@ -42,12 +46,13 @@ public class PieceUpdateFlowManager {
   private final DefaultPieceFlowsValidator defaultPieceFlowsValidator;
   private final PurchaseOrderLineService purchaseOrderLineService;
 
-  public PieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
+  public PieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, TitlesService titlesService, ProtectionService protectionService,
                                 PieceUpdateFlowPoLineService updatePoLineService, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager,
                                 BasePieceFlowHolderBuilder basePieceFlowHolderBuilder, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
                                 PurchaseOrderLineService purchaseOrderLineService) {
     this.pieceStorageService = pieceStorageService;
     this.pieceService = pieceService;
+    this.titlesService = titlesService;
     this.protectionService = protectionService;
     this.updatePoLineService = updatePoLineService;
     this.pieceUpdateFlowInventoryManager = pieceUpdateFlowInventoryManager;
@@ -92,6 +97,7 @@ public class PieceUpdateFlowManager {
   public Future<Void> updatePiecesStatuses(List<String> pieceIds, PieceBatchStatusCollection.ReceivingStatus receivingStatus, RequestContext requestContext) {
     var newStatus = Piece.ReceivingStatus.fromValue(receivingStatus.value());
     return pieceStorageService.getPiecesByIds(pieceIds, requestContext)
+      .compose(pieces -> isOperationRestricted(pieces, requestContext))
       .map(pieces -> pieces.stream().collect(Collectors.groupingBy(Piece::getPoLineId)))
       .map(piecesByPoLineId -> piecesByPoLineId.entrySet().stream()
         .map(entry -> new PieceBatchStatusUpdateHolder(newStatus, entry.getValue(), entry.getKey()))
@@ -150,6 +156,16 @@ public class PieceUpdateFlowManager {
     return pieces.stream()
       .flatMap(pieceToUpdate -> PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLine).stream())
       .toList();
+  }
+
+  protected Future<List<Piece>> isOperationRestricted(List<Piece> pieces, RequestContext requestContext) {
+    var pieceIds = pieces.stream().map(Piece::getId).toList();
+    return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
+      .map(titles -> titles.stream()
+        .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
+        .collect(Collectors.toList()))
+      .map(GenericCompositeFuture::all)
+      .map(pieces);
   }
 
 }

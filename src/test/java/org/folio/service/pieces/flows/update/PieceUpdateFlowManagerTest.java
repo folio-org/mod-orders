@@ -59,6 +59,7 @@ import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUtil;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilder;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidator;
+import org.folio.service.titles.TitlesService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -397,6 +398,9 @@ public class PieceUpdateFlowManagerTest {
     @Bean PieceService pieceService() {
       return mock(PieceService.class);
     }
+    @Bean TitlesService titlesService() {
+      return mock(TitlesService.class);
+    }
     @Bean PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager() {
       return mock(PieceUpdateFlowInventoryManager.class);
     }
@@ -423,11 +427,11 @@ public class PieceUpdateFlowManagerTest {
     }
 
     @Bean
-    PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService,
+    PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, TitlesService titlesService,
                                                   ProtectionService protectionService, PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService,
                                                   PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
                                                   DefaultPieceFlowsValidator defaultPieceFlowsValidator, PurchaseOrderLineService purchaseOrderLineService) {
-      return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService,
+      return new PieceUpdateFlowManager(pieceStorageService, pieceService, titlesService, protectionService,
         pieceUpdateFlowPoLineService, pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder,
         defaultPieceFlowsValidator, purchaseOrderLineService);
     }
