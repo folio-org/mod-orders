@@ -11,7 +11,7 @@ documentation:
 types:
   piece: !include acq-models/mod-orders-storage/schemas/piece.json
   piece-collection: !include acq-models/mod-orders-storage/schemas/piece_collection.json
-  piece-batch-status: !include acq-models/mod-orders/schemas/pieceStatusBatchCollection.json
+  piece-batch-status-collection: !include acq-models/mod-orders/schemas/pieceStatusBatchCollection.json
   errors: !include raml-util/schemas/errors.schema
   UUID:
     type: string
@@ -148,7 +148,7 @@ resourceTypes:
       description: Batch status update for pieces
       body:
         application/json:
-          type: piece-batch-status
+          type: piece-batch-status-collection
           example:
             strict: false
             value: !include acq-models/mod-orders/examples/pieceStatusBatchCollection.sample

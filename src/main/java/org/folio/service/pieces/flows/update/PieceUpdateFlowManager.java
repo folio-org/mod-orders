@@ -19,7 +19,7 @@ import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PieceBatchStatus;
+import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.service.ProtectionService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceService;
@@ -89,7 +89,7 @@ public class PieceUpdateFlowManager {
       .mapEmpty();
   }
 
-  public Future<Void> updatePiecesStatuses(List<String> pieceIds, PieceBatchStatus.ReceivingStatus receivingStatus, RequestContext requestContext) {
+  public Future<Void> updatePiecesStatuses(List<String> pieceIds, PieceBatchStatusCollection.ReceivingStatus receivingStatus, RequestContext requestContext) {
     var newStatus = Piece.ReceivingStatus.fromValue(receivingStatus.value());
     return pieceStorageService.getPiecesByIds(pieceIds, requestContext)
       .map(pieces -> pieces.stream().collect(Collectors.groupingBy(Piece::getPoLineId)))

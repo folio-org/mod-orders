@@ -13,7 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PieceBatchStatus;
+import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
 import org.folio.rest.jaxrs.resource.OrdersPiecesRequests;
 import org.folio.service.CirculationRequestsRetriever;
@@ -63,9 +63,8 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceCreateFlowManager.createPiece(entity, createItem, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(piece -> {
-        if (logger.isInfoEnabled()) {
-          logger.debug("Successfully created piece: {}", JsonObject.mapFrom(piece)
-            .encodePrettily());
+        if (logger.isDebugEnabled()) {
+          logger.debug("Successfully created piece: {}", JsonObject.mapFrom(piece).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece)));
       })
@@ -112,9 +111,9 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
   }
 
   @Override
-  public void putOrdersPiecesBatchStatus(PieceBatchStatus entity, Map<String, String> okapiHeaders,
+  public void putOrdersPiecesBatchStatus(PieceBatchStatusCollection pieceBatchStatusCollection, Map<String, String> okapiHeaders,
                                          Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceUpdateFlowManager.updatePiecesStatuses(entity.getPieceIds(), entity.getReceivingStatus(), new RequestContext(vertxContext, okapiHeaders))
+    pieceUpdateFlowManager.updatePiecesStatuses(pieceBatchStatusCollection.getPieceIds(), pieceBatchStatusCollection.getReceivingStatus(), new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
