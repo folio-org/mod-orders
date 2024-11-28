@@ -630,7 +630,7 @@
         {
           "methods": ["PUT"],
           "pathPattern": "/orders/pieces-batch/status",
-          "permissionsRequired": ["orders.pieces.batch.put"],
+          "permissionsRequired": ["orders.pieces.collection.put"],
           "modulePermissions": [
             "orders-storage.pieces.item.put",
             "orders-storage.pieces.collection.get",
@@ -1545,7 +1545,7 @@
       "description": "Delete an existing piece"
     },
     {
-      "permissionName": "orders.pieces.batch.put",
+      "permissionName": "orders.pieces.collection.put",
       "displayName": "orders - batch update piece statuses",
       "description": "Batch update piece statuses"
     },
@@ -1560,11 +1560,11 @@
       "description" : "All permissions for the pieces",
       "subPermissions" : [
         "orders.pieces.collection.get",
+        "orders.pieces.collection.put",
         "orders.pieces.item.post",
         "orders.pieces.item.get",
         "orders.pieces.item.put",
         "orders.pieces.item.delete",
-        "orders.pieces.batch.put",
         "orders.piece-requests.collection.get"
       ]
     },
