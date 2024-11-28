@@ -58,7 +58,6 @@ public class ResourcePathResolver {
   public static final String USERS = "users";
   public static final String CONSORTIA_USER_TENANTS = "consortia.user-tenants";
 
-
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
 

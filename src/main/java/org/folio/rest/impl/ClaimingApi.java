@@ -9,7 +9,7 @@ import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
 import org.folio.rest.jaxrs.resource.OrdersClaim;
-import org.folio.service.claims.ClaimingService;
+import org.folio.service.claiming.ClaimingService;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 

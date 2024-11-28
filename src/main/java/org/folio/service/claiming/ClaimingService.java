@@ -1,4 +1,4 @@
-package org.folio.service.claims;
+package org.folio.service.claiming;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -11,7 +11,7 @@ import org.folio.models.ClaimingHolder;
 import org.folio.rest.core.RestClient;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
-import org.folio.rest.jaxrs.model.ClaimingResult;
+import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.ClaimingResults;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.service.caches.ConfigurationEntriesCache;
@@ -72,8 +72,8 @@ public class ClaimingService {
     var claimingHolder = new ClaimingHolder();
     return configurationEntriesCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, requestContext)
       .compose(config -> {
-        var pieceIds = claimingCollection.getClaiming().stream().toList();
-        logger.info("sendClaims:: Received pieces to claim, pieceIds: {}", pieceIds);
+        var pieceIds = claimingCollection.getClaimingPieceIds().stream().toList();
+        logger.info("sendClaims:: Received pieces to be claimed, pieceIds: {}", pieceIds);
         return groupPieceIdsByVendorId(claimingHolder, pieceIds, requestContext)
           .compose(pieceIdsByVendorIds -> createJobsByVendor(claimingHolder, config, pieceIdsByVendorIds, requestContext));
       })
@@ -130,7 +130,7 @@ public class ClaimingService {
                                                      List<String>> pieceIdsByVendorId, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(pieceIdsByVendorId)) {
       logger.info("createJobsByVendor:: No jobs are created, pieceIdsByVendorId is empty");
-      return Future.succeededFuture();
+      return Future.succeededFuture(new ClaimingResults());
     }
     var updatePiecesAndJobFutures = new ArrayList<Future<List<String>>>();
     pieceIdsByVendorId.forEach((vendorId, pieceIds) -> {
@@ -146,11 +146,10 @@ public class ClaimingService {
     return collectResultsOnSuccess(updatePiecesAndJobFutures)
       .map(updatedLists -> {
         var processedPieces = updatedLists.stream().flatMap(Collection::stream).distinct()
-          .map(pieceId -> new ClaimingResult().withPieceId(pieceId).withType(ClaimingResult.Type.SUCCESS))
+          .map(pieceId -> new ClaimingPieceResult().withPieceId(pieceId).withStatus(ClaimingPieceResult.Status.SUCCESS))
           .toList();
         logger.info("createJobsByVendor:: Processed pieces for claiming, count: {}", processedPieces.size());
-        return new ClaimingResults().withClaimingResults(processedPieces)
-          .withTotalRecords(processedPieces.size());
+        return new ClaimingResults().withClaimingPieceResults(processedPieces);
       });
   }
 
