@@ -1155,6 +1155,27 @@
       ]
     },
     {
+      "id": "orders.send-claims",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/orders/claim",
+          "permissionsRequired": [
+            "orders.send-claims.collection.post"
+          ],
+          "modulePermissions": [
+            "configuration.entries.collection.get",
+            "orders-storage.pieces.collection.get",
+            "orders-storage.pieces.item.put",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.po-lines.item.put",
+            "orders-storage.purchase-orders.item.get"
+          ]
+        }
+      ]
+    },
+    {
       "id": "_jsonSchemas",
       "version": "1.0",
       "interfaceType" : "multiple",
@@ -1962,7 +1983,19 @@
         "orders.bind-pieces.item.delete"
       ]
     },
-
+    {
+      "permissionName": "orders.send-claims.collection.post",
+      "displayName" : "send-claims collection post",
+      "description" : "Send claims collection post"
+    },
+    {
+      "permissionName": "orders.send-claims.all",
+      "displayName": "All send claims perms",
+      "description": "All permissions for the send claims",
+      "subPermissions": [
+        "orders.send-claims.collection.post"
+      ]
+    },
     {
       "permissionName": "orders.all",
       "displayName": "orders - all permissions",
@@ -1999,7 +2032,8 @@
         "orders.acquisition-methods.all",
         "orders.export-history.all",
         "orders.routing-lists.all",
-        "orders.bind-pieces.all"
+        "orders.bind-pieces.all",
+        "orders.send-claims.all"
       ]
     },
     {
