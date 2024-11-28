@@ -10,13 +10,9 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.ID;
 import static org.folio.rest.jaxrs.model.Eresource.CreateInventory.INSTANCE_HOLDING_ITEM;
-import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.EXPECTED;
-import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.RECEIVED;
-import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.UNRECEIVABLE;
 import static org.folio.service.inventory.InventoryHoldingManager.HOLDING_PERMANENT_LOCATION_ID;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS;
 import static org.folio.service.inventory.InventoryItemManager.ITEM_STATUS_NAME;
-import static org.folio.service.orders.utils.StatusUtils.calculatePoLineReceiptStatus;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -29,7 +25,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -48,12 +43,14 @@ import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.rest.jaxrs.model.Title;
 import org.folio.service.ProtectionService;
 import org.folio.service.caches.InventoryCache;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.orders.PurchaseOrderStorageService;
 import org.folio.service.pieces.PieceService;
 import org.folio.service.pieces.PieceStorageService;
 import org.folio.service.pieces.PieceUtil;
@@ -81,14 +78,26 @@ import io.vertx.junit5.VertxExtension;
 
 @ExtendWith(VertxExtension.class)
 public class PieceUpdateFlowManagerTest {
-  @Autowired PieceUpdateFlowManager pieceUpdateFlowManager;
-  @Autowired PieceStorageService pieceStorageService;
-  @Autowired ProtectionService protectionService;
-  @Autowired PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager;
-  @Autowired PieceService pieceService;
-  @Autowired BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
-  @Autowired PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
-  @Autowired PurchaseOrderLineService purchaseOrderLineService;
+  @Autowired
+  PieceUpdateFlowManager pieceUpdateFlowManager;
+  @Autowired
+  PieceStorageService pieceStorageService;
+  @Autowired
+  ProtectionService protectionService;
+  @Autowired
+  PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager;
+  @Autowired
+  PieceService pieceService;
+  @Autowired
+  TitlesService titlesService;
+  @Autowired
+  BasePieceFlowHolderBuilder basePieceFlowHolderBuilder;
+  @Autowired
+  PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService;
+  @Autowired
+  PurchaseOrderStorageService purchaseOrderStorageService;
+  @Autowired
+  PurchaseOrderLineService purchaseOrderLineService;
 
   private final Context ctx = getFirstContextFromVertx(getVertx());
   @Mock
@@ -98,7 +107,7 @@ public class PieceUpdateFlowManagerTest {
   private static boolean runningOnOwn;
 
   @BeforeEach
-  void initMocks(){
+  void initMocks() {
     MockitoAnnotations.openMocks(this);
     autowireDependencies(this);
     requestContext = new RequestContext(ctx, okapiHeadersMock);
@@ -321,65 +330,29 @@ public class PieceUpdateFlowManagerTest {
   }
 
   @Test
-  void poLineStatusWhenReceiveLast() {
-    // given
-    String poLineId = UUID.randomUUID().toString();
-    List<Piece> fromStorage = givenPieces(EXPECTED, RECEIVED, UNRECEIVABLE);
-    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(RECEIVED));
+  void shouldUpdatePiecesStatusesSuccessfully() {
+    List<String> pieceIds = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+    PieceBatchStatusCollection.ReceivingStatus receivingStatus = PieceBatchStatusCollection.ReceivingStatus.RECEIVED;
+    Title title = new Title().withId(UUID.randomUUID().toString()).withAcqUnitIds(List.of(UUID.randomUUID().toString()));
+    PurchaseOrder purchaseOrder = new PurchaseOrder().withId(UUID.randomUUID().toString());
+    PoLine poLine1 = new PoLine().withId(UUID.randomUUID().toString()).withOrderFormat(PoLine.OrderFormat.P_E_MIX).withPurchaseOrderId(purchaseOrder.getId());
+    PoLine poLine2 = new PoLine().withId(UUID.randomUUID().toString()).withOrderFormat(PoLine.OrderFormat.P_E_MIX).withPurchaseOrderId(purchaseOrder.getId());
+    Piece piece1 = new Piece().withId(pieceIds.get(0)).withPoLineId(poLine1.getId()).withTitleId(title.getId());
+    Piece piece2 = new Piece().withId(pieceIds.get(1)).withPoLineId(poLine2.getId()).withTitleId(title.getId());
 
-    // when
-    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
+    doReturn(succeededFuture(List.of(piece1, piece2))).when(pieceStorageService).getPiecesByIds(pieceIds, requestContext);
+    doReturn(succeededFuture(List.of(title))).when(titlesService).getTitlesByPieceIds(pieceIds, requestContext);
+    doReturn(succeededFuture()).when(protectionService).isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext);
+    doReturn(succeededFuture(poLine1)).when(purchaseOrderLineService).getOrderLineById(poLine1.getId(), requestContext);
+    doReturn(succeededFuture(poLine2)).when(purchaseOrderLineService).getOrderLineById(poLine2.getId(), requestContext);
+    doReturn(succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(purchaseOrder.getId(), requestContext);
+    doReturn(succeededFuture()).when(pieceUpdateFlowPoLineService).updatePoLine(any(), eq(requestContext));
+    doReturn(succeededFuture()).when(pieceStorageService).updatePiece(any(), eq(requestContext));
+    doNothing().when(pieceService).receiptConsistencyPiecePoLine(anyString(), eq(requestContext));
 
-    // then
-    assertEquals(PoLine.ReceiptStatus.FULLY_RECEIVED, receiptStatus);
-  }
+    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, receivingStatus, requestContext);
 
-  @Test
-  void poLineStatusWhenExpectLast() {
-    // given
-    String poLineId = UUID.randomUUID().toString();
-    List<Piece> fromStorage = givenPieces(RECEIVED, RECEIVED, UNRECEIVABLE);
-    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
-
-    // when
-    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
-
-    // then
-    assertEquals(PoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
-  }
-
-  @Test
-  void poLineStatusWhenExpectAll() {
-    // given
-    String poLineId = UUID.randomUUID().toString();
-    List<Piece> fromStorage = givenPieces(RECEIVED);
-    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
-
-    // when
-    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
-
-    // then
-    assertEquals(PoLine.ReceiptStatus.AWAITING_RECEIPT, receiptStatus);
-  }
-
-  @Test
-  void poLineStatusWhenReceivePart() {
-    // given
-    String poLineId = UUID.randomUUID().toString();
-    List<Piece> fromStorage = givenPieces(EXPECTED, EXPECTED);
-    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(UNRECEIVABLE));
-
-    // when
-    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
-
-    // then
-    assertEquals(PoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
-  }
-
-  private static List<Piece> givenPieces(Piece.ReceivingStatus... statuses) {
-    return Arrays.stream(statuses).map(status ->
-      new Piece().withId(UUID.randomUUID().toString()).withReceivingStatus(status)
-    ).toList();
+    assertTrue(result.succeeded());
   }
 
   private void givenPoLineHasPieces(String lineId, List<Piece> pieces) {
@@ -389,40 +362,65 @@ public class PieceUpdateFlowManagerTest {
   }
 
   private static class ContextConfiguration {
-    @Bean PieceStorageService pieceStorageService() {
+    @Bean
+    PieceStorageService pieceStorageService() {
       return mock(PieceStorageService.class);
     }
-    @Bean ProtectionService protectionService() {
+
+    @Bean
+    ProtectionService protectionService() {
       return mock(ProtectionService.class);
     }
-    @Bean PieceService pieceService() {
+
+    @Bean
+    PieceService pieceService() {
       return mock(PieceService.class);
     }
-    @Bean TitlesService titlesService() {
+
+    @Bean
+    TitlesService titlesService() {
       return mock(TitlesService.class);
     }
-    @Bean PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager() {
+
+    @Bean
+    PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager() {
       return mock(PieceUpdateFlowInventoryManager.class);
     }
-    @Bean BasePieceFlowHolderBuilder basePieceFlowHolderBuilder() {
-      return mock(BasePieceFlowHolderBuilder.class);
+
+    @Bean
+    BasePieceFlowHolderBuilder basePieceFlowHolderBuilder(PurchaseOrderStorageService purchaseOrderStorageService,
+                                                          PurchaseOrderLineService purchaseOrderLineService,
+                                                          TitlesService titlesService) {
+      return spy(new BasePieceFlowHolderBuilder(purchaseOrderStorageService, purchaseOrderLineService, titlesService));
     }
-    @Bean PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService() {
-      return  mock(PieceUpdateFlowPoLineService.class);
+
+    @Bean
+    PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService() {
+      return mock(PieceUpdateFlowPoLineService.class);
     }
-    @Bean DefaultPieceFlowsValidator defaultPieceFlowsValidator() {
+
+    @Bean
+    DefaultPieceFlowsValidator defaultPieceFlowsValidator() {
       return spy(new DefaultPieceFlowsValidator());
     }
 
-    @Bean RestClient restClient() {
+    @Bean
+    RestClient restClient() {
       return mock(RestClient.class);
     }
 
-    @Bean InventoryCache inventoryCache() {
+    @Bean
+    InventoryCache inventoryCache() {
       return mock(InventoryCache.class);
     }
 
-    @Bean PurchaseOrderLineService purchaseOrderLineService() {
+    @Bean
+    PurchaseOrderStorageService purchaseOrderStorageService() {
+      return mock(PurchaseOrderStorageService.class);
+    }
+
+    @Bean
+    PurchaseOrderLineService purchaseOrderLineService() {
       return mock(PurchaseOrderLineService.class);
     }
 

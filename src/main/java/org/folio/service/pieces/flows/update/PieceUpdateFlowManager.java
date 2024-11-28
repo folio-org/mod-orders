@@ -120,7 +120,7 @@ public class PieceUpdateFlowManager {
     return updatePoLine(holder, holder.getPieces(), requestContext);
   }
 
-  protected <T extends BasePieceFlowHolder> Future<Void> updatePoLine(T holder, List<Piece> piecesToUpdate, RequestContext requestContext) {
+  private <T extends BasePieceFlowHolder> Future<Void> updatePoLine(T holder, List<Piece> piecesToUpdate, RequestContext requestContext) {
     var originPurchaseOrder = holder.getOriginPurchaseOrder();
     if (originPurchaseOrder.getOrderType() != OrderType.ONE_TIME || originPurchaseOrder.getWorkflowStatus() != WorkflowStatus.OPEN) {
       return Future.succeededFuture();
@@ -167,7 +167,7 @@ public class PieceUpdateFlowManager {
     return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
       .map(titles -> titles.stream()
         .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
-        .collect(Collectors.toList()))
+        .toList())
       .map(GenericCompositeFuture::all)
       .map(pieces);
   }
