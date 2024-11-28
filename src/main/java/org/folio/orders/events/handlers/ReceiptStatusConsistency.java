@@ -59,6 +59,7 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
 
   private Future<Void> updatePoLineAndOrderStatuses(List<Piece> pieces, PoLine poLine, RequestContext requestContext) {
     if (PoLineCommonUtil.isCancelledOrOngoingStatus(poLine)) {
+      logger.info("updatePoLineAndOrderStatuses:: PoLine with id: '{}' has status: '{}', skipping...", poLine.getId(), poLine.getReceiptStatus());
       return Future.succeededFuture();
     }
     var newStatus = pieces.isEmpty()
@@ -66,11 +67,13 @@ public class ReceiptStatusConsistency extends BaseHelper implements Handler<Mess
       : calculatePoLineReceiptStatus(poLine.getId(), pieces);
     boolean statusUpdated = purchaseOrderLineService.updatePoLineReceiptStatusWithoutSave(poLine, newStatus);
     if (!statusUpdated) {
+      logger.info("updatePoLineAndOrderStatuses:: PoLine receipt status is not updated, skipping...");
       return Future.succeededFuture();
     }
     return purchaseOrderLineService.saveOrderLine(poLine, requestContext)
       .compose(v -> updateOrderStatus(poLine, okapiHeaders, requestContext))
-      .onFailure(e -> logger.error("Exception occurred while updating PoLine by id: '{}'", poLine.getId(), e));
+      .onSuccess(v -> logger.info("updatePoLineAndOrderStatuses:: Order '{}' and PoLine '{}' updated successfully", poLine.getId(), poLine.getPurchaseOrderId()))
+      .onFailure(e -> logger.error("Exception occurred while updating Order '{}' and PoLine '{}'", poLine.getId(), poLine.getPurchaseOrderId(), e));
   }
 
   private Future<Void> updateOrderStatus(PoLine poLine, Map<String, String> okapiHeaders, RequestContext requestContext) {
