@@ -106,6 +106,8 @@ public class PieceUpdateFlowManager {
           .compose(v -> updatePiecesStatusesByPoLine(holder, requestContext)))
         .toList())
       .compose(HelperUtils::collectResultsOnSuccess)
+      .onSuccess(v -> log.info("Pieces statuses are updated for pieceIds: {} to status: {}", pieceIds, receivingStatus))
+      .onFailure(t -> log.error("Failed to update pieces statuses for pieceIds: {} to status: {}", pieceIds, receivingStatus, t))
       .mapEmpty();
   }
 

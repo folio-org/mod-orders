@@ -11,7 +11,6 @@ documentation:
 types:
   piece: !include acq-models/mod-orders-storage/schemas/piece.json
   piece-collection: !include acq-models/mod-orders-storage/schemas/piece_collection.json
-  piece-batch-status-collection: !include acq-models/mod-orders/schemas/pieceStatusBatchCollection.json
   errors: !include raml-util/schemas/errors.schema
   UUID:
     type: string
@@ -143,38 +142,3 @@ resourceTypes:
                 value: !include examples/errors_500.sample
             text/plain:
               example: "unable to delete Piece -- Internal server error, e.g. due to misconfiguration"
-  /batch-status:
-    put:
-      description: Batch status update for pieces
-      body:
-        application/json:
-          type: piece-batch-status-collection
-          example:
-            strict: false
-            value: !include acq-models/mod-orders/examples/pieceStatusBatchCollection.sample
-      responses:
-        204:
-          description: "Piece records successfully updated"
-        400:
-          description: "Bad request"
-          body:
-            application/json:
-              example:
-                strict: false
-                value: !include examples/errors_400.sample
-            text/plain:
-              example: "Unable to update pieces - Bad request"
-        404:
-          description: "Pieces do not exist"
-          body:
-            text/plain:
-              example: "Following pieces are not found: [id1, id2]"
-        500:
-          description: "Internal server error, e.g. due to misconfiguration"
-          body:
-            application/json:
-              example:
-                strict: false
-                value: !include examples/errors_500.sample
-            text/plain:
-              example: "Unable to update pieces - Internal server error, e.g. due to misconfiguration"

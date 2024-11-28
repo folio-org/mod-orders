@@ -15,6 +15,7 @@ import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
+import org.folio.rest.jaxrs.resource.OrdersPiecesBatch;
 import org.folio.rest.jaxrs.resource.OrdersPiecesRequests;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.pieces.PieceStorageService;
@@ -30,7 +31,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequests {
+public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequests, OrdersPiecesBatch {
 
   private static final Logger logger = LogManager.getLogger();
   @Autowired
