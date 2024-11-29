@@ -13,7 +13,9 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.annotations.Validate;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.rest.jaxrs.resource.OrdersPieces;
+import org.folio.rest.jaxrs.resource.OrdersPiecesBatch;
 import org.folio.rest.jaxrs.resource.OrdersPiecesRequests;
 import org.folio.service.CirculationRequestsRetriever;
 import org.folio.service.pieces.PieceStorageService;
@@ -29,7 +31,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
-public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequests {
+public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequests, OrdersPiecesBatch {
 
   private static final Logger logger = LogManager.getLogger();
   @Autowired
@@ -62,9 +64,8 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
                                Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     pieceCreateFlowManager.createPiece(entity, createItem, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(piece -> {
-        if (logger.isInfoEnabled()) {
-          logger.debug("Successfully created piece: {}", JsonObject.mapFrom(piece)
-            .encodePrettily());
+        if (logger.isDebugEnabled()) {
+          logger.debug("Successfully created piece: {}", JsonObject.mapFrom(piece).encodePrettily());
         }
         asyncResultHandler.handle(succeededFuture(buildCreatedResponse(piece)));
       })
@@ -104,10 +105,17 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
 
   @Override
   public void getOrdersPiecesRequests(List<String> pieceIds, String status, Map<String, String> okapiHeaders,
-                                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+                                      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     circulationRequestsRetriever.getRequesterIdsToRequestsByPieceIds(pieceIds, status, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(requests -> asyncResultHandler.handle(succeededFuture(buildOkResponse(requests))))
       .onFailure(fail -> handleErrorResponse(asyncResultHandler, fail));
   }
 
+  @Override
+  public void putOrdersPiecesBatchStatus(PieceBatchStatusCollection pieceBatchStatusCollection, Map<String, String> okapiHeaders,
+                                         Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    pieceUpdateFlowManager.updatePiecesStatuses(pieceBatchStatusCollection.getPieceIds(), pieceBatchStatusCollection.getReceivingStatus(), new RequestContext(vertxContext, okapiHeaders))
+      .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
+      .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
+  }
 }

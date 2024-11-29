@@ -1,14 +1,13 @@
 package org.folio.service.pieces;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.folio.orders.events.handlers.MessageAddress;
 import org.folio.rest.core.models.RequestContext;
 
-import io.vertx.core.json.JsonObject;
+import static org.folio.orders.events.utils.EventUtils.createPoLineUpdateEvent;
 
+@Log4j2
 public class PieceService {
-  private static final Logger logger = LogManager.getLogger(PieceService.class);
 
   private final PieceChangeReceiptStatusPublisher receiptStatusPublisher;
 
@@ -16,11 +15,10 @@ public class PieceService {
     this.receiptStatusPublisher = receiptStatusPublisher;
   }
 
-  public void receiptConsistencyPiecePoLine(JsonObject jsonObj, RequestContext requestContext) {
-    logger.debug("Sending event to verify receipt status");
-
-    receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, jsonObj, requestContext);
-
-    logger.debug("Event to verify receipt status - sent");
+  public void receiptConsistencyPiecePoLine(String poLineId, RequestContext requestContext) {
+    log.debug("Sending event to verify receipt status for poLineId: {}", poLineId);
+    receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, createPoLineUpdateEvent(poLineId), requestContext);
+    log.debug("Event to verify receipt status is sent for poLineId: {}", poLineId);
   }
+
 }

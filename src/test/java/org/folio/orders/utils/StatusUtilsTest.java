@@ -2,19 +2,26 @@ package org.folio.orders.utils;
 
 import org.folio.CopilotGenerated;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PurchaseOrder;
 import org.folio.service.orders.utils.StatusUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.EXPECTED;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.RECEIVED;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.UNRECEIVABLE;
+import static org.folio.service.orders.utils.StatusUtils.calculatePoLineReceiptStatus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@CopilotGenerated
+@CopilotGenerated(partiallyGenerated = true)
 public class StatusUtilsTest {
 
   private PurchaseOrder purchaseOrder;
@@ -115,4 +122,67 @@ public class StatusUtilsTest {
     assertFalse(StatusUtils.changeOrderStatusForPoLineUpdate(purchaseOrder, List.of(poLine1)));
     assertEquals(PurchaseOrder.WorkflowStatus.CLOSED, purchaseOrder.getWorkflowStatus());
   }
+
+  @Test
+  void testCalculatePoLineReceiptStatusWhenReceiveLast() {
+    // given
+    String poLineId = UUID.randomUUID().toString();
+    List<Piece> fromStorage = givenPieces(EXPECTED, RECEIVED, UNRECEIVABLE);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(RECEIVED));
+
+    // when
+    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
+
+    // then
+    assertEquals(PoLine.ReceiptStatus.FULLY_RECEIVED, receiptStatus);
+  }
+
+  @Test
+  void testCalculatePoLineReceiptStatusWhenExpectLast() {
+    // given
+    String poLineId = UUID.randomUUID().toString();
+    List<Piece> fromStorage = givenPieces(RECEIVED, RECEIVED, UNRECEIVABLE);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
+
+    // when
+    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
+
+    // then
+    assertEquals(PoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+  }
+
+  @Test
+  void testCalculatePoLineReceiptStatusWhenExpectAll() {
+    // given
+    String poLineId = UUID.randomUUID().toString();
+    List<Piece> fromStorage = givenPieces(RECEIVED);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(EXPECTED));
+
+    // when
+    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
+
+    // then
+    assertEquals(PoLine.ReceiptStatus.AWAITING_RECEIPT, receiptStatus);
+  }
+
+  @Test
+  void testCalculatePoLineReceiptStatusWhenReceivePart() {
+    // given
+    String poLineId = UUID.randomUUID().toString();
+    List<Piece> fromStorage = givenPieces(EXPECTED, EXPECTED);
+    List<Piece> update = List.of(new Piece().withId(fromStorage.get(0).getId()).withReceivingStatus(UNRECEIVABLE));
+
+    // when
+    var receiptStatus = calculatePoLineReceiptStatus(poLineId, fromStorage, update);
+
+    // then
+    assertEquals(PoLine.ReceiptStatus.PARTIALLY_RECEIVED, receiptStatus);
+  }
+
+  private static List<Piece> givenPieces(Piece.ReceivingStatus... statuses) {
+    return Arrays.stream(statuses)
+      .map(status -> new Piece().withId(UUID.randomUUID().toString()).withReceivingStatus(status))
+      .toList();
+  }
+
 }
