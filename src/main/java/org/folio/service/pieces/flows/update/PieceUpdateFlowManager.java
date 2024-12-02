@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import lombok.extern.log4j.Log4j2;
+import org.folio.HttpStatus;
 import org.folio.models.pieces.BasePieceFlowHolder;
 import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.models.pieces.PieceUpdateHolder;
@@ -16,6 +17,8 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
@@ -93,8 +96,9 @@ public class PieceUpdateFlowManager {
 
   public Future<Void> updatePiecesStatuses(List<String> pieceIds, PieceBatchStatusCollection.ReceivingStatus receivingStatus, RequestContext requestContext) {
     var newStatus = Piece.ReceivingStatus.fromValue(receivingStatus.value());
-    return pieceStorageService.getPiecesByIds(pieceIds, requestContext)
-      .compose(pieces -> isOperationRestricted(pieces, requestContext))
+    return isOperationRestricted(pieceIds, requestContext)
+      .compose(v -> pieceStorageService.getPiecesByIds(pieceIds, requestContext))
+      .compose(pieces -> validateFetchedPiecesQuantity(pieces, pieceIds))
       .map(pieces -> pieces.stream().collect(Collectors.groupingBy(Piece::getPoLineId)))
       .map(piecesByPoLineId -> piecesByPoLineId.entrySet().stream()
         .map(entry -> new PieceBatchStatusUpdateHolder(newStatus, entry.getValue(), entry.getKey()))
@@ -159,14 +163,19 @@ public class PieceUpdateFlowManager {
       .toList();
   }
 
-  protected Future<List<Piece>> isOperationRestricted(List<Piece> pieces, RequestContext requestContext) {
-    var pieceIds = pieces.stream().map(Piece::getId).toList();
+  private Future<Void> isOperationRestricted(List<String> pieceIds, RequestContext requestContext) {
     return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
       .map(titles -> titles.stream()
         .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
         .toList())
       .map(GenericCompositeFuture::all)
-      .map(pieces);
+      .mapEmpty();
+  }
+
+  private Future<List<Piece>> validateFetchedPiecesQuantity(List<Piece> pieces, List<String> pieceIds) {
+    return pieces.size() == pieceIds.size()
+      ? Future.succeededFuture(pieces)
+      : Future.failedFuture(new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), ErrorCodes.PIECE_NOT_FOUND));
   }
 
 }
