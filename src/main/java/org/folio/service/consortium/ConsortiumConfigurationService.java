@@ -63,12 +63,12 @@ public class ConsortiumConfigurationService {
       .map(jsonObject -> jsonObject.getJsonArray(USER_TENANTS_ARRAY_IDENTIFIER))
       .map(userTenants -> {
         if (userTenants.isEmpty()) {
-          logger.debug("Central tenant and consortium id not found");
+          logger.info("getConsortiumConfigurationFromRemote:: Central tenant and consortium id not found");
           return Optional.<ConsortiumConfiguration>empty();
         }
         String consortiumId = userTenants.getJsonObject(0).getString(CONSORTIUM_ID_FIELD);
         String centralTenantId = userTenants.getJsonObject(0).getString(CENTRAL_TENANT_ID_FIELD);
-        logger.debug("Found centralTenantId: {} and consortiumId: {}", centralTenantId, consortiumId);
+        logger.info("getConsortiumConfigurationFromRemote:: Found centralTenantId: {} and consortiumId: {}", centralTenantId, consortiumId);
         return Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId));
       }).toCompletionStage().toCompletableFuture();
   }
