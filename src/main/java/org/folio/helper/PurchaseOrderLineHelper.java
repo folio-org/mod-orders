@@ -290,7 +290,8 @@ public class PurchaseOrderLineHelper {
           .compose(v -> validateAccessProviders(compOrderLine, requestContext))
           .compose(v -> validateUserUnaffiliatedLocationUpdates(compOrderLine, poLineFromStorage, requestContext))
           .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
-          .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext)))
+          .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext))
+        )
         .map(v -> compOrderLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
         .map(v -> new PoLineInvoiceLineHolder(compOrderLine, poLineFromStorage))
         .compose(v -> createShadowInstanceIfNeeded(compOrderLine, requestContext))
@@ -722,7 +723,6 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {
-    logger.info("validateAccessProviders:: Running isOperationRestricted");
     return organizationService.validateAccessProviders(Collections.singletonList(compOrderLine), requestContext)
       .map(errors -> {
         if (isNotEmpty(errors.getErrors())) {
@@ -734,17 +734,19 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> validateUserUnaffiliatedLocationUpdates(CompositePoLine updatedPoLine, PoLine storedPoLine, RequestContext requestContext) {
-    logger.info("validateAccessProviders:: Running validateUserUnaffiliatedLocationUpdates");
     return getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         if (CollectionUtils.isEmpty(userTenants)) {
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User tenants is empty");
           return Future.succeededFuture();
         }
         var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
         var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
         if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User is not affiliated with all locations on the POL");
           return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
         }
+        logger.info("validateUserUnaffiliatedLocationUpdates:: User is affiliated with all locations on the POL");
         return Future.succeededFuture();
       });
   }
@@ -831,6 +833,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> createShadowInstanceIfNeeded(CompositePoLine compositePoLine, RequestContext requestContext) {
+    logger.info("createShadowInstanceIfNeeded:: Creating shadow instance if needed");
     String instanceId = compositePoLine.getInstanceId();
     if (Boolean.TRUE.equals(compositePoLine.getIsPackage()) || Objects.isNull(instanceId)) {
       return Future.succeededFuture();

@@ -492,7 +492,6 @@ public class PurchaseOrderLineService {
   }
 
   public Future<Void> validateAndNormalizeISBNAndProductType(List<CompositePoLine> compositePoLines, RequestContext requestContext) {
-    logger.info("validateAndNormalizeISBNAndProductType:: Running isOperationRestricted");
     return inventoryCache.getInvalidISBNProductTypeId(requestContext)
       .compose(invalidIsbnTypeId -> validateAndNormalizeISBNCommon(compositePoLines, requestContext,
         ProductIdUtils::isISBNValidationException, ProductIdUtils::extractProductId, (productId, newProductId) ->
