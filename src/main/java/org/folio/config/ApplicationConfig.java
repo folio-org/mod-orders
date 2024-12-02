@@ -641,13 +641,12 @@ public class ApplicationConfig {
   }
 
   @Bean
-  PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, ProtectionService protectionService,
-            PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService, PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager,
-            BasePieceFlowHolderBuilder basePieceFlowHolderBuilder, DefaultPieceFlowsValidator defaultPieceFlowsValidator,
-            PurchaseOrderLineService purchaseOrderLineService) {
-    return new PieceUpdateFlowManager(pieceStorageService, pieceService, protectionService, pieceUpdateFlowPoLineService,
-                            pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder, defaultPieceFlowsValidator,
-                            purchaseOrderLineService);
+  PieceUpdateFlowManager pieceUpdateFlowManager(PieceStorageService pieceStorageService, PieceService pieceService, TitlesService titlesService,
+                                                ProtectionService protectionService, PieceUpdateFlowPoLineService pieceUpdateFlowPoLineService,
+                                                PieceUpdateFlowInventoryManager pieceUpdateFlowInventoryManager, BasePieceFlowHolderBuilder basePieceFlowHolderBuilder,
+                                                DefaultPieceFlowsValidator defaultPieceFlowsValidator, PurchaseOrderLineService purchaseOrderLineService) {
+    return new PieceUpdateFlowManager(pieceStorageService, pieceService, titlesService, protectionService, pieceUpdateFlowPoLineService,
+      pieceUpdateFlowInventoryManager, basePieceFlowHolderBuilder, defaultPieceFlowsValidator, purchaseOrderLineService);
   }
 
   @Bean

@@ -4,6 +4,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.folio.helper.BaseHelper.EVENT_PAYLOAD;
+import static org.folio.orders.events.utils.EventUtils.POL_UPDATE_FIELD;
 import static org.folio.rest.impl.EventBusContextConfiguration.eventMessages;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -71,7 +72,7 @@ public class HandlersTestHelper {
       assertThat(message.headers(), not(emptyIterable()));
       assertThat(message.body(), notNullValue());
       assertThat(message.body()
-        .getString("poLineIdUpdate"), not(is(emptyOrNullString())));
+        .getString(POL_UPDATE_FIELD), not(is(emptyOrNullString())));
       assertThat(message.body()
         .getString(HelperUtils.LANG), not(is(emptyOrNullString())));
     }
