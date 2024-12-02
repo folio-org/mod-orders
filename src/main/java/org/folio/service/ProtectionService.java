@@ -68,7 +68,9 @@ public class ProtectionService {
    *         exist; successfully otherwise
    */
   public Future<Void> isOperationRestricted(List<String> unitIds, Set<ProtectedOperationType> operations, RequestContext requestContext) {
+    log.info("isOperationRestricted:: Running isOperationRestricted");
     if (userHasDesiredPermission(BYPASS_ACQ_UNITS, requestContext)) {
+      log.info("isOperationRestricted:: No desired permissions");
       return Future.succeededFuture();
     }
     if (CollectionUtils.isNotEmpty(unitIds)) {

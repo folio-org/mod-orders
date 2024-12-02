@@ -722,6 +722,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> validateAccessProviders(CompositePoLine compOrderLine, RequestContext requestContext) {
+    logger.info("validateAccessProviders:: Running isOperationRestricted");
     return organizationService.validateAccessProviders(Collections.singletonList(compOrderLine), requestContext)
       .map(errors -> {
         if (isNotEmpty(errors.getErrors())) {
@@ -733,6 +734,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> validateUserUnaffiliatedLocationUpdates(CompositePoLine updatedPoLine, PoLine storedPoLine, RequestContext requestContext) {
+    logger.info("validateAccessProviders:: Running validateUserUnaffiliatedLocationUpdates");
     return getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         if (CollectionUtils.isEmpty(userTenants)) {
