@@ -736,13 +736,16 @@ public class PurchaseOrderLineHelper {
     return getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         if (CollectionUtils.isEmpty(userTenants)) {
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User tenants is empty");
           return Future.succeededFuture();
         }
         var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
         var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
         if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User is not affiliated with all locations on the POL");
           return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
         }
+        logger.info("validateUserUnaffiliatedLocationUpdates:: User is affiliated with all locations on the POL");
         return Future.succeededFuture();
       });
   }
@@ -829,6 +832,7 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> createShadowInstanceIfNeeded(CompositePoLine compositePoLine, RequestContext requestContext) {
+    logger.info("createShadowInstanceIfNeeded:: Creating shadow instance if needed");
     String instanceId = compositePoLine.getInstanceId();
     if (Boolean.TRUE.equals(compositePoLine.getIsPackage()) || Objects.isNull(instanceId)) {
       return Future.succeededFuture();
