@@ -45,6 +45,8 @@ import static org.folio.rest.impl.MockServer.ORGANIZATION_COLLECTION;
 import static org.folio.rest.impl.MockServer.PIECES_COLLECTION;
 import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
+import static org.folio.rest.impl.MockServer.getDataExportSpringJobCreations;
+import static org.folio.rest.impl.MockServer.getDataExportSpringJobExecutions;
 import static org.folio.rest.impl.MockServer.getOrganizationSearches;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
@@ -91,7 +93,7 @@ public class ClaimingApiTest {
 
   private static Stream<Arguments> testPostOrdersClaimArgs() {
     return Stream.of(
-      Arguments.of("One piece One vendor One Job", 0, 17, 69, new MockHitDto(3, 2, 2, 1, 1, 1),
+      Arguments.of("One piece One vendor One Job", 0, 17, 69, new MockHitDto(3, 2, 2, 1, 1, 1, 1, 1),
         "send-claims-1-piece-1-vendor-1-job.json", EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS, ClaimingPieceResult.Status.SUCCESS),
       Arguments.of("One piece One vendor No Job", 0, 17, 69, null,
         "send-claims-1-piece-1-vendor-1-job.json", EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ClaimingPieceResult.Status.FAILURE)
@@ -106,22 +108,27 @@ public class ClaimingApiTest {
     private final int organizationSearches;
     private final int pieceUpdates;
     private final int claimingResults;
+    private final int jobCreations;
+    private final int jobExecutions;
 
     public MockHitDto(int pieceSearches, int polSearches, int purchaseOrderRetrievals,
-                      int organizationSearches, int pieceUpdates, int claimingResults) {
+                      int organizationSearches, int pieceUpdates, int claimingResults,
+                      int jobCreations, int jobExecutions) {
       this.pieceSearches = pieceSearches;
       this.polSearches = polSearches;
       this.purchaseOrderRetrievals = purchaseOrderRetrievals;
       this.organizationSearches = organizationSearches;
       this.pieceUpdates = pieceUpdates;
       this.claimingResults = claimingResults;
+      this.jobCreations = jobCreations;
+      this.jobExecutions = jobExecutions;
     }
   }
 
   @ParameterizedTest
   @MethodSource("testPostOrdersClaimArgs")
   void testPostOrdersClaim(String name, int vendorIdx, int polIdx, int pieceIdx, MockHitDto dto,
-                           String payloadFile, Header header, ClaimingPieceResult.Status expectedStatus) {
+                           String payloadFile, Header header, ClaimingPieceResult.Status expectedStatus) throws InterruptedException {
     logger.info("Testing postOrdersClaim, name: {}", name);
 
     var organization = getMockAsJson(ORGANIZATION_COLLECTION)
@@ -148,11 +155,15 @@ public class ClaimingApiTest {
     var request = JsonObject.mapFrom(getMockAsJson(mockDataPath).mapTo(ClaimingCollection.class)).encode();
     var response = verifyPostResponse(ORDERS_CLAIMING_ENDPOINT, request, headers, APPLICATION_JSON, CREATED.code()).as(ClaimingResults.class);
 
+    Thread.sleep(1000);
+
     var pieceSearches = getPieceSearches();
     var polSearches = getPoLineSearches();
     var purchaseOrderRetrievals = getPurchaseOrderRetrievals();
     var organizationSearches = getOrganizationSearches();
     var pieceUpdates = getPieceUpdates();
+    var jobCreations = getDataExportSpringJobCreations();
+    var jobExecutions = getDataExportSpringJobExecutions();
 
     if (Objects.nonNull(dto)) {
       assertThat(pieceSearches, not(nullValue()));
@@ -160,11 +171,15 @@ public class ClaimingApiTest {
       assertThat(purchaseOrderRetrievals, not(nullValue()));
       assertThat(organizationSearches, not(nullValue()));
       assertThat(pieceUpdates, not(nullValue()));
+      assertThat(jobCreations, not(nullValue()));
+      assertThat(jobExecutions, not(nullValue()));
       assertThat(pieceSearches, hasSize(dto.pieceSearches));
       assertThat(polSearches, hasSize(dto.polSearches));
       assertThat(purchaseOrderRetrievals, hasSize(dto.purchaseOrderRetrievals));
       assertThat(organizationSearches, hasSize(dto.organizationSearches));
       assertThat(pieceUpdates, hasSize(dto.pieceUpdates));
+      assertThat(jobCreations, hasSize(dto.jobCreations));
+      assertThat(jobExecutions, hasSize(dto.jobExecutions));
       assertThat(response.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
     }
 
