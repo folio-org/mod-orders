@@ -91,7 +91,7 @@ public class ClaimingApiTest {
 
   private static Stream<Arguments> testPostOrdersClaimArgs() {
     return Stream.of(
-      Arguments.of("One piece One vendor One Job", 0, 17, 69, new MockHitDto(1, 1, 1, 1, 1, 1),
+      Arguments.of("One piece One vendor One Job", 0, 17, 69, new MockHitDto(3, 2, 2, 1, 1, 1),
         "send-claims-1-piece-1-vendor-1-job.json", EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS, ClaimingPieceResult.Status.SUCCESS),
       Arguments.of("One piece One vendor No Job", 0, 17, 69, null,
         "send-claims-1-piece-1-vendor-1-job.json", EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ClaimingPieceResult.Status.FAILURE)

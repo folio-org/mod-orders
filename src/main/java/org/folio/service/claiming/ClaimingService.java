@@ -47,7 +47,7 @@ public class ClaimingService {
 
   private static final Logger logger = LogManager.getLogger(ClaimingService.class);
   private static final String JOB_STATUS = "status";
-  private static final String EXPORT_TYPE_CLAIMS = "EDIFACT_ORDERS_EXPORT";
+  private static final String EXPORT_TYPE_CLAIMS = "CLAIMS";
   private static final String CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY = "Cannot send claims, piece ids are empty";
   private static final String CANNOT_RETRIEVE_CONFIG_ENTRIES = "Cannot retrieve config entries";
   private static final String CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE = "Cannot group pieces by vendor";
@@ -94,7 +94,12 @@ public class ClaimingService {
         var pieceIds = claimingCollection.getClaimingPieceIds().stream().toList();
         logger.info("sendClaims:: Received pieces to be claimed, pieceIds: {}", pieceIds);
         return groupPieceIdsByVendorId(pieceIds, requestContext)
-          .compose(pieceIdsByVendorIds -> createJobsByVendor(config, pieceIdsByVendorIds, requestContext));
+          .compose(pieceIdsByVendorIds -> {
+            if (CollectionUtils.isEmpty(pieceIdsByVendorIds)) {
+              return Future.succeededFuture(createEmptyClaimingResults("Cannot find pieces with Expected status to process"));
+            }
+            return createJobsByVendor(config, pieceIdsByVendorIds, requestContext);
+          });
       })
       .onFailure(t -> logger.error("sendClaims :: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
   }
@@ -158,7 +163,7 @@ public class ClaimingService {
       }));
     return collectResultsOnSuccess(updatePiecesAndJobFutures)
       .map(updatedPieceLists -> {
-        if (updatedPieceLists.isEmpty()) {
+        if (CollectionUtils.isEmpty(updatedPieceLists)) {
           logger.info("createJobsByVendor:: No pieces were processes for claiming");
           return new ClaimingResults().withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_CREATE_JOBS_AND_UPDATE_PIECES));
         }
