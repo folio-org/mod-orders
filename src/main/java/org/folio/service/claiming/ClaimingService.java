@@ -47,7 +47,7 @@ public class ClaimingService {
 
   private static final Logger logger = LogManager.getLogger(ClaimingService.class);
   private static final String JOB_STATUS = "status";
-  private static final String EXPORT_TYPE_CLAIMS = "CLAIMS";
+  private static final String EXPORT_TYPE_CLAIMS = "EDIFACT_ORDERS_EXPORT";
   private static final String CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY = "Cannot send claims, piece ids are empty";
   private static final String CANNOT_RETRIEVE_CONFIG_ENTRIES = "Cannot retrieve config entries";
   private static final String CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE = "Cannot group pieces by vendor";
@@ -190,6 +190,7 @@ public class ClaimingService {
   }
 
   private Future<List<String>> updatePiecesAndCreateJob(RequestContext requestContext, List<String> pieceIds, Map.Entry<String, Object> entry) {
+    logger.info("updatePiecesAndCreateJob:: Updating pieces and creating a job, job key: {}, count: {}", entry.getKey(), pieceIds.size());
     return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT, requestContext).map(pieceIds)
         .compose(updatePieceIds -> createJob(entry.getKey(), entry.getValue(), requestContext).map(updatePieceIds));
   }
