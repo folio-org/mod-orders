@@ -70,6 +70,7 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
@@ -741,6 +742,9 @@ public class PurchaseOrderLineHelper {
         }
         var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
         var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
+        logger.info("validateUserUnaffiliatedLocationUpdates:: Found unaffiliated location tenant ids: stored: '{}', updated: '{}'",
+          storageUnaffiliatedLocations.stream().map(Location::getTenantId).toList(),
+          updatedUnaffiliatedLocations.stream().map(Location::getTenantId).toList());
         if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
           logger.info("validateUserUnaffiliatedLocationUpdates:: User is not affiliated with all locations on the POL");
           return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
