@@ -63,7 +63,7 @@ public class ConsortiumConfigurationService {
       .map(jsonObject -> jsonObject.getJsonArray(USER_TENANTS_ARRAY_IDENTIFIER))
       .map(userTenants -> {
         if (userTenants.isEmpty()) {
-          logger.info("getConsortiumConfigurationFromRemote:: Central tenant and consortium id not found");
+          logger.debug("getConsortiumConfigurationFromRemote:: Central tenant and consortium id not found");
           return Optional.<ConsortiumConfiguration>empty();
         }
         String consortiumId = userTenants.getJsonObject(0).getString(CONSORTIUM_ID_FIELD);

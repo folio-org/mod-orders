@@ -742,14 +742,17 @@ public class PurchaseOrderLineHelper {
         }
         var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
         var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
-        logger.info("validateUserUnaffiliatedLocationUpdates:: Found unaffiliated location tenant ids: stored: '{}', updated: '{}'",
-          storageUnaffiliatedLocations.stream().map(Location::getTenantId).toList(),
-          updatedUnaffiliatedLocations.stream().map(Location::getTenantId).toList());
+        logger.info("validateUserUnaffiliatedLocationUpdates:: Found unaffiliated POL location tenant ids, poLineId: '{}', stored: '{}', updated: '{}'",
+          updatedPoLine.getId(),
+          storageUnaffiliatedLocations.stream().map(Location::getTenantId).distinct().toList(),
+          updatedUnaffiliatedLocations.stream().map(Location::getTenantId).distinct().toList());
         if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
-          logger.info("validateUserUnaffiliatedLocationUpdates:: User is not affiliated with all locations on the POL");
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User is not affiliated with all locations on the POL, poLineId: '{}'",
+            updatedPoLine.getId());
           return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
         }
-        logger.info("validateUserUnaffiliatedLocationUpdates:: User is affiliated with all locations on the POL");
+        logger.info("validateUserUnaffiliatedLocationUpdates:: User is affiliated with all locations on the POL, poLineId: '{}'",
+          updatedPoLine.getId());
         return Future.succeededFuture();
       });
   }
@@ -836,7 +839,6 @@ public class PurchaseOrderLineHelper {
   }
 
   private Future<Void> createShadowInstanceIfNeeded(CompositePoLine compositePoLine, RequestContext requestContext) {
-    logger.info("createShadowInstanceIfNeeded:: Creating shadow instance if needed");
     String instanceId = compositePoLine.getInstanceId();
     if (Boolean.TRUE.equals(compositePoLine.getIsPackage()) || Objects.isNull(instanceId)) {
       return Future.succeededFuture();
