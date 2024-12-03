@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import lombok.extern.log4j.Log4j2;
+import org.folio.HttpStatus;
 import org.folio.models.pieces.BasePieceFlowHolder;
 import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.models.pieces.PieceUpdateHolder;
@@ -16,11 +17,14 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.orders.utils.ProtectedOperationType;
+import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.service.ProtectionService;
@@ -36,6 +40,8 @@ import org.folio.service.titles.TitlesService;
 
 @Log4j2
 public class PieceUpdateFlowManager {
+
+  public static final String PIECE_NOT_FOUND_PARAM = "pieceIds";
 
   private final PieceStorageService pieceStorageService;
   private final PieceService pieceService;
@@ -93,8 +99,9 @@ public class PieceUpdateFlowManager {
 
   public Future<Void> updatePiecesStatuses(List<String> pieceIds, PieceBatchStatusCollection.ReceivingStatus receivingStatus, RequestContext requestContext) {
     var newStatus = Piece.ReceivingStatus.fromValue(receivingStatus.value());
-    return pieceStorageService.getPiecesByIds(pieceIds, requestContext)
-      .compose(pieces -> isOperationRestricted(pieces, requestContext))
+    return isOperationRestricted(pieceIds, requestContext)
+      .compose(v -> pieceStorageService.getPiecesByIds(pieceIds, requestContext))
+      .compose(pieces -> validateFetchedPiecesQuantity(pieces, pieceIds))
       .map(pieces -> pieces.stream().collect(Collectors.groupingBy(Piece::getPoLineId)))
       .map(piecesByPoLineId -> piecesByPoLineId.entrySet().stream()
         .map(entry -> new PieceBatchStatusUpdateHolder(newStatus, entry.getValue(), entry.getKey()))
@@ -143,9 +150,30 @@ public class PieceUpdateFlowManager {
       .onFailure(t -> log.error("Failed to update PO line with id: '{}' for pieceIds: {}", originPoLine.getId(), pieceIds, t));
   }
 
+  private Future<Void> isOperationRestricted(List<String> pieceIds, RequestContext requestContext) {
+    return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
+      .map(titles -> titles.stream()
+        .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
+        .toList())
+      .map(GenericCompositeFuture::all)
+      .mapEmpty();
+  }
+
+  private Future<List<Piece>> validateFetchedPiecesQuantity(List<Piece> pieces, List<String> pieceIds) {
+    var invalidPieceIds = pieceIds.stream()
+      .filter(pieceId -> pieces.stream().noneMatch(piece -> piece.getId().equals(pieceId)))
+      .toList();
+    var errorParams = List.of(new Parameter().withKey(PIECE_NOT_FOUND_PARAM).withValue(invalidPieceIds.toString()));
+    return invalidPieceIds.isEmpty()
+      ? Future.succeededFuture(pieces)
+      : Future.failedFuture(new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), ErrorCodes.PIECE_NOT_FOUND, errorParams));
+  }
+
   private Future<Void> updatePiecesStatusesByPoLine(PieceBatchStatusUpdateHolder holder, RequestContext requestContext) {
-    var isAnyPiecesUpdated = holder.getPieces().stream().anyMatch(piece -> updatePieceStatus(piece, piece.getReceivingStatus(), holder.getReceivingStatus()));
-    if (!isAnyPiecesUpdated) {
+    var isAnyPiecesUpdated = holder.getPieces().stream()
+      .map(piece -> updatePieceStatus(piece, piece.getReceivingStatus(), holder.getReceivingStatus()))
+      .reduce(Boolean.FALSE, Boolean::logicalOr); // Don't replace .map() with .anyMatch(), as it needs to iterate over all elements
+    if (!Boolean.TRUE.equals(isAnyPiecesUpdated)) {
       return Future.succeededFuture();
     }
     var updates = holder.getPieces().stream().map(piece -> pieceStorageService.updatePiece(piece, requestContext)).toList();
@@ -157,16 +185,6 @@ public class PieceUpdateFlowManager {
     return pieces.stream()
       .flatMap(pieceToUpdate -> PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLine).stream())
       .toList();
-  }
-
-  protected Future<List<Piece>> isOperationRestricted(List<Piece> pieces, RequestContext requestContext) {
-    var pieceIds = pieces.stream().map(Piece::getId).toList();
-    return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
-      .map(titles -> titles.stream()
-        .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
-        .toList())
-      .map(GenericCompositeFuture::all)
-      .map(pieces);
   }
 
 }
