@@ -33,15 +33,17 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.orders.utils.HelperUtils.DATA_EXPORT_SPRING_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
+import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
+import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EXECUTE_JOB;
+import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 
 @Log4j2
 @Service
 public class ClaimingService {
 
   private static final Logger logger = LogManager.getLogger(ClaimingService.class);
-  private static final String CREATE_JOB = "/data-export-spring/jobs";
-  private static final String EXECUTE_JOB = "/data-export-spring/jobs/send";
   private static final String JOB_STATUS = "status";
+  private static final String EXPORT_TYPE_CLAIMS = "CLAIMS";
 
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final PieceStorageService pieceStorageService;
@@ -72,13 +74,16 @@ public class ClaimingService {
     var claimingHolder = new ClaimingHolder();
     return configurationEntriesCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, requestContext)
       .compose(config -> {
+        if (CollectionUtils.isEmpty(config.getMap())) {
+          logger.info("sendClaims:: No claims are sent, config has no entries");
+          return Future.succeededFuture(new ClaimingResults());
+        }
         var pieceIds = claimingCollection.getClaimingPieceIds().stream().toList();
         logger.info("sendClaims:: Received pieces to be claimed, pieceIds: {}", pieceIds);
         return groupPieceIdsByVendorId(claimingHolder, pieceIds, requestContext)
           .compose(pieceIdsByVendorIds -> createJobsByVendor(claimingHolder, config, pieceIdsByVendorIds, requestContext));
       })
-      .onFailure(t -> logger.error("sendClaims :: Failed send claims: {}",
-        JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
+      .onFailure(t -> logger.error("sendClaims :: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
   }
 
   private Future<Map<String, List<String>>> groupPieceIdsByVendorId(ClaimingHolder claimingHolder, List<String> pieceIds, RequestContext requestContext) {
@@ -94,11 +99,11 @@ public class ClaimingService {
           .toList();
         var pieceIdByVendorIdFutures = new ArrayList<Future<Pair<String, String>>>();
         uniquePiecePoLinePairs.forEach(piecePoLinePairs -> {
-           var pieceIdByVendorIdFuture = pieceStorageService.getPieceById(piecePoLinePairs.getRight(), requestContext)
+          var pieceIdByVendorIdFuture = pieceStorageService.getPieceById(piecePoLinePairs.getRight(), requestContext)
             .compose(piece -> createVendorPiecePair(piecePoLinePairs, piece, requestContext));
-            if (Objects.nonNull(pieceIdByVendorIdFuture)) {
-              pieceIdByVendorIdFutures.add(pieceIdByVendorIdFuture);
-            }
+          if (Objects.nonNull(pieceIdByVendorIdFuture)) {
+            pieceIdByVendorIdFutures.add(pieceIdByVendorIdFuture);
+          }
         });
         return collectResultsOnSuccess(pieceIdByVendorIdFutures)
           .map(ClaimingService::transformAndGroupPieceIdsByVendorId);
@@ -112,7 +117,7 @@ public class ClaimingService {
     }
     return purchaseOrderLineService.getOrderLineById(piecePoLinePairs.getLeft(), requestContext)
       .compose(poLine -> purchaseOrderStorageService.getPurchaseOrderById(poLine.getPurchaseOrderId(), requestContext)
-        .compose(purchaseOrder -> organizationService.getVendorById(purchaseOrder.getVendor(), requestContext)))
+      .compose(purchaseOrder -> organizationService.getVendorById(purchaseOrder.getVendor(), requestContext)))
       .map(vendor -> {
         if (Objects.nonNull(vendor) && Boolean.TRUE.equals(vendor.getIsVendor())) {
           return Pair.of(vendor.getId(), piecePoLinePairs.getRight());
@@ -134,23 +139,28 @@ public class ClaimingService {
     }
     var updatePiecesAndJobFutures = new ArrayList<Future<List<String>>>();
     pieceIdsByVendorId.forEach((vendorId, pieceIds) -> {
-      logger.info("createJobsByVendor:: Preparing job integration detail for vendor, vendor id: {}, pieceIds: {}", vendorId, pieceIds);
       config.stream()
-        .filter(entry -> entry.getKey().contains(vendorId))
+        .filter(entry -> isExportTypeClaimsAndCorrectVendorId(vendorId, entry))
+        .filter(entry -> Objects.nonNull(entry.getValue()))
         .forEach(entry -> {
+          logger.info("createJobsByVendor:: Preparing job integration detail for vendor, vendor id: {}, pieces: {}, job key: {}", vendorId, pieceIds.size(), entry.getKey());
           var updatePiecesAndJobFuture = updatePieces(claimingHolder, pieceIds, requestContext)
             .compose(updatePieceIds -> createJob(entry.getKey(), entry.getValue(), requestContext).map(updatePieceIds));
           updatePiecesAndJobFutures.add(updatePiecesAndJobFuture);
         });
     });
     return collectResultsOnSuccess(updatePiecesAndJobFutures)
-      .map(updatedLists -> {
-        var processedPieces = updatedLists.stream().flatMap(Collection::stream).distinct()
+      .map(updatedPieceLists -> {
+        var processedPieces = updatedPieceLists.stream().flatMap(Collection::stream).distinct()
           .map(pieceId -> new ClaimingPieceResult().withPieceId(pieceId).withStatus(ClaimingPieceResult.Status.SUCCESS))
           .toList();
         logger.info("createJobsByVendor:: Processed pieces for claiming, count: {}", processedPieces.size());
         return new ClaimingResults().withClaimingPieceResults(processedPieces);
       });
+  }
+
+  private static boolean isExportTypeClaimsAndCorrectVendorId(String vendorId, Map.Entry<String, Object> entry) {
+    return entry.getKey().startsWith(String.format("%s_%s", EXPORT_TYPE_CLAIMS, vendorId));
   }
 
   private Future<List<String>> updatePieces(ClaimingHolder claimingHolder, List<String> pieceIds, RequestContext requestContext) {
@@ -167,11 +177,11 @@ public class ClaimingService {
 
   private Future<Void> createJob(String configKey, Object configValue, RequestContext requestContext) {
     var integrationDetail = new JsonObject(String.valueOf(configValue));
-    return restClient.post(CREATE_JOB, integrationDetail, Object.class, requestContext)
+    return restClient.post(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB), integrationDetail, Object.class, requestContext)
       .map(response -> {
         var createdJob = new JsonObject(String.valueOf(response));
         logger.info("createJob:: Created job, config key: {}, job status: {}", configKey, createdJob.getString(JOB_STATUS));
-        return restClient.postEmptyResponse(EXECUTE_JOB, createdJob, requestContext)
+        return restClient.postEmptyResponse(resourcesPath(DATA_EXPORT_SPRING_EXECUTE_JOB), createdJob, requestContext)
           .onSuccess(v -> logger.info("createJob:: Executed job, config key: {}, job status: {}", configKey, createdJob.getString(JOB_STATUS)));
       })
       .mapEmpty();

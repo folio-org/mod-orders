@@ -1,4 +1,4 @@
-package org.folio.service.claims;
+package org.folio.service.claiming;
 
 import org.junit.jupiter.api.Test;
 

@@ -1,0 +1,94 @@
+{
+  "configs": [
+    {
+      "id": "e3a73e91-aac9-40a4-8f47-b0187bdb1e6b",
+      "module": "ORDERS",
+      "configName": "poLines-limit",
+      "enabled": true,
+      "value": "10",
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
+    },
+    {
+      "id": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+      "module": "ORDERS",
+      "configName": "createInventory",
+      "enabled": true,
+      "value": "{\"eresource\":\"Instance, Holding, Item\",\"physical\":\"Instance, Holding, Item\",\"other\":\"Instance, Holding, Item\"}",
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
+    },
+    {
+      "id": "e48f35bd-1dea-4993-ad3c-dfa7ae668c80",
+      "code": "ADDRESS_12345",
+      "module": "TENANT",
+      "configName": "addresses",
+      "enabled": true,
+      "value": "{\n  \"address\": \"sample address\",\n  \"name\": \"sample name\"\n}\n",
+      "metadata": {
+        "createdDate": "2018-12-12T08:14:32.743+0000",
+        "createdByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c",
+        "updatedDate": "2018-12-12T08:24:34.213+0000",
+        "updatedByUserId": "d16d7615-ad6b-5a57-9cb4-62aca2ba764c"
+      }
+    },
+    {
+      "id": "5534ca06-b395-41b3-9bfa-8df54bc93800",
+      "module": "ORDERS",
+      "configName": "inventory-instanceTypeCode",
+      "enabled": true,
+      "value": "customInstanceType"
+    },
+    {
+      "id": "5fd9dea2-57b0-43e1-951d-dc460fa63622",
+      "module": "ORDERS",
+      "configName": "inventory-instanceStatusCode",
+      "enabled": true,
+      "value": "customInstanceStatus"
+    },
+    {
+      "id": "c19bf0dd-0d82-4c6e-9ff0-774568f937de",
+      "module": "ORDERS",
+      "configName": "inventory-loanTypeName",
+      "enabled": true,
+      "value": "customLoanType"
+    },
+    {
+      "id" : "339bc2b6-4f2d-4fff-a23c-4fbec2a5e27a",
+      "module" : "ORDERS",
+      "configName" : "approvals",
+      "enabled" : true,
+      "value" : "{\"isApprovalRequired\":false}"
+    },
+    {
+      "id" : "582ac200-1793-4015-ad80-4dc4b2a1ea82",
+      "module" : "ORG",
+      "configName" : "localeSettings",
+      "enabled" : true,
+      "value" : "{\"locale\":\"en-US\",\"timezone\":\"UTC\",\"currency\":\"USD\"}"
+    },
+    {
+      "id": "245bc212-4e56-4875-8c84-4401018d4242",
+      "value": "{\"id\":\"245bc212-4e56-4875-8c84-4401018d4242\",\"type\":\"CLAIMS\",\"tenant\":\"diku\",\"exportTypeSpecificParameters\":{\"vendorEdiOrdersExportConfig\":{\"exportConfigId\":\"245bc212-4e56-4875-8c84-4401018d4242\",\"vendorId\":\"e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1\",\"integrationType\":\"Claiming\",\"transmissionMethod\":\"File download\",\"fileFormat\":\"CSV\",\"configName\":\"Test 1\",\"ediConfig\":{\"accountNoList\":[\"1\"],\"ediNamingConvention\":\"{organizationCode}-{integrationName}-{exportJobEndDate}\",\"libEdiCode\":\"Test 1\",\"libEdiType\":\"31B/US-SAN\",\"vendorEdiCode\":\"Test 1\",\"vendorEdiType\":\"31B/US-SAN\",\"sendAccountNumber\":false,\"supportOrder\":false,\"supportInvoice\":false},\"ediFtp\":{\"ftpConnMode\":\"Active\",\"ftpFormat\":\"SFTP\",\"ftpMode\":\"ASCII\",\"ftpPort\":1,\"serverAddress\":\"http://test1.org\"},\"isDefaultConfig\":false}},\"schedulePeriod\":\"NONE\"}",
+      "module": "mod-data-export-spring",
+      "default": true,
+      "enabled": true,
+      "metadata": {
+        "createdDate": "2024-11-28T10:45:25.523Z",
+        "updatedDate": "2024-11-28T10:45:25.523Z",
+        "createdByUserId": "d77db61a-4404-4cab-9125-0c3a3567a9b0",
+        "updatedByUserId": "d77db61a-4404-4cab-9125-0c3a3567a9b0"
+      },
+      "configName": "CLAIMS_e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1_245bc212-4e56-4875-8c84-4401018d4242",
+      "description": "Claims configuration parameters"
+    }
+  ]
+}
