@@ -70,6 +70,7 @@ import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FundDistribution;
+import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
@@ -736,13 +737,22 @@ public class PurchaseOrderLineHelper {
     return getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         if (CollectionUtils.isEmpty(userTenants)) {
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User tenants is empty");
           return Future.succeededFuture();
         }
         var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
         var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
+        logger.info("validateUserUnaffiliatedLocationUpdates:: Found unaffiliated POL location tenant ids, poLineId: '{}', stored: '{}', updated: '{}'",
+          updatedPoLine.getId(),
+          storageUnaffiliatedLocations.stream().map(Location::getTenantId).distinct().toList(),
+          updatedUnaffiliatedLocations.stream().map(Location::getTenantId).distinct().toList());
         if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User is not affiliated with all locations on the POL, poLineId: '{}'",
+            updatedPoLine.getId());
           return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
         }
+        logger.info("validateUserUnaffiliatedLocationUpdates:: User is affiliated with all locations on the POL, poLineId: '{}'",
+          updatedPoLine.getId());
         return Future.succeededFuture();
       });
   }
