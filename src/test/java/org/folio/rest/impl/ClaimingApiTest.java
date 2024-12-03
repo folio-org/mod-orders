@@ -55,6 +55,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
 public class ClaimingApiTest {
@@ -168,10 +169,12 @@ public class ClaimingApiTest {
     }
 
     response.getClaimingPieceResults().forEach(result -> {
+      assertThat(result.getPieceId(), not(nullValue()));
+      assertThat(result.getStatus(), is(expectedStatus));
       if (expectedStatus == ClaimingPieceResult.Status.SUCCESS) {
-        assertThat(result.getPieceId(), not(nullValue()));
-        assertThat(result.getStatus(), is(expectedStatus));
         assertThat(result.getError(), is(nullValue()));
+      } else {
+        assertThat(result.getError(), is(notNullValue()));
       }
     });
   }
