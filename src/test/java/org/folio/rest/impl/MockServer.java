@@ -1937,7 +1937,7 @@ public class MockServer {
     String requestQuery = ctx.request().getParam("query");
     MultiMap requestHeaders = ctx.request().headers();
     logger.info("handleGetPieces requestPath: {}, requestQuery: {}, requestHeaders: {}", requestPath, requestQuery, requestHeaders);
-    if (requestQuery.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
+    if (Objects.nonNull(requestQuery) && requestQuery.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
       logger.info("handleGetPieces (with internal server error)");
       addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, new JsonObject());
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
