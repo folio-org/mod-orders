@@ -173,7 +173,7 @@ public class PieceUpdateFlowManager {
     var isAnyPiecesUpdated = holder.getPieces().stream()
       .map(piece -> updatePieceStatus(piece, piece.getReceivingStatus(), holder.getReceivingStatus()))
       .reduce(Boolean.FALSE, Boolean::logicalOr); // Don't replace .map() with .anyMatch(), as it needs to iterate over all elements
-    if (!isAnyPiecesUpdated) {
+    if (!Boolean.TRUE.equals(isAnyPiecesUpdated)) {
       return Future.succeededFuture();
     }
     var updates = holder.getPieces().stream().map(piece -> pieceStorageService.updatePiece(piece, requestContext)).toList();
