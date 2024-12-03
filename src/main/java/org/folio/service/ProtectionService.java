@@ -69,6 +69,7 @@ public class ProtectionService {
    */
   public Future<Void> isOperationRestricted(List<String> unitIds, Set<ProtectedOperationType> operations, RequestContext requestContext) {
     if (userHasDesiredPermission(BYPASS_ACQ_UNITS, requestContext)) {
+      log.info("isOperationRestricted:: Bypassing checking acq units");
       return Future.succeededFuture();
     }
     if (CollectionUtils.isNotEmpty(unitIds)) {
@@ -81,6 +82,7 @@ public class ProtectionService {
               .collect(Collectors.toList());
 
             if (!activeUnits.isEmpty() && applyMergingStrategy(activeUnits, operations)) {
+              log.info("isOperationRestricted:: Acq unit ids are merged");
               return verifyUserIsMemberOfOrdersUnits(extractUnitIds(activeUnits), requestContext);
             }
             return Future.succeededFuture();
@@ -90,6 +92,7 @@ public class ProtectionService {
           }
         });
     } else {
+      log.info("isOperationRestricted:: Acq unit ids are empty");
       return Future.succeededFuture();
     }
   }

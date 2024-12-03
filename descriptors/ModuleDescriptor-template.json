@@ -628,6 +628,31 @@
           ]
         },
         {
+          "methods": ["PUT"],
+          "pathPattern": "/orders/pieces-batch/status",
+          "permissionsRequired": ["orders.pieces.collection.put"],
+          "modulePermissions": [
+            "orders-storage.pieces.item.put",
+            "orders-storage.pieces.collection.get",
+            "orders-storage.po-lines.item.get",
+            "orders-storage.po-lines.item.put",
+            "orders-storage.po-lines.collection.get",
+            "orders-storage.purchase-orders.item.get",
+            "orders-storage.purchase-orders.item.put",
+            "orders-storage.titles.collection.get",
+            "finance.funds.item.get",
+            "finance.ledgers.current-fiscal-year.item.get",
+            "finance.transactions.collection.get",
+            "finance.transactions.batch.execute",
+            "inventory.items.item.get",
+            "inventory.items.item.put",
+            "inventory.items.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "acquisitions-units-storage.units.collection.get",
+            "acquisitions-units-storage.memberships.collection.get"
+          ]
+        },
+        {
           "methods": ["GET"],
           "pathPattern": "/orders/pieces-requests",
           "permissionsRequired": ["orders.piece-requests.collection.get"],
@@ -1541,6 +1566,11 @@
       "description": "Delete an existing piece"
     },
     {
+      "permissionName": "orders.pieces.collection.put",
+      "displayName": "orders - batch update piece statuses",
+      "description": "Batch update piece statuses"
+    },
+    {
       "permissionName": "orders.piece-requests.collection.get",
       "displayName": "Orders - Get piece requests",
       "description": "Get order piece requests"
@@ -1551,6 +1581,7 @@
       "description" : "All permissions for the pieces",
       "subPermissions" : [
         "orders.pieces.collection.get",
+        "orders.pieces.collection.put",
         "orders.pieces.item.post",
         "orders.pieces.item.get",
         "orders.pieces.item.put",
