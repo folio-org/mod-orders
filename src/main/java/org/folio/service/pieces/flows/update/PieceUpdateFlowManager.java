@@ -24,6 +24,7 @@ import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.OrderType;
 import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Location;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.service.ProtectionService;
@@ -39,6 +40,8 @@ import org.folio.service.titles.TitlesService;
 
 @Log4j2
 public class PieceUpdateFlowManager {
+
+  public static final String PIECE_NOT_FOUND_PARAM = "pieceIds";
 
   private final PieceStorageService pieceStorageService;
   private final PieceService pieceService;
@@ -147,8 +150,29 @@ public class PieceUpdateFlowManager {
       .onFailure(t -> log.error("Failed to update PO line with id: '{}' for pieceIds: {}", originPoLine.getId(), pieceIds, t));
   }
 
+  private Future<Void> isOperationRestricted(List<String> pieceIds, RequestContext requestContext) {
+    return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
+      .map(titles -> titles.stream()
+        .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
+        .toList())
+      .map(GenericCompositeFuture::all)
+      .mapEmpty();
+  }
+
+  private Future<List<Piece>> validateFetchedPiecesQuantity(List<Piece> pieces, List<String> pieceIds) {
+    var invalidPieceIds = pieceIds.stream()
+      .filter(pieceId -> pieces.stream().noneMatch(piece -> piece.getId().equals(pieceId)))
+      .toList();
+    var errorParams = List.of(new Parameter().withKey(PIECE_NOT_FOUND_PARAM).withValue(invalidPieceIds.toString()));
+    return invalidPieceIds.isEmpty()
+      ? Future.succeededFuture(pieces)
+      : Future.failedFuture(new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), ErrorCodes.PIECE_NOT_FOUND, errorParams));
+  }
+
   private Future<Void> updatePiecesStatusesByPoLine(PieceBatchStatusUpdateHolder holder, RequestContext requestContext) {
-    var isAnyPiecesUpdated = holder.getPieces().stream().anyMatch(piece -> updatePieceStatus(piece, piece.getReceivingStatus(), holder.getReceivingStatus()));
+    var isAnyPiecesUpdated = holder.getPieces().stream()
+      .map(piece -> updatePieceStatus(piece, piece.getReceivingStatus(), holder.getReceivingStatus()))
+      .reduce(Boolean.FALSE, Boolean::logicalOr); // Don't replace .map() with .anyMatch(), as it needs to iterate over all elements
     if (!isAnyPiecesUpdated) {
       return Future.succeededFuture();
     }
@@ -161,21 +185,6 @@ public class PieceUpdateFlowManager {
     return pieces.stream()
       .flatMap(pieceToUpdate -> PieceUtil.findOrderPieceLineLocation(pieceToUpdate, poLine).stream())
       .toList();
-  }
-
-  private Future<Void> isOperationRestricted(List<String> pieceIds, RequestContext requestContext) {
-    return titlesService.getTitlesByPieceIds(pieceIds, requestContext)
-      .map(titles -> titles.stream()
-        .map(title -> protectionService.isOperationRestricted(title.getAcqUnitIds(), ProtectedOperationType.UPDATE, requestContext))
-        .toList())
-      .map(GenericCompositeFuture::all)
-      .mapEmpty();
-  }
-
-  private Future<List<Piece>> validateFetchedPiecesQuantity(List<Piece> pieces, List<String> pieceIds) {
-    return pieces.size() == pieceIds.size()
-      ? Future.succeededFuture(pieces)
-      : Future.failedFuture(new HttpException(HttpStatus.HTTP_BAD_REQUEST.toInt(), ErrorCodes.PIECE_NOT_FOUND));
   }
 
 }
