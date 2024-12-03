@@ -186,7 +186,6 @@ public class ClaimingService {
   }
 
   private static boolean isExportTypeClaimsAndCorrectVendorId(String vendorId, Map.Entry<String, Object> entry) {
-    log.info("isExportTypeClaimsAndCorrectVendorId:: Checking integration detail, vendorId: {}, job key: {}", vendorId, entry.getKey());
     return entry.getKey().startsWith(String.format("%s_%s", EXPORT_TYPE_CLAIMS, vendorId));
   }
 
