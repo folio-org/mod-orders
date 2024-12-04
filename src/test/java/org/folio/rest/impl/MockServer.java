@@ -1913,17 +1913,18 @@ public class MockServer {
         serverResponse(ctx, 500, APPLICATION_JSON, pieceId);
       } else {
         // Attempt to find POLine in mock server memory
-        JsonObject body = getMockEntry(PIECES_STORAGE, pieceId).orElse(null);
-        if (body == null) {
+        JsonObject data = getMockEntry(PIECES_STORAGE, pieceId).orElse(null);
+        if (data == null) {
           if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
-            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
+            data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
           } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
-            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
+            data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
           } else {
-            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecord-%s.json", pieceId)));
+            data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecord-%s.json", pieceId)));
           }
         }
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+        logger.info("handleGetPieceById, data: {}", data.encodePrettily());
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, data.encodePrettily());
       }
     } catch (IOException e) {
       serverResponse(ctx, 404, APPLICATION_JSON, pieceId);
@@ -2009,6 +2010,7 @@ public class MockServer {
 
       JsonObject data = JsonObject.mapFrom(pieces);
       addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, data);
+      logger.info("handleGetPieces, data: {}", data.encodePrettily());
 
       ctx.response()
         .setStatusCode(200)
@@ -2153,8 +2155,7 @@ public class MockServer {
   private void handleGetPurchaseOrderById(RoutingContext ctx) {
     logger.info("handleGetPurchaseOrderById got: GET {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
-
+    logger.info("id: {}", id);
     try {
       // Attempt to find PO in mock server memory
       JsonObject po = getMockEntry(PURCHASE_ORDER_STORAGE, id).orElse(null);
