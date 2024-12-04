@@ -151,6 +151,7 @@ public class ClaimingService {
 
   private Future<ClaimingResults> createJobsByVendor(JsonObject config, Map<String, List<String>> pieceIdsByVendorId,
                                                      RequestContext requestContext) {
+    log.info("createJobsByVendor:: Creating jobs by vendor, vendors by pieces count: {}", pieceIdsByVendorId.size());
     if (CollectionUtils.isEmpty(pieceIdsByVendorId)) {
       logger.info("createJobsByVendor:: No jobs are created, pieceIdsByVendorId is empty");
       return Future.succeededFuture(new ClaimingResults().withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE)));
