@@ -109,6 +109,7 @@ public class ClaimingService {
       logger.info("groupPieceIdsByVendorId:: No pieces are grouped by vendor, pieceIds is empty");
       return Future.succeededFuture();
     }
+    logger.info("groupPieceIdsByVendorId:: Grouping pieces by vendor");
     return pieceStorageService.getPiecesByIds(pieceIds, requestContext)
       .compose(pieces -> {
         var uniquePiecePoLinePairs = pieces.stream()

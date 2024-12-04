@@ -565,7 +565,7 @@ public class MockServer {
   }
 
   private <T> Optional<List<T>> getMockEntries(String objName, Class<T> tClass) {
-    List<T> entryList =  getRqRsEntries(HttpMethod.SEARCH, objName).stream()
+    List<T> entryList = getRqRsEntries(HttpMethod.SEARCH, objName).stream()
       .map(entries -> entries.mapTo(tClass))
       .collect(toList());
     return Optional.ofNullable(entryList.isEmpty() ? null : entryList);
@@ -1937,7 +1937,12 @@ public class MockServer {
     String requestQuery = ctx.request().getParam("query");
     MultiMap requestHeaders = ctx.request().headers();
     logger.info("handleGetPieces requestPath: {}, requestQuery: {}, requestHeaders: {}", requestPath, requestQuery, requestHeaders);
-    if (Objects.nonNull(requestQuery) && requestQuery.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
+    if (Objects.isNull(requestQuery)) {
+      logger.info("handleGetPieces (empty requestQuery) requestPath: {}, requestHeaders: {}", requestPath, requestHeaders);
+      PieceCollection pieces = new PieceCollection().withPieces(new ArrayList<>());
+      pieces.setTotalRecords(pieces.getPieces().size());
+    } else
+      if (requestQuery.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
       logger.info("handleGetPieces (with internal server error)");
       addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, new JsonObject());
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());

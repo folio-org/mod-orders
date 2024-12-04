@@ -135,6 +135,7 @@ public class PieceStorageService {
   }
 
   public Future<PieceCollection> getAllPieces(int limit, int offset, String query, RequestContext requestContext) {
+    log.info("getAllPieces:: limit: {}, offset: {}, query: {}", limit, offset, query);
     var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
@@ -155,7 +156,7 @@ public class PieceStorageService {
   }
 
   public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
-    log.debug("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
+    log.info("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
     var futures = ofSubLists(new ArrayList<>(pieceIds), MAX_IDS_FOR_GET_RQ_15)
       .map(QueryUtils::convertIdsToCqlQuery)
       .map(query -> getAllPieces(query, requestContext))
