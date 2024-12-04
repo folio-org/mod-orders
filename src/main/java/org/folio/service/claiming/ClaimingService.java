@@ -96,7 +96,7 @@ public class ClaimingService {
         return groupPieceIdsByVendorId(pieceIds, requestContext)
           .compose(pieceIdsByVendorIds -> {
             if (CollectionUtils.isEmpty(pieceIdsByVendorIds)) {
-              return Future.succeededFuture(createEmptyClaimingResults("Cannot find pieces with Expected status to process"));
+              return Future.succeededFuture(createEmptyClaimingResults("Cannot find pieces with LATE status to process"));
             }
             return createJobsByVendor(config, pieceIdsByVendorIds, requestContext);
           });
@@ -129,8 +129,8 @@ public class ClaimingService {
   }
 
   private Future<Pair<String, String>> createVendorPiecePair(Pair<String, String> piecePoLinePairs, Piece piece, RequestContext requestContext) {
-    if (Objects.nonNull(piece) && !piece.getReceivingStatus().equals(Piece.ReceivingStatus.EXPECTED)) {
-      logger.info("createVendorPiecePair:: Ignoring processing of a piece not in expected state, piece id: {}", piece.getId());
+    if (Objects.nonNull(piece) && !piece.getReceivingStatus().equals(Piece.ReceivingStatus.LATE)) {
+      logger.info("createVendorPiecePair:: Ignoring processing of a piece not in LATE state, piece id: {}", piece.getId());
       return Future.succeededFuture();
     }
     return purchaseOrderLineService.getOrderLineById(piecePoLinePairs.getLeft(), requestContext)
