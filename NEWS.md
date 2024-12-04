@@ -1,5 +1,15 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.3 - Released (Ramsons R2 2024)
+The primary focus of this release was to fix async issues with changing instance connection for PO Line.
+
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.2...v12.9.3)
+
+### Bug Fixes
+* [MODORDERS-1219](https://issues.folio.org/browse/MODORDERS-1219) - Adding an Instance connection to a manually created order and po line does not link
+* [MODORDERS-1218](https://issues.folio.org/browse/MODORDERS-1218) - Different instance details pane opens when user click link in "Item details" accordion after changing instance connection in "Orders" app
+
+
 ## 12.9.2 - Released (Ramsons R2 2024)
 The primary focus of this release was to fix issue with binding items in member tenants.
 
