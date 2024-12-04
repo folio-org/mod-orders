@@ -162,11 +162,19 @@ public class PieceStorageService {
       .map(query -> getAllPieces(query, requestContext))
       .toList();
     return collectResultsOnSuccess(futures)
-      .map(lists -> lists.stream()
-        .map(PieceCollection::getPieces)
-        .flatMap(Collection::stream)
-        .toList())
-      .onSuccess(v -> log.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds));
+      .map(lists -> {
+        try {
+          return lists.stream()
+            .map(PieceCollection::getPieces)
+            .flatMap(Collection::stream)
+            .toList();
+        } catch (Throwable t) {
+          log.error("Failed to unwrap piece chunks");
+          throw t;
+        }
+      })
+      .onSuccess(v -> log.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds))
+      .onFailure(t -> log.error("Failed to get pieces by ids"));
   }
 
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {

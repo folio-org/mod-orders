@@ -104,7 +104,7 @@ public class ClaimingService {
             return createJobsByVendor(config, pieceIdsByVendorIds, requestContext);
           });
       })
-      .onFailure(t -> logger.error("sendClaims :: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
+      .onFailure(t -> logger.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
   }
 
   private Future<Map<String, List<String>>> groupPieceIdsByVendorId(List<String> pieceIds, RequestContext requestContext) {
