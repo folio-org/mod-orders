@@ -64,7 +64,6 @@ public class ClaimingApiTest {
 
   private static final String ORGANIZATIONS_KEY = "organizations";
   private static final String PO_LINES_KEY = "poLines";
-  private static final String PIECES_KEY = "pieces";
   private static final String CLAIMING_MOCK_DATA_FOLDER = "claiming/";
 
   @BeforeAll
