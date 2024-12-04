@@ -789,7 +789,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.startsWith("id==")) {
           ids = extractIdsFromQuery(query);
@@ -836,7 +835,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.startsWith("fundId==")) {
           ids = extractfundIdsFromQuery(query);
@@ -1210,8 +1208,7 @@ public class MockServer {
       addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
       serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
     } else {
-      JsonObject items;
-      items = new JsonObject().put("items", new JsonArray());
+      JsonObject items = new JsonObject().put("items", new JsonArray());
       addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
       serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
     }
@@ -1368,16 +1365,16 @@ public class MockServer {
   private void handleGetIdentifierType(RoutingContext ctx) {
     logger.info("handleGetIdentifierType got: {}", ctx.request().path());
     try {
-        // Filter result based on name from query
-        String query = ctx.request().getParam("query");
-        JsonObject entries = new JsonObject(getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
-        if (query != null) {
-          String name = query.split("==")[1];
-          filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
-        }
+      // Filter result based on name from query
+      String query = ctx.request().getParam("query");
+      JsonObject entries = new JsonObject(getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
+      if (query != null) {
+        String name = query.split("==")[1];
+        filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
+      }
 
-        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
-        addServerRqRsData(HttpMethod.GET, IDENTIFIER_TYPES, entries);
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, IDENTIFIER_TYPES, entries);
     } catch (IOException e) {
       ctx.response()
         .setStatusCode(404)
@@ -1409,10 +1406,8 @@ public class MockServer {
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_B).equals(query)) {
         body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"));
       } else if (getQuery(ORGANIZATION_NOT_VENDOR).equals(query)) {
-        body = new JsonObject(
-            getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
-      }
-      else {
+        body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
+      } else {
         JsonArray organizations = new JsonArray();
 
         // Search for Organizations by id
@@ -1907,7 +1902,11 @@ public class MockServer {
     String pieceId = ctx.request().getParam(ID);
     logger.info("id: {}", pieceId);
     try {
-      if (ID_DOES_NOT_EXIST.equals(pieceId)) {
+      if ("dcd0ba36-b660-4751-b9fe-c8ac61ff6f99".equals(pieceId)) {
+        JsonObject data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecord-%s.json", pieceId)));
+        logger.info("handleGetPieceById custom, data: {}", data.encodePrettily());
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, data.encodePrettily());
+      } else if (ID_DOES_NOT_EXIST.equals(pieceId)) {
         serverResponse(ctx, 404, APPLICATION_JSON, pieceId);
       } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(pieceId)) {
         serverResponse(ctx, 500, APPLICATION_JSON, pieceId);
@@ -1978,8 +1977,7 @@ public class MockServer {
             // Filter piece records by receiving status
             if (StringUtils.isNotEmpty(status)) {
               Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
-              pieces.getPieces()
-                .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
+              pieces.getPieces().removeIf(piece -> receivingStatus != piece.getReceivingStatus());
             }
           } else if (requestQuery.contains("id==")) {
             logger.info("handleGetPieces (by id)");
@@ -2027,7 +2025,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.contains("poLineId==")) {
           ids = extractValuesFromQuery("poLineId", query);
@@ -2057,7 +2054,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         // Attempt to find title in mock server memory
         JsonObject existantTitle = getMockEntry(ROUTING_LISTS, id).orElse(null);
 
@@ -2081,7 +2077,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.contains("poLineId==")) {
           ids = extractValuesFromQuery("poLineId", query);
@@ -2831,10 +2826,10 @@ public class MockServer {
   private void handleGetFyRollovers(RoutingContext ctx) {
     logger.info("handleGetFyRollovers got: {}", ctx.request().path());
     try {
-        JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_PATH + "ledger_fiscal_year_rollover_collection.json"));
+      JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_PATH + "ledger_fiscal_year_rollover_collection.json"));
 
-        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
-        addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRollovers", entries);
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRollovers", entries);
 
     } catch (IOException e) {
       String body = buildEmptyCollection("ledgerFiscalYearRollovers");
@@ -2846,11 +2841,10 @@ public class MockServer {
   private void handleGetFyRolloverErrors(RoutingContext ctx) {
     logger.info("handleGetFyRolloverErrors got: {}", ctx.request().path());
     try {
-        JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_ERRORS_PATH + "ledger_fiscal_year_rollover_error_collection.json"));
+      JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_ERRORS_PATH + "ledger_fiscal_year_rollover_error_collection.json"));
 
-        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
-        addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRolloverErrors", entries);
-
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRolloverErrors", entries);
     } catch (IOException e) {
       ctx.response()
         .setStatusCode(404)

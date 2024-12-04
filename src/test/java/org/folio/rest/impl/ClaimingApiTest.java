@@ -18,7 +18,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -36,14 +35,11 @@ import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIM
 import static org.folio.TestConstants.ORDERS_CLAIMING_ENDPOINT;
 import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.TestUtils.getMockData;
 import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORGANIZATION_COLLECTION;
-import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getDataExportSpringJobCreations;
@@ -93,9 +89,11 @@ public class ClaimingApiTest {
 
   private static Stream<Arguments> testPostOrdersClaimArgs() {
     return Stream.of(
-      Arguments.of("One piece One vendor One Job", 0, 17, 69, new MockHitDto(3, 2, 2, 1, 1, 1, 1, 1),
+      Arguments.of("One piece One vendor One Job", 0, 17,
+        new MockHitDto(3, 2, 2, 1, 1, 1, 1, 1),
         "send-claims-1-piece-1-vendor-1-job.json", EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS, ClaimingPieceResult.Status.SUCCESS),
-      Arguments.of("One piece One vendor No Job", 0, 17, 69, null,
+      Arguments.of("One piece One vendor No Job", 0, 17,
+        null,
         "send-claims-1-piece-1-vendor-1-job.json", EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ClaimingPieceResult.Status.FAILURE)
     );
   }
@@ -127,8 +125,8 @@ public class ClaimingApiTest {
 
   @ParameterizedTest
   @MethodSource("testPostOrdersClaimArgs")
-  void testPostOrdersClaim(String name, int vendorIdx, int polIdx, int pieceIdx, MockHitDto dto,
-                           String payloadFile, Header header, ClaimingPieceResult.Status expectedStatus) throws InterruptedException, IOException {
+  void testPostOrdersClaim(String name, int vendorIdx, int polIdx, MockHitDto dto,
+                           String payloadFile, Header header, ClaimingPieceResult.Status expectedStatus) {
     logger.info("Testing postOrdersClaim, name: {}", name);
 
     var organization = getMockAsJson(ORGANIZATION_COLLECTION)
@@ -140,19 +138,15 @@ public class ClaimingApiTest {
       .mapTo(CompositePoLine.class);
     var purchaseOrder = getMinimalOrder(poLine)
       .withVendor(organization.getId());
-    var piece = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-dcd0ba36-b660-4751-b9fe-c8ac61ff6f99.json"));
 
     addMockEntry(ORGANIZATION_STORAGE, organization);
     addMockEntry(PURCHASE_ORDER_STORAGE, purchaseOrder);
     addMockEntry(PO_LINES_STORAGE, poLine);
-    addMockEntry(PIECES_STORAGE, piece);
 
-    var headers = prepareHeaders(header);
     var mockDataPath = BASE_MOCK_DATA_PATH + CLAIMING_MOCK_DATA_FOLDER + payloadFile;
     var request = JsonObject.mapFrom(getMockAsJson(mockDataPath).mapTo(ClaimingCollection.class)).encode();
-    var response = verifyPostResponse(ORDERS_CLAIMING_ENDPOINT, request, headers, APPLICATION_JSON, CREATED.code()).as(ClaimingResults.class);
-
-    Thread.sleep(1000);
+    var response = verifyPostResponse(ORDERS_CLAIMING_ENDPOINT, request, prepareHeaders(header), APPLICATION_JSON, CREATED.code())
+      .as(ClaimingResults.class);
 
     var pieceSearches = getPieceSearches();
     var polSearches = getPoLineSearches();
@@ -178,16 +172,18 @@ public class ClaimingApiTest {
       assertThat(jobCreations, hasSize(dto.jobCreations));
       assertThat(jobExecutions, hasSize(dto.jobExecutions));
       assertThat(response.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
+      jobCreations.forEach(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()));
     }
 
-    response.getClaimingPieceResults().forEach(result -> {
-      assertThat(result.getPieceId(), not(nullValue()));
-      assertThat(result.getStatus(), is(expectedStatus));
-      if (expectedStatus == ClaimingPieceResult.Status.SUCCESS) {
-        assertThat(result.getError(), is(nullValue()));
-      } else {
-        assertThat(result.getError(), is(notNullValue()));
-      }
-    });
+    response.getClaimingPieceResults()
+      .forEach(result -> {
+        assertThat(result.getPieceId(), not(nullValue()));
+        assertThat(result.getStatus(), is(expectedStatus));
+        if (expectedStatus == ClaimingPieceResult.Status.SUCCESS) {
+          assertThat(result.getError(), is(nullValue()));
+        } else {
+          assertThat(result.getError(), is(notNullValue()));
+        }
+      });
   }
 }

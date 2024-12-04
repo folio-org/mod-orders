@@ -47,6 +47,9 @@ public class ClaimingService {
 
   private static final Logger logger = LogManager.getLogger(ClaimingService.class);
   private static final String JOB_STATUS = "status";
+  private static final String EXPORT_TYPE_SPECIFIC_PARAMETERS = "exportTypeSpecificParameters";
+  private static final String VENDOR_EDI_ORDERS_EXPORT_CONFIG = "vendorEdiOrdersExportConfig";
+  private static final String CLAIM_PIECE_IDS = "claimPieceIds";
   private static final String EXPORT_TYPE_CLAIMS = "CLAIMS";
   private static final String CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY = "Cannot send claims, piece ids are empty";
   private static final String CANNOT_RETRIEVE_CONFIG_ENTRIES = "Cannot retrieve config entries";
@@ -115,17 +118,21 @@ public class ClaimingService {
         var uniquePiecePoLinePairs = pieces.stream()
           .map(piece -> Pair.of(piece.getPoLineId(), piece.getId())).distinct()
           .toList();
-        var pieceIdByVendorIdFutures = new ArrayList<Future<Pair<String, String>>>();
-        uniquePiecePoLinePairs.forEach(piecePoLinePairs -> {
-          var pieceIdByVendorIdFuture = pieceStorageService.getPieceById(piecePoLinePairs.getRight(), requestContext)
-            .compose(piece -> createVendorPiecePair(piecePoLinePairs, piece, requestContext));
-          if (Objects.nonNull(pieceIdByVendorIdFuture)) {
-            pieceIdByVendorIdFutures.add(pieceIdByVendorIdFuture);
-          }
-        });
-        return collectResultsOnSuccess(pieceIdByVendorIdFutures)
+        return collectResultsOnSuccess(createPieceIdByVendorFutures(uniquePiecePoLinePairs, requestContext))
           .map(ClaimingService::transformAndGroupPieceIdsByVendorId);
       });
+  }
+
+  private List<Future<Pair<String, String>>> createPieceIdByVendorFutures(List<Pair<String, String>> uniquePiecePoLinePairs, RequestContext requestContext) {
+    var pieceIdByVendorIdFutures = new ArrayList<Future<Pair<String, String>>>();
+    uniquePiecePoLinePairs.forEach(piecePoLinePairs -> {
+      var pieceIdByVendorIdFuture = pieceStorageService.getPieceById(piecePoLinePairs.getRight(), requestContext)
+        .compose(piece -> createVendorPiecePair(piecePoLinePairs, piece, requestContext));
+      if (Objects.nonNull(pieceIdByVendorIdFuture)) {
+        pieceIdByVendorIdFutures.add(pieceIdByVendorIdFuture);
+      }
+    });
+    return pieceIdByVendorIdFutures;
   }
 
   private Future<Pair<String, String>> createVendorPiecePair(Pair<String, String> piecePoLinePairs, Piece piece, RequestContext requestContext) {
@@ -156,14 +163,7 @@ public class ClaimingService {
       logger.info("createJobsByVendor:: No jobs are created, pieceIdsByVendorId is empty");
       return Future.succeededFuture(new ClaimingResults().withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE)));
     }
-    var updatePiecesAndJobFutures = new ArrayList<Future<List<String>>>();
-    pieceIdsByVendorId.forEach((vendorId, pieceIds) -> config.stream()
-      .filter(entry -> isExportTypeClaimsAndCorrectVendorId(vendorId, entry) && Objects.nonNull(entry.getValue()))
-      .forEach(entry -> {
-        logger.info("createJobsByVendor:: Preparing job integration detail for vendor, vendor id: {}, pieces: {}, job key: {}", vendorId, pieceIds.size(), entry.getKey());
-        updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(requestContext, pieceIds, entry));
-      }));
-    return collectResultsOnSuccess(updatePiecesAndJobFutures)
+    return collectResultsOnSuccess(createUpdatePiecesAndJobFutures(config, pieceIdsByVendorId, requestContext))
       .map(updatedPieceLists -> {
         if (CollectionUtils.isEmpty(updatedPieceLists)) {
           logger.info("createJobsByVendor:: No pieces were processes for claiming");
@@ -173,6 +173,17 @@ public class ClaimingService {
         logger.info("createJobsByVendor:: Successfully processed pieces for claiming, count: {}", successClaimingPieceResults.size());
         return new ClaimingResults().withClaimingPieceResults(successClaimingPieceResults);
       });
+  }
+
+  private List<Future<List<String>>> createUpdatePiecesAndJobFutures(JsonObject config, Map<String, List<String>> pieceIdsByVendorId, RequestContext requestContext) {
+    var updatePiecesAndJobFutures = new ArrayList<Future<List<String>>>();
+    pieceIdsByVendorId.forEach((vendorId, pieceIds) -> config.stream()
+      .filter(entry -> isExportTypeClaimsAndCorrectVendorId(vendorId, entry) && Objects.nonNull(entry.getValue()))
+      .forEach(entry -> {
+        logger.info("createJobsByVendor:: Preparing job integration detail for vendor, vendor id: {}, pieces: {}, job key: {}", vendorId, pieceIds.size(), entry.getKey());
+        updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(pieceIds, entry, requestContext));
+      }));
+    return updatePiecesAndJobFutures;
   }
 
   private static ClaimingResults createEmptyClaimingResults(String message) {
@@ -196,14 +207,18 @@ public class ClaimingService {
     return entry.getKey().startsWith(String.format("%s_%s", EXPORT_TYPE_CLAIMS, vendorId));
   }
 
-  private Future<List<String>> updatePiecesAndCreateJob(RequestContext requestContext, List<String> pieceIds, Map.Entry<String, Object> entry) {
+  private Future<List<String>> updatePiecesAndCreateJob(List<String> pieceIds, Map.Entry<String, Object> entry,
+                                                        RequestContext requestContext) {
     logger.info("updatePiecesAndCreateJob:: Updating pieces and creating a job, job key: {}, count: {}", entry.getKey(), pieceIds.size());
-    return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT, requestContext).map(pieceIds)
-        .compose(updatePieceIds -> createJob(entry.getKey(), entry.getValue(), requestContext).map(updatePieceIds));
+    return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT, requestContext)
+        .compose(v -> createJob(entry.getKey(), entry.getValue(), pieceIds, requestContext).map(pieceIds));
   }
 
-  private Future<Void> createJob(String configKey, Object configValue, RequestContext requestContext) {
+  private Future<Void> createJob(String configKey, Object configValue, List<String> pieceIds, RequestContext requestContext) {
     var integrationDetail = new JsonObject(String.valueOf(configValue));
+    integrationDetail.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS)
+      .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG)
+      .put(CLAIM_PIECE_IDS, pieceIds);
     return restClient.post(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB), integrationDetail, Object.class, requestContext)
       .map(response -> {
         var createdJob = new JsonObject(String.valueOf(response));
