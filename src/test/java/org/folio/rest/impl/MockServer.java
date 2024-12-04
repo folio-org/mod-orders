@@ -1942,6 +1942,7 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       PieceCollection pieces;
+      logger.info("handleGetPieces (all records), pieces present: {}", getMockEntries(PIECES_STORAGE, Piece.class).isPresent());
       if (getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
         logger.info("handleGetPieces (all records)");
         try {
@@ -2389,7 +2390,6 @@ public class MockServer {
             .withSourcePoLineId("a6edc906-2f9f-5fb2-a373-efac406f0ef2")
             .withStatus(Encumbrance.Status.UNRELEASED))
           .withMetadata(new Metadata());
-        List<Transaction> transactions = List.of(transaction1);
         TransactionCollection transactionCollection = new TransactionCollection().withTransactions(List.of(transaction1, transaction2)).withTotalRecords(2);
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else if (query.contains("encumbrance.sourcePoLineId == 50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")) {
