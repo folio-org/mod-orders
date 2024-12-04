@@ -760,7 +760,6 @@ public class MockServer {
 
     Object record = new TitleCollection().withTitles(titles).withTotalRecords(titles.size());
 
-
     return JsonObject.mapFrom(record);
   }
 
@@ -863,7 +862,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.startsWith("id==")) {
           ids = extractIdsFromQuery(query);
@@ -1937,90 +1935,89 @@ public class MockServer {
     String requestQuery = ctx.request().getParam("query");
     MultiMap requestHeaders = ctx.request().headers();
     logger.info("handleGetPieces requestPath: {}, requestQuery: {}, requestHeaders: {}", requestPath, requestQuery, requestHeaders);
-    if (Objects.isNull(requestQuery)) {
-      logger.info("handleGetPieces (empty requestQuery) requestPath: {}, requestHeaders: {}", requestPath, requestHeaders);
-      PieceCollection pieces = new PieceCollection().withPieces(new ArrayList<>());
-      pieces.setTotalRecords(pieces.getPieces().size());
-    } else
+    try {
       if (requestQuery.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
-      logger.info("handleGetPieces (with internal server error)");
-      addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, new JsonObject());
-      serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
-    } else {
-      PieceCollection pieces;
-      if (getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
-        logger.info("handleGetPieces (all records)");
-        try {
-          List<Piece> piecesList = getMockEntries(PIECES_STORAGE, Piece.class).get();
-          pieces = new PieceCollection().withPieces(piecesList);
-          pieces.setTotalRecords(pieces.getPieces().size());
-        } catch (Exception e) {
-          throw new IllegalStateException(String.format("Cannot retrieved mock data for requestPath: %s, requestQuery: %s", requestPath, requestQuery));
-        }
+        logger.info("handleGetPieces (with internal server error)");
+        addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, new JsonObject());
+        serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
       } else {
-        try {
-          if (requestQuery.contains("poLineId==")) {
-            logger.info("handleGetPieces (by poLineId)");
-            List<String> conditions = StreamEx
-              .split(requestQuery, " or ")
-              .flatMap(s -> StreamEx.split(s, " and "))
-              .toList();
-
-            String polId = EMPTY;
-            String status = EMPTY;
-            for (String condition : conditions) {
-              if (condition.startsWith("poLineId")) {
-                polId = condition.split("poLineId==")[1];
-              } else if (condition.startsWith("receivingStatus")) {
-                status = condition.split("receivingStatus==")[1];
-              }
-            }
-            logger.info("poLineId: {}",  polId);
-            logger.info("receivingStatus: {}", status);
-
-            String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
-            pieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
-            // Filter piece records by receiving status
-            if (StringUtils.isNotEmpty(status)) {
-              Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
-              pieces.getPieces()
-                .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
-            }
-          } else if (requestQuery.contains("id==")) {
-            logger.info("handleGetPieces (by id)");
-            pieces = new JsonObject(getMockData(PIECES_COLLECTION)).mapTo(PieceCollection.class);
-            List<String> pieceIds = extractIdsFromQuery(requestQuery);
-            pieces.getPieces().removeIf(piece -> !pieceIds.contains(piece.getId()));
-            // fix consistency with titles: the piece's title id should be the same as one of the titles ids
-            // returned for the piece's po line
-            pieces.getPieces().forEach(piece -> {
-              String poLineId = piece.getPoLineId();
-              List<Title> titlesForPoLine = getTitlesByPoLineIds(List.of(poLineId)).mapTo(TitleCollection.class).getTitles();
-              if (!titlesForPoLine.isEmpty() && titlesForPoLine.stream().noneMatch(title -> title.getId().equals(piece.getTitleId()))) {
-                piece.setTitleId(titlesForPoLine.get(0).getId());
-              }
-            });
-          } else {
-            logger.info("handleGetPieces (with empty piece collection)");
-            pieces = new PieceCollection();
+        PieceCollection pieces;
+        if (getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
+          logger.info("handleGetPieces (all records)");
+          try {
+            List<Piece> piecesList = getMockEntries(PIECES_STORAGE, Piece.class).get();
+            pieces = new PieceCollection().withPieces(piecesList);
+            pieces.setTotalRecords(pieces.getPieces().size());
+          } catch (Exception e) {
+            throw new IllegalStateException(String.format("Cannot retrieved mock data for requestPath: %s, requestQuery: %s", requestPath, requestQuery));
           }
+        } else {
+          try {
+            if (requestQuery.contains("poLineId==")) {
+              logger.info("handleGetPieces (by poLineId)");
+              List<String> conditions = StreamEx
+                .split(requestQuery, " or ")
+                .flatMap(s -> StreamEx.split(s, " and "))
+                .toList();
 
-          pieces.setTotalRecords(pieces.getPieces().size());
+              String polId = EMPTY;
+              String status = EMPTY;
+              for (String condition : conditions) {
+                if (condition.startsWith("poLineId")) {
+                  polId = condition.split("poLineId==")[1];
+                } else if (condition.startsWith("receivingStatus")) {
+                  status = condition.split("receivingStatus==")[1];
+                }
+              }
+              logger.info("poLineId: {}",  polId);
+              logger.info("receivingStatus: {}", status);
 
-        } catch (Exception e) {
-          logger.info("handleGetPieces (with empty piece collection on exception)");
-          pieces = new PieceCollection();
-          pieces.setTotalRecords(0);
+              String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
+              pieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
+              // Filter piece records by receiving status
+              if (StringUtils.isNotEmpty(status)) {
+                Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
+                pieces.getPieces()
+                  .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
+              }
+            } else if (requestQuery.contains("id==")) {
+              logger.info("handleGetPieces (by id)");
+              pieces = new JsonObject(getMockData(PIECES_COLLECTION)).mapTo(PieceCollection.class);
+              List<String> pieceIds = extractIdsFromQuery(requestQuery);
+              pieces.getPieces().removeIf(piece -> !pieceIds.contains(piece.getId()));
+              // fix consistency with titles: the piece's title id should be the same as one of the titles ids
+              // returned for the piece's po line
+              pieces.getPieces().forEach(piece -> {
+                String poLineId = piece.getPoLineId();
+                List<Title> titlesForPoLine = getTitlesByPoLineIds(List.of(poLineId)).mapTo(TitleCollection.class).getTitles();
+                if (!titlesForPoLine.isEmpty() && titlesForPoLine.stream().noneMatch(title -> title.getId().equals(piece.getTitleId()))) {
+                  piece.setTitleId(titlesForPoLine.get(0).getId());
+                }
+              });
+            } else {
+              logger.info("handleGetPieces (with empty piece collection)");
+              pieces = new PieceCollection();
+            }
+
+            pieces.setTotalRecords(pieces.getPieces().size());
+
+          } catch (Exception e) {
+            logger.info("handleGetPieces (with empty piece collection on exception)");
+            pieces = new PieceCollection();
+            pieces.setTotalRecords(0);
+          }
         }
+
+        JsonObject data = JsonObject.mapFrom(pieces);
+        addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, data);
+
+        ctx.response()
+          .setStatusCode(200)
+          .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+          .end(data.encodePrettily());
       }
-
-      JsonObject data = JsonObject.mapFrom(pieces);
-      addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, data);
-
-      ctx.response()
-        .setStatusCode(200)
-        .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-        .end(data.encodePrettily());
+    } catch (Exception e) {
+      logger.error("Error handling pieces: ", e);
     }
   }
 
