@@ -1922,7 +1922,7 @@ public class MockServer {
           } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
             body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
           } else {
-            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-А.json"));
+            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecord-%s.json", pieceId)));
           }
         }
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());

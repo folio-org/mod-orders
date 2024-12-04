@@ -11,7 +11,6 @@ import org.folio.rest.jaxrs.model.ClaimingCollection;
 import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.ClaimingResults;
 import org.folio.rest.jaxrs.model.CompositePoLine;
-import org.folio.rest.jaxrs.model.Piece;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,12 +36,10 @@ import static org.folio.TestConstants.ORDERS_CLAIMING_ENDPOINT;
 import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
-import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORGANIZATION_COLLECTION;
-import static org.folio.rest.impl.MockServer.PIECES_COLLECTION;
 import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getDataExportSpringJobCreations;
@@ -140,15 +137,10 @@ public class ClaimingApiTest {
       .mapTo(CompositePoLine.class);
     var purchaseOrder = getMinimalOrder(poLine)
       .withVendor(organization.getId());
-    var piece = getMockAsJson(PIECES_COLLECTION)
-      .getJsonArray(PIECES_KEY)
-      .getJsonObject(pieceIdx)
-      .mapTo(Piece.class);
 
     addMockEntry(ORGANIZATION_STORAGE, organization);
     addMockEntry(PURCHASE_ORDER_STORAGE, purchaseOrder);
     addMockEntry(PO_LINES_STORAGE, poLine);
-    addMockEntry(PIECES_STORAGE, piece);
 
     var headers = prepareHeaders(header);
     var mockDataPath = BASE_MOCK_DATA_PATH + CLAIMING_MOCK_DATA_FOLDER + payloadFile;
