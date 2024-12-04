@@ -131,7 +131,7 @@ public class OrderLinePatchOperationService {
 
     String newInstanceId = request.getReplaceInstanceRef().getNewInstanceId();
     purchaseOrderLineService.getOrderLineById(lineId, requestContext)
-      .map(poLine -> {
+      .compose(poLine -> {
         RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(INSTANCE_RECORDS_BY_ID_ENDPOINT)).withId(newInstanceId);
         return restClient.getAsJsonObject(requestEntry, requestContext)
           .compose(instanceRecord -> updatePoLineWithInstanceRecordInfo(instanceRecord, poLine, requestContext))
