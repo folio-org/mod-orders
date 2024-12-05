@@ -122,7 +122,7 @@ public class ClaimingService {
           return Future.succeededFuture();
         }
         var uniquePiecePoLinePairs = pieces.stream()
-          .filter(Objects::nonNull).filter(piece -> Objects.nonNull(piece.getId()) & Objects.nonNull(piece.getPoLineId()))
+          .filter(Objects::nonNull).filter(piece -> Objects.nonNull(piece.getId()) && Objects.nonNull(piece.getPoLineId()))
           .map(piece -> Pair.of(piece.getPoLineId(), piece.getId())).distinct()
           .toList();
         logger.info("groupPieceIdsByVendorId:: Prepared unique piece-poLine pairs, pairs: {}", uniquePiecePoLinePairs);
@@ -173,7 +173,8 @@ public class ClaimingService {
     log.info("createJobsByVendor:: Creating jobs by vendor, vendors by pieces count: {}", pieceIdsByVendorId.size());
     if (CollectionUtils.isEmpty(pieceIdsByVendorId)) {
       logger.info("createJobsByVendor:: No jobs are created, pieceIdsByVendorId is empty");
-      return Future.succeededFuture(new ClaimingResults().withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE)));
+      return Future.succeededFuture(new ClaimingResults()
+        .withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE)));
     }
     return collectResultsOnSuccess(createUpdatePiecesAndJobFutures(config, pieceIdsByVendorId, requestContext))
       .map(updatedPieceLists -> {
@@ -193,7 +194,8 @@ public class ClaimingService {
     pieceIdsByVendorId.forEach((vendorId, pieceIds) -> config.stream()
       .filter(entry -> isExportTypeClaimsAndCorrectVendorId(vendorId, entry) && Objects.nonNull(entry.getValue()))
       .forEach(entry -> {
-        logger.info("createJobsByVendor:: Preparing job integration detail for vendor, vendor id: {}, pieces: {}, job key: {}", vendorId, pieceIds.size(), entry.getKey());
+        logger.info("createJobsByVendor:: Preparing job integration detail for vendor, vendor id: {}, pieces: {}, job key: {}",
+          vendorId, pieceIds.size(), entry.getKey());
         updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(pieceIds, entry, requestContext));
       }));
     return updatePiecesAndJobFutures;
