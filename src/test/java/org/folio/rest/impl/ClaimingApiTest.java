@@ -75,6 +75,7 @@ public class ClaimingApiTest {
   private static final String ORGANIZATIONS_KEY = "organizations";
   private static final String PO_LINES_KEY = "poLines";
   private static final String PIECES_KEY = "pieces";
+  private static final String ENTRY_ID = "id";
   private static final String CLAIMING_MOCK_DATA_FOLDER = "claiming/";
 
   @BeforeAll
@@ -100,7 +101,7 @@ public class ClaimingApiTest {
 
   private static Stream<Arguments> testPostOrdersClaimArgs() {
     var payloadFile = "send-claims-1-piece-1-vendor-1-job.json";
-    var mockHitDto = new MockHitDto(2, 2, 2, 1, 1, 1, 1, 1);
+    var mockHitDto = new MockHitDto(3, 2, 2, 1, 1, 1, 1, 1);
     return Stream.of(
       Arguments.of("One piece One vendor One Job", 0, 17, 69, mockHitDto, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS, SUCCESS),
       Arguments.of("One piece One vendor No Job", 0, 17, 69, null, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, FAILURE)
@@ -170,8 +171,15 @@ public class ClaimingApiTest {
         .toList())
       .flatMap(Collection::stream)
       .toList();
-    var polSearches = getPoLineSearches();
-    var purchaseOrderRetrievals = getPurchaseOrderRetrievals();
+    var polSearches = getPoLineSearches().stream()
+      .map(JsonObject::mapFrom).map(json -> json.getString(ENTRY_ID))
+      .filter(Objects::nonNull).filter(poLineId -> poLineId.equals(poLine.getId()))
+      .toList();
+    var purchaseOrderRetrievals = getPurchaseOrderRetrievals().stream()
+      .map(JsonObject::mapFrom).map(json -> json.getString(ENTRY_ID))
+      .filter(Objects::nonNull).filter(poLineId -> poLineId.equals(purchaseOrder.getId()))
+      .toList();
+    purchaseOrderRetrievals.forEach(entry -> logger.info("PurchaseOrders: {}", entry));
     var organizationSearches = getOrganizationSearches();
     var pieceUpdates = getPieceUpdates();
     var jobCreations = getDataExportSpringJobCreations();

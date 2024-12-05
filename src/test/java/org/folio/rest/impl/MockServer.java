@@ -93,6 +93,7 @@ import static org.folio.orders.utils.ResourcePathResolver.USER_TENANTS_ENDPOINT;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.acq.model.Piece.ReceivingStatus.LATE;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
@@ -1939,11 +1940,17 @@ public class MockServer {
     } else {
       PieceCollection pieces;
       logger.info("handleGetPieces (all records), pieces already present: {}", getMockEntries(PIECES_STORAGE, Piece.class).isPresent());
-      if (!isTenantForClaiming(requestHeaders) && getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
-        logger.info("handleGetPieces (all records)");
+      // Prevent loading of unnecessary pieces from other tests for tenant that was made specifically for Claiming
+      if (getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
+        var isClaimingTenant = requestHeaders.contains(OKAPI_TENANT, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS.getValue(), false);
+        logger.info("handleGetPieces (all records), isClaimingTenant: {}", isClaimingTenant);
         try {
           List<Piece> piecesList = getMockEntries(PIECES_STORAGE, Piece.class).get();
-          pieces = new PieceCollection().withPieces(piecesList);
+          if (!isClaimingTenant) {
+            pieces = new PieceCollection().withPieces(piecesList);
+          } else {
+            pieces = new PieceCollection().withPieces(piecesList.stream().filter(piece -> piece.getReceivingStatus() == LATE).toList());
+          }
           pieces.setTotalRecords(pieces.getPieces().size());
         } catch (Exception e) {
           throw new IllegalStateException(String.format("Cannot retrieved mock data for requestPath: %s, requestQuery: %s", requestPath, requestQuery));
@@ -2012,11 +2019,6 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(data.encodePrettily());
     }
-  }
-
-  // Prevent loading of unnecessary pieces from other tests for tenant that was made specifically for Claiming
-  private boolean isTenantForClaiming(MultiMap requestHeaders) {
-    return requestHeaders.get(OKAPI_TENANT.toLowerCase()).equals(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS.getValue());
   }
 
   private void handleGetTitles(RoutingContext ctx) {
