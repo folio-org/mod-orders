@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
@@ -11,13 +12,17 @@ import org.folio.rest.jaxrs.model.ClaimingCollection;
 import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.ClaimingResults;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -36,10 +41,12 @@ import static org.folio.TestConstants.ORDERS_CLAIMING_ENDPOINT;
 import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE;
 import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ORGANIZATION_COLLECTION;
+import static org.folio.rest.impl.MockServer.PIECES_COLLECTION;
 import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getDataExportSpringJobCreations;
@@ -49,6 +56,8 @@ import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPieceUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
+import static org.folio.rest.jaxrs.model.ClaimingPieceResult.Status.FAILURE;
+import static org.folio.rest.jaxrs.model.ClaimingPieceResult.Status.SUCCESS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -57,6 +66,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+@ExtendWith(VertxExtension.class)
 public class ClaimingApiTest {
 
   private static final Logger logger = LogManager.getLogger();
@@ -64,6 +74,7 @@ public class ClaimingApiTest {
 
   private static final String ORGANIZATIONS_KEY = "organizations";
   private static final String PO_LINES_KEY = "poLines";
+  private static final String PIECES_KEY = "pieces";
   private static final String CLAIMING_MOCK_DATA_FOLDER = "claiming/";
 
   @BeforeAll
@@ -88,13 +99,11 @@ public class ClaimingApiTest {
   }
 
   private static Stream<Arguments> testPostOrdersClaimArgs() {
+    var payloadFile = "send-claims-1-piece-1-vendor-1-job.json";
+    var mockHitDto = new MockHitDto(2, 2, 2, 1, 1, 1, 1, 1);
     return Stream.of(
-      Arguments.of("One piece One vendor One Job", 0, 17,
-        new MockHitDto(3, 2, 2, 1, 1, 1, 1, 1),
-        "send-claims-1-piece-1-vendor-1-job.json", EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS, ClaimingPieceResult.Status.SUCCESS),
-      Arguments.of("One piece One vendor No Job", 0, 17,
-        null,
-        "send-claims-1-piece-1-vendor-1-job.json", EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, ClaimingPieceResult.Status.FAILURE)
+      Arguments.of("One piece One vendor One Job", 0, 17, 69, mockHitDto, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS, SUCCESS),
+      Arguments.of("One piece One vendor No Job", 0, 17, 69, null, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, FAILURE)
     );
   }
 
@@ -125,7 +134,7 @@ public class ClaimingApiTest {
 
   @ParameterizedTest
   @MethodSource("testPostOrdersClaimArgs")
-  void testPostOrdersClaim(String name, int vendorIdx, int polIdx, MockHitDto dto,
+  void testPostOrdersClaim(String name, int vendorIdx, int poLineIdx, int pieceIdx, MockHitDto dto,
                            String payloadFile, Header header, ClaimingPieceResult.Status expectedStatus) {
     logger.info("Testing postOrdersClaim, name: {}", name);
 
@@ -134,21 +143,33 @@ public class ClaimingApiTest {
       .mapTo(Organization.class);
     var poLine = getMockAsJson(PO_LINES_COLLECTION)
       .getJsonArray(PO_LINES_KEY)
-      .getJsonObject(polIdx)
+      .getJsonObject(poLineIdx)
       .mapTo(CompositePoLine.class);
     var purchaseOrder = getMinimalOrder(poLine)
       .withVendor(organization.getId());
+    var piece = getMockAsJson(PIECES_COLLECTION)
+      .getJsonArray(PIECES_KEY)
+      .getJsonObject(pieceIdx)
+      .mapTo(Piece.class);
 
     addMockEntry(ORGANIZATION_STORAGE, organization);
     addMockEntry(PURCHASE_ORDER_STORAGE, purchaseOrder);
     addMockEntry(PO_LINES_STORAGE, poLine);
+    addMockEntry(PIECES_STORAGE, piece);
 
     var mockDataPath = BASE_MOCK_DATA_PATH + CLAIMING_MOCK_DATA_FOLDER + payloadFile;
     var request = JsonObject.mapFrom(getMockAsJson(mockDataPath).mapTo(ClaimingCollection.class)).encode();
     var response = verifyPostResponse(ORDERS_CLAIMING_ENDPOINT, request, prepareHeaders(header), APPLICATION_JSON, CREATED.code())
       .as(ClaimingResults.class);
 
-    var pieceSearches = getPieceSearches();
+    // Filter out any dummy pieces without ids that are loaded from other tests
+    var pieceSearches = getPieceSearches().stream()
+      .map(JsonObject::mapFrom).map(json -> json.mapTo(PieceCollection.class))
+      .map(collection -> collection.getPieces().stream()
+        .filter(entry -> Objects.nonNull(entry.getId())).filter(entry -> entry.getId().equals(piece.getId()))
+        .toList())
+      .flatMap(Collection::stream)
+      .toList();
     var polSearches = getPoLineSearches();
     var purchaseOrderRetrievals = getPurchaseOrderRetrievals();
     var organizationSearches = getOrganizationSearches();
@@ -179,7 +200,7 @@ public class ClaimingApiTest {
       .forEach(result -> {
         assertThat(result.getPieceId(), not(nullValue()));
         assertThat(result.getStatus(), is(expectedStatus));
-        if (expectedStatus == ClaimingPieceResult.Status.SUCCESS) {
+        if (expectedStatus == SUCCESS) {
           assertThat(result.getError(), is(nullValue()));
         } else {
           assertThat(result.getError(), is(notNullValue()));

@@ -17,6 +17,7 @@ import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.TestConstants.EMPTY_CONFIG_TENANT;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS;
 import static org.folio.TestConstants.ID;
 import static org.folio.TestConstants.ID_BAD_FORMAT;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
@@ -37,6 +38,7 @@ import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT;
 import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT_HEADER;
 import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT;
 import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
+import static org.folio.TestConstants.OKAPI_TENANT;
 import static org.folio.TestConstants.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
 import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
 import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
@@ -1200,18 +1202,16 @@ public class MockServer {
 
     // Attempt to find POLine in mock server memory
     List<JsonObject> itemsList = getRqRsEntries(HttpMethod.SEARCH, ITEM_RECORDS);
+    JsonObject items;
     if (!itemsList.isEmpty()) {
-      JsonObject items = new JsonObject()
+      items = new JsonObject()
         .put("items", itemsList)
         .put(TOTAL_RECORDS, itemsList.size());
-
-      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
-      serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
     } else {
-      JsonObject items = new JsonObject().put("items", new JsonArray());
-      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
-      serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
+      items = new JsonObject().put("items", new JsonArray());
     }
+    addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+    serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
   }
 
   private void handleGetInventoryItemRecords(RoutingContext ctx) {
@@ -1258,7 +1258,7 @@ public class MockServer {
             JsonObject item = (JsonObject) iterator.next();
 
             if (!purchaseOrderLineIdentifier.equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))
-                    || !holdingsRecordId.equals(item.getString(ITEM_HOLDINGS_RECORD_ID))) {
+              || !holdingsRecordId.equals(item.getString(ITEM_HOLDINGS_RECORD_ID))) {
               iterator.remove();
             }
           }
@@ -1902,11 +1902,7 @@ public class MockServer {
     String pieceId = ctx.request().getParam(ID);
     logger.info("id: {}", pieceId);
     try {
-      if ("dcd0ba36-b660-4751-b9fe-c8ac61ff6f99".equals(pieceId)) {
-        JsonObject data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecord-%s.json", pieceId)));
-        logger.info("handleGetPieceById custom, data: {}", data.encodePrettily());
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, data.encodePrettily());
-      } else if (ID_DOES_NOT_EXIST.equals(pieceId)) {
+      if (ID_DOES_NOT_EXIST.equals(pieceId)) {
         serverResponse(ctx, 404, APPLICATION_JSON, pieceId);
       } else if (ID_FOR_INTERNAL_SERVER_ERROR.equals(pieceId)) {
         serverResponse(ctx, 500, APPLICATION_JSON, pieceId);
@@ -1919,6 +1915,7 @@ public class MockServer {
           } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
             data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
           } else {
+            // Load piece by id
             data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecord-%s.json", pieceId)));
           }
         }
@@ -1941,8 +1938,8 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       PieceCollection pieces;
-      logger.info("handleGetPieces (all records), pieces present: {}", getMockEntries(PIECES_STORAGE, Piece.class).isPresent());
-      if (getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
+      logger.info("handleGetPieces (all records), pieces already present: {}", getMockEntries(PIECES_STORAGE, Piece.class).isPresent());
+      if (!isTenantForClaiming(requestHeaders) && getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
         logger.info("handleGetPieces (all records)");
         try {
           List<Piece> piecesList = getMockEntries(PIECES_STORAGE, Piece.class).get();
@@ -1999,7 +1996,6 @@ public class MockServer {
           }
 
           pieces.setTotalRecords(pieces.getPieces().size());
-
         } catch (Exception e) {
           logger.info("handleGetPieces (with empty piece collection on exception)");
           pieces = new PieceCollection();
@@ -2016,6 +2012,11 @@ public class MockServer {
         .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
         .end(data.encodePrettily());
     }
+  }
+
+  // Prevent loading of unnecessary pieces from other tests for tenant that was made specifically for Claiming
+  private boolean isTenantForClaiming(MultiMap requestHeaders) {
+    return requestHeaders.get(OKAPI_TENANT.toLowerCase()).equals(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS.getValue());
   }
 
   private void handleGetTitles(RoutingContext ctx) {
@@ -2418,7 +2419,7 @@ public class MockServer {
   }
 
   private void handleUserTenantsGetEntry(RoutingContext ctx) {
-    String body = new JsonObject().put("userTenants", org.assertj.core.util.Lists.emptyList()).encodePrettily();
+    String body = new JsonObject().put("userTenants", Collections.emptyList()).encodePrettily();
     serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
     addServerRqRsData(HttpMethod.GET, USER_TENANTS_ENDPOINT, new JsonObject(body));
   }

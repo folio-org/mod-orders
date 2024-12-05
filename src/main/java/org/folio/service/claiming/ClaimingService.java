@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import static java.util.stream.Collectors.collectingAndThen;
@@ -55,6 +56,7 @@ public class ClaimingService {
   private static final String CANNOT_RETRIEVE_CONFIG_ENTRIES = "Cannot retrieve config entries";
   private static final String CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE = "Cannot group pieces by vendor";
   private static final String CANNOT_CREATE_JOBS_AND_UPDATE_PIECES = "Cannot create jobs and update pieces";
+  private static final String CANNOT_FIND_A_PIECE_BY_ID = "Cannot find a piece by '%s' id";
 
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final PieceStorageService pieceStorageService;
@@ -112,22 +114,31 @@ public class ClaimingService {
       logger.info("groupPieceIdsByVendorId:: No pieces are grouped by vendor, pieceIds is empty");
       return Future.succeededFuture();
     }
-    logger.info("groupPieceIdsByVendorId:: Grouping pieces by vendor");
+    logger.info("groupPieceIdsByVendorId:: Grouping pieces by vendor, pieceIds count: {}", pieceIds.size());
     return pieceStorageService.getPiecesByIds(pieceIds, requestContext)
       .compose(pieces -> {
+        if (CollectionUtils.isEmpty(pieces)) {
+          logger.info("groupPieceIdsByVendorId:: No pieces are found by piece ids, pieceIds: {}", pieceIds);
+          return Future.succeededFuture();
+        }
         var uniquePiecePoLinePairs = pieces.stream()
+          .filter(Objects::nonNull).filter(piece -> Objects.nonNull(piece.getId()) & Objects.nonNull(piece.getPoLineId()))
           .map(piece -> Pair.of(piece.getPoLineId(), piece.getId())).distinct()
           .toList();
-        return collectResultsOnSuccess(createPieceIdByVendorFutures(uniquePiecePoLinePairs, requestContext))
+        logger.info("groupPieceIdsByVendorId:: Prepared unique piece-poLine pairs, pairs: {}", uniquePiecePoLinePairs);
+        return collectResultsOnSuccess(createPieceIdByVendorFutures(pieces, uniquePiecePoLinePairs, requestContext))
           .map(ClaimingService::transformAndGroupPieceIdsByVendorId);
       });
   }
 
-  private List<Future<Pair<String, String>>> createPieceIdByVendorFutures(List<Pair<String, String>> uniquePiecePoLinePairs, RequestContext requestContext) {
+  private List<Future<Pair<String, String>>> createPieceIdByVendorFutures(List<Piece> pieces, List<Pair<String, String>> uniquePiecePoLinePairs,
+                                                                          RequestContext requestContext) {
     var pieceIdByVendorIdFutures = new ArrayList<Future<Pair<String, String>>>();
     uniquePiecePoLinePairs.forEach(piecePoLinePairs -> {
-      var pieceIdByVendorIdFuture = pieceStorageService.getPieceById(piecePoLinePairs.getRight(), requestContext)
-        .compose(piece -> createVendorPiecePair(piecePoLinePairs, piece, requestContext));
+      var foundPiece = pieces.stream()
+        .filter(Objects::nonNull).filter(piece -> Objects.nonNull(piece.getId())).filter(piece -> piece.getId().equals(piecePoLinePairs.getRight()))
+        .findFirst().orElseThrow(() -> new NoSuchElementException(String.format(CANNOT_FIND_A_PIECE_BY_ID, piecePoLinePairs.getRight())));
+      var pieceIdByVendorIdFuture = createVendorPiecePair(piecePoLinePairs, foundPiece, requestContext);
       if (Objects.nonNull(pieceIdByVendorIdFuture)) {
         pieceIdByVendorIdFutures.add(pieceIdByVendorIdFuture);
       }
@@ -135,7 +146,8 @@ public class ClaimingService {
     return pieceIdByVendorIdFutures;
   }
 
-  private Future<Pair<String, String>> createVendorPiecePair(Pair<String, String> piecePoLinePairs, Piece piece, RequestContext requestContext) {
+  private Future<Pair<String, String>> createVendorPiecePair(Pair<String, String> piecePoLinePairs,
+                                                             Piece piece, RequestContext requestContext) {
     if (Objects.nonNull(piece) && !piece.getReceivingStatus().equals(Piece.ReceivingStatus.LATE)) {
       logger.info("createVendorPiecePair:: Ignoring processing of a piece not in LATE state, piece id: {}", piece.getId());
       return Future.succeededFuture();
@@ -166,7 +178,7 @@ public class ClaimingService {
     return collectResultsOnSuccess(createUpdatePiecesAndJobFutures(config, pieceIdsByVendorId, requestContext))
       .map(updatedPieceLists -> {
         if (CollectionUtils.isEmpty(updatedPieceLists)) {
-          logger.info("createJobsByVendor:: No pieces were processes for claiming");
+          logger.info("createJobsByVendor:: No pieces were processed for claiming");
           return new ClaimingResults().withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_CREATE_JOBS_AND_UPDATE_PIECES));
         }
         var successClaimingPieceResults = createSuccessClaimingResults(updatedPieceLists);
@@ -175,7 +187,8 @@ public class ClaimingService {
       });
   }
 
-  private List<Future<List<String>>> createUpdatePiecesAndJobFutures(JsonObject config, Map<String, List<String>> pieceIdsByVendorId, RequestContext requestContext) {
+  private List<Future<List<String>>> createUpdatePiecesAndJobFutures(JsonObject config, Map<String, List<String>> pieceIdsByVendorId,
+                                                                     RequestContext requestContext) {
     var updatePiecesAndJobFutures = new ArrayList<Future<List<String>>>();
     pieceIdsByVendorId.forEach((vendorId, pieceIds) -> config.stream()
       .filter(entry -> isExportTypeClaimsAndCorrectVendorId(vendorId, entry) && Objects.nonNull(entry.getValue()))

@@ -61,6 +61,7 @@ public final class TestConstants {
   public static final String NON_EXIST_HOLDINGS_SOURCE_TENANT = "nonExistHoldingsSource";
   public static final String COMPOSITE_PO_LINES_PREFIX = "compositePoLines[0].";
   public static final String OKAPI_URL = "X-Okapi-Url";
+  public static final String OKAPI_TENANT = "X-Okapi-Tenant";
 
   public static final Header INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT);
   public static final Header NON_EXIST_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_INSTANCE_STATUS_TENANT);
