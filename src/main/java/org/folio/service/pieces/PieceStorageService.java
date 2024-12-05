@@ -135,6 +135,7 @@ public class PieceStorageService {
   }
 
   public Future<PieceCollection> getAllPieces(int limit, int offset, String query, RequestContext requestContext) {
+    log.info("getAllPieces:: limit: {}, offset: {}, query: {}", limit, offset, query);
     var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
@@ -165,11 +166,12 @@ public class PieceStorageService {
         .map(PieceCollection::getPieces)
         .flatMap(Collection::stream)
         .toList())
-      .onSuccess(v -> log.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds));
+      .onSuccess(v -> log.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds))
+      .onFailure(t -> log.error("Failed to get pieces by ids"));
   }
 
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
-    log.info("getPiecesByLineIdsByChunks start");
+    log.info("getPiecesByLineIdsByChunks:: start");
     var futures = ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getPieceChunkByLineIds(ids, requestContext))
       .toList();
@@ -177,7 +179,7 @@ public class PieceStorageService {
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(Collectors.toList()))
-      .onSuccess(v -> log.info("getPiecesByLineIdsByChunks end"));
+      .onSuccess(v -> log.info("getPiecesByLineIdsByChunks:: end"));
 
   }
 

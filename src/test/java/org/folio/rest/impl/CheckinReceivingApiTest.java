@@ -108,7 +108,7 @@ import static org.folio.rest.impl.MockServer.BASE_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_MULTIPLE_ITEMS;
 import static org.folio.rest.impl.MockServer.CONSISTENT_ECS_PURCHASE_ORDER_ID_PHYSICAL_SINGLE_ITEM;
 import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
-import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
+import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.addMockTitles;
 import static org.folio.rest.impl.MockServer.getCreatedHoldings;
@@ -186,7 +186,7 @@ public class CheckinReceivingApiTest {
   void testPostCheckInElectronicWithNoItems() {
     logger.info("=== Test POST Checkin - CheckIn Electronic resource");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(7).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(7).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     CheckinCollection checkInRq = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + "checkin-pe-mix-2-electronic-resources.json").mapTo(CheckinCollection.class);
@@ -234,7 +234,7 @@ public class CheckinReceivingApiTest {
   void testPostCheckInPhysicalWithMissingItem() {
     logger.info("=== Test POST Checkin - CheckIn physical resource with only one item updated");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(7).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(7).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     CheckinCollection checkInRq = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + "checkin-pe-mix-2-physical-resources.json").mapTo(CheckinCollection.class);
@@ -307,7 +307,7 @@ public class CheckinReceivingApiTest {
   void testPostCheckinRevertPhysicalResource() {
     logger.info("=== Test POST Check-in - Revert received Physical resource");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(8).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(8).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     CheckinCollection checkinReq = getMockAsJson(
@@ -364,7 +364,7 @@ public class CheckinReceivingApiTest {
   void testReceiveOngoingOrderWithChangedLocation() {
     logger.info("=== Test POST Receive - Ongoing PO Lines");
 
-    CompositePoLine originalPoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(9).mapTo(CompositePoLine.class);
+    CompositePoLine originalPoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(9).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(originalPoLine));
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-ongoing.json").mapTo(ReceivingCollection.class);
@@ -413,7 +413,7 @@ public class CheckinReceivingApiTest {
   void testReceiveCancelledOrderWithChangedLocation() {
     logger.info("=== Test POST Receive - Cancelled PO Lines");
 
-    CompositePoLine originalPoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(10).mapTo(CompositePoLine.class);
+    CompositePoLine originalPoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(10).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(originalPoLine));
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-cancelled.json").mapTo(ReceivingCollection.class);
@@ -465,7 +465,7 @@ public class CheckinReceivingApiTest {
 
     String poLineId = "fe47e95d-24e9-4a9a-9dc0-bcba64b51f56";
     String pieceId = UUID.randomUUID().toString();
-    CompositePoLine poLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    CompositePoLine poLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(poLine));
 
     List<ToBeCheckedIn> toBeCheckedInList = new ArrayList<>();
@@ -532,7 +532,7 @@ public class CheckinReceivingApiTest {
   void testPostReceivingPhysicalAll() {
     logger.info("=== Test POST Receiving - Receive physical resources ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(2).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(2).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-all-resources.json").mapTo(ReceivingCollection.class);
@@ -646,7 +646,7 @@ public class CheckinReceivingApiTest {
   void testPostCheckInPhysicalFullyReceivedWithChangedLocation() {
     logger.info("=== Test POST check-in - Check-in Fully Received physical resource with changed location ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(11).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(11).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     CheckinCollection checkinCollection = getMockAsJson(CHECKIN_RQ_MOCK_DATA_PATH + "checkin-fully-receive-physical-resource.json").mapTo(CheckinCollection.class);
@@ -704,7 +704,7 @@ public class CheckinReceivingApiTest {
   void testPostReceivePhysicalCancelledOrder() {
     logger.info("=== Test POST Receive - Check-in Fully Received physical resource with cancelled order ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
     addMockEntry(PO_LINES_STORAGE, compositePoLine);
@@ -774,7 +774,7 @@ public class CheckinReceivingApiTest {
   void testPostReceivePhysicalCancelledOrderLine(int fileIdx, int poLineIdx, PoLine.PaymentStatus paymentStatus, PoLine.ReceiptStatus receiptStatus) {
     logger.info("=== Test POST Receive - Check-in Fully Received physical resource with cancelled order line ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
     addMockEntry(PO_LINES_STORAGE, compositePoLine);
@@ -838,7 +838,7 @@ public class CheckinReceivingApiTest {
   void testPostCheckInPhysicalFullyReceivedCancelledOrder() {
     logger.info("=== Test POST check-in - Check-in Fully Received physical resource with cancelled order ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
     addMockEntry(PO_LINES_STORAGE, compositePoLine);
@@ -918,7 +918,7 @@ public class CheckinReceivingApiTest {
   void testPostCheckInPhysicalFullyReceivedCancelledOrderLine(int fileIdx, int poLineIdx, PoLine.PaymentStatus paymentStatus, PoLine.ReceiptStatus receiptStatus) {
     logger.info("=== Test POST check-in - Check-in Fully Received physical resource with cancelled order line ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
     addMockEntry(PO_LINES_STORAGE, compositePoLine);
@@ -1002,7 +1002,7 @@ public class CheckinReceivingApiTest {
     CompositePurchaseOrder purchaseOrder = new CompositePurchaseOrder().withId(orderId).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     addMockEntry(PURCHASE_ORDER_STORAGE, purchaseOrder);
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines")
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines")
       .stream()
       .map(json -> (JsonObject) json)
       .filter(json -> json.getString("purchaseOrderId").equals(purchaseOrder.getId()))
@@ -1302,7 +1302,7 @@ public class CheckinReceivingApiTest {
   void testPostReceivingElectronicPartially() {
     logger.info("=== Test POST Receiving - Receive partially electronic resources");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(4).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(4).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     // 10 pieces in total with PoLineId daa9cfd1-b330-4b65-8c2a-3663aaae5130
@@ -1358,7 +1358,7 @@ public class CheckinReceivingApiTest {
     logger.info("=== Test POST Receiving - Receive physical resources with different errors");
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "receive-physical-resources-6-of-10-with-errors.json").mapTo(ReceivingCollection.class);
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(3).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(3).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
     ReceivingResults results = verifyPostResponse(ORDERS_RECEIVING_ENDPOINT, JsonObject.mapFrom(receivingRq).encode(),
       prepareHeaders(EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10), APPLICATION_JSON, 200).as(ReceivingResults.class);
@@ -1467,7 +1467,7 @@ public class CheckinReceivingApiTest {
 
   private void verifyProperQuantityOfHoldingsCreated(ReceivingCollection receivingRq) throws IOException {
     // get processed poline
-    PoLineCollection poLineCollection = new JsonObject(getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
+    PoLineCollection poLineCollection = new JsonObject(getMockData(PO_LINES_COLLECTION)).mapTo(PoLineCollection.class);
 
     // get processed pieces for receiving
     PieceCollection pieces = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json"))
@@ -1945,7 +1945,7 @@ public class CheckinReceivingApiTest {
   void testPostReceivingRevertMixedResources() {
     logger.info("=== Test POST Receiving - Revert received P/E Mix resources");
 
-    CompositePoLine poLines = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    CompositePoLine poLines = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(poLines));
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "revert-pe-mix-4-of-5-resources.json").mapTo(ReceivingCollection.class);
@@ -2001,7 +2001,7 @@ public class CheckinReceivingApiTest {
   void testPostReceivingRevertElectronicResource() {
     logger.info("=== Test POST Receiving - Revert received electronic resource");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(6).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(6).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     ReceivingCollection receivingRq = getMockAsJson(RECEIVING_RQ_MOCK_DATA_PATH + "revert-electronic-1-of-1-resource.json").mapTo(ReceivingCollection.class);

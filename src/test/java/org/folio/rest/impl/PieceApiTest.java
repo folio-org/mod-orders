@@ -38,7 +38,7 @@ import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_HOLDINGS_RECORD_JSON;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_INSTANCE_JSON;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_ITEM_JSON;
-import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
+import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
@@ -157,7 +157,7 @@ public class PieceApiTest {
   void testPostPhysicalPieceCancelledPurchaseOrder() {
     logger.info("=== Test POST physical piece with a cancelled purchase order ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
     Title tile = getTitle(compositePoLine);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
@@ -208,7 +208,7 @@ public class PieceApiTest {
   void testPostPieceCancelledOrderLine(int poLineIdx, CheckInPiece.ItemStatus itemStatus) {
     logger.info("=== Test POST physical piece with a cancelled order line ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     Title tile = getTitle(compositePoLine);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
