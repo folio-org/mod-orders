@@ -2168,6 +2168,32 @@
       "description" : "Permission should be provided to reopen order"
     }
   ],
+  "metadata": {
+    "user": {
+      "type": "system",
+      "permissions": [
+        "converter-storage.jobprofilesnapshots.get",
+        "configuration.entries.collection.get",
+        "finance-storage.fiscal-years.item.get",
+        "acquisitions-units.memberships.collection.get",
+        "acquisitions-units.units.collection.get",
+        "invoice-storage.invoice-line-number.get",
+        "invoice-storage.invoice-lines.item.post",
+        "invoice-storage.invoice-lines.item.put",
+        "invoice-storage.invoice-lines.collection.get",
+        "invoice-storage.invoice-number.get",
+        "invoice-storage.invoices.item.get",
+        "invoice-storage.invoices.item.post",
+        "invoice-storage.invoices.item.put",
+        "modperms.orders.item.put",
+        "modperms.orders.item.post",
+        "orders-storage.acquisition-methods.collection.get",
+        "orders-storage.order-invoice-relationships.item.post",
+        "orders.po-lines.collection.get",
+        "orders.po-lines.item.get"
+      ]
+    }
+  },
   "launchDescriptor": {
     "dockerImage": "${artifactId}:${version}",
     "dockerPull": false,
