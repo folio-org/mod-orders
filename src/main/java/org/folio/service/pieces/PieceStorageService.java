@@ -156,29 +156,22 @@ public class PieceStorageService {
   }
 
   public Future<List<Piece>> getPiecesByIds(List<String> pieceIds, RequestContext requestContext) {
-    log.info("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
+    log.debug("getPiecesByIds:: start to retrieving pieces by ids: {}", pieceIds);
     var futures = ofSubLists(new ArrayList<>(pieceIds), MAX_IDS_FOR_GET_RQ_15)
       .map(QueryUtils::convertIdsToCqlQuery)
       .map(query -> getAllPieces(query, requestContext))
       .toList();
     return collectResultsOnSuccess(futures)
-      .map(lists -> {
-        try {
-          return lists.stream()
-            .map(PieceCollection::getPieces)
-            .flatMap(Collection::stream)
-            .toList();
-        } catch (Throwable t) {
-          log.error("Failed to unwrap piece chunks");
-          throw t;
-        }
-      })
+      .map(lists -> lists.stream()
+        .map(PieceCollection::getPieces)
+        .flatMap(Collection::stream)
+        .toList())
       .onSuccess(v -> log.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds))
       .onFailure(t -> log.error("Failed to get pieces by ids"));
   }
 
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
-    log.info("getPiecesByLineIdsByChunks start");
+    log.info("getPiecesByLineIdsByChunks:: start");
     var futures = ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getPieceChunkByLineIds(ids, requestContext))
       .toList();
@@ -186,7 +179,7 @@ public class PieceStorageService {
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
         .collect(Collectors.toList()))
-      .onSuccess(v -> log.info("getPiecesByLineIdsByChunks end"));
+      .onSuccess(v -> log.info("getPiecesByLineIdsByChunks:: end"));
 
   }
 
