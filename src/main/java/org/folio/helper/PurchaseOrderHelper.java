@@ -25,6 +25,7 @@ import static org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus.P
 import static org.folio.service.UserService.getCurrentUserId;
 import static org.folio.service.orders.utils.StatusUtils.changeOrderStatusForOrderUpdate;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,7 @@ import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategyFactory;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
+import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.OrderWorkflowType;
@@ -78,6 +80,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderHelper {
+
   private static final Logger logger = LogManager.getLogger(PurchaseOrderHelper.class);
 
   private final PurchaseOrderLineHelper purchaseOrderLineHelper;
@@ -98,6 +101,7 @@ public class PurchaseOrderHelper {
   private final PoNumberHelper poNumberHelper;
   private final ReOpenCompositeOrderManager reOpenCompositeOrderManager;
   private final OrderValidationService orderValidationService;
+  private final CompositePoLineValidationService compositePoLineValidationService;
 
   public PurchaseOrderHelper(PurchaseOrderLineHelper purchaseOrderLineHelper,
       CompositeOrderDynamicDataPopulateService orderLinesSummaryPopulateService, EncumbranceService encumbranceService,
@@ -109,7 +113,8 @@ public class PurchaseOrderHelper {
       OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
       ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
       OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-      ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrderValidationService orderValidationService) {
+      ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrderValidationService orderValidationService,
+      CompositePoLineValidationService compositePoLineValidationService) {
     this.purchaseOrderLineHelper = purchaseOrderLineHelper;
     this.orderLinesSummaryPopulateService = orderLinesSummaryPopulateService;
     this.encumbranceService = encumbranceService;
@@ -128,6 +133,7 @@ public class PurchaseOrderHelper {
     this.openCompositeOrderFlowValidator = openCompositeOrderFlowValidator;
     this.reOpenCompositeOrderManager = reOpenCompositeOrderManager;
     this.orderValidationService = orderValidationService;
+    this.compositePoLineValidationService = compositePoLineValidationService;
   }
 
   /**
@@ -224,9 +230,26 @@ public class PurchaseOrderHelper {
       .map(HelperUtils::convertToCompositePurchaseOrder)
       .compose(lines -> purchaseOrderLineService.populateOrderLines(lines, requestContext))
       .compose(poFromStorage -> {
+        CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext)
-          .compose(ok -> {
+          .compose(v -> {
+            var poLineFutures = new ArrayList<Future<Void>>();
+            if (!compPO.getCompositePoLines().isEmpty()) {
+              compPO.getCompositePoLines().forEach(poLine -> {
+                var compPoLineFromStorage = clonedPoFromStorage.getCompositePoLines().stream()
+                  .filter(Objects::nonNull).filter(entry-> Objects.nonNull(entry.getId()))
+                  .filter(entry -> entry.getId().equals(poLine.getId()))
+                  .findFirst().orElse(null);
+                if (Objects.nonNull(compPoLineFromStorage)) {
+                  var poLineFromStorage = PoLineCommonUtil.convertToPoLine(compPoLineFromStorage);
+                  poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine, poLineFromStorage, requestContext));
+                }
+              });
+            }
+            return collectResultsOnSuccess(poLineFutures);
+          })
+          .compose(v -> {
             if (isTransitionToClosed(poFromStorage, compPO)) {
               return closeOrder(compPO, poFromStorage, requestContext);
             }
@@ -235,7 +258,6 @@ public class PurchaseOrderHelper {
           .compose(v -> {
             if (isTransitionToOpen) {
               if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-                CompositePurchaseOrder clonedPoFromStorage = JsonObject.mapFrom(poFromStorage).mapTo(CompositePurchaseOrder.class);
                 compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
               }
               compPO.getCompositePoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
