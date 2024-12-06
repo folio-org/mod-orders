@@ -408,7 +408,7 @@ public class CompositePoLineValidationServiceTest {
   }
 
   @Test
-  void testValidateUserUnaffiliatedLocationUpdatesInvalid() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+  void testValidateUserUnaffiliatedLocationUpdatesInvalid() {
     var locationsStored = getLocationsForTenants(List.of("tenant1", "tenant2", "tenant3"));
     var locationsUpdated = getLocationsForTenants(List.of("tenant1", "tenant3"));
     locationsUpdated.get(1).withQuantityPhysical(10);

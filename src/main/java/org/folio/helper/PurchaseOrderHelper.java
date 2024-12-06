@@ -238,8 +238,8 @@ public class PurchaseOrderHelper {
             if (!compPO.getCompositePoLines().isEmpty()) {
               compPO.getCompositePoLines().forEach(poLine -> {
                 var compPoLineFromStorage = clonedPoFromStorage.getCompositePoLines().stream()
-                  .filter(Objects::nonNull).filter(entry-> Objects.nonNull(entry.getId()))
-                  .filter(entry -> entry.getId().equals(poLine.getId())).findFirst().orElse(null);
+                  .filter(entry -> StringUtils.equals(entry.getId(), poLine.getId()))
+                  .findFirst().orElse(null);
                 if (Objects.nonNull(compPoLineFromStorage)) {
                   var updatedLocations = poLine.getLocations();
                   var storedLocations = compPoLineFromStorage.getLocations();

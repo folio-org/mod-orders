@@ -345,16 +345,16 @@ public class CompositePoLineValidationService extends BaseValidationService {
     }
   }
 
-  public Future<Void> validateUserUnaffiliatedLocationUpdates(String poLineId, List<Location> updatedPoLineLoc,
-                                                              List<Location> storedPoLineLoc, RequestContext requestContext) {
+  public Future<Void> validateUserUnaffiliatedLocationUpdates(String poLineId, List<Location> updatedPoLineLocations,
+                                                              List<Location> storedPoLineLocations, RequestContext requestContext) {
     return getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         if (CollectionUtils.isEmpty(userTenants)) {
           logger.info("validateUserUnaffiliatedLocationUpdates:: User tenants is empty");
           return Future.succeededFuture();
         }
-        var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLineLoc, userTenants);
-        var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLineLoc, userTenants);
+        var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLineLocations, userTenants);
+        var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLineLocations, userTenants);
         logger.info("validateUserUnaffiliatedLocationUpdates:: Found unaffiliated POL location tenant ids, poLineId: '{}', stored: '{}', updated: '{}'",
           poLineId,
           storageUnaffiliatedLocations.stream().map(Location::getTenantId).distinct().toList(),
