@@ -239,11 +239,11 @@ public class PurchaseOrderHelper {
               compPO.getCompositePoLines().forEach(poLine -> {
                 var compPoLineFromStorage = clonedPoFromStorage.getCompositePoLines().stream()
                   .filter(Objects::nonNull).filter(entry-> Objects.nonNull(entry.getId()))
-                  .filter(entry -> entry.getId().equals(poLine.getId()))
-                  .findFirst().orElse(null);
+                  .filter(entry -> entry.getId().equals(poLine.getId())).findFirst().orElse(null);
                 if (Objects.nonNull(compPoLineFromStorage)) {
-                  var poLineFromStorage = PoLineCommonUtil.convertToPoLine(compPoLineFromStorage);
-                  poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine, poLineFromStorage, requestContext));
+                  var updatedLocations = poLine.getLocations();
+                  var storedLocations = compPoLineFromStorage.getLocations();
+                  poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), updatedLocations, storedLocations, requestContext));
                 }
               });
             }

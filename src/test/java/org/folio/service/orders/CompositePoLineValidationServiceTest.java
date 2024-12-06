@@ -402,7 +402,7 @@ public class CompositePoLineValidationServiceTest {
     doReturn(succeededFuture(List.of("tenant1", "tenant2")))
       .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), eq("centralTenantId"), any(RequestContext.class));
 
-    var future =  compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(updatedPoLine, storagePoLine, requestContext);
+    var future = compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(updatedPoLine.getId(), updatedPoLine.getLocations(), storagePoLine.getLocations(), requestContext);
 
     assertTrue(future.succeeded());
   }
@@ -420,7 +420,7 @@ public class CompositePoLineValidationServiceTest {
     doReturn(succeededFuture(List.of("tenant1")))
       .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), anyString(), any(RequestContext.class));
 
-    var future =  compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(updatedPoLine, storagePoLine, requestContext);
+    var future = compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(updatedPoLine.getId(), updatedPoLine.getLocations(), storagePoLine.getLocations(), requestContext);
 
     assertTrue(future.failed());
     assertInstanceOf(HttpException.class, future.cause());

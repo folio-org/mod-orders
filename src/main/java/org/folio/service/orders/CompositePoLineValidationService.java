@@ -345,26 +345,27 @@ public class CompositePoLineValidationService extends BaseValidationService {
     }
   }
 
-  public Future<Void> validateUserUnaffiliatedLocationUpdates(CompositePoLine updatedPoLine, PoLine storedPoLine, RequestContext requestContext) {
+  public Future<Void> validateUserUnaffiliatedLocationUpdates(String poLineId, List<Location> updatedPoLineLoc,
+                                                              List<Location> storedPoLineLoc, RequestContext requestContext) {
     return getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         if (CollectionUtils.isEmpty(userTenants)) {
           logger.info("validateUserUnaffiliatedLocationUpdates:: User tenants is empty");
           return Future.succeededFuture();
         }
-        var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
-        var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
+        var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLineLoc, userTenants);
+        var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLineLoc, userTenants);
         logger.info("validateUserUnaffiliatedLocationUpdates:: Found unaffiliated POL location tenant ids, poLineId: '{}', stored: '{}', updated: '{}'",
-          updatedPoLine.getId(),
+          poLineId,
           storageUnaffiliatedLocations.stream().map(Location::getTenantId).distinct().toList(),
           updatedUnaffiliatedLocations.stream().map(Location::getTenantId).distinct().toList());
         if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
           logger.info("validateUserUnaffiliatedLocationUpdates:: User is not affiliated with all locations on the POL, poLineId: '{}'",
-            updatedPoLine.getId());
+            poLineId);
           return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
         }
         logger.info("validateUserUnaffiliatedLocationUpdates:: User is affiliated with all locations on the POL, poLineId: '{}'",
-          updatedPoLine.getId());
+          poLineId);
         return Future.succeededFuture();
       });
   }
