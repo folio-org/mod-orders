@@ -1185,7 +1185,7 @@
       "handlers": [
         {
           "methods": ["POST"],
-          "pathPattern": "/orders/claim",
+          "pathPattern": "/pieces/claim",
           "permissionsRequired": [
             "pieces.send-claims.collection.post"
           ],
