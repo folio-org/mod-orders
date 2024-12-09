@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
@@ -177,7 +176,7 @@ public class PieceStorageService {
     return collectResultsOnSuccess(futures)
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
-        .collect(Collectors.toList()));
+        .toList());
   }
 
   private Future<List<Piece>> getPieceChunkByLineIds(Collection<String> poLineIds, RequestContext requestContext) {
