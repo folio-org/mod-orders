@@ -236,6 +236,11 @@ public class PurchaseOrderHelper {
         return orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext)
           .compose(v -> {
             var poLineFutures = new ArrayList<Future<Void>>();
+            if (isTransitionToOpen) {
+              if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+                compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
+              }
+            }
             logger.info("updateOrder:: POL size: {}", compPO.getCompositePoLines());
             if (!compPO.getCompositePoLines().isEmpty()) {
               compPO.getCompositePoLines().forEach(poLine -> {
@@ -263,9 +268,6 @@ public class PurchaseOrderHelper {
           })
           .compose(v -> {
             if (isTransitionToOpen) {
-              if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-                compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
-              }
               compPO.getCompositePoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
               return openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext)
                 .compose(ok -> openCompositeOrderFlowValidator.checkFundLocationRestrictions(compPO.getCompositePoLines(), requestContext));
