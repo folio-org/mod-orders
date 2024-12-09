@@ -135,7 +135,7 @@ public class PieceStorageService {
   }
 
   public Future<PieceCollection> getAllPieces(int limit, int offset, String query, RequestContext requestContext) {
-    log.info("getAllPieces:: limit: {}, offset: {}, query: {}", limit, offset, query);
+    log.debug("getAllPieces:: limit: {}, offset: {}, query: {}", limit, offset, query);
     var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
