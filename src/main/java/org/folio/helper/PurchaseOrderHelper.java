@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.vertx.core.json.JsonArray;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -235,14 +236,19 @@ public class PurchaseOrderHelper {
         return orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext)
           .compose(v -> {
             var poLineFutures = new ArrayList<Future<Void>>();
+            logger.info("updateOrder:: POL size: {}", compPO.getCompositePoLines());
             if (!compPO.getCompositePoLines().isEmpty()) {
               compPO.getCompositePoLines().forEach(poLine -> {
                 var compPoLineFromStorage = clonedPoFromStorage.getCompositePoLines().stream()
                   .filter(entry -> StringUtils.equals(entry.getId(), poLine.getId()))
                   .findFirst().orElse(null);
+                logger.info("updateOrder:: Stored POL found: {}", Objects.nonNull(compPoLineFromStorage));
                 if (Objects.nonNull(compPoLineFromStorage)) {
                   var updatedLocations = poLine.getLocations();
                   var storedLocations = compPoLineFromStorage.getLocations();
+                  logger.info("updateOrder:: Stored POL poLineId: {}", poLine.getId());
+                  logger.info("updateOrder:: Stored POL storedLocations: {}", JsonArray.of(storedLocations).encodePrettily());
+                  logger.info("updateOrder:: Stored POL updatedLocations: {}", JsonArray.of(updatedLocations).encodePrettily());
                   poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), updatedLocations, storedLocations, requestContext));
                 }
               });
