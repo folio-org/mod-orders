@@ -1,6 +1,7 @@
 package org.folio.service.orders;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.TestUtils.getLocationsForTenants;
 import static org.folio.rest.core.exceptions.ErrorCodes.*;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.OTHER;
 import static org.folio.rest.jaxrs.model.CompositePoLine.OrderFormat.P_E_MIX;
@@ -8,18 +9,25 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import io.vertx.core.Future;
+import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
@@ -27,6 +35,9 @@ import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +51,10 @@ public class CompositePoLineValidationServiceTest {
   private AutoCloseable mockitoMocks;
   @Mock
   private ExpenseClassValidationService expenseClassValidationService;
+  @Mock
+  private ConsortiumConfigurationService consortiumConfigurationService;
+  @Mock
+  private ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
   @InjectMocks
   private CompositePoLineValidationService compositePoLineValidationService;
   @Mock
@@ -367,10 +382,47 @@ public class CompositePoLineValidationServiceTest {
     assertThat(errors, hasSize(0));
   }
 
+
   private Set<String> errorsToCodes(List<Error> errors) {
     return errors
       .stream()
       .map(Error::getCode)
       .collect(Collectors.toSet());
+  }
+
+  @Test
+  void testValidateUserUnaffiliatedLocationUpdates() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    var locationsStored = getLocationsForTenants(List.of("tenant1", "tenant2", "tenant3"));
+    var locationsUpdated = getLocationsForTenants(List.of("tenant1", "tenant3"));
+    var storagePoLine = new PoLine().withLocations(locationsStored);
+    var updatedPoLine = new CompositePoLine().withLocations(locationsUpdated);
+
+    doReturn(succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))))
+      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+    doReturn(succeededFuture(List.of("tenant1", "tenant2")))
+      .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), eq("centralTenantId"), any(RequestContext.class));
+
+    var future = compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(updatedPoLine.getId(), updatedPoLine.getLocations(), storagePoLine.getLocations(), requestContext);
+
+    assertTrue(future.succeeded());
+  }
+
+  @Test
+  void testValidateUserUnaffiliatedLocationUpdatesInvalid() {
+    var locationsStored = getLocationsForTenants(List.of("tenant1", "tenant2", "tenant3"));
+    var locationsUpdated = getLocationsForTenants(List.of("tenant1", "tenant3"));
+    locationsUpdated.get(1).withQuantityPhysical(10);
+    var storagePoLine = new PoLine().withLocations(locationsStored);
+    var updatedPoLine = new CompositePoLine().withLocations(locationsUpdated);
+
+    doReturn(succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))))
+      .when(consortiumConfigurationService).getConsortiumConfiguration(any(RequestContext.class));
+    doReturn(succeededFuture(List.of("tenant1")))
+      .when(consortiumUserTenantsRetriever).getUserTenants(eq("consortiumId"), anyString(), any(RequestContext.class));
+
+    var future = compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(updatedPoLine.getId(), updatedPoLine.getLocations(), storagePoLine.getLocations(), requestContext);
+
+    assertTrue(future.failed());
+    assertInstanceOf(HttpException.class, future.cause());
   }
 }

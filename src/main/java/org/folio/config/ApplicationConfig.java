@@ -712,14 +712,14 @@ public class ApplicationConfig {
     ProtectionService protectionService, InventoryItemStatusSyncService itemStatusSyncService,
     OpenCompositeOrderManager openCompositeOrderManager, PurchaseOrderStorageService purchaseOrderStorageService,
     ConfigurationEntriesCache configurationEntriesCache, PoNumberHelper poNumberHelper,
-    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator,
-    ReOpenCompositeOrderManager reOpenCompositeOrderManager, OrderValidationService orderValidationService) {
+    OpenCompositeOrderFlowValidator openCompositeOrderFlowValidator, ReOpenCompositeOrderManager reOpenCompositeOrderManager,
+    OrderValidationService orderValidationService, CompositePoLineValidationService compositePoLineValidationService) {
     return new PurchaseOrderHelper(purchaseOrderLineHelper, orderLinesSummaryPopulateService, encumbranceService,
       combinedPopulateService, encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, tagService,
       purchaseOrderLineService, titlesService, protectionService, itemStatusSyncService,
       openCompositeOrderManager, purchaseOrderStorageService, configurationEntriesCache,
       poNumberHelper, openCompositeOrderFlowValidator, reOpenCompositeOrderManager,
-      orderValidationService);
+      orderValidationService, compositePoLineValidationService);
   }
 
   @Bean
@@ -746,18 +746,18 @@ public class ApplicationConfig {
                                                   PurchaseOrderStorageService purchaseOrderStorageService,
                                                   RestClient restClient,
                                                   CompositePoLineValidationService compositePoLineValidationService,
-                                                  POLInvoiceLineRelationService polInvoiceLineRelationService,
-                                                  OrganizationService organizationService,
-                                                  ConsortiumConfigurationService consortiumConfigurationService,
-                                                  ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
+                                                  OrganizationService organizationService) {
     return new PurchaseOrderLineHelper(itemStatusSyncService, inventoryInstanceManager, encumbranceService, expenseClassValidationService,
       encumbranceWorkflowStrategyFactory, orderInvoiceRelationService, titlesService, protectionService,
       purchaseOrderLineService, purchaseOrderStorageService, restClient, compositePoLineValidationService,
-      organizationService, consortiumConfigurationService, consortiumUserTenantsRetriever);
+      organizationService);
   }
 
-  @Bean CompositePoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService) {
-    return new CompositePoLineValidationService(expenseClassValidationService);
+  @Bean
+  CompositePoLineValidationService compositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService,
+                                                                    ConsortiumConfigurationService consortiumConfigurationService,
+                                                                    ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
+    return new CompositePoLineValidationService(expenseClassValidationService, consortiumConfigurationService, consortiumUserTenantsRetriever);
   }
 
   @Bean TitleValidationService titleValidationService() {
