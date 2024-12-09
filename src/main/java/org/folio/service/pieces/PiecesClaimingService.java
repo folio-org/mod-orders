@@ -57,7 +57,6 @@ public class PiecesClaimingService {
   private static final String EXPORT_TYPE_CLAIMS = "CLAIMS";
   private static final String CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS = "Cannot find pieces with LATE status to process";
 
-
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final PieceStorageService pieceStorageService;
   private final PurchaseOrderLineService purchaseOrderLineService;

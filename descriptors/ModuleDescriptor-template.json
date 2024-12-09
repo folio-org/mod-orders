@@ -1196,7 +1196,7 @@
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put",
             "orders-storage.purchase-orders.item.get",
-            "orders-storage.purchase-orders.item.put",
+            "orders-storage.titles.item.get",
             "organizations-storage.organizations.item.get",
             "data-export.job.item.post",
             "data-export.job.send.item.execute"
