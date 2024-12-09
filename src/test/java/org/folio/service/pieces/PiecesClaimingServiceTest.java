@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import static org.folio.models.claiming.ClaimingError.CANNOT_COMPLETE_REQ;
 import static org.folio.models.claiming.ClaimingError.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
 import static org.folio.models.claiming.ClaimingError.CANNOT_RETRIEVE_CONFIG_ENTRIES;
 import static org.folio.models.claiming.ClaimingError.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
@@ -130,26 +129,6 @@ public class PiecesClaimingServiceTest {
       .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
         assertEquals(1, result.getClaimingPieceResults().size());
         assertEquals(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS.getValue(), result.getClaimingPieceResults().get(0).getError().getMessage());
-        testContext.completeNow();
-      })));
-  }
-
-  @Test
-  void testSendClaims_cannotCompleteRequest(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1"));
-    var requestContext = mock(RequestContext.class);
-
-    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
-    when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(new Piece().withId("pieceId1").withPoLineId("poLineId1").withReceivingStatus(Piece.ReceivingStatus.LATE))));
-    when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
-    when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
-    when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withIsVendor(true)));
-    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any())).thenReturn(Future.succeededFuture());
-    when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), eq(Object.class), eq(requestContext))) .thenReturn(Future.failedFuture(new RuntimeException("Test error please ignore")));
-
-    piecesClaimingService.sendClaims(claimingCollection, requestContext)
-      .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
-        assertEquals(CANNOT_COMPLETE_REQ.getValue(), throwable.getMessage());
         testContext.completeNow();
       })));
   }

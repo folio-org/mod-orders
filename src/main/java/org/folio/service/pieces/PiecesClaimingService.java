@@ -31,7 +31,6 @@ import java.util.Objects;
 
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.models.claiming.ClaimingError.CANNOT_COMPLETE_REQ;
 import static org.folio.models.claiming.ClaimingError.CANNOT_CREATE_JOBS_AND_UPDATE_PIECES;
 import static org.folio.models.claiming.ClaimingError.CANNOT_FIND_A_PIECE_BY_ID;
 import static org.folio.models.claiming.ClaimingError.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
@@ -227,11 +226,6 @@ public class PiecesClaimingService {
         log.info("createJob:: Created job, config key: {}, job status: {}", configKey, createdJob.getString(JOB_STATUS));
         return restClient.postEmptyResponse(resourcesPath(DATA_EXPORT_SPRING_EXECUTE_JOB), createdJob, requestContext)
           .onSuccess(v -> log.info("createJob:: Executed job, config key: {}", configKey));
-      })
-      .onComplete(asyncResult -> {
-        if (asyncResult.failed()) {
-          throw new IllegalStateException(CANNOT_COMPLETE_REQ.getValue(), asyncResult.cause());
-        }
       })
       .mapEmpty();
   }
