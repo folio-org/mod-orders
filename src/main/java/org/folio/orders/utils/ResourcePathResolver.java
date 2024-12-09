@@ -14,7 +14,7 @@ public class ResourcePathResolver {
   public static final String PO_LINES_BATCH_STORAGE = "poLines.batch";
   public static final String PO_LINES_BUSINESS = "poLinesBusinessEndpoint";
   public static final String ORDERS_BUSINESS = "ordersBusinessEndpoint";
-  public static final String CLAIMING_BUSINESS = "claimingBusinessEndpoint";
+  public static final String PIECES_CLAIMING_BUSINESS = "piecesClaimingBusinessEndpoint";
   public static final String PO_NUMBER = "poNumber";
   public static final String VENDOR_ID = "vendor";
   public static final String PO_LINE_NUMBER = "poLineNumber";
@@ -75,7 +75,7 @@ public class ResourcePathResolver {
     apis.put(PO_LINES_BATCH_STORAGE, "/orders-storage/po-lines-batch");
     apis.put(PO_LINES_BUSINESS, "/orders/order-lines");
     apis.put(ORDERS_BUSINESS, "/orders/composite-orders");
-    apis.put(CLAIMING_BUSINESS, "/orders/claim");
+    apis.put(PIECES_CLAIMING_BUSINESS, "/pieces/claim");
     apis.put(PO_NUMBER, "/orders-storage/po-number");
     apis.put(PURCHASE_ORDER_STORAGE, "/orders-storage/purchase-orders");
     apis.put(PIECES_STORAGE, "/orders-storage/pieces");

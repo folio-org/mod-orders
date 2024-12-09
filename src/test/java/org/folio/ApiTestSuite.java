@@ -28,11 +28,11 @@ import org.folio.rest.core.exceptions.ExceptionUtilTest;
 import org.folio.rest.impl.AcquisitionMethodAPITest;
 import org.folio.rest.impl.BaseApiTest;
 import org.folio.rest.impl.CheckinReceivingApiTest;
-import org.folio.rest.impl.ClaimingApiTest;
 import org.folio.rest.impl.ExportHistoryImplTest;
 import org.folio.rest.impl.HoldingsSummaryAPITest;
 import org.folio.rest.impl.OrderTemplateTest;
 import org.folio.rest.impl.PieceApiTest;
+import org.folio.rest.impl.PiecesClaimingApiTest;
 import org.folio.rest.impl.PoNumberApiTest;
 import org.folio.rest.impl.PurchaseOrderLinesApiTest;
 import org.folio.rest.impl.PurchaseOrdersApiTest;
@@ -548,6 +548,6 @@ public class ApiTestSuite {
   }
 
   @Nested
-  class ClaimingApiTestNested extends ClaimingApiTest {
+  class PiecesClaimingApiTestNested extends PiecesClaimingApiTest {
   }
 }

@@ -6,7 +6,7 @@ import static org.folio.TestConstants.COMPOSITE_PO_LINES_PREFIX;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.NON_EXIST_CONFIG_X_OKAPI_TENANT;
 import static org.folio.TestConstants.ORDERS_CHECKIN_ENDPOINT;
-import static org.folio.TestConstants.ORDERS_CLAIMING_ENDPOINT;
+import static org.folio.TestConstants.PIECES_CLAIMING_ENDPOINT;
 import static org.folio.TestConstants.ORDERS_RECEIVING_ENDPOINT;
 import static org.folio.TestConstants.X_OKAPI_TOKEN;
 import static org.folio.TestUtils.getModifiedProtectedFields;
@@ -55,7 +55,7 @@ public class RestTestUtils {
     // Verify no messages sent via event bus on POST (except receiving/check-in/claiming)
     if (!(url.startsWith(ORDERS_RECEIVING_ENDPOINT)
       || url.startsWith(ORDERS_CHECKIN_ENDPOINT)
-      || url.startsWith(ORDERS_CLAIMING_ENDPOINT) )) {
+      || url.startsWith(PIECES_CLAIMING_ENDPOINT))) {
       HandlersTestHelper.verifyOrderStatusUpdateEvent(0);
     }
 

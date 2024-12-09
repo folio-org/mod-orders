@@ -37,7 +37,7 @@ import static org.folio.TestConfig.initSpringContext;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS;
-import static org.folio.TestConstants.ORDERS_CLAIMING_ENDPOINT;
+import static org.folio.TestConstants.PIECES_CLAIMING_ENDPOINT;
 import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
 import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
@@ -67,7 +67,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
 @ExtendWith(VertxExtension.class)
-public class ClaimingApiTest {
+public class PiecesClaimingApiTest {
 
   private static final Logger logger = LogManager.getLogger();
   private static boolean runningOnOwn;
@@ -99,7 +99,7 @@ public class ClaimingApiTest {
     }
   }
 
-  private static Stream<Arguments> testPostOrdersClaimArgs() {
+  private static Stream<Arguments> testPostPiecesClaimArgs() {
     var payloadFile = "send-claims-1-piece-1-vendor-1-job.json";
     var mockHitDto = new MockHitDto(3, 2, 2, 1, 1, 1, 1, 1);
     return Stream.of(
@@ -134,10 +134,10 @@ public class ClaimingApiTest {
   }
 
   @ParameterizedTest
-  @MethodSource("testPostOrdersClaimArgs")
-  void testPostOrdersClaim(String name, int vendorIdx, int poLineIdx, int pieceIdx, MockHitDto dto,
+  @MethodSource("testPostPiecesClaimArgs")
+  void testPostPiecesClaim(String name, int vendorIdx, int poLineIdx, int pieceIdx, MockHitDto dto,
                            String payloadFile, Header header, ClaimingPieceResult.Status expectedStatus) {
-    logger.info("Testing postOrdersClaim, name: {}", name);
+    logger.info("Testing postPiecesClaim, name: {}", name);
 
     var organization = getMockAsJson(ORGANIZATION_COLLECTION)
       .getJsonArray(ORGANIZATIONS_KEY).getJsonObject(vendorIdx)
@@ -160,7 +160,7 @@ public class ClaimingApiTest {
 
     var mockDataPath = BASE_MOCK_DATA_PATH + CLAIMING_MOCK_DATA_FOLDER + payloadFile;
     var request = JsonObject.mapFrom(getMockAsJson(mockDataPath).mapTo(ClaimingCollection.class)).encode();
-    var response = verifyPostResponse(ORDERS_CLAIMING_ENDPOINT, request, prepareHeaders(header), APPLICATION_JSON, CREATED.code())
+    var response = verifyPostResponse(PIECES_CLAIMING_ENDPOINT, request, prepareHeaders(header), APPLICATION_JSON, CREATED.code())
       .as(ClaimingResults.class);
 
     // Filter out any dummy pieces without ids that are loaded from other tests

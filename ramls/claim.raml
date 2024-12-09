@@ -5,7 +5,7 @@ version: v1
 protocols: [ HTTP, HTTPS ]
 
 documentation:
-  - title: Orders Business Logic API
+  - title: Pieces Business Logic API
     content: <b>API for claiming pieces</b>
 
 types:
@@ -22,7 +22,7 @@ traits:
 resourceTypes:
   post-with-200: !include rtypes/post-json-200.raml
 
-/orders/claim:
+/pieces/claim:
   displayName: Claim pieces
   description: |
     Claim pieces. The endpoint is used to:

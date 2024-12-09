@@ -1180,14 +1180,14 @@
       ]
     },
     {
-      "id": "orders.send-claims",
+      "id": "pieces.send-claims",
       "version": "1.0",
       "handlers": [
         {
           "methods": ["POST"],
           "pathPattern": "/orders/claim",
           "permissionsRequired": [
-            "orders.send-claims.collection.post"
+            "pieces.send-claims.collection.post"
           ],
           "modulePermissions": [
             "configuration.entries.collection.get",
@@ -1195,7 +1195,11 @@
             "orders-storage.pieces.item.put",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put",
-            "orders-storage.purchase-orders.item.get"
+            "orders-storage.purchase-orders.item.get",
+            "orders-storage.purchase-orders.item.put",
+            "organizations-storage.organizations.item.get",
+            "data-export.job.item.post",
+            "data-export.job.send.item.execute"
           ]
         }
       ]
@@ -1442,6 +1446,10 @@
     {
       "id": "consortia",
       "version": "1.0"
+    },
+    {
+      "id": "data-export-spring",
+      "version": "2.0"
     }
   ],
   "permissionSets": [
@@ -2015,16 +2023,16 @@
       ]
     },
     {
-      "permissionName": "orders.send-claims.collection.post",
+      "permissionName": "pieces.send-claims.collection.post",
       "displayName" : "send-claims collection post",
       "description" : "Send claims collection post"
     },
     {
-      "permissionName": "orders.send-claims.all",
+      "permissionName": "pieces.send-claims.all",
       "displayName": "All send claims perms",
       "description": "All permissions for the send claims",
       "subPermissions": [
-        "orders.send-claims.collection.post"
+        "pieces.send-claims.collection.post"
       ]
     },
     {
@@ -2064,7 +2072,7 @@
         "orders.export-history.all",
         "orders.routing-lists.all",
         "orders.bind-pieces.all",
-        "orders.send-claims.all"
+        "pieces.send-claims.all"
       ]
     },
     {

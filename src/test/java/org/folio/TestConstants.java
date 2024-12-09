@@ -22,7 +22,7 @@ public final class TestConstants {
   public static final String ORDERS_EXPECT_ENDPOINT = "/orders/expect";
   public static final String ORDERS_BIND_ENDPOINT = "/orders/bind-pieces";
   public static final String ORDERS_BIND_ID_ENDPOINT = "/orders/bind-pieces/%s";
-  public static final String ORDERS_CLAIMING_ENDPOINT = "/orders/claim";
+  public static final String PIECES_CLAIMING_ENDPOINT = "/pieces/claim";
   public static final String PO_LINE_NUMBER_VALUE = "1";
 
   public static final String BAD_QUERY = "unprocessableQuery";
