@@ -31,9 +31,15 @@ import java.util.Objects;
 
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.models.claiming.IntegrationDetail.CLAIM_PIECE_IDS;
-import static org.folio.models.claiming.IntegrationDetail.EXPORT_TYPE_SPECIFIC_PARAMETERS;
-import static org.folio.models.claiming.IntegrationDetail.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
+import static org.folio.models.claiming.ClaimingError.CANNOT_COMPLETE_REQ;
+import static org.folio.models.claiming.ClaimingError.CANNOT_CREATE_JOBS_AND_UPDATE_PIECES;
+import static org.folio.models.claiming.ClaimingError.CANNOT_FIND_A_PIECE_BY_ID;
+import static org.folio.models.claiming.ClaimingError.CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE;
+import static org.folio.models.claiming.ClaimingError.CANNOT_RETRIEVE_CONFIG_ENTRIES;
+import static org.folio.models.claiming.ClaimingError.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
+import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
+import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
+import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 import static org.folio.orders.utils.HelperUtils.DATA_EXPORT_SPRING_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
@@ -49,12 +55,8 @@ public class PiecesClaimingService {
 
   private static final String JOB_STATUS = "status";
   private static final String EXPORT_TYPE_CLAIMS = "CLAIMS";
-  private static final String CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY = "Cannot send claims, piece ids are empty";
-  private static final String CANNOT_RETRIEVE_CONFIG_ENTRIES = "Cannot retrieve config entries";
-  private static final String CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE = "Cannot group pieces by vendor";
-  private static final String CANNOT_CREATE_JOBS_AND_UPDATE_PIECES = "Cannot create jobs and update pieces";
-  private static final String CANNOT_FIND_A_PIECE_BY_ID = "Cannot find a piece by '%s' id";
-  private static final String CANNOT_COMPLETE_REQ = "Cannot complete request to an optional module mod-data-export-spring is unreachable";
+  private static final String CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS = "Cannot find pieces with LATE status to process";
+
 
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final PieceStorageService pieceStorageService;
@@ -74,21 +76,22 @@ public class PiecesClaimingService {
   public Future<ClaimingResults> sendClaims(ClaimingCollection claimingCollection, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(claimingCollection.getClaimingPieceIds())) {
       log.info("sendClaims:: No claims are sent, claiming piece ids are empty");
-      return Future.succeededFuture(createEmptyClaimingResults(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY));
+      return Future.succeededFuture(createEmptyClaimingResults(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY.getValue()));
     }
     return configurationEntriesCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, requestContext)
       .compose(config -> {
         if (CollectionUtils.isEmpty(config.getMap())) {
           log.info("sendClaims:: No claims are sent, config has no entries");
-          return Future.succeededFuture(createEmptyClaimingResults(CANNOT_RETRIEVE_CONFIG_ENTRIES));
+          return Future.succeededFuture(createEmptyClaimingResults(CANNOT_RETRIEVE_CONFIG_ENTRIES.getValue()));
         }
         var pieceIds = claimingCollection.getClaimingPieceIds().stream().toList();
         log.info("sendClaims:: Received pieces to be claimed, pieceIds: {}", pieceIds);
         return groupPieceIdsByVendorId(pieceIds, requestContext)
           .compose(pieceIdsByVendorIds -> {
             if (CollectionUtils.isEmpty(pieceIdsByVendorIds)) {
-              return Future.succeededFuture(createEmptyClaimingResults("Cannot find pieces with LATE status to process"));
+              return Future.succeededFuture(createEmptyClaimingResults(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS));
             }
+            log.info("sendClaims:: Using pieces by vendor id map, map: {}", pieceIdsByVendorIds);
             return createJobsByVendor(config, pieceIdsByVendorIds, requestContext);
           });
       })
@@ -96,10 +99,6 @@ public class PiecesClaimingService {
   }
 
   private Future<Map<String, List<String>>> groupPieceIdsByVendorId(List<String> pieceIds, RequestContext requestContext) {
-    if (CollectionUtils.isEmpty(pieceIds)) {
-      log.info("groupPieceIdsByVendorId:: No pieces are grouped by vendor, pieceIds is empty");
-      return Future.succeededFuture();
-    }
     log.info("groupPieceIdsByVendorId:: Grouping pieces by vendor, pieceIds count: {}", pieceIds.size());
     return pieceStorageService.getPiecesByIds(pieceIds, requestContext)
       .compose(pieces -> {
@@ -123,7 +122,7 @@ public class PiecesClaimingService {
     uniquePiecePoLinePairs.forEach(piecePoLinePairs -> {
       var foundPiece = pieces.stream()
         .filter(Objects::nonNull).filter(piece -> Objects.nonNull(piece.getId())).filter(piece -> piece.getId().equals(piecePoLinePairs.getRight()))
-        .findFirst().orElseThrow(() -> new NoSuchElementException(String.format(CANNOT_FIND_A_PIECE_BY_ID, piecePoLinePairs.getRight())));
+        .findFirst().orElseThrow(() -> new NoSuchElementException(String.format(CANNOT_FIND_A_PIECE_BY_ID.getValue(), piecePoLinePairs.getRight())));
       var pieceIdByVendorIdFuture = createVendorPiecePair(piecePoLinePairs, foundPiece, requestContext);
       if (Objects.nonNull(pieceIdByVendorIdFuture)) {
         pieceIdByVendorIdFutures.add(pieceIdByVendorIdFuture);
@@ -160,17 +159,19 @@ public class PiecesClaimingService {
     if (CollectionUtils.isEmpty(pieceIdsByVendorId)) {
       log.info("createJobsByVendor:: No jobs are created, pieceIdsByVendorId is empty");
       return Future.succeededFuture(new ClaimingResults()
-        .withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE)));
+        .withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE.getValue())));
     }
     return collectResultsOnSuccess(createUpdatePiecesAndJobFutures(config, pieceIdsByVendorId, requestContext))
       .map(updatedPieceLists -> {
         if (CollectionUtils.isEmpty(updatedPieceLists)) {
           log.info("createJobsByVendor:: No pieces were processed for claiming");
-          return new ClaimingResults().withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_CREATE_JOBS_AND_UPDATE_PIECES));
+          return new ClaimingResults().withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_CREATE_JOBS_AND_UPDATE_PIECES.getValue()));
         }
         var successClaimingPieceResults = createSuccessClaimingResults(updatedPieceLists);
         log.info("createJobsByVendor:: Successfully processed pieces for claiming, count: {}", successClaimingPieceResults.size());
-        return new ClaimingResults().withClaimingPieceResults(successClaimingPieceResults);
+        var claimingResults = new ClaimingResults().withClaimingPieceResults(successClaimingPieceResults);
+        log.info("createJobsByVendor:: Returning claiming results, claimingResults: {}", JsonObject.mapFrom(claimingResults).encodePrettily());
+        return claimingResults;
       });
   }
 
@@ -225,11 +226,11 @@ public class PiecesClaimingService {
         var createdJob = new JsonObject(String.valueOf(response));
         log.info("createJob:: Created job, config key: {}, job status: {}", configKey, createdJob.getString(JOB_STATUS));
         return restClient.postEmptyResponse(resourcesPath(DATA_EXPORT_SPRING_EXECUTE_JOB), createdJob, requestContext)
-          .onSuccess(v -> log.info("createJob:: Executed job, config key: {}, job status: {}", configKey, createdJob.getString(JOB_STATUS)));
+          .onSuccess(v -> log.info("createJob:: Executed job, config key: {}", configKey));
       })
       .onComplete(asyncResult -> {
         if (asyncResult.failed()) {
-          throw new IllegalStateException(CANNOT_COMPLETE_REQ, asyncResult.cause());
+          throw new IllegalStateException(CANNOT_COMPLETE_REQ.getValue(), asyncResult.cause());
         }
       })
       .mapEmpty();

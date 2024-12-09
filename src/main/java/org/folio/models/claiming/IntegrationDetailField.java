@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public enum IntegrationDetail {
+public enum IntegrationDetailField {
   EXPORT_TYPE_SPECIFIC_PARAMETERS("exportTypeSpecificParameters"),
   VENDOR_EDI_ORDERS_EXPORT_CONFIG("vendorEdiOrdersExportConfig"),
   CLAIM_PIECE_IDS("claimPieceIds");

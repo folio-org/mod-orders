@@ -40,9 +40,9 @@ import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIM
 import static org.folio.TestConstants.PIECES_CLAIMING_ENDPOINT;
 import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.models.claiming.IntegrationDetail.CLAIM_PIECE_IDS;
-import static org.folio.models.claiming.IntegrationDetail.EXPORT_TYPE_SPECIFIC_PARAMETERS;
-import static org.folio.models.claiming.IntegrationDetail.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
+import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
+import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
+import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
