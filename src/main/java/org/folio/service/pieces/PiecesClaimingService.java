@@ -34,6 +34,7 @@ import static java.util.stream.Collectors.toList;
 import static org.folio.models.claiming.ClaimingError.CANNOT_COMPLETE_REQ;
 import static org.folio.models.claiming.ClaimingError.CANNOT_CREATE_JOBS_AND_UPDATE_PIECES;
 import static org.folio.models.claiming.ClaimingError.CANNOT_FIND_A_PIECE_BY_ID;
+import static org.folio.models.claiming.ClaimingError.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
 import static org.folio.models.claiming.ClaimingError.CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE;
 import static org.folio.models.claiming.ClaimingError.CANNOT_RETRIEVE_CONFIG_ENTRIES;
 import static org.folio.models.claiming.ClaimingError.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
@@ -55,7 +56,6 @@ public class PiecesClaimingService {
 
   private static final String JOB_STATUS = "status";
   private static final String EXPORT_TYPE_CLAIMS = "CLAIMS";
-  private static final String CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS = "Cannot find pieces with LATE status to process";
 
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final PieceStorageService pieceStorageService;
@@ -88,7 +88,7 @@ public class PiecesClaimingService {
         return groupPieceIdsByVendorId(pieceIds, requestContext)
           .compose(pieceIdsByVendorIds -> {
             if (CollectionUtils.isEmpty(pieceIdsByVendorIds)) {
-              return Future.succeededFuture(createEmptyClaimingResults(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS));
+              return Future.succeededFuture(createEmptyClaimingResults(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS.getValue()));
             }
             log.info("sendClaims:: Using pieces by vendor id map, map: {}", pieceIdsByVendorIds);
             return createJobsByVendor(config, pieceIdsByVendorIds, requestContext);
