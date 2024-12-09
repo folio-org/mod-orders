@@ -14,5 +14,5 @@ public enum ClaimingError {
   CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS("Cannot find pieces with LATE status to process"),
   CANNOT_COMPLETE_REQ("Cannot complete request to an optional module mod-data-export-spring is unreachable");
 
-  private  final String value;
+  private final String value;
 }

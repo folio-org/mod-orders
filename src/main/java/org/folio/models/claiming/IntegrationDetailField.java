@@ -10,5 +10,5 @@ public enum IntegrationDetailField {
   VENDOR_EDI_ORDERS_EXPORT_CONFIG("vendorEdiOrdersExportConfig"),
   CLAIM_PIECE_IDS("claimPieceIds");
 
-  private  final String value;
+  private final String value;
 }
