@@ -178,11 +178,12 @@ public class PiecesClaimingService {
                                                                      RequestContext requestContext) {
     var updatePiecesAndJobFutures = new ArrayList<Future<List<String>>>();
     pieceIdsByVendorId.forEach((vendorId, pieceIds) -> config.stream()
-      .filter(entry -> isExportTypeClaimsAndCorrectVendorId(vendorId, entry) && Objects.nonNull(entry.getValue()))
-      .forEach(entry -> {
+      .filter(pieceIdsByVendorIdEntry -> isExportTypeClaimsAndCorrectVendorId(vendorId, pieceIdsByVendorIdEntry)
+          && Objects.nonNull(pieceIdsByVendorIdEntry.getValue()))
+      .forEach(pieceIdsByVendorIdEntry -> {
         log.info("createJobsByVendor:: Preparing job integration detail for vendor, vendor id: {}, pieces: {}, job key: {}",
-          vendorId, pieceIds.size(), entry.getKey());
-        updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(pieceIds, entry, requestContext));
+          vendorId, pieceIds.size(), pieceIdsByVendorIdEntry.getKey());
+        updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(pieceIds, pieceIdsByVendorIdEntry, requestContext));
       }));
     return updatePiecesAndJobFutures;
   }
@@ -204,15 +205,15 @@ public class PiecesClaimingService {
         .toList();
   }
 
-  private static boolean isExportTypeClaimsAndCorrectVendorId(String vendorId, Map.Entry<String, Object> entry) {
-    return entry.getKey().startsWith(String.format("%s_%s", EXPORT_TYPE_CLAIMS, vendorId));
+  private static boolean isExportTypeClaimsAndCorrectVendorId(String vendorId, Map.Entry<String, Object> pieceIdsByVendorIdEntry) {
+    return pieceIdsByVendorIdEntry.getKey().startsWith(String.format("%s_%s", EXPORT_TYPE_CLAIMS, vendorId));
   }
 
-  private Future<List<String>> updatePiecesAndCreateJob(List<String> pieceIds, Map.Entry<String, Object> entry,
+  private Future<List<String>> updatePiecesAndCreateJob(List<String> pieceIds, Map.Entry<String, Object> pieceIdsByVendorIdEntry,
                                                         RequestContext requestContext) {
-    log.info("updatePiecesAndCreateJob:: Updating pieces and creating a job, job key: {}, count: {}", entry.getKey(), pieceIds.size());
+    log.info("updatePiecesAndCreateJob:: Updating pieces and creating a job, job key: {}, count: {}", pieceIdsByVendorIdEntry.getKey(), pieceIds.size());
     return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT, requestContext)
-        .compose(v -> createJob(entry.getKey(), entry.getValue(), pieceIds, requestContext).map(pieceIds));
+        .compose(v -> createJob(pieceIdsByVendorIdEntry.getKey(), pieceIdsByVendorIdEntry.getValue(), pieceIds, requestContext).map(pieceIds));
   }
 
   private Future<Void> createJob(String configKey, Object configValue, List<String> pieceIds, RequestContext requestContext) {

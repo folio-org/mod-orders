@@ -171,15 +171,13 @@ public class PieceStorageService {
   }
 
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
-    log.debug("getPiecesByLineIdsByChunks:: start");
     var futures = ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getPieceChunkByLineIds(ids, requestContext))
       .toList();
     return collectResultsOnSuccess(futures)
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
-        .collect(Collectors.toList()))
-      .onSuccess(v -> log.debug("getPiecesByLineIdsByChunks:: end"));
+        .collect(Collectors.toList()));
   }
 
   private Future<List<Piece>> getPieceChunkByLineIds(Collection<String> poLineIds, RequestContext requestContext) {
