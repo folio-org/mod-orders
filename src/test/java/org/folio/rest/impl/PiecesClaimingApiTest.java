@@ -40,6 +40,9 @@ import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIM
 import static org.folio.TestConstants.PIECES_CLAIMING_ENDPOINT;
 import static org.folio.TestUtils.getMinimalOrder;
 import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.models.claiming.IntegrationDetail.CLAIM_PIECE_IDS;
+import static org.folio.models.claiming.IntegrationDetail.EXPORT_TYPE_SPECIFIC_PARAMETERS;
+import static org.folio.models.claiming.IntegrationDetail.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
@@ -159,8 +162,8 @@ public class PiecesClaimingApiTest {
     addMockEntry(PIECES_STORAGE, piece);
 
     var mockDataPath = BASE_MOCK_DATA_PATH + CLAIMING_MOCK_DATA_FOLDER + payloadFile;
-    var request = JsonObject.mapFrom(getMockAsJson(mockDataPath).mapTo(ClaimingCollection.class)).encode();
-    var response = verifyPostResponse(PIECES_CLAIMING_ENDPOINT, request, prepareHeaders(header), APPLICATION_JSON, CREATED.code())
+    var request =  getMockAsJson(mockDataPath).mapTo(ClaimingCollection.class);
+    var response = verifyPostResponse(PIECES_CLAIMING_ENDPOINT, JsonObject.mapFrom(request).encode(), prepareHeaders(header), APPLICATION_JSON, CREATED.code())
       .as(ClaimingResults.class);
 
     // Filter out any dummy pieces without ids that are loaded from other tests
@@ -201,7 +204,13 @@ public class PiecesClaimingApiTest {
       assertThat(jobCreations, hasSize(dto.jobCreations));
       assertThat(jobExecutions, hasSize(dto.jobExecutions));
       assertThat(response.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
-      jobCreations.forEach(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()));
+      var claimedPieceIds = jobCreations.stream()
+        .peek(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
+        .map(job -> job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
+          .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
+          .getJsonArray(CLAIM_PIECE_IDS.getValue()).size())
+        .mapToInt(value -> value).sum();
+      assertThat(claimedPieceIds, equalTo(request.getClaimingPieceIds().size()));
     }
 
     response.getClaimingPieceResults()
