@@ -237,7 +237,7 @@ public class PurchaseOrderHelper {
             if (isTransitionToOpen && CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
               compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
             }
-            return validateUserUnaffiliatedPoLineLocations(compPO, clonedPoFromStorage, requestContext);
+            return validateUserUnaffiliatedPoLineLocations(compPO, requestContext);
           })
           .compose(v -> {
             if (isTransitionToClosed(poFromStorage, compPO)) {
@@ -279,18 +279,12 @@ public class PurchaseOrderHelper {
       });
   }
 
-  private Future<List<Void>> validateUserUnaffiliatedPoLineLocations(CompositePurchaseOrder compPO, CompositePurchaseOrder clonedPoFromStorage, RequestContext requestContext) {
+  private Future<List<Void>> validateUserUnaffiliatedPoLineLocations(CompositePurchaseOrder purchaseOrder, RequestContext requestContext) {
     var poLineFutures = new ArrayList<Future<Void>>();
-    if (!compPO.getCompositePoLines().isEmpty()) {
-      compPO.getCompositePoLines().forEach(poLine -> {
-        var compPoLineFromStorage = clonedPoFromStorage.getCompositePoLines().stream()
-          .filter(entry -> StringUtils.equals(entry.getId(), poLine.getId()))
-          .findFirst().orElse(null);
-        if (Objects.nonNull(compPoLineFromStorage)) {
-          var updatedLocations = compPoLineFromStorage.getLocations();
-          poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), updatedLocations, requestContext));
-        }
-      });
+    if (!purchaseOrder.getCompositePoLines().isEmpty()) {
+      purchaseOrder.getCompositePoLines().stream()
+        .filter(Objects::nonNull)
+        .forEach(poLine -> poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), poLine.getLocations(), requestContext)));
     }
     return collectResultsOnSuccess(poLineFutures);
   }
