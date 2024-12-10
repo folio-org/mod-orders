@@ -345,15 +345,14 @@ public class CompositePoLineValidationService extends BaseValidationService {
     }
   }
 
-  public Future<Void> validateUserUnaffiliatedLocationUpdates(String poLineId, List<Location> locations, RequestContext requestContext) {
+  public Future<Void> validateUserUnaffiliatedLocations(String poLineId, List<Location> locations, RequestContext requestContext) {
     return getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         if (CollectionUtils.isEmpty(userTenants)) {
           logger.info("validateUserUnaffiliatedLocationUpdates:: User tenants is empty");
           return Future.succeededFuture();
         }
-        var uniqueUnAffiliatedLocations = extractUnaffiliatedLocations(locations, userTenants).stream()
-          .map(Location::getTenantId).distinct().toList();
+        var uniqueUnAffiliatedLocations = extractUnaffiliatedLocations(locations, userTenants).stream().map(Location::getTenantId).distinct().toList();
         if (CollectionUtils.isNotEmpty(uniqueUnAffiliatedLocations)) {
           logger.info("validateUserUnaffiliatedLocationUpdates:: User has unaffiliated locations on the POL, poLineId: {}, unique locations: {}", poLineId, uniqueUnAffiliatedLocations);
           return Future.failedFuture(new HttpException(HttpStatus.SC_UNPROCESSABLE_ENTITY, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));

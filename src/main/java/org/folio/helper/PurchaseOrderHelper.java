@@ -281,11 +281,10 @@ public class PurchaseOrderHelper {
 
   private Future<List<Void>> validateUserUnaffiliatedPoLineLocations(CompositePurchaseOrder purchaseOrder, RequestContext requestContext) {
     var poLineFutures = new ArrayList<Future<Void>>();
-    if (!purchaseOrder.getCompositePoLines().isEmpty()) {
-      purchaseOrder.getCompositePoLines().stream()
-        .filter(Objects::nonNull)
-        .forEach(poLine -> poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), poLine.getLocations(), requestContext)));
-    }
+    purchaseOrder.getCompositePoLines().stream().filter(Objects::nonNull).forEach(poLine -> {
+      var poLineFuture = compositePoLineValidationService.validateUserUnaffiliatedLocations(poLine.getId(), poLine.getLocations(), requestContext);
+      poLineFutures.add(poLineFuture);
+    });
     return collectResultsOnSuccess(poLineFutures);
   }
 
