@@ -213,8 +213,7 @@ public class PurchaseOrderHelper {
         }
         return null;
       }).compose(v -> updateOrder(compPO, deleteHoldings, requestContext))
-      .onSuccess(v -> logger.info("putCompositeOrderById :: Successfully updated order: {}",
-        JsonObject.mapFrom(compPO).encodePrettily()))
+      .onSuccess(v -> logger.info("putCompositeOrderById :: Successfully updated order: {}", compPO.getId()))
       .onFailure(t -> logger.error("putCompositeOrderById :: Failed to update order: {}",
         JsonObject.mapFrom(compPO).encodePrettily(), t));
   }
