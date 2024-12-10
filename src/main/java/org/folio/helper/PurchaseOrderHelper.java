@@ -234,20 +234,10 @@ public class PurchaseOrderHelper {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext)
           .compose(v -> {
-            var poLineFutures = new ArrayList<Future<Void>>();
-            if (!compPO.getCompositePoLines().isEmpty()) {
-              compPO.getCompositePoLines().forEach(poLine -> {
-                var compPoLineFromStorage = clonedPoFromStorage.getCompositePoLines().stream()
-                  .filter(entry -> StringUtils.equals(entry.getId(), poLine.getId()))
-                  .findFirst().orElse(null);
-                if (Objects.nonNull(compPoLineFromStorage)) {
-                  var updatedLocations = poLine.getLocations();
-                  var storedLocations = compPoLineFromStorage.getLocations();
-                  poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), updatedLocations, storedLocations, requestContext));
-                }
-              });
+            if (isTransitionToOpen && CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+              compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
             }
-            return collectResultsOnSuccess(poLineFutures);
+            return validateUserUnaffiliatedPoLineLocations(compPO, requestContext);
           })
           .compose(v -> {
             if (isTransitionToClosed(poFromStorage, compPO)) {
@@ -257,9 +247,6 @@ public class PurchaseOrderHelper {
           })
           .compose(v -> {
             if (isTransitionToOpen) {
-              if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-                compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
-              }
               compPO.getCompositePoLines().forEach(poLine -> PoLineCommonUtil.updateLocationsQuantity(poLine.getLocations()));
               return openCompositeOrderFlowValidator.checkLocationsAndPiecesConsistency(compPO.getCompositePoLines(), requestContext)
                 .compose(ok -> openCompositeOrderFlowValidator.checkFundLocationRestrictions(compPO.getCompositePoLines(), requestContext));
@@ -290,6 +277,15 @@ public class PurchaseOrderHelper {
           .compose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value(), requestContext))
           .compose(v -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(compPO, requestContext));
       });
+  }
+
+  private Future<List<Void>> validateUserUnaffiliatedPoLineLocations(CompositePurchaseOrder purchaseOrder, RequestContext requestContext) {
+    var poLineFutures = new ArrayList<Future<Void>>();
+    purchaseOrder.getCompositePoLines().stream().filter(Objects::nonNull).forEach(poLine -> {
+      var poLineFuture = compositePoLineValidationService.validateUserUnaffiliatedLocations(poLine.getId(), poLine.getLocations(), requestContext);
+      poLineFutures.add(poLineFuture);
+    });
+    return collectResultsOnSuccess(poLineFutures);
   }
 
   public Future<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus,
