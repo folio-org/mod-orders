@@ -22,6 +22,7 @@ public final class TestConstants {
   public static final String ORDERS_EXPECT_ENDPOINT = "/orders/expect";
   public static final String ORDERS_BIND_ENDPOINT = "/orders/bind-pieces";
   public static final String ORDERS_BIND_ID_ENDPOINT = "/orders/bind-pieces/%s";
+  public static final String PIECES_CLAIMING_ENDPOINT = "/pieces/claim";
   public static final String PO_LINE_NUMBER_VALUE = "1";
 
   public static final String BAD_QUERY = "unprocessableQuery";
@@ -60,6 +61,7 @@ public final class TestConstants {
   public static final String NON_EXIST_HOLDINGS_SOURCE_TENANT = "nonExistHoldingsSource";
   public static final String COMPOSITE_PO_LINES_PREFIX = "compositePoLines[0].";
   public static final String OKAPI_URL = "X-Okapi-Url";
+  public static final String OKAPI_TENANT = "X-Okapi-Tenant";
 
   public static final Header INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, INSTANCE_TYPE_CONTAINS_CODE_AS_INSTANCE_STATUS_TENANT);
   public static final Header NON_EXIST_INSTANCE_STATUS_TENANT_HEADER = new Header(OKAPI_HEADER_TENANT, NON_EXIST_INSTANCE_STATUS_TENANT);
@@ -71,6 +73,7 @@ public final class TestConstants {
   public static final Header X_OKAPI_USER_ID_WITH_ACQ_UNITS = new Header(OKAPI_USERID_HEADER, USER_ID_ASSIGNED_TO_ACQ_UNITS);
   public static final Header X_OKAPI_TOKEN = new Header(OKAPI_HEADER_TOKEN, "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaWt1X2FkbWluIiwidXNlcl9pZCI6ImJmZTI2MjM0LTMzNjktNTdhYS05ZjhhLWU2ZWVhY2M0YTgzYiIsImlhdCI6MTU4MzE1Nzg5OCwidGVuYW50IjoiZGlrdSJ9.Mk7u4KaCywSuYtBgCT44oGcVC0C8jUMY9KjsUnug48I");
   public static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10");
+  public static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_10_claims");
   public static final Header EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1 = new Header(OKAPI_HEADER_TENANT, "test_diku_limit_1");
   public static final Header EXIST_CONFIG_X_OKAPI_TENANT_ECS = new Header(OKAPI_HEADER_TENANT, "consortium");
   public static final Header INVALID_CONFIG_X_OKAPI_TENANT = new Header(OKAPI_HEADER_TENANT, "invalid_config");

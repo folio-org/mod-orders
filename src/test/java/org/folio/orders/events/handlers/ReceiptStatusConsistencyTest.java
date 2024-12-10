@@ -5,8 +5,8 @@ import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.checkVertxContextCompletion;
 import static org.folio.TestUtils.getMockAsJson;
+import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
 import static org.folio.orders.events.utils.EventUtils.POL_UPDATE_FIELD;
-import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
@@ -129,7 +129,7 @@ public class ReceiptStatusConsistencyTest {
   void testSuccessPartiallyReceivedStatusWhenAtleastOneSuccessfullyReceivedPiece(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify partially received status when at least one successfully received piece ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED), context.succeeding(result -> {

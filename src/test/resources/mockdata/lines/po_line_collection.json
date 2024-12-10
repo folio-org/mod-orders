@@ -1395,7 +1395,67 @@
       ],
       "donorOrganizationIds": [],
       "cancellationRestriction": true
+    },
+    {
+      "id": "428c60e8-c43d-4543-b0d4-36dada430e51",
+      "cost": {
+        "currency": "USD",
+        "discountType": "percentage",
+        "listUnitPrice": 1.0,
+        "quantityPhysical": 1,
+        "poLineEstimatedPrice": 1.0
+      },
+      "rush": false,
+      "alerts": [],
+      "claims": [],
+      "source": "User",
+      "details": {
+        "productIds": [],
+        "isAcknowledged": false,
+        "isBinderyActive": false,
+        "subscriptionInterval": 0
+      },
+      "physical": {
+        "volumes": [],
+        "materialType": "1a54b431-2e4f-452d-9cae-9cee66c9a892",
+        "createInventory": "Instance, Holding, Item",
+        "materialSupplier": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+      },
+      "isPackage": false,
+      "locations": [
+        {
+          "quantity": 1,
+          "holdingId": "f845d96f-5d1d-4757-81a8-2066f233836a",
+          "quantityPhysical": 1
+        }
+      ],
+      "collection": false,
+      "instanceId": "d7ee00ec-c456-497e-b330-d93c629acf9e",
+      "orderFormat": "Physical Resource",
+      "checkinItems": false,
+      "contributors": [],
+      "poLineNumber": "10003-1",
+      "vendorDetail": {
+        "instructions": "",
+        "vendorAccount": "1234",
+        "referenceNumbers": []
+      },
+      "paymentStatus": "Awaiting Payment",
+      "receiptStatus": "Awaiting Receipt",
+      "claimingActive": false,
+      "reportingCodes": [],
+      "titleOrPackage": "Test 4",
+      "automaticExport": false,
+      "purchaseOrderId": "64d15f49-3bbe-45a3-9e7d-fe2117dc4458",
+      "claimingInterval": 45,
+      "fundDistribution": [],
+      "acquisitionMethod": "306489dd-0053-49ee-a068-c316444a8f55",
+      "searchLocationIds": [
+        "fcd64ce1-6995-48f0-840e-89ffa2288371"
+      ],
+      "donorOrganizationIds": [],
+      "cancellationRestriction": true
     }
   ],
-  "totalRecords": 17
+  "totalRecords": 18
 }
