@@ -235,12 +235,12 @@ public class PurchaseOrderHelper {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext)
           .compose(v -> {
-            var poLineFutures = new ArrayList<Future<Void>>();
             if (isTransitionToOpen) {
               if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
                 compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
               }
             }
+            var poLineFutures = new ArrayList<Future<Void>>();
             logger.info("updateOrder:: POL size: {}", compPO.getCompositePoLines());
             if (!compPO.getCompositePoLines().isEmpty()) {
               compPO.getCompositePoLines().forEach(poLine -> {
@@ -249,12 +249,10 @@ public class PurchaseOrderHelper {
                   .findFirst().orElse(null);
                 logger.info("updateOrder:: Stored POL found: {}", Objects.nonNull(compPoLineFromStorage));
                 if (Objects.nonNull(compPoLineFromStorage)) {
-                  var updatedLocations = poLine.getLocations();
-                  var storedLocations = compPoLineFromStorage.getLocations();
+                  var updatedLocations = compPoLineFromStorage.getLocations();
                   logger.info("updateOrder:: Stored POL poLineId: {}", poLine.getId());
-                  logger.info("updateOrder:: Stored POL storedLocations: {}", JsonArray.of(storedLocations).encodePrettily());
                   logger.info("updateOrder:: Stored POL updatedLocations: {}", JsonArray.of(updatedLocations).encodePrettily());
-                  poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), updatedLocations, storedLocations, requestContext));
+                  poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), updatedLocations, requestContext));
                 }
               });
             }

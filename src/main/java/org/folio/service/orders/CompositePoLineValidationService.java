@@ -24,8 +24,8 @@ import java.util.Optional;
 
 import io.vertx.core.Future;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.SetUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
@@ -345,27 +345,20 @@ public class CompositePoLineValidationService extends BaseValidationService {
     }
   }
 
-  public Future<Void> validateUserUnaffiliatedLocationUpdates(String poLineId, List<Location> updatedPoLineLocations,
-                                                              List<Location> storedPoLineLocations, RequestContext requestContext) {
+  public Future<Void> validateUserUnaffiliatedLocationUpdates(String poLineId, List<Location> locations, RequestContext requestContext) {
     return getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
         if (CollectionUtils.isEmpty(userTenants)) {
           logger.info("validateUserUnaffiliatedLocationUpdates:: User tenants is empty");
           return Future.succeededFuture();
         }
-        var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLineLocations, userTenants);
-        var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLineLocations, userTenants);
-        logger.info("validateUserUnaffiliatedLocationUpdates:: Found unaffiliated POL location tenant ids, poLineId: '{}', stored: '{}', updated: '{}'",
-          poLineId,
-          storageUnaffiliatedLocations.stream().map(Location::getTenantId).distinct().toList(),
-          updatedUnaffiliatedLocations.stream().map(Location::getTenantId).distinct().toList());
-        if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
-          logger.info("validateUserUnaffiliatedLocationUpdates:: User is not affiliated with all locations on the POL, poLineId: '{}'",
-            poLineId);
-          return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
+        var uniqueUnAffiliatedLocations = extractUnaffiliatedLocations(locations, userTenants).stream()
+          .map(Location::getTenantId).distinct().toList();
+        if (CollectionUtils.isNotEmpty(uniqueUnAffiliatedLocations)) {
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User has unaffiliated locations on the POL, poLineId: {}, unique locations: {}", poLineId, uniqueUnAffiliatedLocations);
+          return Future.failedFuture(new HttpException(HttpStatus.SC_UNPROCESSABLE_ENTITY, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
         }
-        logger.info("validateUserUnaffiliatedLocationUpdates:: User is affiliated with all locations on the POL, poLineId: '{}'",
-          poLineId);
+        logger.info("validateUserUnaffiliatedLocationUpdates:: User is affiliated with all {} locations on the POL, poLineId: {}", locations.size(), poLineId);
         return Future.succeededFuture();
       });
   }

@@ -201,7 +201,7 @@ public class PurchaseOrderHelperTest {
     doReturn(succeededFuture(null))
       .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
     doReturn(succeededFuture(null))
-      .when(compositePoLineValidationService).validateUserUnaffiliatedLocationUpdates(anyString(), any(), any(), eq(requestContext));
+      .when(compositePoLineValidationService).validateUserUnaffiliatedLocationUpdates(anyString(), any(), eq(requestContext));
 
     // When
     Future<Void> future = purchaseOrderHelper.putCompositeOrderById(compPO.getId(), deleteHoldings, compPO, requestContext);

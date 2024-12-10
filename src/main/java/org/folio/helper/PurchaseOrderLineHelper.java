@@ -278,7 +278,7 @@ public class PurchaseOrderLineHelper {
         .compose(compOrder -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
           .compose(v -> purchaseOrderLineService.validateAndNormalizeISBNAndProductType(Collections.singletonList(compOrderLine), requestContext))
           .compose(v -> validateAccessProviders(compOrderLine, requestContext))
-          .compose(v -> compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(compOrderLine.getId(), compOrderLine.getLocations(), poLineFromStorage.getLocations(), requestContext))
+          .compose(v -> compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(compOrderLine.getId(), compOrderLine.getLocations(), requestContext))
           .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
           .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext)))
         .map(v -> compOrderLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
