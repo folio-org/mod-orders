@@ -33,7 +33,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import io.vertx.core.json.JsonArray;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -235,28 +234,10 @@ public class PurchaseOrderHelper {
         boolean isTransitionToOpen = isTransitionToOpen(poFromStorage, compPO);
         return orderValidationService.validateOrderForUpdate(compPO, poFromStorage, deleteHoldings, requestContext)
           .compose(v -> {
-            if (isTransitionToOpen) {
-              if (CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
-                compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
-              }
+            if (isTransitionToOpen && CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
+              compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
             }
-            var poLineFutures = new ArrayList<Future<Void>>();
-            logger.info("updateOrder:: POL size: {}", compPO.getCompositePoLines());
-            if (!compPO.getCompositePoLines().isEmpty()) {
-              compPO.getCompositePoLines().forEach(poLine -> {
-                var compPoLineFromStorage = clonedPoFromStorage.getCompositePoLines().stream()
-                  .filter(entry -> StringUtils.equals(entry.getId(), poLine.getId()))
-                  .findFirst().orElse(null);
-                logger.info("updateOrder:: Stored POL found: {}", Objects.nonNull(compPoLineFromStorage));
-                if (Objects.nonNull(compPoLineFromStorage)) {
-                  var updatedLocations = compPoLineFromStorage.getLocations();
-                  logger.info("updateOrder:: Stored POL poLineId: {}", poLine.getId());
-                  logger.info("updateOrder:: Stored POL updatedLocations: {}", JsonArray.of(updatedLocations).encodePrettily());
-                  poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), updatedLocations, requestContext));
-                }
-              });
-            }
-            return collectResultsOnSuccess(poLineFutures);
+            return validateUserUnaffiliatedPoLineLocations(compPO, clonedPoFromStorage, requestContext);
           })
           .compose(v -> {
             if (isTransitionToClosed(poFromStorage, compPO)) {
@@ -296,6 +277,22 @@ public class PurchaseOrderHelper {
           .compose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value(), requestContext))
           .compose(v -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(compPO, requestContext));
       });
+  }
+
+  private Future<List<Void>> validateUserUnaffiliatedPoLineLocations(CompositePurchaseOrder compPO, CompositePurchaseOrder clonedPoFromStorage, RequestContext requestContext) {
+    var poLineFutures = new ArrayList<Future<Void>>();
+    if (!compPO.getCompositePoLines().isEmpty()) {
+      compPO.getCompositePoLines().forEach(poLine -> {
+        var compPoLineFromStorage = clonedPoFromStorage.getCompositePoLines().stream()
+          .filter(entry -> StringUtils.equals(entry.getId(), poLine.getId()))
+          .findFirst().orElse(null);
+        if (Objects.nonNull(compPoLineFromStorage)) {
+          var updatedLocations = compPoLineFromStorage.getLocations();
+          poLineFutures.add(compositePoLineValidationService.validateUserUnaffiliatedLocationUpdates(poLine.getId(), updatedLocations, requestContext));
+        }
+      });
+    }
+    return collectResultsOnSuccess(poLineFutures);
   }
 
   public Future<Void> handleFinalOrderStatus(CompositePurchaseOrder compPO, String initialOrdersStatus,
