@@ -1,5 +1,13 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.4 - Released (Ramsons R2 2024)
+The primary focus of this release was to fix issue with preventing opening order with PO line locations from tenant in which user does not have affiliation
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.3...v12.9.4)
+
+### Bug Fixes
+* [MODORDERS-1223](https://issues.folio.org/browse/MODORDERS-1223) - (ECS) Can open/unopen order with PO line locations from tenant in which user does not have affiliation
+
+
 ## 12.9.3 - Released (Ramsons R2 2024)
 The primary focus of this release was to fix async issues with changing instance connection for PO Line.
 
