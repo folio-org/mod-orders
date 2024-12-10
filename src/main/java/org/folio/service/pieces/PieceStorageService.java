@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
@@ -135,6 +134,7 @@ public class PieceStorageService {
   }
 
   public Future<PieceCollection> getAllPieces(int limit, int offset, String query, RequestContext requestContext) {
+    log.debug("getAllPieces:: limit: {}, offset: {}, query: {}", limit, offset, query);
     var requestEntry = new RequestEntry(PIECE_STORAGE_ENDPOINT).withQuery(query).withOffset(offset).withLimit(limit);
     return restClient.get(requestEntry, PieceCollection.class, requestContext);
   }
@@ -165,20 +165,18 @@ public class PieceStorageService {
         .map(PieceCollection::getPieces)
         .flatMap(Collection::stream)
         .toList())
-      .onSuccess(v -> log.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds));
+      .onSuccess(v -> log.info("getPiecesByIds:: pieces by ids successfully retrieve: {}", pieceIds))
+      .onFailure(t -> log.error("Failed to get pieces by ids", t));
   }
 
   public Future<List<Piece>> getPiecesByLineIdsByChunks(List<String> lineIds, RequestContext requestContext) {
-    log.info("getPiecesByLineIdsByChunks start");
     var futures = ofSubLists(new ArrayList<>(lineIds), MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> getPieceChunkByLineIds(ids, requestContext))
       .toList();
     return collectResultsOnSuccess(futures)
       .map(lists -> lists.stream()
         .flatMap(Collection::stream)
-        .collect(Collectors.toList()))
-      .onSuccess(v -> log.info("getPiecesByLineIdsByChunks end"));
-
+        .toList());
   }
 
   private Future<List<Piece>> getPieceChunkByLineIds(Collection<String> poLineIds, RequestContext requestContext) {

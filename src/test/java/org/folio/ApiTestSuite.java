@@ -32,6 +32,7 @@ import org.folio.rest.impl.ExportHistoryImplTest;
 import org.folio.rest.impl.HoldingsSummaryAPITest;
 import org.folio.rest.impl.OrderTemplateTest;
 import org.folio.rest.impl.PieceApiTest;
+import org.folio.rest.impl.PiecesClaimingApiTest;
 import org.folio.rest.impl.PoNumberApiTest;
 import org.folio.rest.impl.PurchaseOrderLinesApiTest;
 import org.folio.rest.impl.PurchaseOrdersApiTest;
@@ -96,6 +97,7 @@ import org.folio.service.orders.lines.update.instance.WithoutHoldingOrderLineUpd
 import org.folio.service.pieces.PieceServiceTest;
 import org.folio.service.pieces.PieceStorageServiceTest;
 import org.folio.service.pieces.PieceUpdateInventoryServiceTest;
+import org.folio.service.pieces.PiecesClaimingServiceTest;
 import org.folio.service.pieces.flows.BasePieceFlowHolderBuilderTest;
 import org.folio.service.pieces.flows.DefaultPieceFlowsValidatorTest;
 import org.folio.service.pieces.flows.create.PieceCreateFlowInventoryManagerTest;
@@ -546,4 +548,11 @@ public class ApiTestSuite {
   class SettingsRetrieverTestNested extends SettingsRetrieverTest {
   }
 
+  @Nested
+  class PiecesClaimingApiTestNested extends PiecesClaimingApiTest {
+  }
+
+  @Nested
+  class PiecesClaimingServiceNested extends PiecesClaimingServiceTest {
+  }
 }

@@ -1,0 +1,139 @@
+{
+  "organizations": [
+    {
+      "id": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+      "code": "AMAZ",
+      "name": "Amazon.com",
+      "urls": [
+        {
+          "notes": "",
+          "value": "https://www.amazon.com",
+          "language": "en-us",
+          "isPrimary": true,
+          "categories": [
+            "f52ceea4-8e35-404b-9ebd-5c7db6613195"
+          ],
+          "description": "main website"
+        }
+      ],
+      "taxId": "",
+      "emails": [
+        {
+          "value": "cust.service03@amazon.com",
+          "language": "English",
+          "isPrimary": true,
+          "categories": [],
+          "description": "customer service"
+        }
+      ],
+      "status": "Active",
+      "aliases": [
+        {
+          "value": "Amazon",
+          "description": ""
+        }
+      ],
+      "erpCode": "G64758-74834",
+      "isDonor": false,
+      "sanCode": "1234567",
+      "accounts": [
+        {
+          "name": "Monographic ordering unit account",
+          "notes": "",
+          "accountNo": "1234",
+          "acqUnitIds": [],
+          "appSystemNo": "",
+          "contactInfo": "cust.service03@amazon.com",
+          "description": "Monographic ordering unit account",
+          "libraryCode": "COB",
+          "accountStatus": "Active",
+          "paymentMethod": "Credit Card",
+          "libraryEdiCode": "765987610"
+        },
+        {
+          "name": "Test 1",
+          "accountNo": "1",
+          "acqUnitIds": [],
+          "accountStatus": "Active"
+        },
+        {
+          "name": "Test 2",
+          "accountNo": "2",
+          "acqUnitIds": [],
+          "accountStatus": "Active"
+        }
+      ],
+      "contacts": [
+        "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+      ],
+      "isVendor": true,
+      "language": "en-us",
+      "licensor": false,
+      "metadata": {
+        "createdDate": "2024-11-28T05:19:54.699Z",
+        "updatedDate": "2024-11-28T10:44:52.154Z",
+        "updatedByUserId": "d77db61a-4404-4cab-9125-0c3a3567a9b0"
+      },
+      "addresses": [
+        {
+          "city": "New Castle",
+          "country": "USA",
+          "zipCode": "19720-5550",
+          "language": "English",
+          "isPrimary": true,
+          "categories": [],
+          "stateRegion": "DE",
+          "addressLine1": "1 Centerpiece Blvd.",
+          "addressLine2": "P.O. Box 15550"
+        }
+      ],
+      "acqUnitIds": [],
+      "agreements": [
+        {
+          "name": "test",
+          "notes": "",
+          "discount": 0.0,
+          "referenceUrl": ""
+        }
+      ],
+      "changelogs": [
+        {
+          "timestamp": "2008-05-15T10:53:00.000+00:00",
+          "description": "This is a sample note."
+        }
+      ],
+      "interfaces": [
+        "cd592659-77aa-4eb3-ac34-c9a4657bb20f"
+      ],
+      "description": "Use for rush orders, replacement requests, and second hand market",
+      "governmental": false,
+      "liableForVat": false,
+      "phoneNumbers": [
+        {
+          "language": "English",
+          "isPrimary": true,
+          "categories": [],
+          "phoneNumber": "1-888-238-22090"
+        }
+      ],
+      "paymentMethod": "Credit Card",
+      "taxPercentage": 0.0,
+      "accessProvider": false,
+      "discountPercent": 0.0,
+      "claimingInterval": 45,
+      "materialSupplier": true,
+      "vendorCurrencies": [
+        "USD"
+      ],
+      "organizationTypes": [],
+      "exportToAccounting": true,
+      "privilegedContacts": [],
+      "subscriptionInterval": 0,
+      "expectedInvoiceInterval": 0,
+      "expectedReceiptInterval": 30,
+      "renewalActivationInterval": 0,
+      "expectedActivationInterval": 0
+    }
+  ],
+  "totalRecords": 1
+}
