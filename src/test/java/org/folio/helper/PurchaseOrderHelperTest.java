@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
@@ -46,6 +47,7 @@ import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.inventory.InventoryItemStatusSyncService;
 import org.folio.service.invoice.InvoiceLineService;
 import org.folio.service.orders.CompositeOrderDynamicDataPopulateService;
+import org.folio.service.orders.CompositePoLineValidationService;
 import org.folio.service.orders.OrderInvoiceRelationService;
 import org.folio.service.orders.OrderValidationService;
 import org.folio.service.orders.PurchaseOrderLineService;
@@ -100,6 +102,8 @@ public class PurchaseOrderHelperTest {
   ConfigurationEntriesCache configurationEntriesCache;
   @Mock
   OrderValidationService orderValidationService;
+  @Mock
+  CompositePoLineValidationService compositePoLineValidationService;
 
   @BeforeEach
   void beforeEach() {
@@ -175,6 +179,7 @@ public class PurchaseOrderHelperTest {
     CompositePurchaseOrder compPO = order.mapTo(CompositePurchaseOrder.class);
     prepareOrderForPostRequest(compPO);
     compPO.setId(UUID.randomUUID().toString());
+    compPO.getCompositePoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
     CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
 
     boolean deleteHoldings = false;
@@ -195,6 +200,8 @@ public class PurchaseOrderHelperTest {
       .when(purchaseOrderStorageService).saveOrder(any(PurchaseOrder.class), eq(requestContext));
     doReturn(succeededFuture(null))
       .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(compositePoLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
 
     // When
     Future<Void> future = purchaseOrderHelper.putCompositeOrderById(compPO.getId(), deleteHoldings, compPO, requestContext);

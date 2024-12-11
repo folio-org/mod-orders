@@ -1,15 +1,12 @@
 package org.folio.service.finance.transaction;
 
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
@@ -28,15 +25,13 @@ import org.folio.service.finance.FundService;
 import org.folio.service.finance.LedgerService;
 import org.folio.service.finance.budget.BudgetService;
 
-import io.vertx.core.Future;
-
 public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
 
   private final EncumbranceService encumbranceService;
 
   public EncumbranceRelationsHoldersBuilder(EncumbranceService encumbranceService, FundService fundService,
-      FiscalYearService fiscalYearService, ExchangeRateProviderResolver exchangeRateProviderResolver,
-      BudgetService budgetService, LedgerService ledgerService) {
+                                            FiscalYearService fiscalYearService, ExchangeRateProviderResolver exchangeRateProviderResolver,
+                                            BudgetService budgetService, LedgerService ledgerService) {
     super(fundService, fiscalYearService, exchangeRateProviderResolver, budgetService, ledgerService);
     this.encumbranceService = encumbranceService;
   }
@@ -76,7 +71,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
   }
 
   public Future<List<EncumbranceRelationsHolder>> withExistingTransactions(List<EncumbranceRelationsHolder> encumbranceHolders,
-      CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
+                                                                           CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
     if (poAndLinesFromStorage == null) {
       return Future.succeededFuture(encumbranceHolders);
     }
@@ -103,7 +98,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
   }
 
   private void withToBeReleasedHolders(List<EncumbranceRelationsHolder> encumbranceHolders,
-      List<Transaction> transactionsFromStorage) {
+                                       List<Transaction> transactionsFromStorage) {
 
     List<EncumbranceRelationsHolder> toBeReleasedHolders = transactionsFromStorage.stream()
       .filter(transaction -> encumbranceHolders.stream()
@@ -135,7 +130,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
   }
 
   private EncumbranceRelationsHolder buildToBeReleasedHolder(Transaction transaction,
-      List<EncumbranceRelationsHolder> encumbranceHolders) {
+                                                             List<EncumbranceRelationsHolder> encumbranceHolders) {
     // find the transaction reference in the fund distributions, to be able to remove it if the transaction is deleted
     FundDistribution fd = encumbranceHolders.stream()
       .filter(erh -> erh.getFundDistribution() != null &&
@@ -149,7 +144,7 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
   }
 
   private void mapHoldersToTransactions(List<EncumbranceRelationsHolder> encumbranceHolders,
-      List<Transaction> existingTransactions) {
+                                        List<Transaction> existingTransactions) {
     encumbranceHolders.forEach(holder -> findBestMatch(holder, existingTransactions)
       .ifPresent(existingTransaction -> {
         holder.withOldEncumbrance(existingTransaction);
@@ -167,23 +162,28 @@ public class EncumbranceRelationsHoldersBuilder extends FinanceHoldersBuilder {
   }
 
   public Future<List<EncumbranceRelationsHolder>> prepareEncumbranceRelationsHolder(CompositePurchaseOrder compPO,
-      CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
+                                                                                    CompositePurchaseOrder poFromStorage, RequestContext requestContext) {
     List<EncumbranceRelationsHolder> holders = buildBaseHolders(compPO);
     return withFinances(holders, requestContext)
       .compose(v -> withExistingTransactions(holders, poFromStorage, requestContext));
   }
 
   public Future<Map<String, List<CompositePoLine>>> retrieveMapFiscalYearsWithCompPOLines(CompositePurchaseOrder compPO,
-      CompositePurchaseOrder poAndLinesFromStorage, RequestContext requestContext) {
+                                                                                          CompositePurchaseOrder poAndLinesFromStorage,
+                                                                                          RequestContext requestContext) {
     return prepareEncumbranceRelationsHolder(compPO, poAndLinesFromStorage, requestContext)
-      .map(erhList ->
-        erhList
-          .stream()
-          .filter(erh -> Objects.nonNull(erh.getCurrentFiscalYearId()))
-          .collect(groupingBy(
-            EncumbranceRelationsHolder::getCurrentFiscalYearId,
-            mapping(EncumbranceRelationsHolder::getPoLine, toList())
-          ))
+      .map(erhList -> erhList.stream()
+        .filter(erh -> erh.getCurrentFiscalYearId() != null)
+        .collect(Collectors.groupingBy(
+          EncumbranceRelationsHolder::getCurrentFiscalYearId,
+          Collectors.mapping(
+            EncumbranceRelationsHolder::getPoLine,
+            Collectors.collectingAndThen(
+              Collectors.toList(),
+              list -> list.stream().distinct().toList()
+            )
+          )
+        ))
       );
   }
 

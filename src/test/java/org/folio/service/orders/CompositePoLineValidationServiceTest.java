@@ -8,18 +8,26 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
@@ -27,26 +35,31 @@ import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Physical;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+@ExtendWith(VertxExtension.class)
 public class CompositePoLineValidationServiceTest {
+
+  @Mock private ExpenseClassValidationService expenseClassValidationService;
+  @Mock private ConsortiumConfigurationService consortiumConfigurationService;
+  @Mock private ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
+  @Mock private RequestContext requestContext;
+  @InjectMocks private CompositePoLineValidationService compositePoLineValidationService;
+
   private AutoCloseable mockitoMocks;
-  @Mock
-  private ExpenseClassValidationService expenseClassValidationService;
-  @InjectMocks
-  private CompositePoLineValidationService compositePoLineValidationService;
-  @Mock
-  private RequestContext requestContext;
 
   @BeforeEach
-  public void initMocks(){
+  public void initMocks() {
     mockitoMocks = MockitoAnnotations.openMocks(this);
   }
 
@@ -153,7 +166,6 @@ public class CompositePoLineValidationServiceTest {
     assertEquals(1, errors.size());
     assertEquals(ORDER_FORMAT_INCORRECT_FOR_BINDARY_ACTIVE.getCode(), errors.get(0).getCode());
   }
-
 
   @Test
   void shouldReturnErrorIfIncorrectCreateInventoryWhenBindaryActive() {
@@ -372,5 +384,94 @@ public class CompositePoLineValidationServiceTest {
       .stream()
       .map(Error::getCode)
       .collect(Collectors.toSet());
+  }
+
+  @Test
+  void testValidateUserUnaffiliatedLocations(VertxTestContext testContext) {
+    var locationsUpdated = List.of(
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant1"),
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant2"));
+    var updatedPoLineId = UUID.randomUUID().toString();
+
+    when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(Optional.empty()));
+    when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(List.of("tenant1")));
+
+    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
+  }
+
+  @Test
+  void testValidateUserUnaffiliatedLocationsAllValidLocations(VertxTestContext testContext) {
+    var locationsUpdated = List.of(
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant1"),
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant2"));
+    var updatedPoLineId = UUID.randomUUID().toString();
+
+    when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))));
+    when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(List.of("tenant1", "tenant2")));
+
+    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
+  }
+
+  @Test
+  void testValidateUserUnaffiliatedLocationsAllValidDuplicateTenantLocations(VertxTestContext testContext) {
+    var locationsUpdated = List.of(
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant1"),
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant2"),
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant2"));
+    var updatedPoLineId = UUID.randomUUID().toString();
+
+    when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))));
+    when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(List.of("tenant1", "tenant2")));
+
+    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+      .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
+  }
+
+  @Test
+  void testValidateUserUnaffiliatedLocationsOneValidAndOneInvalidLocations(VertxTestContext testContext) {
+    var locationsUpdated = List.of(
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant1"),
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant2"));
+    var updatedPoLineId = UUID.randomUUID().toString();
+
+    when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))));
+    when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(List.of("tenant1")));
+
+    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+      .onComplete(testContext.failing(cause -> testContext.verify(() -> {
+        assertInstanceOf(HttpException.class, cause);
+        assertTrue(cause.getMessage().contains(ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION.getDescription()));
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  void testValidateUserUnaffiliatedLocationsTwoInvalidLocations(VertxTestContext testContext) {
+    var locationsUpdated = List.of(
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant1"),
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant2"));
+    var updatedPoLineId = UUID.randomUUID().toString();
+
+    when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))));
+    when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(List.of("tenant3")));
+
+    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+      .onComplete(testContext.failing(cause -> testContext.verify(() -> {
+        assertInstanceOf(HttpException.class, cause);
+        assertTrue(cause.getMessage().contains(ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION.getDescription()));
+        testContext.completeNow();
+      })));
   }
 }

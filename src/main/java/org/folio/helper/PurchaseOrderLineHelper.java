@@ -9,7 +9,6 @@ import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
 import static org.folio.orders.utils.HelperUtils.getPoLineLimit;
 import static org.folio.orders.utils.PoLineCommonUtil.convertToCompositePoLine;
 import static org.folio.orders.utils.PoLineCommonUtil.convertToPoLine;
-import static org.folio.orders.utils.PoLineCommonUtil.extractUnaffiliatedLocations;
 import static org.folio.orders.utils.PoLineCommonUtil.updateLocationsQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.verifyProtectedFieldsChanged;
 import static org.folio.orders.utils.ProtectedOperationType.DELETE;
@@ -42,7 +41,6 @@ import javax.ws.rs.core.Response;
 
 import io.vertx.core.json.JsonArray;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.SetUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -75,8 +73,6 @@ import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ReportingCode;
 import org.folio.service.ProtectionService;
-import org.folio.service.consortium.ConsortiumConfigurationService;
-import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 import org.folio.service.finance.transaction.EncumbranceService;
 import org.folio.service.finance.transaction.EncumbranceWorkflowStrategy;
@@ -96,8 +92,8 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
 public class PurchaseOrderLineHelper {
-  private static final Logger logger = LogManager.getLogger(PurchaseOrderLineHelper.class);
 
+  private static final Logger logger = LogManager.getLogger(PurchaseOrderLineHelper.class);
 
   private static final Pattern PO_LINE_NUMBER_PATTERN = Pattern.compile("([a-zA-Z0-9]{1,22}-)(\\d{1,3})");
   private static final String PURCHASE_ORDER_ID = "purchaseOrderId";
@@ -120,8 +116,6 @@ public class PurchaseOrderLineHelper {
   private final RestClient restClient;
   private final CompositePoLineValidationService compositePoLineValidationService;
   private final OrganizationService organizationService;
-  private final ConsortiumConfigurationService consortiumConfigurationService;
-  private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
 
   public PurchaseOrderLineHelper(InventoryItemStatusSyncService inventoryItemStatusSyncService,
                                  InventoryInstanceManager inventoryInstanceManager,
@@ -135,9 +129,7 @@ public class PurchaseOrderLineHelper {
                                  PurchaseOrderStorageService purchaseOrderStorageService,
                                  RestClient restClient,
                                  CompositePoLineValidationService compositePoLineValidationService,
-                                 OrganizationService organizationService,
-                                 ConsortiumConfigurationService consortiumConfigurationService,
-                                 ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
+                                 OrganizationService organizationService) {
 
     this.itemStatusSyncService = inventoryItemStatusSyncService;
     this.inventoryInstanceManager = inventoryInstanceManager;
@@ -152,8 +144,6 @@ public class PurchaseOrderLineHelper {
     this.restClient = restClient;
     this.compositePoLineValidationService = compositePoLineValidationService;
     this.organizationService = organizationService;
-    this.consortiumConfigurationService = consortiumConfigurationService;
-    this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
   }
 
   /**
@@ -288,7 +278,7 @@ public class PurchaseOrderLineHelper {
         .compose(compOrder -> protectionService.isOperationRestricted(compOrder.getAcqUnitIds(), UPDATE, requestContext)
           .compose(v -> purchaseOrderLineService.validateAndNormalizeISBNAndProductType(Collections.singletonList(compOrderLine), requestContext))
           .compose(v -> validateAccessProviders(compOrderLine, requestContext))
-          .compose(v -> validateUserUnaffiliatedLocationUpdates(compOrderLine, poLineFromStorage, requestContext))
+          .compose(v -> compositePoLineValidationService.validateUserUnaffiliatedLocations(compOrderLine.getId(), compOrderLine.getLocations(), requestContext))
           .compose(v -> expenseClassValidationService.validateExpenseClassesForOpenedOrder(compOrder, Collections.singletonList(compOrderLine), requestContext))
           .compose(v -> processPoLineEncumbrances(compOrder, compOrderLine, poLineFromStorage, requestContext)))
         .map(v -> compOrderLine.withPoLineNumber(poLineFromStorage.getPoLineNumber())) // PoLine number must not be modified during PoLine update, set original value
@@ -730,30 +720,6 @@ public class PurchaseOrderLineHelper {
         return null;
       })
       .mapEmpty();
-  }
-
-  private Future<Void> validateUserUnaffiliatedLocationUpdates(CompositePoLine updatedPoLine, PoLine storedPoLine, RequestContext requestContext) {
-    return getUserTenantsIfNeeded(requestContext)
-      .compose(userTenants -> {
-        if (CollectionUtils.isEmpty(userTenants)) {
-          return Future.succeededFuture();
-        }
-        var storageUnaffiliatedLocations = extractUnaffiliatedLocations(storedPoLine.getLocations(), userTenants);
-        var updatedUnaffiliatedLocations = extractUnaffiliatedLocations(updatedPoLine.getLocations(), userTenants);
-        if (!SetUtils.isEqualSet(storageUnaffiliatedLocations, updatedUnaffiliatedLocations)) {
-          return Future.failedFuture(new HttpException(422, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
-        }
-        return Future.succeededFuture();
-      });
-  }
-
-  private Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
-    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
-      .compose(consortiumConfiguration ->
-        consortiumConfiguration
-          .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), configuration.centralTenantId(), requestContext))
-          .orElse(Future.succeededFuture())
-      );
   }
 
   private void validatePOLineProtectedFieldsChanged(CompositePoLine compOrderLine, PoLine poLineFromStorage, CompositePurchaseOrder purchaseOrder) {

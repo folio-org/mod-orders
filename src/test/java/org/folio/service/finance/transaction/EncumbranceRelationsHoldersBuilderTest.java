@@ -1,5 +1,6 @@
 package org.folio.service.finance.transaction;
 
+import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.folio.rest.acq.model.finance.Encumbrance.OrderStatus.OPEN;
@@ -11,14 +12,17 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -26,6 +30,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.models.EncumbranceRelationsHolder;
 import org.folio.rest.acq.model.finance.Encumbrance;
 import org.folio.rest.acq.model.finance.Metadata;
@@ -43,13 +49,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import io.vertx.core.Future;
-import io.vertx.junit5.VertxExtension;
+import org.mockito.Spy;
 
 @ExtendWith(VertxExtension.class)
 public class EncumbranceRelationsHoldersBuilderTest {
 
+  @Spy
   @InjectMocks
   private EncumbranceRelationsHoldersBuilder encumbranceRelationsHoldersBuilder;
 
@@ -252,7 +257,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder2);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(Future.succeededFuture(singletonList(encumbranceFromStorage)));
+      .thenReturn(succeededFuture(singletonList(encumbranceFromStorage)));
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
         .withExistingTransactions(holders, order, requestContextMock).result();
@@ -320,7 +325,7 @@ public class EncumbranceRelationsHoldersBuilderTest {
     holders.add(holder3);
 
     when(encumbranceService.getEncumbrancesByIds(anyList(), any()))
-      .thenReturn(Future.succeededFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
+      .thenReturn(succeededFuture(List.of(encumbranceFromStorage1, encumbranceFromStorage2)));
 
     //When
     List<EncumbranceRelationsHolder> resultHolders = encumbranceRelationsHoldersBuilder
@@ -335,4 +340,54 @@ public class EncumbranceRelationsHoldersBuilderTest {
     assertThat(resultHolders, hasItem( hasProperty("oldEncumbrance", is(encumbranceFromStorage2))));
   }
 
+  @Test
+  void testRetrieveMapFiscalYearsWithCompPOLines(VertxTestContext vertxTestContext) {
+    String fiscalYearId1 = UUID.randomUUID().toString();
+    String fiscalYearId2 = UUID.randomUUID().toString();
+
+    holder1.withCurrentFiscalYearId(fiscalYearId1);
+    holder2.withCurrentFiscalYearId(fiscalYearId2);
+    holder3.withCurrentFiscalYearId(fiscalYearId1);
+
+    // Make holder1  and holder3 have the same poLine as holder1
+    holder1.withPoLine(line1);
+    holder3.withPoLine(line1);
+
+    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3); // Removed holder4
+
+    doReturn(succeededFuture(holders))
+      .when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
+
+    var future = encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(order, order, requestContextMock);
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        assertThat(result.keySet(), hasSize(2));
+        assertThat(result.keySet(), hasItems(fiscalYearId1, fiscalYearId2));
+
+        // Check if the list for fiscalYearId1 shouldn't contain duplicates of line1
+        assertThat(result.get(fiscalYearId1), hasSize(1));
+        assertThat(result.get(fiscalYearId1), hasItems(line1));
+
+        assertThat(result.get(fiscalYearId2), hasSize(1));
+        assertThat(result.get(fiscalYearId2), hasItem(line2));
+
+        vertxTestContext.completeNow();
+      });
+  }
+
+  @Test
+  void testRetrieveMapFiscalYearsWithCompPOLinesEmpty(VertxTestContext vertxTestContext) {
+    List<EncumbranceRelationsHolder> holders = List.of(holder1, holder2, holder3);
+
+    doReturn(succeededFuture(holders))
+      .when(encumbranceRelationsHoldersBuilder).prepareEncumbranceRelationsHolder(any(), any(), any());
+
+    var future = encumbranceRelationsHoldersBuilder.retrieveMapFiscalYearsWithCompPOLines(order, order, requestContextMock);
+    vertxTestContext.assertComplete(future)
+      .onSuccess(result -> {
+        //Then
+        assertTrue(result.isEmpty());
+        vertxTestContext.completeNow();
+      });
+  }
 }

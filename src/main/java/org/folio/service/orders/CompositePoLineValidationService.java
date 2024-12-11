@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.orders.utils.HelperUtils.calculateEstimatedPrice;
+import static org.folio.orders.utils.PoLineCommonUtil.extractUnaffiliatedLocations;
 import static org.folio.orders.utils.PoLineCommonUtil.getElectronicCostQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.getPhysicalCostQuantity;
 import static org.folio.orders.utils.PoLineCommonUtil.isHoldingUpdateRequiredForEresource;
@@ -24,8 +25,12 @@ import java.util.Optional;
 import io.vertx.core.Future;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.orders.utils.HelperUtils;
 import org.folio.rest.core.exceptions.ErrorCodes;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Cost;
@@ -35,15 +40,25 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.PoLine;
+import org.folio.service.consortium.ConsortiumConfigurationService;
+import org.folio.service.consortium.ConsortiumUserTenantsRetriever;
 import org.folio.service.finance.expenceclass.ExpenseClassValidationService;
 
 
 public class CompositePoLineValidationService extends BaseValidationService {
 
-  private final ExpenseClassValidationService expenseClassValidationService;
+  private static final Logger logger = LogManager.getLogger(CompositePoLineValidationService.class);
 
-  public CompositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService) {
+  private final ExpenseClassValidationService expenseClassValidationService;
+  private final ConsortiumConfigurationService consortiumConfigurationService;
+  private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
+
+  public CompositePoLineValidationService(ExpenseClassValidationService expenseClassValidationService,
+                                          ConsortiumConfigurationService consortiumConfigurationService,
+                                          ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever) {
     this.expenseClassValidationService = expenseClassValidationService;
+    this.consortiumConfigurationService = consortiumConfigurationService;
+    this.consortiumUserTenantsRetriever = consortiumUserTenantsRetriever;
   }
 
   public Future<List<Error>> validatePoLine(CompositePoLine compPOL, RequestContext requestContext) {
@@ -328,5 +343,31 @@ public class CompositePoLineValidationService extends BaseValidationService {
     if (Boolean.FALSE.equals(poLine.getCheckinItems())) {
       errors.add(RECEIVING_WORKFLOW_INCORRECT_FOR_BINDARY_ACTIVE.toError());
     }
+  }
+
+  public Future<Void> validateUserUnaffiliatedLocations(String poLineId, List<Location> locations, RequestContext requestContext) {
+    return getUserTenantsIfNeeded(requestContext)
+      .compose(userTenants -> {
+        if (CollectionUtils.isEmpty(userTenants)) {
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User tenants is empty");
+          return Future.succeededFuture();
+        }
+        var uniqueUnAffiliatedLocations = extractUnaffiliatedLocations(locations, userTenants).stream().map(Location::getTenantId).distinct().toList();
+        if (CollectionUtils.isNotEmpty(uniqueUnAffiliatedLocations)) {
+          logger.info("validateUserUnaffiliatedLocationUpdates:: User has unaffiliated locations on the POL, poLineId: {}, unique locations: {}", poLineId, uniqueUnAffiliatedLocations);
+          return Future.failedFuture(new HttpException(HttpStatus.SC_UNPROCESSABLE_ENTITY, ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION));
+        }
+        logger.info("validateUserUnaffiliatedLocationUpdates:: User is affiliated with all {} locations on the POL, poLineId: {}", locations.size(), poLineId);
+        return Future.succeededFuture();
+      });
+  }
+
+  private Future<List<String>> getUserTenantsIfNeeded(RequestContext requestContext) {
+    return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
+      .compose(consortiumConfiguration ->
+        consortiumConfiguration
+          .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), configuration.centralTenantId(), requestContext))
+          .orElse(Future.succeededFuture())
+      );
   }
 }
