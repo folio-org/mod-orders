@@ -96,7 +96,7 @@ public class ConsortiumConfigurationService {
         }
         RequestContext centralContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
         return isCentralOrderingEnabled(requestContext)
-          .compose(orderingEnabled ->  Future.succeededFuture(orderingEnabled ? centralContext : requestContext));
+          .compose(isCentralOrderingEnabled -> Future.succeededFuture(isCentralOrderingEnabled ? centralContext : requestContext));
       });
   }
 

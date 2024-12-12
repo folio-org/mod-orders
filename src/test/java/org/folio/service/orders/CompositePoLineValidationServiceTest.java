@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -411,6 +412,8 @@ public class CompositePoLineValidationServiceTest {
 
     when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
       .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(true));
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant1", "tenant2")));
 
@@ -428,11 +431,34 @@ public class CompositePoLineValidationServiceTest {
 
     when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
       .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(true));
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant1", "tenant2")));
 
     compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
       .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
+  }
+
+  @Test
+  void testValidateUserUnaffiliatedLocationsWhenCentralOrderingIsDisabled(VertxTestContext testContext) {
+    var locationsUpdated = List.of(
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant1"),
+      new Location().withLocationId(UUID.randomUUID().toString()).withTenantId("tenant2"));
+    var updatedPoLineId = UUID.randomUUID().toString();
+
+    when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(false));
+    when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
+      .thenReturn(Future.succeededFuture(List.of("tenant1")));
+
+    compositePoLineValidationService.validateUserUnaffiliatedLocations(updatedPoLineId, locationsUpdated, requestContext)
+      .onComplete(testContext.succeeding(result -> {
+        testContext.verify(testContext::completeNow);
+        verifyNoInteractions(consortiumUserTenantsRetriever);
+      }));
   }
 
   @Test
@@ -444,6 +470,8 @@ public class CompositePoLineValidationServiceTest {
 
     when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
       .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(true));
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant1")));
 
@@ -464,6 +492,8 @@ public class CompositePoLineValidationServiceTest {
 
     when(consortiumConfigurationService.getConsortiumConfiguration(eq(requestContext)))
       .thenReturn(Future.succeededFuture(Optional.of(new ConsortiumConfiguration("tenant1", "consortiumId"))));
+    when(consortiumConfigurationService.isCentralOrderingEnabled(eq(requestContext)))
+      .thenReturn(Future.succeededFuture(true));
     when(consortiumUserTenantsRetriever.getUserTenants(eq("consortiumId"), anyString(), eq(requestContext)))
       .thenReturn(Future.succeededFuture(List.of("tenant3")));
 
