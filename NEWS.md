@@ -1,5 +1,14 @@
 ## 13.0.0 - Unreleased
 
+## 12.9.5 - Released (Ramsons R2 2024)
+The primary focus of this release was to add missed module permission and do some queries optimization for fetching user-tenants for validation
+only when the Central Ordering feature is enabled.
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.4...v12.9.5)
+
+### Bug Fixes
+* [MODORDERS-1223](https://issues.folio.org/browse/MODORDERS-1223) - (ECS) Can open/unopen order with PO line locations from tenant in which user does not have affiliation
+
+
 ## 12.9.4 - Released (Ramsons R2 2024)
 The primary focus of this release was to fix issue with preventing opening order with PO line locations from tenant in which user does not have affiliation
 and fixing error when trying to unopen an ongoing order to add a purchase order line with multiple funds.
