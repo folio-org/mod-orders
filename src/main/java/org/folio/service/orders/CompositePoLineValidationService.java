@@ -366,7 +366,10 @@ public class CompositePoLineValidationService extends BaseValidationService {
     return consortiumConfigurationService.getConsortiumConfiguration(requestContext)
       .compose(consortiumConfiguration ->
         consortiumConfiguration
-          .map(configuration -> consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), configuration.centralTenantId(), requestContext))
+          .map(configuration -> consortiumConfigurationService.isCentralOrderingEnabled(requestContext)
+              .compose(isCentralOrderingEnabled -> isCentralOrderingEnabled
+                ? consortiumUserTenantsRetriever.getUserTenants(configuration.consortiumId(), configuration.centralTenantId(), requestContext)
+                : Future.succeededFuture()))
           .orElse(Future.succeededFuture())
       );
   }
