@@ -15,6 +15,7 @@ import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.RestConstants;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
@@ -27,16 +28,17 @@ import io.vertx.core.json.JsonObject;
 public class DefaultPieceFlowsValidator {
   private static final Logger logger = LogManager.getLogger(DefaultPieceFlowsValidator.class);
 
-  public void isPieceRequestValid(Piece pieceToCreate, CompositePoLine originPoLine, boolean isCreateItem) {
-    List<Error> combinedErrors = new ArrayList<>();
+  public void isPieceRequestValid(Piece pieceToCreate, CompositePurchaseOrder originalOrder, CompositePoLine originPoLine, boolean isCreateItem) {
     List<Error> isItemCreateValidError = validateItemCreateFlag(pieceToCreate, originPoLine, isCreateItem);
-    combinedErrors.addAll(isItemCreateValidError);
+    List<Error> combinedErrors = new ArrayList<>(isItemCreateValidError);
     List<Error> pieceLocationErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceLocation(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     combinedErrors.addAll(pieceLocationErrors);
     List<Error> pieceFormatErrors = Optional.ofNullable(PieceValidatorUtil.validatePieceFormat(pieceToCreate, originPoLine)).orElse(new ArrayList<>());
     combinedErrors.addAll(pieceFormatErrors);
     List<Error> displayOnHoldingsErrors = validateDisplayOnHoldingsConsistency(pieceToCreate);
     combinedErrors.addAll(displayOnHoldingsErrors);
+    List<Error> relatedOrderErrors = PieceValidatorUtil.validatePieceRelatedOrder(originalOrder, originPoLine);
+    combinedErrors.addAll(relatedOrderErrors);
     if (CollectionUtils.isNotEmpty(combinedErrors)) {
       Errors errors = new Errors().withErrors(combinedErrors).withTotalRecords(combinedErrors.size());
       logger.error("Validation error : " + JsonObject.mapFrom(errors).encodePrettily());

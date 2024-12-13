@@ -11,13 +11,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.List;
 import java.util.UUID;
 
+import org.folio.CopilotGenerated;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder.WorkflowStatus;
 import org.folio.rest.jaxrs.model.Eresource;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Physical;
 import org.folio.rest.jaxrs.model.Piece;
 import org.junit.jupiter.api.Test;
 
+@CopilotGenerated(partiallyGenerated = true)
 public class PieceValidatorUtilTest {
 
   @Test
@@ -126,6 +131,44 @@ public class PieceValidatorUtilTest {
       .withFormat(Piece.Format.PHYSICAL);
     CompositePoLine poLine = new CompositePoLine().withOrderFormat(P_E_MIX);
     List<Error> errorList = PieceValidatorUtil.validatePieceFormat(piece, poLine);
+    assertEquals(0, errorList.size());
+  }
+
+  @Test
+  void testValidateRelatedOrderWhenOrderIsNull() {
+    CompositePoLine poLine = new CompositePoLine();
+    List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(null, poLine);
+    assertEquals(0, errorList.size());
+  }
+
+  @Test
+  void testValidateRelatedOrderWhenPoLineIsNull() {
+    CompositePurchaseOrder order = new CompositePurchaseOrder();
+    List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, null);
+    assertEquals(0, errorList.size());
+  }
+
+  @Test
+  void testValidateRelatedWhenOrderIsPendingAndCheckinItemsIsFalse() {
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withWorkflowStatus(WorkflowStatus.PENDING);
+    CompositePoLine poLine = new CompositePoLine().withCheckinItems(false);
+    List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
+    assertEquals(ErrorCodes.PIECE_RELATED_ORDER_DATA_IS_NOT_VALID.getCode(), errorList.get(0).getCode());
+  }
+
+  @Test
+  void testValidateRelatedOrderWhenOrderIsPendingAndCheckinItemsIsTrue() {
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withWorkflowStatus(WorkflowStatus.PENDING);
+    CompositePoLine poLine = new CompositePoLine().withCheckinItems(true);
+    List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
+    assertEquals(0, errorList.size());
+  }
+
+  @Test
+  void testValidateRelatedWhenOrderIsNotPending() {
+    CompositePurchaseOrder order = new CompositePurchaseOrder().withWorkflowStatus(WorkflowStatus.OPEN);
+    CompositePoLine poLine = new CompositePoLine().withCheckinItems(false);
+    List<Error> errorList = PieceValidatorUtil.validatePieceRelatedOrder(order, poLine);
     assertEquals(0, errorList.size());
   }
 }

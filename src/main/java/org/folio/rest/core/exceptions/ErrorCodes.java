@@ -108,6 +108,7 @@ public enum ErrorCodes {
   POSTGRE_SQL_ERROR("pgException", "PostgreSQL exception"),
   PIECE_FORMAT_IS_NOT_VALID_ERROR("pieceFormatIsNotValid", "Piece format %s is not compatible with purchase line %s"),
   PIECE_DISPLAY_ON_HOLDINGS_IS_NOT_CONSISTENT("pieceDisplayOnHoldingsIsNotConsistent", "Display On Holdings could not be set to false when Display To Public is true"),
+  PIECE_RELATED_ORDER_DATA_IS_NOT_VALID("pieceRelatedOrderDataIsNotValid", "Adding piece for pending order with synchronized workflow is not allowed"),
   CREATE_PIECE_FOR_PENDING_ORDER_ERROR("createPiecePendingOrderError", "Creating piece for pending order is not possible. Please open order."),
   CREATE_ITEM_FOR_PIECE_IS_NOT_ALLOWED_ERROR("createItemForPieceIsNotAllowedError", "Create item for piece format %s is not allowed. Please check inventory option in the purchase order line %s"),
   NOT_FOUND("notFound", "Not Found"),
