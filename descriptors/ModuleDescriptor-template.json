@@ -222,7 +222,8 @@
             "orders.po-lines.item.put"
           ],
           "permissionsDesired": [
-            "orders.acquisition-units.bypass.execute"
+            "orders.acquisition-units.bypass.execute",
+            "invoices.acquisition-units.bypass.execute"
           ],
           "modulePermissions": [
             "orders-storage.alerts.item.post",
