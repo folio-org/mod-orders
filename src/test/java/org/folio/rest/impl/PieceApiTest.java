@@ -266,6 +266,11 @@ public class PieceApiTest {
   void testPutPiecesByIdTest() throws Exception {
     logger.info("=== Test update piece by id - valid Id 204 ===");
 
+    CompositePoLine poLineForOpenOrder = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(poLineForOpenOrder.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
+    addMockEntry(PO_LINES_STORAGE, poLineForOpenOrder);
+
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
     String pieceId = UUID.randomUUID().toString();
     JsonObject pieceStorage = new JsonObject((reqData));
@@ -274,6 +279,7 @@ public class PieceApiTest {
     JsonObject pieceRequest = new JsonObject((reqData));
     pieceRequest.put(ID, pieceId);
     pieceRequest.put("receivingStatus", "Received");
+    pieceRequest.put("poLineId", poLineForOpenOrder.getId());
 
     addMockEntry(PIECES_STORAGE, pieceStorage);
     verifyPut(String.format(PIECES_ID_PATH, pieceId), pieceRequest, "", 204);
@@ -338,6 +344,11 @@ public class PieceApiTest {
   @Test
   void testPutPiecesByIdConsistentReceiptStatusTest() throws Exception {
     logger.info("=== Test update piece by id when receipt status is consistent - valid Id 204 ===");
+
+    CompositePoLine poLineForOpenOrder = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(poLineForOpenOrder.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
+    addMockEntry(PO_LINES_STORAGE, poLineForOpenOrder);
 
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json");
 
