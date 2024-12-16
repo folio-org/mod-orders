@@ -125,6 +125,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
   private static final String OKAPI_URL = "http://localhost:" + TestConfig.mockPort;
   private static final String USER_ID = "6bece55a-831c-4197-bed1-coff1e00b7d8";
   private static final String PO_LINE_ORDER_ID_KEY = "purchaseOrderId";
+  private static final String SYSTEM_USER_ENABLED = "SYSTEM_USER_ENABLED";
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -267,6 +268,42 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
     CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
     assertTrue(createdOrder.getPoNumber().contains("pref"));
     assertTrue(createdOrder.getPoNumber().contains("suf"));
+  }
+
+  @Test
+  public void shouldCreatePendingOrderAndPublishDiCompletedEventWithSystemUser() throws InterruptedException {
+    // given
+    System.setProperty(SYSTEM_USER_ENABLED, "false");
+    ProfileSnapshotWrapper profileSnapshotWrapper = buildProfileSnapshotWrapper(jobProfile, actionProfile, mappingProfile);
+    addMockEntry(JOB_PROFILE_SNAPSHOTS_MOCK, profileSnapshotWrapper);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
+      .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
+      .withTenant(TENANT_ID)
+      .withToken("")
+      .withOkapiUrl(OKAPI_URL)
+      .withContext(new HashMap<>() {{
+        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+        put(JOB_PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId());
+      }});
+
+    SendKeyValues<String, String> request = prepareKafkaRequest(dataImportEventPayload);
+
+    // when
+    kafkaCluster.send(request);
+
+    // then
+    DataImportEventPayload eventPayload = observeEvent(DI_COMPLETED.value());
+    assertEquals(DI_ORDER_CREATED.value(), eventPayload.getEventsChain().get(eventPayload.getEventsChain().size() - 1));
+    verifyOrder(eventPayload);
+    verifyPoLine(eventPayload);
+
+    CompositePurchaseOrder createdOrder = Json.decodeValue(eventPayload.getContext().get(ORDER.value()), CompositePurchaseOrder.class);
+    assertTrue(createdOrder.getPoNumber().contains("pref"));
+    assertTrue(createdOrder.getPoNumber().contains("suf"));
+    System.clearProperty(SYSTEM_USER_ENABLED);
   }
 
   @Test
