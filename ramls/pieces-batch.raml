@@ -1,0 +1,49 @@
+#%RAML 1.0
+title: Pieces Batch Operations
+baseUri: https://github.com/folio-org/mod-orders
+version: v1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Endpoint for batch operations on Pieces
+    content: <b>Endpoint for batch operations on Pieces</b>
+
+types:
+  piece-batch-status-collection: !include acq-models/mod-orders/schemas/pieceStatusBatchCollection.json
+
+/orders/pieces-batch:
+  /status:
+    put:
+      description: Batch status update for pieces
+      body:
+        application/json:
+          type: piece-batch-status-collection
+          example:
+            strict: false
+            value: !include acq-models/mod-orders/examples/pieceStatusBatchCollection.sample
+      responses:
+        204:
+          description: "Piece records successfully updated"
+        400:
+          description: "Bad request"
+          body:
+            application/json:
+              example:
+                strict: false
+                value: !include examples/errors_400.sample
+            text/plain:
+              example: "Unable to update pieces - Bad request"
+        404:
+          description: "Pieces do not exist"
+          body:
+            text/plain:
+              example: "Following pieces are not found: [id1, id2]"
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            application/json:
+              example:
+                strict: false
+                value: !include examples/errors_500.sample
+            text/plain:
+              example: "Unable to update pieces - Internal server error, e.g. due to misconfiguration"

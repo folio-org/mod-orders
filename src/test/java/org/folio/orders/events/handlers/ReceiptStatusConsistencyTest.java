@@ -5,7 +5,8 @@ import static org.folio.TestConfig.clearServiceInteractions;
 import static org.folio.TestConfig.isVerticleNotDeployed;
 import static org.folio.TestUtils.checkVertxContextCompletion;
 import static org.folio.TestUtils.getMockAsJson;
-import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
+import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
+import static org.folio.orders.events.utils.EventUtils.POL_UPDATE_FIELD;
 import static org.folio.rest.impl.MockServer.PO_LINES_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
@@ -33,6 +34,7 @@ import org.folio.rest.acq.model.PoLine.ReceiptStatus;
 import org.folio.rest.impl.MockServer;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.service.orders.PurchaseOrderLineService;
+import org.folio.service.pieces.PieceStorageService;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -67,6 +69,8 @@ public class ReceiptStatusConsistencyTest {
 
   @Autowired
   private PurchaseOrderLineService purchaseOrderLineService;
+  @Autowired
+  private PieceStorageService pieceStorageService;
 
   @BeforeAll
   static void before() throws InterruptedException, ExecutionException, TimeoutException {
@@ -82,7 +86,7 @@ public class ReceiptStatusConsistencyTest {
   @BeforeEach
   void setUp() {
     SpringContextUtil.autowireDependencies(this, vertx.getOrCreateContext());
-    vertx.eventBus().consumer(TEST_ADDRESS, new ReceiptStatusConsistency(vertx, purchaseOrderLineService));
+    vertx.eventBus().consumer(TEST_ADDRESS, new ReceiptStatusConsistency(vertx, pieceStorageService, purchaseOrderLineService));
   }
 
   @AfterEach
@@ -125,7 +129,7 @@ public class ReceiptStatusConsistencyTest {
   void testSuccessPartiallyReceivedStatusWhenAtleastOneSuccessfullyReceivedPiece(VertxTestContext context) throws Throwable {
     logger.info("=== Test case to verify partially received status when at least one successfully received piece ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
     MockServer.addMockOrderData(Collections.singletonList(compositePoLine));
 
     sendEvent(createBody(POLINE_UUID_TIED_TO_PIECE_PARTIALLY_RECEIVED), context.succeeding(result -> {
@@ -224,7 +228,7 @@ public class ReceiptStatusConsistencyTest {
 
   private JsonObject createBody(String poLineId) {
     JsonObject jsonObj = new JsonObject();
-    jsonObj.put("poLineIdUpdate",  poLineId);
+    jsonObj.put(POL_UPDATE_FIELD,  poLineId);
     return jsonObj;
   }
 

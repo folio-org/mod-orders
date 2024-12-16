@@ -1,17 +1,17 @@
 package org.folio.service.orders.flows.update.open;
 
+import static org.folio.orders.events.utils.EventUtils.createPoLineUpdateEvent;
 import static org.folio.orders.utils.HelperUtils.calculateInventoryItemsQuantity;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.RequestContextUtil.createContextWithNewTenantId;
+import static org.folio.service.pieces.PieceUtil.updatePieceStatus;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -124,18 +124,12 @@ public class OpenCompositeOrderPieceService {
       .compose(v -> inventoryItemManager.updateItemWithPieceFields(piece, requestContext))
       .compose(vVoid -> pieceStorageService.getPieceById(piece.getId(), requestContext))
       .compose(pieceStorage -> {
-        var receivingStatusUpdate = piece.getReceivingStatus();
-        var receivingStatusStorage = pieceStorage.getReceivingStatus();
-        boolean isReceivingStatusChanged = !receivingStatusStorage.equals(receivingStatusUpdate);
-        if (isReceivingStatusChanged) {
-          piece.setStatusUpdatedDate(new Date());
-        }
+        var isReceivingStatusChanged = updatePieceStatus(piece, pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
         return pieceStorageService.updatePiece(piece, requestContext)
           .compose(v -> {
-            logger.debug("updatePiece:: receivingStatusStorage - {}, receivingStatusUpdate - {}", receivingStatusStorage, receivingStatusUpdate);
+            logger.debug("updatePiece:: Status updated from: {} to {}", pieceStorage.getReceivingStatus(), piece.getReceivingStatus());
             if (isReceivingStatusChanged) {
-              var messageToEventBus = JsonObject.of("poLineIdUpdate", piece.getPoLineId());
-              receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, messageToEventBus, requestContext);
+              receiptStatusPublisher.sendEvent(MessageAddress.RECEIPT_STATUS, createPoLineUpdateEvent(piece.getPoLineId()), requestContext);
             }
             return Future.succeededFuture();
           })

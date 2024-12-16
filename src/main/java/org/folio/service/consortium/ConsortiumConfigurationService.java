@@ -63,12 +63,12 @@ public class ConsortiumConfigurationService {
       .map(jsonObject -> jsonObject.getJsonArray(USER_TENANTS_ARRAY_IDENTIFIER))
       .map(userTenants -> {
         if (userTenants.isEmpty()) {
-          logger.debug("Central tenant and consortium id not found");
+          logger.debug("getConsortiumConfigurationFromRemote:: Central tenant and consortium id not found");
           return Optional.<ConsortiumConfiguration>empty();
         }
         String consortiumId = userTenants.getJsonObject(0).getString(CONSORTIUM_ID_FIELD);
         String centralTenantId = userTenants.getJsonObject(0).getString(CENTRAL_TENANT_ID_FIELD);
-        logger.debug("Found centralTenantId: {} and consortiumId: {}", centralTenantId, consortiumId);
+        logger.info("getConsortiumConfigurationFromRemote:: Found centralTenantId: {} and consortiumId: {}", centralTenantId, consortiumId);
         return Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId));
       }).toCompletionStage().toCompletableFuture();
   }
@@ -95,12 +95,16 @@ public class ConsortiumConfigurationService {
           return Future.succeededFuture(requestContext);
         }
         RequestContext centralContext = createContextWithNewTenantId(requestContext, configuration.centralTenantId());
-        return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, centralContext)
-          .map(centralOrdering -> {
-            logger.info("overrideContextToCentralTenantIdNeeded:: central ordering enabled: {}", centralOrdering);
-            return centralOrdering.map(Setting::getValue).orElse(null);
-          })
-          .compose(orderingEnabled -> Future.succeededFuture(Boolean.parseBoolean(orderingEnabled) ? centralContext : requestContext));
+        return isCentralOrderingEnabled(requestContext)
+          .compose(isCentralOrderingEnabled -> Future.succeededFuture(isCentralOrderingEnabled ? centralContext : requestContext));
+      });
+  }
+
+  public Future<Boolean> isCentralOrderingEnabled(RequestContext requestContext) {
+    return settingsRetriever.getSettingByKey(SettingKey.CENTRAL_ORDERING_ENABLED, requestContext)
+      .map(centralOrdering -> {
+        logger.info("isCentralOrderingEnabled:: central ordering enabled: {}", centralOrdering);
+        return centralOrdering.map(setting -> Boolean.parseBoolean(setting.getValue())).orElse(false);
       });
   }
 }

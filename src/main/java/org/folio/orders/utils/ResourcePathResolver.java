@@ -14,6 +14,7 @@ public class ResourcePathResolver {
   public static final String PO_LINES_BATCH_STORAGE = "poLines.batch";
   public static final String PO_LINES_BUSINESS = "poLinesBusinessEndpoint";
   public static final String ORDERS_BUSINESS = "ordersBusinessEndpoint";
+  public static final String PIECES_CLAIMING_BUSINESS = "piecesClaimingBusinessEndpoint";
   public static final String PO_NUMBER = "poNumber";
   public static final String VENDOR_ID = "vendor";
   public static final String PO_LINE_NUMBER = "poLineNumber";
@@ -25,6 +26,7 @@ public class ResourcePathResolver {
   public static final String REPORTING_CODES = "reportingCodes";
   public static final String PURCHASE_ORDER_STORAGE = "purchaseOrder";
   public static final String PIECES_STORAGE = "pieces";
+  public static final String ORGANIZATION_STORAGE = "organizations";
   public static final String RECEIVING_HISTORY = "receiving-history";
   public static final String RECEIPT_STATUS = "receiptStatus";
   public static final String PAYMENT_STATUS = "paymentStatus";
@@ -56,7 +58,8 @@ public class ResourcePathResolver {
   public static final String ORDER_SETTINGS = "orderSettings";
   public static final String USERS = "users";
   public static final String CONSORTIA_USER_TENANTS = "consortia.user-tenants";
-
+  public static final String DATA_EXPORT_SPRING_CREATE_JOB = "data-export-spring.job";
+  public static final String DATA_EXPORT_SPRING_EXECUTE_JOB = "data-export-spring.send-job";
 
   private static final Map<String, String> SUB_OBJECT_ITEM_APIS;
   private static final Map<String, String> SUB_OBJECT_COLLECTION_APIS;
@@ -72,9 +75,11 @@ public class ResourcePathResolver {
     apis.put(PO_LINES_BATCH_STORAGE, "/orders-storage/po-lines-batch");
     apis.put(PO_LINES_BUSINESS, "/orders/order-lines");
     apis.put(ORDERS_BUSINESS, "/orders/composite-orders");
+    apis.put(PIECES_CLAIMING_BUSINESS, "/pieces/claim");
     apis.put(PO_NUMBER, "/orders-storage/po-number");
     apis.put(PURCHASE_ORDER_STORAGE, "/orders-storage/purchase-orders");
     apis.put(PIECES_STORAGE, "/orders-storage/pieces");
+    apis.put(ORGANIZATION_STORAGE, "/organizations-storage/organizations");
     apis.put(RECEIVING_HISTORY, "/orders-storage/receiving-history");
     apis.put(PO_LINE_NUMBER, "/orders-storage/po-line-number");
     apis.put(ORDER_TEMPLATES, "/orders-storage/order-templates");
@@ -105,6 +110,8 @@ public class ResourcePathResolver {
     apis.put(CONSORTIA_USER_TENANTS, "/consortia/{id}/user-tenants");
     apis.put(ORDER_SETTINGS, "/orders-storage/settings");
     apis.put(ROUTING_LISTS, "/orders-storage/routing-lists");
+    apis.put(DATA_EXPORT_SPRING_CREATE_JOB, "/data-export-spring/jobs");
+    apis.put(DATA_EXPORT_SPRING_EXECUTE_JOB, "/data-export-spring/jobs/send");
 
     SUB_OBJECT_COLLECTION_APIS = Collections.unmodifiableMap(apis);
     SUB_OBJECT_ITEM_APIS = Collections.unmodifiableMap(

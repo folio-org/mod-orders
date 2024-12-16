@@ -38,7 +38,7 @@ import static org.folio.rest.impl.MockServer.PIECE_RECORDS_MOCK_DATA_PATH;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_HOLDINGS_RECORD_JSON;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_INSTANCE_JSON;
 import static org.folio.rest.impl.MockServer.ECS_UNIVERSITY_ITEM_JSON;
-import static org.folio.rest.impl.MockServer.POLINES_COLLECTION;
+import static org.folio.rest.impl.MockServer.PO_LINES_COLLECTION;
 import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getCreatedItems;
 import static org.folio.rest.impl.MockServer.getCreatedPieces;
@@ -157,7 +157,7 @@ public class PieceApiTest {
   void testPostPhysicalPieceCancelledPurchaseOrder() {
     logger.info("=== Test POST physical piece with a cancelled purchase order ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(14).mapTo(CompositePoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.CLOSED);
     Title tile = getTitle(compositePoLine);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
@@ -208,7 +208,7 @@ public class PieceApiTest {
   void testPostPieceCancelledOrderLine(int poLineIdx, CheckInPiece.ItemStatus itemStatus) {
     logger.info("=== Test POST physical piece with a cancelled order line ===");
 
-    CompositePoLine compositePoLine = getMockAsJson(POLINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
+    CompositePoLine compositePoLine = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(poLineIdx).mapTo(CompositePoLine.class);
     CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(compositePoLine.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
     Title tile = getTitle(compositePoLine);
     addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
@@ -266,6 +266,11 @@ public class PieceApiTest {
   void testPutPiecesByIdTest() throws Exception {
     logger.info("=== Test update piece by id - valid Id 204 ===");
 
+    CompositePoLine poLineForOpenOrder = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(poLineForOpenOrder.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
+    addMockEntry(PO_LINES_STORAGE, poLineForOpenOrder);
+
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord.json");
     String pieceId = UUID.randomUUID().toString();
     JsonObject pieceStorage = new JsonObject((reqData));
@@ -274,6 +279,7 @@ public class PieceApiTest {
     JsonObject pieceRequest = new JsonObject((reqData));
     pieceRequest.put(ID, pieceId);
     pieceRequest.put("receivingStatus", "Received");
+    pieceRequest.put("poLineId", poLineForOpenOrder.getId());
 
     addMockEntry(PIECES_STORAGE, pieceStorage);
     verifyPut(String.format(PIECES_ID_PATH, pieceId), pieceRequest, "", 204);
@@ -338,6 +344,11 @@ public class PieceApiTest {
   @Test
   void testPutPiecesByIdConsistentReceiptStatusTest() throws Exception {
     logger.info("=== Test update piece by id when receipt status is consistent - valid Id 204 ===");
+
+    CompositePoLine poLineForOpenOrder = getMockAsJson(PO_LINES_COLLECTION).getJsonArray("poLines").getJsonObject(5).mapTo(CompositePoLine.class);
+    CompositePurchaseOrder compositePurchaseOrder = new CompositePurchaseOrder().withId(poLineForOpenOrder.getPurchaseOrderId()).withWorkflowStatus(CompositePurchaseOrder.WorkflowStatus.OPEN);
+    addMockEntry(PURCHASE_ORDER_STORAGE, compositePurchaseOrder);
+    addMockEntry(PO_LINES_STORAGE, poLineForOpenOrder);
 
     String reqData = getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json");
 

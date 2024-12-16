@@ -17,6 +17,7 @@ import static org.folio.TestConstants.COMP_ORDER_MOCK_DATA_PATH;
 import static org.folio.TestConstants.EMPTY_CONFIG_TENANT;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_1;
 import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10;
+import static org.folio.TestConstants.EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS;
 import static org.folio.TestConstants.ID;
 import static org.folio.TestConstants.ID_BAD_FORMAT;
 import static org.folio.TestConstants.ID_DOES_NOT_EXIST;
@@ -37,6 +38,7 @@ import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT;
 import static org.folio.TestConstants.NON_EXIST_INSTANCE_TYPE_TENANT_HEADER;
 import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT;
 import static org.folio.TestConstants.NON_EXIST_LOAN_TYPE_TENANT_HEADER;
+import static org.folio.TestConstants.OKAPI_TENANT;
 import static org.folio.TestConstants.PO_ID_GET_LINES_INTERNAL_SERVER_ERROR;
 import static org.folio.TestConstants.PO_LINE_NUMBER_VALUE;
 import static org.folio.TestConstants.PROTECTED_READ_ONLY_TENANT;
@@ -59,6 +61,8 @@ import static org.folio.orders.utils.ResourcePathResolver.ACQUISITION_METHODS;
 import static org.folio.orders.utils.ResourcePathResolver.ALERTS;
 import static org.folio.orders.utils.ResourcePathResolver.BUDGETS;
 import static org.folio.orders.utils.ResourcePathResolver.CURRENT_BUDGET;
+import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
+import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EXECUTE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.EXPENSE_CLASSES_URL;
 import static org.folio.orders.utils.ResourcePathResolver.EXPORT_HISTORY;
 import static org.folio.orders.utils.ResourcePathResolver.FINANCE_BATCH_TRANSACTIONS;
@@ -69,6 +73,7 @@ import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVERS;
 import static org.folio.orders.utils.ResourcePathResolver.LEDGER_FY_ROLLOVER_ERRORS;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_INVOICE_RELATIONSHIP;
 import static org.folio.orders.utils.ResourcePathResolver.ORDER_TEMPLATES;
+import static org.folio.orders.utils.ResourcePathResolver.ORGANIZATION_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_BATCH_STORAGE;
 import static org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE;
@@ -88,6 +93,7 @@ import static org.folio.orders.utils.ResourcePathResolver.USER_TENANTS_ENDPOINT;
 import static org.folio.orders.utils.ResourcePathResolver.resourceByIdPath;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.rest.acq.model.Piece.ReceivingStatus.LATE;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_IS_INACTIVE;
 import static org.folio.rest.core.exceptions.ErrorCodes.BUDGET_NOT_FOUND_FOR_TRANSACTION;
 import static org.folio.rest.core.exceptions.ErrorCodes.FUND_CANNOT_BE_PAID;
@@ -257,7 +263,9 @@ public class MockServer {
   private static final String ORDER_TEMPLATES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "orderTemplates/";
   private static final String RECEIVING_HISTORY_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "receivingHistory/";
   private static final String ORGANIZATIONS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "organizations/";
-  public static final String POLINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
+  public static final String PO_LINES_COLLECTION = PO_LINES_MOCK_DATA_PATH + "po_line_collection.json";
+  public static final String PIECES_COLLECTION = PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json";
+  public static final String ORGANIZATION_COLLECTION = ORGANIZATIONS_MOCK_DATA_PATH + "organizations.json";
   private static final String IDENTIFIER_TYPES_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "identifierTypes/";
   private static final String ITEM_REQUESTS_MOCK_DATA_PATH = BASE_MOCK_DATA_PATH + "itemRequests/";
   public static final String ACQUISITIONS_UNITS_COLLECTION = ACQUISITIONS_UNITS_MOCK_DATA_PATH + "/units.json";
@@ -285,7 +293,6 @@ public class MockServer {
   public static final String ECS_UNIVERSITY_HOLDINGS_RECORD_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_holdings_record.json";
   public static final String ECS_UNIVERSITY_ITEM_JSON = BASE_MOCK_DATA_PATH + "ecs/%s/university_item.json";
 
-  static final String HEADER_SERVER_ERROR = "X-Okapi-InternalServerError";
   private static final String PENDING_VENDOR_ID = "160501b3-52dd-41ec-a0ce-17762e7a9b47";
   static final String ORDER_ID_WITH_PO_LINES = "ab18897b-0e40-4f31-896b-9c9adc979a87";
   private static final String PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID = "7d0aa803-a659-49f0-8a95-968f277c87d7";
@@ -410,12 +417,20 @@ public class MockServer {
     return serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.GET);
   }
 
-  public static List<JsonObject> getPurchaseOrderCreations() {
-    return serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.POST);
-  }
-
   public static List<JsonObject> getPurchaseOrderUpdates() {
     return serverRqRs.get(PURCHASE_ORDER_STORAGE, HttpMethod.PUT);
+  }
+
+  public static List<JsonObject> getOrganizationSearches() {
+    return serverRqRs.get(ORGANIZATION_STORAGE, HttpMethod.SEARCH);
+  }
+
+  public static List<JsonObject> getDataExportSpringJobCreations() {
+    return serverRqRs.get(DATA_EXPORT_SPRING_CREATE_JOB, HttpMethod.POST);
+  }
+
+  public static List<JsonObject> getDataExportSpringJobExecutions() {
+    return serverRqRs.get(DATA_EXPORT_SPRING_EXECUTE_JOB, HttpMethod.POST);
   }
 
   public static List<JsonObject> getPieceUpdates() {
@@ -521,11 +536,6 @@ public class MockServer {
       .toList();
   }
 
-  static List<JsonObject> getBatchCalls() {
-    return Optional.ofNullable(serverRqRs.get(FINANCE_BATCH_TRANSACTIONS, HttpMethod.POST))
-      .orElse(Collections.emptyList());
-  }
-
   private static List<JsonObject> getCollectionRecords(List<JsonObject> entries) {
     return entries.stream()
       .filter(json -> !json.containsKey(ID))
@@ -558,7 +568,7 @@ public class MockServer {
   }
 
   private <T> Optional<List<T>> getMockEntries(String objName, Class<T> tClass) {
-    List<T> entryList =  getRqRsEntries(HttpMethod.SEARCH, objName).stream()
+    List<T> entryList = getRqRsEntries(HttpMethod.SEARCH, objName).stream()
       .map(entries -> entries.mapTo(tClass))
       .collect(toList());
     return Optional.ofNullable(entryList.isEmpty() ? null : entryList);
@@ -575,8 +585,8 @@ public class MockServer {
 
   private Router defineRoutes() {
     Router router = Router.router(vertx);
-
     router.route().handler(BodyHandler.create());
+    // POST
     router.post(resourcesPath(PURCHASE_ORDER_STORAGE)).handler(this::handlePostPurchaseOrder);
     router.post("/inventory/instances").handler(this::handlePostInstanceRecord);
     router.post("/item-storage/items").handler(this::handlePostItemStorRecord);
@@ -589,7 +599,6 @@ public class MockServer {
     router.post(resourcesPath(FINANCE_BATCH_TRANSACTIONS)).handler(this::handleBatchTransactions);
     router.post(resourcesPath(TITLES)).handler(ctx -> handlePostGenericSubObj(ctx, TITLES));
     router.post(resourcesPath(ROUTING_LISTS)).handler(ctx -> handlePostGenericSubObj(ctx, ROUTING_LISTS));
-
     router.post(resourcesPath(ACQUISITIONS_UNITS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_UNITS));
     router.post(resourcesPath(ACQUISITION_METHODS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITION_METHODS));
     router.post(resourcesPath(ACQUISITIONS_MEMBERSHIPS)).handler(ctx -> handlePostGenericSubObj(ctx, ACQUISITIONS_MEMBERSHIPS));
@@ -597,9 +606,11 @@ public class MockServer {
     router.post(resourcesPath(PREFIXES)).handler(ctx -> handlePostGenericSubObj(ctx, PREFIXES));
     router.post(resourcesPath(SUFFIXES)).handler(ctx -> handlePostGenericSubObj(ctx, SUFFIXES));
     router.post(resourcesPath(TAGS)).handler(ctx -> handlePostGenericSubObj(ctx, TAGS));
-
+    router.post(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)).handler(ctx -> handlePostGenericSubObj(ctx, DATA_EXPORT_SPRING_CREATE_JOB));
+    router.post(resourcesPath(DATA_EXPORT_SPRING_EXECUTE_JOB)).handler(ctx -> handlePostGenericSubObj(ctx, DATA_EXPORT_SPRING_EXECUTE_JOB));
+    // GET
     router.get(resourcePath(PURCHASE_ORDER_STORAGE)).handler(this::handleGetPurchaseOrderById);
-    router.get(resourcesPath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handleGetPurchaseOrderByQuery(ctx, PURCHASE_ORDER_STORAGE));
+    router.get(resourcesPath(PURCHASE_ORDER_STORAGE)).handler(this::handleGetPurchaseOrderByQuery);
     router.get("/instance-types").handler(this::handleGetInstanceType);
     router.get("/instance-statuses").handler(this::handleGetInstanceStatus);
     router.get("/inventory/instances").handler(this::handleGetInstanceRecord);
@@ -615,7 +626,7 @@ public class MockServer {
     router.get("/identifier-types").handler(this::handleGetIdentifierType);
     router.get("/holdings-sources").handler(this::handleGetHoldingsSource);
     router.get("/circulation/requests").handler(this::handleGetItemRequests);
-    router.get(resourcesPath(PO_LINES_STORAGE)).handler(ctx -> handleGetPoLines(ctx, PO_LINES_STORAGE));
+    router.get(resourcesPath(PO_LINES_STORAGE)).handler(this::handleGetPoLines);
     router.get(resourcePath(PO_LINES_STORAGE)).handler(this::handleGetPoLineById);
     router.get(resourcePath(ALERTS)).handler(ctx -> handleGetGenericSubObj(ctx, ALERTS));
     router.get(resourcePath(REPORTING_CODES)).handler(ctx -> handleGetGenericSubObj(ctx, REPORTING_CODES));
@@ -668,7 +679,7 @@ public class MockServer {
     router.get("/organizations/organizations").handler(this::handleGetOrganizations);
     router.get("/locations").handler(ctx -> handleGetJsonResource(ctx, MOCKDATA_LOCATIONS_JSON));
     router.get("/material-types").handler(ctx -> handleGetJsonResource(ctx, MOCKDATA_MATERIAL_TYPES_JSON));
-
+    // PUT
     router.put(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
     router.put(resourcesPath(PO_LINES_BATCH_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_BATCH_STORAGE));
@@ -686,8 +697,7 @@ public class MockServer {
     router.put(resourcePath(PREFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, PREFIXES));
     router.put(resourcePath(SUFFIXES)).handler(ctx -> handlePutGenericSubObj(ctx, SUFFIXES));
     router.put(resourcePath(ACQUISITION_METHODS)).handler(ctx -> handlePutGenericSubObj(ctx, ACQUISITION_METHODS));
-
-
+    // DELETE
     router.delete(resourcePath(PURCHASE_ORDER_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PURCHASE_ORDER_STORAGE));
     router.delete(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handleDeleteGenericSubObj(ctx, PO_LINES_STORAGE));
     router.delete(resourcePath(ALERTS)).handler(ctx -> handleDeleteGenericSubObj(ctx, ALERTS));
@@ -703,21 +713,18 @@ public class MockServer {
     router.delete(resourcePath(PREFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, PREFIXES));
     router.delete(resourcePath(SUFFIXES)).handler(ctx -> handleDeleteGenericSubObj(ctx, SUFFIXES));
     router.delete("/inventory/items/:id").handler(ctx -> handleDeleteGenericSubObj(ctx, ITEM_RECORDS));
-
     router.get("/configurations/entries").handler(this::handleConfigurationModuleResponse);
-
-    router.patch(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePatchOrderLines(ctx, PATCH_ORDER_LINES_REQUEST_PATCH));
+    router.patch(resourcePath(PO_LINES_STORAGE)).handler(this::handlePatchOrderLines);
     return router;
   }
 
   private void handleGetExportHistoryMethod(RoutingContext ctx) {
-    logger.info("handleGetExportHistoryMethod got: " + ctx.request().path());
+    logger.info("handleGetExportHistoryMethod got: {}", ctx.request().path());
     try {
       JsonObject entries = new JsonObject(getMockData(EXPORT_HISTORY_PATH_TO_SAMPLES + "export_history_collection.json"));
 
       serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
       addServerRqRsData(HttpMethod.GET, "exportHistory", entries);
-
     } catch (IOException e) {
       ctx.response()
         .setStatusCode(404)
@@ -726,20 +733,18 @@ public class MockServer {
   }
 
   private void handleGetFyRolloverProgress(RoutingContext ctx) {
-    logger.info("handleGetFyRolloverProgress got: " + ctx.request().path());
+    logger.info("handleGetFyRolloverProgress got: {}", ctx.request().path());
     try {
       JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_PROGRESS_PATH + "ledger_fiscal_year_rollover_progress_collection.json"));
 
       serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
       addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRolloverProgress", entries);
-
     } catch (IOException e) {
       ctx.response()
-              .setStatusCode(404)
-              .end();
+        .setStatusCode(404)
+        .end();
     }
   }
-
 
   private JsonObject getTitlesByPoLineIds(List<String> poLineIds) {
     Supplier<List<Title>> getFromFile = () -> {
@@ -757,7 +762,6 @@ public class MockServer {
     }
 
     Object record = new TitleCollection().withTitles(titles).withTotalRecords(titles.size());
-
 
     return JsonObject.mapFrom(record);
   }
@@ -788,7 +792,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.startsWith("id==")) {
           ids = extractIdsFromQuery(query);
@@ -808,9 +811,9 @@ public class MockServer {
   }
 
   private void handleGetFundById(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetFundById got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
 
     FundCollection funds = getFundsByIds(Collections.singletonList(id))
       .mapTo(FundCollection.class);
@@ -826,7 +829,6 @@ public class MockServer {
 
       serverResponse(ctx, 200, APPLICATION_JSON, fund.encodePrettily());
     }
-
   }
 
   private void handleGetBudgets(RoutingContext ctx) {
@@ -836,7 +838,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.startsWith("fundId==")) {
           ids = extractfundIdsFromQuery(query);
@@ -855,7 +856,6 @@ public class MockServer {
     }
   }
 
-
   private void handleGetLedgers(RoutingContext ctx) {
     String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
     addServerRqQuery(LEDGERS, query);
@@ -863,7 +863,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.startsWith("id==")) {
           ids = extractIdsFromQuery(query);
@@ -898,7 +897,6 @@ public class MockServer {
     }
 
     Object record = new FundCollection().withFunds(funds).withTotalRecords(funds.size());
-
 
     return JsonObject.mapFrom(record);
   }
@@ -941,12 +939,11 @@ public class MockServer {
 
     Object record = new LedgerCollection().withLedgers(ledgers).withTotalRecords(ledgers.size());
 
-
     return JsonObject.mapFrom(record);
   }
 
   private void handleGetBudgetExpenseClass(RoutingContext ctx) {
-    logger.info("handleGetBudgetExpenseClass: " + ctx.request().path());
+    logger.info("handleGetBudgetExpenseClass: {}", ctx.request().path());
     try {
       BudgetExpenseClassCollection expenseClassCollection = new JsonObject(getMockData(BUDGET_EXPENSE_CLASSES_MOCK_DATA_PATH))
         .mapTo(BudgetExpenseClassCollection.class);
@@ -959,7 +956,7 @@ public class MockServer {
   }
 
   private void handleGetExpenseClasses(RoutingContext ctx) {
-    logger.info("handleGetExpenseClasses: " + ctx.request().path());
+    logger.info("handleGetExpenseClasses: {}", ctx.request().path());
     try {
       ExpenseClassCollection expenseClassCollection = new JsonObject(getMockData(EXPENSE_CLASSES_MOCK_DATA_PATH))
         .mapTo(ExpenseClassCollection.class);
@@ -972,9 +969,9 @@ public class MockServer {
   }
 
   private void handleGetCurrentFiscalYearByLedgerId(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetCurrentFiscalYearByLedgerId got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
 
     addServerRqRsData(HttpMethod.GET, PO_LINES_STORAGE, new JsonObject().put(ID, id));
 
@@ -1022,19 +1019,19 @@ public class MockServer {
   }
 
   private void handlePostInstanceRecord(RoutingContext ctx) {
-    logger.info("handlePostInstanceRecord got: " + ctx.body().asString());
+    logger.info("handlePostInstanceRecord got: {}", ctx.body().asString());
     JsonObject body = ctx.body().asJsonObject();
     addServerRqRsData(HttpMethod.POST, INSTANCE_RECORD, body);
 
     ctx.response()
       .setStatusCode(201)
       .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-      .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + UUID.randomUUID().toString())
+      .putHeader(HttpHeaders.LOCATION, ctx.request().absoluteURI() + "/" + UUID.randomUUID())
       .end();
   }
 
   private void handlePostHoldingRecord(RoutingContext ctx) {
-    logger.info("handlePostHoldingsRecord got: " + ctx.body().asJsonObject());
+    logger.info("handlePostHoldingsRecord got: {}", ctx.body().asJsonObject());
     JsonObject body = ctx.body().asJsonObject();
 
     // the case when item creation is expected to fail for particular holding
@@ -1053,7 +1050,7 @@ public class MockServer {
 
   private void handlePostItemStorRecord(RoutingContext ctx) {
     String bodyAsString = ctx.body().toString();
-    logger.info("handlePostItemRecord got: " + bodyAsString);
+    logger.info("handlePostItemRecord got: {}", bodyAsString);
 
     if (bodyAsString.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
@@ -1070,7 +1067,7 @@ public class MockServer {
   }
 
   private void handleGetInstanceRecord(RoutingContext ctx) {
-    logger.info("handleGetInstanceRecord got: " + ctx.request().path());
+    logger.info("handleGetInstanceRecord got: {}", ctx.request().path());
 
     try {
       JsonObject instance;
@@ -1089,7 +1086,7 @@ public class MockServer {
   }
 
   private void handleGetInstanceRecordById(RoutingContext ctx) {
-    logger.info("handleGetInstanceRecordId got: " + ctx.request().path());
+    logger.info("handleGetInstanceRecordId got: {}", ctx.request().path());
 
     try {
       JsonObject instance = new JsonObject(getMockData(INSTANCE_RECORDS_MOCK_DATA_PATH + "instance.json"));
@@ -1103,7 +1100,7 @@ public class MockServer {
   }
 
   private void handleGetHoldingsRecords(RoutingContext ctx) {
-    logger.info("handleGetHoldingRecord got: " + ctx.request().path());
+    logger.info("handleGetHoldingRecord got: {}", ctx.request().path());
     String queryParam = ctx.queryParam("query").get(0);
     JsonObject holdings;
     try {
@@ -1137,7 +1134,7 @@ public class MockServer {
         List<JsonObject> holdingsList = new JsonObject(getMockData(HOLDINGS_OLD_NEW_PATH)).getJsonArray("holdingsRecords")
           .stream()
           .map(JsonObject::mapFrom)
-          .collect(toList());
+          .toList();
         List<JsonObject> doubleList = new ArrayList<>(holdingsList);
         doubleList.addAll(holdingsList);
         holdings = new JsonObject().put("holdingsRecords", new JsonArray(doubleList));
@@ -1179,7 +1176,7 @@ public class MockServer {
           .toList();
       } catch (IOException e) {
           holdingRecords = Collections.emptyList();
-      };
+      }
     }
 
     Object record = new JsonObject().put("holdingsRecords", new JsonArray(holdingRecords));
@@ -1188,9 +1185,9 @@ public class MockServer {
   }
 
   private void handleGetHolding(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetHolding got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
 
     JsonObject holding = new JsonObject();
     holding.put("id", id);
@@ -1202,27 +1199,24 @@ public class MockServer {
   }
 
   private void handleGetItemRecordsFromStorage(RoutingContext ctx) {
-    logger.info("handleGetItemRecordsFromStorage got: " + ctx.request().path());
+    logger.info("handleGetItemRecordsFromStorage got: {}", ctx.request().path());
 
     // Attempt to find POLine in mock server memory
     List<JsonObject> itemsList = getRqRsEntries(HttpMethod.SEARCH, ITEM_RECORDS);
+    JsonObject items;
     if (!itemsList.isEmpty()) {
-      JsonObject items = new JsonObject()
+      items = new JsonObject()
         .put("items", itemsList)
         .put(TOTAL_RECORDS, itemsList.size());
-
-      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
-      serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
     } else {
-      JsonObject items;
       items = new JsonObject().put("items", new JsonArray());
-      addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
-      serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
     }
+    addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, items);
+    serverResponse(ctx, 200, APPLICATION_JSON, items.encodePrettily());
   }
 
   private void handleGetInventoryItemRecords(RoutingContext ctx) {
-    logger.info("handleGetInventoryItemRecords got: " + ctx.request().path());
+    logger.info("handleGetInventoryItemRecords got: {}", ctx.request().path());
 
     String query = ctx.request().getParam("query");
 
@@ -1265,7 +1259,7 @@ public class MockServer {
             JsonObject item = (JsonObject) iterator.next();
 
             if (!purchaseOrderLineIdentifier.equals(item.getString(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER))
-                    || !holdingsRecordId.equals(item.getString(ITEM_HOLDINGS_RECORD_ID))) {
+              || !holdingsRecordId.equals(item.getString(ITEM_HOLDINGS_RECORD_ID))) {
               iterator.remove();
             }
           }
@@ -1285,10 +1279,10 @@ public class MockServer {
   }
 
   private void handleGetInventoryItemRecordById(RoutingContext ctx) {
-    logger.info("handleGetInventoryItemRecordById got: " + ctx.request().path());
+    logger.info("handleGetInventoryItemRecordById got: {}", ctx.request().path());
 
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
 
     if (id.equals(ID_FOR_INTERNAL_SERVER_ERROR)) {
       ctx.response().setStatusCode(500).end();
@@ -1307,7 +1301,7 @@ public class MockServer {
             }
           }
 
-        if  (jsonArray.size() > 0) {
+        if  (!jsonArray.isEmpty()) {
           items.put(TOTAL_RECORDS, jsonArray.size());
           addServerRqRsData(HttpMethod.GET, ITEM_RECORDS, jsonArray.getJsonObject(0));
 
@@ -1323,7 +1317,7 @@ public class MockServer {
   }
 
   private void handleGetItemRequests(RoutingContext ctx) {
-    logger.info("handleGetItemRequests got: " + ctx.request().path());
+    logger.info("handleGetItemRequests got: {}", ctx.request().path());
     try {
       String itemId = ctx.request().getParam("query").split("and")[0].split("==")[1].trim();
       if (itemId.startsWith("(") && itemId.endsWith(")")) {
@@ -1346,7 +1340,7 @@ public class MockServer {
   }
 
   private void handleGetLoanType(RoutingContext ctx) {
-    logger.info("handleGetLoanType got: " + ctx.request().path());
+    logger.info("handleGetLoanType got: {}", ctx.request().path());
     String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     try {
       if (NON_EXIST_LOAN_TYPE_TENANT.equals(tenantId)) {
@@ -1370,18 +1364,18 @@ public class MockServer {
   }
 
   private void handleGetIdentifierType(RoutingContext ctx) {
-    logger.info("handleGetIdentifierType got: " + ctx.request().path());
+    logger.info("handleGetIdentifierType got: {}", ctx.request().path());
     try {
-        // Filter result based on name from query
-        String query = ctx.request().getParam("query");
-        JsonObject entries = new JsonObject(getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
-        if (query != null) {
-          String name = query.split("==")[1];
-          filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
-        }
+      // Filter result based on name from query
+      String query = ctx.request().getParam("query");
+      JsonObject entries = new JsonObject(getMockData(IDENTIFIER_TYPES_MOCK_DATA_PATH + "identifierTypes.json"));
+      if (query != null) {
+        String name = query.split("==")[1];
+        filterByKeyValue("name", name, entries.getJsonArray(IDENTIFIER_TYPES));
+      }
 
-        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
-        addServerRqRsData(HttpMethod.GET, IDENTIFIER_TYPES, entries);
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, IDENTIFIER_TYPES, entries);
     } catch (IOException e) {
       ctx.response()
         .setStatusCode(404)
@@ -1390,7 +1384,7 @@ public class MockServer {
   }
 
   private void handleGetAccessProviders(RoutingContext ctx) {
-    logger.info("handleGetAccessProviders got: " + ctx.request().path());
+    logger.info("handleGetAccessProviders got: {}", ctx.request().path());
     String query = ctx.request().getParam("query");
     JsonObject body = null;
 
@@ -1413,10 +1407,8 @@ public class MockServer {
       } else if (getQuery(ACTIVE_ACCESS_PROVIDER_B).equals(query)) {
         body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"));
       } else if (getQuery(ORGANIZATION_NOT_VENDOR).equals(query)) {
-        body = new JsonObject(
-            getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
-      }
-      else {
+        body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
+      } else {
         JsonArray organizations = new JsonArray();
 
         // Search for Organizations by id
@@ -1444,8 +1436,9 @@ public class MockServer {
   }
 
   private void getOrganizationById(RoutingContext ctx) {
-    logger.info("handleGetOrganizationById got: " + ctx.request().path());
+    logger.info("handleGetOrganizationById got: {}", ctx.request().path());
     String vendorId = ctx.request().getParam(ID);
+    logger.info("id: {}", vendorId);
     JsonObject body;
     if (NON_EXIST_VENDOR_ID.equals(vendorId)) {
       serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
@@ -1456,38 +1449,32 @@ public class MockServer {
       if (body != null) {
         serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
       } else {
+        body = getMockEntry(ORGANIZATION_STORAGE, vendorId).orElse(null);
+        if (Objects.nonNull(body)) {
+          serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
+          return;
+        }
         serverResponse(ctx, HttpStatus.HTTP_NOT_FOUND.toInt(), APPLICATION_JSON, "vendor not found");
       }
     }
   }
 
   private JsonObject getOrganizationById(String organizationId) {
-    logger.debug("Searching for organization by id={}", organizationId);
+    logger.debug("Searching for organization by id: {}", organizationId);
     JsonObject body;
     try {
-      switch (organizationId) {
-        case ACTIVE_VENDOR_ID:
-          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "active_vendor.json"));
-          break;
-        case INACTIVE_VENDOR_ID:
-          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "inactive_vendor.json"));
-          break;
-        case PENDING_VENDOR_ID:
-          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "pending_vendor.json"));
-          break;
-        case ACTIVE_ACCESS_PROVIDER_B:
-          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"))
+      body = switch (organizationId) {
+        case ACTIVE_VENDOR_ID -> new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "active_vendor.json"));
+        case INACTIVE_VENDOR_ID -> new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "inactive_vendor.json"));
+        case PENDING_VENDOR_ID -> new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "pending_vendor.json"));
+        case ACTIVE_ACCESS_PROVIDER_B ->
+          new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "one_access_providers_active.json"))
             .getJsonArray(ORGANIZATIONS).getJsonObject(0);
-          break;
-        case ORGANIZATION_NOT_VENDOR:
-          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
-          break;
-        case VENDOR_WITH_BAD_CONTENT:
-          body = new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "vendor_bad_content.json"));
-          break;
-        default:
-          body = null;
-      }
+        case ORGANIZATION_NOT_VENDOR -> new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "not_vendor.json"));
+        case VENDOR_WITH_BAD_CONTENT ->
+          new JsonObject(getMockData(ORGANIZATIONS_MOCK_DATA_PATH + "vendor_bad_content.json"));
+        default -> null;
+      };
     } catch (IOException e) {
       body = null;
     }
@@ -1499,7 +1486,7 @@ public class MockServer {
   }
 
   private void handleGetInstanceStatus(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetInstanceStatus got: {}", ctx.request().path());
 
     String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     try {
@@ -1522,7 +1509,7 @@ public class MockServer {
   }
 
   private void handleGetInstanceType(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetInstanceType got: {}", ctx.request().path());
 
     String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     try {
@@ -1549,7 +1536,7 @@ public class MockServer {
   }
 
   private void handleGetHoldingsSource(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetHoldingsSource got: {}", ctx.request().path());
 
     String tenantId = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     try {
@@ -1589,7 +1576,7 @@ public class MockServer {
   }
 
   private void handleGetReceivingHistory(RoutingContext ctx) {
-    logger.info("handleGetItemsRecords got: " + ctx.request().path());
+    logger.info("handleGetItemsRecords got: {}", ctx.request().path());
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     addServerRqQuery(RECEIVING_HISTORY, queryParam);
     try {
@@ -1650,7 +1637,6 @@ public class MockServer {
     } catch (IOException e) {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     }
-
   }
 
   private void handleDeleteGenericSubObj(RoutingContext ctx, String subObj) {
@@ -1671,11 +1657,11 @@ public class MockServer {
     }
   }
 
-  private void handleGetPoLines(RoutingContext ctx, String type) {
+  private void handleGetPoLines(RoutingContext ctx) {
     logger.info("handleGetPoLines got: {}?{}", ctx.request().path(), ctx.request().query());
 
     String queryParam = StringUtils.trimToEmpty(ctx.request().getParam("query"));
-    addServerRqQuery(type, queryParam);
+    addServerRqQuery(org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE, queryParam);
     if (queryParam.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
     } else if (queryParam.contains(ID_FOR_INTERNAL_SERVER_ERROR) || queryParam.contains(PO_ID_GET_LINES_INTERNAL_SERVER_ERROR)) {
@@ -1694,22 +1680,16 @@ public class MockServer {
         polIds = queryParam.startsWith("id==") ? extractIdsFromQuery(queryParam) : Collections.emptyList();
       }
 
-      List<JsonObject> postedPoLines = getRqRsEntries(HttpMethod.SEARCH, type);
+      List<JsonObject> postedPoLines = getRqRsEntries(HttpMethod.SEARCH, org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE);
 
       try {
         PoLineCollection poLineCollection = new PoLineCollection();
         if (postedPoLines.isEmpty()) {
           if (poId.equals(ORDER_ID_WITH_PO_LINES) || !polIds.isEmpty()) {
-            poLineCollection = new JsonObject(getMockData(POLINES_COLLECTION)).mapTo(PoLineCollection.class);
+            poLineCollection = new JsonObject(getMockData(PO_LINES_COLLECTION)).mapTo(PoLineCollection.class);
 
             // Filter PO Lines either by PO id or by expected line ids
-            Iterator<PoLine> iterator = poLineCollection.getPoLines().iterator();
-            while (iterator.hasNext()) {
-              PoLine poLine = iterator.next();
-              if (polIds.isEmpty() ? !poId.equals(poLine.getPurchaseOrderId()) : !polIds.contains(poLine.getId())) {
-                iterator.remove();
-              }
-            }
+            poLineCollection.getPoLines().removeIf(poLine -> polIds.isEmpty() ? !poId.equals(poLine.getPurchaseOrderId()) : !polIds.contains(poLine.getId()));
             poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
           } else {
             String filePath;
@@ -1726,7 +1706,7 @@ public class MockServer {
         // Attempt to find POLine in mock server memory
           poLineCollection.getPoLines().addAll(postedPoLines.stream()
             .map(jsonObj -> jsonObj.mapTo(PoLine.class))
-            .collect(Collectors.toList()));
+            .toList());
           poLineCollection.getPoLines().removeIf(poLine -> !polIds.isEmpty() && !polIds.contains(poLine.getId()));
         }
 
@@ -1738,30 +1718,27 @@ public class MockServer {
         JsonObject po_lines = JsonObject.mapFrom(poLineCollection);
         logger.info(po_lines.encodePrettily());
 
-        addServerRqRsData(HttpMethod.GET, type, po_lines);
+        addServerRqRsData(HttpMethod.GET, org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE, po_lines);
         serverResponse(ctx, 200, APPLICATION_JSON, po_lines.encode());
       } catch (NoSuchFileException e) {
         PoLineCollection poLineCollection = new PoLineCollection();
 
         // Attempt to find POLine in mock server memory
-        if (postedPoLines != null) {
-          String finalPoId = poId;
-          poLineCollection.getPoLines().addAll(postedPoLines.stream()
-            .map(json -> json.mapTo(PoLine.class))
-            .filter(line -> finalPoId.equals(line.getPurchaseOrderId()))
-            .collect(Collectors.toList()));
-        }
+        poLineCollection.getPoLines().addAll(postedPoLines.stream()
+          .map(json -> json.mapTo(PoLine.class))
+          .filter(line -> poId.equals(line.getPurchaseOrderId()))
+          .toList());
         poLineCollection.setTotalRecords(poLineCollection.getPoLines().size());
 
         JsonObject entries = JsonObject.mapFrom(poLineCollection);
-        addServerRqRsData(HttpMethod.GET, type, entries);
+        addServerRqRsData(HttpMethod.GET, org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE, entries);
         serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
       } catch (IOException e) {
         PoLineCollection poLineCollection = new PoLineCollection();
         poLineCollection.setTotalRecords(0);
 
         JsonObject entries = JsonObject.mapFrom(poLineCollection);
-        addServerRqRsData(HttpMethod.GET, type, entries);
+        addServerRqRsData(HttpMethod.GET, org.folio.orders.utils.ResourcePathResolver.PO_LINES_STORAGE, entries);
         serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(poLineCollection).encodePrettily());
       }
     }
@@ -1825,9 +1802,9 @@ public class MockServer {
   }
 
   private void handleGetPoLineById(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetPoLineById: got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
 
     addServerRqRsData(HttpMethod.GET, PO_LINES_STORAGE, new JsonObject().put(ID, id));
 
@@ -1837,7 +1814,6 @@ public class MockServer {
       serverResponse(ctx, 200, APPLICATION_JSON, encodePrettily(getMinimalContentCompositePoLine()));
     } else {
       try {
-
         // Attempt to find POLine in mock server memory
         JsonObject pol = getMockEntry(PO_LINES_STORAGE, id).orElse(null);
 
@@ -1863,9 +1839,9 @@ public class MockServer {
   }
 
   private void handleGetGenericSubObj(RoutingContext ctx, String subObj) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
 
     JsonObject data = new JsonObject().put(ID, id);
     addServerRqRsData(HttpMethod.GET, subObj, data);
@@ -1885,7 +1861,7 @@ public class MockServer {
   }
 
   private void handleGetGenericSubObjs(RoutingContext ctx, String subObj) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetGenericSubObjs got: {}", ctx.request().path());
 
     String query = StringUtils.trimToEmpty(ctx.request().getParam(QUERY));
     addServerRqQuery(subObj, query);
@@ -1923,8 +1899,9 @@ public class MockServer {
   }
 
   private void handleGetPieceById(RoutingContext ctx) {
-    logger.info("handleGetPiecesById got: " + ctx.request().path());
+    logger.info("handleGetPiecesById got: {}", ctx.request().path());
     String pieceId = ctx.request().getParam(ID);
+    logger.info("id: {}", pieceId);
     try {
       if (ID_DOES_NOT_EXIST.equals(pieceId)) {
         serverResponse(ctx, 404, APPLICATION_JSON, pieceId);
@@ -1932,19 +1909,19 @@ public class MockServer {
         serverResponse(ctx, 500, APPLICATION_JSON, pieceId);
       } else {
         // Attempt to find POLine in mock server memory
-        JsonObject body = getMockEntry(PIECES_STORAGE, pieceId).orElse(null);
-        if (body == null) {
+        JsonObject data = getMockEntry(PIECES_STORAGE, pieceId).orElse(null);
+        if (data == null) {
           if (PIECE_POLINE_CONSISTENCY_404_POLINE_NOT_FOUND_ID.equals(pieceId)) {
-            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
-
+            data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-poline-not-exists-5b454292-6aaa-474f-9510-b59a564e0c8d.json"));
           } else if (PIECE_POLINE_CONSISTENT_RECEIPT_STATUS_ID.equals(pieceId)) {
-            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
+            data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-received-consistent-receipt-status-5b454292-6aaa-474f-9510-b59a564e0c8d2.json"));
           } else {
-            body = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecord-А.json"));
+            // Load piece by id
+            data = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecord-%s.json", pieceId)));
           }
         }
-        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body.encodePrettily());
-
+        logger.info("handleGetPieceById, data: {}", data.encodePrettily());
+        serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, data.encodePrettily());
       }
     } catch (IOException e) {
       serverResponse(ctx, 404, APPLICATION_JSON, pieceId);
@@ -1956,17 +1933,24 @@ public class MockServer {
     String requestQuery = ctx.request().getParam("query");
     MultiMap requestHeaders = ctx.request().headers();
     logger.info("handleGetPieces requestPath: {}, requestQuery: {}, requestHeaders: {}", requestPath, requestQuery, requestHeaders);
-    if (requestQuery.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
+    if (Objects.nonNull(requestQuery) && requestQuery.contains(ID_FOR_PIECES_INTERNAL_SERVER_ERROR)) {
       logger.info("handleGetPieces (with internal server error)");
       addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, new JsonObject());
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       PieceCollection pieces;
+      logger.info("handleGetPieces (all records), pieces already present: {}", getMockEntries(PIECES_STORAGE, Piece.class).isPresent());
+      // Prevent loading of unnecessary pieces from other tests for tenant that was made specifically for Claiming
       if (getMockEntries(PIECES_STORAGE, Piece.class).isPresent()) {
-        logger.info("handleGetPieces (all records)");
+        var isClaimingTenant = requestHeaders.contains(OKAPI_TENANT, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS.getValue(), false);
+        logger.info("handleGetPieces (all records), isClaimingTenant: {}", isClaimingTenant);
         try {
           List<Piece> piecesList = getMockEntries(PIECES_STORAGE, Piece.class).get();
-          pieces = new PieceCollection().withPieces(piecesList);
+          if (!isClaimingTenant) {
+            pieces = new PieceCollection().withPieces(piecesList);
+          } else {
+            pieces = new PieceCollection().withPieces(piecesList.stream().filter(piece -> piece.getReceivingStatus() == LATE).toList());
+          }
           pieces.setTotalRecords(pieces.getPieces().size());
         } catch (Exception e) {
           throw new IllegalStateException(String.format("Cannot retrieved mock data for requestPath: %s, requestQuery: %s", requestPath, requestQuery));
@@ -1989,20 +1973,19 @@ public class MockServer {
                 status = condition.split("receivingStatus==")[1];
               }
             }
-            logger.info("poLineId: " + polId);
-            logger.info("receivingStatus: " + status);
+            logger.info("poLineId: {}",  polId);
+            logger.info("receivingStatus: {}", status);
 
             String path = PIECE_RECORDS_MOCK_DATA_PATH + String.format("pieceRecords-%s.json", polId);
             pieces = new JsonObject(getMockData(path)).mapTo(PieceCollection.class);
             // Filter piece records by receiving status
             if (StringUtils.isNotEmpty(status)) {
               Piece.ReceivingStatus receivingStatus = Piece.ReceivingStatus.fromValue(status);
-              pieces.getPieces()
-                .removeIf(piece -> receivingStatus != piece.getReceivingStatus());
+              pieces.getPieces().removeIf(piece -> receivingStatus != piece.getReceivingStatus());
             }
           } else if (requestQuery.contains("id==")) {
             logger.info("handleGetPieces (by id)");
-            pieces = new JsonObject(getMockData(PIECE_RECORDS_MOCK_DATA_PATH + "pieceRecordsCollection.json")).mapTo(PieceCollection.class);
+            pieces = new JsonObject(getMockData(PIECES_COLLECTION)).mapTo(PieceCollection.class);
             List<String> pieceIds = extractIdsFromQuery(requestQuery);
             pieces.getPieces().removeIf(piece -> !pieceIds.contains(piece.getId()));
             // fix consistency with titles: the piece's title id should be the same as one of the titles ids
@@ -2020,7 +2003,6 @@ public class MockServer {
           }
 
           pieces.setTotalRecords(pieces.getPieces().size());
-
         } catch (Exception e) {
           logger.info("handleGetPieces (with empty piece collection on exception)");
           pieces = new PieceCollection();
@@ -2030,6 +2012,7 @@ public class MockServer {
 
       JsonObject data = JsonObject.mapFrom(pieces);
       addServerRqRsData(HttpMethod.GET, PIECES_STORAGE, data);
+      logger.info("handleGetPieces, data: {}", data.encodePrettily());
 
       ctx.response()
         .setStatusCode(200)
@@ -2045,7 +2028,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.contains("poLineId==")) {
           ids = extractValuesFromQuery("poLineId", query);
@@ -2065,9 +2047,9 @@ public class MockServer {
   }
 
   private void handleGetRoutingListById(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetRoutingListById got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
 
     addServerRqRsData(HttpMethod.GET, ROUTING_LISTS, new JsonObject().put(ID, id));
 
@@ -2075,7 +2057,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         // Attempt to find title in mock server memory
         JsonObject existantTitle = getMockEntry(ROUTING_LISTS, id).orElse(null);
 
@@ -2099,7 +2080,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         List<String> ids = Collections.emptyList();
         if (query.contains("poLineId==")) {
           ids = extractValuesFromQuery("poLineId", query);
@@ -2138,7 +2118,7 @@ public class MockServer {
   }
 
   private void handlePutGenericSubObj(RoutingContext ctx, String subObj) {
-    logger.info("handlePutGenericSubObj got: PUT " + ctx.request().path());
+    logger.info("handlePutGenericSubObj got: PUT {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
 
     addServerRqRsData(HttpMethod.PUT, subObj, ctx.body().asJsonObject());
@@ -2172,10 +2152,9 @@ public class MockServer {
   }
 
   private void handleGetPurchaseOrderById(RoutingContext ctx) {
-    logger.info("handleGetPurchaseOrderById got: GET " + ctx.request().path());
+    logger.info("handleGetPurchaseOrderById got: GET {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
-
+    logger.info("id: {}", id);
     try {
       // Attempt to find PO in mock server memory
       JsonObject po = getMockEntry(PURCHASE_ORDER_STORAGE, id).orElse(null);
@@ -2220,16 +2199,15 @@ public class MockServer {
     }
   }
 
-  private void handleGetPurchaseOrderByQuery(RoutingContext ctx, String orderType) {
-
+  private void handleGetPurchaseOrderByQuery(RoutingContext ctx) {
     String query = StringUtils.substringAfter(ctx.request().absoluteURI(), "query=");
-    addServerRqQuery(orderType, query);
+    addServerRqQuery(org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE, query);
 
     JsonObject po = new JsonObject();
     PurchaseOrderCollection orderCollection = new PurchaseOrderCollection();
 
     // Attempt to find POLine in mock server memory
-    List<JsonObject> postedOrders = serverRqRs.column(HttpMethod.SEARCH).get(orderType);
+    List<JsonObject> postedOrders = serverRqRs.column(HttpMethod.SEARCH).get(org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE);
 
     if (postedOrders != null) {
       orderCollection
@@ -2244,14 +2222,14 @@ public class MockServer {
       po.remove("totalEstimatedPrice");
       po.remove("totalItems");
 
-      addServerRqRsData(HttpMethod.GET, orderType, po);
+      addServerRqRsData(HttpMethod.GET, org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE, po);
     } else {
       if (query.contains(BAD_QUERY)) {
         serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
       } else if (query.contains(ID_FOR_INTERNAL_SERVER_ERROR)) {
         serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
       } else {
-        addServerRqRsData(HttpMethod.GET, orderType, po);
+        addServerRqRsData(HttpMethod.GET, org.folio.orders.utils.ResourcePathResolver.PURCHASE_ORDER_STORAGE, po);
         Matcher matcher = Pattern.compile(".*poNumber==(\\S[^)]+).*").matcher(query);
         final String poNumber = matcher.find() ? matcher.group(1) : EMPTY;
         switch (poNumber) {
@@ -2267,7 +2245,7 @@ public class MockServer {
   }
 
   private void handlePostPurchaseOrder(RoutingContext ctx) {
-    logger.info("got: " + ctx.body().asString());
+    logger.info("handlePostPurchaseOrder got: {}", ctx.body().asString());
     if (ORDER_ID_DUPLICATION_ERROR_USER_ID.equals(ctx.request().getHeader(RestVerticle.OKAPI_USERID_HEADER))) {
       JsonObject body = ctx.body().asJsonObject();
       Error error = new Error()
@@ -2290,23 +2268,8 @@ public class MockServer {
       .end(JsonObject.mapFrom(po).encodePrettily());
   }
 
-  private void handlePostGeneric(RoutingContext ctx, String objectType) {
-    logger.info("handlePostGeneric {} got: {}", objectType, ctx.body().asString());
-
-    if (objectType.equals(ctx.request().getHeader(HEADER_SERVER_ERROR))) {
-      serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
-    } else {
-      String id = UUID.randomUUID().toString();
-      JsonObject body = ctx.body().asJsonObject();
-      body.put(ID, id);
-      addServerRqRsData(HttpMethod.POST, objectType, body);
-
-      serverResponse(ctx, 201, APPLICATION_JSON, body.encodePrettily());
-    }
-  }
-
   private void handlePostGenericSubObj(RoutingContext ctx, String subObj) {
-    logger.info("got: " + ctx.body().asString());
+    logger.info("handlePostGenericSubObj got: {}", ctx.body().asString());
 
     String echoStatus = ctx.request().getHeader(X_ECHO_STATUS);
 
@@ -2359,7 +2322,7 @@ public class MockServer {
   }
 
   private void handleBatchTransactions(RoutingContext ctx) {
-    logger.info("handleBatchTransactions got: " + ctx.request().path());
+    logger.info("handleBatchTransactions got: {}", ctx.request().path());
 
     String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
 
@@ -2425,7 +2388,6 @@ public class MockServer {
             .withSourcePoLineId("a6edc906-2f9f-5fb2-a373-efac406f0ef2")
             .withStatus(Encumbrance.Status.UNRELEASED))
           .withMetadata(new Metadata());
-        List<Transaction> transactions = List.of(transaction1);
         TransactionCollection transactionCollection = new TransactionCollection().withTransactions(List.of(transaction1, transaction2)).withTotalRecords(2);
         body = JsonObject.mapFrom(transactionCollection).encodePrettily();
       } else if (query.contains("encumbrance.sourcePoLineId == 50fb5514-cdf1-11e8-a8d5-f2801f1b9fd1")) {
@@ -2459,7 +2421,7 @@ public class MockServer {
   }
 
   private void handleUserTenantsGetEntry(RoutingContext ctx) {
-    String body = new JsonObject().put("userTenants", org.assertj.core.util.Lists.emptyList()).encodePrettily();
+    String body = new JsonObject().put("userTenants", Collections.emptyList()).encodePrettily();
     serverResponse(ctx, HttpStatus.HTTP_OK.toInt(), APPLICATION_JSON, body);
     addServerRqRsData(HttpMethod.GET, USER_TENANTS_ENDPOINT, new JsonObject(body));
   }
@@ -2478,6 +2440,7 @@ public class MockServer {
       case PREFIXES -> Prefix.class;
       case SUFFIXES -> Suffix.class;
       case TAGS -> Tag.class;
+      case DATA_EXPORT_SPRING_CREATE_JOB, DATA_EXPORT_SPRING_EXECUTE_JOB -> Object.class;
       default -> {
         fail("The sub-object is unknown");
         yield null;
@@ -2486,14 +2449,13 @@ public class MockServer {
   }
 
   private void handlePostPOLine(RoutingContext ctx) {
-    logger.info("got poLine: " + ctx.body().asString());
+    logger.info("handlePostPOLine got poLine: {}", ctx.body().asString());
     JsonObject body = ctx.body().asJsonObject();
     org.folio.rest.acq.model.PoLine pol = body.mapTo(org.folio.rest.acq.model.PoLine.class);
 
     if (pol.getId() == null) {
       pol.setId(UUID.randomUUID().toString());
     }
-
 
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(pol.getPurchaseOrderId())) {
       ctx.response()
@@ -2571,7 +2533,7 @@ public class MockServer {
   };
 
   private void handleGetAcquisitionsUnits(RoutingContext ctx) {
-    logger.info("handleGetAcquisitionsUnits got: " + ctx.request().path());
+    logger.info("handleGetAcquisitionsUnits got: {}", ctx.request().path());
     String tenant = ctx.request().getHeader(OKAPI_HEADER_TENANT);
     String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     addServerRqQuery(ACQUISITIONS_UNITS, query);
@@ -2588,7 +2550,7 @@ public class MockServer {
       if (!query.contains(ALL_UNITS_CQL)) {
         List<Boolean> isDeleted = extractValuesFromQuery(IS_DELETED_PROP, query).stream()
           .map(Boolean::valueOf)
-          .collect(toList());
+          .toList();
         if (!isDeleted.isEmpty()) {
           units.getAcquisitionsUnits().removeIf(unit -> !isDeleted.contains(unit.getIsDeleted()));
         }
@@ -2615,7 +2577,7 @@ public class MockServer {
   }
 
   private void handleGetAcquisitionsUnit(RoutingContext ctx) {
-    logger.info("handleGetAcquisitionsUnits got: " + ctx.request().path());
+    logger.info("handleGetAcquisitionsUnit got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
 
     AcquisitionsUnitCollection units;
@@ -2641,13 +2603,12 @@ public class MockServer {
   }
 
   private void handleGetAcquisitionsMemberships(RoutingContext ctx) {
-    logger.info("handleGetAcquisitionsMemberships got: " + ctx.request().path());
+    logger.info("handleGetAcquisitionsMemberships got: {}", ctx.request().path());
 
     String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     if (query.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
     } else {
-
       Matcher userIdMatcher = Pattern.compile(".*userId==(\\S+).*").matcher(query);
       final String userId = userIdMatcher.find() ? userIdMatcher.group(1) : EMPTY;
 
@@ -2673,7 +2634,7 @@ public class MockServer {
   }
 
   private void handleGetAcquisitionsMembership(RoutingContext ctx) {
-    logger.info("handleGetAcquisitionsMembership got: " + ctx.request().path());
+    logger.info("handleGetAcquisitionsMembership got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
 
     AcquisitionsUnitMembershipCollection memberships;
@@ -2699,7 +2660,7 @@ public class MockServer {
   }
 
   private void handleGetAcquisitionMethod(RoutingContext ctx) {
-    logger.info("handleGetAcquisitionMethod got: " + ctx.request().path());
+    logger.info("handleGetAcquisitionMethod got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
 
     AcquisitionMethodCollection acquisitionMethodCollection;
@@ -2725,13 +2686,12 @@ public class MockServer {
   }
 
   private void handleGetAcquisitionMethods(RoutingContext ctx) {
-    logger.info("handleGetAcquisitionMethods got: " + ctx.request().path());
+    logger.info("handleGetAcquisitionMethods got: {}", ctx.request().path());
 
     String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     if (query.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
     } else {
-
       Matcher sourceMatcher = Pattern.compile(".*source==(\\S+).*").matcher(query);
       final String acquisitionMethodSource = sourceMatcher.find() ? sourceMatcher.group(1) : EMPTY;
 
@@ -2757,8 +2717,7 @@ public class MockServer {
   }
 
   private void handleGetIsbnConverter(RoutingContext ctx) {
-    logger.info("handleGetIsbnConverter got: " + ctx.request()
-      .path());
+    logger.info("handleGetIsbnConverter got: {}", ctx.request().path());
     String isbn = ctx.request()
       .getParam("isbn");
     JsonObject data = new JsonObject();
@@ -2776,7 +2735,7 @@ public class MockServer {
   }
 
   private void handleGetOrderTemplates(RoutingContext ctx) {
-    logger.info("handleGetOrderTemplates got: " + ctx.request().path());
+    logger.info("handleGetOrderTemplates got: {}", ctx.request().path());
 
     String query = StringUtils.trimToEmpty(ctx.request().getParam("query"));
     addServerRqQuery(ORDER_TEMPLATES, query);
@@ -2784,7 +2743,6 @@ public class MockServer {
     if (query.contains(BAD_QUERY)) {
       serverResponse(ctx, 400, APPLICATION_JSON, Response.Status.BAD_REQUEST.getReasonPhrase());
     } else {
-
       Matcher templateCodeMatcher = Pattern.compile(".*templateCode==(\\S+).*").matcher(query);
       final String templateCode = templateCodeMatcher.find() ? templateCodeMatcher.group(1) : EMPTY;
 
@@ -2810,11 +2768,10 @@ public class MockServer {
     }
   }
 
-
   private void handleGetOrderTitleById(RoutingContext ctx) {
-    logger.info("got: " + ctx.request().path());
+    logger.info("handleGetOrderTitleById got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
 
     addServerRqRsData(HttpMethod.GET, TITLES, new JsonObject().put(ID, id));
 
@@ -2822,7 +2779,6 @@ public class MockServer {
       serverResponse(ctx, 500, APPLICATION_JSON, INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
       try {
-
         // Attempt to find title in mock server memory
         JsonObject existantTitle = getMockEntry(TITLES, id).orElse(null);
 
@@ -2840,7 +2796,7 @@ public class MockServer {
   }
 
   private void handleGetBudgetByFinanceId(RoutingContext ctx) {
-    logger.info("handleGetInvoiceDocumentById got: GET " + ctx.request().path());
+    logger.info("handleGetInvoiceDocumentById got: GET {}", ctx.request().path());
     String fundId = ctx.request().getParam("id");
 
     JsonObject collection = getBudgetsByFundIds(Collections.singletonList(fundId));
@@ -2862,7 +2818,7 @@ public class MockServer {
   }
 
   private void handleGetRateOfExchange(RoutingContext ctx) {
-    logger.info("handleGetRateOfExchange: " + ctx.request().path());
+    logger.info("handleGetRateOfExchange: {}", ctx.request().path());
     String fromParam = StringUtils.trimToEmpty(ctx.request().getParam("from"));
     String toParam = StringUtils.trimToEmpty(ctx.request().getParam("to"));
     ExchangeRate exchangeRate = new ExchangeRate().withExchangeRate(1.0d).withFrom(fromParam).withTo(toParam);
@@ -2870,14 +2826,13 @@ public class MockServer {
     serverResponse(ctx, 200, APPLICATION_JSON, JsonObject.mapFrom(exchangeRate).encodePrettily());
   }
 
-
   private void handleGetFyRollovers(RoutingContext ctx) {
-    logger.info("handleGetFyRollovers got: " + ctx.request().path());
+    logger.info("handleGetFyRollovers got: {}", ctx.request().path());
     try {
-        JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_PATH + "ledger_fiscal_year_rollover_collection.json"));
+      JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_PATH + "ledger_fiscal_year_rollover_collection.json"));
 
-        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
-        addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRollovers", entries);
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRollovers", entries);
 
     } catch (IOException e) {
       String body = buildEmptyCollection("ledgerFiscalYearRollovers");
@@ -2887,13 +2842,12 @@ public class MockServer {
   }
 
   private void handleGetFyRolloverErrors(RoutingContext ctx) {
-    logger.info("handleGetFyRolloverErrors got: " + ctx.request().path());
+    logger.info("handleGetFyRolloverErrors got: {}", ctx.request().path());
     try {
-        JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_ERRORS_PATH + "ledger_fiscal_year_rollover_error_collection.json"));
+      JsonObject entries = new JsonObject(getMockData(LEDGER_FY_ROLLOVERS_ERRORS_PATH + "ledger_fiscal_year_rollover_error_collection.json"));
 
-        serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
-        addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRolloverErrors", entries);
-
+      serverResponse(ctx, 200, APPLICATION_JSON, entries.encodePrettily());
+      addServerRqRsData(HttpMethod.GET, "ledgerFiscalYearRolloverErrors", entries);
     } catch (IOException e) {
       ctx.response()
         .setStatusCode(404)
@@ -2902,12 +2856,11 @@ public class MockServer {
   }
 
   private void handleGetOrderInvoiceRelationship(RoutingContext ctx) {
-    logger.info("handleGetOrderInvoiceRelationship got: " + ctx.request().path());
+    logger.info("handleGetOrderInvoiceRelationship got: {}", ctx.request().path());
     JsonObject emptyCollection = JsonObject.mapFrom(new OrderInvoiceRelationshipCollection().withTotalRecords(0));
 
     serverResponse(ctx, 200, APPLICATION_JSON, emptyCollection.encodePrettily());
     addServerRqRsData(HttpMethod.GET, "orderInvoiceRelationship", emptyCollection);
-
   }
 
   private void handleGetInvoiceLines(RoutingContext ctx) {
@@ -2966,11 +2919,11 @@ public class MockServer {
     addServerRqRsData(HttpMethod.GET, "invoiceLines", jo);
   }
 
-  private void handlePatchOrderLines(RoutingContext ctx, String subObj) {
-    logger.info("handlePatchOrderLines got: PATCH " + ctx.request().path());
+  private void handlePatchOrderLines(RoutingContext ctx) {
+    logger.info("handlePatchOrderLines got: PATCH {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
 
-    addServerRqRsData(HttpMethod.PATCH, subObj, ctx.body().asJsonObject());
+    addServerRqRsData(HttpMethod.PATCH, MockServer.PATCH_ORDER_LINES_REQUEST_PATCH, ctx.body().asJsonObject());
 
     if (ID_DOES_NOT_EXIST.equals(id)) {
       serverResponse(ctx, 404, APPLICATION_JSON, id);
@@ -2987,9 +2940,9 @@ public class MockServer {
   }
 
   private void handleGetJobProfileSnapshotById(RoutingContext ctx) {
-    logger.info("handleGetJobProfileSnapshotById got: " + ctx.request().path());
+    logger.info("handleGetJobProfileSnapshotById got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
@@ -3007,9 +2960,9 @@ public class MockServer {
   }
 
   private void handleGetJobExecutionById(RoutingContext ctx) {
-    logger.info("handleGetJobExecutionById got: " + ctx.request().path());
+    logger.info("handleGetJobExecutionById got: {}", ctx.request().path());
     String id = ctx.request().getParam(ID);
-    logger.info("id: " + id);
+    logger.info("id: {}", id);
     if (ID_FOR_INTERNAL_SERVER_ERROR.equals(id)) {
       serverResponse(ctx, 500, APPLICATION_JSON, Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase());
     } else {
@@ -3023,7 +2976,7 @@ public class MockServer {
   }
 
   private void handleGetOrganizations(RoutingContext ctx) {
-    logger.info("handleGetOrganizations:: got: " + ctx.request().path());
+    logger.info("handleGetOrganizations:: got: {}", ctx.request().path());
     Optional<List<Organization>> organizationsOptional = getMockEntries("organizations", Organization.class);
     if (organizationsOptional.isPresent()) {
       List<Organization> organizations = organizationsOptional.get();
