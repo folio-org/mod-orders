@@ -269,7 +269,6 @@
             "organizations-storage.organizations.collection.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put",
-            "invoices.acquisition-units.bypass.execute",
             "orders-storage.order-invoice-relationships.collection.get",
             "consortia.user-tenants.collection.get",
             "user-tenants.collection.get",
