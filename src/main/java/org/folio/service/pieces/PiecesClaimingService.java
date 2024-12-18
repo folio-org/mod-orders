@@ -90,7 +90,7 @@ public class PiecesClaimingService {
               return Future.succeededFuture(createEmptyClaimingResults(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS.getValue()));
             }
             log.info("sendClaims:: Using pieces by vendor id map, map: {}", pieceIdsByVendorIds);
-            return createJobsByVendor(config, pieceIdsByVendorIds, requestContext);
+            return createJobsByVendor(claimingCollection, config, pieceIdsByVendorIds, requestContext);
           });
       })
       .onFailure(t -> log.error("sendClaims:: Failed send claims: {}", JsonObject.mapFrom(claimingCollection).encodePrettily(), t));
@@ -151,15 +151,15 @@ public class PiecesClaimingService {
       .groupingBy(Pair::getKey, mapping(Pair::getValue, toList()));
   }
 
-  private Future<ClaimingResults> createJobsByVendor(JsonObject config, Map<String, List<String>> pieceIdsByVendorId,
-                                                     RequestContext requestContext) {
+  private Future<ClaimingResults> createJobsByVendor(ClaimingCollection claimingCollection, JsonObject config,
+                                                     Map<String, List<String>> pieceIdsByVendorId, RequestContext requestContext) {
     log.info("createJobsByVendor:: Creating jobs by vendor, vendors by pieces count: {}", pieceIdsByVendorId.size());
     if (CollectionUtils.isEmpty(pieceIdsByVendorId)) {
       log.info("createJobsByVendor:: No jobs are created, pieceIdsByVendorId is empty");
       return Future.succeededFuture(new ClaimingResults()
         .withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendorId, CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE.getValue())));
     }
-    return collectResultsOnSuccess(createUpdatePiecesAndJobFutures(config, pieceIdsByVendorId, requestContext))
+    return collectResultsOnSuccess(createUpdatePiecesAndJobFutures(claimingCollection, config, pieceIdsByVendorId, requestContext))
       .map(updatedPieceLists -> {
         if (CollectionUtils.isEmpty(updatedPieceLists)) {
           log.info("createJobsByVendor:: No pieces were processed for claiming");
@@ -173,8 +173,8 @@ public class PiecesClaimingService {
       });
   }
 
-  private List<Future<List<String>>> createUpdatePiecesAndJobFutures(JsonObject config, Map<String, List<String>> pieceIdsByVendorId,
-                                                                     RequestContext requestContext) {
+  private List<Future<List<String>>> createUpdatePiecesAndJobFutures(ClaimingCollection claimingCollection, JsonObject config,
+                                                                     Map<String, List<String>> pieceIdsByVendorId, RequestContext requestContext) {
     var updatePiecesAndJobFutures = new ArrayList<Future<List<String>>>();
     pieceIdsByVendorId.forEach((vendorId, pieceIds) -> config.stream()
       .filter(pieceIdsByVendorIdEntry -> isExportTypeClaimsAndCorrectVendorId(vendorId, pieceIdsByVendorIdEntry)
@@ -182,7 +182,7 @@ public class PiecesClaimingService {
       .forEach(pieceIdsByVendorIdEntry -> {
         log.info("createJobsByVendor:: Preparing job integration detail for vendor, vendor id: {}, pieces: {}, job key: {}",
           vendorId, pieceIds.size(), pieceIdsByVendorIdEntry.getKey());
-        updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(pieceIds, pieceIdsByVendorIdEntry, requestContext));
+        updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(claimingCollection, pieceIds, pieceIdsByVendorIdEntry, requestContext));
       }));
     return updatePiecesAndJobFutures;
   }
@@ -208,10 +208,11 @@ public class PiecesClaimingService {
     return pieceIdsByVendorIdEntry.getKey().startsWith(String.format("%s_%s", EXPORT_TYPE_CLAIMS, vendorId));
   }
 
-  private Future<List<String>> updatePiecesAndCreateJob(List<String> pieceIds, Map.Entry<String, Object> pieceIdsByVendorIdEntry,
-                                                        RequestContext requestContext) {
+  private Future<List<String>> updatePiecesAndCreateJob(ClaimingCollection claimingCollection, List<String> pieceIds,
+                                                        Map.Entry<String, Object> pieceIdsByVendorIdEntry, RequestContext requestContext) {
     log.info("updatePiecesAndCreateJob:: Updating pieces and creating a job, job key: {}, count: {}", pieceIdsByVendorIdEntry.getKey(), pieceIds.size());
-    return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT, requestContext)
+    return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT,
+        claimingCollection.getClaimingInterval(), claimingCollection.getInternalNote(), claimingCollection.getExternalNote(), requestContext)
         .compose(v -> createJob(pieceIdsByVendorIdEntry.getKey(), pieceIdsByVendorIdEntry.getValue(), pieceIds, requestContext).map(pieceIds));
   }
 

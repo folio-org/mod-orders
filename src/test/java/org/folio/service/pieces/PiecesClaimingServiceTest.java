@@ -82,7 +82,7 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_noConfigEntries(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1"));
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()));
@@ -97,7 +97,7 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_noPiecesFound(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1"));
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("key", "value")));
@@ -113,7 +113,7 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_pieceStatusNotLate(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1"));
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
@@ -121,7 +121,7 @@ public class PiecesClaimingServiceTest {
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
     when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withIsVendor(true)));
-    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 
@@ -135,7 +135,7 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_success(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1"));
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
@@ -143,7 +143,7 @@ public class PiecesClaimingServiceTest {
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
     when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withIsVendor(true)));
-    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 
@@ -158,7 +158,7 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_successWithTwoPieces(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2"));
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("CLAIMS_vendorId", createIntegrationDetail())));
@@ -169,7 +169,7 @@ public class PiecesClaimingServiceTest {
     when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId1")));
     when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
     when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withIsVendor(true)));
-    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 
@@ -186,7 +186,7 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_successWithMultipleOrganizations(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5"));
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
@@ -216,7 +216,7 @@ public class PiecesClaimingServiceTest {
       return Future.succeededFuture(new Organization().withId(vendorId).withIsVendor(true));
     });
 
-    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 
@@ -241,7 +241,7 @@ public class PiecesClaimingServiceTest {
 
   @Test
   void testSendClaims_successWithMultipleOrganizationsAndOneIntegrationDetail(VertxTestContext testContext) {
-    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5"));
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1", "pieceId2", "pieceId3", "pieceId4", "pieceId5")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
 
     when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
@@ -270,7 +270,7 @@ public class PiecesClaimingServiceTest {
       return Future.succeededFuture(new Organization().withId(vendorId).withIsVendor(true));
     });
 
-    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any())).thenReturn(Future.succeededFuture());
+    when(pieceUpdateFlowManager.updatePiecesStatuses(any(), any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
     when(restClient.post(eq(resourcesPath(DATA_EXPORT_SPRING_CREATE_JOB)), any(), any(), any())).thenReturn(Future.succeededFuture(new JsonObject().put("status", "CREATED")));
     when(restClient.postEmptyResponse(any(), any(), any())).thenReturn(Future.succeededFuture());
 

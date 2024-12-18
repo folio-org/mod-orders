@@ -204,6 +204,8 @@ public class PiecesClaimingApiTest {
       assertThat(jobCreations, hasSize(dto.jobCreations));
       assertThat(jobExecutions, hasSize(dto.jobExecutions));
       assertThat(response.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
+      pieceUpdates.forEach(pieceUpdate -> logger.info("Updated piece: {}", pieceUpdate.encodePrettily()));
+
       var claimedPieceIds = jobCreations.stream()
         .peek(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
         .map(job -> job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
