@@ -282,7 +282,7 @@ public class CreateOrderEventHandlerTest extends DiAbstractRestTest {
       .withEventType(DI_INCOMING_MARC_BIB_FOR_ORDER_PARSED.value())
       .withJobExecutionId(jobExecutionJson.getString(ID_FIELD))
       .withTenant(TENANT_ID)
-      .withToken("")
+      .withToken(null)
       .withOkapiUrl(OKAPI_URL)
       .withContext(new HashMap<>() {{
         put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
