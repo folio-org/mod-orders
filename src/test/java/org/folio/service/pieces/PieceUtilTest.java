@@ -11,7 +11,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @CopilotGenerated(partiallyGenerated = true)
-class PieceUtilTest {
+public class PieceUtilTest {
 
   @Test
   void testUpdatePieceStatusWithOldAndNewStatus() {
