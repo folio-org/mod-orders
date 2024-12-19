@@ -6,13 +6,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.tuple.Pair;
+import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Organization;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
 import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.ClaimingResults;
 import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.service.caches.ConfigurationEntriesCache;
@@ -96,9 +99,8 @@ public class PiecesClaimingService {
               log.info("createVendorPiecePair:: Using pieces by vendor map, vendorId: {}, piecesByVendor: {}", key.getId(), value));
             var vendorWithoutIntegrationDetails = checkVendorIntegrationDetails(config, pieceIdsByVendors);
             if (Objects.nonNull(vendorWithoutIntegrationDetails)) {
-              return Future.succeededFuture(new ClaimingResults()
-                .withClaimingPieceResults(List.of(new ClaimingPieceResult().withStatus(FAILURE)
-                  .withError(new Error().withMessage(String.format(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getValue(), vendorWithoutIntegrationDetails.getCode()))))));
+              var errors = List.of(new Error().withMessage(String.format(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getValue(), vendorWithoutIntegrationDetails.getCode())));
+              throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), new Errors().withErrors(errors).withTotalRecords(errors.size()));
             }
             return createJobsByVendor(claimingCollection, config, pieceIdsByVendors, requestContext);
           });
