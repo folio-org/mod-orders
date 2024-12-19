@@ -6,6 +6,7 @@ import static org.folio.orders.utils.QueryUtils.combineCqlExpressions;
 import static org.folio.orders.utils.QueryUtils.convertIdsToCqlQuery;
 import static org.folio.orders.utils.QueryUtils.getCqlExpressionForFieldNullValue;
 import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE;
+import static org.folio.orders.utils.ResourcePathResolver.PIECES_STORAGE_BATCH;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
 import static org.folio.rest.RestConstants.MAX_IDS_FOR_GET_RQ_15;
 
@@ -40,6 +41,7 @@ public class PieceStorageService {
   private static final String PIECES_BY_HOLDING_ID_QUERY = "holdingId==%s";
   private static final String PIECE_STORAGE_ENDPOINT = resourcesPath(PIECES_STORAGE);
   private static final String PIECE_STORAGE_BY_ID_ENDPOINT = PIECE_STORAGE_ENDPOINT + "/{id}";
+  private static final String PIECES_STORAGE_BATCH_ENDPOINT = resourcesPath(PIECES_STORAGE_BATCH);
 
   private final ConsortiumConfigurationService consortiumConfigurationService;
   private final ConsortiumUserTenantsRetriever consortiumUserTenantsRetriever;
@@ -80,6 +82,11 @@ public class PieceStorageService {
   public Future<Void> updatePiece(Piece piece, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(PIECE_STORAGE_BY_ID_ENDPOINT).withId(piece.getId());
     return restClient.put(requestEntry, piece, requestContext);
+  }
+
+  public Future<Void> updatePiecesBatch(PieceCollection pieceCollection, RequestContext requestContext) {
+    RequestEntry requestEntry = new RequestEntry(PIECES_STORAGE_BATCH_ENDPOINT);
+    return restClient.put(requestEntry, pieceCollection, requestContext);
   }
 
   public Future<Piece> insertPiece(Piece piece, RequestContext requestContext) {

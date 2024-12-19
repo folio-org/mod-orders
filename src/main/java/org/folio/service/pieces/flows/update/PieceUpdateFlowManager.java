@@ -27,6 +27,7 @@ import org.folio.rest.jaxrs.model.Location;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
+import org.folio.rest.jaxrs.model.PieceCollection;
 import org.folio.service.ProtectionService;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.pieces.PieceService;
@@ -176,8 +177,7 @@ public class PieceUpdateFlowManager {
     if (!Boolean.TRUE.equals(isAnyPiecesUpdated)) {
       return Future.succeededFuture();
     }
-    var updates = holder.getPieces().stream().map(piece -> pieceStorageService.updatePiece(piece, requestContext)).toList();
-    return HelperUtils.collectResultsOnSuccess(updates)
+    return pieceStorageService.updatePiecesBatch(new PieceCollection().withPieces(holder.getPieces()), requestContext)
       .compose(v -> asFuture(() -> pieceService.receiptConsistencyPiecePoLine(holder.getOrderLineId(), requestContext)));
   }
 
