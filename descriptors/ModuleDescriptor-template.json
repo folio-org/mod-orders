@@ -1157,7 +1157,6 @@
             "circulation.requests.item.move.post",
             "circulation.requests.item.put",
             "user-tenants.collection.get",
-            "orders-storage.settings.collection.get",
             "consortia.sharing-instances.item.post"
           ]
         },
