@@ -9,6 +9,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.folio.HttpStatus;
 import org.folio.rest.acq.model.Organization;
 import org.folio.rest.core.RestClient;
+import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
@@ -16,6 +17,7 @@ import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.ClaimingResults;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
+import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.service.caches.ConfigurationEntriesCache;
@@ -32,16 +34,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.folio.models.claiming.ClaimingError.CANNOT_CREATE_JOBS_AND_UPDATE_PIECES;
-import static org.folio.models.claiming.ClaimingError.CANNOT_FIND_A_PIECE_BY_ID;
-import static org.folio.models.claiming.ClaimingError.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
-import static org.folio.models.claiming.ClaimingError.CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE;
-import static org.folio.models.claiming.ClaimingError.CANNOT_RETRIEVE_CONFIG_ENTRIES;
-import static org.folio.models.claiming.ClaimingError.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
-import static org.folio.models.claiming.ClaimingError.UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS;
 import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
 import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
 import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
@@ -50,7 +46,13 @@ import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_EXECUTE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
-import static org.folio.rest.jaxrs.model.ClaimingPieceResult.Status.FAILURE;
+import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_CREATE_JOBS_AND_UPDATE_PIECES;
+import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
+import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECE_BY_ID;
+import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_GROUP_PIECES_BY_VENDOR;
+import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_RETRIEVE_CONFIG_ENTRIES;
+import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
+import static org.folio.rest.core.exceptions.ErrorCodes.UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS;
 import static org.folio.rest.jaxrs.model.ClaimingPieceResult.Status.SUCCESS;
 
 @Log4j2
@@ -60,6 +62,8 @@ public class PiecesClaimingService {
 
   private static final String JOB_STATUS = "status";
   private static final String EXPORT_TYPE_CLAIMS = "CLAIMS";
+  private static final String VENDOR_CODE_PARAMETER = "vendorCode";
+  private static final String PIECE_ID_PARAMETER = "pieceId";
 
   private final ConfigurationEntriesCache configurationEntriesCache;
   private final PieceStorageService pieceStorageService;
@@ -79,28 +83,29 @@ public class PiecesClaimingService {
    */
   public Future<ClaimingResults> sendClaims(ClaimingCollection claimingCollection, RequestContext requestContext) {
     if (CollectionUtils.isEmpty(claimingCollection.getClaimingPieceIds())) {
-      log.info("sendClaims:: No claims are sent, claiming piece ids are empty");
-      return Future.succeededFuture(createEmptyClaimingResults(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY.getValue()));
+      log.info("sendClaims:: Cannot send claims piece ids are empty - No claims are sent");
+      throwHttpException(CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
     }
     return configurationEntriesCache.loadConfiguration(DATA_EXPORT_SPRING_CONFIG_MODULE_NAME, requestContext)
       .compose(config -> {
         if (CollectionUtils.isEmpty(config.getMap())) {
-          log.info("sendClaims:: No claims are sent, config has no entries");
-          return Future.succeededFuture(createEmptyClaimingResults(CANNOT_RETRIEVE_CONFIG_ENTRIES.getValue()));
+          log.info("sendClaims:: Cannot retrieve config entries - No claims are sent");
+          throwHttpException(CANNOT_RETRIEVE_CONFIG_ENTRIES, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
         }
         var pieceIds = claimingCollection.getClaimingPieceIds().stream().toList();
         log.info("sendClaims:: Received pieces to be claimed, pieceIds: {}", pieceIds);
         return groupPieceIdsByVendor(pieceIds, requestContext)
           .compose(pieceIdsByVendors -> {
             if (CollectionUtils.isEmpty(pieceIdsByVendors)) {
-              return Future.succeededFuture(createEmptyClaimingResults(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS.getValue()));
+              log.info("sendClaims:: Cannot find pieces with late status to process - No claims are sent");
+              throwHttpException(CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS, claimingCollection, HttpStatus.HTTP_BAD_REQUEST);
             }
-            pieceIdsByVendors.forEach((key, value) ->
-              log.info("createVendorPiecePair:: Using pieces by vendor map, vendorId: {}, piecesByVendor: {}", key.getId(), value));
+            pieceIdsByVendors.forEach((vendor, piecesByVendor) ->
+              log.info("createVendorPiecePair:: Using pieces by vendor map, vendorId: {}, piecesByVendor: {}", vendor.getId(), piecesByVendor));
             var vendorWithoutIntegrationDetails = checkVendorIntegrationDetails(config, pieceIdsByVendors);
             if (Objects.nonNull(vendorWithoutIntegrationDetails)) {
-              var errors = List.of(new Error().withMessage(String.format(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getValue(), vendorWithoutIntegrationDetails.getCode())));
-              throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), new Errors().withErrors(errors).withTotalRecords(errors.size()));
+              log.info("sendClaims:: Unable to generate claims because no claim integrations exist - No claims are sent");
+              throwHttpExceptionOnMissingVendorIntegrationDetails(claimingCollection, vendorWithoutIntegrationDetails);
             }
             return createJobsByVendor(claimingCollection, config, pieceIdsByVendors, requestContext);
           });
@@ -132,7 +137,7 @@ public class PiecesClaimingService {
     uniquePiecePoLinePairs.forEach(piecePoLinePairs -> {
       var foundPiece = pieces.stream()
         .filter(Objects::nonNull).filter(piece -> Objects.nonNull(piece.getId())).filter(piece -> piece.getId().equals(piecePoLinePairs.getRight()))
-        .findFirst().orElseThrow(() -> new NoSuchElementException(String.format(CANNOT_FIND_A_PIECE_BY_ID.getValue(), piecePoLinePairs.getRight())));
+        .findFirst().orElseThrow(() -> new NoSuchElementException(String.format(CANNOT_FIND_PIECE_BY_ID.getDescription(), piecePoLinePairs.getRight())));
       var pieceIdByVendorFuture = createVendorPiecePair(piecePoLinePairs, foundPiece, requestContext);
       if (Objects.nonNull(pieceIdByVendorFuture)) {
         pieceIdByVendorFutures.add(pieceIdByVendorFuture);
@@ -183,15 +188,14 @@ public class PiecesClaimingService {
                                                      Map<Organization, List<String>> pieceIdsByVendor, RequestContext requestContext) {
     log.info("createJobsByVendor:: Creating jobs by vendor, vendors by pieces count: {}", pieceIdsByVendor.size());
     if (CollectionUtils.isEmpty(pieceIdsByVendor)) {
-      log.info("createJobsByVendor:: No jobs are created, pieceIdsByVendor is empty");
-      return Future.succeededFuture(new ClaimingResults()
-        .withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendor, CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE.getValue())));
+      log.info("createJobsByVendor:: Cannot group pieces by vendor - No jobs were create or pieces processed");
+      throwHttpException(CANNOT_GROUP_PIECES_BY_VENDOR, claimingCollection, HttpStatus.HTTP_NOT_FOUND);
     }
     return collectResultsOnSuccess(createUpdatePiecesAndJobFutures(claimingCollection, config, pieceIdsByVendor, requestContext))
       .map(updatedPieceLists -> {
         if (CollectionUtils.isEmpty(updatedPieceLists)) {
-          log.info("createJobsByVendor:: No pieces were processed for claiming");
-          return new ClaimingResults().withClaimingPieceResults(createErrorClaimingResults(pieceIdsByVendor, CANNOT_CREATE_JOBS_AND_UPDATE_PIECES.getValue()));
+          log.info("createJobsByVendor:: Cannot create jobs and update pieces - No jobs were create or pieces processed");
+          throwHttpException(CANNOT_CREATE_JOBS_AND_UPDATE_PIECES, claimingCollection, HttpStatus.HTTP_NOT_FOUND);
         }
         var successClaimingPieceResults = createSuccessClaimingResults(updatedPieceLists);
         log.info("createJobsByVendor:: Successfully processed pieces for claiming, count: {}", successClaimingPieceResults.size());
@@ -209,13 +213,9 @@ public class PiecesClaimingService {
       .forEach(configEntry -> {
         log.info("createUpdatePiecesAndJobFutures:: Preparing job integration detail for vendor, vendor id: {}, pieces: {}, job key: {}",
           vendor.getId(), pieceIds.size(), configEntry.getKey());
-        updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(claimingCollection, pieceIds, configEntry, requestContext));
+        updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(claimingCollection, pieceIds, configEntry, requestContext).map(pieceIds));
       }));
     return updatePiecesAndJobFutures;
-  }
-
-  private static ClaimingResults createEmptyClaimingResults(String message) {
-    return new ClaimingResults().withClaimingPieceResults(List.of(new ClaimingPieceResult().withError(new Error().withMessage(message))));
   }
 
   private List<ClaimingPieceResult> createSuccessClaimingResults(List<List<String>> updatedPieceLists) {
@@ -224,19 +224,12 @@ public class PiecesClaimingService {
       .toList();
   }
 
-  private List<ClaimingPieceResult> createErrorClaimingResults(Map<Organization, List<String>> pieceIdsByVendor, String message) {
-    return pieceIdsByVendor.values().stream()
-      .flatMap(Collection::stream)
-      .map(pieceId -> new ClaimingPieceResult().withPieceId(pieceId).withStatus(FAILURE).withError(new Error().withMessage(message)))
-      .toList();
-  }
-
-  private Future<List<String>> updatePiecesAndCreateJob(ClaimingCollection claimingCollection, List<String> pieceIds,
-                                                        Map.Entry<String, Object> configEntry, RequestContext requestContext) {
+  private Future<Void> updatePiecesAndCreateJob(ClaimingCollection claimingCollection, List<String> pieceIds,
+                                                Map.Entry<String, Object> configEntry, RequestContext requestContext) {
     log.info("updatePiecesAndCreateJob:: Updating pieces and creating a job, job key: {}, count: {}", configEntry.getKey(), pieceIds.size());
-    return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT,
-        claimingCollection.getClaimingInterval(), claimingCollection.getInternalNote(), claimingCollection.getExternalNote(), requestContext)
-      .compose(v -> createJob(configEntry.getKey(), configEntry.getValue(), pieceIds, requestContext).map(pieceIds));
+    return createJob(configEntry.getKey(), configEntry.getValue(), pieceIds, requestContext).map(pieceIds)
+      .compose(v -> pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT,
+        claimingCollection.getClaimingInterval(), claimingCollection.getInternalNote(), claimingCollection.getExternalNote(), requestContext));
   }
 
   private Future<Void> createJob(String configKey, Object configValue, List<String> pieceIds, RequestContext requestContext) {
@@ -252,5 +245,27 @@ public class PiecesClaimingService {
           .onSuccess(v -> log.info("createJob:: Executed job, config key: {}", configKey));
       })
       .mapEmpty();
+  }
+
+  private void throwHttpExceptionOnMissingVendorIntegrationDetails(ClaimingCollection claimingCollection, Organization vendorWithoutIntegrationDetails) {
+    var parameters = createPieceIdParameters(claimingCollection);
+    parameters.add(new Parameter().withKey(VENDOR_CODE_PARAMETER).withValue(vendorWithoutIntegrationDetails.getCode()));
+    var errors = List.of(new Error().withCode(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getCode())
+      .withMessage(String.format(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getDescription(), vendorWithoutIntegrationDetails.getCode()))
+      .withParameters(parameters));
+    throw new HttpException(HttpStatus.HTTP_UNPROCESSABLE_ENTITY.toInt(), new Errors().withErrors(errors).withTotalRecords(errors.size()));
+  }
+
+  private void throwHttpException(ErrorCodes errorCode, ClaimingCollection claimingCollection, HttpStatus httpStatus) {
+    var errors = List.of(new Error().withCode(errorCode.getCode())
+      .withMessage(errorCode.getDescription())
+      .withParameters(createPieceIdParameters(claimingCollection)));
+    throw new HttpException(httpStatus.toInt(), new Errors().withErrors(errors).withTotalRecords(errors.size()));
+  }
+
+  private ArrayList<Parameter> createPieceIdParameters(ClaimingCollection claimingCollection) {
+    return claimingCollection.getClaimingPieceIds().stream()
+      .map(pieceId -> new Parameter().withKey(PIECE_ID_PARAMETER).withValue(pieceId))
+      .collect(Collectors.toCollection(ArrayList::new));
   }
 }

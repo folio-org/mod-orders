@@ -186,14 +186,12 @@ public class PiecesClaimingApiTest {
       .filter(Objects::nonNull).filter(poLineId -> poLineId.equals(purchaseOrder.getId()))
       .toList();
 
-    purchaseOrderRetrievals.forEach(entry -> logger.info("PurchaseOrders: {}", entry));
+    purchaseOrderRetrievals.forEach(entry -> logger.info("Retrieved PurchaseOrder: {}", entry));
 
     var organizationSearches = getOrganizationSearches();
     var pieceUpdates = getPieceUpdates();
     var jobCreations = getDataExportSpringJobCreations();
     var jobExecutions = getDataExportSpringJobExecutions();
-
-    pieceUpdates.forEach(pieceUpdate -> logger.info("Updated piece: {}", pieceUpdate.encodePrettily()));
 
     if (response instanceof ClaimingResults claimingResults) {
       if (Objects.nonNull(dto)) {
@@ -212,6 +210,8 @@ public class PiecesClaimingApiTest {
         assertThat(jobCreations, hasSize(dto.jobCreations));
         assertThat(jobExecutions, hasSize(dto.jobExecutions));
         assertThat(claimingResults.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
+
+        pieceUpdates.forEach(pieceUpdate -> logger.info("Updated Piece: {}", pieceUpdate.encodePrettily()));
 
         var claimedPieceIds = jobCreations.stream()
           .peek(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
@@ -234,7 +234,10 @@ public class PiecesClaimingApiTest {
       }
     } else if (response instanceof HttpException exception) {
       assertThat(exception.getErrors().getErrors().size(), is(1));
+      assertThat(exception.getError().getCode(), is("unableToGenerateClaimsForOrgNoIntegrationDetails"));
       assertThat(exception.getError().getMessage(), is("Unable to generate claims for AMAZ because no claim integrations exist"));
+      assertThat(exception.getError().getParameters().get(0).getValue(), is(piece.getId()));
+      assertThat(exception.getError().getParameters().get(1).getValue(), is("AMAZ"));
     }
   }
 }
