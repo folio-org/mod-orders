@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.folio.models.pieces.PieceBatchStatusUpdateHolder;
 import org.folio.orders.utils.PoLineCommonUtil;
 import org.folio.rest.jaxrs.model.CompositePoLine;
 import org.folio.rest.jaxrs.model.Eresource;
@@ -79,6 +80,18 @@ public class PieceUtil {
       piece.setStatusUpdatedDate(new Date());
     }
     piece.setReceivingStatus(newStatus);
+    return isStatusChanged;
+  }
+
+  public static boolean updatePieceStatus(Piece piece, PieceBatchStatusUpdateHolder holder) {
+    var isStatusChanged = !piece.getReceivingStatus().equals(holder.getReceivingStatus());
+    if (isStatusChanged) {
+      piece.setStatusUpdatedDate(new Date());
+    }
+    piece.setReceivingStatus(holder.getReceivingStatus());
+    piece.setClaimingInterval(holder.getClaimingInterval());
+    piece.setInternalNote(holder.getInternalNote());
+    piece.setExternalNote(holder.getExternalNote());
     return isStatusChanged;
   }
 

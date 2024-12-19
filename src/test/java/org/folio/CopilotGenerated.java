@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  * Set <code>value</code> or <code>partiallyGenerated</code> attribute to <code>true</code>
  * if the generated test(s) were significantly modified/altered by the developer.
  */
-@Target(ElementType.TYPE)
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.SOURCE)
 public @interface CopilotGenerated {
 
