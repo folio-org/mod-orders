@@ -11,7 +11,8 @@ public enum ClaimingError {
   CANNOT_RETRIEVE_CONFIG_ENTRIES("Cannot retrieve config entries"),
   CANNOT_GROUP_PIECES_BY_VENDOR_MESSAGE("Cannot group pieces by vendor"),
   CANNOT_CREATE_JOBS_AND_UPDATE_PIECES("Cannot create jobs and update pieces"),
-  CANNOT_FIND_A_PIECE_BY_ID("Cannot find a piece by '%s' id");
+  CANNOT_FIND_A_PIECE_BY_ID("Cannot find a piece by '%s' id"),
+  UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS("Unable to generate claims for %s because no claim integrations exist");
 
   private final String value;
 }

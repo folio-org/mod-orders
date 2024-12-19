@@ -205,7 +205,6 @@ public class PiecesClaimingApiTest {
       assertThat(jobExecutions, hasSize(dto.jobExecutions));
       assertThat(response.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
       pieceUpdates.forEach(pieceUpdate -> logger.info("Updated piece: {}", pieceUpdate.encodePrettily()));
-
       var claimedPieceIds = jobCreations.stream()
         .peek(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
         .map(job -> job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
@@ -217,13 +216,13 @@ public class PiecesClaimingApiTest {
 
     response.getClaimingPieceResults()
       .forEach(result -> {
-        assertThat(result.getPieceId(), not(nullValue()));
-        assertThat(result.getStatus(), is(expectedStatus));
         if (expectedStatus == SUCCESS) {
+          assertThat(result.getPieceId(), not(nullValue()));
           assertThat(result.getError(), is(nullValue()));
         } else {
           assertThat(result.getError(), is(notNullValue()));
         }
+        assertThat(result.getStatus(), is(expectedStatus));
       });
   }
 }
