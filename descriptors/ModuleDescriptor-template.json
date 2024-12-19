@@ -222,7 +222,8 @@
             "orders.po-lines.item.put"
           ],
           "permissionsDesired": [
-            "orders.acquisition-units.bypass.execute"
+            "orders.acquisition-units.bypass.execute",
+            "invoices.acquisition-units.bypass.execute"
           ],
           "modulePermissions": [
             "orders-storage.alerts.item.post",
@@ -268,7 +269,6 @@
             "organizations-storage.organizations.collection.get",
             "invoice.invoice-lines.collection.get",
             "invoice.invoice-lines.item.put",
-            "invoices.acquisition-units.bypass.execute",
             "orders-storage.order-invoice-relationships.collection.get",
             "orders-storage.settings.collection.get",
             "consortia.user-tenants.collection.get",
