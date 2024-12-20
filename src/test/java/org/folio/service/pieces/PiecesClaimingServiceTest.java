@@ -1,6 +1,7 @@
 package org.folio.service.pieces;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -32,13 +33,16 @@ import org.mockito.MockitoAnnotations;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
+import static org.folio.models.claiming.IntegrationDetailField.TENANT;
 import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
 import static org.folio.orders.utils.ResourcePathResolver.DATA_EXPORT_SPRING_CREATE_JOB;
 import static org.folio.orders.utils.ResourcePathResolver.resourcesPath;
+import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_FIND_PIECES_WITH_LATE_STATUS_TO_PROCESS;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_RETRIEVE_CONFIG_ENTRIES;
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
@@ -247,6 +251,38 @@ public class PiecesClaimingServiceTest {
   }
 
   @Test
+  void testSendClaims_incorrectRequestTenant(VertxTestContext testContext) {
+    var pieceId = UUID.randomUUID().toString();
+    var piece = new Piece().withId(pieceId).withPoLineId("poLineId").withReceivingStatus(Piece.ReceivingStatus.LATE);
+    var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of(pieceId));
+    var requestContext = new RequestContext(Vertx.vertx().getOrCreateContext(), Map.of(OKAPI_HEADER_TENANT, "folio"));
+
+    when(configurationEntriesCache.loadConfiguration(any(), any())).thenReturn(Future.succeededFuture(new JsonObject()
+      .put("CLAIMS_vendorId", createIntegrationDetail())));
+    when(pieceStorageService.getPiecesByIds(any(), any())).thenReturn(Future.succeededFuture(List.of(piece)));
+    when(purchaseOrderLineService.getOrderLineById(any(), any())).thenReturn(Future.succeededFuture(new PoLine().withPurchaseOrderId("orderId")));
+    when(purchaseOrderStorageService.getPurchaseOrderById(any(), any())).thenReturn(Future.succeededFuture(new PurchaseOrder().withVendor("vendorId")));
+    when(organizationService.getVendorById(any(), any())).thenReturn(Future.succeededFuture(new Organization().withId("vendorId").withCode("VENDOR").withIsVendor(true)));
+
+    piecesClaimingService.sendClaims(claimingCollection, requestContext)
+      .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
+        Assertions.assertInstanceOf(HttpException.class, throwable);
+        var httpException = (HttpException) throwable;
+        var error = httpException.getErrors().getErrors().get(0);
+        assertEquals(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getCode(), error.getCode());
+        assertEquals(String.format(UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS.getDescription(), "VENDOR"), error.getMessage());
+        Assertions.assertEquals(2, error.getParameters().size());
+        var parameter1 = error.getParameters().get(0);
+        Assertions.assertEquals("pieceId", parameter1.getKey());
+        Assertions.assertEquals(pieceId, parameter1.getValue());
+        var parameter2 = error.getParameters().get(1);
+        Assertions.assertEquals("vendorCode", parameter2.getKey());
+        Assertions.assertEquals("VENDOR", parameter2.getValue());
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
   void testSendClaims_success(VertxTestContext testContext) {
     var claimingCollection = new ClaimingCollection().withClaimingPieceIds(List.of("pieceId1")).withClaimingInterval(1);
     var requestContext = mock(RequestContext.class);
@@ -411,6 +447,6 @@ public class PiecesClaimingServiceTest {
   private JsonObject createIntegrationDetail() {
     var vendorEditOrdersExportConfig = new JsonObject().put(CLAIM_PIECE_IDS.getValue(), List.of());
     var exportTypeSpecificParameters = new JsonObject().put(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue(), vendorEditOrdersExportConfig);
-    return new JsonObject().put(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue(), exportTypeSpecificParameters);
+    return new JsonObject().put(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue(), exportTypeSpecificParameters).put(TENANT.getValue(), "folio_shared");
   }
 }

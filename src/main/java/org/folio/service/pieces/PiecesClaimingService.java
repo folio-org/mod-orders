@@ -20,6 +20,7 @@ import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
 import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
@@ -40,6 +41,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.models.claiming.IntegrationDetailField.CLAIM_PIECE_IDS;
 import static org.folio.models.claiming.IntegrationDetailField.EXPORT_TYPE_SPECIFIC_PARAMETERS;
+import static org.folio.models.claiming.IntegrationDetailField.TENANT;
 import static org.folio.models.claiming.IntegrationDetailField.VENDOR_EDI_ORDERS_EXPORT_CONFIG;
 import static org.folio.orders.utils.HelperUtils.DATA_EXPORT_SPRING_CONFIG_MODULE_NAME;
 import static org.folio.orders.utils.HelperUtils.collectResultsOnSuccess;
@@ -102,7 +104,7 @@ public class PiecesClaimingService {
             }
             pieceIdsByVendors.forEach((vendor, piecesByVendor) ->
               log.info("createVendorPiecePair:: Using pieces by vendor map, vendorId: {}, piecesByVendor: {}", vendor.getId(), piecesByVendor));
-            var vendorWithoutIntegrationDetails = checkVendorIntegrationDetails(config, pieceIdsByVendors);
+            var vendorWithoutIntegrationDetails = findFirstMissingVendorWithoutIntegrationDetail(config, pieceIdsByVendors, requestContext);
             if (Objects.nonNull(vendorWithoutIntegrationDetails)) {
               log.info("sendClaims:: Unable to generate claims because no claim integrations exist - No claims are sent");
               throwHttpExceptionOnMissingVendorIntegrationDetails(claimingCollection, vendorWithoutIntegrationDetails);
@@ -163,25 +165,18 @@ public class PiecesClaimingService {
       });
   }
 
-  private Organization checkVendorIntegrationDetails(JsonObject config, Map<Organization, List<String>> pieceIdsByVendors) {
+  private Organization findFirstMissingVendorWithoutIntegrationDetail(JsonObject config, Map<Organization, List<String>> pieceIdsByVendors,
+                                                                      RequestContext requestContext) {
     return pieceIdsByVendors.keySet().stream()
       .filter(vendor -> {
         var vendorIntegrationDetails = config.stream()
           .filter(configEntry -> isExportTypeClaimsAndCorrectVendorId(vendor.getId(), configEntry))
+          .filter(configEntry -> isCorrectTenant(TenantTool.tenantId(requestContext.getHeaders()), configEntry))
           .toList();
         log.info("checkVendorIntegrationDetails:: Found vendor integration details, vendorId: {}, integrationDetails: {}", vendor.getId(), vendorIntegrationDetails);
         return vendorIntegrationDetails.isEmpty();
       })
       .findFirst().orElse(null);
-  }
-
-  private boolean isExportTypeClaimsAndCorrectVendorId(String vendorId, Map.Entry<String, Object> configEntry) {
-    return configEntry.getKey().startsWith(String.format("%s_%s", EXPORT_TYPE_CLAIMS, vendorId)) && Objects.nonNull(configEntry.getValue());
-  }
-
-  private static Map<Organization, List<String>> transformAndGroupPieceIdsByVendor(List<Pair<Organization, String>> piecesByVendorList) {
-    return StreamEx.of(piecesByVendorList).distinct().filter(Objects::nonNull)
-      .groupingBy(Pair::getKey, mapping(Pair::getValue, toList()));
   }
 
   private Future<ClaimingResults> createJobsByVendor(ClaimingCollection claimingCollection, JsonObject config,
@@ -209,19 +204,14 @@ public class PiecesClaimingService {
                                                                      Map<Organization, List<String>> pieceIdsByVendor, RequestContext requestContext) {
     var updatePiecesAndJobFutures = new ArrayList<Future<List<String>>>();
     pieceIdsByVendor.forEach((vendor, pieceIds) -> config.stream()
-      .filter(pieceIdsByVendorIdEntry -> isExportTypeClaimsAndCorrectVendorId(vendor.getId(), pieceIdsByVendorIdEntry))
+      .filter(configEntry -> isExportTypeClaimsAndCorrectVendorId(vendor.getId(), configEntry))
+      .filter(configEntry -> isCorrectTenant(TenantTool.tenantId(requestContext.getHeaders()), configEntry))
       .forEach(configEntry -> {
         log.info("createUpdatePiecesAndJobFutures:: Preparing job integration detail for vendor, vendor id: {}, pieces: {}, job key: {}",
           vendor.getId(), pieceIds.size(), configEntry.getKey());
         updatePiecesAndJobFutures.add(updatePiecesAndCreateJob(claimingCollection, pieceIds, configEntry, requestContext).map(pieceIds));
       }));
     return updatePiecesAndJobFutures;
-  }
-
-  private List<ClaimingPieceResult> createSuccessClaimingResults(List<List<String>> updatedPieceLists) {
-    return updatedPieceLists.stream().flatMap(Collection::stream).distinct()
-      .map(pieceId -> new ClaimingPieceResult().withPieceId(pieceId).withStatus(SUCCESS))
-      .toList();
   }
 
   private Future<Void> updatePiecesAndCreateJob(ClaimingCollection claimingCollection, List<String> pieceIds,
@@ -247,6 +237,26 @@ public class PiecesClaimingService {
       .mapEmpty();
   }
 
+  private boolean isExportTypeClaimsAndCorrectVendorId(String vendorId, Map.Entry<String, Object> configEntry) {
+    return configEntry.getKey().startsWith(String.format("%s_%s", EXPORT_TYPE_CLAIMS, vendorId)) && Objects.nonNull(configEntry.getValue());
+  }
+
+  private boolean isCorrectTenant(String tenantId, Map.Entry<String, Object> configEntry) {
+    var integrationDetail = new JsonObject(String.valueOf(configEntry.getValue()));
+    return integrationDetail.getString(TENANT.getValue()).equals(tenantId);
+  }
+
+  private static Map<Organization, List<String>> transformAndGroupPieceIdsByVendor(List<Pair<Organization, String>> piecesByVendorList) {
+    return StreamEx.of(piecesByVendorList).distinct().filter(Objects::nonNull)
+      .groupingBy(Pair::getKey, mapping(Pair::getValue, toList()));
+  }
+
+  private List<ClaimingPieceResult> createSuccessClaimingResults(List<List<String>> updatedPieceLists) {
+    return updatedPieceLists.stream().flatMap(Collection::stream).distinct()
+      .map(pieceId -> new ClaimingPieceResult().withPieceId(pieceId).withStatus(SUCCESS))
+      .toList();
+  }
+
   private void throwHttpExceptionOnMissingVendorIntegrationDetails(ClaimingCollection claimingCollection, Organization vendorWithoutIntegrationDetails) {
     var parameters = createPieceIdParameters(claimingCollection);
     parameters.add(new Parameter().withKey(VENDOR_CODE_PARAMETER).withValue(vendorWithoutIntegrationDetails.getCode()));
@@ -263,7 +273,7 @@ public class PiecesClaimingService {
     throw new HttpException(httpStatus.toInt(), new Errors().withErrors(errors).withTotalRecords(errors.size()));
   }
 
-  private ArrayList<Parameter> createPieceIdParameters(ClaimingCollection claimingCollection) {
+  private List<Parameter> createPieceIdParameters(ClaimingCollection claimingCollection) {
     return claimingCollection.getClaimingPieceIds().stream()
       .map(pieceId -> new Parameter().withKey(PIECE_ID_PARAMETER).withValue(pieceId))
       .collect(Collectors.toCollection(ArrayList::new));
