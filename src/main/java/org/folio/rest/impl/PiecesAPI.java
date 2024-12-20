@@ -114,7 +114,10 @@ public class PiecesAPI extends BaseApi implements OrdersPieces, OrdersPiecesRequ
   @Override
   public void putOrdersPiecesBatchStatus(PieceBatchStatusCollection pieceBatchStatusCollection, Map<String, String> okapiHeaders,
                                          Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    pieceUpdateFlowManager.updatePiecesStatuses(pieceBatchStatusCollection.getPieceIds(), pieceBatchStatusCollection.getReceivingStatus(), new RequestContext(vertxContext, okapiHeaders))
+    var pieceIds = pieceBatchStatusCollection.getPieceIds();
+    var receivingStatus = pieceBatchStatusCollection.getReceivingStatus();
+    var claimingInterval = pieceBatchStatusCollection.getClaimingInterval();
+    pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, receivingStatus, claimingInterval, null, null, new RequestContext(vertxContext, okapiHeaders))
       .onSuccess(v -> asyncResultHandler.handle(succeededFuture(buildNoContentResponse())))
       .onFailure(t -> handleErrorResponse(asyncResultHandler, t));
   }
