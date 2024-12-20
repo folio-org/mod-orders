@@ -11,7 +11,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.kafka.AsyncRecordHandler;
-import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -62,7 +61,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
       Promise<String> promise = Promise.promise();
-      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers());
+      Map<String, String> headersMap = DataImportUtils.kafkaHeadersToMap(kafkaRecord);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
       String recordId = headersMap.get(RECORD_ID_HEADER);
       Event event = DatabindCodec.mapper().readValue(kafkaRecord.value(), Event.class);
