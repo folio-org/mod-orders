@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.restassured.http.Header;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -8,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.ApiTestSuite;
 import org.folio.Organization;
 import org.folio.config.ApplicationConfig;
+import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.jaxrs.model.ClaimingCollection;
 import org.folio.rest.jaxrs.model.ClaimingPieceResult;
 import org.folio.rest.jaxrs.model.ClaimingResults;
@@ -29,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.CREATED;
+import static io.netty.handler.codec.http.HttpResponseStatus.UNPROCESSABLE_ENTITY;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.RestTestUtils.prepareHeaders;
 import static org.folio.RestTestUtils.verifyPostResponse;
@@ -106,8 +109,8 @@ public class PiecesClaimingApiTest {
     var payloadFile = "send-claims-1-piece-1-vendor-1-job.json";
     var mockHitDto = new MockHitDto(3, 2, 2, 1, 1, 1, 1, 1);
     return Stream.of(
-      Arguments.of("One piece One vendor One Job", 0, 17, 69, mockHitDto, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS, SUCCESS),
-      Arguments.of("One piece One vendor No Job", 0, 17, 69, null, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, FAILURE)
+      Arguments.of("One piece One vendor One Job", 0, 17, 69, mockHitDto, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10_CLAIMS, SUCCESS, CREATED),
+      Arguments.of("One piece One vendor No Job", 0, 17, 69, null, payloadFile, EXIST_CONFIG_X_OKAPI_TENANT_LIMIT_10, FAILURE, UNPROCESSABLE_ENTITY)
     );
   }
 
@@ -139,7 +142,8 @@ public class PiecesClaimingApiTest {
   @ParameterizedTest
   @MethodSource("testPostPiecesClaimArgs")
   void testPostPiecesClaim(String name, int vendorIdx, int poLineIdx, int pieceIdx, MockHitDto dto,
-                           String payloadFile, Header header, ClaimingPieceResult.Status expectedStatus) {
+                           String payloadFile, Header header, ClaimingPieceResult.Status expectedStatus,
+                           HttpResponseStatus expectedResponseStatus) {
     logger.info("Testing postPiecesClaim, name: {}", name);
 
     var organization = getMockAsJson(ORGANIZATION_COLLECTION)
@@ -162,9 +166,8 @@ public class PiecesClaimingApiTest {
     addMockEntry(PIECES_STORAGE, piece);
 
     var mockDataPath = BASE_MOCK_DATA_PATH + CLAIMING_MOCK_DATA_FOLDER + payloadFile;
-    var request =  getMockAsJson(mockDataPath).mapTo(ClaimingCollection.class);
-    var response = verifyPostResponse(PIECES_CLAIMING_ENDPOINT, JsonObject.mapFrom(request).encode(), prepareHeaders(header), APPLICATION_JSON, CREATED.code())
-      .as(ClaimingResults.class);
+    var request = getMockAsJson(mockDataPath).mapTo(ClaimingCollection.class);
+    var response = verifyPostResponse(PIECES_CLAIMING_ENDPOINT, JsonObject.mapFrom(request).encode(), prepareHeaders(header), APPLICATION_JSON, expectedResponseStatus.code());
 
     // Filter out any dummy pieces without ids that are loaded from other tests
     var pieceSearches = getPieceSearches().stream()
@@ -182,46 +185,59 @@ public class PiecesClaimingApiTest {
       .map(JsonObject::mapFrom).map(json -> json.getString(ENTRY_ID))
       .filter(Objects::nonNull).filter(poLineId -> poLineId.equals(purchaseOrder.getId()))
       .toList();
-    purchaseOrderRetrievals.forEach(entry -> logger.info("PurchaseOrders: {}", entry));
+
+    purchaseOrderRetrievals.forEach(entry -> logger.info("Retrieved PurchaseOrder: {}", entry));
+
     var organizationSearches = getOrganizationSearches();
     var pieceUpdates = getPieceUpdates();
     var jobCreations = getDataExportSpringJobCreations();
     var jobExecutions = getDataExportSpringJobExecutions();
 
-    if (Objects.nonNull(dto)) {
-      assertThat(pieceSearches, not(nullValue()));
-      assertThat(polSearches, not(nullValue()));
-      assertThat(purchaseOrderRetrievals, not(nullValue()));
-      assertThat(organizationSearches, not(nullValue()));
-      assertThat(pieceUpdates, not(nullValue()));
-      assertThat(jobCreations, not(nullValue()));
-      assertThat(jobExecutions, not(nullValue()));
-      assertThat(pieceSearches, hasSize(dto.pieceSearches));
-      assertThat(polSearches, hasSize(dto.polSearches));
-      assertThat(purchaseOrderRetrievals, hasSize(dto.purchaseOrderRetrievals));
-      assertThat(organizationSearches, hasSize(dto.organizationSearches));
-      assertThat(pieceUpdates, hasSize(dto.pieceUpdates));
-      assertThat(jobCreations, hasSize(dto.jobCreations));
-      assertThat(jobExecutions, hasSize(dto.jobExecutions));
-      assertThat(response.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
-      var claimedPieceIds = jobCreations.stream()
-        .peek(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
-        .map(job -> job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
-          .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
-          .getJsonArray(CLAIM_PIECE_IDS.getValue()).size())
-        .mapToInt(value -> value).sum();
-      assertThat(claimedPieceIds, equalTo(request.getClaimingPieceIds().size()));
-    }
+    if (response instanceof ClaimingResults claimingResults) {
+      if (Objects.nonNull(dto)) {
+        assertThat(pieceSearches, not(nullValue()));
+        assertThat(polSearches, not(nullValue()));
+        assertThat(purchaseOrderRetrievals, not(nullValue()));
+        assertThat(organizationSearches, not(nullValue()));
+        assertThat(pieceUpdates, not(nullValue()));
+        assertThat(jobCreations, not(nullValue()));
+        assertThat(jobExecutions, not(nullValue()));
+        assertThat(pieceSearches, hasSize(dto.pieceSearches));
+        assertThat(polSearches, hasSize(dto.polSearches));
+        assertThat(purchaseOrderRetrievals, hasSize(dto.purchaseOrderRetrievals));
+        assertThat(organizationSearches, hasSize(dto.organizationSearches));
+        assertThat(pieceUpdates, hasSize(dto.pieceUpdates));
+        assertThat(jobCreations, hasSize(dto.jobCreations));
+        assertThat(jobExecutions, hasSize(dto.jobExecutions));
+        assertThat(claimingResults.getClaimingPieceResults().size(), equalTo(dto.claimingResults));
 
-    response.getClaimingPieceResults()
-      .forEach(result -> {
-        assertThat(result.getPieceId(), not(nullValue()));
-        assertThat(result.getStatus(), is(expectedStatus));
-        if (expectedStatus == SUCCESS) {
-          assertThat(result.getError(), is(nullValue()));
-        } else {
-          assertThat(result.getError(), is(notNullValue()));
-        }
-      });
+        pieceUpdates.forEach(pieceUpdate -> logger.info("Updated Piece: {}", pieceUpdate.encodePrettily()));
+
+        var claimedPieceIds = jobCreations.stream()
+          .peek(job -> logger.info("Created job: {}", JsonObject.mapFrom(job).encodePrettily()))
+          .map(job -> job.getJsonObject(EXPORT_TYPE_SPECIFIC_PARAMETERS.getValue())
+            .getJsonObject(VENDOR_EDI_ORDERS_EXPORT_CONFIG.getValue())
+            .getJsonArray(CLAIM_PIECE_IDS.getValue()).size())
+          .mapToInt(value -> value).sum();
+        assertThat(claimedPieceIds, equalTo(request.getClaimingPieceIds().size()));
+
+        claimingResults.getClaimingPieceResults()
+          .forEach(result -> {
+            if (expectedStatus == SUCCESS) {
+              assertThat(result.getPieceId(), not(nullValue()));
+              assertThat(result.getError(), is(nullValue()));
+            } else {
+              assertThat(result.getError(), is(notNullValue()));
+            }
+            assertThat(result.getStatus(), is(expectedStatus));
+          });
+      }
+    } else if (response instanceof HttpException exception) {
+      assertThat(exception.getErrors().getErrors().size(), is(1));
+      assertThat(exception.getError().getCode(), is("unableToGenerateClaimsForOrgNoIntegrationDetails"));
+      assertThat(exception.getError().getMessage(), is("Unable to generate claims for AMAZ because no claim integrations exist"));
+      assertThat(exception.getError().getParameters().get(0).getValue(), is(piece.getId()));
+      assertThat(exception.getError().getParameters().get(1).getValue(), is("AMAZ"));
+    }
   }
 }

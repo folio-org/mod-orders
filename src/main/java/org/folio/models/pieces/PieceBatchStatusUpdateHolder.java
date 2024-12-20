@@ -12,6 +12,12 @@ public class PieceBatchStatusUpdateHolder extends BasePieceFlowHolder {
   @Getter
   private Piece.ReceivingStatus receivingStatus;
   @Getter
+  private Integer claimingInterval;
+  @Getter
+  private String internalNote;
+  @Getter
+  private String externalNote;
+  @Getter
   private List<Piece> pieces;
   private String poLineId;
 
