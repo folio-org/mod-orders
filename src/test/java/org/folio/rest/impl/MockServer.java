@@ -2146,7 +2146,7 @@ public class MockServer {
   private void handlePutPiecesBatch(RoutingContext ctx) {
     logger.info("handlePutPiecesBatch got: PUT {}", ctx.request().path());
     JsonObject body = ctx.body().asJsonObject();
-    addServerRqRsData(HttpMethod.PUT, PIECES_STORAGE, body);
+    addServerRqRsData(HttpMethod.PUT, PIECES_STORAGE_BATCH, body);
     ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
       .setStatusCode(204)
       .end();
