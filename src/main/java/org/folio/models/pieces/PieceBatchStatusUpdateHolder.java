@@ -2,7 +2,9 @@ package org.folio.models.pieces;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.apache.commons.collections.CollectionUtils;
 import org.folio.rest.jaxrs.model.Piece;
+import org.folio.rest.jaxrs.model.PieceCollection;
 
 import java.util.List;
 
@@ -29,6 +31,10 @@ public class PieceBatchStatusUpdateHolder extends BasePieceFlowHolder {
   @Override
   public String getTitleId() {
     return null;
+  }
+
+  public PieceCollection getPieceCollection() {
+    return new PieceCollection().withPieces(pieces).withTotalRecords(CollectionUtils.size(pieces));
   }
 
 }
