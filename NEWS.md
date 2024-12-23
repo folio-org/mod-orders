@@ -1,4 +1,5 @@
 ## 13.0.0 - Unreleased
+* [MODORDERS-1215](https://issues.folio.org/browse/MODORDERS-1215) Assign to system user permissions required for data import
 
 ## 12.9.0 - Released (Ramsons R2 2024)
 The primary focus of this release was to enhance multi-tenant functionality, improve piece management, and implement various inventory and order processing features.

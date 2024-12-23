@@ -2244,6 +2244,26 @@
       "description" : "Permission should be provided to reopen order"
     }
   ],
+  "metadata": {
+    "user": {
+      "type": "system",
+      "permissions": [
+        "converter-storage.jobprofilesnapshots.get",
+        "configuration.entries.collection.get",
+        "finance-storage.fiscal-years.item.get",
+        "acquisitions-units.memberships.collection.get",
+        "acquisitions-units.units.collection.get",
+        "modperms.orders.item.put",
+        "modperms.orders.item.post",
+        "orders-storage.acquisition-methods.collection.get",
+        "orders.po-lines.collection.get",
+        "orders.po-lines.item.get",
+        "organizations.organizations.collection.get",
+        "change-manager.jobExecutions.item.get"
+
+      ]
+    }
+  },
   "launchDescriptor": {
     "dockerImage": "${artifactId}:${version}",
     "dockerPull": false,
