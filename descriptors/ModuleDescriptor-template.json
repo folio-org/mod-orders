@@ -635,6 +635,7 @@
           "modulePermissions": [
             "orders-storage.pieces.item.put",
             "orders-storage.pieces.collection.get",
+            "orders-storage.pieces-batch.collection.put",
             "orders-storage.po-lines.item.get",
             "orders-storage.po-lines.item.put",
             "orders-storage.po-lines.collection.get",

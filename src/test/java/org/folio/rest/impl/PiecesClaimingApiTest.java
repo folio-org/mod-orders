@@ -58,8 +58,8 @@ import static org.folio.rest.impl.MockServer.addMockEntry;
 import static org.folio.rest.impl.MockServer.getDataExportSpringJobCreations;
 import static org.folio.rest.impl.MockServer.getDataExportSpringJobExecutions;
 import static org.folio.rest.impl.MockServer.getOrganizationSearches;
+import static org.folio.rest.impl.MockServer.getPieceBatchUpdates;
 import static org.folio.rest.impl.MockServer.getPieceSearches;
-import static org.folio.rest.impl.MockServer.getPieceUpdates;
 import static org.folio.rest.impl.MockServer.getPoLineSearches;
 import static org.folio.rest.impl.MockServer.getPurchaseOrderRetrievals;
 import static org.folio.rest.jaxrs.model.ClaimingPieceResult.Status.FAILURE;
@@ -189,7 +189,7 @@ public class PiecesClaimingApiTest {
     purchaseOrderRetrievals.forEach(entry -> logger.info("Retrieved PurchaseOrder: {}", entry));
 
     var organizationSearches = getOrganizationSearches();
-    var pieceUpdates = getPieceUpdates();
+    var pieceUpdates = getPieceBatchUpdates();
     var jobCreations = getDataExportSpringJobCreations();
     var jobExecutions = getDataExportSpringJobExecutions();
 

@@ -177,8 +177,7 @@ public class PieceUpdateFlowManager {
     if (!Boolean.TRUE.equals(isAnyPiecesUpdated)) {
       return Future.succeededFuture();
     }
-    var updates = holder.getPieces().stream().map(piece -> pieceStorageService.updatePiece(piece, requestContext)).toList();
-    return HelperUtils.collectResultsOnSuccess(updates)
+    return pieceStorageService.updatePiecesBatch(holder.getPieceCollection(), requestContext)
       .compose(v -> asFuture(() -> pieceService.receiptConsistencyPiecePoLine(holder.getOrderLineId(), requestContext)));
   }
 

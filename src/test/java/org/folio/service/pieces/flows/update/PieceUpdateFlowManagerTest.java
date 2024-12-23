@@ -347,7 +347,7 @@ public class PieceUpdateFlowManagerTest {
     doReturn(succeededFuture(poLine2)).when(purchaseOrderLineService).getOrderLineById(poLine2.getId(), requestContext);
     doReturn(succeededFuture(purchaseOrder)).when(purchaseOrderStorageService).getPurchaseOrderById(purchaseOrder.getId(), requestContext);
     doReturn(succeededFuture()).when(pieceUpdateFlowPoLineService).updatePoLine(any(), eq(requestContext));
-    doReturn(succeededFuture()).when(pieceStorageService).updatePiece(any(), eq(requestContext));
+    doReturn(succeededFuture()).when(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(anyString(), eq(requestContext));
 
     Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, receivingStatus, null, null, null, requestContext);
