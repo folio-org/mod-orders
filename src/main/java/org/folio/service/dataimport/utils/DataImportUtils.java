@@ -42,7 +42,7 @@ public class DataImportUtils {
 
   public static Map<String, String> kafkaHeadersToMap(KafkaConsumerRecord<String, String> kafkaRecord) {
     var headerStream = kafkaRecord.headers().stream();
-    if (!isSystemUserEnabled()) {
+    if (isSystemUserEnabled()) {
       headerStream = headerStream.filter(header -> !StringUtils.equalsIgnoreCase(RestVerticle.OKAPI_HEADER_TOKEN, header.key()));
     }
 
