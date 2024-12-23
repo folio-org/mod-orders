@@ -689,7 +689,7 @@ public class MockServer {
     router.put(resourcePath(PO_LINES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_STORAGE));
     router.put(resourcesPath(PO_LINES_BATCH_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PO_LINES_BATCH_STORAGE));
     router.put(resourcePath(PIECES_STORAGE)).handler(ctx -> handlePutGenericSubObj(ctx, PIECES_STORAGE));
-    router.put(resourcePath(PIECES_STORAGE_BATCH)).handler(ctx -> handlePutBatchSubObj(ctx, PIECES_STORAGE_BATCH));
+    router.put(resourcesPath(PIECES_STORAGE_BATCH)).handler(this::handlePutPiecesBatch); // without id param
     router.put(resourcePath(REPORTING_CODES)).handler(ctx -> handlePutGenericSubObj(ctx, REPORTING_CODES));
     router.put(resourcePath(ALERTS)).handler(ctx -> handlePutGenericSubObj(ctx, ALERTS));
     router.put("/inventory/items/:id").handler(ctx -> handlePutGenericSubObj(ctx, ITEM_RECORDS));
@@ -2143,9 +2143,10 @@ public class MockServer {
     }
   }
 
-  private void handlePutBatchSubObj(RoutingContext ctx, String subObj) {
+  private void handlePutPiecesBatch(RoutingContext ctx) {
     logger.info("handlePutPiecesBatch got: PUT {}", ctx.request().path());
-    addServerRqRsData(HttpMethod.PUT, subObj, ctx.body().asJsonObject());
+    JsonObject body = ctx.body().asJsonObject();
+    addServerRqRsData(HttpMethod.PUT, PIECES_STORAGE, body);
     ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
       .setStatusCode(204)
       .end();
