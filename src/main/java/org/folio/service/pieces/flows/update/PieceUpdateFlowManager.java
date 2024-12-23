@@ -98,14 +98,15 @@ public class PieceUpdateFlowManager {
       .mapEmpty();
   }
 
-  public Future<Void> updatePiecesStatuses(List<String> pieceIds, PieceBatchStatusCollection.ReceivingStatus receivingStatus, RequestContext requestContext) {
+  public Future<Void> updatePiecesStatuses(List<String> pieceIds, PieceBatchStatusCollection.ReceivingStatus receivingStatus,
+                                           Integer claimingInterval, String internalNote, String externalNote, RequestContext requestContext) {
     var newStatus = Piece.ReceivingStatus.fromValue(receivingStatus.value());
     return isOperationRestricted(pieceIds, requestContext)
       .compose(v -> pieceStorageService.getPiecesByIds(pieceIds, requestContext))
       .compose(pieces -> validateFetchedPiecesQuantity(pieces, pieceIds))
       .map(pieces -> pieces.stream().collect(Collectors.groupingBy(Piece::getPoLineId)))
       .map(piecesByPoLineId -> piecesByPoLineId.entrySet().stream()
-        .map(entry -> new PieceBatchStatusUpdateHolder(newStatus, entry.getValue(), entry.getKey()))
+        .map(entry -> new PieceBatchStatusUpdateHolder(newStatus, claimingInterval, internalNote, externalNote, entry.getValue(), entry.getKey()))
         .map(holder -> basePieceFlowHolderBuilder.updateHolderWithOrderInformation(holder, requestContext)
           .compose(v -> updatePoLine(holder, requestContext))
           .compose(v -> updatePiecesStatusesByPoLine(holder, requestContext)))
@@ -172,7 +173,7 @@ public class PieceUpdateFlowManager {
 
   private Future<Void> updatePiecesStatusesByPoLine(PieceBatchStatusUpdateHolder holder, RequestContext requestContext) {
     var isAnyPiecesUpdated = holder.getPieces().stream()
-      .map(piece -> updatePieceStatus(piece, piece.getReceivingStatus(), holder.getReceivingStatus()))
+      .map(piece -> updatePieceStatus(piece, holder))
       .reduce(Boolean.FALSE, Boolean::logicalOr); // Don't replace .map() with .anyMatch(), as it needs to iterate over all elements
     if (!Boolean.TRUE.equals(isAnyPiecesUpdated)) {
       return Future.succeededFuture();

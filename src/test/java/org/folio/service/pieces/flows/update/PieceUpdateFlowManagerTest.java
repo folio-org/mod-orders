@@ -350,7 +350,7 @@ public class PieceUpdateFlowManagerTest {
     doReturn(succeededFuture()).when(pieceStorageService).updatePiecesBatch(any(), eq(requestContext));
     doNothing().when(pieceService).receiptConsistencyPiecePoLine(anyString(), eq(requestContext));
 
-    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, receivingStatus, requestContext);
+    Future<Void> result = pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, receivingStatus, null, null, null, requestContext);
 
     assertTrue(result.succeeded());
   }
