@@ -212,9 +212,9 @@ public class PiecesClaimingService {
   private Future<Void> updatePiecesAndCreateJob(ClaimingCollection claimingCollection, List<String> pieceIds,
                                                 Map.Entry<String, Object> configEntry, RequestContext requestContext) {
     log.info("updatePiecesAndCreateJob:: Updating pieces and creating a job, job key: {}, count: {}", configEntry.getKey(), pieceIds.size());
-    return createJob(configEntry.getKey(), configEntry.getValue(), pieceIds, requestContext).map(pieceIds)
-      .compose(v -> pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT,
-        claimingCollection.getClaimingInterval(), claimingCollection.getInternalNote(), claimingCollection.getExternalNote(), requestContext));
+    return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT,
+      claimingCollection.getClaimingInterval(), claimingCollection.getInternalNote(), claimingCollection.getExternalNote(), requestContext)
+      .compose(v -> createJob(configEntry.getKey(), configEntry.getValue(), pieceIds, requestContext));
   }
 
   private Future<Void> createJob(String configKey, Object configValue, List<String> pieceIds, RequestContext requestContext) {
