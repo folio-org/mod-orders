@@ -430,10 +430,6 @@ public class MockServer {
     return serverRqRs.get(DATA_EXPORT_SPRING_CREATE_JOB, HttpMethod.POST);
   }
 
-  public static List<JsonObject> getDataExportSpringJobExecutions() {
-    return serverRqRs.get(DATA_EXPORT_SPRING_EXECUTE_JOB, HttpMethod.POST);
-  }
-
   public static List<JsonObject> getPieceUpdates() {
     return serverRqRs.get(PIECES_STORAGE, HttpMethod.PUT);
   }
