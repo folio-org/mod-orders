@@ -190,7 +190,7 @@ public class PiecesClaimingService {
         var successClaimingPieceResults = createSuccessClaimingResults(updatedPieceLists);
         log.info("createJobsByVendor:: Successfully processed pieces for claiming, count: {}", successClaimingPieceResults.size());
         var claimingResults = new ClaimingResults().withClaimingPieceResults(successClaimingPieceResults);
-        log.info("createJobsByVendor:: Returning claiming results, claimingResults: {}", JsonObject.mapFrom(claimingResults).encodePrettily());
+        log.debug("createJobsByVendor:: Returning claiming results, claimingResults: {}", JsonObject.mapFrom(claimingResults).encodePrettily());
         return claimingResults;
       });
   }
