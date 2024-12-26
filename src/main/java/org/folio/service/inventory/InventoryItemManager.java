@@ -92,6 +92,7 @@ public class InventoryItemManager {
     String query = convertIdsToCqlQuery(ids);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS))
       .withQuery(query).withOffset(0).withLimit(ids.size());
+    logger.info("Fetching item records by query: {}", query);
     return restClient.getAsJsonObject(requestEntry, requestContext)
       .map(this::extractEntities);
   }
@@ -128,6 +129,7 @@ public class InventoryItemManager {
   }
 
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {
+    logger.info("Updating item with '{}' id", item.getString(ID));
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
   }
@@ -420,7 +422,7 @@ public class InventoryItemManager {
       .put(ITEM_PERMANENT_LOAN_TYPE_ID, bindItem.getPermanentLoanTypeId())
       .put(ITEM_MATERIAL_TYPE_ID, bindItem.getMaterialTypeId())
       .put(ITEM_PURCHASE_ORDER_LINE_IDENTIFIER, compPOL.getId());
-    logger.debug("Creating item for PO Line with '{}' id", compPOL.getId());
+    logger.info("Creating item for PO Line with '{}' id", compPOL.getId());
     return createItemInInventory(item, locationContext);
   }
 

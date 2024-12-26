@@ -49,6 +49,7 @@ public class ConsortiumConfigurationService {
   public Future<Optional<ConsortiumConfiguration>> getConsortiumConfiguration(RequestContext requestContext) {
     try {
       var cacheKey = TenantTool.tenantId(requestContext.getHeaders());
+      logger.info("getConsortiumConfiguration:: cacheKey: {}", cacheKey);
       return Future.fromCompletionStage(asyncCache.get(cacheKey, (key, executor) ->
         getConsortiumConfigurationFromRemote(requestContext)));
     } catch (Exception e) {

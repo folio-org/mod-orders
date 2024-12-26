@@ -71,7 +71,7 @@ public class CirculationRequestsRetriever {
   }
 
   private Future<List<JsonObject>> getRequestsByItemIds(List<String> itemIds, String status, RequestContext requestContext) {
-    log.debug("getRequestsByItemIds:: Fetching requests by item ids: {}", itemIds);
+    log.info("getRequestsByItemIds:: Fetching requests by item ids: {}", itemIds);
     var futures = StreamEx.ofSubLists(itemIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> String.format("(%s and status=\"%s\")", convertIdsToCqlQuery(ids, ITEM_ID.getValue()), status))
       .map(query -> new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))

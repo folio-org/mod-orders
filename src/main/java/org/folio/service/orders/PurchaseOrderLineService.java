@@ -100,6 +100,7 @@ public class PurchaseOrderLineService {
 
   public Future<PoLine> getOrderLineById(String lineId, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
+    logger.info("Get order line by id: {}", lineId);
     return restClient.get(requestEntry, PoLine.class, requestContext);
   }
 

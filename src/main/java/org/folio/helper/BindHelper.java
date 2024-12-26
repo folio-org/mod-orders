@@ -199,6 +199,8 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
 
   private Future<BindPiecesHolder> updateItemStatus(BindPiecesHolder holder, RequestContext requestContext) {
     logger.debug("updateItemStatus:: Updating previous item status to 'Unavailable'");
+    logger.info(holder.getPiecesGroupedByPoLine());
+    logger.info("tenantToItems: {}", mapTenantIdsToItemIds(holder.getPiecesGroupedByPoLine(), requestContext));
     return GenericCompositeFuture.all(
       mapTenantIdsToItemIds(holder.getPiecesGroupedByPoLine(), requestContext).entrySet().stream()
         .map(entry -> {
@@ -222,7 +224,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     var bindPiecesCollection = holder.getBindPiecesCollection();
     var poLineId = holder.getPoLineId();
     var bindItem = bindPiecesCollection.getBindItem();
-    logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
+    logger.info("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
       .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getInstanceId(), bindItem, requestContext))
@@ -239,6 +241,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private Future<String> createInventoryObjects(CompositePoLine compPOL, String instanceId, BindItem bindItem, RequestContext requestContext) {
+    logger.info("createInventoryObjects:: Creating inventory objects for poLine: '{}'", compPOL.getId());
     if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
       instanceId = compPOL.getInstanceId();
     }
