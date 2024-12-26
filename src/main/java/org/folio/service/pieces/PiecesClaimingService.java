@@ -19,7 +19,6 @@ import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.Piece;
-import org.folio.rest.jaxrs.model.PieceBatchStatusCollection;
 import org.folio.service.caches.ConfigurationEntriesCache;
 import org.folio.service.orders.PurchaseOrderLineService;
 import org.folio.service.orders.PurchaseOrderStorageService;
@@ -53,6 +52,8 @@ import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_RETRIEVE_CONFIG_E
 import static org.folio.rest.core.exceptions.ErrorCodes.CANNOT_SEND_CLAIMS_PIECE_IDS_ARE_EMPTY;
 import static org.folio.rest.core.exceptions.ErrorCodes.UNABLE_TO_GENERATE_CLAIMS_FOR_ORG_NO_INTEGRATION_DETAILS;
 import static org.folio.rest.jaxrs.model.ClaimingPieceResult.Status.SUCCESS;
+import static org.folio.rest.jaxrs.model.Piece.ReceivingStatus.LATE;
+import static org.folio.rest.jaxrs.model.PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT;
 
 @Log4j2
 @Service
@@ -146,7 +147,7 @@ public class PiecesClaimingService {
 
   private Future<Pair<Organization, String>> createVendorPiecePair(Pair<String, String> piecePoLinePairs,
                                                                    Piece piece, RequestContext requestContext) {
-    if (!piece.getReceivingStatus().equals(Piece.ReceivingStatus.LATE)) {
+    if (!piece.getReceivingStatus().equals(LATE)) {
       log.info("createVendorPiecePair:: Ignoring processing of a piece not in LATE state, piece id: {}", piece.getId());
       return Future.succeededFuture();
     }
@@ -215,8 +216,10 @@ public class PiecesClaimingService {
 
   private Future<Void> updatePieces(ClaimingCollection claimingCollection, String vendorId, List<String> pieceIds, RequestContext requestContext) {
     log.info("updatePieces:: Updating pieces for vendor, vendorId: {}, pieces: {}", vendorId, pieceIds.size());
-    return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, PieceBatchStatusCollection.ReceivingStatus.CLAIM_SENT,
-      claimingCollection.getClaimingInterval(), claimingCollection.getInternalNote(), claimingCollection.getExternalNote(), requestContext);
+    var claimingInterval = claimingCollection.getClaimingInterval();
+    var internalNote = claimingCollection.getInternalNote();
+    var externalNote = claimingCollection.getExternalNote();
+    return pieceUpdateFlowManager.updatePiecesStatuses(pieceIds, CLAIM_SENT, claimingInterval, internalNote, externalNote, requestContext);
   }
 
   private Future<Void> createJob(String configKey, Object configValue, List<String> pieceIds, RequestContext requestContext) {
