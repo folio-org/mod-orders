@@ -238,7 +238,12 @@ public class PurchaseOrderHelper {
             }
             return Future.succeededFuture();
           })
-          .compose(v -> validatePurchaseOrderHasPoLines(compPO))
+          .compose(v -> {
+            if (isTransitionToOpen) {
+              return validatePurchaseOrderHasPoLines(compPO);
+            }
+            return Future.succeededFuture();
+          })
           .compose(v -> validateUserUnaffiliatedPoLineLocations(compPO, requestContext))
           .compose(v -> {
             if (isTransitionToClosed(poFromStorage, compPO)) {

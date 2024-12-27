@@ -863,7 +863,6 @@ public class PurchaseOrdersApiTest {
     request.put("poNumber", "1234");
 
     verifyPut(String.format(COMPOSITE_ORDERS_BY_ID_PATH, id), request, APPLICATION_JSON, 422);
-
   }
 
   @Test
@@ -959,7 +958,6 @@ public class PurchaseOrdersApiTest {
 
     assertThat(errors.getErrors().get(0).getCode(),is(BUDGET_EXPENSE_CLASS_NOT_FOUND.toError().getCode()));
   }
-
 
   @Test
   @Disabled
@@ -1550,7 +1548,6 @@ public class PurchaseOrdersApiTest {
     assertThat(items.size(), lessThan(calculateInventoryItemsQuantity(reqData.getCompositePoLines().get(0))));
   }
 
-
   @Test
   void testPutOrdersByIdToChangeStatusToOpenButWithFailureFromStorage() throws Exception {
     logger.info("=== testPutOrdersByIdToChangeStatusToOpenButWithFailureFromStorage ===");
@@ -1866,7 +1863,6 @@ public class PurchaseOrdersApiTest {
     String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, BAD_QUERY);
 
     verifyGet(endpointQuery, APPLICATION_JSON, 400);
-
   }
 
   @Test
@@ -1876,7 +1872,6 @@ public class PurchaseOrdersApiTest {
     String endpointQuery = String.format("%s?query=%s", COMPOSITE_ORDERS_PATH, ID_FOR_INTERNAL_SERVER_ERROR);
 
     verifyGet(endpointQuery, APPLICATION_JSON, 500);
-
   }
 
   @Test
@@ -1902,7 +1897,6 @@ public class PurchaseOrdersApiTest {
     checkExpectedError(INACTIVE_VENDOR_ID, allInactiveErrors, 0, ORDER_VENDOR_IS_INACTIVE, reqData, 0);
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_A, allInactiveErrors, 1, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
     checkExpectedError(INACTIVE_ACCESS_PROVIDER_B, allInactiveErrors, 2, POL_ACCESS_PROVIDER_IS_INACTIVE, reqData, 1);
-
   }
 
   @Test
@@ -2016,7 +2010,6 @@ public class PurchaseOrdersApiTest {
     assertThat(errors.getErrors(), hasSize(1));
 
     checkExpectedError(ORGANIZATION_NOT_VENDOR, errors, 0, ORGANIZATION_NOT_A_VENDOR, reqData, 0);
-
   }
 
   @Test
@@ -2285,7 +2278,6 @@ public class PurchaseOrdersApiTest {
     //Create order second time for tenant, cache contains contributor name type for this tenant
     verifyPostResponse(COMPOSITE_ORDERS_PATH, JsonObject.mapFrom(reqData).encodePrettily(), headers, APPLICATION_JSON, 201);
 
-
     assertThat(getLoanTypesSearches(), nullValue());
     assertThat(getInstanceStatusesSearches(), nullValue());
     assertThat(getInstanceTypesSearches(), nullValue());
@@ -2338,7 +2330,6 @@ public class PurchaseOrdersApiTest {
 
   @Test
   void testInventoryHelperCacheContainsDifferentValuesForInstanceTypeAndInstanceStatusWithSameCode() throws Exception {
-
     MockServer.serverRqRs.clear();
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
     MockServer.addMockTitles(reqData.getCompositePoLines());
@@ -2407,7 +2398,6 @@ public class PurchaseOrdersApiTest {
     verifyOpenOrderPiecesCreated(items, resp.getCompositePoLines(), createdPieces, 0);
   }
 
-
   @Test
   void testInventoryHelperMissingContributorNameTypeThrowsProperError() throws Exception {
     CompositePurchaseOrder reqData = getMockDraftOrder().mapTo(CompositePurchaseOrder.class);
@@ -2443,7 +2433,6 @@ public class PurchaseOrdersApiTest {
 
   @Test
   void testInventoryHelperEmptyLoanTypeThrowsProperError() throws Exception {
-
     Error err = verifyMissingInventoryEntryErrorHandling(NON_EXIST_LOAN_TYPE_TENANT_HEADER);
 
     assertThat(err.getCode(), equalTo(ErrorCodes.MISSING_LOAN_TYPE.getCode()));
@@ -2518,7 +2507,6 @@ public class PurchaseOrdersApiTest {
       .as(Errors.class)
       .getErrors()
       .get(0);
-
 
     assertThat(err.getMessage(), equalTo(ISBN_NOT_VALID.getDescription()));
     assertThat(err.getCode(), equalTo(ISBN_NOT_VALID.getCode()));
