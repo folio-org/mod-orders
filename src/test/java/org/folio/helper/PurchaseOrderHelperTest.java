@@ -181,6 +181,7 @@ public class PurchaseOrderHelperTest {
     compPO.setId(UUID.randomUUID().toString());
     compPO.getCompositePoLines().forEach(line -> line.withId(UUID.randomUUID().toString()));
     CompositePurchaseOrder poFromStorage = JsonObject.mapFrom(compPO).mapTo(CompositePurchaseOrder.class);
+    poFromStorage.setCompositePoLines(List.of(getMinimalContentCompositePoLine(order.getString("id"))));
 
     boolean deleteHoldings = false;
 
@@ -200,6 +201,8 @@ public class PurchaseOrderHelperTest {
       .when(purchaseOrderStorageService).saveOrder(any(PurchaseOrder.class), eq(requestContext));
     doReturn(succeededFuture(null))
       .when(encumbranceService).updateEncumbrancesOrderStatusAndReleaseIfClosed(any(CompositePurchaseOrder.class), eq(requestContext));
+    doReturn(succeededFuture(null))
+      .when(compositePoLineValidationService).validatePurchaseOrderHasPoLines(any());
     doReturn(succeededFuture(null))
       .when(compositePoLineValidationService).validateUserUnaffiliatedLocations(anyString(), any(), eq(requestContext));
 
@@ -223,7 +226,7 @@ public class PurchaseOrderHelperTest {
       Validator schemaValidator = factory.getValidator();
       Set<ConstraintViolation<CompositePurchaseOrder>> violations = schemaValidator.validate(compPO);
       assertThat(violations, hasSize(1));
-      assertEquals(violations.iterator().next().getPropertyPath().toString(), "compositePoLines[0].source");
+      assertEquals("compositePoLines[0].source", violations.iterator().next().getPropertyPath().toString());
     }
   }
 

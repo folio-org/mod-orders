@@ -345,6 +345,13 @@ public class CompositePoLineValidationService extends BaseValidationService {
     }
   }
 
+  public Future<Void> validatePurchaseOrderHasPoLines(List<CompositePoLine> poLines) {
+    if (CollectionUtils.isEmpty(poLines)) {
+      return Future.failedFuture(new HttpException(org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY, ErrorCodes.COMPOSITE_ORDER_MISSING_PO_LINES));
+    }
+    return Future.succeededFuture();
+  }
+
   public Future<Void> validateUserUnaffiliatedLocations(String poLineId, List<Location> locations, RequestContext requestContext) {
     return getUserTenantsIfNeeded(requestContext)
       .compose(userTenants -> {
