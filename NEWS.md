@@ -1,5 +1,12 @@
 ## 13.0.0 - Unreleased
+
+## 12.9.6 - Released (Ramsons R2 2024)
+The primary focus of this release was to provide RTR support on Eureka-based environment for order creation through data import
+[Full Changelog](https://github.com/folio-org/mod-orders/compare/v12.9.5...v12.9.6)
+
+### Stories
 * [MODORDERS-1215](https://issues.folio.org/browse/MODORDERS-1215) Assign to system user permissions required for data import
+
 
 ## 12.9.5 - Released (Ramsons R2 2024)
 The primary focus of this release was to add missed module permission and do some queries optimization for fetching user-tenants for validation
