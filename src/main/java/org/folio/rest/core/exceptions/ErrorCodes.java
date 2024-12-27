@@ -11,6 +11,7 @@ public enum ErrorCodes {
   MISSING_ORDER_ID_IN_POL("orderIdRequired", "Purchase order id is missing in PoLine object"),
   ORDER_NOT_FOUND("orderNotFound", "The order cannot be found by provided order id"),
   MISMATCH_BETWEEN_ID_IN_PATH_AND_BODY("idMismatch", "Mismatch between id in path and request body"),
+  COMPOSITE_ORDER_MISSING_PO_LINES("compositeOrderMissingPoLines", "Composite order is missing poLines for Open/Unopen operations"),
   INCORRECT_ORDER_ID_IN_POL("orderIdMismatch", "Mismatch between order id in the request and storage"),
   POL_LINES_LIMIT_EXCEEDED("polLimitExceeded", "Your FOLIO system is configured to limit the number of PO Lines on each order"),
   PO_LINE_ROLLOVER_FAILED("poLineRolloverFailed", "PO line update failed while making rollover"),

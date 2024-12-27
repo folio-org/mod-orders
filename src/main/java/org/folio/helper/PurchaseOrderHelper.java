@@ -236,8 +236,10 @@ public class PurchaseOrderHelper {
             if (isTransitionToOpen && CollectionUtils.isEmpty(compPO.getCompositePoLines())) {
               compPO.setCompositePoLines(clonedPoFromStorage.getCompositePoLines());
             }
-            return validateUserUnaffiliatedPoLineLocations(compPO, requestContext);
+            return Future.succeededFuture();
           })
+          .compose(v -> validatePurchaseOrderHasPoLines(compPO))
+          .compose(v -> validateUserUnaffiliatedPoLineLocations(compPO, requestContext))
           .compose(v -> {
             if (isTransitionToClosed(poFromStorage, compPO)) {
               return closeOrder(compPO, poFromStorage, requestContext);
@@ -276,6 +278,10 @@ public class PurchaseOrderHelper {
           .compose(ok -> handleFinalOrderStatus(compPO, poFromStorage.getWorkflowStatus().value(), requestContext))
           .compose(v -> encumbranceService.updateEncumbrancesOrderStatusAndReleaseIfClosed(compPO, requestContext));
       });
+  }
+
+  private Future<Void> validatePurchaseOrderHasPoLines(CompositePurchaseOrder purchaseOrder) {
+    return compositePoLineValidationService.validatePurchaseOrderHasPoLines(purchaseOrder.getCompositePoLines());
   }
 
   private Future<List<Void>> validateUserUnaffiliatedPoLineLocations(CompositePurchaseOrder purchaseOrder, RequestContext requestContext) {
