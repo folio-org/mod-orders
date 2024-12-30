@@ -42,6 +42,7 @@ public class InventoryItemRequestService {
   }
 
   public Future<List<String>> getItemIdsWithActiveRequests(List<String> itemIds, RequestContext requestContext) {
+    logger.info("getItemsWithActiveRequests:: Getting itemIds with active requests: {}", itemIds);
     if (logger.isDebugEnabled()) {
       logger.debug("getItemsWithActiveRequests:: Filtering itemIds with active requests: {}", itemIds);
     }

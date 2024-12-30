@@ -197,13 +197,13 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private BindPiecesHolder updatePieceRecords(BindPiecesHolder holder) {
-    logger.debug("updatePieceRecords:: Updating the piece records to set isBound flag as TRUE");
+    logger.info("updatePieceRecords:: Updating the piece records to set isBound flag as TRUE");
     holder.getPieces().forEach(piece -> piece.setIsBound(true));
     return holder;
   }
 
   private Future<BindPiecesHolder> updateItemStatus(BindPiecesHolder holder, RequestContext requestContext) {
-    logger.debug("updateItemStatus:: Updating previous item status to 'Unavailable'");
+    logger.info("updateItemStatus:: Updating previous item status to 'Unavailable'");
     return GenericCompositeFuture.all(
       mapTenantIdsToItemIds(holder.getPiecesGroupedByPoLine(), requestContext).entrySet().stream()
         .map(entry -> {
@@ -227,11 +227,12 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
     var bindPiecesCollection = holder.getBindPiecesCollection();
     var poLineId = holder.getPoLineId();
     var bindItem = bindPiecesCollection.getBindItem();
-    logger.debug("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
+    logger.info("createItemForPiece:: Trying to get poLine by id '{}'", poLineId);
     return purchaseOrderLineService.getOrderLineById(poLineId, requestContext)
       .map(PoLineCommonUtil::convertToCompositePoLine)
       .compose(compPOL -> createInventoryObjects(compPOL, bindPiecesCollection.getInstanceId(), bindItem, requestContext))
       .map(newItemId -> {
+        logger.info("createItemForPiece:: Item created with id: '{}'", newItemId);
         // Move requests if requestsAction is TRANSFER, otherwise do nothing
         if (TRANSFER.equals(bindPiecesCollection.getRequestsAction())) {
           var itemIds = holder.getPieces().map(Piece::getItemId).toList();
@@ -244,6 +245,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private Future<String> createInventoryObjects(CompositePoLine compPOL, String instanceId, BindItem bindItem, RequestContext requestContext) {
+    logger.info("createInventoryObjects:: Creating inventory objects for poLine: '{}'", compPOL.getId());
     if (!Boolean.TRUE.equals(compPOL.getIsPackage())) {
       instanceId = compPOL.getInstanceId();
     }
@@ -293,6 +295,7 @@ public class BindHelper extends CheckinReceivePiecesHelper<BindPiecesCollection>
   }
 
   private BindPiecesResult prepareResponseBody(BindPiecesHolder holder) {
+    logger.info("prepareResponseBody:: Preparing response body for bound pieces");
     return new BindPiecesResult()
       .withPoLineId(holder.getPoLineId())
       .withBoundPieceIds(holder.getPieces().map(Piece::getId).toList())

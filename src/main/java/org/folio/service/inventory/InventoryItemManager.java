@@ -90,6 +90,7 @@ public class InventoryItemManager {
 
   public Future<List<JsonObject>> getItemRecordsByIds(List<String> ids, RequestContext requestContext) {
     String query = convertIdsToCqlQuery(ids);
+    logger.info("Fetching item records by ids: {}", query);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEMS))
       .withQuery(query).withOffset(0).withLimit(ids.size());
     return restClient.getAsJsonObject(requestEntry, requestContext)
@@ -128,6 +129,7 @@ public class InventoryItemManager {
   }
 
   public Future<Void> updateItem(JsonObject item, RequestContext requestContext) {
+    logger.info("Updating item with '{}' id", item);
     RequestEntry requestEntry = new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(ITEM_BY_ID_ENDPOINT)).withId(item.getString(ID));
     return restClient.put(requestEntry, item, requestContext);
   }

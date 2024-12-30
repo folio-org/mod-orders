@@ -55,8 +55,10 @@ public class TitlesService {
   }
 
   public Future<TitleCollection> getTitles(int limit, int offset, String query, RequestContext requestContext) {
+    log.info("Get titles with limit: {}, offset: {}, query: {}", limit, offset, query);
     return protectionService.getQueryWithAcqUnitsCheck(StringUtils.EMPTY, query, requestContext)
       .compose(finalQuery -> {
+        log.info("Get titles with limit: {}, offset: {}, finalQuery: {}", limit, offset, finalQuery);
         RequestEntry requestEntry = new RequestEntry(ENDPOINT).withQuery(finalQuery)
           .withOffset(offset)
           .withLimit(limit);
@@ -71,6 +73,7 @@ public class TitlesService {
 
   public Future<Void> saveTitle(Title title, RequestContext requestContext) {
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(title.getId());
+    log.info("Updating title with id: {}", title.getId());
     return restClient.put(requestEntry, title, requestContext);
   }
 
