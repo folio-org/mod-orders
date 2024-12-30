@@ -17,6 +17,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -26,11 +27,13 @@ import java.util.stream.Collectors;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.folio.CopilotGenerated;
 import org.folio.models.consortium.ConsortiumConfiguration;
 import org.folio.rest.core.exceptions.ErrorCodes;
 import org.folio.rest.core.exceptions.HttpException;
 import org.folio.rest.core.models.RequestContext;
 import org.folio.rest.jaxrs.model.CompositePoLine;
+import org.folio.rest.jaxrs.model.CompositePurchaseOrder;
 import org.folio.rest.jaxrs.model.Cost;
 import org.folio.rest.jaxrs.model.Details;
 import org.folio.rest.jaxrs.model.Error;
@@ -81,9 +84,7 @@ public class CompositePoLineValidationServiceTest {
     List<Error> errors = compositePoLineValidationService.validateLocations(compositePoLine);
 
     assertEquals(2, errors.size());
-    errors.forEach(error -> {
-      assertEquals(ErrorCodes.HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR.getCode(), error.getCode());
-    });
+    errors.forEach(error -> assertEquals(ErrorCodes.HOLDINGS_ID_AND_LOCATION_ID_IS_NULL_ERROR.getCode(), error.getCode()));
   }
 
   @Test
@@ -100,9 +101,7 @@ public class CompositePoLineValidationServiceTest {
     List<Error> errors = compositePoLineValidationService.validateLocations(compositePoLine);
 
     assertEquals(2, errors.size());
-    errors.forEach(error -> {
-      assertEquals(ErrorCodes.MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR.getCode(), error.getCode());
-    });
+    errors.forEach(error -> assertEquals(ErrorCodes.MAY_BE_LINK_TO_EITHER_HOLDING_OR_LOCATION_ERROR.getCode(), error.getCode()));
   }
 
   @Test
@@ -503,5 +502,45 @@ public class CompositePoLineValidationServiceTest {
         assertTrue(cause.getMessage().contains(ErrorCodes.LOCATION_UPDATE_WITHOUT_AFFILIATION.getDescription()));
         testContext.completeNow();
       })));
+  }
+
+  @Test
+  @CopilotGenerated(partiallyGenerated = true)
+  void shouldFailValidationWhenCompositePurchaseOrderHasNullPoLines(VertxTestContext testContext) {
+    var compPO = new CompositePurchaseOrder();
+    compPO.setCompositePoLines(null);
+
+    compositePoLineValidationService.validatePurchaseOrderHasPoLines(compPO.getCompositePoLines())
+      .onComplete(testContext.failing(cause -> testContext.verify(() -> {
+        assertInstanceOf(HttpException.class, cause);
+        assertEquals(COMPOSITE_ORDER_MISSING_PO_LINES.getCode(), ((HttpException) cause).getError().getCode());
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  @CopilotGenerated(partiallyGenerated = true)
+  void shouldFailValidationWhenCompositePurchaseOrderHasEmptyPoLines(VertxTestContext testContext) {
+    var compPO = new CompositePurchaseOrder();
+    compPO.setCompositePoLines(Collections.emptyList());
+
+    compositePoLineValidationService.validatePurchaseOrderHasPoLines(compPO.getCompositePoLines())
+      .onComplete(testContext.failing(cause -> testContext.verify(() -> {
+        assertInstanceOf(HttpException.class, cause);
+        assertEquals(COMPOSITE_ORDER_MISSING_PO_LINES.getCode(), ((HttpException) cause).getError().getCode());
+        testContext.completeNow();
+      })));
+  }
+
+  @Test
+  @CopilotGenerated(partiallyGenerated = true)
+  void shouldPassValidationWhenCompositePurchaseOrderHasPoLines(VertxTestContext testContext) {
+    var compPO = new CompositePurchaseOrder();
+    var poLine = new CompositePoLine();
+    poLine.setId(UUID.randomUUID().toString());
+    compPO.setCompositePoLines(List.of(poLine));
+
+    compositePoLineValidationService.validatePurchaseOrderHasPoLines(compPO.getCompositePoLines())
+      .onComplete(testContext.succeeding(result -> testContext.verify(testContext::completeNow)));
   }
 }

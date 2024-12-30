@@ -1,7 +1,7 @@
 {
   "id": "1ab7ef6a-d1d4-4a4f-90a2-882aed18af14",
   "approved": true,
-  "assignedTo": "",
+  "assignedTo": "4a725943-9d6f-47cf-9e57-749e59daa020",
   "manualPo": false,
   "notes": [],
   "poNumber": "268758",
@@ -73,7 +73,7 @@
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
-        "materialSupplier": "",
+        "materialSupplier": "fd8224df-58db-48f8-aa52-8704b11ca5de",
         "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
@@ -166,7 +166,7 @@
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
-        "materialSupplier": "",
+        "materialSupplier": "fd8224df-58db-48f8-aa52-8704b11ca5de",
         "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
@@ -258,7 +258,7 @@
       "paymentStatus": "Awaiting Payment",
       "physical": {
         "createInventory": "Instance, Holding, Item",
-        "materialSupplier": "",
+        "materialSupplier": "fd8224df-58db-48f8-aa52-8704b11ca5de",
         "receiptDue": "2018-09-29T00:00:00.000Z",
         "volumes": [
           "vol. 1"
