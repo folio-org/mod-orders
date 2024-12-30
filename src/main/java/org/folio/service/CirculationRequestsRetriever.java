@@ -2,10 +2,9 @@ package org.folio.service;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import lombok.extern.log4j.Log4j2;
 import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.orders.utils.CommonFields;
 import org.folio.rest.core.RestClient;
@@ -36,9 +35,9 @@ import static org.folio.service.inventory.util.RequestFields.COLLECTION_RECORDS;
 import static org.folio.service.inventory.util.RequestFields.REQUESTER_ID;
 import static org.folio.service.inventory.util.RequestFields.ITEM_ID;
 
+@Log4j2
 public class CirculationRequestsRetriever {
 
-  private static final Logger logger = LogManager.getLogger();
   private static final String OPEN_REQUEST_STATUS = "Open - *";
 
   private final PieceStorageService pieceStorageService;
@@ -72,13 +71,15 @@ public class CirculationRequestsRetriever {
   }
 
   private Future<List<JsonObject>> getRequestsByItemIds(List<String> itemIds, String status, RequestContext requestContext) {
+    log.debug("getRequestsByItemIds:: Fetching requests by item ids: {}", itemIds);
     var futures = StreamEx.ofSubLists(itemIds, MAX_IDS_FOR_GET_RQ_15)
       .map(ids -> String.format("(%s and status=\"%s\")", convertIdsToCqlQuery(ids, ITEM_ID.getValue()), status))
       .map(query -> new RequestEntry(INVENTORY_LOOKUP_ENDPOINTS.get(REQUESTS))
         .withQuery(query).withOffset(0).withLimit(Integer.MAX_VALUE))
       .map(entry -> restClient.getAsJsonObject(entry, requestContext)
+        .onSuccess(response -> log.info("getRequestsByItemIds:: Successfully fetched [{}] requests by item ids: {}", response.getString(COLLECTION_TOTAL.getValue()), itemIds))
         .recover(throwable -> {
-          logger.error("getRequestsByItemIds:: Failed to get requests by item ids", throwable);
+          log.error("getRequestsByItemIds:: Failed to get requests by item ids", throwable);
           return Future.succeededFuture(null);
         }))
       .toList();

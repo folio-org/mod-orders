@@ -12,6 +12,7 @@ import org.folio.service.CirculationRequestsRetriever;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +22,7 @@ import static org.folio.orders.utils.HelperUtils.extractId;
 import static org.folio.service.inventory.InventoryUtils.INVENTORY_LOOKUP_ENDPOINTS;
 import static org.folio.service.inventory.InventoryUtils.REQUESTS;
 import static org.folio.service.inventory.util.RequestFields.DESTINATION_ITEM_ID;
+import static org.folio.service.inventory.util.RequestFields.POSITION;
 import static org.folio.service.inventory.util.RequestFields.STATUS;
 
 public class InventoryItemRequestService {
@@ -57,12 +59,13 @@ public class InventoryItemRequestService {
         var requestsToTransfer = new ArrayList<JsonObject>();
         for (var requests : requesterToRequestsMap.values()) {
           requestsToCancel.addAll(requests);
-          requests.stream().min(this::compareRequests).ifPresent(request -> {
+          requests.stream().min(this::compareRequestsByCreationDate).ifPresent(request -> {
             requestsToTransfer.add(request);
             requestsToCancel.remove(request);
           });
         }
 
+        requestsToTransfer.sort(this::compareRequestsByPosition);
         // Move requests to new item sequentially and then cancel unnecessary ones
         return chainCall(requestsToTransfer, (request) -> transferRequest(request, destinationItemId, requestContext))
           .compose(v -> cancelRequests(requestsToCancel, requestContext));
@@ -94,10 +97,16 @@ public class InventoryItemRequestService {
     return restClient.put(requestEntry, request, requestContext);
   }
 
-  private int compareRequests(JsonObject r1, JsonObject r2) {
+  private int compareRequestsByCreationDate(JsonObject r1, JsonObject r2) {
     Instant createdDate1 = Instant.parse(extractCreatedDate(r1));
     Instant createdDate2 = Instant.parse(extractCreatedDate(r2));
     return createdDate1.compareTo(createdDate2);
+  }
+
+  private int compareRequestsByPosition(JsonObject r1, JsonObject r2) {
+    Integer pos1 = r1.getInteger(POSITION.getValue());
+    Integer pos2 = r2.getInteger(POSITION.getValue());
+    return Comparator.nullsLast(Integer::compare).compare(pos1, pos2);
   }
 
 }
