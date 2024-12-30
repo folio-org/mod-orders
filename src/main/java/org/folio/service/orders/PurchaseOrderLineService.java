@@ -56,6 +56,7 @@ import org.folio.rest.jaxrs.model.Parameter;
 import org.folio.rest.jaxrs.model.PoLine;
 import org.folio.rest.jaxrs.model.PoLineCollection;
 import org.folio.rest.jaxrs.model.ProductId;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.service.caches.InventoryCache;
 
 import io.vertx.core.Future;
@@ -99,7 +100,7 @@ public class PurchaseOrderLineService {
   }
 
   public Future<PoLine> getOrderLineById(String lineId, RequestContext requestContext) {
-    logger.info("Get order line by id: {}", lineId);
+    logger.info("Get order line by id: {} with tenantId: {}", lineId, TenantTool.tenantId(requestContext.getHeaders()));
     RequestEntry requestEntry = new RequestEntry(BY_ID_ENDPOINT).withId(lineId);
     return restClient.get(requestEntry, PoLine.class, requestContext);
   }
